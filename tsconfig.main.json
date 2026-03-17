@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@types/*": ["types/*"],
+      "@services/*": ["services/*"],
+      "@hardware/*": ["hardware/*"]
+    }
+  },
+  "include": ["main/**/*", "hardware/**/*", "services/**/*", "types/**/*"],
+  "exclude": ["node_modules", "renderer", "dist"]
+}

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["renderer/*"],
+      "@types/*": ["types/*"],
+      "@services/*": ["services/*"],
+      "@hardware/*": ["hardware/*"]
+    }
+  },
+  "include": ["renderer/**/*", "types/**/*", "services/**/*"],
+  "exclude": ["node_modules", "dist", "main", "hardware"]
+}

@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    @apply bg-surface text-slate-100 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden; /* POS is a single-page app */
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-card rounded-xl shadow-card;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-500 active:bg-brand-700
+           text-white font-semibold rounded-xl
+           px-4 py-2.5 transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-input hover:bg-surface-border active:bg-surface-card
+           text-slate-200 font-medium rounded-xl
+           px-4 py-2.5 transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-500 active:bg-red-700
+           text-white font-semibold rounded-xl
+           px-4 py-2.5 transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input {
+    @apply bg-surface-input border border-surface-border rounded-xl
+           px-4 py-2.5 text-slate-100 placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+           transition-all duration-150 w-full;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-400 mb-1.5;
+  }
+}

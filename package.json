@@ -1,0 +1,80 @@
+{
+  "name": "elm-pos",
+  "version": "1.0.0",
+  "description": "Production-grade multi-business Desktop POS system",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron\"",
+    "dev:next": "next dev renderer --port 3000",
+    "dev:electron": "wait-on http://localhost:3000 && tsc -p tsconfig.main.json && electron .",
+    "build": "npm run build:next && npm run build:electron",
+    "build:next": "next build renderer",
+    "build:electron": "tsc -p tsconfig.main.json",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "better-sqlite3": "^11.3.0",
+    "date-fns": "^3.6.0",
+    "electron-store": "^10.0.0",
+    "escpos": "^3.0.0-alpha",
+    "escpos-usb": "^3.0.0-alpha",
+    "nfc-pcsc": "^0.9.2",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "zustand": "^4.5.0",
+    "lucide-react": "^0.400.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.elmpos.app",
+    "productName": "Elm POS",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/.next/**/*",
+      "renderer/public/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

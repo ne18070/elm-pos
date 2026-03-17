@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+.next/
+renderer/.next/
+renderer/out/
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.local
+.DS_Store
+Thumbs.db
+*.log
