@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
-  BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck,
+  BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +13,7 @@ import { OfflineBadge } from './OfflineBadge';
 
 const NAV_ITEMS = [
   { href: '/pos',        icon: ShoppingCart,  label: 'Caisse',        roles: null },
+  { href: '/livraison',  icon: Truck,         label: 'Livraisons',    roles: null },
   { href: '/orders',     icon: ClipboardList, label: 'Commandes',     roles: null },
   { href: '/products',   icon: Package,       label: 'Produits',      roles: ['owner', 'admin'] },
   { href: '/categories', icon: LayoutGrid,    label: 'Catégories',    roles: ['owner', 'admin'] },

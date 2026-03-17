@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { Order, Cart, PaymentMethod, Coupon } from '../../types';
+import type { Order, Cart, PaymentMethod, Coupon, Refund } from '../../types';
 
 export interface CreateOrderInput {
   business_id: string;
@@ -29,26 +29,26 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       business_id: input.business_id,
       cashier_id: input.cashier_id,
       items: input.cart.items.map((item) => ({
-        product_id: item.product_id,
-        variant_id: item.variant_id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
+        product_id:      item.product_id,
+        variant_id:      item.variant_id,
+        name:            item.name,
+        price:           item.price,
+        quantity:        item.quantity,
         discount_amount: 0,
-        total: item.price * item.quantity,
-        notes: item.notes,
+        total:           item.price * item.quantity,
+        notes:           item.notes,
       })),
       payment: {
         method: input.payment_method,
         amount: input.payment_amount,
       },
       subtotal,
-      tax_amount: tax,
+      tax_amount:      tax,
       discount_amount: discount,
       total,
-      coupon_id: input.coupon?.id,
+      coupon_id:   input.coupon?.id,
       coupon_code: input.coupon?.code,
-      notes: input.notes,
+      notes:       input.notes,
     },
   });
 
@@ -63,53 +63,34 @@ export async function getOrders(
   let query = supabase
     .from('orders')
     .select(
-      `
-      *,
-      items:order_items(*),
-      payments(*),
-      cashier:users(id, full_name, email)
-    `,
+      `*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email)`,
       { count: 'exact' }
     )
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
 
-  if (options?.status) {
+  if (options?.status && options.status !== 'all') {
     query = query.eq('status', options.status);
   }
-
   if (options?.date) {
-    const start = `${options.date}T00:00:00Z`;
-    const end = `${options.date}T23:59:59Z`;
-    query = query.gte('created_at', start).lte('created_at', end);
+    query = query
+      .gte('created_at', `${options.date}T00:00:00Z`)
+      .lte('created_at', `${options.date}T23:59:59Z`);
   }
-
-  if (options?.limit) {
-    query = query.limit(options.limit);
-  }
-
+  if (options?.limit) query = query.limit(options.limit);
   if (options?.offset) {
-    query = query.range(
-      options.offset,
-      options.offset + (options.limit ?? 20) - 1
-    );
+    query = query.range(options.offset, options.offset + (options.limit ?? 20) - 1);
   }
 
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-
   return { orders: data as Order[], count: count ?? 0 };
 }
 
 export async function getOrderById(id: string): Promise<Order> {
   const { data, error } = await supabase
     .from('orders')
-    .select(`
-      *,
-      items:order_items(*),
-      payments(*),
-      cashier:users(id, full_name, email)
-    `)
+    .select(`*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email)`)
     .eq('id', id)
     .single();
 
@@ -117,12 +98,78 @@ export async function getOrderById(id: string): Promise<Order> {
   return data as Order;
 }
 
-export async function cancelOrder(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('orders')
-    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-    .eq('id', id);
+// ─── Annulation (restaure stock + coupon en transaction) ─────────────────────
 
+export async function cancelOrder(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Remboursement ───────────────────────────────────────────────────────────
+
+export interface RefundInput {
+  orderId: string;
+  amount: number;
+  reason?: string;
+  refundedBy?: string;
+}
+
+export async function refundOrder(input: RefundInput): Promise<void> {
+  const { error } = await supabase.rpc('refund_order', {
+    p_order_id:    input.orderId,
+    p_amount:      input.amount,
+    p_reason:      input.reason ?? null,
+    p_refunded_by: input.refundedBy ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function getRefundsForOrder(orderId: string): Promise<Refund[]> {
+  const { data, error } = await supabase
+    .from('refunds')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('refunded_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data as Refund[];
+}
+
+// ─── Livraison / Picking ─────────────────────────────────────────────────────
+
+/**
+ * Commandes payées en attente de livraison, avec barcode produit pour le scan.
+ */
+export async function getOrdersForDelivery(businessId: string): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      cashier:cashier_id(id, full_name),
+      items:order_items(
+        *,
+        product:products(id, barcode, image_url)
+      )
+    `)
+    .eq('business_id', businessId)
+    .eq('status', 'paid')
+    .neq('delivery_status', 'delivered')
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data as Order[];
+}
+
+export async function startOrderPicking(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc('start_order_picking', { p_order_id: orderId });
+  if (error) throw new Error(error.message);
+}
+
+export async function confirmOrderDelivery(orderId: string, deliveredBy: string): Promise<void> {
+  const { error } = await supabase.rpc('confirm_order_delivery', {
+    p_order_id:     orderId,
+    p_delivered_by: deliveredBy,
+  });
   if (error) throw new Error(error.message);
 }
 

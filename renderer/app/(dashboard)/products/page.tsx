@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -10,10 +10,13 @@ import { ProductModal } from '@/components/products/ProductModal';
 import { deleteProduct } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
+type ViewMode = 'grid' | 'list';
+
 export default function ProductsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<ViewMode>('grid');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -27,7 +30,8 @@ export default function ProductsPage() {
       p.sku?.toLowerCase().includes(search.toLowerCase())
   );
 
-  async function handleDelete(product: Product) {
+  async function handleDelete(product: Product, e: React.MouseEvent) {
+    e.stopPropagation();
     if (!confirm(`Supprimer "${product.name}" ?`)) return;
     try {
       await deleteProduct(product.id);
@@ -38,12 +42,25 @@ export default function ProductsPage() {
     }
   }
 
+  function handleEdit(product: Product, e: React.MouseEvent) {
+    e.stopPropagation();
+    setEditProduct(product);
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-surface-border">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Produits</h1>
+          <div>
+            <h1 className="text-xl font-bold text-white">Produits</h1>
+            {!loading && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                {filtered.length} produit{filtered.length !== 1 ? 's' : ''}
+                {search && ` · filtrés sur ${products.length}`}
+              </p>
+            )}
+          </div>
           <button
             onClick={() => setShowCreate(true)}
             className="btn-primary flex items-center gap-2"
@@ -53,19 +70,48 @@ export default function ProductsPage() {
           </button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Rechercher par nom, SKU ou code-barres…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input pl-10"
-          />
+        <div className="flex gap-3">
+          {/* Recherche */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Nom, SKU, code-barres…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-10"
+            />
+          </div>
+
+          {/* Toggle vue */}
+          <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1">
+            <button
+              onClick={() => setView('grid')}
+              title="Vue grille"
+              className={`p-2 rounded-lg transition-colors ${
+                view === 'grid'
+                  ? 'bg-brand-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView('list')}
+              title="Vue liste"
+              className={`p-2 rounded-lg transition-colors ${
+                view === 'list'
+                  ? 'bg-brand-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Grille */}
+      {/* Contenu */}
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
           <div className="text-slate-400 text-center py-16">Chargement…</div>
@@ -77,12 +123,14 @@ export default function ProductsPage() {
               <p className="text-sm mt-1">Cliquez sur "Nouveau produit" pour commencer.</p>
             )}
           </div>
-        ) : (
+        ) : view === 'grid' ? (
+          /* ── Vue Grille ── */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filtered.map((product) => (
               <div
                 key={product.id}
-                className="card p-4 flex flex-col gap-3 group"
+                onClick={() => setEditProduct(product)}
+                className="card p-4 flex flex-col gap-3 group cursor-pointer hover:border-brand-700 transition-colors"
               >
                 {/* Image */}
                 <div className="aspect-square rounded-lg bg-surface-input flex items-center justify-center overflow-hidden">
@@ -98,31 +146,33 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="flex-1">
-                  <p className="font-medium text-white text-sm line-clamp-2">{product.name}</p>
+                  <p className="font-medium text-white text-sm line-clamp-2 leading-snug">
+                    {product.name}
+                  </p>
                   {product.category && (
                     <p className="text-xs text-slate-500 mt-0.5">{product.category.name}</p>
                   )}
-                  <p className="text-brand-400 font-semibold mt-1">
+                  <p className="text-brand-400 font-semibold mt-1 text-sm">
                     {formatCurrency(product.price, business?.currency)}
                   </p>
                   {product.track_stock && (
-                    <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-slate-400' : 'text-red-400'}`}>
+                    <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-slate-400' : 'text-red-400 font-medium'}`}>
                       Stock : {product.stock ?? 0}
                     </p>
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2">
+                {/* Actions — visibles au hover */}
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => setEditProduct(product)}
+                    onClick={(e) => handleEdit(product, e)}
                     className="flex-1 btn-secondary flex items-center justify-center gap-1 py-1.5 text-xs"
                   >
                     <Pencil className="w-3 h-3" />
                     Modifier
                   </button>
                   <button
-                    onClick={() => handleDelete(product)}
+                    onClick={(e) => handleDelete(product, e)}
                     className="btn-danger flex items-center justify-center py-1.5 px-2"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -130,6 +180,138 @@ export default function ProductsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          /* ── Vue Liste ── */
+          <div className="rounded-xl border border-surface-border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-surface-card border-b border-surface-border">
+                <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
+                  <th className="px-4 py-3 w-12"></th>
+                  <th className="px-4 py-3">Produit</th>
+                  <th className="px-4 py-3 hidden md:table-cell">Catégorie</th>
+                  <th className="px-4 py-3 hidden lg:table-cell">Code-barres / SKU</th>
+                  <th className="px-4 py-3 hidden sm:table-cell">Stock</th>
+                  <th className="px-4 py-3">Prix</th>
+                  <th className="px-4 py-3 w-24">Statut</th>
+                  <th className="px-4 py-3 w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((product, i) => (
+                  <tr
+                    key={product.id}
+                    onClick={() => setEditProduct(product)}
+                    className={`border-b border-surface-border last:border-0 hover:bg-surface-hover
+                      cursor-pointer transition-colors group
+                      ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
+                  >
+                    {/* Miniature */}
+                    <td className="px-4 py-3">
+                      <div className="w-10 h-10 rounded-lg bg-surface-input overflow-hidden flex items-center justify-center shrink-0">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="w-5 h-5 text-slate-600" />
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Nom */}
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-white text-sm">{product.name}</p>
+                      {product.description && (
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{product.description}</p>
+                      )}
+                    </td>
+
+                    {/* Catégorie */}
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {product.category ? (
+                        <span className="text-xs text-slate-400 bg-surface-input px-2 py-1 rounded-lg">
+                          {product.category.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-600">—</span>
+                      )}
+                    </td>
+
+                    {/* Barcode / SKU */}
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <div className="space-y-0.5">
+                        {product.barcode && (
+                          <div className="flex items-center gap-1 text-xs text-slate-400 font-mono">
+                            <Barcode className="w-3 h-3 shrink-0" />
+                            {product.barcode}
+                          </div>
+                        )}
+                        {product.sku && (
+                          <p className="text-xs text-slate-500 font-mono">{product.sku}</p>
+                        )}
+                        {!product.barcode && !product.sku && (
+                          <span className="text-xs text-slate-600">—</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Stock */}
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      {product.track_stock ? (
+                        <span className={`text-sm font-medium ${
+                          (product.stock ?? 0) === 0
+                            ? 'text-red-400'
+                            : (product.stock ?? 0) <= 5
+                            ? 'text-yellow-400'
+                            : 'text-slate-300'
+                        }`}>
+                          {product.stock ?? 0}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-600">—</span>
+                      )}
+                    </td>
+
+                    {/* Prix */}
+                    <td className="px-4 py-3">
+                      <span className="text-brand-400 font-semibold text-sm">
+                        {formatCurrency(product.price, business?.currency)}
+                      </span>
+                    </td>
+
+                    {/* Statut actif */}
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${
+                        product.is_active
+                          ? 'bg-green-900/20 text-green-400 border-green-800'
+                          : 'bg-slate-800 text-slate-500 border-slate-700'
+                      }`}>
+                        {product.is_active ? 'Actif' : 'Inactif'}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => handleEdit(product, e)}
+                          className="btn-secondary p-1.5"
+                          title="Modifier"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(product, e)}
+                          className="btn-danger p-1.5"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

@@ -1,150 +1,279 @@
 'use client';
 
-import { Minus, Plus, Trash2, ShoppingCart, Tag, X } from 'lucide-react';
+import { useState } from 'react';
+import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
+import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { CouponInput } from './CouponInput';
+import { HoldModal } from './HoldModal';
+import type { CartItem } from '@pos-types';
 
 interface OrderPanelProps {
   taxRate: number;
   currency: string;
   businessId: string;
   onCheckout: () => void;
+  onShowHeld: () => void;
 }
 
-export function OrderPanel({ taxRate, currency, businessId, onCheckout }: OrderPanelProps) {
+export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld }: OrderPanelProps) {
   const {
     items, coupon, setCoupon,
     updateQuantity, removeItem,
     subtotal, discountAmount, taxAmount, total, itemCount,
+    holdCurrentOrder, heldOrders,
   } = useCartStore();
-
+  const { warning } = useNotificationStore();
+  const [showHoldModal, setShowHoldModal] = useState(false);
   const fmt = (n: number) => formatCurrency(n, currency);
+
+  function handleQtyIncrease(item: CartItem) {
+    const result = updateQuantity(item.product_id, item.variant_id, item.quantity + 1);
+    if (!result.ok) warning(result.reason ?? 'Stock insuffisant');
+  }
+
+  function handleQtyDecrease(item: CartItem) {
+    updateQuantity(item.product_id, item.variant_id, item.quantity - 1);
+  }
+
+  /** True si la quantité en panier a atteint le stock disponible */
+  function atStockLimit(item: CartItem): boolean {
+    if (!item.product?.track_stock) return false;
+    return item.quantity >= (item.product.stock ?? 0);
+  }
+
+  /** True si la quantité dépasse le stock (cas où le stock a baissé en temps réel) */
+  function overStock(item: CartItem): boolean {
+    if (!item.product?.track_stock) return false;
+    return item.quantity > (item.product.stock ?? 0);
+  }
+
+  // ── Panier vide ──────────────────────────────────────────────────────────────
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3 px-4">
-        <ShoppingCart className="w-12 h-12 opacity-30" />
-        <p className="text-sm text-center">
-          Sélectionnez des produits pour démarrer une vente
-        </p>
+      <div className="flex flex-col h-full">
+        <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between">
+          <h2 className="font-semibold text-white text-sm">Nouvelle vente</h2>
+          {heldOrders.length > 0 && (
+            <button
+              onClick={onShowHeld}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                         bg-brand-900/30 border border-brand-700 text-brand-400
+                         hover:bg-brand-900/50 transition-colors text-xs font-medium"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              En attente
+              <span className="bg-brand-600 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {heldOrders.length}
+              </span>
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center flex-1 text-slate-500 gap-3 px-4">
+          <ShoppingCart className="w-12 h-12 opacity-30" />
+          <p className="text-sm text-center">Sélectionnez des produits pour démarrer une vente</p>
+        </div>
       </div>
     );
   }
 
+  // ── Panier avec articles ─────────────────────────────────────────────────────
+
+  const hasOverStock = items.some(overStock);
+
   return (
-    <div className="flex flex-col h-full">
-      {/* En-tête */}
-      <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between">
-        <h2 className="font-semibold text-white">
-          Commande <span className="text-brand-400">({itemCount()} article{itemCount() > 1 ? 's' : ''})</span>
-        </h2>
-      </div>
-
-      {/* Liste des articles */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {items.map((item) => (
-          <div
-            key={`${item.product_id}::${item.variant_id ?? ''}`}
-            className="bg-surface-input rounded-xl p-3"
-          >
-            <div className="flex items-start gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{item.name}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{fmt(item.price)} / unité</p>
-              </div>
+    <>
+      <div className="flex flex-col h-full">
+        {/* En-tête */}
+        <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-2">
+          <h2 className="font-semibold text-white shrink-0">
+            Commande{' '}
+            <span className="text-brand-400">({itemCount()} article{itemCount() > 1 ? 's' : ''})</span>
+          </h2>
+          <div className="flex items-center gap-2 ml-auto">
+            {heldOrders.length > 0 && (
               <button
-                onClick={() => removeItem(item.product_id, item.variant_id)}
-                className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                onClick={onShowHeld}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg
+                           bg-brand-900/30 border border-brand-700 text-brand-400
+                           hover:bg-brand-900/50 transition-colors text-xs font-medium shrink-0"
               >
-                <Trash2 className="w-4 h-4" />
+                <Clock className="w-3.5 h-3.5" />
+                <span className="bg-brand-600 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {heldOrders.length}
+                </span>
               </button>
-            </div>
-
-            {/* Quantité + sous-total */}
-            <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity - 1)}
-                  className="w-7 h-7 rounded-lg bg-surface-card flex items-center justify-center
-                             text-slate-400 hover:text-white hover:bg-brand-600 transition-colors"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="text-white font-semibold w-6 text-center">{item.quantity}</span>
-                <button
-                  onClick={() => updateQuantity(item.product_id, item.variant_id, item.quantity + 1)}
-                  className="w-7 h-7 rounded-lg bg-surface-card flex items-center justify-center
-                             text-slate-400 hover:text-white hover:bg-brand-600 transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-              <span className="text-white font-bold">
-                {fmt(item.price * item.quantity)}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Coupon */}
-      <div className="px-4 py-2 border-t border-surface-border">
-        {coupon ? (
-          <div className="flex items-center gap-2 bg-green-900/30 border border-green-700 rounded-xl px-3 py-2">
-            <Tag className="w-4 h-4 text-green-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-green-400">{coupon.code}</p>
-              <p className="text-xs text-green-600">
-                -{coupon.type === 'percentage' ? `${coupon.value}%` : fmt(coupon.value)}
-              </p>
-            </div>
-            <button onClick={() => setCoupon(null)} className="text-green-600 hover:text-green-400">
-              <X className="w-4 h-4" />
+            )}
+            <button
+              onClick={() => setShowHoldModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-surface-border
+                         text-slate-400 hover:border-slate-500 hover:text-white transition-colors text-xs font-medium shrink-0"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Attente
             </button>
           </div>
-        ) : (
-          <CouponInput
-            businessId={businessId}
-            orderTotal={subtotal()}
-            onApply={setCoupon}
-          />
-        )}
-      </div>
-
-      {/* Récapitulatif */}
-      <div className="px-4 py-3 border-t border-surface-border space-y-1.5">
-        <div className="flex justify-between text-sm text-slate-400">
-          <span>Sous-total</span>
-          <span>{fmt(subtotal())}</span>
         </div>
-        {discountAmount() > 0 && (
-          <div className="flex justify-between text-sm text-green-400">
-            <span>Remise</span>
-            <span>-{fmt(discountAmount())}</span>
+
+        {/* Alerte globale surstock (stock changé en temps réel) */}
+        {hasOverStock && (
+          <div className="mx-4 mt-3 flex items-start gap-2 p-3 bg-red-900/20 border border-red-800
+                          rounded-xl text-xs text-red-300">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+            <span>
+              Le stock de certains articles a changé. Veuillez ajuster les quantités avant d'encaisser.
+            </span>
           </div>
         )}
-        {taxRate > 0 && (
+
+        {/* Liste des articles */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {items.map((item) => {
+            const limited = atStockLimit(item);
+            const over    = overStock(item);
+            const stock   = item.product?.stock ?? 0;
+
+            return (
+              <div
+                key={`${item.product_id}::${item.variant_id ?? ''}`}
+                className={`rounded-xl p-3 border transition-colors ${
+                  over
+                    ? 'bg-red-900/10 border-red-800'
+                    : 'bg-surface-input border-transparent'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{fmt(item.price)} / unité</p>
+                  </div>
+                  <button
+                    onClick={() => removeItem(item.product_id, item.variant_id)}
+                    className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleQtyDecrease(item)}
+                      className="w-7 h-7 rounded-lg bg-surface-card flex items-center justify-center
+                                 text-slate-400 hover:text-white hover:bg-brand-600 transition-colors"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className={`font-semibold w-6 text-center ${over ? 'text-red-400' : 'text-white'}`}>
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => handleQtyIncrease(item)}
+                      disabled={limited}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors
+                        ${limited
+                          ? 'bg-surface-card text-slate-600 cursor-not-allowed'
+                          : 'bg-surface-card text-slate-400 hover:text-white hover:bg-brand-600'}`}
+                      title={limited ? `Stock max : ${stock}` : undefined}
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-white font-bold block">{fmt(item.price * item.quantity)}</span>
+                    {/* Indicateur stock */}
+                    {item.product?.track_stock && (
+                      <span className={`text-xs ${
+                        over
+                          ? 'text-red-400 font-medium'
+                          : limited
+                          ? 'text-yellow-400'
+                          : 'text-slate-500'
+                      }`}>
+                        {over
+                          ? `⚠ Max ${stock} en stock`
+                          : limited
+                          ? `Limite atteinte`
+                          : `${stock - item.quantity} restant${stock - item.quantity > 1 ? 's' : ''}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Coupon */}
+        <div className="px-4 py-2 border-t border-surface-border">
+          {coupon ? (
+            <div className="flex items-center gap-2 bg-green-900/30 border border-green-700 rounded-xl px-3 py-2">
+              <Tag className="w-4 h-4 text-green-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-green-400">{coupon.code}</p>
+                <p className="text-xs text-green-600">
+                  -{coupon.type === 'percentage' ? `${coupon.value}%` : fmt(coupon.value)}
+                </p>
+              </div>
+              <button onClick={() => setCoupon(null)} className="text-green-600 hover:text-green-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <CouponInput businessId={businessId} orderTotal={subtotal()} onApply={setCoupon} />
+          )}
+        </div>
+
+        {/* Récapitulatif */}
+        <div className="px-4 py-3 border-t border-surface-border space-y-1.5">
           <div className="flex justify-between text-sm text-slate-400">
-            <span>TVA ({taxRate}%)</span>
-            <span>{fmt(taxAmount(taxRate))}</span>
+            <span>Sous-total</span>
+            <span>{fmt(subtotal())}</span>
           </div>
-        )}
-        <div className="flex justify-between text-lg font-bold text-white pt-1 border-t border-surface-border">
-          <span>Total</span>
-          <span className="text-brand-400">{fmt(total(taxRate))}</span>
+          {discountAmount() > 0 && (
+            <div className="flex justify-between text-sm text-green-400">
+              <span>Remise</span>
+              <span>-{fmt(discountAmount())}</span>
+            </div>
+          )}
+          {taxRate > 0 && (
+            <div className="flex justify-between text-sm text-slate-400">
+              <span>TVA ({taxRate}%)</span>
+              <span>{fmt(taxAmount(taxRate))}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg font-bold text-white pt-1 border-t border-surface-border">
+            <span>Total</span>
+            <span className="text-brand-400">{fmt(total(taxRate))}</span>
+          </div>
+        </div>
+
+        {/* Bouton paiement */}
+        <div className="p-4 border-t border-surface-border">
+          <button
+            onClick={onCheckout}
+            disabled={hasOverStock}
+            className={`w-full h-12 text-base flex items-center justify-center gap-2 rounded-xl font-semibold transition-all
+              ${hasOverStock
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                : 'btn-primary'}`}
+          >
+            {hasOverStock
+              ? 'Ajustez les quantités'
+              : `Encaisser · ${fmt(total(taxRate))}`}
+          </button>
         </div>
       </div>
 
-      {/* Bouton paiement */}
-      <div className="p-4 border-t border-surface-border">
-        <button
-          onClick={onCheckout}
-          className="btn-primary w-full h-12 text-base flex items-center justify-center gap-2"
-        >
-          Encaisser · {fmt(total(taxRate))}
-        </button>
-      </div>
-    </div>
+      {showHoldModal && (
+        <HoldModal
+          onConfirm={(label) => { holdCurrentOrder(label); }}
+          onClose={() => setShowHoldModal(false)}
+        />
+      )}
+    </>
   );
 }

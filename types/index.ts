@@ -73,7 +73,8 @@ export interface Product {
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
-export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'refunded';
+export type OrderStatus   = 'pending' | 'paid' | 'cancelled' | 'refunded';
+export type DeliveryStatus = 'pending' | 'picking' | 'delivered';
 export type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'partial';
 
 export interface OrderItem {
@@ -81,14 +82,14 @@ export interface OrderItem {
   order_id: string;
   product_id: string;
   variant_id?: string;
-  name: string;            // snapshot at time of sale
-  price: number;           // unit price snapshot
+  name: string;
+  price: number;
   quantity: number;
   discount_amount: number;
   total: number;
   notes?: string;
   // joined
-  product?: Product;
+  product?: Product & { barcode?: string; image_url?: string };
 }
 
 export interface Payment {
@@ -116,6 +117,10 @@ export interface Order {
   notes?: string;
   created_at: string;
   updated_at: string;
+  // livraison
+  delivery_status: DeliveryStatus;
+  delivered_by?: string;
+  delivered_at?: string;
   // joined
   cashier?: User;
 }
@@ -248,6 +253,17 @@ export interface QueueItem {
   attempts: number;
   created_at: string;
   last_attempt?: string;
+}
+
+// ─── Remboursements ───────────────────────────────────────────────────────────
+
+export interface Refund {
+  id: string;
+  order_id: string;
+  amount: number;
+  reason?: string;
+  refunded_by?: string;
+  refunded_at: string;
 }
 
 // ─── UI State ─────────────────────────────────────────────────────────────────
