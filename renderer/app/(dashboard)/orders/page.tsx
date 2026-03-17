@@ -7,7 +7,7 @@ import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
 import { OrderDetail } from '@/components/orders/OrderDetail';
-import type { Order, OrderStatus } from '../../../../types';
+import type { Order, OrderStatus } from '@pos-types';
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending:   'bg-yellow-500/20 text-yellow-400 border-yellow-700',

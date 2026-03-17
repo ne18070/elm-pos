@@ -76,7 +76,7 @@ Supabase
 
 - Node.js 20+
 - npm 10+
-- Supabase CLI (`npm install -g supabase`)
+- Supabase CLI (voir https://github.com/supabase/cli#install-the-cli — Scoop / WinGet / Homebrew)
 - (Optionnel) Imprimante thermique USB compatible ESC/POS
 - (Optionnel) Lecteur NFC PC/SC (ACR122U, ACR1252U...)
 

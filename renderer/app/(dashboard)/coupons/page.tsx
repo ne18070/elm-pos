@@ -5,11 +5,11 @@ import { Plus, Tag, Trash2, Pencil } from 'lucide-react';
 import { useCoupons } from '@/hooks/useCoupons';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { deleteCoupon } from '../../../services/supabase/coupons';
+import { deleteCoupon } from '@services/supabase/coupons';
 import { CouponModal } from '@/components/coupons/CouponModal';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { Coupon } from '../../../../types';
+import type { Coupon } from '@pos-types';
 
 export default function CouponsPage() {
   const { business } = useAuthStore();

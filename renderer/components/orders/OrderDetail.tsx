@@ -5,10 +5,10 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { cancelOrder } from '../../../services/supabase/orders';
+import { cancelOrder } from '@services/supabase/orders';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import type { Order, OrderStatus } from '../../../../types';
+import type { Order, OrderStatus } from '@pos-types';
 
 interface OrderDetailProps {
   order: Order;

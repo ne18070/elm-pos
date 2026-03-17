@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useNotificationStore } from '@/store/notifications';
-import { createCoupon, updateCoupon } from '../../../services/supabase/coupons';
-import type { Coupon } from '../../../../types';
+import { createCoupon, updateCoupon } from '@services/supabase/coupons';
+import type { Coupon } from '@pos-types';
 
 interface CouponModalProps {
   coupon: Coupon | null;

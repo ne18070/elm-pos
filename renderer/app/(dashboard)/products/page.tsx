@@ -7,12 +7,12 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { ProductModal } from '@/components/products/ProductModal';
-import { deleteProduct } from '../../../services/supabase/products';
-import type { Product } from '../../../../types';
+import { deleteProduct } from '@services/supabase/products';
+import type { Product } from '@pos-types';
 
 export default function ProductsPage() {
   const { business } = useAuthStore();
-  const { notify } = useNotificationStore((s) => ({ notify: s }));
+  const { success, error: notifError } = useNotificationStore();
   const [search, setSearch] = useState('');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -28,13 +28,13 @@ export default function ProductsPage() {
   );
 
   async function handleDelete(product: Product) {
-    if (!confirm(`Delete "${product.name}"?`)) return;
+    if (!confirm(`Supprimer "${product.name}" ?`)) return;
     try {
       await deleteProduct(product.id);
-      notify.success(`"${product.name}" deleted`);
+      success(`"${product.name}" supprimé`);
       refetch();
     } catch (err) {
-      notify.error(String(err));
+      notifError(String(err));
     }
   }
 
@@ -43,13 +43,13 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="p-6 border-b border-surface-border">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-white">Products</h1>
+          <h1 className="text-xl font-bold text-white">Produits</h1>
           <button
             onClick={() => setShowCreate(true)}
             className="btn-primary flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Add Product
+            Nouveau produit
           </button>
         </div>
 
@@ -57,7 +57,7 @@ export default function ProductsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name, SKU, or barcode..."
+            placeholder="Rechercher par nom, SKU ou code-barres…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="input pl-10"
@@ -65,14 +65,17 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grille */}
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="text-slate-400 text-center py-16">Loading products...</div>
+          <div className="text-slate-400 text-center py-16">Chargement…</div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Package className="w-12 h-12 mb-3 opacity-30" />
-            <p>No products found</p>
+            <p className="font-medium">Aucun produit trouvé</p>
+            {!search && (
+              <p className="text-sm mt-1">Cliquez sur "Nouveau produit" pour commencer.</p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -81,8 +84,8 @@ export default function ProductsPage() {
                 key={product.id}
                 className="card p-4 flex flex-col gap-3 group"
               >
-                {/* Image placeholder */}
-                <div className="aspect-square rounded-lg bg-surface-input flex items-center justify-center text-3xl overflow-hidden">
+                {/* Image */}
+                <div className="aspect-square rounded-lg bg-surface-input flex items-center justify-center overflow-hidden">
                   {product.image_url ? (
                     <img
                       src={product.image_url}
@@ -104,7 +107,7 @@ export default function ProductsPage() {
                   </p>
                   {product.track_stock && (
                     <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-slate-400' : 'text-red-400'}`}>
-                      Stock: {product.stock ?? 0}
+                      Stock : {product.stock ?? 0}
                     </p>
                   )}
                 </div>
@@ -116,7 +119,7 @@ export default function ProductsPage() {
                     className="flex-1 btn-secondary flex items-center justify-center gap-1 py-1.5 text-xs"
                   >
                     <Pencil className="w-3 h-3" />
-                    Edit
+                    Modifier
                   </button>
                   <button
                     onClick={() => handleDelete(product)}
@@ -131,20 +134,12 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Product modal */}
       {(showCreate || editProduct) && (
         <ProductModal
           product={editProduct}
           businessId={business?.id ?? ''}
-          onClose={() => {
-            setShowCreate(false);
-            setEditProduct(null);
-          }}
-          onSaved={() => {
-            setShowCreate(false);
-            setEditProduct(null);
-            refetch();
-          }}
+          onClose={() => { setShowCreate(false); setEditProduct(null); }}
+          onSaved={() => { setShowCreate(false); setEditProduct(null); refetch(); }}
         />
       )}
     </div>

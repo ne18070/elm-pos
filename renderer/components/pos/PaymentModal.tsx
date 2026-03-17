@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { createOrder } from '../../../services/supabase/orders';
+import { createOrder } from '@services/supabase/orders';
 import { enqueueToSync } from '@/lib/ipc';
 import {
   computeChange,
@@ -16,14 +16,14 @@ import {
   PAYMENT_METHOD_LABELS,
   validatePayment,
   formatPaymentError,
-} from '../../../domain/payment.service';
+} from '@domain/payment.service';
 import {
   validateOrderPayload,
   buildOrderDbPayload,
   computeOrderTotals,
   formatOrderError,
-} from '../../../domain/order.service';
-import type { PaymentMethod } from '../../../../types';
+} from '@domain/order.service';
+import type { PaymentMethod } from '@pos-types';
 
 interface PaymentModalProps {
   taxRate: number;

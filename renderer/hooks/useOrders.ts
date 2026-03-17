@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getOrders } from '../../services/supabase/orders';
-import type { Order } from '../../types';
+import { getOrders } from '@services/supabase/orders';
+import type { Order } from '@pos-types';
 
 interface UseOrdersOptions {
   status?: string;

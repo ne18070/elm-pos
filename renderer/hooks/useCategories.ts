@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getCategories } from '../../services/supabase/products';
-import type { Category } from '../../types';
+import { getCategories } from '@services/supabase/products';
+import type { Category } from '@pos-types';
 
 export function useCategories(businessId: string) {
   const [categories, setCategories] = useState<Category[]>([]);

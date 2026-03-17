@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getProducts } from '../../services/supabase/products';
-import type { Product } from '../../types';
+import { getProducts } from '@services/supabase/products';
+import type { Product } from '@pos-types';
 
 export function useProducts(businessId: string) {
   const [products, setProducts] = useState<Product[]>([]);

@@ -4,6 +4,7 @@ release/
 .next/
 renderer/.next/
 renderer/out/
+.claude
 *.db
 *.db-shm
 *.db-wal

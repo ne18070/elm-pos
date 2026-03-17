@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getCoupons } from '../../services/supabase/coupons';
-import type { Coupon } from '../../types';
+import { getCoupons } from '@services/supabase/coupons';
+import type { Coupon } from '@pos-types';
 
 export function useCoupons(businessId: string) {
   const [coupons, setCoupons] = useState<Coupon[]>([]);

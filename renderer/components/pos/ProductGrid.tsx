@@ -4,7 +4,7 @@ import { Package } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
-import type { Product } from '../../../../types';
+import type { Product } from '@pos-types';
 
 interface ProductGridProps {
   businessId: string;

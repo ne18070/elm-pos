@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
-  BarChart2, Settings, LogOut, Tag,
+  BarChart2, Settings, LogOut, Tag, LayoutGrid,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
@@ -12,12 +12,13 @@ import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
 
 const NAV_ITEMS = [
-  { href: '/pos',       icon: ShoppingCart,  label: 'Caisse'        },
-  { href: '/orders',    icon: ClipboardList, label: 'Commandes'     },
-  { href: '/products',  icon: Package,       label: 'Produits'      },
-  { href: '/coupons',   icon: Tag,           label: 'Coupons'       },
-  { href: '/analytics', icon: BarChart2,     label: 'Statistiques'  },
-  { href: '/settings',  icon: Settings,      label: 'Paramètres'    },
+  { href: '/pos',        icon: ShoppingCart,  label: 'Caisse'        },
+  { href: '/orders',     icon: ClipboardList, label: 'Commandes'     },
+  { href: '/products',   icon: Package,       label: 'Produits'      },
+  { href: '/categories', icon: LayoutGrid,    label: 'Catégories'    },
+  { href: '/coupons',    icon: Tag,           label: 'Coupons'       },
+  { href: '/analytics',  icon: BarChart2,     label: 'Statistiques'  },
+  { href: '/settings',   icon: Settings,      label: 'Paramètres'    },
 ];
 
 export function Sidebar() {

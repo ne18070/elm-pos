@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Loader2, Upload, X, ScanLine } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useCategories } from '@/hooks/useCategories';
 import { useNotificationStore } from '@/store/notifications';
-import { createProduct, updateProduct } from '../../../services/supabase/products';
-import type { Product } from '../../../../types';
+import { createProduct, updateProduct } from '@services/supabase/products';
+import { uploadProductImage } from '@services/supabase/storage';
+import type { Product } from '@pos-types';
 
 interface ProductModalProps {
   product: Product | null;
@@ -20,6 +21,10 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
   const { categories } = useCategories(businessId);
   const { success, error: notifError } = useNotificationStore();
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [scanMode, setScanMode] = useState(false);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name:        product?.name ?? '',
@@ -31,10 +36,40 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     track_stock: product?.track_stock ?? false,
     stock:       String(product?.stock ?? ''),
     is_active:   product?.is_active ?? true,
+    image_url:   product?.image_url ?? '',
   });
 
   function update(field: string, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadProductImage(businessId, file);
+      update('image_url', url);
+    } catch (err) {
+      notifError("Erreur lors de l'upload : " + String(err));
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  // Mode scan : active le focus sur le champ code-barres
+  // Le scanner HID va saisir directement dans l'input
+  function activateScanMode() {
+    setScanMode(true);
+    setTimeout(() => barcodeInputRef.current?.focus(), 50);
+  }
+
+  // Quand le champ barcode reçoit Enter (scanner) → désactiver le mode scan
+  function handleBarcodeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setScanMode(false);
+    }
   }
 
   async function handleSave() {
@@ -52,6 +87,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
         track_stock:  form.track_stock,
         stock:        form.track_stock && form.stock ? parseInt(form.stock) : undefined,
         is_active:    form.is_active,
+        image_url:    form.image_url || undefined,
         variants:     product?.variants ?? [],
       };
 
@@ -90,6 +126,52 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
       }
     >
       <div className="space-y-4">
+        {/* Image */}
+        <div>
+          <label className="label">Image du produit</label>
+          <div className="flex items-center gap-3">
+            {/* Aperçu */}
+            <div className="w-20 h-20 rounded-xl bg-surface-input border border-surface-border overflow-hidden shrink-0 flex items-center justify-center">
+              {uploadingImage ? (
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              ) : form.image_url ? (
+                <img src={form.image_url} alt="Aperçu" className="w-full h-full object-cover" />
+              ) : (
+                <Upload className="w-6 h-6 text-slate-600" />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+                className="btn-secondary text-sm flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {form.image_url ? 'Changer' : 'Choisir une image'}
+              </button>
+              {form.image_url && (
+                <button
+                  type="button"
+                  onClick={() => update('image_url', '')}
+                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Supprimer
+                </button>
+              )}
+              <p className="text-xs text-slate-500">JPG, PNG, WEBP · max 5 Mo</p>
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageChange}
+          />
+        </div>
+
         {/* Nom */}
         <div>
           <label className="label">Nom du produit *</label>
@@ -145,17 +227,38 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
           </div>
         </div>
 
-        {/* Barcode + SKU */}
+        {/* Code-barres + SKU */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Code-barres</label>
-            <input
-              type="text"
-              value={form.barcode}
-              onChange={(e) => update('barcode', e.target.value)}
-              className="input font-mono"
-              placeholder="EAN13..."
-            />
+            <div className="flex gap-2">
+              <input
+                ref={barcodeInputRef}
+                type="text"
+                value={form.barcode}
+                onChange={(e) => update('barcode', e.target.value)}
+                onKeyDown={handleBarcodeKeyDown}
+                className={`input font-mono flex-1 transition-all ${
+                  scanMode ? 'border-brand-500 ring-1 ring-brand-500' : ''
+                }`}
+                placeholder={scanMode ? 'Scannez maintenant...' : 'EAN13...'}
+              />
+              <button
+                type="button"
+                onClick={activateScanMode}
+                title="Cliquez puis scannez le code-barres"
+                className={`btn-secondary px-2.5 shrink-0 ${
+                  scanMode ? 'border-brand-500 text-brand-400' : ''
+                }`}
+              >
+                <ScanLine className="w-4 h-4" />
+              </button>
+            </div>
+            {scanMode && (
+              <p className="text-xs text-brand-400 mt-1">
+                Pointez le scanner vers le code-barres…
+              </p>
+            )}
           </div>
           <div>
             <label className="label">SKU</label>
@@ -187,7 +290,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
               value={form.stock}
               onChange={(e) => update('stock', e.target.value)}
               className="input w-24 py-1.5 text-sm"
-              placeholder="Qtité"
+              placeholder="Qté"
               min="0"
             />
           )}

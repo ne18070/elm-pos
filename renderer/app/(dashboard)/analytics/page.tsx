@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, ShoppingBag, BarChart, DollarSign } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
-import { getAnalyticsSummary } from '../../../services/supabase/analytics';
-import type { AnalyticsSummary } from '../../../../types';
+import { getAnalyticsSummary } from '@services/supabase/analytics';
+import type { AnalyticsSummary } from '@pos-types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 

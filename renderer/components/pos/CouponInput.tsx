@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { Tag, Loader2 } from 'lucide-react';
-import { validateCoupon } from '../../../services/supabase/coupons';
+import { validateCoupon } from '@services/supabase/coupons';
 import { useAuthStore } from '@/store/auth';
-import type { Coupon } from '../../../../types';
+import type { Coupon } from '@pos-types';
 
 interface CouponInputProps {
   businessId: string;

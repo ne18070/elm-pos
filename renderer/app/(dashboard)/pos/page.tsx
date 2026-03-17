@@ -10,7 +10,7 @@ import { OfflineBanner } from '@/components/shared/OfflineBanner';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import type { Product } from '../../../../types';
+import type { Product } from '@pos-types';
 
 export default function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

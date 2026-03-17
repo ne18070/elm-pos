@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Notification } from '../../types';
+import type { Notification } from '@pos-types';
 import { generateId } from '../lib/utils';
 
 interface NotificationState {
