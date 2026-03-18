@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, XCircle, RotateCcw, AlertTriangle } from 'lucide-react';
+import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { cancelOrder, refundOrder, getRefundsForOrder } from '@services/supabase/orders';
+import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { RefundModal } from './RefundModal';
-import type { Order, OrderStatus, Refund } from '@pos-types';
+import type { Order, OrderStatus, Refund, PaymentMethod } from '@pos-types';
 
 interface OrderDetailProps {
   order: Order;
@@ -37,16 +37,39 @@ const METHOD_LABELS: Record<string, string> = {
   cash:         'Espèces',
   card:         'Carte',
   mobile_money: 'Mobile Money',
-  partial:      'Mixte',
+  partial:      'Acompte',
 };
+
+const PAYMENT_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', 'mobile_money'];
+
+function getPaidAmount(order: Order): number {
+  return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
+}
+
+function getRemainingAmount(order: Order): number {
+  return Math.max(0, order.total - getPaidAmount(order));
+}
+
+function isAcompte(order: Order): boolean {
+  if (order.status === 'cancelled' || order.status === 'refunded') return false;
+  return getRemainingAmount(order) > 0.01;
+}
 
 export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetailProps) {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [refunds, setRefunds] = useState<Refund[]>([]);
-  const fmt = (n: number) => formatCurrency(n, currency);
-  const isAdmin = user?.role === 'owner' || user?.role === 'admin';
+  const [showRefundModal, setShowRefundModal]     = useState(false);
+  const [showCompleteForm, setShowCompleteForm]   = useState(false);
+  const [completeMethod, setCompleteMethod]       = useState<Exclude<PaymentMethod, 'partial'>>('cash');
+  const [completeAmount, setCompleteAmount]       = useState('');
+  const [completing, setCompleting]               = useState(false);
+  const [refunds, setRefunds]                     = useState<Refund[]>([]);
+
+  const fmt       = (n: number) => formatCurrency(n, currency);
+  const isAdmin   = user?.role === 'owner' || user?.role === 'admin';
+  const partial   = isAcompte(order);
+  const paidAmt   = getPaidAmount(order);
+  const remaining = getRemainingAmount(order);
 
   useEffect(() => {
     if (order.status === 'refunded') {
@@ -54,11 +77,18 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
     }
   }, [order.id, order.status]);
 
+  // Pré-remplir le montant du solde quand on ouvre le formulaire
+  useEffect(() => {
+    if (showCompleteForm) {
+      setCompleteAmount(String(remaining));
+    }
+  }, [showCompleteForm, remaining]);
+
   async function handlePrint() {
     if (!business || !user) return;
     try {
       await printReceipt({ order, business, cashier_name: user.full_name });
-      success('Reçu envoyé à l\'imprimante');
+      success("Reçu envoyé à l'imprimante");
     } catch (err) {
       notifError(String(err));
     }
@@ -88,6 +118,24 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
     onClose();
   }
 
+  async function handleCompletePayment() {
+    const amount = parseFloat(completeAmount) || 0;
+    if (amount <= 0) { notifError('Montant invalide'); return; }
+    if (amount > remaining + 0.01) { notifError(`Montant supérieur au reste dû (${fmt(remaining)})`); return; }
+
+    setCompleting(true);
+    try {
+      await completeOrderPayment({ orderId: order.id, method: completeMethod, amount });
+      success(`Paiement de ${fmt(amount)} enregistré${amount >= remaining - 0.01 ? ' — commande soldée !' : ''}`);
+      onRefresh();
+      onClose();
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setCompleting(false);
+    }
+  }
+
   return (
     <>
       <div className="w-80 border-l border-surface-border bg-surface-card flex flex-col h-full">
@@ -111,10 +159,27 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
           {/* Statut */}
           <div className="flex items-center justify-between">
             <p className="label">Statut</p>
-            <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-medium border ${STATUS_COLORS[order.status as OrderStatus]}`}>
-              {STATUS_LABELS[order.status as OrderStatus]}
-            </span>
+            {partial ? (
+              <span className="inline-flex px-3 py-1 rounded-lg text-xs font-medium border bg-amber-900/30 text-amber-400 border-amber-700">
+                Acompte versé
+              </span>
+            ) : (
+              <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-medium border ${STATUS_COLORS[order.status as OrderStatus]}`}>
+                {STATUS_LABELS[order.status as OrderStatus]}
+              </span>
+            )}
           </div>
+
+          {/* Client (acompte) */}
+          {order.customer_name && (
+            <div className="bg-amber-900/20 border border-amber-800 rounded-xl px-3 py-2.5 space-y-0.5">
+              <p className="label text-amber-400">Client</p>
+              <p className="text-sm font-semibold text-white">{order.customer_name}</p>
+              {order.customer_phone && (
+                <p className="text-sm text-slate-400">{order.customer_phone}</p>
+              )}
+            </div>
+          )}
 
           {/* Caissier */}
           <div>
@@ -130,9 +195,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
                 <div key={item.id} className="flex justify-between text-sm">
                   <div className="flex-1 min-w-0">
                     <p className="text-white truncate">{item.name}</p>
-                    <p className="text-slate-500 text-xs">
-                      {fmt(item.price)} × {item.quantity}
-                    </p>
+                    <p className="text-slate-500 text-xs">{fmt(item.price)} × {item.quantity}</p>
                   </div>
                   <p className="text-white font-medium shrink-0 ml-2">{fmt(item.total)}</p>
                 </div>
@@ -162,9 +225,23 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
               <span>Total</span>
               <span>{fmt(order.total)}</span>
             </div>
+
+            {/* Solde acompte */}
+            {partial && (
+              <>
+                <div className="flex justify-between text-sm text-brand-400 pt-1 border-t border-surface-border">
+                  <span>Acompte versé</span>
+                  <span className="font-medium">{fmt(paidAmt)}</span>
+                </div>
+                <div className="flex justify-between text-amber-400 font-bold">
+                  <span>Reste à régler</span>
+                  <span className="text-lg">{fmt(remaining)}</span>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Paiements */}
+          {/* Paiements reçus */}
           {order.payments?.length > 0 && (
             <div>
               <p className="label">Paiements reçus</p>
@@ -174,6 +251,64 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
                   <span className="text-white">{fmt(p.amount)}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Formulaire paiement complémentaire */}
+          {partial && showCompleteForm && (
+            <div className="bg-amber-900/20 border border-amber-800 rounded-xl p-3 space-y-3">
+              <p className="text-xs text-amber-400 font-medium uppercase tracking-wider">
+                Enregistrer le solde ({fmt(remaining)})
+              </p>
+
+              {/* Méthode */}
+              <div className="grid grid-cols-3 gap-1.5">
+                {PAYMENT_METHODES.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setCompleteMethod(m)}
+                    className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all ${
+                      completeMethod === m
+                        ? 'border-brand-500 bg-brand-900/30 text-brand-400'
+                        : 'border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {m === 'cash'         && <Banknote className="w-4 h-4" />}
+                    {m === 'card'         && <CreditCard className="w-4 h-4" />}
+                    {m === 'mobile_money' && <Smartphone className="w-4 h-4" />}
+                    <span>{m === 'cash' ? 'Espèces' : m === 'card' ? 'Carte' : 'Mobile'}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Montant */}
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Montant reçu</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={completeAmount}
+                  onChange={(e) => setCompleteAmount(e.target.value)}
+                  className="input text-center font-bold"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCompleteForm(false)}
+                  className="btn-secondary flex-1 h-9 text-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleCompletePayment}
+                  disabled={completing}
+                  className="btn-primary flex-1 h-9 text-sm flex items-center justify-center gap-1.5"
+                >
+                  {completing && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Valider
+                </button>
+              </div>
             </div>
           )}
 
@@ -195,11 +330,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
             </div>
           )}
 
-          {/* Avertissement annulation commande en attente */}
-          {order.status === 'pending' && (
-            <div className="flex gap-2 p-3 bg-yellow-900/20 border border-yellow-800 rounded-xl text-xs text-yellow-300">
+          {/* Alerte acompte */}
+          {partial && !showCompleteForm && (
+            <div className="flex gap-2 p-3 bg-amber-900/20 border border-amber-800 rounded-xl text-xs text-amber-300">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>Cette commande est en attente de paiement.</span>
+              <span>Acompte de <strong>{fmt(paidAmt)}</strong> versé. Reste à régler : <strong>{fmt(remaining)}</strong>.</span>
             </div>
           )}
         </div>
@@ -214,7 +349,19 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
             Réimprimer le reçu
           </button>
 
-          {isAdmin && order.status === 'paid' && (
+          {/* Compléter le paiement */}
+          {partial && !showCompleteForm && (
+            <button
+              onClick={() => setShowCompleteForm(true)}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
+                         bg-amber-600 hover:bg-amber-500 text-white font-medium text-sm transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              Encaisser le solde ({fmt(remaining)})
+            </button>
+          )}
+
+          {isAdmin && order.status === 'paid' && !partial && (
             <div className="flex gap-2">
               <button
                 onClick={() => setShowRefundModal(true)}
@@ -235,7 +382,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
             </div>
           )}
 
-          {isAdmin && order.status === 'pending' && (
+          {isAdmin && (order.status === 'pending' || partial) && (
             <button
               onClick={handleCancel}
               className="btn-danger w-full flex items-center justify-center gap-2 h-10"

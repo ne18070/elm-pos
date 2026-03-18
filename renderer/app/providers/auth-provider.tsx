@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
 
-const PUBLIC_PATHS = ['/login'];
+const PUBLIC_PATHS = ['/login', '/display'];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setLoading, clear } = useAuthStore();
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
+        if ((event === 'SIGNED_OUT' || !session) && !PUBLIC_PATHS.includes(pathname)) {
           clear();
           router.replace('/login');
         }

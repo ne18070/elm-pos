@@ -84,10 +84,12 @@ export function validateOrderPayload(
     payload.taxRate
   );
 
-  // Pour espèces, le montant reçu doit couvrir le total
+  // Pour espèces (paiement complet), le montant reçu doit couvrir le total
+  // Paiement partiel (acompte) : autorisé à être inférieur au total
   if (
     payload.paymentMethod === 'cash' &&
-    payload.paymentAmount < total - 0.01 // tolérance centimes
+    payload.paymentMethod !== 'partial' &&
+    payload.paymentAmount < total - 0.01
   ) {
     return {
       code: 'INSUFFICIENT_PAYMENT',

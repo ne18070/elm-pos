@@ -4,7 +4,7 @@
  */
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       businesses: {
@@ -22,11 +22,22 @@ export interface Database {
           owner_id: string;
           created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['businesses']['Row'], 'id' | 'created_at'> & {
+        Insert: {
           id?: string;
+          name: string;
+          type: string;
+          address?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          logo_url?: string | null;
+          currency?: string;
+          tax_rate?: number;
+          receipt_footer?: string | null;
+          owner_id: string;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['businesses']['Insert']>;
+        Relationships: [];
       };
       users: {
         Row: {
@@ -38,10 +49,25 @@ export interface Database {
           avatar_url: string | null;
           created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'created_at'> & {
+        Insert: {
+          id: string;
+          email: string;
+          full_name: string;
+          role?: string;
+          business_id?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['users']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'users_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          }
+        ];
       };
       categories: {
         Row: {
@@ -53,11 +79,25 @@ export interface Database {
           sort_order: number;
           created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['categories']['Row'], 'id' | 'created_at'> & {
+        Insert: {
           id?: string;
+          business_id: string;
+          name: string;
+          color?: string | null;
+          icon?: string | null;
+          sort_order?: number;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['categories']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'categories_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          }
+        ];
       };
       products: {
         Row: {
@@ -77,12 +117,40 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['products']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+        Insert: {
           id?: string;
+          business_id: string;
+          category_id?: string | null;
+          name: string;
+          description?: string | null;
+          price: number;
+          image_url?: string | null;
+          barcode?: string | null;
+          sku?: string | null;
+          track_stock?: boolean;
+          stock?: number | null;
+          variants?: Json;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['products']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'products_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'products_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          }
+        ];
       };
       orders: {
         Row: {
@@ -97,15 +165,51 @@ export interface Database {
           coupon_id: string | null;
           coupon_code: string | null;
           notes: string | null;
+          customer_name: string | null;
+          customer_phone: string | null;
+          delivery_status: string | null;
+          delivered_by: string | null;
+          delivered_at: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['orders']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+        Insert: {
           id?: string;
+          business_id: string;
+          cashier_id: string;
+          status?: string;
+          subtotal: number;
+          tax_amount?: number;
+          discount_amount?: number;
+          total: number;
+          coupon_id?: string | null;
+          coupon_code?: string | null;
+          notes?: string | null;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          delivery_status?: string | null;
+          delivered_by?: string | null;
+          delivered_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['orders']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'orders_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'orders_cashier_id_fkey';
+            columns: ['cashier_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
       };
       order_items: {
         Row: {
@@ -120,8 +224,28 @@ export interface Database {
           total: number;
           notes: string | null;
         };
-        Insert: Omit<Database['public']['Tables']['order_items']['Row'], 'id'> & { id?: string };
+        Insert: {
+          id?: string;
+          order_id: string;
+          product_id: string;
+          variant_id?: string | null;
+          name: string;
+          price: number;
+          quantity: number;
+          discount_amount?: number;
+          total: number;
+          notes?: string | null;
+        };
         Update: Partial<Database['public']['Tables']['order_items']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'order_items_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          }
+        ];
       };
       payments: {
         Row: {
@@ -132,8 +256,24 @@ export interface Database {
           reference: string | null;
           paid_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['payments']['Row'], 'id'> & { id?: string };
+        Insert: {
+          id?: string;
+          order_id: string;
+          method: string;
+          amount: number;
+          reference?: string | null;
+          paid_at?: string;
+        };
         Update: Partial<Database['public']['Tables']['payments']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'payments_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          }
+        ];
       };
       coupons: {
         Row: {
@@ -150,25 +290,98 @@ export interface Database {
           is_active: boolean;
           created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['coupons']['Row'], 'id' | 'created_at' | 'uses_count'> & {
+        Insert: {
           id?: string;
-          created_at?: string;
+          business_id: string;
+          code: string;
+          type: string;
+          value: number;
+          min_order_amount?: number | null;
+          max_uses?: number | null;
           uses_count?: number;
+          per_user_limit?: number | null;
+          expires_at?: string | null;
+          is_active?: boolean;
+          created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['coupons']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'coupons_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      refunds: {
+        Row: {
+          id: string;
+          order_id: string;
+          amount: number;
+          reason: string | null;
+          refunded_by: string | null;
+          refunded_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          amount: number;
+          reason?: string | null;
+          refunded_by?: string | null;
+          refunded_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['refunds']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'refunds_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          }
+        ];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      [_ in never]: never;
+    };
     Functions: {
       create_order: {
         Args: { order_data: Json };
         Returns: Json;
+      };
+      cancel_order: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
+      refund_order: {
+        Args: { p_order_id: string; p_amount: number; p_reason: string | null; p_refunded_by: string | null };
+        Returns: undefined;
+      };
+      start_order_picking: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
+      confirm_order_delivery: {
+        Args: { p_order_id: string; p_delivered_by: string };
+        Returns: undefined;
+      };
+      decrement_stock: {
+        Args: { p_product_id: string; p_quantity: number };
+        Returns: undefined;
       };
       validate_coupon: {
         Args: { coupon_code: string; business_id: string; order_total: number; user_id: string };
         Returns: Json;
       };
     };
-    Enums: Record<string, never>;
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
-}
+};

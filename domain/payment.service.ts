@@ -106,3 +106,41 @@ export function isFullyPaid(order: Order): boolean {
   const paidAmount = order.payments.reduce((sum, p) => sum + p.amount, 0);
   return paidAmount >= order.total - 0.01;
 }
+
+// ─── Paiement partiel ─────────────────────────────────────────────────────────
+
+export interface PartialPaymentLine {
+  method: Exclude<PaymentMethod, 'partial'>;
+  amount: number;     // montant alloué à ce mode
+  received?: number;  // espèces seulement — montant physiquement remis
+}
+
+export function partialTotal(lines: PartialPaymentLine[]): number {
+  return Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
+}
+
+export function partialChange(lines: PartialPaymentLine[]): number {
+  return Math.round(
+    lines
+      .filter((l) => l.method === 'cash' && l.received !== undefined)
+      .reduce((s, l) => s + (l.received! - l.amount), 0) * 100
+  ) / 100;
+}
+
+export function validatePartialPayments(
+  lines: PartialPaymentLine[],
+  total: number
+): string | null {
+  if (lines.length < 1) return 'Ajoutez au moins un mode de paiement';
+  for (const l of lines) {
+    if (l.amount <= 0) return 'Chaque montant doit être positif';
+    if (l.method === 'cash' && l.received !== undefined && l.received < l.amount - 0.01) {
+      return 'Montant espèces insuffisant';
+    }
+  }
+  const sum = partialTotal(lines);
+  if (Math.abs(sum - total) > 0.01) {
+    return `Total des paiements (${sum.toFixed(0)}) ≠ total dû (${total.toFixed(0)})`;
+  }
+  return null;
+}

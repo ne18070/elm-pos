@@ -34,7 +34,7 @@ export async function getAnalyticsSummary(
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
 
-  const orders = ordersResult.data ?? [];
+  const orders = (ordersResult.data ?? []) as Array<{ total: number; created_at: string }>;
   const total_sales = orders.reduce((sum, o) => sum + o.total, 0);
   const order_count = orders.length;
   const avg_order_value = order_count > 0 ? total_sales / order_count : 0;
@@ -62,8 +62,9 @@ export async function getAnalyticsSummary(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Build top products
+  type ItemRow = { product_id: string; name: string; quantity: number; total: number };
   const productMap = new Map<string, TopProduct>();
-  for (const item of itemsResult.data ?? []) {
+  for (const item of (itemsResult.data ?? []) as ItemRow[]) {
     const existing = productMap.get(item.product_id) ?? {
       product_id: item.product_id,
       name: item.name,
@@ -97,7 +98,7 @@ export async function getDailySales(
   if (error) throw new Error(error.message);
 
   return {
-    total: (data ?? []).reduce((sum, o) => sum + o.total, 0),
+    total: ((data ?? []) as Array<{ total: number }>).reduce((sum, o) => sum + o.total, 0),
     count: (data ?? []).length,
   };
 }

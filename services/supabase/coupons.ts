@@ -16,7 +16,7 @@ export async function validateCoupon(
 
   if (error) return { coupon: null, error: error.message };
 
-  const result = data as { valid: boolean; coupon?: Coupon; error?: string };
+  const result = data as unknown as { valid: boolean; coupon?: Coupon; error?: string };
   if (!result.valid) {
     return { coupon: null, error: result.error ?? 'Invalid coupon' };
   }

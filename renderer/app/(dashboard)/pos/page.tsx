@@ -12,6 +12,7 @@ import { OfflineBanner } from '@/components/shared/OfflineBanner';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { getProductByBarcode } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
@@ -24,14 +25,19 @@ export default function PosPage() {
   const [view, setView]                          = useState<ViewMode>('grid');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
 
-  const { addItem } = useCartStore();
+  const addItem = useCartStore((s) => s.addItem);
   const { business } = useAuthStore();
   const { warning } = useNotificationStore();
 
-  const handleProductSelect = useCallback(
-    (product: Product) => { addItem(product); },
-    [addItem]
-  );
+  const { sendPaymentConfirm } = useCustomerDisplay({
+    businessName: business?.name ?? 'Elm POS',
+    logoUrl:      business?.logo_url,
+    currency:     business?.currency ?? 'XOF',
+    taxRate:      business?.tax_rate ?? 0,
+  });
+
+  // ProductGrid.handleSelect already calls addItem internally — no-op here avoids double-add
+  const handleProductSelect = useCallback((_product: Product) => {}, []);
 
   const handleBarcodeScanned = useCallback(
     async (barcode: string) => {
@@ -136,6 +142,7 @@ export default function PosPage() {
           currency={business?.currency ?? 'XOF'}
           onClose={() => setPaymentOpen(false)}
           onSuccess={() => setPaymentOpen(false)}
+          onPaymentConfirm={sendPaymentConfirm}
         />
       )}
     </div>

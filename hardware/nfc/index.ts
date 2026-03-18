@@ -27,16 +27,19 @@ export class NfcManager {
       this.nfc = new NFC();
 
       (this.nfc as {
-        on: (event: string, handler: (...args: unknown[]) => void) => void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        on: (event: string, handler: (...args: any[]) => void) => void;
       }).on('reader', (reader: Record<string, unknown>) => {
         this.readerName = reader['name'] as string;
         this.connected = true;
 
         const readerObj = reader as {
-          on: (event: string, handler: (...args: unknown[]) => void) => void;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          on: (event: string, handler: (...args: any[]) => void) => void;
           read: (block: number, length: number) => Promise<Buffer>;
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         readerObj.on('card', async (card: Record<string, unknown>) => {
           const uid = (card['uid'] as string) || 'unknown';
           let ndefData: unknown = null;
@@ -67,7 +70,8 @@ export class NfcManager {
         });
       });
 
-      (this.nfc as { on: (event: string, handler: (...args: unknown[]) => void) => void })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.nfc as { on: (event: string, handler: (...args: any[]) => void) => void })
         .on('error', (err: unknown) => {
           console.error('[NFC] Error:', err);
           this.connected = false;

@@ -10,6 +10,11 @@ export interface CreateOrderInput {
   tax_rate: number;
   coupon?: Coupon;
   notes?: string;
+  /** Informations client (obligatoires pour les acomptes) */
+  customer_name?: string;
+  customer_phone?: string;
+  /** Pour paiement partiel : liste détaillée des lignes de paiement */
+  payments?: Array<{ method: string; amount: number }>;
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
@@ -27,33 +32,36 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
   const { data, error } = await supabase.rpc('create_order', {
     order_data: {
       business_id: input.business_id,
-      cashier_id: input.cashier_id,
+      cashier_id:  input.cashier_id,
       items: input.cart.items.map((item) => ({
         product_id:      item.product_id,
-        variant_id:      item.variant_id,
+        variant_id:      item.variant_id ?? null,
         name:            item.name,
         price:           item.price,
         quantity:        item.quantity,
         discount_amount: 0,
         total:           item.price * item.quantity,
-        notes:           item.notes,
+        notes:           item.notes ?? null,
       })),
       payment: {
         method: input.payment_method,
         amount: input.payment_amount,
       },
+      ...(input.payments ? { payments: input.payments } : {}),
       subtotal,
       tax_amount:      tax,
       discount_amount: discount,
       total,
-      coupon_id:   input.coupon?.id,
-      coupon_code: input.coupon?.code,
-      notes:       input.notes,
+      coupon_id:      input.coupon?.id     ?? null,
+      coupon_code:    input.coupon?.code   ?? null,
+      notes:          input.notes          ?? null,
+      customer_name:  input.customer_name  ?? null,
+      customer_phone: input.customer_phone ?? null,
     },
   });
 
   if (error) throw new Error(error.message);
-  return data as Order;
+  return data as unknown as Order;
 }
 
 export async function getOrders(
@@ -84,7 +92,7 @@ export async function getOrders(
 
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return { orders: data as Order[], count: count ?? 0 };
+  return { orders: data as unknown as Order[], count: count ?? 0 };
 }
 
 export async function getOrderById(id: string): Promise<Order> {
@@ -95,7 +103,7 @@ export async function getOrderById(id: string): Promise<Order> {
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Order;
+  return data as unknown as Order;
 }
 
 // ─── Annulation (restaure stock + coupon en transaction) ─────────────────────
@@ -157,7 +165,7 @@ export async function getOrdersForDelivery(businessId: string): Promise<Order[]>
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data as Order[];
+  return data as unknown as Order[];
 }
 
 export async function startOrderPicking(orderId: string): Promise<void> {
@@ -169,6 +177,23 @@ export async function confirmOrderDelivery(orderId: string, deliveredBy: string)
   const { error } = await supabase.rpc('confirm_order_delivery', {
     p_order_id:     orderId,
     p_delivered_by: deliveredBy,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Paiement complémentaire (solde acompte) ─────────────────────────────────
+
+export interface CompletePaymentInput {
+  orderId: string;
+  method: string;
+  amount: number;
+}
+
+export async function completeOrderPayment(input: CompletePaymentInput): Promise<void> {
+  const { error } = await supabase.rpc('complete_order_payment', {
+    p_order_id: input.orderId,
+    p_method:   input.method,
+    p_amount:   input.amount,
   });
   if (error) throw new Error(error.message);
 }

@@ -38,6 +38,7 @@ interface CartState {
    * Le stock est lu depuis le produit stocké dans CartItem (mis à jour par Realtime).
    */
   updateQuantity: (productId: string, variantId: string | undefined, qty: number) => AddItemResult;
+  removeItem: (productId: string, variantId?: string) => void;
   updateNotes: (productId: string, variantId: string | undefined, notes: string) => void;
   /** Met à jour le snapshot du produit dans les lignes du panier (appelé par le Realtime). */
   syncProductStock: (productId: string, newStock: number | undefined, isActive: boolean) => void;
@@ -190,6 +191,13 @@ export const useCartStore = create<CartState>((set, get) => ({
           ? { ...i, product: { ...i.product, stock: newStock, is_active: isActive } }
           : i
       ),
+    }));
+  },
+
+  removeItem: (productId, variantId) => {
+    const key = itemKey(productId, variantId);
+    set((state) => ({
+      items: state.items.filter((i) => itemKey(i.product_id, i.variant_id) !== key),
     }));
   },
 

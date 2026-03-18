@@ -6,7 +6,7 @@ import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Product } from '@pos-types';
 
 interface ProductGridProps {
@@ -35,6 +35,23 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
   // Quantité déjà dans le panier pour ce produit
   const { items: cartItems, addItem } = useCartStore();
+
+  // Distingue tap vs scroll sur écran tactile
+  const touchRef = useRef({ y: 0, scrolled: false });
+  const tapHandlers = (product: Product) => ({
+    onTouchStart: (e: React.TouchEvent) => {
+      touchRef.current = { y: e.touches[0].clientY, scrolled: false };
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      if (Math.abs(e.touches[0].clientY - touchRef.current.y) > 8) {
+        touchRef.current.scrolled = true;
+      }
+    },
+    onClick: () => {
+      if (touchRef.current.scrolled) return;
+      handleSelect(product);
+    },
+  });
 
   function handleSelect(product: Product) {
     const result = addItem(product);
@@ -118,7 +135,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
           return (
             <button
               key={product.id}
-              onClick={() => handleSelect(product)}
+              {...tapHandlers(product)}
               disabled={disabled}
               className={`group bg-surface-card rounded-xl p-3 text-left border
                          transition-all duration-150 flex flex-col gap-2
@@ -179,7 +196,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
         return (
           <button
             key={product.id}
-            onClick={() => handleSelect(product)}
+            {...tapHandlers(product)}
             disabled={disabled}
             className={`group w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left
                        transition-all duration-150

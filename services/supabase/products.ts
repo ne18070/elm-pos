@@ -58,7 +58,7 @@ export async function getProducts(businessId: string): Promise<Product[]> {
     .order('name');
 
   if (error) throw new Error(error.message);
-  return data as Product[];
+  return data as unknown as Product[];
 }
 
 export async function getProductByBarcode(
@@ -74,7 +74,7 @@ export async function getProductByBarcode(
     .single();
 
   if (error) return null;
-  return data as Product;
+  return data as unknown as Product;
 }
 
 export async function createProduct(
@@ -82,12 +82,12 @@ export async function createProduct(
 ): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
-    .insert(product)
+    .insert(product as never)
     .select('*, category:categories(*)')
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Product;
+  return data as unknown as Product;
 }
 
 export async function updateProduct(
@@ -96,20 +96,20 @@ export async function updateProduct(
 ): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...updates, updated_at: new Date().toISOString() } as never)
     .eq('id', id)
     .select('*, category:categories(*)')
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Product;
+  return data as unknown as Product;
 }
 
 export async function deleteProduct(id: string): Promise<void> {
   // Soft delete
   const { error } = await supabase
     .from('products')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .update({ is_active: false, updated_at: new Date().toISOString() } as never)
     .eq('id', id);
 
   if (error) throw new Error(error.message);

@@ -50,7 +50,7 @@ export async function getCurrentUser(): Promise<User | null> {
     .eq('id', user.id)
     .single();
 
-  return (profile as User) || null;
+  return profile ? (profile as User) : null;
 }
 
 export async function updatePassword(newPassword: string): Promise<{ error: string | null }> {

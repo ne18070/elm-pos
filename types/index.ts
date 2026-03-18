@@ -115,6 +115,8 @@ export interface Order {
   coupon_id?: string;
   coupon_code?: string;
   notes?: string;
+  customer_name?: string;
+  customer_phone?: string;
   created_at: string;
   updated_at: string;
   // livraison
