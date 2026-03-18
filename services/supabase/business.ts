@@ -22,7 +22,7 @@ export async function getMyBusinesses(): Promise<BusinessMembership[]> {
   const { data, error } = await supabase.rpc('get_my_businesses');
   if (error) throw new Error(error.message);
 
-  return (data as Array<Business & { member_role: UserRole }>).map((row) => ({
+  return (data as unknown as Array<Business & { member_role: UserRole }>).map((row) => ({
     business: {
       id:             row.id,
       name:           row.name,
@@ -72,7 +72,7 @@ export async function getBusinessMembers(businessId: string): Promise<BusinessMe
     p_business_id: businessId,
   });
   if (error) throw new Error(error.message);
-  return data as BusinessMember[];
+  return data as unknown as BusinessMember[];
 }
 
 /** Changer le rôle d'un membre */

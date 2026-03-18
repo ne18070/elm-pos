@@ -19,6 +19,7 @@ export type Database = {
           currency: string;
           tax_rate: number;
           receipt_footer: string | null;
+          stock_units: Json | null;
           owner_id: string;
           created_at: string;
         };
@@ -33,6 +34,7 @@ export type Database = {
           currency?: string;
           tax_rate?: number;
           receipt_footer?: string | null;
+          stock_units?: Json | null;
           owner_id: string;
           created_at?: string;
         };
@@ -343,6 +345,58 @@ export type Database = {
           }
         ];
       };
+      stock_entries: {
+        Row: {
+          id: string;
+          business_id: string;
+          product_id: string;
+          quantity: number;
+          packaging_qty: number | null;
+          packaging_size: number | null;
+          packaging_unit: string | null;
+          supplier: string | null;
+          cost_per_unit: number | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          product_id: string;
+          quantity: number;
+          packaging_qty?: number | null;
+          packaging_size?: number | null;
+          packaging_unit?: string | null;
+          supplier?: string | null;
+          cost_per_unit?: number | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['stock_entries']['Insert']>;
+        Relationships: [];
+      };
+      business_members: {
+        Row: {
+          id: string;
+          business_id: string;
+          user_id: string;
+          role: string;
+          invited_by: string | null;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          user_id: string;
+          role?: string;
+          invited_by?: string | null;
+          joined_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['business_members']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -375,6 +429,44 @@ export type Database = {
       validate_coupon: {
         Args: { coupon_code: string; business_id: string; order_total: number; user_id: string };
         Returns: Json;
+      };
+      complete_order_payment: {
+        Args: { p_order_id: string; p_method: string; p_amount: number };
+        Returns: undefined;
+      };
+      add_stock_entry: {
+        Args: {
+          p_business_id: string; p_product_id: string; p_quantity: number;
+          p_packaging_qty: number | null; p_packaging_size: number | null;
+          p_packaging_unit: string | null; p_supplier: string | null;
+          p_cost_per_unit: number | null; p_notes: string | null;
+          p_created_by: string | null;
+        };
+        Returns: undefined;
+      };
+      get_my_businesses: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      switch_business: {
+        Args: { p_business_id: string };
+        Returns: undefined;
+      };
+      create_business: {
+        Args: { business_data: Json };
+        Returns: Json;
+      };
+      get_business_members: {
+        Args: { p_business_id: string };
+        Returns: Json;
+      };
+      set_member_role: {
+        Args: { p_business_id: string; p_user_id: string; p_role: string };
+        Returns: undefined;
+      };
+      remove_business_member: {
+        Args: { p_business_id: string; p_user_id: string };
+        Returns: undefined;
       };
     };
     Enums: {

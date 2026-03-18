@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"yarn dev:next\" \"yarn dev:electron\"",
     "dev:next": "cd renderer && next dev --port 3000",
-    "dev:electron": "wait-on http://localhost:3000 && tsc -p tsconfig.main.json && electron .",
+    "dev:electron": "wait-on http://localhost:3000 && tsc -p tsconfig.main.json && ELECTRON_DEV=true electron .",
     "build": "yarn build:next && yarn build:electron",
     "build:next": "cd renderer && next build",
     "build:electron": "tsc -p tsconfig.main.json",
@@ -61,7 +61,10 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        { "target": "nsis",     "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
       "icon": "assets/icon.ico"
     },
     "mac": {

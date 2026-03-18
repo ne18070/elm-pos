@@ -93,9 +93,8 @@ export class PrinterManager {
 
       try {
         const device  = new (USB as new () => unknown)();
-        const printer = new (escpos as typeof import('escpos')).Printer(
-          device as Parameters<typeof escpos.Printer>[0]
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const printer = new (escpos as any).Printer(device) as any;
         const lines = formatReceiptLines(data);
 
         (device as { open: (cb: (err?: Error) => void) => void }).open((err) => {
