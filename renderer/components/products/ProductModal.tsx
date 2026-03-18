@@ -1,13 +1,27 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { Loader2, Upload, X, ScanLine } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Loader2, Upload, X, ScanLine, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useCategories } from '@/hooks/useCategories';
+import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { createProduct, updateProduct } from '@services/supabase/products';
 import { uploadProductImage } from '@services/supabase/storage';
-import type { Product } from '@pos-types';
+import type { Product, ProductVariant } from '@pos-types';
+
+const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
+
+function generateSKU(name: string): string {
+  const prefix = name
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 3)
+    .padEnd(3, 'X');
+  const suffix = String(Math.floor(Math.random() * 9000) + 1000);
+  return `${prefix}-${suffix}`;
+}
 
 interface ProductModalProps {
   product: Product | null;
@@ -19,7 +33,9 @@ interface ProductModalProps {
 export function ProductModal({ product, businessId, onClose, onSaved }: ProductModalProps) {
   const isEdit = !!product;
   const { categories } = useCategories(businessId);
+  const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const stockUnits = business?.stock_units ?? DEFAULT_UNITS;
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [scanMode, setScanMode] = useState(false);
@@ -35,9 +51,31 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     sku:         product?.sku ?? '',
     track_stock: product?.track_stock ?? false,
     stock:       String(product?.stock ?? ''),
+    unit:        product?.unit ?? '',
     is_active:   product?.is_active ?? true,
     image_url:   product?.image_url ?? '',
   });
+
+  const [variants, setVariants] = useState<ProductVariant[]>(
+    product?.variants ?? []
+  );
+
+  function addVariant() {
+    setVariants((v) => [
+      ...v,
+      { id: crypto.randomUUID(), name: '', price_modifier: 0, stock_consumption: 1 },
+    ]);
+  }
+
+  function removeVariant(id: string) {
+    setVariants((v) => v.filter((vr) => vr.id !== id));
+  }
+
+  function updateVariant(id: string, field: keyof ProductVariant, value: string | number) {
+    setVariants((v) =>
+      v.map((vr) => (vr.id === id ? { ...vr, [field]: value } : vr))
+    );
+  }
 
   function update(field: string, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -85,10 +123,11 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
         barcode:      form.barcode || undefined,
         sku:          form.sku || undefined,
         track_stock:  form.track_stock,
-        stock:        form.track_stock && form.stock ? parseInt(form.stock) : undefined,
+        stock:        form.track_stock && form.stock ? parseFloat(form.stock) : undefined,
+        unit:         form.unit || undefined,
         is_active:    form.is_active,
         image_url:    form.image_url || undefined,
-        variants:     product?.variants ?? [],
+        variants,
       };
 
       if (isEdit) {
@@ -262,13 +301,23 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
           </div>
           <div>
             <label className="label">SKU</label>
-            <input
-              type="text"
-              value={form.sku}
-              onChange={(e) => update('sku', e.target.value)}
-              className="input font-mono"
-              placeholder="REF-001"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.sku}
+                onChange={(e) => update('sku', e.target.value)}
+                className="input font-mono flex-1"
+                placeholder="REF-001"
+              />
+              <button
+                type="button"
+                onClick={() => update('sku', generateSKU(form.name || 'PRD'))}
+                title="Générer automatiquement"
+                className="btn-secondary px-2.5 shrink-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -292,7 +341,104 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
               className="input w-24 py-1.5 text-sm"
               placeholder="Qté"
               min="0"
+              step="0.001"
             />
+          )}
+        </div>
+
+        {/* Unité de stock */}
+        {form.track_stock && (
+          <div>
+            <label className="label">Unité de stock</label>
+            <select
+              value={form.unit}
+              onChange={(e) => update('unit', e.target.value)}
+              className="input"
+            >
+              <option value="">— Choisir une unité —</option>
+              {stockUnits.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              Gérez la liste dans Paramètres → Unités de stock
+            </p>
+          </div>
+        )}
+
+        {/* Variantes */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="label mb-0">Variantes</label>
+            <button
+              type="button"
+              onClick={addVariant}
+              className="btn-secondary text-xs flex items-center gap-1 py-1 px-2"
+            >
+              <Plus className="w-3 h-3" />
+              Ajouter
+            </button>
+          </div>
+
+          {variants.length === 0 ? (
+            <p className="text-xs text-slate-500 italic">Aucune variante — le produit est vendu tel quel.</p>
+          ) : (
+            <div className="space-y-2">
+              {variants.map((vr) => (
+                <div key={vr.id} className="flex items-center gap-2 p-2 rounded-lg bg-surface-input">
+                  {/* Nom de la variante */}
+                  <input
+                    type="text"
+                    value={vr.name}
+                    onChange={(e) => updateVariant(vr.id, 'name', e.target.value)}
+                    className="input flex-1 py-1.5 text-sm"
+                    placeholder="Ex: 500g, Large…"
+                  />
+                  {/* Prix de vente final */}
+                  <div className="flex flex-col items-start gap-0.5">
+                    <input
+                      type="number"
+                      value={parseFloat(form.price || '0') + vr.price_modifier || ''}
+                      onChange={(e) => {
+                        const finalPrice = parseFloat(e.target.value) || 0;
+                        const base = parseFloat(form.price || '0');
+                        updateVariant(vr.id, 'price_modifier', finalPrice - base);
+                      }}
+                      className="input w-28 py-1.5 text-sm"
+                      placeholder="Prix vente"
+                      step="0.01"
+                      min="0"
+                    />
+                    <span className="text-[10px] text-slate-500 pl-1">prix de vente</span>
+                  </div>
+                  {/* Consommation stock */}
+                  {form.track_stock && (
+                    <div className="flex flex-col items-start gap-0.5">
+                      <input
+                        type="number"
+                        value={vr.stock_consumption ?? 1}
+                        onChange={(e) => updateVariant(vr.id, 'stock_consumption', parseFloat(e.target.value) || 1)}
+                        className="input w-20 py-1.5 text-sm"
+                        placeholder="1"
+                        step="0.001"
+                        min="0.001"
+                      />
+                      <span className="text-[10px] text-slate-500 pl-1">
+                        {form.unit ? form.unit : 'unité'}/vente
+                      </span>
+                    </div>
+                  )}
+                  {/* Supprimer */}
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(vr.id)}
+                    className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

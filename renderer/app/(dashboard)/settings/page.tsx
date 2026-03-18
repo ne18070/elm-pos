@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Printer, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { flushSyncQueue } from '@/lib/ipc';
 import { supabase } from '@/lib/supabase';
+
+const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
 export default function SettingsPage() {
   const { business, user } = useAuthStore();
@@ -23,6 +25,13 @@ export default function SettingsPage() {
     currency:       business?.currency ?? 'XOF',
     receipt_footer: business?.receipt_footer ?? '',
   });
+
+  // Unités de stock
+  const [stockUnits, setStockUnits] = useState<string[]>(
+    business?.stock_units ?? DEFAULT_UNITS
+  );
+  const [newUnit, setNewUnit]       = useState('');
+  const [savingUnits, setSavingUnits] = useState(false);
 
   async function handleSaveBusiness() {
     if (!business) return;
@@ -46,6 +55,34 @@ export default function SettingsPage() {
       notifError(String(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  function addUnit() {
+    const u = newUnit.trim().toLowerCase();
+    if (!u || stockUnits.includes(u)) { setNewUnit(''); return; }
+    setStockUnits((prev) => [...prev, u]);
+    setNewUnit('');
+  }
+
+  function removeUnit(unit: string) {
+    setStockUnits((prev) => prev.filter((u) => u !== unit));
+  }
+
+  async function handleSaveUnits() {
+    if (!business) return;
+    setSavingUnits(true);
+    try {
+      const { error } = await supabase
+        .from('businesses')
+        .update({ stock_units: stockUnits })
+        .eq('id', business.id);
+      if (error) throw new Error(error.message);
+      success('Unités enregistrées');
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setSavingUnits(false);
     }
   }
 
@@ -153,6 +190,60 @@ export default function SettingsPage() {
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+
+        {/* Unités de stock */}
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-white flex items-center gap-2">
+            <Package className="w-4 h-4 text-slate-400" />
+            Unités de stock
+          </h2>
+          <p className="text-xs text-slate-500">
+            Ces unités seront disponibles en liste déroulante lors de la création de produits.
+          </p>
+
+          {/* Liste des unités existantes */}
+          <div className="flex flex-wrap gap-2">
+            {stockUnits.map((unit) => (
+              <span
+                key={unit}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-input
+                           border border-surface-border rounded-lg text-sm text-slate-300"
+              >
+                {unit}
+                <button
+                  onClick={() => removeUnit(unit)}
+                  className="text-slate-500 hover:text-red-400 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Ajouter une nouvelle unité */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newUnit}
+              onChange={(e) => setNewUnit(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addUnit()}
+              placeholder="Nouvelle unité (ex: bouteille)"
+              className="input flex-1"
+            />
+            <button onClick={addUnit} className="btn-secondary px-3">
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            onClick={handleSaveUnits}
+            disabled={savingUnits}
+            className="btn-primary flex items-center gap-2"
+          >
+            {savingUnits ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {savingUnits ? 'Enregistrement...' : 'Enregistrer les unités'}
           </button>
         </div>
 

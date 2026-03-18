@@ -37,16 +37,21 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
     updateQuantity(item.product_id, item.variant_id, item.quantity - 1);
   }
 
-  /** True si la quantité en panier a atteint le stock disponible */
-  function atStockLimit(item: CartItem): boolean {
-    if (!item.product?.track_stock) return false;
-    return item.quantity >= (item.product.stock ?? 0);
+  /** Calcule la consommation totale en stock de base pour un item à une quantité donnée */
+  function totalConsumption(item: CartItem, qty: number): number {
+    return qty * (item.stock_consumption ?? 1);
   }
 
-  /** True si la quantité dépasse le stock (cas où le stock a baissé en temps réel) */
+  /** True si ajouter 1 de plus dépasserait le stock disponible */
+  function atStockLimit(item: CartItem): boolean {
+    if (!item.product?.track_stock) return false;
+    return totalConsumption(item, item.quantity + 1) > (item.product.stock ?? 0);
+  }
+
+  /** True si la consommation actuelle dépasse le stock (cas où le stock a baissé en temps réel) */
   function overStock(item: CartItem): boolean {
     if (!item.product?.track_stock) return false;
-    return item.quantity > (item.product.stock ?? 0);
+    return totalConsumption(item, item.quantity) > (item.product.stock ?? 0);
   }
 
   // ── Panier vide ──────────────────────────────────────────────────────────────
@@ -194,10 +199,10 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
                           : 'text-slate-500'
                       }`}>
                         {over
-                          ? `⚠ Max ${stock} en stock`
+                          ? `⚠ Max ${stock} ${item.product.unit ?? ''} en stock`.trim()
                           : limited
                           ? `Limite atteinte`
-                          : `${stock - item.quantity} restant${stock - item.quantity > 1 ? 's' : ''}`}
+                          : `${stock - totalConsumption(item, item.quantity)} restant${stock - totalConsumption(item, item.quantity) > 1 ? 's' : ''}`}
                       </span>
                     )}
                   </div>

@@ -27,6 +27,7 @@ export interface Business {
   currency: string;
   tax_rate: number;          // percentage, e.g. 18
   receipt_footer?: string;
+  stock_units?: string[];    // unités de stock configurables
   owner_id: string;
   created_at: string;
 }
@@ -49,6 +50,8 @@ export interface ProductVariant {
   price_modifier: number; // added to base price
   sku?: string;
   stock?: number;
+  /** How many base units of stock this variant consumes per sale (default 1) */
+  stock_consumption?: number;
 }
 
 export interface Product {
@@ -63,6 +66,8 @@ export interface Product {
   sku?: string;
   track_stock: boolean;
   stock?: number;
+  /** Base unit of measure for stock (e.g. "kg", "pièce", "litre") */
+  unit?: string;
   variants: ProductVariant[];
   is_active: boolean;
   created_at: string;
@@ -137,6 +142,8 @@ export interface CartItem {
   quantity: number;
   notes?: string;
   product?: Product;
+  /** How many base stock units this item consumes per unit sold (default 1) */
+  stock_consumption?: number;
 }
 
 export interface Cart {

@@ -57,15 +57,15 @@ interface CartState {
 const itemKey = (productId: string, variantId?: string) =>
   variantId ? `${productId}::${variantId}` : productId;
 
-function stockAvailable(product: Product, qtyInCart: number): AddItemResult {
+function stockAvailable(product: Product, consumedInCart: number, consumption: number): AddItemResult {
   if (!product.track_stock) return { ok: true };
   const stock = product.stock ?? 0;
-  if (qtyInCart >= stock) {
+  if (consumedInCart + consumption > stock) {
     return {
       ok: false,
       reason: stock === 0
         ? `"${product.name}" est épuisé`
-        : `Stock insuffisant — seulement ${stock} disponible${stock > 1 ? 's' : ''}`,
+        : `Stock insuffisant — seulement ${stock} ${product.unit ?? 'unité(s)'} disponible${stock > 1 ? 's' : ''}`,
     };
   }
   return { ok: true };
@@ -116,9 +116,13 @@ export const useCartStore = create<CartState>((set, get) => ({
   addItem: (product, variant) => {
     const key = itemKey(product.id, variant?.id);
     const { items } = get();
-    const inCart = items.find((i) => itemKey(i.product_id, i.variant_id) === key)?.quantity ?? 0;
+    const consumption = variant?.stock_consumption ?? 1;
+    // Total base-units already consumed in cart for this product (across all variants)
+    const consumedInCart = items
+      .filter((i) => i.product_id === product.id)
+      .reduce((s, i) => s + i.quantity * (i.stock_consumption ?? 1), 0);
 
-    const check = stockAvailable(product, inCart);
+    const check = stockAvailable(product, consumedInCart, consumption);
     if (!check.ok) return check;
 
     set((state) => {
@@ -133,19 +137,18 @@ export const useCartStore = create<CartState>((set, get) => ({
         };
       }
       const price = product.price + (variant?.price_modifier ?? 0);
-      return {
-        items: [
-          ...state.items,
-          {
-            product_id: product.id,
-            variant_id: variant?.id,
-            name:       variant ? `${product.name} - ${variant.name}` : product.name,
-            price,
-            quantity:   1,
-            product,
-          },
-        ],
+      const newItem: import('@pos-types').CartItem = {
+        product_id: product.id,
+        variant_id: variant?.id,
+        name:       variant ? `${product.name} - ${variant.name}` : product.name,
+        price,
+        quantity:   1,
+        product,
       };
+      if (consumption !== 1) {
+        newItem.stock_consumption = consumption;
+      }
+      return { items: [...state.items, newItem] };
     });
     return { ok: true };
   },
@@ -166,10 +169,15 @@ export const useCartStore = create<CartState>((set, get) => ({
     // Vérifier le stock si le produit est suivi
     if (item?.product?.track_stock) {
       const stock = item.product.stock ?? 0;
-      if (qty > stock) {
+      const consumption = item.stock_consumption ?? 1;
+      // Total consumed by all OTHER items of the same product
+      const otherConsumed = get().items
+        .filter((i) => i.product_id === item.product_id && itemKey(i.product_id, i.variant_id) !== key)
+        .reduce((s, i) => s + i.quantity * (i.stock_consumption ?? 1), 0);
+      if (qty * consumption + otherConsumed > stock) {
         return {
           ok: false,
-          reason: `Stock insuffisant — seulement ${stock} disponible${stock > 1 ? 's' : ''}`,
+          reason: `Stock insuffisant — seulement ${stock} ${item.product.unit ?? 'unité(s)'} disponible${stock > 1 ? 's' : ''}`,
         };
       }
     }

@@ -34,14 +34,15 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       business_id: input.business_id,
       cashier_id:  input.cashier_id,
       items: input.cart.items.map((item) => ({
-        product_id:      item.product_id,
-        variant_id:      item.variant_id ?? null,
-        name:            item.name,
-        price:           item.price,
-        quantity:        item.quantity,
-        discount_amount: 0,
-        total:           item.price * item.quantity,
-        notes:           item.notes ?? null,
+        product_id:       item.product_id,
+        variant_id:       item.variant_id ?? null,
+        name:             item.name,
+        price:            item.price,
+        quantity:         item.quantity,
+        discount_amount:  0,
+        total:            item.price * item.quantity,
+        notes:            item.notes ?? null,
+        stock_consumption: item.stock_consumption ?? 1,
       })),
       payment: {
         method: input.payment_method,
@@ -160,7 +161,7 @@ export async function getOrdersForDelivery(businessId: string): Promise<Order[]>
       )
     `)
     .eq('business_id', businessId)
-    .eq('status', 'paid')
+    .in('status', ['paid', 'pending'])
     .neq('delivery_status', 'delivered')
     .order('created_at', { ascending: true });
 

@@ -1,13 +1,14 @@
 'use client';
 
-import { Package, Plus, AlertTriangle } from 'lucide-react';
+import { Package, Plus, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
-import { useEffect, useRef } from 'react';
-import type { Product } from '@pos-types';
+import { useEffect, useRef, useState } from 'react';
+import { VariantPicker } from './VariantPicker';
+import type { Product, ProductVariant } from '@pos-types';
 
 interface ProductGridProps {
   businessId: string;
@@ -33,8 +34,10 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     });
   }, [products, syncProductStock]);
 
-  // Quantité déjà dans le panier pour ce produit
   const { items: cartItems, addItem } = useCartStore();
+
+  // Produit en attente de sélection de variante
+  const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
 
   // Distingue tap vs scroll sur écran tactile
   const touchRef = useRef({ y: 0, scrolled: false });
@@ -54,7 +57,16 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
   });
 
   function handleSelect(product: Product) {
-    const result = addItem(product);
+    // Produit avec variantes → ouvrir le picker
+    if (product.variants && product.variants.length > 0) {
+      setPickerProduct(product);
+      return;
+    }
+    addDirect(product);
+  }
+
+  function addDirect(product: Product, variant?: ProductVariant) {
+    const result = addItem(product, variant);
     if (!result.ok) {
       warning(result.reason ?? 'Stock insuffisant');
       return;
@@ -62,6 +74,14 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     onSelect(product);
   }
 
+  // Total base-units consumed in cart for a product (used for stock checks)
+  function consumedInCart(productId: string): number {
+    return cartItems
+      .filter((i) => i.product_id === productId)
+      .reduce((s, i) => s + i.quantity * (i.stock_consumption ?? 1), 0);
+  }
+
+  // Total item count in cart for a product (used for the badge display)
   function qtyInCart(productId: string): number {
     return cartItems
       .filter((i) => i.product_id === productId)
@@ -107,8 +127,8 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
   function stockState(product: Product) {
     if (!product.track_stock) return 'ok' as const;
-    const inCart = qtyInCart(product.id);
-    const remaining = (product.stock ?? 0) - inCart;
+    const consumed = consumedInCart(product.id);
+    const remaining = (product.stock ?? 0) - consumed;
     if (remaining <= 0) return 'out' as const;
     if (remaining <= 3) return 'low' as const;
     return 'ok' as const;
@@ -116,8 +136,8 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
   function stockLabel(product: Product): string | null {
     if (!product.track_stock) return null;
-    const inCart = qtyInCart(product.id);
-    const remaining = (product.stock ?? 0) - inCart;
+    const consumed = consumedInCart(product.id);
+    const remaining = (product.stock ?? 0) - consumed;
     if (remaining <= 0) return 'Épuisé';
     if (remaining <= 3) return `${remaining} restant${remaining > 1 ? 's' : ''}`;
     return null;
@@ -126,6 +146,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
   /* ── Vue Grille ── */
   if (view === 'grid') {
     return (
+      <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {filtered.map((product) => {
           const state = stockState(product);
@@ -158,6 +179,13 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                 {state === 'low' && (
                   <div className="absolute top-1.5 right-1.5 bg-yellow-500 rounded-full w-2.5 h-2.5" />
                 )}
+                {/* Badge quantité en panier */}
+                {qtyInCart(product.id) > 0 && (
+                  <div className="absolute top-1.5 left-1.5 min-w-[1.25rem] h-5 px-1 rounded-full
+                                  bg-brand-600 text-white text-xs font-bold flex items-center justify-center">
+                    {qtyInCart(product.id)}
+                  </div>
+                )}
               </div>
 
               {/* Nom */}
@@ -167,9 +195,17 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
               {/* Prix + stock */}
               <div className="flex items-center justify-between mt-auto">
-                <span className="text-brand-400 font-bold text-sm">
-                  {formatCurrency(product.price, business?.currency)}
-                </span>
+                <div>
+                  <span className="text-brand-400 font-bold text-sm">
+                    {formatCurrency(product.price, business?.currency)}
+                  </span>
+                  {product.variants?.length > 0 && (
+                    <p className="text-[10px] text-slate-500 flex items-center gap-0.5 mt-0.5">
+                      <ChevronDown className="w-3 h-3" />
+                      {product.variants.length} variante{product.variants.length > 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
                 {label && (
                   <span className={`text-xs font-medium ${
                     state === 'out' ? 'text-red-400' : 'text-yellow-400'
@@ -182,11 +218,22 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
           );
         })}
       </div>
+      {pickerProduct && (
+        <VariantPicker
+          product={pickerProduct}
+          currency={business?.currency}
+          consumedInCart={consumedInCart(pickerProduct.id)}
+          onSelect={(variant) => addDirect(pickerProduct, variant)}
+          onClose={() => setPickerProduct(null)}
+        />
+      )}
+      </>
     );
   }
 
   /* ── Vue Liste ── */
   return (
+    <>
     <div className="flex flex-col gap-1.5">
       {filtered.map((product) => {
         const state = stockState(product);
@@ -205,11 +252,17 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                          : 'border-surface-border bg-surface-card hover:border-brand-500 hover:bg-surface-hover active:scale-[0.99]'}`}
           >
             {/* Miniature */}
-            <div className="w-10 h-10 rounded-lg bg-surface-input flex items-center justify-center overflow-hidden shrink-0">
+            <div className="relative w-10 h-10 rounded-lg bg-surface-input flex items-center justify-center overflow-hidden shrink-0">
               {product.image_url ? (
                 <img src={product.image_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <Package className="w-5 h-5 text-slate-600" />
+              )}
+              {qtyInCart(product.id) > 0 && (
+                <div className="absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full
+                                bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {qtyInCart(product.id)}
+                </div>
               )}
             </div>
 
@@ -233,13 +286,24 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
             {/* Prix + bouton ajouter */}
             <div className="flex items-center gap-3 shrink-0">
-              <span className="text-brand-400 font-bold text-sm">
-                {formatCurrency(product.price, business?.currency)}
-              </span>
+              <div className="text-right">
+                <span className="text-brand-400 font-bold text-sm">
+                  {formatCurrency(product.price, business?.currency)}
+                </span>
+                {product.variants?.length > 0 && (
+                  <p className="text-[10px] text-slate-500">
+                    {product.variants.length} variante{product.variants.length > 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
               {!disabled && (
-                <div className="w-8 h-8 rounded-lg bg-brand-600 group-hover:bg-brand-500
-                               flex items-center justify-center transition-colors">
-                  <Plus className="w-4 h-4 text-white" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+                                ${product.variants?.length > 0
+                                  ? 'bg-amber-600 group-hover:bg-amber-500'
+                                  : 'bg-brand-600 group-hover:bg-brand-500'}`}>
+                  {product.variants?.length > 0
+                    ? <ChevronDown className="w-4 h-4 text-white" />
+                    : <Plus className="w-4 h-4 text-white" />}
                 </div>
               )}
             </div>
@@ -247,5 +311,15 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
         );
       })}
     </div>
+    {pickerProduct && (
+      <VariantPicker
+        product={pickerProduct}
+        currency={business?.currency}
+        consumedInCart={consumedInCart(pickerProduct.id)}
+        onSelect={(variant) => addDirect(pickerProduct, variant)}
+        onClose={() => setPickerProduct(null)}
+      />
+    )}
+    </>
   );
 }

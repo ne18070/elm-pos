@@ -29,16 +29,17 @@ export default function LivraisonPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
 
-  const fetchOrders = useCallback(async () => {
+  // silent=true → pas de spinner (refresh Realtime / bouton)
+  const fetchOrders = useCallback(async (silent = false) => {
     if (!business?.id) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const data = await getOrdersForDelivery(business.id);
       setOrders(data);
     } catch (err) {
       notifError(String(err));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [business?.id]);
 
@@ -52,7 +53,7 @@ export default function LivraisonPage() {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
-        () => { fetchOrders(); }
+        () => { fetchOrders(true); }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -77,7 +78,7 @@ export default function LivraisonPage() {
       await confirmOrderDelivery(selected.id, user.id);
       success(`Commande #${selected.id.slice(0, 8).toUpperCase()} livrée ✓`);
       setSelected(null);
-      fetchOrders();
+      fetchOrders(true);
     } catch (err) {
       notifError(String(err));
     }
@@ -104,7 +105,7 @@ export default function LivraisonPage() {
                 {orders.length} commande{orders.length !== 1 ? 's' : ''} à traiter
               </p>
             </div>
-            <button onClick={fetchOrders} className="btn-secondary p-2" title="Actualiser">
+            <button onClick={() => fetchOrders(true)} className="btn-secondary p-2" title="Actualiser">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
