@@ -20,7 +20,7 @@ interface OrderPanelProps {
 
 export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld }: OrderPanelProps) {
   const {
-    items, coupon, setCoupon, addFreeItem, removeItem: removeCartItem,
+    items, coupon, setCoupon, addFreeItem, removeFreeItem,
     updateQuantity, removeItem,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
@@ -43,9 +43,8 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
   }
 
   function handleCouponRemove() {
-    // Retirer le produit offert du panier si présent
     if (coupon?.type === 'free_item' && coupon.free_item_product_id) {
-      removeCartItem(coupon.free_item_product_id, '__free__');
+      removeFreeItem(coupon.free_item_product_id);
     }
     setCoupon(null);
   }
@@ -163,6 +162,11 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
             const limited = atStockLimit(item);
             const over    = overStock(item);
             const stock   = item.product?.stock ?? 0;
+            // Total consommé pour ce produit dans tout le panier (toutes lignes confondues)
+            const totalConsumedForProduct = items
+              .filter((i) => i.product_id === item.product_id)
+              .reduce((s, i) => s + i.quantity * (i.stock_consumption ?? 1), 0);
+            const remaining = stock - totalConsumedForProduct;
 
             return (
               <div
@@ -226,7 +230,7 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
                           ? `⚠ Max ${stock} ${item.product.unit ?? ''} en stock`.trim()
                           : limited
                           ? `Limite atteinte`
-                          : `${stock - totalConsumption(item, item.quantity)} restant${stock - totalConsumption(item, item.quantity) > 1 ? 's' : ''}`}
+                          : `${remaining} restant${remaining > 1 ? 's' : ''}`}
                       </span>
                     )}
                   </div>

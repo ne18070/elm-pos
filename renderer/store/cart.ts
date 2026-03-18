@@ -34,6 +34,8 @@ interface CartState {
   addItem: (product: Product, variant?: ProductVariant) => AddItemResult;
   /** Ajoute un article offert à prix 0 (coupon free_item). Vérifie quand même le stock. */
   addFreeItem: (product: Product, quantity: number) => AddItemResult;
+  /** Retire l'article offert (is_free_item) d'un produit donné */
+  removeFreeItem: (productId: string) => void;
   removeItem: (productId: string, variantId?: string) => void;
   /**
    * Retourne false si la quantité demandée dépasse le stock disponible.
@@ -163,29 +165,36 @@ export const useCartStore = create<CartState>((set, get) => ({
     const check = stockAvailable(product, consumedInCart, quantity);
     if (!check.ok) return check;
 
-    const FREE_ITEM_KEY = `${product.id}::__free__`;
     set((state) => {
-      const existing = state.items.find((i) => itemKey(i.product_id, i.variant_id) === FREE_ITEM_KEY);
+      // Si un article offert du même produit existe déjà, augmenter la quantité
+      const existing = state.items.find((i) => i.product_id === product.id && i.is_free_item);
       if (existing) {
         return {
           items: state.items.map((i) =>
-            itemKey(i.product_id, i.variant_id) === FREE_ITEM_KEY
+            i.product_id === product.id && i.is_free_item
               ? { ...i, quantity: i.quantity + quantity }
               : i
           ),
         };
       }
       const newItem: import('@pos-types').CartItem = {
-        product_id: product.id,
-        variant_id: '__free__',
-        name:       `${product.name} (offert)`,
-        price:      0,
+        product_id:   product.id,
+        variant_id:   undefined,   // pas de variant_id → null en DB, pas de cast UUID
+        name:         `${product.name} (offert)`,
+        price:        0,
         quantity,
         product,
+        is_free_item: true,
       };
       return { items: [...state.items, newItem] };
     });
     return { ok: true };
+  },
+
+  removeFreeItem: (productId) => {
+    set((state) => ({
+      items: state.items.filter((i) => !(i.product_id === productId && i.is_free_item)),
+    }));
   },
 
   // ── Changement de quantité avec vérification stock ───────────────────────────

@@ -139,12 +139,14 @@ export interface CartItem {
   product_id: string;
   variant_id?: string;
   name: string;
-  price: number;           // final unit price (base + variant modifier)
+  price: number;           // final unit price (base + variant modifier); 0 pour les articles offerts
   quantity: number;
   notes?: string;
   product?: Product;
   /** How many base stock units this item consumes per unit sold (default 1) */
   stock_consumption?: number;
+  /** True si cet article a été ajouté automatiquement par un coupon free_item */
+  is_free_item?: boolean;
 }
 
 export interface Cart {
