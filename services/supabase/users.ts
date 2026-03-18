@@ -1,37 +1,7 @@
 import { supabase } from './client';
 import type { User, UserRole } from '../../types';
 
-// ─── Équipe ───────────────────────────────────────────────────────────────────
-
-export async function getTeamMembers(businessId: string): Promise<User[]> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('business_id', businessId)
-    .order('full_name');
-
-  if (error) throw new Error(error.message);
-  return data as User[];
-}
-
-export async function updateUserRole(userId: string, role: UserRole): Promise<void> {
-  const { error } = await supabase
-    .from('users')
-    .update({ role })
-    .eq('id', userId);
-
-  if (error) throw new Error(error.message);
-}
-
-export async function removeUserFromBusiness(userId: string): Promise<void> {
-  // Retire l'utilisateur du business sans supprimer son compte
-  const { error } = await supabase
-    .from('users')
-    .update({ business_id: null })
-    .eq('id', userId);
-
-  if (error) throw new Error(error.message);
-}
+// ─── Profil utilisateur ───────────────────────────────────────────────────────
 
 export async function updateOwnProfile(
   userId: string,
@@ -46,6 +16,88 @@ export async function updateOwnProfile(
 
   if (error) throw new Error(error.message);
   return data as User;
+}
+
+// ─── Équipe (via business_members) ────────────────────────────────────────────
+
+/**
+ * Liste les membres d'un établissement.
+ * Utilise get_business_members() RPC si disponible (migration 017),
+ * sinon fallback sur l'ancienne requête directe.
+ */
+export async function getTeamMembers(businessId: string): Promise<User[]> {
+  // Tenter d'abord le RPC (migration 017)
+  const { data: rpcData, error: rpcError } = await supabase
+    .rpc('get_business_members', { p_business_id: businessId });
+
+  if (!rpcError && rpcData) {
+    // Adapter le format rpc → User
+    return (rpcData as Array<{
+      user_id: string; full_name: string; email: string;
+      avatar_url?: string; role: UserRole; joined_at: string;
+    }>).map((m) => ({
+      id:          m.user_id,
+      full_name:   m.full_name,
+      email:       m.email,
+      avatar_url:  m.avatar_url,
+      role:        m.role,
+      business_id: businessId,
+      created_at:  m.joined_at,
+    } as User));
+  }
+
+  // Fallback : ancienne requête directe
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('business_id', businessId)
+    .order('full_name');
+
+  if (error) throw new Error(error.message);
+  return data as User[];
+}
+
+/**
+ * Changer le rôle d'un membre.
+ * Utilise set_member_role() RPC (migration 017) avec fallback.
+ */
+export async function updateUserRole(userId: string, role: UserRole, businessId?: string): Promise<void> {
+  if (businessId) {
+    const { error } = await supabase.rpc('set_member_role', {
+      p_business_id: businessId,
+      p_user_id:     userId,
+      p_role:        role,
+    });
+    if (!error) return;
+  }
+
+  // Fallback
+  const { error } = await supabase
+    .from('users')
+    .update({ role })
+    .eq('id', userId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Retirer un membre de l'établissement.
+ * Utilise remove_business_member() RPC (migration 017) avec fallback.
+ */
+export async function removeUserFromBusiness(userId: string, businessId?: string): Promise<void> {
+  if (businessId) {
+    const { error } = await supabase.rpc('remove_business_member', {
+      p_business_id: businessId,
+      p_user_id:     userId,
+    });
+    if (!error) return;
+  }
+
+  // Fallback
+  const { error } = await supabase
+    .from('users')
+    .update({ business_id: null })
+    .eq('id', userId);
+  if (error) throw new Error(error.message);
 }
 
 // ─── Invitation (via Edge Function) ───────────────────────────────────────────

@@ -1,0 +1,102 @@
+import { supabase } from './client';
+import type { Business, UserRole } from '../../types';
+
+export interface BusinessMembership {
+  business: Business;
+  role: UserRole;
+}
+
+export interface BusinessMember {
+  user_id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+  role: UserRole;
+  joined_at: string;
+}
+
+// ─── Multi-établissements ─────────────────────────────────────────────────────
+
+/** Tous les établissements auxquels l'utilisateur connecté appartient */
+export async function getMyBusinesses(): Promise<BusinessMembership[]> {
+  const { data, error } = await supabase.rpc('get_my_businesses');
+  if (error) throw new Error(error.message);
+
+  return (data as Array<Business & { member_role: UserRole }>).map((row) => ({
+    business: {
+      id:             row.id,
+      name:           row.name,
+      type:           row.type,
+      address:        row.address,
+      phone:          row.phone,
+      email:          row.email,
+      logo_url:       row.logo_url,
+      currency:       row.currency,
+      tax_rate:       row.tax_rate,
+      receipt_footer: row.receipt_footer,
+      stock_units:    row.stock_units,
+      owner_id:       row.owner_id,
+      created_at:     row.created_at,
+    } as Business,
+    role: row.member_role,
+  }));
+}
+
+/** Basculer vers un autre établissement (met à jour le contexte RLS) */
+export async function switchBusiness(businessId: string): Promise<void> {
+  const { error } = await supabase.rpc('switch_business', {
+    p_business_id: businessId,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Créer un nouvel établissement et y basculer automatiquement */
+export async function createBusiness(data: {
+  name: string;
+  type: string;
+  currency: string;
+  tax_rate: number;
+}): Promise<Business> {
+  const { data: result, error } = await supabase.rpc('create_business', {
+    business_data: data,
+  });
+  if (error) throw new Error(error.message);
+  return result as unknown as Business;
+}
+
+// ─── Gestion des membres ──────────────────────────────────────────────────────
+
+/** Liste les membres d'un établissement */
+export async function getBusinessMembers(businessId: string): Promise<BusinessMember[]> {
+  const { data, error } = await supabase.rpc('get_business_members', {
+    p_business_id: businessId,
+  });
+  if (error) throw new Error(error.message);
+  return data as BusinessMember[];
+}
+
+/** Changer le rôle d'un membre */
+export async function setMemberRole(
+  businessId: string,
+  userId: string,
+  role: UserRole
+): Promise<void> {
+  const { error } = await supabase.rpc('set_member_role', {
+    p_business_id: businessId,
+    p_user_id:     userId,
+    p_role:        role,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Retirer un membre de l'établissement */
+export async function removeBusinessMember(
+  businessId: string,
+  userId: string
+): Promise<void> {
+  const { error } = await supabase.rpc('remove_business_member', {
+    p_business_id: businessId,
+    p_user_id:     userId,
+  });
+  if (error) throw new Error(error.message);
+}

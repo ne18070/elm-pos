@@ -5,29 +5,39 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
+  Monitor,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
+import { BusinessSwitcher } from './BusinessSwitcher';
 
 const NAV_ITEMS = [
-  { href: '/pos',        icon: ShoppingCart,  label: 'Caisse',        roles: null },
-  { href: '/livraison',  icon: Truck,         label: 'Livraisons',    roles: null },
-  { href: '/orders',     icon: ClipboardList, label: 'Commandes',     roles: null },
-  { href: '/products',           icon: Package,    label: 'Produits',           roles: ['owner', 'admin'] },
-  { href: '/approvisionnement', icon: Warehouse,  label: 'Approvisionnement',  roles: ['owner', 'admin'] },
-  { href: '/categories', icon: LayoutGrid,    label: 'Catégories',    roles: ['owner', 'admin'] },
-  { href: '/coupons',    icon: Tag,           label: 'Coupons',       roles: ['owner', 'admin'] },
-  { href: '/analytics',  icon: BarChart2,     label: 'Statistiques',  roles: ['owner', 'admin'] },
-  { href: '/settings',   icon: Settings,      label: 'Paramètres',    roles: null },
+  { href: '/pos',               icon: ShoppingCart, label: 'Caisse',             roles: null },
+  { href: '/livraison',         icon: Truck,        label: 'Livraisons',         roles: null },
+  { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null },
+  { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'] },
+  { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'] },
+  { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'] },
+  { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'] },
+  { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'] },
+  { href: '/settings',          icon: Settings,     label: 'Paramètres',         roles: null },
 ] as const;
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, business, clear } = useAuthStore();
+  const { user, clear } = useAuthStore();
   const role = user?.role ?? 'staff';
   const isAdmin = role === 'owner' || role === 'admin';
+
+  function handleOpenDisplay() {
+    if (window.electronAPI?.display?.open) {
+      window.electronAPI.display.open();
+    } else {
+      window.open('/display', '_blank');
+    }
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -35,19 +45,15 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-16 lg:w-56 h-full bg-surface-card border-r border-surface-border flex flex-col shrink-0">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-surface-border">
-        <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0">
-          <ShoppingCart className="w-4 h-4 text-white" />
-        </div>
-        <span className="ml-3 font-bold text-white hidden lg:block truncate">
-          {business?.name ?? 'Elm POS'}
-        </span>
+    <aside className="w-16 lg:w-60 h-full bg-surface-card border-r border-surface-border flex flex-col shrink-0">
+
+      {/* Sélecteur d'établissement */}
+      <div className="px-2 pt-3 pb-2 border-b border-surface-border">
+        <BusinessSwitcher />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-2">
+      <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
         {NAV_ITEMS.filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin')).map(
           ({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
@@ -70,14 +76,23 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Badge offline / sync */}
+      {/* Badge offline */}
       <div className="px-2 py-2 hidden lg:block">
         <OfflineBadge />
       </div>
 
       {/* Utilisateur + Admin */}
-      <div className="px-2 py-3 border-t border-surface-border space-y-1">
-        {/* Lien Admin — visible owner/admin uniquement */}
+      <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
+        {/* Écran client */}
+        <button
+          onClick={handleOpenDisplay}
+          title="Ouvrir l'écran client"
+          className="w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-slate-400 hover:text-white hover:bg-surface-hover"
+        >
+          <Monitor className="w-4 h-4 shrink-0" />
+          <span className="text-sm hidden lg:block">Écran client</span>
+        </button>
+
         {isAdmin && (
           <Link
             href="/admin"
@@ -105,7 +120,9 @@ export function Sidebar() {
           </div>
           <div className="hidden lg:block min-w-0">
             <p className="text-xs font-medium text-white truncate">{user?.full_name}</p>
-            <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+            <p className="text-xs text-slate-500 capitalize">
+              {role === 'owner' ? 'Propriétaire' : role === 'admin' ? 'Administrateur' : 'Caissier'}
+            </p>
           </div>
         </div>
 

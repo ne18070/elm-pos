@@ -4,26 +4,24 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
+import { getMyBusinesses } from '@services/supabase/business';
 
 const PUBLIC_PATHS = ['/login', '/display'];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setBusiness, setLoading, clear } = useAuthStore();
+  const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // Restore session on mount
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) {
         setLoading(false);
-        if (!PUBLIC_PATHS.includes(pathname)) {
-          router.replace('/login');
-        }
+        if (!PUBLIC_PATHS.includes(pathname)) router.replace('/login');
         return;
       }
 
-      // Load user profile
+      // Charger le profil utilisateur
       const { data: profile } = await supabase
         .from('users')
         .select('*')
@@ -38,20 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(profile as never);
 
-      // Load business if assigned
+      // Charger l'établissement actif
       if (profile.business_id) {
-        const { data: business } = await supabase
+        const { data: biz } = await supabase
           .from('businesses')
           .select('*')
           .eq('id', profile.business_id)
           .single();
-        if (business) setBusiness(business as never);
+        if (biz) setBusiness(biz as never);
+      }
+
+      // Charger tous les établissements de l'utilisateur
+      try {
+        const memberships = await getMyBusinesses();
+        setBusinesses(memberships);
+      } catch {
+        // Pas critique — la migration n'est peut-être pas encore appliquée
       }
 
       setLoading(false);
     });
 
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if ((event === 'SIGNED_OUT' || !session) && !PUBLIC_PATHS.includes(pathname)) {
