@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { ProductModal } from '@/components/products/ProductModal';
+import { ImportProductsModal } from '@/components/products/ImportProductsModal';
 import { deleteProduct } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
@@ -19,8 +20,32 @@ export default function ProductsPage() {
   const [view, setView] = useState<ViewMode>('list');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const { products, loading, refetch } = useProducts(business?.id ?? '');
+
+  function exportCSV() {
+    const headers = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
+    const rows = filtered.map((p) => [
+      p.name,
+      p.description ?? '',
+      String(p.price),
+      p.category?.name ?? '',
+      p.barcode ?? '',
+      p.sku ?? '',
+      String(p.stock ?? ''),
+      p.track_stock ? 'oui' : 'non',
+      p.is_active ? 'oui' : 'non',
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `produits_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const filtered = products.filter(
     (p) =>
@@ -61,13 +86,32 @@ export default function ProductsPage() {
               </p>
             )}
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nouveau produit
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportCSV}
+              className="btn-secondary flex items-center gap-2"
+              title="Exporter en CSV"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Exporter CSV</span>
+            </button>
+            <button
+              onClick={() => setShowImport(true)}
+              className="btn-secondary flex items-center gap-2"
+              title="Importer depuis CSV"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Importer</span>
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nouveau produit</span>
+              <span className="sm:hidden">Nouveau</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-3">
@@ -322,6 +366,14 @@ export default function ProductsPage() {
           businessId={business?.id ?? ''}
           onClose={() => { setShowCreate(false); setEditProduct(null); }}
           onSaved={() => { setShowCreate(false); setEditProduct(null); refetch(); }}
+        />
+      )}
+
+      {showImport && (
+        <ImportProductsModal
+          businessId={business?.id ?? ''}
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); refetch(); }}
         />
       )}
     </div>
