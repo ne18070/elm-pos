@@ -7,7 +7,7 @@ export interface HeldOrder {
   id: string;
   label: string;
   items: CartItem[];
-  coupon: Coupon | null;
+  coupons: Coupon[];
   notes: string;
   heldAt: string;
 }
@@ -23,7 +23,7 @@ export interface AddItemResult {
 
 interface CartState {
   items: CartItem[];
-  coupon: Coupon | null;
+  coupons: Coupon[];
   notes: string;
 
   heldOrders: HeldOrder[];
@@ -42,12 +42,12 @@ interface CartState {
    * Le stock est lu depuis le produit stocké dans CartItem (mis à jour par Realtime).
    */
   updateQuantity: (productId: string, variantId: string | undefined, qty: number) => AddItemResult;
-  removeItem: (productId: string, variantId?: string) => void;
   updateNotes: (productId: string, variantId: string | undefined, notes: string) => void;
   /** Met à jour le snapshot du produit dans les lignes du panier (appelé par le Realtime). */
   syncProductStock: (productId: string, newStock: number | undefined, isActive: boolean) => void;
 
-  setCoupon: (coupon: Coupon | null) => void;
+  addCoupon: (coupon: Coupon) => void;
+  removeCoupon: (couponId: string) => void;
   setNotes:  (notes: string) => void;
   clear: () => void;
 
@@ -77,26 +77,26 @@ function stockAvailable(product: Product, consumedInCart: number, consumption: n
 
 export const useCartStore = create<CartState>((set, get) => ({
   items:       [],
-  coupon:      null,
+  coupons:     [],
   notes:       '',
   heldOrders:  [],
 
   // ── Mise en attente ──────────────────────────────────────────────────────────
 
   holdCurrentOrder: (label) => {
-    const { items, coupon, notes } = get();
+    const { items, coupons, notes } = get();
     if (items.length === 0) return;
     const held: HeldOrder = {
       id:     crypto.randomUUID(),
       label:  label.trim() || `Client ${get().heldOrders.length + 1}`,
       items:  [...items],
-      coupon,
+      coupons: [...coupons],
       notes,
       heldAt: new Date().toISOString(),
     };
     set((state) => ({
       heldOrders: [...state.heldOrders, held],
-      items: [], coupon: null, notes: '',
+      items: [], coupons: [], notes: '',
     }));
   },
 
@@ -105,7 +105,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (!held) return;
     set((state) => ({
       items:      [...held.items],
-      coupon:     held.coupon,
+      coupons:    [...held.coupons],
       notes:      held.notes,
       heldOrders: state.heldOrders.filter((h) => h.id !== id),
     }));
@@ -262,21 +262,36 @@ export const useCartStore = create<CartState>((set, get) => ({
     }));
   },
 
-  setCoupon: (coupon) => set({ coupon }),
+  addCoupon: (coupon) => {
+    set((state) => {
+      // Éviter les doublons
+      if (state.coupons.some((c) => c.id === coupon.id)) return state;
+      return { coupons: [...state.coupons, coupon] };
+    });
+  },
+
+  removeCoupon: (couponId) => {
+    set((state) => ({ coupons: state.coupons.filter((c) => c.id !== couponId) }));
+  },
+
   setNotes:  (notes)  => set({ notes }),
-  clear: () => set({ items: [], coupon: null, notes: '' }),
+  clear: () => set({ items: [], coupons: [], notes: '' }),
 
   subtotal: () =>
     get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
 
   discountAmount: () => {
-    const { coupon, items } = get();
-    if (!coupon) return 0;
-    if (coupon.type === 'free_item') return 0;
+    const { coupons, items } = get();
+    if (coupons.length === 0) return 0;
     const sub = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    return coupon.type === 'percentage'
-      ? Math.round(sub * coupon.value / 100 * 100) / 100
-      : Math.min(coupon.value, sub);
+    let total = 0;
+    for (const coupon of coupons) {
+      if (coupon.type === 'free_item') continue;
+      total += coupon.type === 'percentage'
+        ? Math.round(sub * coupon.value / 100 * 100) / 100
+        : Math.min(coupon.value, sub);
+    }
+    return Math.min(total, sub);
   },
 
   taxAmount: (taxRate: number) => {

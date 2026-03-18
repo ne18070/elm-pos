@@ -5,7 +5,7 @@
  * Utilisé par le renderer via les hooks, et par le main process via IPC.
  */
 
-import type { Cart, CartItem, Coupon, Order, PaymentMethod } from '../types';
+import type { Cart, CartItem, Coupon, PaymentMethod } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,12 +38,17 @@ export function computeSubtotal(items: CartItem[]): number {
   return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 }
 
-export function computeDiscount(coupon: Coupon | null | undefined, subtotal: number): number {
-  if (!coupon) return 0;
-  if (coupon.type === 'percentage') {
-    return round2(subtotal * coupon.value / 100);
+export function computeDiscount(coupons: Coupon[] | Coupon | null | undefined, subtotal: number): number {
+  const list = Array.isArray(coupons) ? coupons : coupons ? [coupons] : [];
+  if (list.length === 0) return 0;
+  let total = 0;
+  for (const coupon of list) {
+    if (coupon.type === 'free_item') continue;
+    total += coupon.type === 'percentage'
+      ? round2(subtotal * coupon.value / 100)
+      : Math.min(coupon.value, subtotal);
   }
-  return Math.min(coupon.value, subtotal);
+  return Math.min(total, subtotal);
 }
 
 export function computeTax(taxableAmount: number, taxRate: number): number {
@@ -52,11 +57,11 @@ export function computeTax(taxableAmount: number, taxRate: number): number {
 
 export function computeOrderTotals(
   items: CartItem[],
-  coupon: Coupon | null | undefined,
+  coupons: Coupon[] | Coupon | null | undefined,
   taxRate: number
 ): OrderTotals {
   const subtotal       = computeSubtotal(items);
-  const discountAmount = computeDiscount(coupon, subtotal);
+  const discountAmount = computeDiscount(coupons, subtotal);
   const taxable        = subtotal - discountAmount;
   const taxAmount      = computeTax(taxable, taxRate);
   const total          = round2(taxable + taxAmount);
@@ -80,7 +85,7 @@ export function validateOrderPayload(
 
   const { total } = computeOrderTotals(
     payload.cart.items,
-    payload.cart.coupon,
+    payload.cart.coupons,
     payload.taxRate
   );
 
@@ -88,7 +93,6 @@ export function validateOrderPayload(
   // Paiement partiel (acompte) : autorisé à être inférieur au total
   if (
     payload.paymentMethod === 'cash' &&
-    payload.paymentMethod !== 'partial' &&
     payload.paymentAmount < total - 0.01
   ) {
     return {
@@ -106,9 +110,11 @@ export function validateOrderPayload(
 export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string, unknown> {
   const { subtotal, discountAmount, taxAmount, total } = computeOrderTotals(
     payload.cart.items,
-    payload.cart.coupon,
+    payload.cart.coupons,
     payload.taxRate
   );
+
+  const coupons = payload.cart.coupons ?? [];
 
   return {
     business_id:     payload.businessId,
@@ -131,8 +137,13 @@ export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string,
     tax_amount:      taxAmount,
     discount_amount: discountAmount,
     total,
-    coupon_id:   payload.cart.coupon?.id,
-    coupon_code: payload.cart.coupon?.code,
+    // backward compat: premier coupon
+    coupon_id:   coupons[0]?.id   ?? null,
+    coupon_code: coupons[0]?.code ?? null,
+    coupon_notes: coupons[0]?.type === 'free_item' ? (coupons[0].free_item_label ?? null) : null,
+    // tableau complet
+    coupon_ids:  coupons.map((c) => c.id),
+    coupon_codes: coupons.map((c) => c.code),
     notes:       payload.notes ?? payload.cart.notes,
   };
 }

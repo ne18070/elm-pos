@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { getProducts } from '@services/supabase/products';
-import { CouponInput } from './CouponInput';
+import { CouponPicker } from './CouponPicker';
 import { HoldModal } from './HoldModal';
 import type { CartItem, Coupon } from '@pos-types';
 
@@ -20,15 +20,15 @@ interface OrderPanelProps {
 
 export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld }: OrderPanelProps) {
   const {
-    items, coupon, setCoupon, addFreeItem, removeFreeItem,
+    items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
     updateQuantity, removeItem,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
   } = useCartStore();
   const { warning } = useNotificationStore();
 
-  async function handleCouponApply(c: Coupon) {
-    setCoupon(c);
+  async function handleCouponAdd(c: Coupon) {
+    addCoupon(c);
     if (c.type === 'free_item' && c.free_item_product_id) {
       try {
         const products = await getProducts(businessId);
@@ -42,12 +42,14 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
     }
   }
 
-  function handleCouponRemove() {
-    if (coupon?.type === 'free_item' && coupon.free_item_product_id) {
-      removeFreeItem(coupon.free_item_product_id);
+  function handleCouponRemove(couponId: string) {
+    const c = coupons.find((x) => x.id === couponId);
+    if (c?.type === 'free_item' && c.free_item_product_id) {
+      removeFreeItem(c.free_item_product_id);
     }
-    setCoupon(null);
+    removeCoupon(couponId);
   }
+
   const [showHoldModal, setShowHoldModal] = useState(false);
   const fmt = (n: number) => formatCurrency(n, currency);
 
@@ -240,26 +242,44 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
           })}
         </div>
 
-        {/* Coupon */}
-        <div className="px-4 py-2 border-t border-surface-border">
-          {coupon ? (
-            <div className="flex items-center gap-2 bg-green-900/30 border border-green-700 rounded-xl px-3 py-2">
-              <Tag className="w-4 h-4 text-green-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-green-400">{coupon.code}</p>
-                <p className="text-xs text-green-600">
-                  {coupon.type === 'free_item'
-                    ? coupon.free_item_label ?? 'Article offert'
-                    : `-${coupon.type === 'percentage' ? `${coupon.value}%` : fmt(coupon.value)}`}
-                </p>
-              </div>
-              <button onClick={handleCouponRemove} className="text-green-600 hover:text-green-400">
-                <X className="w-4 h-4" />
-              </button>
+        {/* Promotions */}
+        <div className="px-4 py-2 border-t border-surface-border space-y-2">
+          {/* Chips des coupons déjà appliqués */}
+          {coupons.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {coupons.map((c) => (
+                <div
+                  key={c.id}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium
+                    ${c.type === 'free_item'
+                      ? 'bg-amber-900/30 border border-amber-700 text-amber-400'
+                      : 'bg-green-900/30 border border-green-700 text-green-400'}`}
+                >
+                  {c.type === 'free_item'
+                    ? <Gift className="w-3 h-3 shrink-0" />
+                    : <Tag className="w-3 h-3 shrink-0" />}
+                  <span>{c.code}</span>
+                  <button
+                    onClick={() => handleCouponRemove(c.id)}
+                    className="opacity-70 hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-          ) : (
-            <CouponInput businessId={businessId} orderTotal={subtotal()} cartItemCount={itemCount()} onApply={handleCouponApply} />
           )}
+
+          {/* Sélecteur de promotions */}
+          <CouponPicker
+            businessId={businessId}
+            currency={currency}
+            orderTotal={subtotal()}
+            cartItemCount={itemCount()}
+            selectedIds={coupons.map((c) => c.id)}
+            onAdd={handleCouponAdd}
+            onRemove={handleCouponRemove}
+          />
         </div>
 
         {/* Récapitulatif */}

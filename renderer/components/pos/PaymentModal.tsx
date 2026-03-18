@@ -76,7 +76,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
   const fmt = (n: number) => formatCurrency(n, currency);
   const { subtotal, discountAmount, taxAmount, total } = computeOrderTotals(
     cart.items,
-    cart.coupon,
+    cart.coupons,
     taxRate
   );
 
@@ -139,11 +139,11 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
       const order = await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
-        cart:           { items: cart.items, coupon: cart.coupon ?? undefined, discount_amount: discountAmount, notes: cart.notes },
+        cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         payment_method: methode,
         payment_amount: methode === 'cash' ? montantRecuNum : total,
         tax_rate:       taxRate,
-        coupon:         cart.coupon ?? undefined,
+        coupons:        cart.coupons,
         notes:          cart.notes,
       });
       setOrdreId(order.id);
@@ -158,7 +158,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
       const dbPayload = buildOrderDbPayload({
         businessId:    business.id,
         cashierId:     user.id,
-        cart:          { items: cart.items, coupon: cart.coupon ?? undefined, discount_amount: discountAmount, notes: cart.notes },
+        cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         paymentMethod: methode,
         paymentAmount: methode === 'cash' ? montantRecuNum : total,
         taxRate,
@@ -183,11 +183,11 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
       const order = await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
-        cart:           { items: cart.items, coupon: cart.coupon ?? undefined, discount_amount: discountAmount, notes: cart.notes },
+        cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         payment_method: 'partial',
         payment_amount: acompteNum,
         tax_rate:       taxRate,
-        coupon:         cart.coupon ?? undefined,
+        coupons:        cart.coupons,
         notes:          cart.notes,
         customer_name:  customerName.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
@@ -203,7 +203,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
       const dbPayload = buildOrderDbPayload({
         businessId:    business.id,
         cashierId:     user.id,
-        cart:          { items: cart.items, coupon: cart.coupon ?? undefined, discount_amount: discountAmount, notes: cart.notes },
+        cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         paymentMethod: 'partial',
         paymentAmount: acompteNum,
         taxRate,
@@ -229,7 +229,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
     const orderError = validateOrderPayload({
       businessId:    business.id,
       cashierId:     user.id,
-      cart:          { items: cart.items, coupon: cart.coupon ?? undefined, discount_amount: discountAmount, notes: cart.notes },
+      cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
       paymentMethod: methode,
       paymentAmount: methode === 'cash' ? montantRecuNum : total,
       taxRate,

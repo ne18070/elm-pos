@@ -151,7 +151,7 @@ export interface CartItem {
 
 export interface Cart {
   items: CartItem[];
-  coupon?: Coupon;
+  coupons: Coupon[];
   discount_amount: number;
   notes?: string;
 }

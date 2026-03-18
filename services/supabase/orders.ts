@@ -8,7 +8,7 @@ export interface CreateOrderInput {
   payment_method: PaymentMethod;
   payment_amount: number;
   tax_rate: number;
-  coupon?: Coupon;
+  coupons?: Coupon[];
   notes?: string;
   /** Informations client (obligatoires pour les acomptes) */
   customer_name?: string;
@@ -18,16 +18,22 @@ export interface CreateOrderInput {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
+  const coupons = input.coupons ?? input.cart.coupons ?? [];
   const subtotal = input.cart.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const discount = input.coupon
-    ? calculateDiscount(input.coupon, subtotal)
+  const discount = coupons.length > 0
+    ? calculateDiscount(coupons, subtotal)
     : input.cart.discount_amount;
   const taxable = subtotal - discount;
   const tax = Math.round(taxable * input.tax_rate) / 100;
   const total = taxable + tax;
+
+  // Premier coupon (backward compat)
+  const firstCoupon = coupons[0] ?? null;
+  // Notes du premier coupon free_item
+  const couponNotes = coupons.find((c) => c.type === 'free_item')?.free_item_label ?? null;
 
   const { data, error } = await supabase.rpc('create_order', {
     order_data: {
@@ -53,9 +59,11 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       tax_amount:      tax,
       discount_amount: discount,
       total,
-      coupon_id:      input.coupon?.id     ?? null,
-      coupon_code:    input.coupon?.code   ?? null,
-      coupon_notes:   input.coupon?.type === 'free_item' ? (input.coupon.free_item_label ?? null) : null,
+      coupon_id:      firstCoupon?.id   ?? null,
+      coupon_code:    firstCoupon?.code ?? null,
+      coupon_notes:   couponNotes,
+      coupon_ids:     coupons.map((c) => c.id),
+      coupon_codes:   coupons.map((c) => c.code),
       notes:          input.notes          ?? null,
       customer_name:  input.customer_name  ?? null,
       customer_phone: input.customer_phone ?? null,
@@ -202,10 +210,13 @@ export async function completeOrderPayment(input: CompletePaymentInput): Promise
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function calculateDiscount(coupon: Coupon, subtotal: number): number {
-  if (coupon.type === 'free_item') return 0;
-  if (coupon.type === 'percentage') {
-    return Math.round((subtotal * coupon.value) / 100 * 100) / 100;
+function calculateDiscount(coupons: Coupon[], subtotal: number): number {
+  let total = 0;
+  for (const coupon of coupons) {
+    if (coupon.type === 'free_item') continue;
+    total += coupon.type === 'percentage'
+      ? Math.round((subtotal * coupon.value) / 100 * 100) / 100
+      : Math.min(coupon.value, subtotal);
   }
-  return Math.min(coupon.value, subtotal);
+  return Math.min(total, subtotal);
 }

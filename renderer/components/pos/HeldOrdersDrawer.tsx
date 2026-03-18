@@ -66,11 +66,12 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
           ) : (
             heldOrders.map((held) => {
               const subtotal = held.items.reduce((s, i) => s + i.price * i.quantity, 0);
-              const discount = held.coupon
-                ? held.coupon.type === 'percentage'
-                  ? Math.round(subtotal * held.coupon.value / 100 * 100) / 100
-                  : Math.min(held.coupon.value, subtotal)
-                : 0;
+              const discount = (held.coupons ?? []).reduce((acc, c) => {
+                if (c.type === 'free_item') return acc;
+                return acc + (c.type === 'percentage'
+                  ? Math.round(subtotal * c.value / 100 * 100) / 100
+                  : Math.min(c.value, subtotal));
+              }, 0);
               const tax   = Math.round((subtotal - discount) * taxRate) / 100;
               const total = subtotal - discount + tax;
 
@@ -126,10 +127,14 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
                     )}
                   </div>
 
-                  {/* Coupon */}
-                  {held.coupon && (
-                    <div className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded-lg">
-                      Coupon : {held.coupon.code}
+                  {/* Coupons */}
+                  {(held.coupons ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(held.coupons ?? []).map((c) => (
+                        <span key={c.id} className="text-xs text-green-400 bg-green-900/20 px-2 py-0.5 rounded-lg">
+                          {c.code}
+                        </span>
+                      ))}
                     </div>
                   )}
 
