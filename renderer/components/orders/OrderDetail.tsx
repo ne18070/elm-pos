@@ -215,6 +215,12 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
                 <span>-{fmt(order.discount_amount)}</span>
               </div>
             )}
+            {order.coupon_code && order.discount_amount === 0 && (
+              <div className="flex justify-between text-sm text-amber-400">
+                <span>Offre ({order.coupon_code})</span>
+                <span>{order.coupon_notes ?? 'Article offert'}</span>
+              </div>
+            )}
             {order.tax_amount > 0 && (
               <div className="flex justify-between text-sm text-slate-400">
                 <span>TVA</span>

@@ -15,6 +15,7 @@ export type CouponValidationError =
   | { code: 'EXPIRED'; expiredAt: string }
   | { code: 'MAX_USES_REACHED'; maxUses: number; current: number }
   | { code: 'MIN_ORDER_NOT_MET'; minimum: number; current: number }
+  | { code: 'MIN_QUANTITY_NOT_MET'; minimum: number; current: number }
   | { code: 'USER_LIMIT_REACHED'; limit: number };
 
 export interface CouponApplyResult {
@@ -32,7 +33,8 @@ export interface CouponApplyError {
 
 export function validateCouponLocal(
   coupon: Coupon,
-  orderSubtotal: number
+  orderSubtotal: number,
+  cartItemCount = 0
 ): CouponValidationError | null {
   if (!coupon.is_active) {
     return { code: 'INACTIVE' };
@@ -58,6 +60,14 @@ export function validateCouponLocal(
     };
   }
 
+  if (coupon.min_quantity && cartItemCount < coupon.min_quantity) {
+    return {
+      code: 'MIN_QUANTITY_NOT_MET',
+      minimum: coupon.min_quantity,
+      current: cartItemCount,
+    };
+  }
+
   return null; // valide
 }
 
@@ -65,16 +75,20 @@ export function validateCouponLocal(
 
 export function applyCoupon(
   coupon: Coupon,
-  subtotal: number
+  subtotal: number,
+  cartItemCount = 0
 ): CouponApplyResult | CouponApplyError {
-  const error = validateCouponLocal(coupon, subtotal);
+  const error = validateCouponLocal(coupon, subtotal, cartItemCount);
   if (error) return { valid: false, error };
 
   let discountAmount: number;
   if (coupon.type === 'percentage') {
     discountAmount = Math.round(subtotal * coupon.value / 100 * 100) / 100;
-  } else {
+  } else if (coupon.type === 'fixed') {
     discountAmount = Math.min(coupon.value, subtotal);
+  } else {
+    // free_item : pas de remise monétaire, le caissier gère manuellement
+    discountAmount = 0;
   }
 
   return { valid: true, discountAmount, coupon };
@@ -94,6 +108,8 @@ export function formatCouponError(error: CouponValidationError): string {
       return `Ce coupon a atteint sa limite (${error.maxUses} utilisations)`;
     case 'MIN_ORDER_NOT_MET':
       return `Montant minimum requis : ${error.minimum.toFixed(2)} (panier : ${error.current.toFixed(2)})`;
+    case 'MIN_QUANTITY_NOT_MET':
+      return `Quantité minimum requise : ${error.minimum} article(s) (panier : ${error.current})`;
     case 'USER_LIMIT_REACHED':
       return `Vous avez déjà utilisé ce coupon ${error.limit} fois`;
   }
@@ -102,8 +118,11 @@ export function formatCouponError(error: CouponValidationError): string {
 // ─── Affichage ────────────────────────────────────────────────────────────────
 
 export function describeCoupon(coupon: Coupon): string {
-  if (coupon.type === 'percentage') {
-    return `-${coupon.value}%`;
-  }
-  return `-${coupon.value}`;
+  if (coupon.type === 'percentage') return `-${coupon.value}%`;
+  if (coupon.type === 'fixed') return `-${coupon.value}`;
+  // free_item
+  const label = coupon.free_item_label ?? 'article offert';
+  return coupon.min_quantity
+    ? `${label} (pour ${coupon.min_quantity} achetés)`
+    : label;
 }

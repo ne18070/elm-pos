@@ -119,6 +119,7 @@ export interface Order {
   total: number;
   coupon_id?: string;
   coupon_code?: string;
+  coupon_notes?: string;  // description affichée sur la facture (ex: "1 bouteille offerte")
   notes?: string;
   customer_name?: string;
   customer_phone?: string;
@@ -155,15 +156,19 @@ export interface Cart {
 
 // ─── Coupons ──────────────────────────────────────────────────────────────────
 
-export type CouponType = 'percentage' | 'fixed';
+export type CouponType = 'percentage' | 'fixed' | 'free_item';
 
 export interface Coupon {
   id: string;
   business_id: string;
   code: string;
   type: CouponType;
-  value: number;           // percentage (0–100) or fixed amount
+  value: number;            // percentage (0–100) or fixed amount; 0 for free_item
   min_order_amount?: number;
+  min_quantity?: number;         // free_item: nb minimum d'articles dans le panier
+  free_item_label?: string;      // free_item: description affichée (ex: "1 bouteille")
+  free_item_product_id?: string; // free_item: produit à offrir (sortie de stock automatique)
+  free_item_quantity?: number;   // free_item: quantité offerte (défaut 1)
   max_uses?: number;
   uses_count: number;
   per_user_limit?: number;

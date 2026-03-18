@@ -55,6 +55,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       total,
       coupon_id:      input.coupon?.id     ?? null,
       coupon_code:    input.coupon?.code   ?? null,
+      coupon_notes:   input.coupon?.type === 'free_item' ? (input.coupon.free_item_label ?? null) : null,
       notes:          input.notes          ?? null,
       customer_name:  input.customer_name  ?? null,
       customer_phone: input.customer_phone ?? null,
@@ -202,6 +203,7 @@ export async function completeOrderPayment(input: CompletePaymentInput): Promise
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function calculateDiscount(coupon: Coupon, subtotal: number): number {
+  if (coupon.type === 'free_item') return 0;
   if (coupon.type === 'percentage') {
     return Math.round((subtotal * coupon.value) / 100 * 100) / 100;
   }

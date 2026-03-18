@@ -150,9 +150,10 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
       title={isEdit ? 'Modifier le produit' : 'Nouveau produit'}
       onClose={onClose}
       size="md"
-      footer={
+      guard
+      footer={(requestClose) => (
         <>
-          <button onClick={onClose} className="btn-secondary px-5">Annuler</button>
+          <button onClick={requestClose} className="btn-secondary px-5">Annuler</button>
           <button
             onClick={handleSave}
             disabled={loading || !form.name || !form.price}
@@ -162,7 +163,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             {isEdit ? 'Enregistrer' : 'Créer'}
           </button>
         </>
-      }
+      )}
     >
       <div className="space-y-4">
         {/* Image */}

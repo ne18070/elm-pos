@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Check, Package, ScanLine, X, CheckCheck, Loader2 } from 'lucide-react';
+import { Check, Package, ScanLine, X, CheckCheck, Loader2, Tag, Gift } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
@@ -122,6 +122,24 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
               />
             </div>
           </div>
+
+          {/* Coupon appliqué */}
+          {order.coupon_code && (
+            <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm border ${
+              order.discount_amount > 0
+                ? 'bg-green-900/20 border-green-800 text-green-300'
+                : 'bg-amber-900/20 border-amber-800 text-amber-300'
+            }`}>
+              {order.discount_amount > 0
+                ? <Tag className="w-4 h-4 shrink-0" />
+                : <Gift className="w-4 h-4 shrink-0" />}
+              <span className="font-medium">{order.coupon_code}</span>
+              <span className="text-slate-400 mx-1">·</span>
+              {order.discount_amount > 0
+                ? <span>-{fmt(order.discount_amount)}</span>
+                : <span>{order.coupon_notes ?? 'Article offert'}</span>}
+            </div>
+          )}
 
           {/* Notification scan */}
           {lastScanned && (

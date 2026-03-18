@@ -9,10 +9,11 @@ import type { Coupon } from '@pos-types';
 interface CouponInputProps {
   businessId: string;
   orderTotal: number;
+  cartItemCount?: number;
   onApply: (coupon: Coupon) => void;
 }
 
-export function CouponInput({ businessId, orderTotal, onApply }: CouponInputProps) {
+export function CouponInput({ businessId, orderTotal, cartItemCount = 0, onApply }: CouponInputProps) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -31,6 +32,11 @@ export function CouponInput({ businessId, orderTotal, onApply }: CouponInputProp
       );
       if (error || !coupon) {
         setErreur(error ?? 'Coupon invalide');
+        return;
+      }
+      // Vérification min_quantity côté client (free_item)
+      if (coupon.min_quantity && cartItemCount < coupon.min_quantity) {
+        setErreur(`Quantité minimum requise : ${coupon.min_quantity} article(s) (panier : ${cartItemCount})`);
         return;
       }
       onApply(coupon);

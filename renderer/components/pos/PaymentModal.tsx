@@ -274,6 +274,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
           : 'Encaissement'}
       onClose={onClose}
       size="sm"
+      guard={step !== 'succes'}
     >
       {/* ── Étape 1 : méthode ─────────────────────────────────────────────── */}
       {step === 'methode' && (

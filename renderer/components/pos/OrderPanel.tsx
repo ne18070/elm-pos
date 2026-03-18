@@ -5,9 +5,10 @@ import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle } from 
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
+import { getProducts } from '@services/supabase/products';
 import { CouponInput } from './CouponInput';
 import { HoldModal } from './HoldModal';
-import type { CartItem } from '@pos-types';
+import type { CartItem, Coupon } from '@pos-types';
 
 interface OrderPanelProps {
   taxRate: number;
@@ -19,12 +20,35 @@ interface OrderPanelProps {
 
 export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld }: OrderPanelProps) {
   const {
-    items, coupon, setCoupon,
+    items, coupon, setCoupon, addFreeItem, removeItem: removeCartItem,
     updateQuantity, removeItem,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
   } = useCartStore();
   const { warning } = useNotificationStore();
+
+  async function handleCouponApply(c: Coupon) {
+    setCoupon(c);
+    if (c.type === 'free_item' && c.free_item_product_id) {
+      try {
+        const products = await getProducts(businessId);
+        const freeProduct = products.find((p) => p.id === c.free_item_product_id);
+        if (freeProduct) {
+          const qty = c.free_item_quantity ?? 1;
+          const result = addFreeItem(freeProduct, qty);
+          if (!result.ok) warning(result.reason ?? 'Stock insuffisant pour l\'article offert');
+        }
+      } catch { /* silencieux */ }
+    }
+  }
+
+  function handleCouponRemove() {
+    // Retirer le produit offert du panier si présent
+    if (coupon?.type === 'free_item' && coupon.free_item_product_id) {
+      removeCartItem(coupon.free_item_product_id, '__free__');
+    }
+    setCoupon(null);
+  }
   const [showHoldModal, setShowHoldModal] = useState(false);
   const fmt = (n: number) => formatCurrency(n, currency);
 
@@ -220,15 +244,17 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-green-400">{coupon.code}</p>
                 <p className="text-xs text-green-600">
-                  -{coupon.type === 'percentage' ? `${coupon.value}%` : fmt(coupon.value)}
+                  {coupon.type === 'free_item'
+                    ? coupon.free_item_label ?? 'Article offert'
+                    : `-${coupon.type === 'percentage' ? `${coupon.value}%` : fmt(coupon.value)}`}
                 </p>
               </div>
-              <button onClick={() => setCoupon(null)} className="text-green-600 hover:text-green-400">
+              <button onClick={handleCouponRemove} className="text-green-600 hover:text-green-400">
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <CouponInput businessId={businessId} orderTotal={subtotal()} onApply={setCoupon} />
+            <CouponInput businessId={businessId} orderTotal={subtotal()} cartItemCount={itemCount()} onApply={handleCouponApply} />
           )}
         </div>
 

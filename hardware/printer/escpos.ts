@@ -10,6 +10,8 @@ export interface ReceiptLines {
   cashierName: string;
   items: Array<{ name: string; qty: number; total: string }>;
   subtotal: string;
+  couponCode?: string;
+  couponNotes?: string;  // label pour free_item, absent pour les autres
   discount?: string;
   tax?: string;
   total: string;
@@ -39,6 +41,8 @@ export function formatReceiptLines(data: ReceiptData): ReceiptLines {
     cashierName: cashier_name,
     items,
     subtotal: fmt(order.subtotal),
+    couponCode:  order.coupon_code ?? undefined,
+    couponNotes: order.coupon_notes ?? undefined,
     discount: order.discount_amount > 0 ? fmt(order.discount_amount) : undefined,
     tax: order.tax_amount > 0 ? fmt(order.tax_amount) : undefined,
     total: fmt(order.total),
@@ -74,7 +78,14 @@ export function generateTextReceipt(data: ReceiptData): string {
     ...lines.items.map((i) => row(`${i.name} x${i.qty}`, i.total)),
     divider,
     row('Subtotal', lines.subtotal),
-    ...(lines.discount ? [row('Discount', `-${lines.discount}`)] : []),
+    ...(lines.discount && lines.couponCode
+      ? [row(`Remise (${lines.couponCode})`, `-${lines.discount}`)]
+      : lines.discount
+      ? [row('Remise', `-${lines.discount}`)]
+      : []),
+    ...(lines.couponCode && !lines.discount && lines.couponNotes
+      ? [row(`Offre (${lines.couponCode})`, lines.couponNotes)]
+      : []),
     ...(lines.tax ? [row('Tax', lines.tax)] : []),
     row('TOTAL', lines.total),
     divider,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { X, Package, Calculator, Loader2 } from 'lucide-react';
+import { X, Package, Calculator, Loader2, AlertTriangle } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -40,6 +40,9 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
   const [costPerUnit, setCostPerUnit]     = useState('');
   const [notes, setNotes]                 = useState('');
   const [saving, setSaving]               = useState(false);
+  const [confirming, setConfirming]       = useState(false);
+
+  function requestClose() { setConfirming(true); }
 
   const filteredProducts = useMemo(() => {
     if (!search) return products.slice(0, 8);
@@ -91,13 +94,13 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       <div className="relative bg-surface-card border border-surface-border rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
           <h2 className="font-semibold text-white text-lg">Nouvel approvisionnement</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={requestClose} className="text-slate-400 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -326,7 +329,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-surface-border flex gap-3 shrink-0">
-          <button onClick={onClose} className="btn-secondary flex-1 h-11">Annuler</button>
+          <button onClick={requestClose} className="btn-secondary flex-1 h-11">Annuler</button>
           <button
             onClick={handleSave}
             disabled={saving || !selectedProduct || totalQty <= 0}
@@ -336,6 +339,31 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
             {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
+        {/* Confirmation fermeture */}
+        {confirming && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/70 backdrop-blur-sm">
+            <div className="bg-surface-card border border-surface-border rounded-2xl p-6 mx-6 space-y-4 shadow-2xl">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-white">Annuler la saisie ?</p>
+                  <p className="text-sm text-slate-400 mt-1">Les informations saisies seront perdues.</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirming(false)} className="btn-secondary flex-1" autoFocus>
+                  Continuer la saisie
+                </button>
+                <button
+                  onClick={() => { setConfirming(false); onClose(); }}
+                  className="flex-1 h-10 px-4 rounded-xl bg-red-900/30 border border-red-800 text-red-400 hover:bg-red-900/50 transition-colors text-sm font-medium"
+                >
+                  Oui, annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
