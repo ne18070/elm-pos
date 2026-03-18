@@ -1,6 +1,9 @@
 import { supabase } from './client';
 import type { Order, Cart, PaymentMethod, Coupon, Refund } from '../../types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = (supabase as any).rpc.bind(supabase) as (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+
 export interface CreateOrderInput {
   business_id: string;
   cashier_id: string;
@@ -35,7 +38,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
   // Notes du premier coupon free_item
   const couponNotes = coupons.find((c) => c.type === 'free_item')?.free_item_label ?? null;
 
-  const { data, error } = await supabase.rpc('create_order', {
+  const { data, error } = await rpc('create_order', {
     order_data: {
       business_id: input.business_id,
       cashier_id:  input.cashier_id,
@@ -119,7 +122,7 @@ export async function getOrderById(id: string): Promise<Order> {
 // ─── Annulation (restaure stock + coupon en transaction) ─────────────────────
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId });
+  const { error } = await rpc('cancel_order', { p_order_id: orderId });
   if (error) throw new Error(error.message);
 }
 
@@ -133,7 +136,7 @@ export interface RefundInput {
 }
 
 export async function refundOrder(input: RefundInput): Promise<void> {
-  const { error } = await supabase.rpc('refund_order', {
+  const { error } = await rpc('refund_order', {
     p_order_id:    input.orderId,
     p_amount:      input.amount,
     p_reason:      input.reason ?? null,
@@ -179,12 +182,12 @@ export async function getOrdersForDelivery(businessId: string): Promise<Order[]>
 }
 
 export async function startOrderPicking(orderId: string): Promise<void> {
-  const { error } = await supabase.rpc('start_order_picking', { p_order_id: orderId });
+  const { error } = await rpc('start_order_picking', { p_order_id: orderId });
   if (error) throw new Error(error.message);
 }
 
 export async function confirmOrderDelivery(orderId: string, deliveredBy: string): Promise<void> {
-  const { error } = await supabase.rpc('confirm_order_delivery', {
+  const { error } = await rpc('confirm_order_delivery', {
     p_order_id:     orderId,
     p_delivered_by: deliveredBy,
   });
@@ -200,7 +203,7 @@ export interface CompletePaymentInput {
 }
 
 export async function completeOrderPayment(input: CompletePaymentInput): Promise<void> {
-  const { error } = await supabase.rpc('complete_order_payment', {
+  const { error } = await rpc('complete_order_payment', {
     p_order_id: input.orderId,
     p_method:   input.method,
     p_amount:   input.amount,

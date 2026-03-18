@@ -1,5 +1,10 @@
 import { supabase } from './client';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db  = supabase as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = db.rpc.bind(db) as (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+
 export interface StockEntry {
   id: string;
   business_id: string;
@@ -35,7 +40,7 @@ export async function getStockEntries(
   businessId: string,
   productId?: string
 ): Promise<StockEntry[]> {
-  let query = supabase
+  let query = db
     .from('stock_entries')
     .select(`
       *,
@@ -56,7 +61,7 @@ export async function getStockEntries(
 }
 
 export async function addStockEntry(input: AddStockEntryInput): Promise<void> {
-  const { error } = await supabase.rpc('add_stock_entry', {
+  const { error } = await rpc('add_stock_entry', {
     p_business_id:    input.businessId,
     p_product_id:     input.productId,
     p_quantity:       input.quantity,

@@ -1,13 +1,16 @@
 import { supabase } from './client';
 import type { Coupon } from '../../types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = (supabase as any).rpc.bind(supabase) as (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+
 export async function validateCoupon(
   code: string,
   businessId: string,
   orderTotal: number,
   userId: string
 ): Promise<{ coupon: Coupon | null; error: string | null }> {
-  const { data, error } = await supabase.rpc('validate_coupon', {
+  const { data, error } = await rpc('validate_coupon', {
     coupon_code: code.toUpperCase().trim(),
     business_id: businessId,
     order_total: orderTotal,

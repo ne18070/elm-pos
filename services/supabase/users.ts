@@ -1,6 +1,9 @@
 import { supabase } from './client';
 import type { User, UserRole } from '../../types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = (supabase as any).rpc.bind(supabase) as (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+
 // ─── Profil utilisateur ───────────────────────────────────────────────────────
 
 export async function updateOwnProfile(
@@ -27,8 +30,7 @@ export async function updateOwnProfile(
  */
 export async function getTeamMembers(businessId: string): Promise<User[]> {
   // Tenter d'abord le RPC (migration 017)
-  const { data: rpcData, error: rpcError } = await supabase
-    .rpc('get_business_members', { p_business_id: businessId });
+  const { data: rpcData, error: rpcError } = await rpc('get_business_members', { p_business_id: businessId });
 
   if (!rpcError && rpcData) {
     // Adapter le format rpc → User
@@ -63,7 +65,7 @@ export async function getTeamMembers(businessId: string): Promise<User[]> {
  */
 export async function updateUserRole(userId: string, role: UserRole, businessId?: string): Promise<void> {
   if (businessId) {
-    const { error } = await supabase.rpc('set_member_role', {
+    const { error } = await rpc('set_member_role', {
       p_business_id: businessId,
       p_user_id:     userId,
       p_role:        role,
@@ -85,7 +87,7 @@ export async function updateUserRole(userId: string, role: UserRole, businessId?
  */
 export async function removeUserFromBusiness(userId: string, businessId?: string): Promise<void> {
   if (businessId) {
-    const { error } = await supabase.rpc('remove_business_member', {
+    const { error } = await rpc('remove_business_member', {
       p_business_id: businessId,
       p_user_id:     userId,
     });

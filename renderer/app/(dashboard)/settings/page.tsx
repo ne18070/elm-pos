@@ -13,7 +13,7 @@ const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sac
 export default function SettingsPage() {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
-  const { isOnline, pendingCount, syncing } = useOfflineSync();
+  const { isOnline, pending: pendingCount, syncing } = useOfflineSync();
   const [saving, setSaving] = useState(false);
   const [syncing2, setSyncing2] = useState(false);
 
@@ -75,7 +75,7 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from('businesses')
-        .update({ stock_units: stockUnits })
+        .update({ stock_units: stockUnits } as never)
         .eq('id', business.id);
       if (error) throw new Error(error.message);
       success('Unités enregistrées');

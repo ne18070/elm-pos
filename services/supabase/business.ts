@@ -1,6 +1,9 @@
 import { supabase } from './client';
 import type { Business, UserRole } from '../../types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = (supabase as any).rpc.bind(supabase) as (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+
 export interface BusinessMembership {
   business: Business;
   role: UserRole;
@@ -19,7 +22,7 @@ export interface BusinessMember {
 
 /** Tous les établissements auxquels l'utilisateur connecté appartient */
 export async function getMyBusinesses(): Promise<BusinessMembership[]> {
-  const { data, error } = await supabase.rpc('get_my_businesses');
+  const { data, error } = await rpc('get_my_businesses');
   if (error) throw new Error(error.message);
 
   return (data as Array<Business & { member_role: UserRole }>).map((row) => ({
@@ -44,7 +47,7 @@ export async function getMyBusinesses(): Promise<BusinessMembership[]> {
 
 /** Basculer vers un autre établissement (met à jour le contexte RLS) */
 export async function switchBusiness(businessId: string): Promise<void> {
-  const { error } = await supabase.rpc('switch_business', {
+  const { error } = await rpc('switch_business', {
     p_business_id: businessId,
   });
   if (error) throw new Error(error.message);
@@ -57,7 +60,7 @@ export async function createBusiness(data: {
   currency: string;
   tax_rate: number;
 }): Promise<Business> {
-  const { data: result, error } = await supabase.rpc('create_business', {
+  const { data: result, error } = await rpc('create_business', {
     business_data: data,
   });
   if (error) throw new Error(error.message);
@@ -68,7 +71,7 @@ export async function createBusiness(data: {
 
 /** Liste les membres d'un établissement */
 export async function getBusinessMembers(businessId: string): Promise<BusinessMember[]> {
-  const { data, error } = await supabase.rpc('get_business_members', {
+  const { data, error } = await rpc('get_business_members', {
     p_business_id: businessId,
   });
   if (error) throw new Error(error.message);
@@ -81,7 +84,7 @@ export async function setMemberRole(
   userId: string,
   role: UserRole
 ): Promise<void> {
-  const { error } = await supabase.rpc('set_member_role', {
+  const { error } = await rpc('set_member_role', {
     p_business_id: businessId,
     p_user_id:     userId,
     p_role:        role,
@@ -94,7 +97,7 @@ export async function removeBusinessMember(
   businessId: string,
   userId: string
 ): Promise<void> {
-  const { error } = await supabase.rpc('remove_business_member', {
+  const { error } = await rpc('remove_business_member', {
     p_business_id: businessId,
     p_user_id:     userId,
   });

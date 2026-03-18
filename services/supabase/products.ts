@@ -1,6 +1,9 @@
 import { supabase } from './client';
 import type { Product, Category } from '../../types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = (supabase as any).rpc.bind(supabase) as (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export async function getCategories(businessId: string): Promise<Category[]> {
@@ -116,7 +119,7 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 export async function decrementStock(productId: string, quantity: number): Promise<void> {
-  const { error } = await supabase.rpc('decrement_stock', {
+  const { error } = await rpc('decrement_stock', {
     p_product_id: productId,
     p_quantity: quantity,
   });
