@@ -97,7 +97,7 @@ export default function OrdersPage() {
           </div>
 
           {/* Onglets filtre */}
-          <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 flex-wrap">
+          <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 overflow-x-auto">
             {TABS.map((t) => (
               <button
                 key={t}
@@ -137,13 +137,13 @@ export default function OrdersPage() {
             <table className="w-full">
               <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
                 <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
-                  <th className="px-6 py-3">Commande</th>
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Client / Caissier</th>
-                  <th className="px-6 py-3">Articles</th>
-                  <th className="px-6 py-3">Total</th>
-                  <th className="px-6 py-3">Versé / Reste</th>
-                  <th className="px-6 py-3">Statut</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Commande</th>
+                  <th className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">Date</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Client / Caissier</th>
+                  <th className="px-4 py-3 whitespace-nowrap hidden md:table-cell">Articles</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Total</th>
+                  <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Versé / Reste</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Statut</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,44 +161,44 @@ export default function OrdersPage() {
                         ${selectedOrder?.id === order.id ? 'bg-surface-hover' : ''}
                         ${partial ? 'border-l-2 border-l-amber-600' : ''}`}
                     >
-                      <td className="px-6 py-4 font-mono text-sm text-slate-300">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-300 whitespace-nowrap">
                         #{order.id.slice(0, 8).toUpperCase()}
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-slate-400 whitespace-nowrap">
+                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">
                         {format(new Date(order.created_at), 'dd MMM, HH:mm', { locale: fr })}
                       </td>
 
                       {/* Client + Caissier */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3 max-w-[180px]">
                         {order.customer_name ? (
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-5 h-5 rounded-full bg-amber-900/50 border border-amber-700 flex items-center justify-center shrink-0">
-                                <User className="w-2.5 h-2.5 text-amber-400" />
+                          <div className="space-y-0.5 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className="w-4 h-4 rounded-full bg-amber-900/50 border border-amber-700 flex items-center justify-center shrink-0">
+                                <User className="w-2 h-2 text-amber-400" />
                               </div>
-                              <p className="text-sm font-semibold text-white">{order.customer_name}</p>
+                              <p className="text-sm font-semibold text-white truncate">{order.customer_name}</p>
                             </div>
                             {order.customer_phone && (
-                              <p className="text-xs text-amber-400 pl-6">{order.customer_phone}</p>
+                              <p className="text-xs text-amber-400 pl-5 truncate">{order.customer_phone}</p>
                             )}
-                            <p className="text-xs text-slate-500 pl-6">via {order.cashier?.full_name ?? '—'}</p>
+                            <p className="text-xs text-slate-500 pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-300">{order.cashier?.full_name ?? '—'}</p>
+                          <p className="text-sm text-slate-300 truncate">{order.cashier?.full_name ?? '—'}</p>
                         )}
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-slate-400">
+                      <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap hidden md:table-cell">
                         {qty} article{qty !== 1 ? 's' : ''}
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-white whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm font-semibold text-white whitespace-nowrap">
                         {fmt(order.total)}
                       </td>
 
                       {/* Versé / Reste */}
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-4 py-3 text-sm hidden lg:table-cell whitespace-nowrap">
                         {partial ? (
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1 text-brand-400">
@@ -216,13 +216,13 @@ export default function OrdersPage() {
                       </td>
 
                       {/* Statut */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         {partial ? (
-                          <span className="inline-flex px-2 py-1 rounded-lg text-xs font-medium border bg-amber-500/20 text-amber-400 border-amber-700">
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/20 text-amber-400 border-amber-700 whitespace-nowrap">
                             Acompte
                           </span>
                         ) : (
-                          <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-medium border ${STATUS_COLORS[order.status as OrderStatus]}`}>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${STATUS_COLORS[order.status as OrderStatus]}`}>
                             {TAB_LABELS[order.status as OrderStatus] ?? order.status}
                           </span>
                         )}

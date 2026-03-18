@@ -16,7 +16,7 @@ export default function ProductsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<ViewMode>('grid');
+  const [view, setView] = useState<ViewMode>('list');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -218,10 +218,10 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Nom */}
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-white text-sm">{product.name}</p>
+                    <td className="px-4 py-3 max-w-[200px]">
+                      <p className="font-medium text-white text-sm truncate">{product.name}</p>
                       {product.description && (
-                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{product.description}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{product.description}</p>
                       )}
                     </td>
 

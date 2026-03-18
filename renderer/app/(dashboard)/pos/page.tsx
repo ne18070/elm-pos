@@ -22,7 +22,7 @@ export default function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery]            = useState('');
   const [paymentOpen, setPaymentOpen]            = useState(false);
-  const [view, setView]                          = useState<ViewMode>('grid');
+  const [view, setView]                          = useState<ViewMode>('list');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
 
   const addItem = useCartStore((s) => s.addItem);

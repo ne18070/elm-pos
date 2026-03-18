@@ -120,13 +120,13 @@ export default function ApprovisionnementPage() {
           <table className="w-full">
             <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
               <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
-                <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Produit</th>
-                <th className="px-6 py-3">Conditionnement</th>
-                <th className="px-6 py-3">Quantité reçue</th>
-                <th className="px-6 py-3">Fournisseur</th>
-                <th className="px-6 py-3">Coût total</th>
-                <th className="px-6 py-3">Par</th>
+                <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                <th className="px-4 py-3 whitespace-nowrap">Produit</th>
+                <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Conditionnement</th>
+                <th className="px-4 py-3 whitespace-nowrap">Qté reçue</th>
+                <th className="px-4 py-3 whitespace-nowrap hidden md:table-cell">Fournisseur</th>
+                <th className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">Coût total</th>
+                <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Par</th>
               </tr>
             </thead>
             <tbody>
@@ -143,28 +143,28 @@ export default function ApprovisionnementPage() {
                     className="border-b border-surface-border hover:bg-surface-hover transition-colors"
                   >
                     {/* Date */}
-                    <td className="px-6 py-4 text-sm text-slate-400 whitespace-nowrap">
-                      {format(new Date(entry.created_at), 'dd MMM yyyy', { locale: fr })}
+                    <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                      {format(new Date(entry.created_at), 'dd MMM yy', { locale: fr })}
                       <br />
-                      <span className="text-xs text-slate-600">
+                      <span className="text-slate-600">
                         {format(new Date(entry.created_at), 'HH:mm')}
                       </span>
                     </td>
 
                     {/* Produit */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
-                          <Package className="w-4 h-4 text-slate-500" />
+                    <td className="px-4 py-3 max-w-[180px]">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
+                          <Package className="w-3.5 h-3.5 text-slate-500" />
                         </div>
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-white truncate">
                           {entry.product?.name ?? '—'}
                         </span>
                       </div>
                     </td>
 
                     {/* Conditionnement */}
-                    <td className="px-6 py-4 text-sm text-slate-400">
+                    <td className="px-4 py-3 text-sm text-slate-400 hidden lg:table-cell whitespace-nowrap">
                       {hasPackaging ? (
                         <span>
                           {entry.packaging_qty} {entry.packaging_unit ?? 'colis'} × {entry.packaging_size} {unit}
@@ -175,19 +175,19 @@ export default function ApprovisionnementPage() {
                     </td>
 
                     {/* Quantité reçue */}
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-sm font-bold text-green-400">
                         +{entry.quantity} {unit}
                       </span>
                     </td>
 
                     {/* Fournisseur */}
-                    <td className="px-6 py-4 text-sm text-slate-400">
-                      {entry.supplier ?? <span className="text-slate-600">—</span>}
+                    <td className="px-4 py-3 text-sm text-slate-400 hidden md:table-cell max-w-[140px]">
+                      <span className="truncate block">{entry.supplier ?? <span className="text-slate-600">—</span>}</span>
                     </td>
 
                     {/* Coût total */}
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-4 py-3 text-sm hidden sm:table-cell whitespace-nowrap">
                       {totalCost != null ? (
                         <span className="text-white font-medium">
                           {formatCurrency(totalCost, business?.currency)}
@@ -198,8 +198,10 @@ export default function ApprovisionnementPage() {
                     </td>
 
                     {/* Créé par */}
-                    <td className="px-6 py-4 text-xs text-slate-500">
-                      {(entry.creator as { full_name?: string } | null)?.full_name ?? '—'}
+                    <td className="px-4 py-3 text-xs text-slate-500 hidden lg:table-cell max-w-[120px]">
+                      <span className="truncate block">
+                        {(entry.creator as { full_name?: string } | null)?.full_name ?? '—'}
+                      </span>
                     </td>
                   </tr>
                 );
