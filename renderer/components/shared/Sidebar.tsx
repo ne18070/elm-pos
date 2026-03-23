@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor,
+  Monitor, HelpCircle, BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'] },
   { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'] },
   { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'] },
+  { href: '/comptabilite',      icon: BookOpen,     label: 'Comptabilité',       roles: ['owner', 'admin'] },
   { href: '/settings',          icon: Settings,     label: 'Paramètres',         roles: null },
 ] as const;
 
@@ -83,6 +84,20 @@ export function Sidebar() {
 
       {/* Utilisateur + Admin */}
       <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
+        {/* Aide */}
+        <Link
+          href="/help"
+          className={cn(
+            'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
+            pathname.startsWith('/help')
+              ? 'bg-brand-600 text-white'
+              : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+          )}
+        >
+          <HelpCircle className="w-4 h-4 shrink-0" />
+          <span className="text-sm hidden lg:block">Aide</span>
+        </Link>
+
         {/* Écran client */}
         <button
           onClick={handleOpenDisplay}
