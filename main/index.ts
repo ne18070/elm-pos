@@ -1,5 +1,20 @@
-import { app, BrowserWindow, ipcMain, Menu, shell, net, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, shell, net, screen, protocol } from 'electron';
 import * as path from 'path';
+
+// Doit être appelé AVANT app.whenReady()
+if (!process.env.ELECTRON_DEV && process.env.NODE_ENV !== 'development') {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'elmpos',
+      privileges: {
+        secure: true,
+        standard: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+      },
+    },
+  ]);
+}
 import { registerHardwareHandlers } from './ipc/hardware';
 import { registerOrderHandlers } from './ipc/orders';
 import { registerSyncHandlers, startSyncEngine, onNetworkOnline } from './ipc/sync';
@@ -37,9 +52,7 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, '..', '..', 'renderer', 'out', 'index.html')
-    );
+    mainWindow.loadURL('elmpos://./');
   }
 
   mainWindow.once('ready-to-show', () => {
@@ -90,9 +103,7 @@ function createCustomerDisplay(): BrowserWindow {
   if (isDev) {
     customerDisplayWindow.loadURL('http://localhost:3000/display');
   } else {
-    customerDisplayWindow.loadFile(
-      path.join(__dirname, '..', '..', 'renderer', 'out', 'display', 'index.html')
-    );
+    customerDisplayWindow.loadURL('elmpos://./display/');
   }
 
   customerDisplayWindow.on('closed', () => {
@@ -168,6 +179,20 @@ async function initialize(): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  // Protocole custom : mappe elmpos:// → renderer/out/
+  // Nécessaire car Next.js génère des assets avec chemins absolus (/_next/...)
+  // incompatibles avec le protocole file://
+  if (isDev === false) {
+    const outDir = path.join(__dirname, '..', '..', 'renderer', 'out');
+    protocol.handle('elmpos', (request) => {
+      let urlPath = new URL(request.url).pathname;
+      if (!urlPath || urlPath === '/') urlPath = '/index.html';
+      // Next.js static export : les pages avec trailingSlash ont un sous-dossier
+      const filePath = path.join(outDir, urlPath);
+      return net.fetch('file://' + filePath);
+    });
+  }
+
   await initialize();
   createWindow();
 
@@ -192,7 +217,7 @@ app.on('window-all-closed', () => {
 
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, url) => {
-    const allowed = ['http://localhost:3000', 'file://'];
+    const allowed = ['http://localhost:3000', 'file://', 'elmpos://'];
     if (!allowed.some((o) => url.startsWith(o))) {
       event.preventDefault();
     }
