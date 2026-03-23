@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { logAction } from './logger';
 import type { Order, Cart, PaymentMethod, Coupon, Refund } from '../../types';
 
 export interface CreateOrderInput {
@@ -71,7 +72,20 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
   });
 
   if (error) throw new Error(error.message);
-  return data as unknown as Order;
+  const order = data as unknown as Order;
+  logAction({
+    business_id: input.business_id,
+    action:      'order.created',
+    entity_type: 'order',
+    entity_id:   order.id,
+    user_id:     input.cashier_id,
+    metadata: {
+      total:         order.total,
+      items_count:   input.cart.items.length,
+      payment_method: input.payment_method,
+    },
+  });
+  return order;
 }
 
 export async function getOrders(

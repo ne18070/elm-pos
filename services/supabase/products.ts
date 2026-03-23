@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { logAction } from './logger';
 import type { Product, Category } from '../../types';
 
 // ─── Categories ───────────────────────────────────────────────────────────────
@@ -87,7 +88,15 @@ export async function createProduct(
     .single();
 
   if (error) throw new Error(error.message);
-  return data as unknown as Product;
+  const created = data as unknown as Product;
+  logAction({
+    business_id: created.business_id,
+    action:      'product.created',
+    entity_type: 'product',
+    entity_id:   created.id,
+    metadata:    { name: created.name, price: created.price },
+  });
+  return created;
 }
 
 export async function updateProduct(
@@ -102,7 +111,15 @@ export async function updateProduct(
     .single();
 
   if (error) throw new Error(error.message);
-  return data as unknown as Product;
+  const updated = data as unknown as Product;
+  logAction({
+    business_id: updated.business_id,
+    action:      'product.updated',
+    entity_type: 'product',
+    entity_id:   id,
+    metadata:    { name: updated.name, fields: Object.keys(updates) },
+  });
+  return updated;
 }
 
 export async function deleteProduct(id: string): Promise<void> {

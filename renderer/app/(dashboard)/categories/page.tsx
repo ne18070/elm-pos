@@ -105,6 +105,7 @@ export default function CategoriesPage() {
         <CategoryModal
           category={editCategory}
           businessId={business?.id ?? ''}
+          nextSortOrder={categories.length}
           onClose={() => { setShowCreate(false); setEditCategory(null); }}
           onSaved={() => { setShowCreate(false); setEditCategory(null); refetch(); }}
         />

@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { logAction } from './logger';
 
 export interface StockEntry {
   id: string;
@@ -69,4 +70,16 @@ export async function addStockEntry(input: AddStockEntryInput): Promise<void> {
     p_created_by:     input.createdBy     ?? null,
   });
   if (error) throw new Error(error.message);
+  logAction({
+    business_id: input.businessId,
+    action:      'stock.entry',
+    entity_type: 'stock',
+    entity_id:   input.productId,
+    user_id:     input.createdBy,
+    metadata: {
+      quantity:   input.quantity,
+      supplier:   input.supplier,
+      cost:       input.costPerUnit,
+    },
+  });
 }

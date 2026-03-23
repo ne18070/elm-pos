@@ -7,6 +7,7 @@ import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
+import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { RefundModal } from './RefundModal';
@@ -99,6 +100,15 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     if (!confirm('Annuler cette commande ?\n\nLe stock sera restauré et le coupon éventuellement appliqué sera annulé.')) return;
     try {
       await cancelOrder(order.id);
+      logAction({
+        business_id: order.business_id,
+        action:      'order.cancelled',
+        entity_type: 'order',
+        entity_id:   order.id,
+        user_id:     user?.id,
+        user_name:   user?.full_name,
+        metadata:    { total: order.total },
+      });
       success('Commande annulée');
       onRefresh();
       onClose();
@@ -114,6 +124,15 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       reason:     reason || undefined,
       refundedBy: user?.id,
     });
+    logAction({
+      business_id: order.business_id,
+      action:      'order.refunded',
+      entity_type: 'order',
+      entity_id:   order.id,
+      user_id:     user?.id,
+      user_name:   user?.full_name,
+      metadata:    { amount, reason: reason || null },
+    });
     success(`Remboursement de ${fmt(amount)} enregistré`);
     onRefresh();
     onClose();
@@ -127,6 +146,15 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     setCompleting(true);
     try {
       await completeOrderPayment({ orderId: order.id, method: completeMethod, amount });
+      logAction({
+        business_id: order.business_id,
+        action:      'order.payment_completed',
+        entity_type: 'order',
+        entity_id:   order.id,
+        user_id:     user?.id,
+        user_name:   user?.full_name,
+        metadata:    { amount, method: completeMethod, fully_paid: amount >= remaining - 0.01 },
+      });
       success(`Paiement de ${fmt(amount)} enregistré${amount >= remaining - 0.01 ? ' — commande soldée !' : ''}`);
       onRefresh();
       onClose();
