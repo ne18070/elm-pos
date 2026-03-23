@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Loader2, Save, UserPlus, Shield, UserX, ChevronDown,
   Users, User, Building2, Check,
@@ -11,8 +11,10 @@ import { useTeam } from '@/hooks/useTeam';
 import { InviteModal } from '@/components/admin/InviteModal';
 import { updateUserRole, removeUserFromBusiness, updateOwnProfile } from '@services/supabase/users';
 import { uploadProductImage } from '@services/supabase/storage';
+import { getMyBusinesses } from '@services/supabase/business';
 import { supabase } from '@/lib/supabase';
 import type { User as UserType, UserRole } from '@pos-types';
+import type { BusinessMembership } from '@services/supabase/business';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   owner: { label: 'Propriétaire', color: 'text-yellow-400 bg-yellow-900/20 border-yellow-800' },
@@ -23,11 +25,38 @@ const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
 type Tab = 'profil' | 'equipe' | 'etablissements';
 
 export default function AdminPage() {
-  const { user, business, businesses, setUser } = useAuthStore();
+  const { user, business, businesses, setUser, setBusinesses } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const { members, loading: loadingTeam, refetch } = useTeam(business?.id ?? '');
   const [tab, setTab] = useState<Tab>('profil');
   const [showInvite, setShowInvite] = useState(false);
+
+  // Liste locale avec fallback : store OU business actif
+  const [bizList, setBizList] = useState<BusinessMembership[]>(() =>
+    businesses.length > 0
+      ? businesses
+      : business ? [{ business, role: user?.role ?? 'staff' } as BusinessMembership] : []
+  );
+
+  // Rafraîchir quand l'onglet établissements s'ouvre
+  useEffect(() => {
+    if (tab !== 'etablissements') return;
+    getMyBusinesses()
+      .then((list) => {
+        setBusinesses(list);
+        setBizList(list.length > 0
+          ? list
+          : business ? [{ business, role: user?.role ?? 'staff' } as BusinessMembership] : []
+        );
+      })
+      .catch(() => {
+        // RPC indisponible — garder le fallback
+        if (bizList.length === 0 && business) {
+          setBizList([{ business, role: user?.role ?? 'staff' } as BusinessMembership]);
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // ── Profil ───────────────────────────────────────────────────────────────────
   const [profileForm, setProfileForm] = useState({ full_name: user?.full_name ?? '' });
@@ -308,14 +337,14 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-white font-medium">
-                  {businesses.length} établissement{businesses.length !== 1 ? 's' : ''}
+                  {bizList.length} établissement{bizList.length !== 1 ? 's' : ''}
                 </p>
                 <p className="text-xs text-slate-500">Vous êtes propriétaire ou membre</p>
               </div>
             </div>
 
             <div className="space-y-2">
-              {businesses.map(({ business: biz, role }) => {
+              {bizList.map(({ business: biz, role }) => {
                 const isActive = biz.id === business?.id;
                 return (
                   <div
@@ -351,7 +380,7 @@ export default function AdminPage() {
                 );
               })}
 
-              {businesses.length === 0 && (
+              {bizList.length === 0 && (
                 <div className="text-center py-12 text-slate-500">
                   <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p>Aucun établissement trouvé</p>

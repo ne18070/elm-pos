@@ -53,7 +53,8 @@ IF v_reset_user IS NOT NULL THEN
     DELETE FROM stock_entries WHERE business_id = v_reset_biz;
     DELETE FROM products      WHERE business_id = v_reset_biz;
     DELETE FROM categories    WHERE business_id = v_reset_biz;
-    DELETE FROM coupons       WHERE business_id = v_reset_biz;
+    DELETE FROM coupons           WHERE business_id = v_reset_biz;
+    DELETE FROM business_members  WHERE business_id = v_reset_biz;
     UPDATE users SET business_id = NULL WHERE id = v_reset_user;
     DELETE FROM businesses WHERE id = v_reset_biz;
   END IF;
@@ -99,12 +100,18 @@ INSERT INTO businesses (
 
 -- ─── 3. Lier l'utilisateur à l'établissement ─────────────────────────────────
 
+-- public.users est créé par le trigger handle_new_user lors de l'INSERT auth.users
+-- On met à jour business_id et role (le trigger crée la ligne avec business_id=NULL)
 UPDATE users
-SET
-  full_name   = 'Démo Elm POS',
-  role        = 'owner',
-  business_id = v_business_id
+SET full_name   = 'Démo Elm POS',
+    role        = 'owner',
+    business_id = v_business_id
 WHERE id = v_user_id;
+
+-- Alimenter business_members explicitement (source de vérité pour get_my_businesses)
+INSERT INTO business_members (business_id, user_id, role)
+VALUES (v_business_id, v_user_id, 'owner')
+ON CONFLICT (business_id, user_id) DO UPDATE SET role = 'owner';
 
 -- ─── 4. Catégories ───────────────────────────────────────────────────────────
 
