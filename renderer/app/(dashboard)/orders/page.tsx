@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
 import { OrderDetail } from '@/components/orders/OrderDetail';
+import { InvoiceModal } from '@/components/shared/InvoiceModal';
 import type { Order, OrderStatus } from '@pos-types';
 
 type FilterTab = OrderStatus | 'all' | 'acompte';
@@ -42,7 +43,8 @@ function isAcompte(order: Order): boolean {
 export default function OrdersPage() {
   const { business } = useAuthStore();
   const [tab, setTab]               = useState<FilterTab>('all');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
+  const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
 
   // Pour le filtre "acompte", on charge tout puis on filtre côté client
@@ -243,7 +245,13 @@ export default function OrdersPage() {
           currency={business?.currency ?? 'XOF'}
           onClose={() => setSelectedOrder(null)}
           onRefresh={() => { refetch(); setSelectedOrder(null); }}
+          onPrint={(o) => setPrintOrder(o)}
         />
+      )}
+
+      {/* Modal impression */}
+      {printOrder && (
+        <InvoiceModal order={printOrder} onClose={() => setPrintOrder(null)} />
       )}
     </div>
   );

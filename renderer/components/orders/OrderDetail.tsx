@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2 } from 'lucide-react';
+import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface OrderDetailProps {
   currency: string;
   onClose: () => void;
   onRefresh: () => void;
+  onPrint?: (order: Order) => void;
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -55,7 +56,7 @@ function isAcompte(order: Order): boolean {
   return getRemainingAmount(order) > 0.01;
 }
 
-export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetailProps) {
+export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: OrderDetailProps) {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const [showRefundModal, setShowRefundModal]     = useState(false);
@@ -347,13 +348,22 @@ export function OrderDetail({ order, currency, onClose, onRefresh }: OrderDetail
 
         {/* Actions */}
         <div className="p-4 border-t border-surface-border space-y-2">
-          <button
-            onClick={handlePrint}
-            className="btn-secondary w-full flex items-center justify-center gap-2 h-10"
-          >
-            <Printer className="w-4 h-4" />
-            Réimprimer le reçu
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePrint}
+              className="btn-secondary flex-1 flex items-center justify-center gap-2 h-10"
+            >
+              <Printer className="w-4 h-4" />
+              Reçu
+            </button>
+            <button
+              onClick={() => onPrint?.(order)}
+              className="btn-secondary flex-1 flex items-center justify-center gap-2 h-10"
+            >
+              <FileText className="w-4 h-4" />
+              Facture
+            </button>
+          </div>
 
           {/* Compléter le paiement */}
           {partial && !showCompleteForm && (
