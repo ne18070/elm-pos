@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
 
 const PUBLIC_PATHS = ['/login', '/display'];
+const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
@@ -17,7 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) {
         setLoading(false);
-        if (!PUBLIC_PATHS.includes(pathname)) router.replace('/login');
+        if (!isPublic(pathname)) router.replace('/login');
         return;
       }
 
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if ((event === 'SIGNED_OUT' || !session) && !PUBLIC_PATHS.includes(pathname)) {
+        if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathname)) {
           clear();
           router.replace('/login');
         }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle, ShoppingCart } from 'lucide-react';
+import { CheckCircle, ShoppingCart, X } from 'lucide-react';
 import type { DisplayState, DisplayItem } from '@/hooks/useCustomerDisplay';
 
 function useClock() {
@@ -300,7 +300,16 @@ export default function DisplayPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#0f172a]">
+    <div className="h-screen w-screen overflow-hidden bg-[#0f172a] relative">
+      {/* Bouton fermer — visible au survol */}
+      <button
+        onClick={() => window.electronAPI?.invoke('display:close')}
+        className="absolute top-3 right-3 z-50 p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-500 hover:text-white opacity-0 hover:opacity-100 focus:opacity-100 transition-all"
+        title="Fermer l'écran client"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
       {displayState.screen === 'idle'    && <IdleScreen    state={displayState} />}
       {displayState.screen === 'cart'    && <CartScreen    state={displayState} />}
       {displayState.screen === 'confirm' && <ConfirmScreen state={displayState} onConfirm={handleCustomerConfirm} />}
