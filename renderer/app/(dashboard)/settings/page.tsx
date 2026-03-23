@@ -15,7 +15,7 @@ const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sac
 export default function SettingsPage() {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
-  const { isOnline, pendingCount, syncing } = useOfflineSync();
+  const { isOnline, pending: pendingCount, syncing } = useOfflineSync();
   const [saving, setSaving] = useState(false);
   const [syncing2, setSyncing2] = useState(false);
 
