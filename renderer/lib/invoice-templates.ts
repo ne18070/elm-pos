@@ -1,5 +1,63 @@
 import type { Order, Business } from '../../types';
 
+// ─── Montant en lettres (français) ───────────────────────────────────────────
+
+const _UNITS = [
+  '', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf',
+  'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize',
+  'dix-sept', 'dix-huit', 'dix-neuf',
+];
+const _TENS = ['', 'dix', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+
+function _int2fr(n: number): string {
+  if (n === 0) return 'zéro';
+  if (n < 20)  return _UNITS[n];
+  if (n < 100) {
+    const t = Math.floor(n / 10), u = n % 10;
+    if (t === 7) return u === 0 ? 'soixante-dix' : 'soixante-' + _UNITS[10 + u];
+    if (t === 8) return u === 0 ? 'quatre-vingts' : 'quatre-vingt-' + _UNITS[u];
+    if (t === 9) return u === 0 ? 'quatre-vingt-dix' : 'quatre-vingt-' + _UNITS[10 + u];
+    return u === 0 ? _TENS[t] : u === 1 ? _TENS[t] + '-et-un' : _TENS[t] + '-' + _UNITS[u];
+  }
+  if (n < 1000) {
+    const h = Math.floor(n / 100), r = n % 100;
+    const p = h === 1 ? 'cent' : _int2fr(h) + ' cent';
+    return r === 0 ? (h === 1 ? 'cent' : _int2fr(h) + ' cents') : p + ' ' + _int2fr(r);
+  }
+  if (n < 1_000_000) {
+    const t = Math.floor(n / 1000), r = n % 1000;
+    const p = t === 1 ? 'mille' : _int2fr(t) + ' mille';
+    return r === 0 ? p : p + ' ' + _int2fr(r);
+  }
+  if (n < 1_000_000_000) {
+    const m = Math.floor(n / 1_000_000), r = n % 1_000_000;
+    const p = m === 1 ? 'un million' : _int2fr(m) + ' millions';
+    return r === 0 ? p : p + ' ' + _int2fr(r);
+  }
+  const b = Math.floor(n / 1_000_000_000), r = n % 1_000_000_000;
+  const p = b === 1 ? 'un milliard' : _int2fr(b) + ' milliards';
+  return r === 0 ? p : p + ' ' + _int2fr(r);
+}
+
+const _CURRENCY_NAMES: Record<string, [string, string]> = {
+  XOF: ['franc CFA',       'francs CFA'],
+  EUR: ['euro',             'euros'],
+  USD: ['dollar',           'dollars'],
+  GBP: ['livre sterling',   'livres sterling'],
+  MAD: ['dirham',           'dirhams'],
+  DZD: ['dinar algérien',   'dinars algériens'],
+  TND: ['dinar tunisien',   'dinars tunisiens'],
+};
+
+function amountInWords(amount: number, currency: string): string {
+  const int  = Math.floor(Math.abs(amount));
+  const dec  = Math.round((Math.abs(amount) - int) * 100);
+  const [sg, pl] = _CURRENCY_NAMES[currency] ?? [currency, currency];
+  let result = _int2fr(int).toUpperCase() + ' ' + (int > 1 ? pl : sg).toUpperCase();
+  if (dec > 0) result += ' ET ' + _int2fr(dec).toUpperCase() + ' CENTIMES';
+  return result;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -132,6 +190,12 @@ export function generateThermalReceipt(order: Order, business: Business): string
     </tr>
   </table>
 
+  <!-- Montant en lettres -->
+  <div class="small" style="margin:4px 0;font-style:italic;line-height:1.4">
+    Arrêté à la somme de :<br>
+    <strong>${amountInWords(order.total, cur)}</strong>
+  </div>
+
   <hr class="divider">
 
   <!-- Paiements -->
@@ -229,6 +293,9 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
           ` : ''}
           ${order.tax_amount > 0 ? `<tr><td>TVA</td><td>${fmt(order.tax_amount, cur)}</td></tr>` : ''}
           <tr class="total-final"><td>TOTAL TTC</td><td>${fmt(order.total, cur)}</td></tr>
+          <tr><td colspan="2" style="font-size:8px;font-style:italic;color:#4a5568;padding:3px 6px 2px;line-height:1.4;border-bottom:1px solid #e2e8f0">
+            Arrêté à la somme de : <strong>${amountInWords(order.total, cur)}</strong>
+          </td></tr>
           ${(order.payments ?? []).map((p) =>
             `<tr class="payment-line"><td>${PAYMENT_LABELS[p.method] ?? p.method}</td><td>${fmt(p.amount, cur)}</td></tr>`
           ).join('')}

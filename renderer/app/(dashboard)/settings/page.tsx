@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Receipt, FileText } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette } from 'lucide-react';
+import { TemplateManager } from '@/components/settings/TemplateManager';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -33,10 +34,7 @@ export default function SettingsPage() {
   const [newUnit, setNewUnit]       = useState('');
   const [savingUnits, setSavingUnits] = useState(false);
 
-  // Template de facture par défaut
-  const [invoiceTemplate, setInvoiceTemplate] = useState<'thermal' | 'a4'>(
-    () => (typeof window !== 'undefined' ? (localStorage.getItem('invoice_template') as 'thermal' | 'a4' | null) ?? 'thermal' : 'thermal')
-  );
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   async function handleSaveBusiness() {
     if (!business) return;
@@ -252,69 +250,22 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Template de facture */}
+        {/* Modèles de facture */}
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-white flex items-center gap-2">
             <Printer className="w-4 h-4 text-slate-400" />
-            Modèle de facture par défaut
+            Modèles de facture
           </h2>
           <p className="text-xs text-slate-500">
-            Ce modèle sera pré-sélectionné à chaque impression depuis la page Commandes.
+            Créez et personnalisez vos modèles d&apos;impression : format, couleurs, champs affichés, duplicata…
           </p>
-
-          <div className="grid grid-cols-2 gap-3">
-            {/* Ticket thermique */}
-            <button
-              onClick={() => {
-                setInvoiceTemplate('thermal');
-                localStorage.setItem('invoice_template', 'thermal');
-              }}
-              className={`flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
-                invoiceTemplate === 'thermal'
-                  ? 'border-brand-600 bg-brand-600/10'
-                  : 'border-surface-border hover:border-slate-600 hover:bg-surface-hover'
-              }`}
-            >
-              <Receipt className={`w-6 h-6 ${invoiceTemplate === 'thermal' ? 'text-brand-400' : 'text-slate-400'}`} />
-              <div>
-                <p className={`text-sm font-semibold ${invoiceTemplate === 'thermal' ? 'text-white' : 'text-slate-300'}`}>
-                  Ticket thermique
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5 leading-snug">Imprimante 80mm · Format caisse</p>
-              </div>
-              {invoiceTemplate === 'thermal' && (
-                <span className="text-xs text-brand-400 font-medium">✓ Sélectionné</span>
-              )}
-            </button>
-
-            {/* Facture A4 duplicata */}
-            <button
-              onClick={() => {
-                setInvoiceTemplate('a4');
-                localStorage.setItem('invoice_template', 'a4');
-              }}
-              className={`flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
-                invoiceTemplate === 'a4'
-                  ? 'border-brand-600 bg-brand-600/10'
-                  : 'border-surface-border hover:border-slate-600 hover:bg-surface-hover'
-              }`}
-            >
-              <FileText className={`w-6 h-6 ${invoiceTemplate === 'a4' ? 'text-brand-400' : 'text-slate-400'}`} />
-              <div>
-                <p className={`text-sm font-semibold ${invoiceTemplate === 'a4' ? 'text-white' : 'text-slate-300'}`}>
-                  Facture A4 duplicata
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5 leading-snug">A4 paysage · Client + boutique</p>
-              </div>
-              {invoiceTemplate === 'a4' && (
-                <span className="text-xs text-brand-400 font-medium">✓ Sélectionné</span>
-              )}
-            </button>
-          </div>
-
-          <p className="text-xs text-slate-500">
-            La préférence est enregistrée localement sur cet appareil.
-          </p>
+          <button onClick={() => setShowTemplateManager(true)} className="btn-secondary flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Gérer les modèles
+          </button>
+          {showTemplateManager && (
+            <TemplateManager businessId={business?.id ?? ''} onClose={() => setShowTemplateManager(false)} />
+          )}
         </div>
 
         {/* Synchronisation */}
