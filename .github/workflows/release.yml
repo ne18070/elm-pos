@@ -66,6 +66,9 @@ jobs:
       - name: Build (Next.js + Electron)
         run: yarn build
 
+      - name: Install dmg-license (required by electron-builder on macOS)
+        run: npm install dmg-license --no-save
+
       - name: Package macOS
         run: yarn dist:mac
         env:

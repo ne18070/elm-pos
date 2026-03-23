@@ -2,6 +2,10 @@
   "name": "elm-pos",
   "version": "1.0.0",
   "description": "Production-grade multi-business Desktop POS system",
+  "author": {
+    "name": "Elm POS",
+    "email": "contact@elmpos.app"
+  },
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "concurrently \"yarn dev:next\" \"yarn dev:electron\"",
@@ -71,6 +75,9 @@
     "mac": {
       "target": "dmg",
       "icon": "assets/icon.icns"
+    },
+    "dmg": {
+      "sign": false
     },
     "linux": {
       "target": "AppImage",
