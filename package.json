@@ -60,7 +60,7 @@
     },
     "files": [
       "dist/**/*",
-      "renderer/.next/**/*",
+      "renderer/out/**/*",
       "renderer/public/**/*",
       "node_modules/**/*",
       "package.json"
