@@ -5,6 +5,7 @@ import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHori
 import { useCustomersStore } from '@/store/customers';
 import type { SavedCustomer } from '@/store/customers';
 import { Modal } from '@/components/ui/Modal';
+import { NumpadModal } from '@/components/ui/NumpadModal';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -49,6 +50,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
   const [chargement, setChargement]   = useState(false);
   const [ordreId, setOrdreId]         = useState<string | null>(null);
   const [erreur, setErreur]           = useState('');
+  const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | null>(null);
 
   // Paiement partiel (acompte)
   const [partialMethod, setPartialMethod]     = useState<Exclude<PaymentMethod, 'partial'>>('cash');
@@ -354,20 +356,17 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
           {methode === 'cash' && (
             <div>
               <label className="label">Montant reçu</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={montantRecu}
-                onChange={(e) => { setMontantRecu(e.target.value); setErreur(''); }}
-                placeholder="0"
-                className="input text-2xl font-bold text-center py-3"
-                autoFocus
-              />
+              <button
+                onClick={() => { setNumpad('montant'); setErreur(''); }}
+                className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
+              >
+                {montantRecu || <span className="text-slate-500">Appuyer pour saisir</span>}
+              </button>
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {suggestions.map((v) => (
                   <button
                     key={v}
-                    onClick={() => setMontantRecu(String(v))}
+                    onClick={() => { setMontantRecu(String(v)); setErreur(''); }}
                     className={`btn-secondary py-1.5 text-xs ${montantRecuNum === v ? 'border border-brand-500 text-brand-400' : ''}`}
                   >
                     {fmt(v)}
@@ -507,28 +506,23 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
 
           <div>
             <label className="label">Montant versé maintenant</label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={acompte}
-              onChange={(e) => { setAcompte(e.target.value); setErreur(''); }}
-              placeholder="0"
-              className="input text-2xl font-bold text-center py-3"
-              autoFocus
-            />
+            <button
+              onClick={() => { setNumpad('acompte'); setErreur(''); }}
+              className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
+            >
+              {acompte || <span className="text-slate-500">Appuyer pour saisir</span>}
+            </button>
           </div>
 
           {partialMethod === 'cash' && acompteNum > 0 && (
             <div>
               <label className="label">Montant reçu (espèces)</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={acompteRecu}
-                onChange={(e) => setAcompteRecu(e.target.value)}
-                placeholder={fmt(acompteNum)}
-                className="input text-center"
-              />
+              <button
+                onClick={() => setNumpad('acompteRecu')}
+                className="input text-xl font-bold text-center py-2.5 w-full cursor-pointer hover:border-brand-500 transition-colors"
+              >
+                {acompteRecu || <span className="text-slate-500">{fmt(acompteNum)}</span>}
+              </button>
             </div>
           )}
 
@@ -606,6 +600,35 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
             </button>
           )}
         </div>
+      )}
+
+      {/* ── Numpad ────────────────────────────────────────────────────────── */}
+      {numpad === 'montant' && (
+        <NumpadModal
+          value={montantRecu}
+          label="Montant reçu"
+          hint={`Total : ${fmt(total)}`}
+          onDigit={(v) => { setMontantRecu(v); setErreur(''); }}
+          onClose={() => setNumpad(null)}
+        />
+      )}
+      {numpad === 'acompte' && (
+        <NumpadModal
+          value={acompte}
+          label="Montant versé"
+          hint={`Total : ${fmt(total)}`}
+          onDigit={(v) => { setAcompte(v); setErreur(''); }}
+          onClose={() => setNumpad(null)}
+        />
+      )}
+      {numpad === 'acompteRecu' && (
+        <NumpadModal
+          value={acompteRecu}
+          label="Montant reçu (espèces)"
+          hint={`Acompte : ${fmt(acompteNum)}`}
+          onDigit={setAcompteRecu}
+          onClose={() => setNumpad(null)}
+        />
       )}
 
       {/* ── Étape 4 : succès ──────────────────────────────────────────────── */}
