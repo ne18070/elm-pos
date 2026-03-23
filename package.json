@@ -32,8 +32,7 @@
   },
   "optionalDependencies": {
     "escpos": "^3.0.0-alpha",
-    "escpos-usb": "^3.0.0-alpha",
-    "nfc-pcsc": "^0.9.2"
+    "escpos-usb": "^3.0.0-alpha"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
