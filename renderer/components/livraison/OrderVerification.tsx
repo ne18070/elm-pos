@@ -18,10 +18,25 @@ interface OrderVerificationProps {
 }
 
 export function OrderVerification({ order, currency, onConfirm, onClose }: OrderVerificationProps) {
-  // Set des IDs d'articles vérifiés (par l'opérateur)
   const [verified, setVerified] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const [lastScanned, setLastScanned] = useState<{ text: string; ok: boolean } | null>(null);
+
+  // Scanner activé/désactivé — persisté en localStorage
+  const [scannerEnabled, setScannerEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem(SCANNER_KEY);
+    return saved === null ? true : saved === 'true';
+  });
+
+  function toggleScanner() {
+    setScannerEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem(SCANNER_KEY, String(next));
+      return next;
+    });
+  }
+
   const fmt = (n: number) => formatCurrency(n, currency);
 
   // Items à plat : si qty=3, on génère 3 "lignes" distinctes de vérification
@@ -52,21 +67,19 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
   // Scan code-barres → coche l'article correspondant
   const handleBarcode = useCallback(
     (barcode: string) => {
-      const match = items.find(
-        (i) => i.product?.barcode === barcode
-      );
+      const match = items.find((i) => i.product?.barcode === barcode);
       if (match) {
         setVerified((prev) => {
-          if (prev.has(match.id)) return prev; // déjà coché
+          if (prev.has(match.id)) return prev;
           const next = new Set(prev);
           next.add(match.id);
           return next;
         });
-        setLastScanned(match.name);
-        setTimeout(() => setLastScanned(null), 2000);
+        setLastScanned({ text: match.name, ok: true });
+        setTimeout(() => setLastScanned(null), 2500);
       } else {
-        setLastScanned(`❌ Inconnu : ${barcode}`);
-        setTimeout(() => setLastScanned(null), 2000);
+        setLastScanned({ text: `Code inconnu : ${barcode}`, ok: false });
+        setTimeout(() => setLastScanned(null), 2500);
       }
     },
     [items]
@@ -79,7 +92,8 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
 
   return (
     <>
-      <BarcodeListener onScan={handleBarcode} />
+      {/* Scanner monté uniquement si activé */}
+      {scannerEnabled && <BarcodeListener onScan={handleBarcode} />}
 
       <div className="flex flex-col h-full">
         {/* En-tête commande */}
@@ -145,20 +159,21 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
 
           {/* Notification scan */}
           {lastScanned && (
-            <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium
-              ${lastScanned.startsWith('❌')
-                ? 'bg-red-900/20 border border-red-800 text-red-300'
-                : 'bg-green-900/20 border border-green-800 text-green-300'}`}>
+            <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border ${
+              lastScanned.ok
+                ? 'bg-green-900/20 border-green-800 text-green-300'
+                : 'bg-red-900/20 border-red-800 text-red-300'
+            }`}>
               <ScanLine className="w-4 h-4 shrink-0" />
-              {lastScanned.startsWith('❌') ? lastScanned : `✓ ${lastScanned}`}
+              {lastScanned.ok ? `✓ ${lastScanned.text}` : lastScanned.text}
             </div>
           )}
         </div>
 
         {/* Liste articles */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-          {/* Raccourcis */}
-          <div className="flex gap-2 mb-4">
+          {/* Raccourcis + toggle scanner */}
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={checkAll}
               disabled={allDone}
@@ -176,11 +191,30 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
               Tout décocher
             </button>
             <div className="flex-1" />
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <ScanLine className="w-3.5 h-3.5" />
-              Scan actif
-            </div>
+
+            {/* Toggle scanner */}
+            <button
+              onClick={toggleScanner}
+              title={scannerEnabled ? 'Désactiver le scanner (panne / absence)' : 'Activer le scanner'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                scannerEnabled
+                  ? 'border-brand-700 bg-brand-900/30 text-brand-400 hover:bg-brand-900/50'
+                  : 'border-slate-700 bg-surface-input text-slate-500 hover:border-slate-600 hover:text-slate-300'
+              }`}
+            >
+              {scannerEnabled
+                ? <><ScanBarcode className="w-3.5 h-3.5" /> Scanner actif</>
+                : <><WifiOff className="w-3.5 h-3.5" /> Mode manuel</>}
+            </button>
           </div>
+
+          {/* Bannière mode manuel */}
+          {!scannerEnabled && (
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-amber-900/20 border border-amber-800 rounded-xl text-xs text-amber-300">
+              <WifiOff className="w-3.5 h-3.5 shrink-0" />
+              Scanner désactivé — cochage manuel uniquement. Cliquez sur un article pour le valider.
+            </div>
+          )}
 
           {items.map((item) => {
             const done = verified.has(item.id);
