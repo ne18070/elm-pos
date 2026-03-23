@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 const ALLOWED_INVOKE_CHANNELS = new Set([
   'hardware:printer:status',
   'hardware:printer:print',
+  'hardware:printer:test',
   'hardware:scanner:status',
   'hardware:nfc:status',
   'sync:status',
@@ -77,6 +78,9 @@ const api = {
       assertObject(data, 'receiptData');
       return ipcRenderer.invoke('hardware:printer:print', data);
     },
+
+    testPrinterConnection: (ip: string, port: number) =>
+      ipcRenderer.invoke('hardware:printer:test', { ip, port }),
 
     getScannerStatus: () => ipcRenderer.invoke('hardware:scanner:status'),
     getNfcStatus:     () => ipcRenderer.invoke('hardware:nfc:status'),

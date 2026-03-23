@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
+import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -35,6 +36,28 @@ export default function SettingsPage() {
   const [savingUnits, setSavingUnits] = useState(false);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  // Config imprimante réseau
+  const [printerConfig, setPrinterConfig] = useState<PrinterConfig>(() => loadPrinterConfig());
+  const [testingPrinter, setTestingPrinter]   = useState(false);
+  const [printerTestResult, setPrinterTestResult] = useState<{ connected: boolean; latency?: number; error?: string } | null>(null);
+
+  function handleSavePrinterConfig() {
+    savePrinterConfig(printerConfig);
+    success('Configuration imprimante enregistrée');
+  }
+
+  async function handleTestPrinter() {
+    if (!printerConfig.ip) { notifError('Entrez une adresse IP'); return; }
+    setTestingPrinter(true);
+    setPrinterTestResult(null);
+    try {
+      const result = await testPrinterConnection(printerConfig.ip, printerConfig.port);
+      setPrinterTestResult(result);
+    } finally {
+      setTestingPrinter(false);
+    }
+  }
 
   async function handleSaveBusiness() {
     if (!business) return;
@@ -300,16 +323,107 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Infos imprimante */}
-        <div className="card p-5">
-          <h2 className="font-semibold text-white mb-3 flex items-center gap-2">
+        {/* Config imprimante */}
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-white flex items-center gap-2">
             <Printer className="w-4 h-4 text-slate-400" />
             Imprimante thermique
           </h2>
-          <p className="text-sm text-slate-400">
-            L&apos;imprimante est détectée automatiquement via USB.
-            Assurez-vous que les pilotes ESC/POS sont installés.
-          </p>
+
+          {/* Mode de connexion */}
+          <div>
+            <label className="label">Mode de connexion</label>
+            <div className="flex gap-2 mt-1">
+              {(['usb', 'network'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => { setPrinterConfig({ ...printerConfig, type }); setPrinterTestResult(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                    printerConfig.type === type
+                      ? 'border-brand-600 bg-brand-600/10 text-white'
+                      : 'border-surface-border text-slate-400 hover:border-slate-600 hover:bg-surface-hover'
+                  }`}
+                >
+                  {type === 'usb'
+                    ? <><Printer className="w-4 h-4" /> USB</>
+                    : <><Network className="w-4 h-4" /> Réseau TCP/IP</>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* USB */}
+          {printerConfig.type === 'usb' && (
+            <p className="text-sm text-slate-400">
+              L&apos;imprimante est détectée automatiquement via USB.
+              Assurez-vous que les pilotes ESC/POS sont installés.
+            </p>
+          )}
+
+          {/* Réseau */}
+          {printerConfig.type === 'network' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="label">Adresse IP</label>
+                  <input
+                    type="text"
+                    placeholder="192.168.1.100"
+                    value={printerConfig.ip}
+                    onChange={(e) => { setPrinterConfig({ ...printerConfig, ip: e.target.value }); setPrinterTestResult(null); }}
+                    className="input font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="label">Port</label>
+                  <input
+                    type="number"
+                    value={printerConfig.port}
+                    onChange={(e) => setPrinterConfig({ ...printerConfig, port: parseInt(e.target.value) || 9100 })}
+                    className="input font-mono"
+                    min={1}
+                    max={65535}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleTestPrinter}
+                disabled={testingPrinter || !printerConfig.ip}
+                className="btn-secondary flex items-center gap-2"
+              >
+                {testingPrinter
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Wifi className="w-4 h-4" />}
+                {testingPrinter ? 'Test en cours…' : 'Tester la connexion'}
+              </button>
+
+              {printerTestResult && (
+                <div className={`flex items-center gap-2 p-3 rounded-xl border text-sm ${
+                  printerTestResult.connected
+                    ? 'bg-green-900/20 border-green-800 text-green-400'
+                    : 'bg-red-900/20 border-red-800 text-red-400'
+                }`}>
+                  {printerTestResult.connected
+                    ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    : <XCircle className="w-4 h-4 shrink-0" />}
+                  <span>
+                    {printerTestResult.connected
+                      ? `Imprimante accessible — latence ${printerTestResult.latency}ms`
+                      : `Connexion impossible : ${printerTestResult.error}`}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleSavePrinterConfig}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Enregistrer
+          </button>
         </div>
 
         {/* Compte utilisateur */}

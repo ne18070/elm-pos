@@ -1,5 +1,12 @@
+import * as net from 'net';
 import type { PrinterStatus, ReceiptData } from '../../types';
 import { formatReceiptLines } from './escpos';
+
+export interface PrinterConfig {
+  type: 'usb' | 'network';
+  ip?: string;
+  port?: number;
+}
 
 // Chargement dynamique pour éviter les crashs si les packages ne sont pas installés
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -58,9 +65,14 @@ export class PrinterManager {
     }
   }
 
-  async printReceipt(data: ReceiptData, attempt = 1): Promise<void> {
+  async printReceipt(data: ReceiptData, config?: PrinterConfig, attempt = 1): Promise<void> {
+    // Mode réseau TCP/IP
+    if (config?.type === 'network' && config.ip) {
+      return this.doPrintNetwork(data, config.ip, config.port ?? 9100);
+    }
+
+    // Mode USB (défaut)
     if (!loadEscpos() || !USB) {
-      // Pas de crash — juste loggé (fallback texte en dev)
       console.log('[PRINTER] Fallback texte :\n', this.textFallback(data));
       return;
     }
@@ -74,15 +86,106 @@ export class PrinterManager {
       await this.doPrint(data);
     } catch (err) {
       if (attempt < MAX_RETRIES) {
-        // Retry avec délai court
         await delay(500);
-        return this.printReceipt(data, attempt + 1);
+        return this.printReceipt(data, config, attempt + 1);
       }
       throw new PrinterError(
         `Échec impression après ${MAX_RETRIES} tentatives : ${err}`,
         'PRINT_FAILED'
       );
     }
+  }
+
+  /** Test de connexion TCP — renvoie la latence si succès */
+  async testConnection(ip: string, port: number): Promise<{ connected: boolean; latency?: number; error?: string }> {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const socket = new net.Socket();
+      const TIMEOUT = 3000;
+
+      socket.setTimeout(TIMEOUT);
+
+      socket.connect(port, ip, () => {
+        const latency = Date.now() - start;
+        socket.destroy();
+        resolve({ connected: true, latency });
+      });
+
+      socket.on('error', (err) => {
+        socket.destroy();
+        resolve({ connected: false, error: err.message });
+      });
+
+      socket.on('timeout', () => {
+        socket.destroy();
+        resolve({ connected: false, error: `Délai dépassé (${TIMEOUT}ms)` });
+      });
+    });
+  }
+
+  /** Impression réseau via socket TCP — protocole ESC/POS brut */
+  private doPrintNetwork(data: ReceiptData, ip: string, port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const lines = formatReceiptLines(data);
+      const ESC = '\x1b';
+      const GS  = '\x1d';
+
+      const W = 42; // largeur 80mm standard
+      const center = (s: string) => ' '.repeat(Math.max(0, Math.floor((W - s.length) / 2))) + s;
+      const row    = (l: string, r: string) => l.slice(0, W - r.length - 1).padEnd(W - r.length) + r;
+      const divider = '-'.repeat(W);
+
+      const parts: string[] = [
+        `${ESC}@`,                                      // init
+        `${ESC}a\x01${ESC}E\x01`,                      // center + bold
+        center(lines.businessName) + '\n',
+        `${ESC}E\x00${ESC}a\x00`,                      // bold off + left
+        lines.address  ? center(lines.address)  + '\n' : '',
+        lines.phone    ? center(lines.phone)    + '\n' : '',
+        divider + '\n',
+        `Date    : ${lines.date}\n`,
+        `Commande: #${lines.orderId}\n`,
+        `Caissier: ${lines.cashierName}\n`,
+        divider + '\n',
+        ...lines.items.map((i) => row(`${i.name} x${i.qty}`, i.total) + '\n'),
+        divider + '\n',
+        row('Sous-total', lines.subtotal) + '\n',
+        lines.discount ? row('Remise', `-${lines.discount}`) + '\n' : '',
+        lines.tax      ? row('TVA', lines.tax)               + '\n' : '',
+        `${ESC}E\x01`,                                  // bold
+        row('TOTAL', lines.total) + '\n',
+        `${ESC}E\x00`,                                  // bold off
+        divider + '\n',
+        `Paiement : ${lines.paymentMethod}\n`,
+        divider + '\n',
+        lines.footer ? center(lines.footer) + '\n' : '',
+        center('Merci de votre visite !') + '\n\n\n',
+        `${GS}V\x41\x03`,                              // coupe papier partiel
+      ];
+
+      const payload = Buffer.from(parts.join(''), 'utf8');
+
+      const socket = new net.Socket();
+      socket.setTimeout(PRINT_TIMEOUT_MS);
+
+      socket.connect(port, ip, () => {
+        socket.write(payload, (err) => {
+          socket.destroy();
+          if (err) reject(new PrinterError(`Envoi réseau échoué : ${err.message}`, 'PRINT_FAILED'));
+          else resolve();
+        });
+      });
+
+      socket.on('error', (err) => {
+        socket.destroy();
+        reject(new PrinterError(`Connexion réseau impossible : ${err.message}`, 'OPEN_FAILED'));
+      });
+
+      socket.on('timeout', () => {
+        socket.destroy();
+        reject(new PrinterError('Délai réseau dépassé', 'TIMEOUT'));
+      });
+    });
   }
 
   private doPrint(data: ReceiptData): Promise<void> {

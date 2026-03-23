@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron';
 import type { IpcResponse, ReceiptData } from '../../types';
-import { PrinterManager, PrinterError } from '../../hardware/printer';
+import { PrinterManager, PrinterError, type PrinterConfig } from '../../hardware/printer';
 import { ScannerManager } from '../../hardware/scanner';
 import { NfcManager } from '../../hardware/nfc';
 
@@ -30,18 +30,27 @@ export function registerHardwareHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle(
     'hardware:printer:print',
-    async (_event, receiptData: ReceiptData): Promise<IpcResponse> => {
+    async (_event, payload: ReceiptData & { printerConfig?: PrinterConfig }): Promise<IpcResponse> => {
       try {
-        await getPrinter().printReceipt(receiptData);
+        const { printerConfig, ...receiptData } = payload;
+        await getPrinter().printReceipt(receiptData as ReceiptData, printerConfig);
         return { success: true };
       } catch (err) {
-        // Distinguer les erreurs hardware des erreurs génériques
         if (err instanceof PrinterError) {
-          return {
-            success: false,
-            error: mapPrinterError(err),
-          };
+          return { success: false, error: mapPrinterError(err) };
         }
+        return { success: false, error: String(err) };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'hardware:printer:test',
+    async (_event, { ip, port }: { ip: string; port: number }): Promise<IpcResponse> => {
+      try {
+        const result = await getPrinter().testConnection(ip, port);
+        return { success: result.connected, data: result };
+      } catch (err) {
         return { success: false, error: String(err) };
       }
     }

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Check, Package, ScanLine, X, CheckCheck, Loader2, Tag, Gift } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Check, Package, ScanLine, ScanBarcode, X, CheckCheck, Loader2, Tag, Gift, WifiOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { BarcodeListener } from '@/components/pos/BarcodeListener';
 import type { Order, OrderItem } from '@pos-types';
+
+const SCANNER_KEY = 'delivery_scanner_enabled';
 
 interface OrderVerificationProps {
   order: Order;

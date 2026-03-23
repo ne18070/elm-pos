@@ -12,6 +12,28 @@ export const isElectron = !!api;
 
 // ─── Imprimante ───────────────────────────────────────────────────────────────
 
+export interface PrinterConfig {
+  type: 'usb' | 'network';
+  ip: string;
+  port: number;
+}
+
+const PRINTER_CONFIG_KEY = 'printer_config';
+
+export function loadPrinterConfig(): PrinterConfig {
+  if (typeof window === 'undefined') return { type: 'usb', ip: '', port: 9100 };
+  try {
+    const raw = localStorage.getItem(PRINTER_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : { type: 'usb', ip: '', port: 9100 };
+  } catch {
+    return { type: 'usb', ip: '', port: 9100 };
+  }
+}
+
+export function savePrinterConfig(config: PrinterConfig): void {
+  localStorage.setItem(PRINTER_CONFIG_KEY, JSON.stringify(config));
+}
+
 export async function printReceipt(
   data: unknown
 ): Promise<{ success: boolean; error?: string }> {
@@ -19,7 +41,17 @@ export async function printReceipt(
     console.log('[DEV] Impression simulée :', data);
     return { success: true };
   }
-  return api.hardware.printReceipt(data) as Promise<{ success: boolean; error?: string }>;
+  const printerConfig = loadPrinterConfig();
+  return api.hardware.printReceipt({ ...(data as object), printerConfig }) as Promise<{ success: boolean; error?: string }>;
+}
+
+export async function testPrinterConnection(
+  ip: string,
+  port: number
+): Promise<{ connected: boolean; latency?: number; error?: string }> {
+  if (!api) return { connected: false, error: 'Non disponible hors Electron' };
+  const result = await (api.hardware as any).testPrinterConnection(ip, port) as { success: boolean; data?: { connected: boolean; latency?: number; error?: string } };
+  return result.data ?? { connected: false };
 }
 
 // ─── Sync queue ───────────────────────────────────────────────────────────────
