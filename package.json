@@ -1,10 +1,10 @@
 {
   "name": "elm-pos",
   "version": "1.0.0",
-  "description": "Production-grade multi-business Desktop POS system",
+  "description": "Multi-business Desktop POS system",
   "author": {
-    "name": "Elm POS",
-    "email": "contact@elmpos.app"
+    "name": "Lamine MBAYE",
+    "email": "whyme822@gmail.com"
   },
   "main": "dist/main/index.js",
   "scripts": {
