@@ -186,8 +186,10 @@ app.whenReady().then(async () => {
     const outDir = path.join(__dirname, '..', '..', 'renderer', 'out');
     protocol.handle('elmpos', (request) => {
       let urlPath = new URL(request.url).pathname;
-      if (!urlPath || urlPath === '/') urlPath = '/index.html';
-      // Next.js static export : les pages avec trailingSlash ont un sous-dossier
+      // Tout chemin qui se termine par / → ajouter index.html
+      // ex: /  → /index.html
+      // ex: /display/ → /display/index.html
+      if (!urlPath || urlPath.endsWith('/')) urlPath += 'index.html';
       const filePath = path.join(outDir, urlPath);
       return net.fetch('file://' + filePath);
     });
