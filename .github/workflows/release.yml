@@ -1,0 +1,138 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # déclenché sur : git tag v1.0.0 && git push --tags
+  workflow_dispatch:  # déclenchement manuel depuis GitHub UI
+
+permissions:
+  contents: write     # nécessaire pour créer une Release GitHub
+
+jobs:
+  # ── Windows (.exe + portable) ─────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Create renderer/.env
+        run: |
+          echo NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} > renderer/.env
+          echo NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} >> renderer/.env
+
+      - name: Build (Next.js + Electron)
+        run: yarn build
+
+      - name: Package Windows
+        run: yarn dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: release/*.exe
+          retention-days: 7
+
+  # ── macOS (.dmg) ──────────────────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Create renderer/.env
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" > renderer/.env
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> renderer/.env
+
+      - name: Build (Next.js + Electron)
+        run: yarn build
+
+      - name: Package macOS
+        run: yarn dist:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signature Apple (optionnel — laisse vide si pas de compte développeur)
+          # CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: release/*.dmg
+          retention-days: 7
+
+  # ── Linux (.AppImage) ─────────────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Create renderer/.env
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" > renderer/.env
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> renderer/.env
+
+      - name: Build (Next.js + Electron)
+        run: yarn build
+
+      - name: Package Linux
+        run: yarn dist:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: release/*.AppImage
+          retention-days: 7
+
+  # ── Création de la Release GitHub ─────────────────────────────────────────
+  publish-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')   # seulement sur un tag v*
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-release/*.exe
+            artifacts/macos-release/*.dmg
+            artifacts/linux-release/*.AppImage
+          generate_release_notes: true   # génère les notes depuis les commits
+          draft: false
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
