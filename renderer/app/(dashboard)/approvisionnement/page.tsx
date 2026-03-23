@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Package, TrendingUp, Search, Filter } from 'lucide-react';
+import { Plus, RefreshCw, Package, TrendingUp, Search, Filter, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
@@ -9,6 +9,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { getStockEntries } from '@services/supabase/stock';
 import { StockEntryModal } from '@/components/stock/StockEntryModal';
+import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlerts';
 import type { StockEntry } from '@services/supabase/stock';
 
 export default function ApprovisionnementPage() {
@@ -48,6 +49,7 @@ export default function ApprovisionnementPage() {
   // Stats rapides
   const totalEntries  = entries.length;
   const totalProducts = new Set(entries.map((e) => e.product_id)).size;
+  const { lowStock } = useLowStockAlerts(business?.id ?? '');
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -72,7 +74,7 @@ export default function ApprovisionnementPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => { setShowModal(true); }}
               className="btn-primary flex items-center gap-2 h-10 px-4"
             >
               <Plus className="w-4 h-4" />
@@ -80,6 +82,24 @@ export default function ApprovisionnementPage() {
             </button>
           </div>
         </div>
+
+        {/* Alerte rupture de stock */}
+        {lowStock.length > 0 && (
+          <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-red-800 bg-red-900/15 text-sm">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-red-300">
+                {lowStock.filter((p) => (p.stock ?? 0) === 0).length > 0
+                  ? `${lowStock.filter((p) => (p.stock ?? 0) === 0).length} produit(s) en rupture totale`
+                  : `${lowStock.length} produit(s) avec stock bas (≤ ${LOW_STOCK_THRESHOLD})`}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {lowStock.slice(0, 3).map((p) => p.name).join(', ')}
+                {lowStock.length > 3 ? ` et ${lowStock.length - 3} autres…` : ''}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Recherche */}
         <div className="relative">

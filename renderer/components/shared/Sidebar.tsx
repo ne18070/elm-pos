@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
 import { BusinessSwitcher } from './BusinessSwitcher';
+import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 
 const NAV_ITEMS = [
   { href: '/pos',               icon: ShoppingCart, label: 'Caisse',             roles: null },
@@ -29,9 +30,10 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, clear } = useAuthStore();
+  const { user, business, clear } = useAuthStore();
   const role = user?.role ?? 'staff';
   const isAdmin = role === 'owner' || role === 'admin';
+  const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
 
   function handleOpenDisplay() {
     if (window.electronAPI?.display?.open) {
@@ -59,6 +61,7 @@ export function Sidebar() {
         {NAV_ITEMS.filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin')).map(
           ({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
+            const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
             return (
               <Link
                 key={href}
@@ -70,8 +73,23 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-white hover:bg-surface-hover'
                 )}
               >
-                <Icon className="w-5 h-5 shrink-0" />
-                <span className="text-sm font-medium hidden lg:block">{label}</span>
+                <div className="relative shrink-0">
+                  <Icon className="w-5 h-5" />
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
+                                     flex items-center justify-center rounded-full
+                                     bg-red-500 text-white text-[9px] font-bold leading-none">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-medium hidden lg:block flex-1">{label}</span>
+                {badge > 0 && (
+                  <span className="hidden lg:flex items-center justify-center min-w-[20px] h-5 px-1
+                                   rounded-full bg-red-500 text-white text-xs font-bold">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </Link>
             );
           }

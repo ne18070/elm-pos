@@ -376,6 +376,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
               {/* 4 — Pied de page */}
               <Section title="Pied de page">
                 <Toggle label="Signatures" checked={selected.showSignatures} onChange={(v) => updateSelected({ showSignatures: v })} />
+                <Toggle label="QR Code (requiert Internet)" checked={selected.showQRCode} onChange={(v) => updateSelected({ showQRCode: v })} />
                 <div>
                   <label className="label">Texte pied de page</label>
                   <textarea value={selected.footerText} onChange={(e) => updateSelected({ footerText: e.target.value })}

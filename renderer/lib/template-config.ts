@@ -46,6 +46,7 @@ export interface TemplateConfig {
 
   // Footer
   showSignatures: boolean;
+  showQRCode: boolean;
   footerText: string;
 
   // Copies config
@@ -85,6 +86,7 @@ export const DEFAULT_THERMAL: TemplateConfig = {
   showChange: true,
   showBalance: true,
   showSignatures: false,
+  showQRCode: false,
   footerText: 'Merci de votre visite !',
   copy1Label: '✦ EXEMPLAIRE CLIENT ✦',
   copy2Label: '✦ EXEMPLAIRE BOUTIQUE ✦',
@@ -120,6 +122,7 @@ export const DEFAULT_A4_DUPLICATE: TemplateConfig = {
   showChange: false,
   showBalance: true,
   showSignatures: true,
+  showQRCode: false,
   footerText: '',
   copy1Label: '✦ EXEMPLAIRE CLIENT ✦',
   copy2Label: '✦ EXEMPLAIRE BOUTIQUE ✦',
@@ -372,6 +375,13 @@ function buildBody(order: any, business: any, config: TemplateConfig): string {
       <div class="center small" style="margin-top:6px;color:#aaa">
         ${fmtDate(order.created_at)} — Elm POS
       </div>
+
+      ${config.showQRCode ? `
+      <div class="center" style="margin-top:8px">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(receiptNum(order))}&bgcolor=ffffff&color=000000&margin=2"
+             style="width:64px;height:64px;image-rendering:pixelated" alt="QR">
+        <div class="small" style="margin-top:2px;color:#555">${receiptNum(order)}</div>
+      </div>` : ''}
     `;
   }
 
@@ -398,6 +408,11 @@ function buildBody(order: any, business: any, config: TemplateConfig): string {
         ${config.showDate ? `<div class="invoice-detail">Date : ${fmtDate(order.created_at)}</div>` : ''}
         ${config.showDate ? `<div class="invoice-detail">Heure : ${fmtTime(order.created_at)}</div>` : ''}
         ${config.showCashier && order.cashier?.full_name ? `<div class="invoice-detail">Caissier : ${order.cashier.full_name}</div>` : ''}
+        ${config.showQRCode ? `
+        <div style="margin-top:4px;text-align:right">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(receiptNum(order))}&bgcolor=ffffff&color=000000&margin=2"
+               style="width:56px;height:56px;image-rendering:pixelated;display:inline-block" alt="QR">
+        </div>` : ''}
       </div>
     </div>
 

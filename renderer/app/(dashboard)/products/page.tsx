@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlerts';
 import { formatCurrency } from '@/lib/utils';
 import { ProductModal } from '@/components/products/ProductModal';
 import { ImportProductsModal } from '@/components/products/ImportProductsModal';
@@ -23,6 +24,7 @@ export default function ProductsPage() {
   const [showImport, setShowImport] = useState(false);
 
   const { products, loading, refetch } = useProducts(business?.id ?? '');
+  const { lowStock } = useLowStockAlerts(business?.id ?? '');
 
   function exportCSV() {
     const headers = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
@@ -157,6 +159,36 @@ export default function ProductsPage() {
 
       {/* Contenu */}
       <div className="flex-1 overflow-y-auto p-6">
+        {/* Alertes stock bas */}
+        {!loading && lowStock.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-800 bg-amber-900/15 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <p className="text-sm font-semibold text-amber-300">
+                {lowStock.length} article{lowStock.length > 1 ? 's' : ''} avec stock bas (≤ {LOW_STOCK_THRESHOLD})
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {lowStock.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setEditProduct(p)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-amber-900/30 ${
+                    (p.stock ?? 0) === 0
+                      ? 'border-red-800 bg-red-900/20 text-red-300'
+                      : 'border-amber-800 bg-amber-900/20 text-amber-300'
+                  }`}
+                >
+                  <span>{p.name}</span>
+                  <span className={`font-bold ${(p.stock ?? 0) === 0 ? 'text-red-400' : 'text-amber-400'}`}>
+                    {(p.stock ?? 0) === 0 ? 'RUPTURE' : `× ${p.stock}`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-slate-400 text-center py-16">Chargement…</div>
         ) : filtered.length === 0 ? (

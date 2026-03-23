@@ -1,63 +1,94 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TrendingUp, ShoppingBag, BarChart, DollarSign } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { TrendingUp, ShoppingBag, BarChart, DollarSign, Sun, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
-import { getAnalyticsSummary } from '@services/supabase/analytics';
+import { getAnalyticsSummary, getDailySales } from '@services/supabase/analytics';
 import type { AnalyticsSummary } from '@pos-types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const PERIODS = [
-  { label: '7 jours',  value: 7  },
-  { label: '30 jours', value: 30 },
-  { label: '90 jours', value: 90 },
+  { label: 'Aujourd\'hui', value: 0  },
+  { label: '7 jours',      value: 7  },
+  { label: '30 jours',     value: 30 },
+  { label: '90 jours',     value: 90 },
 ];
 
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
   const [period, setPeriod] = useState(30);
   const [data, setData] = useState<AnalyticsSummary | null>(null);
+  const [today, setToday] = useState<{ total: number; count: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  useEffect(() => {
+  async function loadAll(silent = false) {
     if (!business) return;
-    setLoading(true);
-    getAnalyticsSummary(business.id, period)
-      .then(setData)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [business, period]);
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const [summary, todayData] = await Promise.all([
+        getAnalyticsSummary(business.id, period === 0 ? 1 : period),
+        getDailySales(business.id, todayStr),
+      ]);
+      // For "Aujourd'hui", filter summary to today only
+      if (period === 0) {
+        const todayStat = summary.daily_stats.find((d) => d.date === todayStr);
+        setData({
+          ...summary,
+          total_sales: todayStat?.total_sales ?? 0,
+          order_count: todayStat?.order_count ?? 0,
+          avg_order_value: todayStat?.avg_order_value ?? 0,
+          daily_stats: todayStat ? [todayStat] : [],
+        });
+      } else {
+        setData(summary);
+      }
+      setToday(todayData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
 
-  const stats = [
+  useEffect(() => { loadAll(); }, [business, period]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stats: { label: string; value: string; sub?: string; icon: React.ElementType; color: string; bg: string }[] = [
     {
-      label: 'Chiffre d\'affaires',
+      label: period === 0 ? 'Ventes aujourd\'hui' : 'Chiffre d\'affaires',
       value: data ? fmt(data.total_sales) : '—',
       icon: DollarSign,
       color: 'text-brand-400',
+      bg: 'bg-brand-900/20 border-brand-800',
     },
     {
-      label: 'Commandes',
+      label: period === 0 ? 'Commandes aujourd\'hui' : 'Commandes',
       value: data ? String(data.order_count) : '—',
       icon: ShoppingBag,
       color: 'text-green-400',
+      bg: 'bg-green-900/20 border-green-800',
     },
     {
       label: 'Panier moyen',
       value: data ? fmt(data.avg_order_value) : '—',
       icon: BarChart,
       color: 'text-purple-400',
+      bg: 'bg-purple-900/20 border-purple-800',
     },
     {
-      label: 'Tendance',
-      value: data
-        ? `${data.order_count > 0 ? '+' : ''}${data.order_count}`
-        : '—',
-      icon: TrendingUp,
+      label: 'Ventes du jour (live)',
+      value: today ? fmt(today.total) : '—',
+      sub: today ? `${today.count} commande${today.count !== 1 ? 's' : ''}` : undefined,
+      icon: Sun,
       color: 'text-yellow-400',
+      bg: 'bg-yellow-900/20 border-yellow-800',
     },
   ];
 
@@ -65,26 +96,36 @@ export default function AnalyticsPage() {
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="p-6 border-b border-surface-border flex items-center justify-between sticky top-0 bg-surface z-10">
         <h1 className="text-xl font-bold text-white">Statistiques</h1>
-        <div className="flex gap-1 bg-surface-input rounded-xl p-1">
-          {PERIODS.map(({ label, value }) => (
-            <button
-              key={value}
-              onClick={() => setPeriod(value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                period === value ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => loadAll(true)}
+            disabled={refreshing}
+            className="btn-secondary p-2"
+            title="Actualiser"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <div className="flex gap-1 bg-surface-input rounded-xl p-1">
+            {PERIODS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setPeriod(value)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  period === value ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
         {/* Cartes KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="card p-5">
+          {stats.map(({ label, value, icon: Icon, color, bg, sub }) => (
+            <div key={label} className={`p-5 rounded-xl border ${bg}`}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm text-slate-400">{label}</p>
                 <Icon className={`w-5 h-5 ${color}`} />
@@ -92,6 +133,9 @@ export default function AnalyticsPage() {
               <p className={`text-2xl font-bold ${loading ? 'text-slate-600 animate-pulse' : 'text-white'}`}>
                 {loading ? '...' : value}
               </p>
+              {sub && !loading && (
+                <p className="text-xs text-slate-500 mt-1">{sub}</p>
+              )}
             </div>
           ))}
         </div>
