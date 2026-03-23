@@ -38,7 +38,7 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(
-      path.join(__dirname, '..', 'renderer', 'out', 'index.html')
+      path.join(__dirname, '..', '..', 'renderer', 'out', 'index.html')
     );
   }
 
@@ -91,7 +91,7 @@ function createCustomerDisplay(): BrowserWindow {
     customerDisplayWindow.loadURL('http://localhost:3000/display');
   } else {
     customerDisplayWindow.loadFile(
-      path.join(__dirname, '..', 'renderer', 'out', 'display', 'index.html')
+      path.join(__dirname, '..', '..', 'renderer', 'out', 'display', 'index.html')
     );
   }
 
