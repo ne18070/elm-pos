@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --ignore-optional --network-timeout 100000
 
+      - name: Rebuild native modules for Electron
+        run: npx electron-rebuild -f -w better-sqlite3
+
       - name: Create renderer/.env
         run: |
           echo NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} > renderer/.env
@@ -57,6 +60,9 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --ignore-optional --network-timeout 100000
+
+      - name: Rebuild native modules for Electron
+        run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Create renderer/.env
         run: |
@@ -97,6 +103,9 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --ignore-optional --network-timeout 100000
+
+      - name: Rebuild native modules for Electron
+        run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Create renderer/.env
         run: |
