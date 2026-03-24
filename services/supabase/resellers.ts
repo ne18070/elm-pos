@@ -1,4 +1,8 @@
-import { supabase } from './client';
+import { supabase as _supabase } from './client';
+
+// Tables ajoutées par migration 021 — pas encore dans database.types.ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

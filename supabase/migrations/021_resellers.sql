@@ -62,6 +62,10 @@ ALTER TABLE reseller_clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reseller_offers  ENABLE ROW LEVEL SECURITY;
 
 -- Revendeurs
+DROP POLICY IF EXISTS "resellers_business"  ON resellers;
+DROP POLICY IF EXISTS "resellers_insert"    ON resellers;
+DROP POLICY IF EXISTS "resellers_update"    ON resellers;
+DROP POLICY IF EXISTS "resellers_delete"    ON resellers;
 CREATE POLICY "resellers_business" ON resellers
   USING (business_id = get_user_business_id());
 CREATE POLICY "resellers_insert" ON resellers FOR INSERT
@@ -72,6 +76,10 @@ CREATE POLICY "resellers_delete" ON resellers FOR DELETE
   USING (business_id = get_user_business_id());
 
 -- Clients revendeurs
+DROP POLICY IF EXISTS "reseller_clients_business" ON reseller_clients;
+DROP POLICY IF EXISTS "reseller_clients_insert"   ON reseller_clients;
+DROP POLICY IF EXISTS "reseller_clients_update"   ON reseller_clients;
+DROP POLICY IF EXISTS "reseller_clients_delete"   ON reseller_clients;
 CREATE POLICY "reseller_clients_business" ON reseller_clients
   USING (business_id = get_user_business_id());
 CREATE POLICY "reseller_clients_insert" ON reseller_clients FOR INSERT
@@ -82,6 +90,10 @@ CREATE POLICY "reseller_clients_delete" ON reseller_clients FOR DELETE
   USING (business_id = get_user_business_id());
 
 -- Offres volume
+DROP POLICY IF EXISTS "reseller_offers_business" ON reseller_offers;
+DROP POLICY IF EXISTS "reseller_offers_insert"   ON reseller_offers;
+DROP POLICY IF EXISTS "reseller_offers_update"   ON reseller_offers;
+DROP POLICY IF EXISTS "reseller_offers_delete"   ON reseller_offers;
 CREATE POLICY "reseller_offers_business" ON reseller_offers
   USING (business_id = get_user_business_id());
 CREATE POLICY "reseller_offers_insert" ON reseller_offers FOR INSERT

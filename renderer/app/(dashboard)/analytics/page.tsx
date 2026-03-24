@@ -10,7 +10,8 @@ import { formatCurrency } from '@/lib/utils';
 import {
   getAnalyticsSummary, getDailySales, getCouponStats,
 } from '@services/supabase/analytics';
-import type { AnalyticsSummary, CouponStat } from '@services/supabase/analytics';
+import type { AnalyticsSummary } from '@pos-types';
+import type { CouponStat } from '@services/supabase/analytics';
 import { GrossisteTab } from '@/components/analytics/GrossisteTab';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';

@@ -80,7 +80,7 @@ export default function RevendeursPage() {
       .eq('business_id', business.id)
       .eq('is_active', true)
       .order('name');
-    setProducts((data ?? []) as Product[]);
+    setProducts((data ?? []) as unknown as Product[]);
   }
 
   // ── CRUD Revendeur ─────────────────────────────────────────────────────────

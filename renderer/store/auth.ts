@@ -16,6 +16,24 @@ interface AuthState {
   clear: () => void;
 }
 
+const SESSION_KEY = 'elm-pos-active-business';
+
+function saveBusinessToSession(business: Business | null) {
+  if (typeof window === 'undefined') return;
+  if (business) sessionStorage.setItem(SESSION_KEY, JSON.stringify(business));
+  else          sessionStorage.removeItem(SESSION_KEY);
+}
+
+function readBusinessFromSession(): Business | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as Business) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -25,18 +43,26 @@ export const useAuthStore = create<AuthState>()(
       isLoading:  true,
 
       setUser:       (user)       => set({ user }),
-      setBusiness:   (business)   => set({ business }),
+      setBusiness:   (business)   => { saveBusinessToSession(business); set({ business }); },
       setBusinesses: (businesses) => set({ businesses }),
       setLoading:    (isLoading)  => set({ isLoading }),
-      clear: () => set({ user: null, business: null, businesses: [] }),
+      clear: () => {
+        saveBusinessToSession(null);
+        set({ user: null, business: null, businesses: [] });
+      },
     }),
     {
       name: 'elm-pos-auth',
+      // user + businesses → localStorage (partagé entre onglets, persiste au redémarrage)
+      // business actif   → sessionStorage (isolé par onglet)
       partialize: (state) => ({
         user:       state.user,
-        business:   state.business,
         businesses: state.businesses,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Restaurer le business actif depuis sessionStorage après hydratation
+        if (state) state.business = readBusinessFromSession();
+      },
     }
   )
 );

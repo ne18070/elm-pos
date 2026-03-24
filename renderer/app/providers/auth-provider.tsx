@@ -38,7 +38,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(profile as never);
 
       // Charger l'établissement actif
-      if (profile.business_id) {
+      // Si l'onglet a déjà un business sélectionné (sessionStorage), ne pas l'écraser
+      const hasTabBusiness = !!sessionStorage.getItem('elm-pos-active-business');
+      if (!hasTabBusiness && profile.business_id) {
         const { data: biz } = await supabase
           .from('businesses')
           .select('*')
