@@ -101,6 +101,36 @@ export async function removeUserFromBusiness(userId: string, businessId?: string
   if (error) throw new Error(error.message);
 }
 
+// ─── Blocage + reset MDP (owner only) ────────────────────────────────────────
+
+export async function toggleUserBlock(
+  businessId: string,
+  userId: string,
+  blocked: boolean
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).rpc('toggle_user_block', {
+    p_business_id: businessId,
+    p_user_id:     userId,
+    p_blocked:     blocked,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function adminResetUserPassword(
+  businessId: string,
+  userId: string,
+  newPassword: string
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).rpc('admin_reset_user_password', {
+    p_business_id:  businessId,
+    p_user_id:      userId,
+    p_new_password: newPassword,
+  });
+  if (error) throw new Error(error.message);
+}
+
 // ─── Création de compte membre ────────────────────────────────────────────────
 // Utilise un client temporaire (sans persistance de session) pour ne pas
 // déconnecter l'admin en cours de session.

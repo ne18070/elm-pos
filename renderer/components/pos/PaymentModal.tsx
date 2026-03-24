@@ -68,8 +68,9 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
   const [customerName, setCustomerName]         = useState('');
   const [customerPhone, setCustomerPhone]       = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState<SavedCustomer[]>([]);
-  const [showSuggestions, setShowSuggestions]   = useState(false);
-  const suggestionsRef                          = useRef<HTMLDivElement>(null);
+  const [showSuggestions, setShowSuggestions]         = useState(false);
+  const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
+  const suggestionsRef                                = useRef<HTMLDivElement>(null);
 
   const { search: searchCustomers, addOrUpdate: saveCustomer } = useCustomersStore();
 
@@ -480,17 +481,57 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
             </div>
 
             {/* Téléphone */}
-            <div>
+            <div className="relative">
               <label className="text-xs text-slate-400 mb-1 block">Téléphone</label>
               <input
                 type="tel"
                 inputMode="tel"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setCustomerPhone(v);
+                  const results = searchCustomers(v);
+                  setCustomerSuggestions(results);
+                  setShowPhoneSuggestions(results.length > 0 && v.trim().length > 0);
+                  setShowSuggestions(false);
+                }}
+                onFocus={() => {
+                  if (customerPhone.trim()) {
+                    const results = searchCustomers(customerPhone);
+                    setCustomerSuggestions(results);
+                    setShowPhoneSuggestions(results.length > 0);
+                  }
+                }}
+                onBlur={() => setTimeout(() => setShowPhoneSuggestions(false), 150)}
                 placeholder="Ex : 77 000 00 00"
                 className="input"
                 autoComplete="off"
               />
+
+              {showPhoneSuggestions && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                  {customerSuggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={() => {
+                        setCustomerName(c.name);
+                        setCustomerPhone(c.phone ?? '');
+                        setShowPhoneSuggestions(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-700 transition-colors text-left"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-brand-900/50 border border-brand-700 flex items-center justify-center shrink-0">
+                        <User className="w-3.5 h-3.5 text-brand-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{c.name}</p>
+                        {c.phone && <p className="text-xs text-slate-400">{c.phone}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

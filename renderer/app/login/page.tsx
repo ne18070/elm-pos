@@ -49,6 +49,12 @@ export default function LoginPage() {
         return;
       }
 
+      if (profile.is_blocked) {
+        await supabase.auth.signOut();
+        setErreur('Votre compte a été bloqué. Contactez votre administrateur.');
+        return;
+      }
+
       setUser(profile as never);
 
       if (profile.business_id) {

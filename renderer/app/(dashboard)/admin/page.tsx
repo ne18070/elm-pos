@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import {
   Loader2, Save, UserPlus, Shield, UserX, ChevronDown,
-  Users, User, Building2, Check,
+  Users, User, Building2, Check, Lock, Ban, RefreshCw, Copy,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useTeam } from '@/hooks/useTeam';
 import { InviteModal } from '@/components/admin/InviteModal';
-import { updateUserRole, removeUserFromBusiness, updateOwnProfile } from '@services/supabase/users';
+import { updateUserRole, removeUserFromBusiness, updateOwnProfile, toggleUserBlock, adminResetUserPassword } from '@services/supabase/users';
 import { uploadProductImage } from '@services/supabase/storage';
 import { getMyBusinesses } from '@services/supabase/business';
 import { supabase } from '@/lib/supabase';
@@ -115,6 +115,57 @@ export default function AdminPage() {
       notifError(String(err));
     } finally {
       setSavingPw(false);
+    }
+  }
+
+  // ── Blocage + reset MDP ───────────────────────────────────────────────────────
+  const [blockingId, setBlockingId] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<UserType | null>(null);
+  const [resetPw, setResetPw] = useState('');
+  const [resetCopied, setResetCopied] = useState(false);
+  const [savingReset, setSavingReset] = useState(false);
+
+  function openReset(member: UserType) {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+    const pw = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    setResetPw(pw);
+    setResetCopied(false);
+    setResetTarget(member);
+  }
+
+  async function handleCopyReset() {
+    await navigator.clipboard.writeText(resetPw);
+    setResetCopied(true);
+    setTimeout(() => setResetCopied(false), 2000);
+  }
+
+  async function handleConfirmReset() {
+    if (!resetTarget || !resetPw || !business) return;
+    setSavingReset(true);
+    try {
+      await adminResetUserPassword(business.id, resetTarget.id, resetPw);
+      success(`Mot de passe de ${resetTarget.full_name} réinitialisé`);
+      setResetTarget(null);
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setSavingReset(false);
+    }
+  }
+
+  async function handleToggleBlock(member: UserType) {
+    if (!business) return;
+    const action = member.is_blocked ? 'débloquer' : 'bloquer';
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${member.full_name} ?`)) return;
+    setBlockingId(member.id);
+    try {
+      await toggleUserBlock(business.id, member.id, !member.is_blocked);
+      success(`${member.full_name} ${member.is_blocked ? 'débloqué' : 'bloqué'}`);
+      refetch();
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setBlockingId(null);
     }
   }
 
@@ -309,6 +360,7 @@ export default function AdminPage() {
                   const badge = ROLE_LABELS[member.role];
                   const isSelf    = member.id === user?.id;
                   const canManage = isOwnerOrAdmin && !isSelf && member.role !== 'owner';
+                  const canOwnerAct = isOwner && !isSelf && member.role !== 'owner';
 
                   return (
                     <div key={member.id} className="card p-4 flex items-center gap-3">
@@ -321,8 +373,15 @@ export default function AdminPage() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
-                          <p className="font-medium text-white text-sm truncate">{member.full_name}</p>
+                          <p className={`font-medium text-sm truncate ${member.is_blocked ? 'text-slate-500 line-through' : 'text-white'}`}>
+                            {member.full_name}
+                          </p>
                           {isSelf && <span className="text-xs text-slate-500 shrink-0">(vous)</span>}
+                          {member.is_blocked && (
+                            <span className="shrink-0 text-xs text-red-400 bg-red-900/20 border border-red-800 px-1.5 py-0.5 rounded-full">
+                              Bloqué
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-500 truncate">{member.email}</p>
                       </div>
@@ -344,6 +403,32 @@ export default function AdminPage() {
                         <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
                           {badge.label}
                         </span>
+                      )}
+
+                      {canOwnerAct && (
+                        <button
+                          onClick={() => openReset(member)}
+                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-900/20 transition-colors"
+                          title="Réinitialiser le mot de passe"
+                        >
+                          <Lock className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {canOwnerAct && (
+                        <button
+                          onClick={() => handleToggleBlock(member)}
+                          disabled={blockingId === member.id}
+                          className={`shrink-0 p-1.5 rounded-lg transition-colors
+                            ${member.is_blocked
+                              ? 'text-red-400 bg-red-900/20 hover:bg-red-900/40'
+                              : 'text-slate-500 hover:text-red-400 hover:bg-red-900/20'}`}
+                          title={member.is_blocked ? 'Débloquer' : 'Bloquer'}
+                        >
+                          {blockingId === member.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Ban className="w-4 h-4" />}
+                        </button>
                       )}
 
                       {canManage && (
@@ -433,6 +518,52 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {resetTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="card p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-semibold text-white">Réinitialiser le mot de passe</h2>
+            <p className="text-sm text-slate-400">
+              Nouveau mot de passe pour <span className="text-white font-medium">{resetTarget.full_name}</span>
+            </p>
+            <div>
+              <label className="label">Nouveau mot de passe</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={resetPw}
+                  onChange={(e) => setResetPw(e.target.value)}
+                  className="input font-mono flex-1"
+                />
+                <button
+                  onClick={() => {
+                    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+                    setResetPw(Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join(''));
+                  }}
+                  className="btn-secondary px-3"
+                  title="Régénérer"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button onClick={handleCopyReset} className="btn-secondary px-3" title="Copier">
+                  {resetCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setResetTarget(null)} className="btn-secondary px-5">Annuler</button>
+              <button
+                onClick={handleConfirmReset}
+                disabled={savingReset || !resetPw}
+                className="btn-primary px-5 flex items-center gap-2"
+              >
+                {savingReset && <Loader2 className="w-4 h-4 animate-spin" />}
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showInvite && (
         <InviteModal
