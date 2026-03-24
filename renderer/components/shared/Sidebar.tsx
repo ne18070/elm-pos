@@ -128,20 +128,20 @@ export function Sidebar() {
           <span className="text-sm hidden lg:block">Écran client</span>
         </button>
 
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className={cn(
-              'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
-              pathname.startsWith('/admin')
-                ? 'bg-brand-600 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-surface-hover'
-            )}
-          >
-            <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span className="text-sm hidden lg:block">Administration</span>
-          </Link>
-        )}
+        <Link
+          href="/admin"
+          className={cn(
+            'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
+            pathname.startsWith('/admin')
+              ? 'bg-brand-600 text-white'
+              : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+          )}
+        >
+          <ShieldCheck className="w-4 h-4 shrink-0" />
+          <span className="text-sm hidden lg:block">
+            {isAdmin ? 'Administration' : 'Mon profil'}
+          </span>
+        </Link>
 
         {/* Identité */}
         <div className="flex items-center gap-3 px-2 py-2">

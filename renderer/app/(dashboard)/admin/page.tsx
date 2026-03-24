@@ -93,11 +93,29 @@ export default function AdminPage() {
     }
   }
 
+  const [pwForm,    setPwForm]    = useState({ newPw: '', confirmPw: '' });
+  const [savingPw,  setSavingPw]  = useState(false);
+
   async function handleChangePassword() {
-    if (!user?.email) return;
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email);
-    if (error) notifError(error.message);
-    else success('E-mail de réinitialisation envoyé');
+    if (!pwForm.newPw || pwForm.newPw.length < 6) {
+      notifError('Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+    if (pwForm.newPw !== pwForm.confirmPw) {
+      notifError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    setSavingPw(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pwForm.newPw });
+      if (error) throw error;
+      setPwForm({ newPw: '', confirmPw: '' });
+      success('Mot de passe mis à jour');
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setSavingPw(false);
+    }
   }
 
   // ── Équipe ────────────────────────────────────────────────────────────────────
@@ -226,13 +244,37 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div className="card p-5 space-y-3">
-              <h2 className="font-semibold text-white">Sécurité</h2>
-              <p className="text-sm text-slate-400">
-                Un lien de réinitialisation sera envoyé à votre adresse e-mail.
-              </p>
-              <button onClick={handleChangePassword} className="btn-secondary text-sm">
-                Réinitialiser le mot de passe
+            <div className="card p-5 space-y-4">
+              <h2 className="font-semibold text-white">Changer le mot de passe</h2>
+              <div>
+                <label className="label">Nouveau mot de passe</label>
+                <input
+                  type="password"
+                  value={pwForm.newPw}
+                  onChange={(e) => setPwForm((f) => ({ ...f, newPw: e.target.value }))}
+                  className="input"
+                  placeholder="Min. 6 caractères"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div>
+                <label className="label">Confirmer le mot de passe</label>
+                <input
+                  type="password"
+                  value={pwForm.confirmPw}
+                  onChange={(e) => setPwForm((f) => ({ ...f, confirmPw: e.target.value }))}
+                  className="input"
+                  placeholder="Répéter le mot de passe"
+                  autoComplete="new-password"
+                />
+              </div>
+              <button
+                onClick={handleChangePassword}
+                disabled={savingPw || !pwForm.newPw}
+                className="btn-primary flex items-center gap-2 text-sm"
+              >
+                {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Mettre à jour le mot de passe
               </button>
             </div>
           </div>

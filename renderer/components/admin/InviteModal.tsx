@@ -1,32 +1,54 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Mail } from 'lucide-react';
+import { Loader2, UserPlus, RefreshCw, Copy, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useNotificationStore } from '@/store/notifications';
 import { inviteUser } from '@services/supabase/users';
 
 interface InviteModalProps {
   businessId: string;
-  onClose: () => void;
-  onInvited: () => void;
+  onClose:    () => void;
+  onInvited:  () => void;
 }
 
 const ROLES = [
-  { value: 'staff', label: 'Caissier', desc: "Accès à la caisse uniquement" },
-  { value: 'admin', label: 'Administrateur', desc: "Accès complet sauf gestion propriétaire" },
+  { value: 'staff', label: 'Caissier',        desc: 'Accès à la caisse uniquement' },
+  { value: 'admin', label: 'Administrateur',  desc: 'Accès complet sauf gestion propriétaire' },
 ];
+
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
 
 export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps) {
   const { success, error: notifError } = useNotificationStore();
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ email: '', full_name: '', role: 'staff' });
+  const [loading,  setLoading]  = useState(false);
+  const [done,     setDone]     = useState(false);
+  const [copied,   setCopied]   = useState(false);
+  const [form, setForm] = useState({
+    email:     '',
+    full_name: '',
+    role:      'staff',
+    password:  generatePassword(),
+  });
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  async function handleInvite() {
+  function refreshPassword() {
+    setForm((f) => ({ ...f, password: generatePassword() }));
+  }
+
+  async function copyPassword() {
+    await navigator.clipboard.writeText(form.password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleCreate() {
     if (!form.email.trim()) return;
     setLoading(true);
     try {
@@ -35,9 +57,10 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
         full_name:   form.full_name.trim() || form.email.split('@')[0],
         role:        form.role as 'admin' | 'staff',
         business_id: businessId,
+        password:    form.password,
       });
-      success(`Invitation envoyée à ${form.email}`);
-      onInvited();
+      setDone(true);
+      success(`Compte créé pour ${form.email}`);
     } catch (err) {
       notifError(String(err));
     } finally {
@@ -45,21 +68,57 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
     }
   }
 
+  if (done) {
+    return (
+      <Modal title="Compte créé" onClose={onClose} size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">
+            Le compte <strong className="text-white">{form.email}</strong> a été créé.
+            Transmettez ces identifiants à l'utilisateur.
+          </p>
+
+          <div className="rounded-xl border border-surface-border bg-surface-card p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Email</span>
+              <span className="text-white font-mono">{form.email}</span>
+            </div>
+            <div className="flex justify-between text-sm items-center">
+              <span className="text-slate-400">Mot de passe</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-mono">{form.password}</span>
+                <button onClick={copyPassword} className="text-slate-400 hover:text-white">
+                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            L'utilisateur pourra changer son mot de passe depuis son profil.
+          </p>
+        </div>
+        <div className="flex justify-end mt-6">
+          <button onClick={() => { onInvited(); onClose(); }} className="btn-primary px-5">Fermer</button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
-      title="Inviter un membre"
+      title="Créer un compte membre"
       onClose={onClose}
       size="sm"
       footer={
         <>
           <button onClick={onClose} className="btn-secondary px-5">Annuler</button>
           <button
-            onClick={handleInvite}
+            onClick={handleCreate}
             disabled={loading || !form.email.trim()}
             className="btn-primary px-5 flex items-center gap-2"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-            Envoyer l'invitation
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+            Créer le compte
           </button>
         </>
       }
@@ -86,6 +145,25 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
             className="input"
             placeholder="Prénom Nom"
           />
+        </div>
+
+        <div>
+          <label className="label">Mot de passe temporaire</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.password}
+              onChange={(e) => update('password', e.target.value)}
+              className="input font-mono flex-1"
+            />
+            <button
+              onClick={refreshPassword}
+              className="btn-secondary px-3"
+              title="Générer un nouveau mot de passe"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div>
@@ -117,7 +195,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
         </div>
 
         <p className="text-xs text-slate-500">
-          L'utilisateur recevra un e-mail avec un lien pour rejoindre votre espace.
+          Le compte est créé immédiatement. Transmettez l'email et le mot de passe à l'utilisateur.
         </p>
       </div>
     </Modal>

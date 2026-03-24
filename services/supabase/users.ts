@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from './client';
 import type { User, UserRole } from '../../types';
 
@@ -100,18 +101,50 @@ export async function removeUserFromBusiness(userId: string, businessId?: string
   if (error) throw new Error(error.message);
 }
 
-// ─── Invitation (via Edge Function) ───────────────────────────────────────────
+// ─── Création de compte membre ────────────────────────────────────────────────
+// Utilise un client temporaire (sans persistance de session) pour ne pas
+// déconnecter l'admin en cours de session.
 
 export interface InvitePayload {
-  email: string;
-  full_name: string;
-  role: UserRole;
+  email:       string;
+  full_name:   string;
+  role:        UserRole;
   business_id: string;
+  password:    string;
 }
 
 export async function inviteUser(payload: InvitePayload): Promise<void> {
-  const { error } = await supabase.functions.invoke('invite-user', {
-    body: payload,
+  // Client isolé — ne touche pas à la session de l'admin
+  const tmp = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+
+  const { data, error } = await tmp.auth.signUp({
+    email:    payload.email,
+    password: payload.password,
+    options: {
+      data: {
+        full_name:   payload.full_name,
+        role:        payload.role,
+        business_id: payload.business_id,
+      },
+    },
   });
-  if (error) throw new Error(error.message);
+
+  // unexpected_failure = trigger a échoué mais auth user est quand même créé
+  if (error && error.code !== 'unexpected_failure') {
+    throw new Error(error.message);
+  }
+
+  // Créer/mettre à jour le profil dans public.users via RPC SECURITY DEFINER
+  const { error: rpcError } = await supabase.rpc('assign_user_to_business', {
+    p_email:       payload.email,
+    p_full_name:   payload.full_name,
+    p_role:        payload.role,
+    p_business_id: payload.business_id,
+  });
+
+  if (rpcError) throw new Error(rpcError.message);
 }
