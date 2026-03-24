@@ -10,9 +10,10 @@
   "scripts": {
     "dev": "concurrently \"yarn dev:next\" \"yarn dev:electron\"",
     "dev:next": "cd renderer && next dev --port 3000",
-    "dev:electron": "wait-on http://localhost:3000 && tsc -p tsconfig.main.json && ELECTRON_DEV=true electron .",
+    "dev:electron": "wait-on http://localhost:3000 && tsc -p tsconfig.main.json && cross-env ELECTRON_DEV=true electron .",
     "build": "yarn build:next && yarn build:electron",
-    "build:next": "cd renderer && ELECTRON_BUILD=1 next build",
+    "build:next": "cross-env ELECTRON_BUILD=1 yarn build:next:run",
+    "build:next:run": "cd renderer && next build",
     "build:electron": "tsc -p tsconfig.main.json",
     "dist": "yarn build && electron-builder",
     "dist:win": "yarn build && electron-builder --win",
@@ -53,6 +54,7 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.0",
+    "cross-env": "^7.0.3",
     "wait-on": "^7.2.0"
   },
   "build": {
