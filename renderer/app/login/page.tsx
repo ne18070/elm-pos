@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
+import { getMyBusinesses } from '@services/supabase/business';
 import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
 
-  const { setUser, setBusiness } = useAuthStore();
+  const { setUser, setBusiness, setBusinesses } = useAuthStore();
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -58,6 +59,12 @@ export default function LoginPage() {
           .single();
         if (business) setBusiness(business as never);
       }
+
+      // Charger tous les établissements avant la redirection
+      try {
+        const memberships = await getMyBusinesses();
+        setBusinesses(memberships);
+      } catch { /* migration pas encore appliquée */ }
 
       router.replace('/pos');
     } catch {

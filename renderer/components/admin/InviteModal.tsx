@@ -24,9 +24,10 @@ function generatePassword(): string {
 
 export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps) {
   const { success, error: notifError } = useNotificationStore();
-  const [loading,  setLoading]  = useState(false);
-  const [done,     setDone]     = useState(false);
-  const [copied,   setCopied]   = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [done,          setDone]          = useState(false);
+  const [copied,        setCopied]        = useState(false);
+  const [existingUser,  setExistingUser]  = useState(false);
   const [form, setForm] = useState({
     email:     '',
     full_name: '',
@@ -53,11 +54,12 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
     setLoading(true);
     try {
       await inviteUser({
-        email:       form.email.trim(),
-        full_name:   form.full_name.trim() || form.email.split('@')[0],
-        role:        form.role as 'admin' | 'staff',
-        business_id: businessId,
-        password:    form.password,
+        email:         form.email.trim(),
+        full_name:     form.full_name.trim() || form.email.split('@')[0],
+        role:          form.role as 'admin' | 'staff',
+        business_id:   businessId,
+        password:      existingUser ? undefined : form.password,
+        existing_user: existingUser,
       });
       setDone(true);
       success(`Compte créé pour ${form.email}`);
@@ -70,32 +72,39 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
 
   if (done) {
     return (
-      <Modal title="Compte créé" onClose={onClose} size="sm">
+      <Modal title={existingUser ? 'Membre ajouté' : 'Compte créé'} onClose={onClose} size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-slate-300">
-            Le compte <strong className="text-white">{form.email}</strong> a été créé.
-            Transmettez ces identifiants à l'utilisateur.
-          </p>
-
-          <div className="rounded-xl border border-surface-border bg-surface-card p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Email</span>
-              <span className="text-white font-mono">{form.email}</span>
-            </div>
-            <div className="flex justify-between text-sm items-center">
-              <span className="text-slate-400">Mot de passe</span>
-              <div className="flex items-center gap-2">
-                <span className="text-white font-mono">{form.password}</span>
-                <button onClick={copyPassword} className="text-slate-400 hover:text-white">
-                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                </button>
+          {existingUser ? (
+            <p className="text-sm text-slate-300">
+              <strong className="text-white">{form.email}</strong> a été ajouté à cet établissement.
+              Il verra le nouvel établissement dans son sélecteur en haut à gauche.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-slate-300">
+                Le compte <strong className="text-white">{form.email}</strong> a été créé.
+                Transmettez ces identifiants à l'utilisateur.
+              </p>
+              <div className="rounded-xl border border-surface-border bg-surface-card p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Email</span>
+                  <span className="text-white font-mono">{form.email}</span>
+                </div>
+                <div className="flex justify-between text-sm items-center">
+                  <span className="text-slate-400">Mot de passe</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-mono">{form.password}</span>
+                    <button onClick={copyPassword} className="text-slate-400 hover:text-white">
+                      {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-
-          <p className="text-xs text-slate-500">
-            L'utilisateur pourra changer son mot de passe depuis son profil.
-          </p>
+              <p className="text-xs text-slate-500">
+                L'utilisateur pourra changer son mot de passe depuis son profil.
+              </p>
+            </>
+          )}
         </div>
         <div className="flex justify-end mt-6">
           <button onClick={() => { onInvited(); onClose(); }} className="btn-primary px-5">Fermer</button>
@@ -124,6 +133,21 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
       }
     >
       <div className="space-y-4">
+
+        {/* Toggle compte existant */}
+        <label className="flex items-center gap-3 p-3 rounded-xl border border-surface-border cursor-pointer hover:border-slate-500 transition-colors">
+          <input
+            type="checkbox"
+            checked={existingUser}
+            onChange={(e) => setExistingUser(e.target.checked)}
+            className="w-4 h-4 accent-brand-500"
+          />
+          <div>
+            <p className="text-sm font-medium text-white">Utilisateur existant</p>
+            <p className="text-xs text-slate-400">L'utilisateur a déjà un compte sur un autre établissement</p>
+          </div>
+        </label>
+
         <div>
           <label className="label">Adresse e-mail *</label>
           <input
@@ -136,6 +160,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
           />
         </div>
 
+        {!existingUser && (
         <div>
           <label className="label">Nom complet</label>
           <input
@@ -146,7 +171,9 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
             placeholder="Prénom Nom"
           />
         </div>
+        )}
 
+        {!existingUser && (
         <div>
           <label className="label">Mot de passe temporaire</label>
           <div className="flex gap-2">
@@ -165,6 +192,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
             </button>
           </div>
         </div>
+        )}
 
         <div>
           <label className="label">Rôle</label>
@@ -195,7 +223,9 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
         </div>
 
         <p className="text-xs text-slate-500">
-          Le compte est créé immédiatement. Transmettez l'email et le mot de passe à l'utilisateur.
+          {existingUser
+            ? "L'utilisateur sera ajouté à cet établissement. Il pourra basculer entre ses établissements depuis la barre latérale."
+            : "Le compte est créé immédiatement. Transmettez l'email et le mot de passe à l'utilisateur."}
         </p>
       </div>
     </Modal>

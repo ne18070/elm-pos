@@ -40,15 +40,17 @@ BEGIN
     RAISE EXCEPTION 'Utilisateur introuvable dans auth.users';
   END IF;
 
-  -- Insérer ou mettre à jour le profil dans public.users
+  -- Insérer le profil si nouveau, sinon laisser business_id/role existants intacts
+  -- (un user existant garde son business actif et son rôle principal)
   INSERT INTO public.users (id, email, full_name, role, business_id)
   VALUES (v_user_id, p_email, NULLIF(p_full_name, ''), p_role, p_business_id)
   ON CONFLICT (id) DO UPDATE SET
     full_name   = COALESCE(NULLIF(p_full_name, ''), public.users.full_name),
-    role        = p_role,
-    business_id = p_business_id;
+    -- Ne pas changer le business actif ni le rôle principal si déjà définis
+    role        = COALESCE(public.users.role, p_role),
+    business_id = COALESCE(public.users.business_id, p_business_id);
 
-  -- Ajouter dans business_members (le trigger peut ne pas s'exécuter depuis SECURITY DEFINER)
+  -- Ajouter dans business_members avec le rôle spécifique à ce business
   INSERT INTO public.business_members (business_id, user_id, role)
   VALUES (p_business_id, v_user_id, p_role)
   ON CONFLICT (business_id, user_id)
