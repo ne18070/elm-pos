@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { getProducts } from '@services/supabase/products';
 import { CouponPicker } from './CouponPicker';
 import { HoldModal } from './HoldModal';
+import { WholesaleSelector } from './WholesaleSelector';
+import type { WholesaleContext } from './WholesaleSelector';
 import type { CartItem, Coupon } from '@pos-types';
 
 interface OrderPanelProps {
@@ -16,16 +18,19 @@ interface OrderPanelProps {
   businessId: string;
   onCheckout: () => void;
   onShowHeld: () => void;
+  wholesaleCtx?: WholesaleContext | null;
+  onWholesaleChange?: (ctx: WholesaleContext | null) => void;
 }
 
-export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld }: OrderPanelProps) {
+export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld, wholesaleCtx, onWholesaleChange }: OrderPanelProps) {
   const {
     items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
-    updateQuantity, removeItem,
+    updateQuantity, removeItem, resetPriceOverrides,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
   } = useCartStore();
   const { warning } = useNotificationStore();
+  const [showWholesale, setShowWholesale] = useState(false);
 
   async function handleCouponAdd(c: Coupon) {
     addCoupon(c);
@@ -123,6 +128,18 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
             <span className="text-brand-400">({itemCount()} article{itemCount() > 1 ? 's' : ''})</span>
           </h2>
           <div className="flex items-center gap-2 ml-auto">
+            {/* Bouton mode grossiste */}
+            <button
+              onClick={() => setShowWholesale(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-medium shrink-0
+                ${wholesaleCtx
+                  ? 'border-amber-600 bg-amber-900/20 text-amber-400'
+                  : 'border-surface-border text-slate-400 hover:border-amber-600 hover:text-amber-400'}`}
+            >
+              <Store className="w-3.5 h-3.5" />
+              {wholesaleCtx ? wholesaleCtx.reseller.name : 'Gros'}
+            </button>
+
             {heldOrders.length > 0 && (
               <button
                 onClick={onShowHeld}
@@ -282,6 +299,44 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
           />
         </div>
 
+        {/* Bannière grossiste active */}
+        {wholesaleCtx && (
+          <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-amber-900/20 border border-amber-800 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+                <Store className="w-3 h-3" /> Prix de gros — {wholesaleCtx.reseller.name}
+              </p>
+              {wholesaleCtx.client && (
+                <p className="text-xs text-slate-400 truncate">Client : {wholesaleCtx.client.name}</p>
+              )}
+            </div>
+            <button
+              onClick={() => { resetPriceOverrides(); onWholesaleChange?.(null); }}
+              className="p-1 rounded text-amber-500 hover:text-white shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Alertes offres volume */}
+        {wholesaleCtx && wholesaleCtx.offers.map((offer) => {
+          const cartItem = items.find((i) => i.product_id === offer.product_id);
+          if (!cartItem) return null;
+          const eligible = cartItem.quantity >= offer.min_qty;
+          return (
+            <div key={offer.id} className={`mx-4 mb-1 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs
+              ${eligible ? 'bg-green-900/20 border border-green-800 text-green-400' : 'bg-amber-900/10 border border-amber-800/40 text-amber-500'}`}>
+              <Gift className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                {eligible
+                  ? `✓ Offre déclenchée : ${offer.bonus_qty} ${offer.product_name ?? ''} offert${offer.bonus_qty > 1 ? 's' : ''}`
+                  : `${offer.product_name} : encore ${offer.min_qty - cartItem.quantity} pour ${offer.bonus_qty} offert${offer.bonus_qty > 1 ? 's' : ''}`}
+              </span>
+            </div>
+          );
+        })}
+
         {/* Récapitulatif */}
         <div className="px-4 py-3 border-t border-surface-border space-y-1.5">
           <div className="flex justify-between text-sm text-slate-400">
@@ -327,6 +382,16 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
         <HoldModal
           onConfirm={(label) => { holdCurrentOrder(label); }}
           onClose={() => setShowHoldModal(false)}
+        />
+      )}
+
+      {showWholesale && (
+        <WholesaleSelector
+          businessId={businessId}
+          current={wholesaleCtx ?? null}
+          onClose={() => setShowWholesale(false)}
+          onApplied={(ctx) => { onWholesaleChange?.(ctx); setShowWholesale(false); }}
+          onReset={() => { resetPriceOverrides(); onWholesaleChange?.(null); }}
         />
       )}
     </>

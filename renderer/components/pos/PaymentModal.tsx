@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
+import type { WholesaleContext } from './WholesaleSelector';
 import { createOrder } from '@services/supabase/orders';
 import { enqueueToSync } from '@/lib/ipc';
 import {
@@ -34,6 +35,7 @@ interface PaymentModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onPaymentConfirm?: (amountPaid: number, change: number, total: number) => void;
+  wholesaleCtx?: WholesaleContext | null;
 }
 
 type Step = 'methode' | 'montant' | 'partiel' | 'attente' | 'succes';
@@ -43,7 +45,7 @@ const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', '
 
 const BC_CHANNEL = 'elm-pos-display';
 
-export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentConfirm }: PaymentModalProps) {
+export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx }: PaymentModalProps) {
   const [step, setStep]               = useState<Step>('methode');
   const [methode, setMethode]         = useState<PaymentMethod>('cash');
   const [montantRecu, setMontantRecu] = useState('');
@@ -149,9 +151,14 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
         notes:          cart.notes,
       });
       setOrdreId(order.id);
-      printReceipt({ order, business, cashier_name: user.full_name }).catch(() =>
-        notifWarning('Reçu non imprimé — imprimante indisponible')
-      );
+      printReceipt({
+        order,
+        business,
+        cashier_name: user.full_name,
+        reseller_name:        wholesaleCtx?.reseller.name,
+        reseller_client_name: wholesaleCtx?.client?.name,
+        reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
+      }).catch(() => notifWarning('Reçu non imprimé — imprimante indisponible'));
       notifSuccess('Paiement enregistré avec succès');
       onPaymentConfirm?.(methode === 'cash' ? montantRecuNum : total, rendu, total);
       cart.clear();

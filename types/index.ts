@@ -231,6 +231,11 @@ export interface ReceiptData {
   order: Order;
   business: Business;
   cashier_name: string;
+  /** Mode grossiste : nom du revendeur (affiché à gauche sur la facture) */
+  reseller_name?: string;
+  /** Mode grossiste : nom du client du revendeur (affiché à droite) */
+  reseller_client_name?: string;
+  reseller_client_phone?: string;
 }
 
 // ─── IPC Channel Types ────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { LayoutGrid, List } from 'lucide-react';
+import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
 import { ProductGrid } from '@/components/pos/ProductGrid';
 import { OrderPanel } from '@/components/pos/OrderPanel';
 import { PaymentModal } from '@/components/pos/PaymentModal';
@@ -24,6 +25,7 @@ export default function PosPage() {
   const [paymentOpen, setPaymentOpen]            = useState(false);
   const [view, setView]                          = useState<ViewMode>('list');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
+  const [wholesaleCtx, setWholesaleCtx]          = useState<WholesaleContext | null>(null);
 
   const addItem = useCartStore((s) => s.addItem);
   const { business } = useAuthStore();
@@ -123,6 +125,8 @@ export default function PosPage() {
             businessId={business?.id ?? ''}
             onCheckout={() => setPaymentOpen(true)}
             onShowHeld={() => setHeldDrawerOpen(true)}
+            wholesaleCtx={wholesaleCtx}
+            onWholesaleChange={setWholesaleCtx}
           />
         </div>
       </div>
@@ -143,6 +147,7 @@ export default function PosPage() {
           onClose={() => setPaymentOpen(false)}
           onSuccess={() => setPaymentOpen(false)}
           onPaymentConfirm={sendPaymentConfirm}
+          wholesaleCtx={wholesaleCtx}
         />
       )}
     </div>

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null },
   { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'] },
   { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'] },
+  { href: '/revendeurs',        icon: Store,        label: 'Revendeurs',         roles: ['owner', 'admin'] },
   { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'] },
   { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'] },
   { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'] },

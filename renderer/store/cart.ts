@@ -50,6 +50,10 @@ interface CartState {
   removeCoupon: (couponId: string) => void;
   setNotes:  (notes: string) => void;
   clear: () => void;
+  /** Applique des prix de gros sur les items du panier (clé = product_id → nouveau prix) */
+  applyPriceOverrides: (overrides: Record<string, number>) => void;
+  /** Réinitialise les prix aux prix de détail originaux (product.price) */
+  resetPriceOverrides: () => void;
 
   subtotal: () => number;
   discountAmount: () => number;
@@ -276,6 +280,21 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   setNotes:  (notes)  => set({ notes }),
   clear: () => set({ items: [], coupons: [], notes: '' }),
+
+  applyPriceOverrides: (overrides) => set((state) => ({
+    items: state.items.map((item) =>
+      overrides[item.product_id] !== undefined
+        ? { ...item, price: overrides[item.product_id] }
+        : item
+    ),
+  })),
+
+  resetPriceOverrides: () => set((state) => ({
+    items: state.items.map((item) => ({
+      ...item,
+      price: item.product?.price ?? item.price,
+    })),
+  })),
 
   subtotal: () =>
     get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),

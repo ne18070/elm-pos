@@ -261,7 +261,7 @@ function fontStack(f: TemplateConfig['fontFamily']): string {
 
 // ─── Core body builder ────────────────────────────────────────────────────────
 
-function buildBody(order: any, business: any, config: TemplateConfig): string {
+function buildBody(order: any, business: any, config: TemplateConfig, extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string }): string {
   const cur = (business.currency as string) ?? 'XOF';
   const paid = paidAmount(order);
   const change = Math.max(0, paid - order.total);
@@ -327,6 +327,8 @@ function buildBody(order: any, business: any, config: TemplateConfig): string {
         ${config.showCashier && order.cashier?.full_name ? `<tr><td>Caissier</td><td class="right">${order.cashier.full_name}</td></tr>` : ''}
         ${config.showCustomer && order.customer_name ? `<tr><td>Client</td><td class="right">${order.customer_name}</td></tr>` : ''}
         ${config.showCustomer && order.customer_phone ? `<tr><td>Tél.</td><td class="right">${order.customer_phone}</td></tr>` : ''}
+        ${extra?.resellerName ? `<tr><td>Réf</td><td class="right bold">${extra.resellerName}</td></tr>` : ''}
+        ${extra?.resellerClientName ? `<tr><td>→ Client</td><td class="right">${extra.resellerClientName}</td></tr>` : ''}
       </table>
 
       <hr class="divider">
@@ -416,11 +418,19 @@ function buildBody(order: any, business: any, config: TemplateConfig): string {
       </div>
     </div>
 
-    ${config.showCustomer && (order.customer_name || order.customer_phone) ? `
-    <div class="client-box">
-      <span class="client-label">Client :</span>
-      <span class="client-name">${order.customer_name ?? ''}</span>
-      ${order.customer_phone ? `<span class="client-phone">  ${order.customer_phone}</span>` : ''}
+    ${(extra?.resellerName || (config.showCustomer && (order.customer_name || order.customer_phone))) ? `
+    <div class="parties-row">
+      ${extra?.resellerName ? `
+      <div class="party-box party-left">
+        <div class="party-label">Réf</div>
+        <div class="party-name">${extra.resellerName}</div>
+      </div>` : '<div></div>'}
+      ${extra?.resellerClientName || (config.showCustomer && order.customer_name) ? `
+      <div class="party-box party-right">
+        <div class="party-label">Client</div>
+        <div class="party-name">${extra?.resellerClientName ?? order.customer_name ?? ''}</div>
+        ${(extra?.resellerClientPhone ?? order.customer_phone) ? `<div class="party-phone">${extra?.resellerClientPhone ?? order.customer_phone}</div>` : ''}
+      </div>` : '<div></div>'}
     </div>` : ''}
 
     <!-- Articles -->
@@ -516,6 +526,13 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
     .client-label { color: #718096; }
     .client-name { font-weight: 600; margin-left: 4px; }
     .client-phone { color: #718096; margin-left: 4px; }
+    .parties-row { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; }
+    .party-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px; font-size: 10px; }
+    .party-left { border-left: 3px solid ${config.accentColor}; }
+    .party-right { border-right: 3px solid ${config.primaryColor}; text-align: right; }
+    .party-label { font-size: 8px; text-transform: uppercase; letter-spacing: .05em; color: #a0aec0; margin-bottom: 2px; }
+    .party-name { font-weight: 700; color: #2d3748; font-size: 11px; }
+    .party-phone { color: #718096; font-size: 9px; margin-top: 1px; }
     .items-table { width: 100%; border-collapse: collapse; font-size: 10px; }
     .items-table thead tr { background: ${config.primaryColor}; }
     .th { padding: 4px 6px; color: #94a3b8; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; text-align: right; }
@@ -546,7 +563,12 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
 
 // ─── renderTemplate ───────────────────────────────────────────────────────────
 
-export function renderTemplate(order: any, business: any, config: TemplateConfig): string {
+export function renderTemplate(
+  order: any,
+  business: any,
+  config: TemplateConfig,
+  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string }
+): string {
   const isThermal = config.format === 'thermal';
   const isTwoCols = config.copies === 2 && (config.format === 'a4-landscape' || config.format === 'a5-portrait');
 
@@ -556,19 +578,19 @@ export function renderTemplate(order: any, business: any, config: TemplateConfig
   let bodyContent: string;
 
   if (isThermal) {
-    bodyContent = buildBody(order, business, config);
+    bodyContent = buildBody(order, business, config, extra);
   } else if (isTwoCols) {
-    const copy1 = buildBody(order, business, config) + `
+    const copy1 = buildBody(order, business, config, extra) + `
       <div class="copy-label" style="color:${config.copy1Color};border-color:${config.copy1Color}">
         ${config.copy1Label}
       </div>`;
-    const copy2 = buildBody(order, business, config) + `
+    const copy2 = buildBody(order, business, config, extra) + `
       <div class="copy-label" style="color:${config.copy2Color};border-color:${config.copy2Color}">
         ${config.copy2Label}
       </div>`;
     bodyContent = `<div class="copy">${copy1}</div><div class="copy">${copy2}</div>`;
   } else {
-    bodyContent = `<div class="single-copy">${buildBody(order, business, config)}</div>`;
+    bodyContent = `<div class="single-copy">${buildBody(order, business, config, extra)}</div>`;
   }
 
   return `<!DOCTYPE html>
