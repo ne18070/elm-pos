@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import {
   Loader2, Save, UserPlus, Shield, UserX, ChevronDown,
   Users, User, Building2, Check, Lock, Ban, RefreshCw, Copy,
+  CreditCard, Clock, CheckCircle, XCircle, Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useTeam } from '@/hooks/useTeam';
 import { InviteModal } from '@/components/admin/InviteModal';
 import { updateUserRole, removeUserFromBusiness, updateOwnProfile, toggleUserBlock, adminResetUserPassword } from '@services/supabase/users';
+import { useSubscriptionStore } from '@/store/subscription';
+import { getEffectiveStatus, getTrialDaysRemaining } from '@services/supabase/subscriptions';
 import { uploadProductImage } from '@services/supabase/storage';
 import { getMyBusinesses } from '@services/supabase/business';
 import { supabase } from '@/lib/supabase';
@@ -192,6 +195,11 @@ export default function AdminPage() {
     }
   }
 
+  const { subscription, plans } = useSubscriptionStore();
+  const subStatus  = getEffectiveStatus(subscription);
+  const trialDays  = getTrialDaysRemaining(subscription);
+  const activePlan = plans.find((p) => p.id === subscription?.plan_id);
+
   const isOwnerOrAdmin = user?.role === 'owner' || user?.role === 'admin';
   const isOwner        = user?.role === 'owner';
 
@@ -327,6 +335,57 @@ export default function AdminPage() {
                 {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Mettre à jour le mot de passe
               </button>
+            </div>
+
+            {/* ── Abonnement ─────────────────────────────────────────────────── */}
+            <div className={`card p-5 space-y-3 border-l-4
+              ${subStatus === 'active'  ? 'border-l-green-500'
+              : subStatus === 'trial'   ? 'border-l-amber-500'
+              : 'border-l-red-500'}`}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-white flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-slate-400" />
+                  Abonnement
+                </h2>
+                {subStatus !== 'active' && (
+                  <a href="/billing" className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300">
+                    <Zap className="w-3 h-3" /> S'abonner
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                {subStatus === 'active'  && <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />}
+                {subStatus === 'trial'   && <Clock       className="w-5 h-5 text-amber-400 shrink-0" />}
+                {(subStatus === 'expired' || subStatus === 'none') && <XCircle className="w-5 h-5 text-red-400 shrink-0" />}
+
+                <div>
+                  {subStatus === 'active' && (
+                    <>
+                      <p className="text-sm font-medium text-green-400">
+                        Actif {activePlan ? `— ${activePlan.label}` : ''}
+                      </p>
+                      {subscription?.expires_at && (
+                        <p className="text-xs text-slate-500">
+                          Valide jusqu'au {new Date(subscription.expires_at).toLocaleDateString('fr-FR')}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {subStatus === 'trial' && (
+                    <>
+                      <p className="text-sm font-medium text-amber-400">Période d'essai gratuite</p>
+                      <p className="text-xs text-slate-500">
+                        {trialDays === 0 ? 'Expire aujourd\'hui' : `${trialDays} jour${trialDays > 1 ? 's' : ''} restant${trialDays > 1 ? 's' : ''}`}
+                      </p>
+                    </>
+                  )}
+                  {(subStatus === 'expired' || subStatus === 'none') && (
+                    <p className="text-sm font-medium text-red-400">Accès expiré</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

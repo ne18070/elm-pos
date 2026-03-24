@@ -3,14 +3,17 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
+import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
+import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 
 const PUBLIC_PATHS = ['/login', '/display'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
+  const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -56,6 +59,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // Pas critique — la migration n'est peut-être pas encore appliquée
       }
+
+      // Charger abonnement + plans + paramètres paiement
+      const activeBizId = (sessionStorage.getItem('elm-pos-active-business')
+        ? JSON.parse(sessionStorage.getItem('elm-pos-active-business')!)?.id
+        : null) ?? profile.business_id;
+
+      if (activeBizId) {
+        try {
+          const [sub, plans, paySettings] = await Promise.all([
+            getSubscription(activeBizId),
+            getPlans(),
+            getPaymentSettings(),
+          ]);
+          setSubscription(sub);
+          setPlans(plans);
+          setPaymentSettings(paySettings);
+        } catch { /* non critique */ }
+      }
+      setLoaded(true);
 
       setLoading(false);
     });

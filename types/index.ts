@@ -9,7 +9,8 @@ export interface User {
   role: UserRole;
   business_id: string | null;
   avatar_url?: string;
-  is_blocked?: boolean;
+  is_blocked?:    boolean;
+  is_superadmin?: boolean;
   created_at: string;
 }
 

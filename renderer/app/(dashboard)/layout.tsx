@@ -1,20 +1,28 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
+import { useSubscriptionStore } from '@/store/subscription';
 import { Sidebar } from '@/components/shared/Sidebar';
+import { TrialBanner } from '@/components/shared/TrialBanner';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
-  const router = useRouter();
+  const { effectiveStatus, loaded: subLoaded } = useSubscriptionStore();
+  const router   = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace('/login');
+    if (isLoading || !subLoaded) return;
+    if (!user) { router.replace('/login'); return; }
+
+    const status = effectiveStatus();
+    if (status === 'expired' && pathname !== '/billing') {
+      router.replace('/billing');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, subLoaded, pathname, effectiveStatus, router]);
 
   if (isLoading) {
     return (
@@ -30,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <main className="flex-1 overflow-hidden flex flex-col">
+        <TrialBanner />
         {children}
       </main>
     </div>
