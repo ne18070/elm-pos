@@ -83,6 +83,223 @@ export async function getAnalyticsSummary(
   return { total_sales, order_count, avg_order_value, top_products, daily_stats };
 }
 
+// ─── Reseller stats ──────────────────────────────────────────────────────────
+
+export interface ResellerStat {
+  reseller_id: string;
+  name: string;
+  revenue: number;
+  order_count: number;
+}
+
+export interface ResellerClientStat {
+  client_id: string;
+  name: string;
+  reseller_name: string;
+  revenue: number;
+  order_count: number;
+}
+
+export async function getResellerStats(
+  businessId: string,
+  days = 30
+): Promise<ResellerStat[]> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('total, reseller_id, reseller:resellers!reseller_id(name)')
+    .eq('business_id', businessId)
+    .eq('status', 'paid')
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .not('reseller_id', 'is', null) as unknown as {
+      data: Array<{ total: number; reseller_id: string; reseller: { name: string } | null }> | null;
+      error: unknown;
+    };
+
+  if (error) throw error;
+
+  const map = new Map<string, ResellerStat>();
+  for (const row of data ?? []) {
+    if (!row.reseller_id || !row.reseller) continue;
+    const existing = map.get(row.reseller_id) ?? {
+      reseller_id: row.reseller_id,
+      name: row.reseller.name,
+      revenue: 0,
+      order_count: 0,
+    };
+    existing.revenue += row.total;
+    existing.order_count += 1;
+    map.set(row.reseller_id, existing);
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+}
+
+export async function getResellerClientStats(
+  businessId: string,
+  days = 30
+): Promise<ResellerClientStat[]> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      total,
+      reseller_client_id,
+      client:reseller_clients!reseller_client_id(name),
+      reseller:resellers!reseller_id(name)
+    `)
+    .eq('business_id', businessId)
+    .eq('status', 'paid')
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .not('reseller_client_id', 'is', null) as unknown as {
+      data: Array<{
+        total: number;
+        reseller_client_id: string;
+        client: { name: string } | null;
+        reseller: { name: string } | null;
+      }> | null;
+      error: unknown;
+    };
+
+  if (error) throw error;
+
+  const map = new Map<string, ResellerClientStat>();
+  for (const row of data ?? []) {
+    if (!row.reseller_client_id || !row.client) continue;
+    const existing = map.get(row.reseller_client_id) ?? {
+      client_id: row.reseller_client_id,
+      name: row.client.name,
+      reseller_name: row.reseller?.name ?? '—',
+      revenue: 0,
+      order_count: 0,
+    };
+    existing.revenue += row.total;
+    existing.order_count += 1;
+    map.set(row.reseller_client_id, existing);
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+}
+
+// ─── Coupon / promo stats ─────────────────────────────────────────────────────
+
+export interface CouponStat {
+  coupon_code: string;
+  usage_count: number;
+  total_discount: number;
+  revenue: number;
+}
+
+export async function getCouponStats(
+  businessId: string,
+  days = 30
+): Promise<CouponStat[]> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('coupon_code, discount_amount, total')
+    .eq('business_id', businessId)
+    .eq('status', 'paid')
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .not('coupon_code', 'is', null) as unknown as {
+      data: Array<{ coupon_code: string; discount_amount: number; total: number }> | null;
+      error: unknown;
+    };
+
+  if (error) throw error;
+
+  const map = new Map<string, CouponStat>();
+  for (const row of data ?? []) {
+    if (!row.coupon_code) continue;
+    const existing = map.get(row.coupon_code) ?? {
+      coupon_code: row.coupon_code,
+      usage_count: 0,
+      total_discount: 0,
+      revenue: 0,
+    };
+    existing.usage_count += 1;
+    existing.total_discount += row.discount_amount ?? 0;
+    existing.revenue += row.total;
+    map.set(row.coupon_code, existing);
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.usage_count - a.usage_count);
+}
+
+// ─── Wholesale detail (per order-item) ───────────────────────────────────────
+
+export interface WholesaleOrderItem {
+  order_id: string;
+  reseller_id: string;
+  reseller_name: string;
+  client_id: string | null;
+  client_name: string | null;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  revenue: number;
+}
+
+export async function getResellerDetailStats(
+  businessId: string,
+  days = 30
+): Promise<WholesaleOrderItem[]> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+
+  type OrderRow = {
+    id: string;
+    reseller_id: string;
+    reseller_client_id: string | null;
+    reseller: { id: string; name: string };
+    client: { id: string; name: string } | null;
+    items: { product_id: string; name: string; quantity: number; total: number }[];
+  };
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      reseller_id,
+      reseller_client_id,
+      reseller:resellers!reseller_id(id, name),
+      client:reseller_clients!reseller_client_id(id, name),
+      items:order_items(product_id, name, quantity, total)
+    `)
+    .eq('business_id', businessId)
+    .eq('status', 'paid')
+    .not('reseller_id', 'is', null)
+    .gte('created_at', `${startDate}T00:00:00Z`) as unknown as {
+      data: OrderRow[] | null;
+      error: unknown;
+    };
+
+  if (error) throw error;
+
+  const result: WholesaleOrderItem[] = [];
+  for (const order of data ?? []) {
+    if (!order.reseller) continue;
+    for (const item of order.items ?? []) {
+      result.push({
+        order_id:      order.id,
+        reseller_id:   order.reseller_id,
+        reseller_name: order.reseller.name,
+        client_id:     order.reseller_client_id,
+        client_name:   order.client?.name ?? null,
+        product_id:    item.product_id,
+        product_name:  item.name,
+        quantity:      item.quantity,
+        revenue:       item.total,
+      });
+    }
+  }
+  return result;
+}
+
+// ─── Daily sales ──────────────────────────────────────────────────────────────
+
 export async function getDailySales(
   businessId: string,
   date: string
