@@ -49,7 +49,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (profile.is_blocked) {
+      if ((profile as { is_blocked?: boolean }).is_blocked) {
         await supabase.auth.signOut();
         setErreur('Votre compte a été bloqué. Contactez votre administrateur.');
         return;
