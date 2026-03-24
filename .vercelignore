@@ -1,0 +1,9 @@
+node_modules
+dist
+renderer/.next
+renderer/out
+renderer/node_modules
+release
+*.log
+.env
+.env.local

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText } from 'lucide-react';
+import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
+import { openWhatsApp } from '@/lib/share-invoice';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
@@ -390,6 +391,19 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             >
               <FileText className="w-4 h-4" />
               Facture
+            </button>
+            <button
+              onClick={() => openWhatsApp({
+                phone:        order.customer_phone ?? undefined,
+                orderRef:     order.id.slice(0, 8).toUpperCase(),
+                total:        order.total,
+                currency,
+                customerName: order.customer_name ?? undefined,
+              })}
+              className="flex items-center justify-center gap-1.5 px-3 h-10 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 transition-colors"
+              title="Partager via WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
             </button>
           </div>
 

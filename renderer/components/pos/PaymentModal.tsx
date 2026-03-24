@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle } from 'lucide-react';
 import { useCustomersStore } from '@/store/customers';
 import type { SavedCustomer } from '@/store/customers';
 import { Modal } from '@/components/ui/Modal';
@@ -11,7 +11,9 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
+import { openWhatsApp } from '@/lib/share-invoice';
 import type { WholesaleContext } from './WholesaleSelector';
+import type { Order } from '@pos-types';
 import { createOrder } from '@services/supabase/orders';
 import { enqueueToSync } from '@/lib/ipc';
 import {
@@ -51,6 +53,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
   const [montantRecu, setMontantRecu] = useState('');
   const [chargement, setChargement]   = useState(false);
   const [ordreId, setOrdreId]         = useState<string | null>(null);
+  const [ordre, setOrdre]             = useState<Order | null>(null);
   const [erreur, setErreur]           = useState('');
   const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | null>(null);
 
@@ -151,6 +154,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
         notes:          cart.notes,
       });
       setOrdreId(order.id);
+      setOrdre(order);
       printReceipt({
         order,
         business,
@@ -202,6 +206,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
         customer_phone: customerPhone.trim() || undefined,
       });
       setOrdreId(order.id);
+      setOrdre(order);
       // Sauvegarder le client pour la prochaine fois
       saveCustomer(customerName, customerPhone);
       notifSuccess(`Acompte de ${fmt(acompteNum)} enregistré`);
@@ -687,7 +692,40 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
             )}
           </div>
 
-          <button onClick={onSuccess} className="btn-primary w-full h-11 mt-2">
+          {/* Partage facture */}
+          <div className="w-full space-y-2">
+            <p className="text-xs text-slate-500 text-center">Partager la facture</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => ordre && printReceipt({
+                  order: ordre,
+                  business: business!,
+                  cashier_name: user!.full_name,
+                  reseller_name:        wholesaleCtx?.reseller.name,
+                  reseller_client_name: wholesaleCtx?.client?.name,
+                  reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
+                })}
+                disabled={!ordre}
+                className="btn-secondary flex-1 h-10 text-sm flex items-center justify-center gap-1.5"
+              >
+                <Download className="w-4 h-4 shrink-0" /> PDF
+              </button>
+              <button
+                onClick={() => openWhatsApp({
+                  phone:        ordre?.customer_phone ?? undefined,
+                  orderRef:     (ordreId ?? '').slice(0, 8).toUpperCase(),
+                  total,
+                  currency,
+                  customerName: ordre?.customer_name ?? undefined,
+                })}
+                className="flex-1 h-10 flex items-center justify-center gap-1.5 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 text-sm font-medium transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" /> WhatsApp
+              </button>
+            </div>
+          </div>
+
+          <button onClick={onSuccess} className="btn-primary w-full h-11">
             Nouvelle vente
           </button>
         </div>
