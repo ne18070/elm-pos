@@ -30,8 +30,11 @@ export interface PaymentSettings {
 
 // ── Lecture ───────────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 export async function getSubscription(businessId: string): Promise<Subscription | null> {
-  const { data } = await supabase
+  const { data } = await db
     .from('subscriptions')
     .select('*')
     .eq('business_id', businessId)
@@ -40,7 +43,7 @@ export async function getSubscription(businessId: string): Promise<Subscription 
 }
 
 export async function getPlans(): Promise<Plan[]> {
-  const { data } = await supabase
+  const { data } = await db
     .from('plans')
     .select('*')
     .eq('is_active', true)
@@ -49,7 +52,7 @@ export async function getPlans(): Promise<Plan[]> {
 }
 
 export async function getPaymentSettings(): Promise<PaymentSettings | null> {
-  const { data } = await supabase
+  const { data } = await db
     .from('payment_settings')
     .select('*')
     .eq('id', 1)
@@ -119,7 +122,7 @@ export async function activateSubscription(
 }
 
 export async function upsertPaymentSettings(settings: Partial<PaymentSettings>): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db
     .from('payment_settings')
     .update({ ...settings, updated_at: new Date().toISOString() })
     .eq('id', 1);
@@ -128,10 +131,10 @@ export async function upsertPaymentSettings(settings: Partial<PaymentSettings>):
 
 export async function upsertPlan(plan: Partial<Plan> & { id?: string }): Promise<void> {
   if (plan.id) {
-    const { error } = await supabase.from('plans').update(plan).eq('id', plan.id);
+    const { error } = await db.from('plans').update(plan).eq('id', plan.id);
     if (error) throw new Error(error.message);
   } else {
-    const { error } = await supabase.from('plans').insert(plan);
+    const { error } = await db.from('plans').insert(plan);
     if (error) throw new Error(error.message);
   }
 }
