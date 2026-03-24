@@ -1,8 +1,10 @@
 /**
  * Couche IPC côté renderer
- * Fournit des helpers typés qui tombent en fallback silencieux
- * quand on est en dehors d'Electron (navigateur pur, tests).
+ * - En mode Electron : délègue à window.electronAPI (IPC natif)
+ * - En mode Web     : utilise des fallbacks navigateur (BroadcastChannel, window.print…)
  */
+
+import type { ReceiptData } from '../../types';
 
 const api = typeof window !== 'undefined' && 'electronAPI' in window
   ? window.electronAPI
@@ -38,8 +40,9 @@ export async function printReceipt(
   data: unknown
 ): Promise<{ success: boolean; error?: string }> {
   if (!api) {
-    console.log('[DEV] Impression simulée :', data);
-    return { success: true };
+    // Mode web : impression via la fenêtre navigateur
+    const { printReceiptBrowser } = await import('./print-web');
+    return printReceiptBrowser(data as ReceiptData);
   }
   const printerConfig = loadPrinterConfig();
   return api.hardware.printReceipt({ ...(data as object), printerConfig }) as Promise<{ success: boolean; error?: string }>;

@@ -228,11 +228,17 @@ const PAYMENT_LABELS: Record<string, string> = {
   partial: 'Paiement mixte',
 };
 
+const CURRENCY_LABEL: Record<string, string> = {
+  XOF: 'FCFA',
+  XAF: 'FCFA',
+};
+
 function fmt(amount: number, currency = 'XOF'): string {
+  const label = CURRENCY_LABEL[currency] ?? currency;
   return new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount) + '\u00a0' + currency;
+  }).format(amount) + '\u00a0' + label;
 }
 
 function fmtDate(iso: string): string {

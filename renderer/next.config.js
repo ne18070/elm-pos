@@ -1,15 +1,17 @@
 const path = require('path');
 
+// Electron build: static export (output: 'export')
+// Web build:     standard Next.js server (no static export)
+const isElectron = process.env.ELECTRON_BUILD === '1';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  trailingSlash: true,
-  images: { unoptimized: true },
+  ...(isElectron ? { output: 'export', trailingSlash: true } : {}),
+  images: { unoptimized: isElectron },
 
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      // Aliases pour les modules hors du dossier renderer/
       '@services': path.resolve(__dirname, '../services'),
       '@domain':   path.resolve(__dirname, '../domain'),
       '@pos-types':path.resolve(__dirname, '../types/index'),
