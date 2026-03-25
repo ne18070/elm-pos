@@ -45,6 +45,12 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'settings.updated':        { label: 'Paramètres modifiés',  Icon: Settings,     color: 'text-slate-400' },
   'coupon.created':          { label: 'Coupon créé',          Icon: Tag,          color: 'text-green-400' },
   'coupon.deleted':          { label: 'Coupon supprimé',      Icon: Tag,          color: 'text-red-400' },
+  'cash_session.opened':     { label: 'Caisse ouverte',       Icon: ShieldAlert,  color: 'text-brand-400' },
+  'cash_session.closed':     { label: 'Caisse clôturée',      Icon: ShieldAlert,  color: 'text-purple-400' },
+  'user.blocked':            { label: 'Utilisateur bloqué',   Icon: UserMinus,    color: 'text-red-400' },
+  'user.unblocked':          { label: 'Utilisateur débloqué', Icon: UserPlus,     color: 'text-green-400' },
+  'user.password_reset':     { label: 'MDP réinitialisé',     Icon: UserCog,      color: 'text-amber-400' },
+  'subscription.activated':  { label: 'Abonnement activé',    Icon: ShieldAlert,  color: 'text-green-400' },
 };
 
 function getActionConfig(action: string) {
@@ -78,6 +84,10 @@ const ACTION_FILTERS = [
   { value: 'stock.entry',             label: 'Approvisionnements' },
   { value: 'user.role_changed',       label: 'Changements de rôle' },
   { value: 'user.removed',            label: 'Membres retirés' },
+  { value: 'cash_session.opened',     label: 'Ouvertures de caisse' },
+  { value: 'cash_session.closed',     label: 'Clôtures de caisse' },
+  { value: 'user.blocked',            label: 'Blocages utilisateur' },
+  { value: 'subscription.activated',  label: 'Activations abonnement' },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

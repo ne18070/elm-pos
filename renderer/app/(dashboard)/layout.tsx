@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { Sidebar } from '@/components/shared/Sidebar';
 import { TrialBanner } from '@/components/shared/TrialBanner';
+import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <InactivityGuard />
       <Sidebar />
       <main className="flex-1 overflow-hidden flex flex-col">
         <TrialBanner />

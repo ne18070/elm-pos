@@ -7,6 +7,8 @@ import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
+import { getCurrentSession } from '@services/supabase/cash-sessions';
+import { useCashSessionStore } from '@/store/cashSession';
 
 const PUBLIC_PATHS = ['/login', '/display', '/subscribe'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
@@ -14,6 +16,7 @@ const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.sta
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
   const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
+  const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -68,17 +71,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (activeBizId) {
         try {
-          const [sub, plans, paySettings] = await Promise.all([
+          const [sub, plans, paySettings, cashSession] = await Promise.all([
             getSubscription(activeBizId),
             getPlans(),
             getPaymentSettings(),
+            getCurrentSession(activeBizId),
           ]);
           setSubscription(sub);
           setPlans(plans);
           setPaymentSettings(paySettings);
+          setCashSession(cashSession);
         } catch { /* non critique */ }
       }
       setLoaded(true);
+      setCashLoaded(true);
 
       setLoading(false);
     });

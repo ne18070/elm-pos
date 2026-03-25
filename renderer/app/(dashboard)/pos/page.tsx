@@ -10,6 +10,7 @@ import { CategoryBar } from '@/components/pos/CategoryBar';
 import { BarcodeListener } from '@/components/pos/BarcodeListener';
 import { HeldOrdersDrawer } from '@/components/pos/HeldOrdersDrawer';
 import { OfflineBanner } from '@/components/shared/OfflineBanner';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -67,6 +68,10 @@ export default function PosPage() {
 
         {/* Gauche : catalogue */}
         <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-border">
+          {/* Onboarding — visible uniquement pour les nouveaux établissements */}
+          <div className="px-4 pt-3 empty:hidden">
+            <OnboardingChecklist />
+          </div>
           {/* Barre recherche + toggle vue */}
           <div className="px-4 py-3 border-b border-surface-border flex gap-2">
             <input

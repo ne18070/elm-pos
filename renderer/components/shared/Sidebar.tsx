@@ -5,19 +5,22 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { useThemeStore } from '@/store/theme';
+import { useCashSessionStore } from '@/store/cashSession';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
 import { BusinessSwitcher } from './BusinessSwitcher';
+import { NotificationBell } from './NotificationBell';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 
 const NAV_ITEMS = [
   { href: '/pos',               icon: ShoppingCart, label: 'Caisse',             roles: null },
+  { href: '/caisse',            icon: Vault,        label: 'Clôture caisse',     roles: ['owner', 'admin'] },
   { href: '/livraison',         icon: Truck,        label: 'Livraisons',         roles: null },
   { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null },
   { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'] },
@@ -36,6 +39,7 @@ export function Sidebar() {
   const { user, business, clear } = useAuthStore();
   const { setSubscription, setLoaded } = useSubscriptionStore();
   const { theme, cycle: cycleTheme } = useThemeStore();
+  const { session: cashSession } = useCashSessionStore();
   const role = user?.role ?? 'staff';
   const isAdmin = role === 'owner' || role === 'admin';
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
@@ -52,6 +56,9 @@ export function Sidebar() {
     await supabase.auth.signOut();
     setSubscription(null);
     setLoaded(false);
+    const { setSession: setCash, setLoaded: setCashLoaded } = useCashSessionStore.getState();
+    setCash(null);
+    setCashLoaded(false);
     clear();
   }
 
@@ -69,6 +76,7 @@ export function Sidebar() {
           ({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
             const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
+            const sessionDot = href === '/caisse';
             return (
               <Link
                 key={href}
@@ -88,6 +96,11 @@ export function Sidebar() {
                                      bg-red-500 text-white text-[9px] font-bold leading-none">
                       {badge > 99 ? '99+' : badge}
                     </span>
+                  )}
+                  {sessionDot && (
+                    <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-surface-card
+                      ${cashSession ? 'bg-green-400' : 'bg-slate-600'}`}
+                    />
                   )}
                 </div>
                 <span className="text-sm font-medium hidden lg:block flex-1">{label}</span>
@@ -110,6 +123,9 @@ export function Sidebar() {
 
       {/* Utilisateur + Admin */}
       <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
+        {/* Notifications */}
+        <NotificationBell />
+
         {/* Aide */}
         <Link
           href="/help"
