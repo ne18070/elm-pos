@@ -3,10 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
-
   * {
     box-sizing: border-box;
   }
@@ -15,7 +11,7 @@
     @apply bg-surface text-slate-100 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
     height: 100%;
-    overflow: hidden; /* POS is a single-page app */
+    overflow: hidden;
   }
 
   /* Scrollbar */
@@ -30,7 +26,7 @@
     @apply bg-surface-border rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400;
+    background-color: #94a3b8;
   }
 
   /* Focus ring */
@@ -76,3 +72,107 @@
     @apply block text-sm font-medium text-slate-400 mb-1.5;
   }
 }
+
+/* ─── MODE CLAIR ────────────────────────────────────────────────────────────
+   Overrides hors @layer + !important pour battre les classes Tailwind compilées.
+   La sidebar (<aside>) conserve toujours le thème sombre.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Fond principal */
+[data-theme="light"] body                  { background-color: #f1f5f9 !important; color: #1e293b !important; }
+[data-theme="light"] .bg-surface           { background-color: #f1f5f9 !important; }
+[data-theme="light"] .bg-surface-card      { background-color: #ffffff !important; }
+[data-theme="light"] .bg-surface-input     { background-color: #f8fafc !important; }
+[data-theme="light"] .bg-surface-border    { background-color: #e2e8f0 !important; }
+[data-theme="light"] .bg-surface-hover     { background-color: #f1f5f9 !important; }
+
+/* Sidebar : annule les overrides ci-dessus pour garder le look sombre */
+[data-theme="light"] aside,
+[data-theme="light"] aside.bg-surface,
+[data-theme="light"] aside.bg-surface-card  { background-color: #0f172a !important; }
+[data-theme="light"] aside .bg-surface      { background-color: #0f172a !important; }
+[data-theme="light"] aside .bg-surface-card { background-color: #1e293b !important; }
+[data-theme="light"] aside .bg-surface-input { background-color: #334155 !important; }
+[data-theme="light"] aside .bg-surface-hover,
+[data-theme="light"] aside .hover\:bg-surface-hover:hover { background-color: #1e293b !important; }
+
+/* Bordures */
+[data-theme="light"] .border-surface-border { border-color: #e2e8f0 !important; }
+[data-theme="light"] aside .border-surface-border { border-color: #334155 !important; }
+
+/* ── Texte slate (global, sauf sidebar) ─────────────────────────────────── */
+[data-theme="light"] .text-white     { color: #0f172a !important; }
+[data-theme="light"] .text-slate-100 { color: #1e293b !important; }
+[data-theme="light"] .text-slate-200 { color: #334155 !important; }
+[data-theme="light"] .text-slate-300 { color: #475569 !important; }
+[data-theme="light"] .text-slate-400 { color: #64748b !important; }
+[data-theme="light"] .text-slate-500 { color: #475569 !important; }
+[data-theme="light"] .text-slate-600 { color: #334155 !important; }
+[data-theme="light"] .text-slate-700 { color: #1e293b !important; }
+
+/* ── Sidebar : restaure les couleurs sombres ─────────────────────────────── */
+[data-theme="light"] aside .text-white     { color: #ffffff !important; }
+[data-theme="light"] aside .text-slate-100 { color: #f1f5f9 !important; }
+[data-theme="light"] aside .text-slate-200 { color: #e2e8f0 !important; }
+[data-theme="light"] aside .text-slate-300 { color: #cbd5e1 !important; }
+[data-theme="light"] aside .text-slate-400 { color: #94a3b8 !important; }
+[data-theme="light"] aside .text-slate-500 { color: #64748b !important; }
+
+/* ── hover:text-white sur fond clair → sombre (sauf sidebar) ────────────── */
+[data-theme="light"] .hover\:text-white:hover       { color: #0f172a !important; }
+[data-theme="light"] aside .hover\:text-white:hover { color: #ffffff !important; }
+
+/* ── Hover fond : tables et listes ──────────────────────────────────────── */
+[data-theme="light"] .hover\:bg-surface-hover:hover  { background-color: #e2e8f0 !important; }
+[data-theme="light"] .hover\:bg-surface-card:hover   { background-color: #f1f5f9 !important; }
+[data-theme="light"] .hover\:bg-surface-input:hover  { background-color: #e2e8f0 !important; }
+[data-theme="light"] aside .hover\:bg-surface-hover:hover  { background-color: #1e293b !important; }
+[data-theme="light"] aside .hover\:bg-surface-card:hover   { background-color: #1e293b !important; }
+
+/* ── Inputs, labels, boutons ─────────────────────────────────────────────── */
+[data-theme="light"] .input {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+[data-theme="light"] .input::placeholder { color: #94a3b8 !important; }
+[data-theme="light"] .label             { color: #475569 !important; }
+[data-theme="light"] .btn-secondary     { color: #334155 !important; }
+
+/* ── Éléments sur fond coloré : text-white reste blanc ───────────────────── */
+[data-theme="light"] .bg-brand-600 { color: #ffffff !important; }
+[data-theme="light"] .bg-brand-500 { color: #ffffff !important; }
+[data-theme="light"] .bg-red-500   { color: #ffffff !important; }
+[data-theme="light"] .bg-red-600   { color: #ffffff !important; }
+
+/* ── Couleurs sémantiques : "400/300" → versions sombres lisibles sur blanc ─ */
+[data-theme="light"] .text-brand-400   { color: #0369a1 !important; }
+[data-theme="light"] .text-brand-300   { color: #0284c7 !important; }
+[data-theme="light"] .text-green-400   { color: #15803d !important; }
+[data-theme="light"] .text-green-500   { color: #166534 !important; }
+[data-theme="light"] .text-emerald-400 { color: #065f46 !important; }
+[data-theme="light"] .text-emerald-500 { color: #064e3b !important; }
+[data-theme="light"] .text-amber-300   { color: #b45309 !important; }
+[data-theme="light"] .text-amber-400   { color: #92400e !important; }
+[data-theme="light"] .text-amber-500   { color: #78350f !important; }
+[data-theme="light"] .text-yellow-300  { color: #92400e !important; }
+[data-theme="light"] .text-yellow-400  { color: #78350f !important; }
+[data-theme="light"] .text-yellow-500  { color: #713f12 !important; }
+[data-theme="light"] .text-orange-400  { color: #c2410c !important; }
+[data-theme="light"] .text-red-300     { color: #b91c1c !important; }
+[data-theme="light"] .text-red-400     { color: #991b1b !important; }
+[data-theme="light"] .text-red-500     { color: #7f1d1d !important; }
+[data-theme="light"] .text-purple-400  { color: #6b21a8 !important; }
+[data-theme="light"] .text-purple-300  { color: #7e22ce !important; }
+[data-theme="light"] .text-pink-400    { color: #be185d !important; }
+[data-theme="light"] .text-cyan-400    { color: #0e7490 !important; }
+[data-theme="light"] .text-sky-400     { color: #0369a1 !important; }
+
+/* ── Restaurer couleurs vives dans la sidebar (fond sombre) ──────────────── */
+[data-theme="light"] aside .text-brand-400  { color: #38bdf8 !important; }
+[data-theme="light"] aside .text-amber-300  { color: #fcd34d !important; }
+[data-theme="light"] aside .text-amber-400  { color: #fbbf24 !important; }
+[data-theme="light"] aside .text-yellow-400 { color: #facc15 !important; }
+[data-theme="light"] aside .text-green-400  { color: #4ade80 !important; }
+[data-theme="light"] aside .text-red-400    { color: #f87171 !important; }
+[data-theme="light"] aside .text-purple-400 { color: #c084fc !important; }

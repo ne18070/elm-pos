@@ -34,7 +34,7 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
   const [search, setSearch]         = useState('');
   const [activating, setActivating] = useState<string | null>(null);
   const [form, setForm]             = useState<{
-    businessId: string; planId: string; days: string; note: string;
+    businessId: string; planId: string; days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
 
   async function load() {
@@ -53,8 +53,11 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
   async function handleActivate() {
     if (!form) return;
     setActivating(form.businessId);
+    const totalDays = form.mode === 'mois'
+      ? (parseInt(form.days) || 1) * 30
+      : parseInt(form.days) || 30;
     try {
-      await activateSubscription(form.businessId, form.planId, parseInt(form.days) || 30, form.note || undefined);
+      await activateSubscription(form.businessId, form.planId, totalDays, form.note || undefined);
       setForm(null);
       await load();
     } catch (e) { alert(String(e)); }
@@ -121,7 +124,8 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
                   onClick={() => setForm({
                     businessId: row.business_id,
                     planId: plans[0]?.id ?? '',
-                    days: '30',
+                    days: '1',
+                    mode: 'mois',
                     note: '',
                   })}
                   className="btn-primary text-sm px-4 shrink-0"
@@ -157,14 +161,36 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
             </div>
 
             <div>
-              <label className="label">Durée (jours)</label>
-              <input
-                type="number"
-                value={form.days}
-                onChange={(e) => setForm((f) => f && { ...f, days: e.target.value })}
-                className="input"
-                min={1}
-              />
+              <label className="label">Durée</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={form.days}
+                  onChange={(e) => setForm((f) => f && { ...f, days: e.target.value })}
+                  className="input flex-1"
+                  min={1}
+                />
+                <div className="flex rounded-xl border border-surface-border overflow-hidden shrink-0">
+                  {(['jours', 'mois'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setForm((f) => f && { ...f, mode: m })}
+                      className={`px-3 py-2 text-sm font-medium transition-colors
+                        ${form.mode === m
+                          ? 'bg-brand-600 text-white'
+                          : 'text-slate-400 hover:text-white'}`}
+                    >
+                      {m.charAt(0).toUpperCase() + m.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                = {form.mode === 'mois'
+                  ? `${(parseInt(form.days) || 1) * 30} jours`
+                  : `${parseInt(form.days) || 0} jour${parseInt(form.days) > 1 ? 's' : ''}`}
+              </p>
             </div>
 
             <div>

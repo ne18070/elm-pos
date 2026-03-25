@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
+import { useThemeStore } from '@/store/theme';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
@@ -34,6 +35,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, business, clear } = useAuthStore();
   const { setSubscription, setLoaded } = useSubscriptionStore();
+  const { theme, cycle: cycleTheme } = useThemeStore();
   const role = user?.role ?? 'staff';
   const isAdmin = role === 'owner' || role === 'admin';
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
@@ -164,6 +166,20 @@ export function Sidebar() {
             </p>
           </div>
         </div>
+
+        <button
+          onClick={cycleTheme}
+          title="Changer le thème"
+          className="w-full flex items-center gap-3 px-2 py-2 rounded-xl
+                     text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+        >
+          {theme === 'light'  ? <Sun     className="w-4 h-4 shrink-0" /> :
+           theme === 'dark'   ? <Moon    className="w-4 h-4 shrink-0" /> :
+                                <SunMoon className="w-4 h-4 shrink-0" />}
+          <span className="text-sm hidden lg:block">
+            {theme === 'light' ? 'Mode clair' : theme === 'dark' ? 'Mode sombre' : 'Auto'}
+          </span>
+        </button>
 
         <button
           onClick={handleLogout}
