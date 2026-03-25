@@ -139,6 +139,139 @@ export async function upsertPlan(plan: Partial<Plan> & { id?: string }): Promise
   }
 }
 
+// ── Demandes d'abonnement ─────────────────────────────────────────────────────
+
+export interface SubscriptionRequest {
+  id:           string;
+  business_id:  string;
+  business_name: string;
+  plan_id:      string | null;
+  plan_label:   string | null;
+  plan_price:   number | null;
+  plan_currency: string | null;
+  receipt_url:  string;
+  status:       'pending' | 'approved' | 'rejected';
+  note:         string | null;
+  created_at:   string;
+  processed_at: string | null;
+}
+
+export async function uploadReceipt(businessId: string, file: File): Promise<string> {
+  const BUCKET = 'product-images';
+  const ext    = file.name.split('.').pop() ?? 'jpg';
+  const path   = `receipts/${businessId}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file);
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function submitSubscriptionRequest(
+  businessId: string,
+  planId:     string,
+  receiptUrl: string,
+): Promise<void> {
+  const { error } = await db
+    .from('subscription_requests')
+    .insert({ business_id: businessId, plan_id: planId, receipt_url: receiptUrl });
+  if (error) throw new Error(error.message);
+}
+
+export async function getSubscriptionRequests(): Promise<SubscriptionRequest[]> {
+  const { data, error } = await db
+    .from('subscription_requests')
+    .select('*, businesses(name), plans(label, price, currency)')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: Record<string, any>) => ({
+    ...r,
+    business_name: r.businesses?.name ?? '—',
+    plan_label:    r.plans?.label    ?? '—',
+    plan_price:    r.plans?.price    ?? null,
+    plan_currency: r.plans?.currency ?? null,
+  }));
+}
+
+export async function getMySubscriptionRequests(businessId: string): Promise<SubscriptionRequest[]> {
+  const { data, error } = await db
+    .from('subscription_requests')
+    .select('*, plans(label, price, currency)')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: Record<string, any>) => ({
+    ...r,
+    business_name: '',
+    plan_label:    r.plans?.label    ?? '—',
+    plan_price:    r.plans?.price    ?? null,
+    plan_currency: r.plans?.currency ?? null,
+  }));
+}
+
+export async function approveSubscriptionRequest(
+  requestId:  string,
+  businessId: string,
+  planId:     string,
+  days:       number,
+  note?:      string,
+): Promise<void> {
+  await activateSubscription(businessId, planId, days, note);
+  const { error } = await db
+    .from('subscription_requests')
+    .update({ status: 'approved', processed_at: new Date().toISOString() })
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
+export async function rejectSubscriptionRequest(requestId: string, note?: string): Promise<void> {
+  const { error } = await db
+    .from('subscription_requests')
+    .update({ status: 'rejected', processed_at: new Date().toISOString(), note: note ?? null })
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
+// ── Demandes publiques (prospects sans compte) ────────────────────────────────
+
+export interface PublicSubscriptionRequest {
+  id:            string;
+  business_name: string;
+  email:         string;
+  phone:         string | null;
+  plan_id:       string | null;
+  plan_label:    string | null;
+  plan_price:    number | null;
+  plan_currency: string | null;
+  receipt_url:   string;
+  status:        'pending' | 'approved' | 'rejected';
+  note:          string | null;
+  created_at:    string;
+  processed_at:  string | null;
+}
+
+export async function getPublicSubscriptionRequests(): Promise<PublicSubscriptionRequest[]> {
+  const { data, error } = await db
+    .from('public_subscription_requests')
+    .select('*, plans(label, price, currency)')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: Record<string, any>) => ({
+    ...r,
+    plan_label:    r.plans?.label    ?? '—',
+    plan_price:    r.plans?.price    ?? null,
+    plan_currency: r.plans?.currency ?? null,
+  }));
+}
+
+export async function rejectPublicRequest(requestId: string, note?: string): Promise<void> {
+  const { error } = await db
+    .from('public_subscription_requests')
+    .update({ status: 'rejected', processed_at: new Date().toISOString(), note: note ?? null })
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {
   const BUCKET = 'product-images'; // réutilise le bucket existant
   const ext    = file.name.split('.').pop() ?? 'png';

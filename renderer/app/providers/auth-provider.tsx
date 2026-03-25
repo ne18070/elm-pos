@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 
-const PUBLIC_PATHS = ['/login', '/display'];
+const PUBLIC_PATHS = ['/login', '/display', '/subscribe'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
