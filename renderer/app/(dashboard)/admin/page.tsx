@@ -341,7 +341,8 @@ export default function AdminPage() {
             <div className={`card p-5 space-y-3 border-l-4
               ${subStatus === 'active'  ? 'border-l-green-500'
               : subStatus === 'trial'   ? 'border-l-amber-500'
-              : 'border-l-red-500'}`}
+              : subStatus === 'expired' ? 'border-l-red-500'
+              : 'border-l-slate-600'}`}
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-white flex items-center gap-2">
@@ -381,8 +382,11 @@ export default function AdminPage() {
                       </p>
                     </>
                   )}
-                  {(subStatus === 'expired' || subStatus === 'none') && (
+                  {subStatus === 'expired' && (
                     <p className="text-sm font-medium text-red-400">Accès expiré</p>
+                  )}
+                  {subStatus === 'none' && (
+                    <p className="text-sm font-medium text-slate-400">—</p>
                   )}
                 </div>
               </div>

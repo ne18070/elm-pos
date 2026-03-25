@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
+import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -15,6 +17,7 @@ export default function LoginPage() {
   const [chargement, setChargement] = useState(false);
 
   const { setUser, setBusiness, setBusinesses } = useAuthStore();
+  const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -71,6 +74,22 @@ export default function LoginPage() {
         const memberships = await getMyBusinesses();
         setBusinesses(memberships);
       } catch { /* migration pas encore appliquée */ }
+
+      // Charger l'abonnement avant la redirection (auth-provider ne re-tourne pas après login)
+      const activeBizId = profile.business_id as string | null;
+      if (activeBizId) {
+        try {
+          const [sub, plans, paySettings] = await Promise.all([
+            getSubscription(activeBizId),
+            getPlans(),
+            getPaymentSettings(),
+          ]);
+          setSubscription(sub);
+          setPlans(plans);
+          setPaymentSettings(paySettings);
+        } catch { /* non critique */ }
+      }
+      setLoaded(true);
 
       router.replace('/pos');
     } catch {

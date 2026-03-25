@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) {
+        setLoaded(true); // pas de session → subscription inutile, on marque comme chargé
         setLoading(false);
         if (!isPublic(pathname)) router.replace('/login');
         return;

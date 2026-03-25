@@ -8,6 +8,7 @@ import {
   Monitor, HelpCircle, BookOpen, ScrollText, Store,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, business, clear } = useAuthStore();
+  const { setSubscription, setLoaded } = useSubscriptionStore();
   const role = user?.role ?? 'staff';
   const isAdmin = role === 'owner' || role === 'admin';
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
@@ -46,6 +48,8 @@ export function Sidebar() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    setSubscription(null);
+    setLoaded(false);
     clear();
   }
 
