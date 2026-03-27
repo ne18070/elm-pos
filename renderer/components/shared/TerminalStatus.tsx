@@ -62,7 +62,7 @@ export function TerminalStatus() {
     : 'bg-red-500';
 
   const statusLabel = status === 'connected'
-    ? `${terminals.length} terminal${terminals.length !== 1 ? 'x' : ''}`
+    ? terminals.length > 1 ? `${terminals.length} terminaux` : `${terminals.length} terminal`
     : status === 'connecting'
     ? 'Connexion…'
     : 'Hors ligne';
@@ -87,8 +87,8 @@ export function TerminalStatus() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 bg-surface-2 border border-surface-border
-                        rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute bottom-full left-0 mb-2 w-72 bg-slate-900 border border-surface-border
+                        rounded-2xl shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-surface-border">
             <ArrowUpDown className="w-4 h-4 text-brand-400" />
