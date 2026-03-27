@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
-import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig } from '@/lib/ipc';
+import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -36,6 +36,27 @@ export default function SettingsPage() {
   const [savingUnits, setSavingUnits] = useState(false);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  // Config tiroir-caisse
+  const [drawerConfig, setDrawerConfig] = useState<CashDrawerConfig>(() => loadCashDrawerConfig());
+  const [testingDrawer, setTestingDrawer] = useState(false);
+
+  function handleSaveDrawerConfig(cfg: CashDrawerConfig) {
+    saveCashDrawerConfig(cfg);
+    setDrawerConfig(cfg);
+    success('Configuration tiroir enregistrée');
+  }
+
+  async function handleTestDrawer() {
+    setTestingDrawer(true);
+    try {
+      const result = await openCashDrawer();
+      if (result.success) success('Tiroir ouvert avec succès');
+      else notifError(result.error ?? 'Tiroir non répondu — vérifiez la connexion');
+    } finally {
+      setTestingDrawer(false);
+    }
+  }
 
   // Config imprimante réseau
   const [printerConfig, setPrinterConfig] = useState<PrinterConfig>(() => loadPrinterConfig());
@@ -424,6 +445,61 @@ export default function SettingsPage() {
             <Save className="w-4 h-4" />
             Enregistrer
           </button>
+        </div>
+
+        {/* Tiroir-caisse */}
+        <div className="card p-5 space-y-4">
+          <h2 className="font-semibold text-white flex items-center gap-2">
+            <Archive className="w-4 h-4 text-slate-400" />
+            Tiroir-caisse
+          </h2>
+
+          <p className="text-sm text-slate-400">
+            Le tiroir-caisse s&apos;ouvre automatiquement via l&apos;imprimante thermique
+            (commande ESC/POS) après chaque paiement en espèces.
+          </p>
+
+          {/* Toggle activé/désactivé */}
+          <label className="flex items-center justify-between cursor-pointer select-none">
+            <span className="text-sm text-slate-300">Activer le tiroir-caisse</span>
+            <button
+              role="switch"
+              aria-checked={drawerConfig.enabled}
+              onClick={() => handleSaveDrawerConfig({ ...drawerConfig, enabled: !drawerConfig.enabled })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                drawerConfig.enabled ? 'bg-brand-600' : 'bg-slate-700'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                drawerConfig.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </label>
+
+          {drawerConfig.enabled && (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                La connexion utilise la même configuration que l&apos;imprimante thermique ci-dessus.
+                Assurez-vous que le câble RJ11 du tiroir est branché sur l&apos;imprimante.
+              </p>
+              {isElectron ? (
+                <button
+                  onClick={handleTestDrawer}
+                  disabled={testingDrawer}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  {testingDrawer
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Archive className="w-4 h-4" />}
+                  {testingDrawer ? 'Ouverture…' : 'Tester le tiroir'}
+                </button>
+              ) : (
+                <p className="text-xs text-amber-400">
+                  Test disponible uniquement dans l&apos;application Electron.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Compte utilisateur */}

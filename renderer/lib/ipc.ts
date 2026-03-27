@@ -57,6 +57,40 @@ export async function testPrinterConnection(
   return result.data ?? { connected: false };
 }
 
+// ─── Tiroir-caisse ────────────────────────────────────────────────────────────
+
+export interface CashDrawerConfig {
+  enabled: boolean;
+}
+
+const CASH_DRAWER_CONFIG_KEY = 'cash_drawer_config';
+
+export function loadCashDrawerConfig(): CashDrawerConfig {
+  if (typeof window === 'undefined') return { enabled: false };
+  try {
+    const raw = localStorage.getItem(CASH_DRAWER_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : { enabled: false };
+  } catch {
+    return { enabled: false };
+  }
+}
+
+export function saveCashDrawerConfig(config: CashDrawerConfig): void {
+  localStorage.setItem(CASH_DRAWER_CONFIG_KEY, JSON.stringify(config));
+}
+
+/**
+ * Ouvre le tiroir-caisse. Utilise la même config imprimante pour la connexion.
+ * Silencieux si le tiroir n'est pas activé ou si hors Electron.
+ */
+export async function openCashDrawer(): Promise<{ success: boolean; error?: string }> {
+  const { enabled } = loadCashDrawerConfig();
+  if (!enabled || !api) return { success: false };
+  const printerConfig = loadPrinterConfig();
+  const result = await (api.hardware as any).openCashDrawer(printerConfig) as { success: boolean; error?: string };
+  return result;
+}
+
 // ─── Sync queue ───────────────────────────────────────────────────────────────
 
 export async function enqueueToSync(operation: string, payload: unknown): Promise<void> {

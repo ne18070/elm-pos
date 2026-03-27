@@ -6,6 +6,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'hardware:printer:status',
   'hardware:printer:print',
   'hardware:printer:test',
+  'hardware:cashdrawer:open',
   'hardware:scanner:status',
   'hardware:nfc:status',
   'sync:status',
@@ -81,6 +82,9 @@ const api = {
 
     testPrinterConnection: (ip: string, port: number) =>
       ipcRenderer.invoke('hardware:printer:test', { ip, port }),
+
+    openCashDrawer: (printerConfig?: unknown) =>
+      ipcRenderer.invoke('hardware:cashdrawer:open', { printerConfig }),
 
     getScannerStatus: () => ipcRenderer.invoke('hardware:scanner:status'),
     getNfcStatus:     () => ipcRenderer.invoke('hardware:nfc:status'),

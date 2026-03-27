@@ -10,7 +10,7 @@ import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
-import { printReceipt } from '@/lib/ipc';
+import { printReceipt, openCashDrawer } from '@/lib/ipc';
 import { openWhatsApp } from '@/lib/share-invoice';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
@@ -164,6 +164,8 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
         reseller_client_name: wholesaleCtx?.client?.name,
         reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
       }).catch(() => notifWarning('Reçu non imprimé — imprimante indisponible'));
+      // Ouvre le tiroir-caisse uniquement pour les paiements en espèces
+      if (methode === 'cash') openCashDrawer().catch(() => {});
       notifSuccess('Paiement enregistré avec succès');
       onPaymentConfirm?.(methode === 'cash' ? montantRecuNum : total, rendu, total);
       cart.clear();
@@ -212,6 +214,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
       saveCustomer(customerName, customerPhone);
       notifSuccess(`Acompte de ${fmt(acompteNum)} enregistré`);
       onPaymentConfirm?.(acompteNum, renduAcompte, total);
+      if (partialMethod === 'cash') openCashDrawer().catch(() => {});
       cart.clear();
       setStep('succes');
     } catch {

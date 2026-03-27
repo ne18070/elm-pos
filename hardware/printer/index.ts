@@ -96,6 +96,50 @@ export class PrinterManager {
     }
   }
 
+  /** Ouvre le tiroir-caisse via commande ESC/POS */
+  async openCashDrawer(config?: PrinterConfig): Promise<void> {
+    // ESC p pin t1 t2 — commande standard d'ouverture de tiroir
+    // pin 0 = connecteur RJ11 broche 2 (le plus courant)
+    // pin 1 = connecteur RJ11 broche 5
+    const pin = 0x00; // broche par défaut
+    const cmd = Buffer.from([0x1b, 0x70, pin, 0x19, 0xfa]);
+
+    if (config?.type === 'network' && config.ip) {
+      return this.sendRawNetwork(cmd, config.ip, config.port ?? 9100);
+    }
+
+    // USB
+    if (!loadEscpos() || !USB) {
+      console.log('[CASH DRAWER] Pas de pilote ESC/POS — commande ignorée');
+      return;
+    }
+    const devices = (USB as { list: () => unknown[] }).list();
+    if (devices.length === 0) {
+      throw new PrinterError('Aucune imprimante USB pour ouvrir le tiroir', 'NOT_FOUND');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => reject(new PrinterError('Délai tiroir dépassé', 'TIMEOUT')), 3000);
+      try {
+        const device = new (USB as new () => unknown)();
+        (device as { open: (cb: (err?: Error) => void) => void }).open((err) => {
+          if (err) {
+            clearTimeout(timeoutId);
+            return reject(new PrinterError(`Ouverture tiroir impossible : ${err}`, 'OPEN_FAILED'));
+          }
+          (device as { write: (data: Buffer, cb: () => void) => void }).write(cmd, () => {
+            (device as { close: () => void }).close();
+            clearTimeout(timeoutId);
+            resolve();
+          });
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        reject(new PrinterError(String(err), 'PRINT_FAILED'));
+      }
+    });
+  }
+
   /** Test de connexion TCP — renvoie la latence si succès */
   async testConnection(ip: string, port: number): Promise<{ connected: boolean; latency?: number; error?: string }> {
     return new Promise((resolve) => {
@@ -276,6 +320,32 @@ export class PrinterManager {
         clearTimeout(timeoutId);
         reject(new PrinterError(String(err), 'PRINT_FAILED'));
       }
+    });
+  }
+
+  /** Envoi d'un buffer brut via socket TCP (tiroir-caisse, test, etc.) */
+  private sendRawNetwork(payload: Buffer, ip: string, port: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      socket.setTimeout(3000);
+
+      socket.connect(port, ip, () => {
+        socket.write(payload, (err) => {
+          socket.destroy();
+          if (err) reject(new PrinterError(`Envoi réseau échoué : ${err.message}`, 'PRINT_FAILED'));
+          else resolve();
+        });
+      });
+
+      socket.on('error', (err) => {
+        socket.destroy();
+        reject(new PrinterError(`Connexion réseau impossible : ${err.message}`, 'OPEN_FAILED'));
+      });
+
+      socket.on('timeout', () => {
+        socket.destroy();
+        reject(new PrinterError('Délai réseau dépassé', 'TIMEOUT'));
+      });
     });
   }
 

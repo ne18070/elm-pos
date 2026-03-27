@@ -56,6 +56,20 @@ export function registerHardwareHandlers(ipcMain: IpcMain): void {
     }
   );
 
+  // ─── Tiroir-caisse ───────────────────────────────────────────────────────────
+
+  ipcMain.handle('hardware:cashdrawer:open', async (_event, payload: { printerConfig?: PrinterConfig }): Promise<IpcResponse> => {
+    try {
+      await getPrinter().openCashDrawer(payload?.printerConfig);
+      return { success: true };
+    } catch (err) {
+      if (err instanceof PrinterError) {
+        return { success: false, error: mapPrinterError(err) };
+      }
+      return { success: false, error: String(err) };
+    }
+  });
+
   // ─── Scanner ─────────────────────────────────────────────────────────────────
 
   ipcMain.handle('hardware:scanner:status', (): IpcResponse => {
