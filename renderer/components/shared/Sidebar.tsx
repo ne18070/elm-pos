@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
 import { BusinessSwitcher } from './BusinessSwitcher';
 import { NotificationBell } from './NotificationBell';
+import { TerminalStatus } from './TerminalStatus';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 
 const NAV_ITEMS = [
@@ -117,8 +118,9 @@ export function Sidebar() {
       </nav>
 
       {/* Badge offline */}
-      <div className="px-2 py-2 hidden lg:block">
+      <div className="px-2 py-2 hidden lg:block space-y-1">
         <OfflineBadge />
+        <TerminalStatus />
       </div>
 
       {/* Utilisateur + Admin */}

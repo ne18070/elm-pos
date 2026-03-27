@@ -6,7 +6,7 @@ import type { Category } from '@pos-types';
 
 export function useCategories(businessId: string) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
 
   const fetch = useCallback(async () => {
     if (!businessId) return;
@@ -21,9 +21,15 @@ export function useCategories(businessId: string) {
     }
   }, [businessId]);
 
+  useEffect(() => { fetch(); }, [fetch]);
+
+  // Real-time: sync category changes from other terminals
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    if (!businessId) return;
+    const handler = () => { fetch(); };
+    window.addEventListener('elm-pos:categories:changed', handler);
+    return () => window.removeEventListener('elm-pos:categories:changed', handler);
+  }, [businessId, fetch]);
 
   return { categories, loading, refetch: fetch };
 }

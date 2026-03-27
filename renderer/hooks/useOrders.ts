@@ -6,15 +6,15 @@ import type { Order } from '@pos-types';
 
 interface UseOrdersOptions {
   status?: string;
-  limit?: number;
-  date?: string;
+  limit?:  number;
+  date?:   string;
 }
 
 export function useOrders(businessId: string, options?: UseOrdersOptions) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [count, setCount] = useState(0);
+  const [orders, setOrders]   = useState<Order[]>([]);
+  const [count, setCount]     = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
     if (!businessId) return;
@@ -32,9 +32,15 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, options?.status, options?.date, options?.limit]);
 
+  useEffect(() => { fetch(); }, [fetch]);
+
+  // Real-time: refetch when any terminal creates/updates an order
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    if (!businessId) return;
+    const handler = () => { fetch(); };
+    window.addEventListener('elm-pos:orders:changed', handler);
+    return () => window.removeEventListener('elm-pos:orders:changed', handler);
+  }, [businessId, fetch]);
 
   return { orders, count, loading, error, refetch: fetch };
 }

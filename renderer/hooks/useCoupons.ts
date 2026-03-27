@@ -21,5 +21,13 @@ export function useCoupons(businessId: string) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  // Real-time: sync coupon usage counts from other terminals
+  useEffect(() => {
+    if (!businessId) return;
+    const handler = () => { fetch(); };
+    window.addEventListener('elm-pos:coupons:changed', handler);
+    return () => window.removeEventListener('elm-pos:coupons:changed', handler);
+  }, [businessId, fetch]);
+
   return { coupons, loading, refetch: fetch };
 }

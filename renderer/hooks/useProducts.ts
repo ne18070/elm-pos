@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getProducts } from '@services/supabase/products';
-import { supabase } from '@/lib/supabase';
 import type { Product } from '@pos-types';
 
-export function useProducts(businessId: string, realtime = false) {
+// `realtime` param kept for backward compatibility but no longer creates its own
+// channel — real-time updates come from the central useRealtimeSync() channel
+// mounted in the dashboard layout via CustomEvents.
+export function useProducts(businessId: string, _realtime = false) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
     if (!businessId) return;
@@ -25,56 +26,32 @@ export function useProducts(businessId: string, realtime = false) {
     }
   }, [businessId]);
 
-  // Chargement initial
+  // Initial load
   useEffect(() => { fetch(); }, [fetch]);
 
-  // Abonnement Realtime — activé uniquement à la caisse (realtime=true)
+  // Real-time updates via central channel (useRealtimeSync dispatches this event)
   useEffect(() => {
-    if (!realtime || !businessId) return;
+    if (!businessId) return;
 
-    const channel = supabase
-      .channel(`products:${businessId}`)
-      .on(
-        'postgres_changes',
-        {
-          event:  'UPDATE',
-          schema: 'public',
-          table:  'products',
-          filter: `business_id=eq.${businessId}`,
-        },
-        (payload) => {
-          // Mise à jour ciblée du produit modifié (stock, is_active…)
-          setProducts((prev) =>
-            prev.map((p) =>
-              p.id === payload.new.id
-                ? { ...p, ...(payload.new as Partial<Product>) }
-                : p
-            )
-          );
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'products',
-          filter: `business_id=eq.${businessId}`,
-        },
-        () => {
-          // Nouveau produit → recharger la liste complète (on veut le join category)
-          fetch();
-        }
-      )
-      .subscribe();
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { eventType: string; record?: Partial<Product> } | undefined;
 
-    channelRef.current = channel;
-
-    return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
+      if (detail?.eventType === 'UPDATE' && detail.record?.id) {
+        // Targeted in-place update — avoids a full refetch for stock changes
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === detail.record!.id ? { ...p, ...detail.record } : p
+          )
+        );
+      } else {
+        // INSERT or DELETE → full refetch to get category join
+        fetch();
+      }
     };
-  }, [realtime, businessId, fetch]);
+
+    window.addEventListener('elm-pos:products:changed', handler);
+    return () => window.removeEventListener('elm-pos:products:changed', handler);
+  }, [businessId, fetch]);
 
   return { products, loading, error, refetch: fetch };
 }

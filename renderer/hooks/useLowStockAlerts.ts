@@ -8,7 +8,7 @@ export const LOW_STOCK_THRESHOLD = 5;
 
 export function useLowStockAlerts(businessId: string) {
   const [lowStock, setLowStock] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
 
   const fetch = useCallback(async () => {
     if (!businessId) return;
@@ -26,18 +26,12 @@ export function useLowStockAlerts(businessId: string) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  // Realtime : re-query on product stock updates
+  // Real-time: re-query when the central channel fires a product change
   useEffect(() => {
     if (!businessId) return;
-    const channel = supabase
-      .channel(`low-stock:${businessId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'products', filter: `business_id=eq.${businessId}` },
-        () => { fetch(); }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const handler = () => { fetch(); };
+    window.addEventListener('elm-pos:products:changed', handler);
+    return () => window.removeEventListener('elm-pos:products:changed', handler);
   }, [businessId, fetch]);
 
   return { lowStock, count: lowStock.length, loading, refetch: fetch };

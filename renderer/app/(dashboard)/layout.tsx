@@ -8,9 +8,11 @@ import { Sidebar } from '@/components/shared/Sidebar';
 import { TrialBanner } from '@/components/shared/TrialBanner';
 import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { Loader2 } from 'lucide-react';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
+  useRealtimeSync();
   const { effectiveStatus, loaded: subLoaded } = useSubscriptionStore();
   const router   = useRouter();
   const pathname = usePathname();
