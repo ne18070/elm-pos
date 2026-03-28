@@ -35,7 +35,7 @@ export interface JournalEntry {
   entry_date: string;
   reference: string | null;
   description: string;
-  source: 'manual' | 'order' | 'stock' | 'refund' | 'adjustment';
+  source: 'manual' | 'order' | 'stock' | 'refund' | 'adjustment' | 'hotel';
   source_id: string | null;
   created_at: string;
   lines: JournalLine[];
@@ -188,6 +188,74 @@ export interface BalanceSheet {
   dettesSociales:  number;  // 421, 431, 646
   autresDettesCT:  number;  // other class 4 credit
   totalPassif:     number;
+}
+
+// ─── Synchronisation hôtel ───────────────────────────────────────────────────
+//
+// Crée une écriture journal pour chaque réservation check-out non encore
+// synchronisée.  Écriture :
+//   Débit  571 (Caisse)   : paid_amount
+//   Débit  411 (Clients)  : total - paid_amount  (si solde restant)
+//   Crédit 706 (Hébergmt) : total
+
+export async function syncHotelAccounting(businessId: string): Promise<number> {
+  // 1. Toutes les réservations clôturées
+  const { data: reservations, error: resErr } = await (supabase as any)
+    .from('hotel_reservations')
+    .select('id, actual_check_out, check_out, total, total_room, total_services, paid_amount, room:hotel_rooms(number), guest:hotel_guests(full_name)')
+    .eq('business_id', businessId)
+    .eq('status', 'checked_out');
+  if (resErr) throw new Error(resErr.message);
+  if (!reservations?.length) return 0;
+
+  // 2. IDs déjà synchronisés
+  const { data: existing } = await db('journal_entries')
+    .select('source_id')
+    .eq('business_id', businessId)
+    .eq('source', 'hotel');
+  const syncedIds = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+
+  const toSync = (reservations as {
+    id: string;
+    actual_check_out: string | null;
+    check_out: string;
+    total: number;
+    total_room: number;
+    total_services: number;
+    paid_amount: number;
+    room: { number: string } | null;
+    guest: { full_name: string } | null;
+  }[]).filter((r) => !syncedIds.has(r.id));
+
+  let count = 0;
+  for (const res of toSync) {
+    const entryDate   = (res.actual_check_out ?? res.check_out).slice(0, 10);
+    const roomLabel   = res.room?.number  ? `Ch.${res.room.number}` : '';
+    const guestLabel  = res.guest?.full_name ?? 'Client';
+    const description = `Séjour hôtel${roomLabel ? ` — ${roomLabel}` : ''} — ${guestLabel}`;
+
+    const total       = Number(res.total);
+    const paid        = Number(res.paid_amount);
+    const outstanding = Math.max(0, total - paid);
+
+    const lines: { account_code: string; account_name: string; debit: number; credit: number }[] = [];
+    if (paid > 0)            lines.push({ account_code: '571', account_name: 'Caisse',                   debit: paid,        credit: 0 });
+    if (outstanding > 0.01)  lines.push({ account_code: '411', account_name: 'Clients',                  debit: outstanding, credit: 0 });
+    lines.push(               { account_code: '706', account_name: 'Prestations hébergement', debit: 0,           credit: total });
+
+    if (!lines.length) continue;
+
+    const { data: entry, error: entryErr } = await db('journal_entries')
+      .insert({ business_id: businessId, entry_date: entryDate, description, source: 'hotel', source_id: res.id })
+      .select()
+      .single();
+    if (entryErr || !entry) continue;
+
+    await db('journal_lines').insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
+    count++;
+  }
+
+  return count;
 }
 
 export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeStatement {

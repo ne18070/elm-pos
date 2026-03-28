@@ -3,15 +3,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   TrendingUp, ShoppingBag, BarChart, DollarSign, Sun,
-  RefreshCw, Store, Tag,
+  RefreshCw, Store, Tag, BedDouble, LogIn, LogOut, Banknote, Wrench,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
 import {
-  getAnalyticsSummary, getDailySales, getCouponStats,
+  getAnalyticsSummary, getDailySales, getCouponStats, getHotelAnalytics,
 } from '@services/supabase/analytics';
 import type { AnalyticsSummary } from '@pos-types';
-import type { CouponStat } from '@services/supabase/analytics';
+import type { CouponStat, HotelAnalyticsSummary } from '@services/supabase/analytics';
 import { GrossisteTab } from '@/components/analytics/GrossisteTab';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -23,7 +23,7 @@ const PERIODS = [
   { label: '90 jours',    value: 90 },
 ];
 
-type Tab = 'general' | 'produits' | 'grossiste' | 'promos';
+type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel';
 
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
@@ -35,6 +35,8 @@ export default function AnalyticsPage() {
   const [data, setData]       = useState<AnalyticsSummary | null>(null);
   const [today, setToday]     = useState<{ total: number; count: number } | null>(null);
   const [coupons, setCoupons] = useState<CouponStat[]>([]);
+  const [hotelData, setHotelData] = useState<HotelAnalyticsSummary | null>(null);
+  const isHotel = business?.type === 'hotel';
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -44,11 +46,13 @@ export default function AnalyticsPage() {
     if (!business) return;
     if (!silent) setLoading(true); else setRefreshing(true);
     try {
-      const [summary, todayData, couponData] = await Promise.all([
+      const [summary, todayData, couponData, hotelStats] = await Promise.all([
         getAnalyticsSummary(business.id, days),
         getDailySales(business.id, todayStr),
         getCouponStats(business.id, days),
+        business.type === 'hotel' ? getHotelAnalytics(business.id, days) : Promise.resolve(null),
       ]);
+      setHotelData(hotelStats);
       if (period === 0) {
         const todayStat = summary.daily_stats.find((d) => d.date === todayStr);
         setData({
@@ -102,6 +106,7 @@ export default function AnalyticsPage() {
     { id: 'produits',  label: 'Produits',  icon: BarChart   },
     { id: 'grossiste', label: 'Grossiste', icon: Store      },
     { id: 'promos',    label: 'Promos',    icon: Tag        },
+    ...(isHotel ? [{ id: 'hotel' as Tab, label: 'Hôtel', icon: BedDouble }] : []),
   ];
 
   return (
@@ -273,6 +278,94 @@ export default function AnalyticsPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Hôtel ── */}
+        {tab === 'hotel' && (
+          <div className="space-y-5">
+            {loading ? (
+              <p className="text-sm text-slate-500">Chargement…</p>
+            ) : !hotelData ? (
+              <p className="text-sm text-slate-500 text-center py-6">Aucun séjour terminé sur la période</p>
+            ) : (
+              <>
+                {/* KPIs */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Revenus hébergement', value: fmt(hotelData.total_revenue),      icon: DollarSign, color: 'text-teal-400',   bg: 'bg-teal-900/20 border-teal-700' },
+                    { label: 'Check-outs',           value: String(hotelData.total_checkouts), icon: LogOut,     color: 'text-green-400',  bg: 'bg-green-900/20 border-green-800' },
+                    { label: 'Séjour moyen',         value: fmt(hotelData.avg_stay_value),     icon: BedDouble,  color: 'text-brand-400',  bg: 'bg-brand-900/20 border-brand-800' },
+                    { label: 'Nuits moyennes',       value: hotelData.avg_nights.toFixed(1),   icon: LogIn,      color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800' },
+                  ].map(({ label, value, icon: Icon, color, bg }) => (
+                    <div key={label} className={`p-4 rounded-xl border ${bg}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-slate-400">{label}</p>
+                        <Icon className={`w-4 h-4 ${color}`} />
+                      </div>
+                      <p className="text-xl font-bold text-white">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Détail revenus */}
+                <div className="card p-4 space-y-3">
+                  <h2 className="text-sm font-semibold text-slate-300">Détail des revenus</h2>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 flex items-center gap-2"><BedDouble className="w-3.5 h-3.5" /> Nuitées</span>
+                      <span className="text-white font-medium">{fmt(hotelData.total_room_revenue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 flex items-center gap-2"><Wrench className="w-3.5 h-3.5" /> Prestations</span>
+                      <span className="text-white font-medium">{fmt(hotelData.total_services_revenue)}</span>
+                    </div>
+                    {hotelData.outstanding_balance > 0 && (
+                      <div className="flex justify-between border-t border-surface-border pt-2">
+                        <span className="text-slate-400 flex items-center gap-2"><Banknote className="w-3.5 h-3.5" /> Soldes impayés</span>
+                        <span className="text-red-400 font-medium">{fmt(hotelData.outstanding_balance)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-surface-border pt-2 font-bold">
+                      <span className="text-slate-300">Total encaissé</span>
+                      <span className="text-teal-400">{fmt(hotelData.total_revenue - hotelData.outstanding_balance)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top chambres */}
+                {hotelData.room_stats.length > 0 && (
+                  <div className="card p-4">
+                    <h2 className="text-sm font-semibold text-slate-300 mb-4">Performance par chambre</h2>
+                    <div className="space-y-3">
+                      {hotelData.room_stats.map((r) => {
+                        const maxRev = hotelData.room_stats[0].revenue;
+                        const pct = maxRev > 0 ? (r.revenue / maxRev) * 100 : 0;
+                        return (
+                          <div key={r.room_id} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-teal-900/40 flex items-center justify-center shrink-0">
+                              <BedDouble className="w-4 h-4 text-teal-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-white font-medium">Ch. {r.room_number} <span className="text-slate-500 text-xs capitalize">{r.room_type}</span></span>
+                                <span className="text-slate-400 shrink-0 ml-2">{fmt(r.revenue)}</span>
+                              </div>
+                              <div className="h-1.5 bg-surface-input rounded-full overflow-hidden">
+                                <div className="h-full bg-teal-500 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-xs text-slate-500 w-20 text-right shrink-0">
+                              {r.checkouts} séjour{r.checkouts > 1 ? 's' : ''} · {r.nights}n
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

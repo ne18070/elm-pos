@@ -3,18 +3,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Plus, Search, BedDouble, Users, Pencil, Trash2, X, Check,
-  Calendar, Phone, IdCard, ChevronRight, LogIn, LogOut,
+  Calendar, Phone, BadgeCheck, ChevronRight, LogIn, LogOut,
   ClipboardList, AlertCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { logAction } from '@services/supabase/logger';
 import { cn } from '@/lib/utils';
 import {
   getRooms, createRoom, updateRoom, deleteRoom,
   getGuests, createGuest, updateGuest, deleteGuest,
   getReservations, createReservation, cancelReservation, checkIn, checkOut,
   getServices, addService, deleteService,
-  nightsBetween,
+  getRoomConflicts, nightsBetween,
 } from '@services/supabase/hotel';
 import type {
   HotelRoom, HotelGuest, HotelReservation, HotelService,
@@ -302,6 +303,16 @@ export default function HotelPage() {
     }
     setSaving(true);
     try {
+      // Vérifier la disponibilité avant de créer
+      const conflicts = await getRoomConflicts(resForm.room_id, resForm.check_in, resForm.check_out);
+      if (conflicts.length > 0) {
+        const c = conflicts[0];
+        const guestLabel = c.guest_name ? ` (${c.guest_name})` : '';
+        notifError(`Chambre déjà réservée du ${c.check_in} au ${c.check_out}${guestLabel}`);
+        setSaving(false);
+        return;
+      }
+
       const created = await createReservation(business.id, user.id, {
         room_id:        resForm.room_id,
         guest_id:       resForm.guest_id,
@@ -312,6 +323,7 @@ export default function HotelPage() {
         notes:          resForm.notes.trim() || undefined,
       });
       setReservations((prev) => [created, ...prev]);
+      logAction({ business_id: business.id, action: 'hotel.reservation.created', entity_type: 'reservation', entity_id: created.id, metadata: { room_id: created.room_id, guest_id: created.guest_id, check_in: created.check_in, check_out: created.check_out, total: created.total } });
       success('Réservation créée');
       setPanel(null);
     } catch (e) { notifError(String(e)); }
@@ -324,6 +336,7 @@ export default function HotelPage() {
       const updated = await cancelReservation(res.id);
       setReservations((prev) => prev.map((r) => r.id === updated.id ? updated : r));
       if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: updated });
+      if (business) logAction({ business_id: business.id, action: 'hotel.reservation.cancelled', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id } });
       success('Réservation annulée');
     } catch (e) { notifError(String(e)); }
   }
@@ -334,6 +347,7 @@ export default function HotelPage() {
       setReservations((prev) => prev.map((r) => r.id === updated.id ? updated : r));
       setRooms((prev) => prev.map((r) => r.id === res.room_id ? { ...r, status: 'occupied' } : r));
       if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: updated });
+      if (business) logAction({ business_id: business.id, action: 'hotel.checkin', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, check_in: res.check_in } });
       success('Check-in effectué');
     } catch (e) { notifError(String(e)); }
   }
@@ -345,6 +359,7 @@ export default function HotelPage() {
       setReservations((prev) => prev.map((r) => r.id === updated.id ? updated : r));
       setRooms((prev) => prev.map((r) => r.id === res.room_id ? { ...r, status: 'cleaning' } : r));
       setPanel(null);
+      if (business) logAction({ business_id: business.id, action: 'hotel.checkout', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, total: updated.total, paid_amount: paid } });
       success('Check-out effectué — chambre en nettoyage');
     } catch (e) { notifError(String(e)); }
   }
@@ -1054,7 +1069,7 @@ export default function HotelPage() {
                   {res.guest?.phone && <p className="text-xs text-slate-400 flex items-center gap-1"><Phone className="w-3 h-3" />{res.guest.phone}</p>}
                   {res.guest?.nationality && <p className="text-xs text-slate-500">{res.guest.nationality}</p>}
                   {res.guest?.id_number && (
-                    <p className="text-xs text-slate-500 flex items-center gap-1"><IdCard className="w-3 h-3" />{res.guest.id_type} {res.guest.id_number}</p>
+                    <p className="text-xs text-slate-500 flex items-center gap-1"><BadgeCheck className="w-3 h-3" />{res.guest.id_type} {res.guest.id_number}</p>
                   )}
                 </div>
               </div>

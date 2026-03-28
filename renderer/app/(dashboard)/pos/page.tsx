@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { LayoutGrid, List } from 'lucide-react';
 import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
 import { ProductGrid } from '@/components/pos/ProductGrid';
@@ -30,6 +31,14 @@ export default function PosPage() {
 
   const addItem = useCartStore((s) => s.addItem);
   const { business } = useAuthStore();
+  const router = useRouter();
+
+  // Les hôtels sans POS activé sont redirigés vers /hotel
+  useEffect(() => {
+    if (business?.type === 'hotel' && !(business?.features ?? []).includes('pos')) {
+      router.replace('/hotel');
+    }
+  }, [business, router]);
   const { warning } = useNotificationStore();
 
   const { sendPaymentConfirm } = useCustomerDisplay({

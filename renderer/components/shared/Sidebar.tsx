@@ -80,6 +80,12 @@ export function Sidebar() {
         {NAV_ITEMS
           .filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin'))
           .filter(({ types }) => !types || !business?.type || (types as readonly string[]).includes(business.type))
+          .filter(({ href }) => {
+            // Pour les hôtels, /pos est optionnel — visible uniquement si 'pos' est dans les features
+            if (href !== '/pos') return true;
+            if (business?.type !== 'hotel') return true;
+            return (business?.features ?? []).includes('pos');
+          })
           .map(
           ({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ShoppingBag, Utensils, Briefcase, BedDouble,
-  Check, ArrowRight, CheckCircle2, XCircle,
+  Check, ArrowRight, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -103,6 +103,14 @@ const TYPE_CONFIG: Record<BusinessType, {
 
 const TYPES = Object.entries(TYPE_CONFIG) as [BusinessType, (typeof TYPE_CONFIG)[BusinessType]][];
 
+// ─── Options supplémentaires par type ────────────────────────────────────────
+
+const TYPE_OPTIONS: Partial<Record<BusinessType, { key: string; label: string; description: string }[]>> = {
+  hotel: [
+    { key: 'pos', label: 'Caisse POS', description: 'Activer la vente de produits (bar, boutique…) en plus du module hôtel' },
+  ],
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConfigurePage() {
@@ -113,9 +121,18 @@ export default function ConfigurePage() {
   const [selected, setSelected] = useState<BusinessType>(
     (business?.type as BusinessType) ?? 'retail'
   );
+  const [features, setFeatures] = useState<string[]>(business?.features ?? []);
   const [saving, setSaving] = useState(false);
 
-  const hasChanged = selected !== business?.type;
+  function toggleFeature(key: string) {
+    setFeatures((prev) =>
+      prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
+    );
+  }
+
+  const hasChanged =
+    selected !== business?.type ||
+    JSON.stringify([...features].sort()) !== JSON.stringify([...(business?.features ?? [])].sort());
 
   async function handleSave() {
     if (!business) return;
@@ -123,12 +140,12 @@ export default function ConfigurePage() {
     try {
       const { error } = await (supabase as any)
         .from('businesses')
-        .update({ type: selected })
+        .update({ type: selected, features })
         .eq('id', business.id);
       if (error) throw new Error(error.message);
 
       // Mise à jour du store local
-      setBusiness({ ...business, type: selected });
+      setBusiness({ ...business, type: selected, features });
       success('Configuration enregistrée');
       router.push('/pos');
     } catch (e) {
@@ -203,6 +220,38 @@ export default function ConfigurePage() {
             );
           })}
         </div>
+
+        {/* ── Options supplémentaires (selon type) ── */}
+        {TYPE_OPTIONS[selected] && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-white">Options supplémentaires</h2>
+            {TYPE_OPTIONS[selected]!.map(({ key, label, description }) => {
+              const enabled = features.includes(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleFeature(key)}
+                  className={cn(
+                    'w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all',
+                    enabled
+                      ? 'border-brand-600 bg-brand-900/20'
+                      : 'border-surface-border bg-surface-card hover:border-slate-600'
+                  )}
+                >
+                  {enabled
+                    ? <ToggleRight className="w-7 h-7 text-brand-400 shrink-0" />
+                    : <ToggleLeft  className="w-7 h-7 text-slate-600 shrink-0" />}
+                  <div>
+                    <p className={cn('text-sm font-semibold', enabled ? 'text-brand-300' : 'text-slate-300')}>
+                      {label}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* ── Résumé sélection ── */}
         {(() => {

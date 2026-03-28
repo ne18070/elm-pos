@@ -30,6 +30,7 @@ export interface Business {
   tax_rate: number;          // percentage, e.g. 18
   receipt_footer?: string;
   stock_units?: string[];    // unités de stock configurables
+  features: string[];        // optional modules enabled, e.g. ['pos']
   owner_id: string;
   created_at: string;
 }

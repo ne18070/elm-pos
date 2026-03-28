@@ -9,6 +9,8 @@ import { useCartStore } from '@/store/cart';
 import { switchBusiness, getMyBusinesses } from '@services/supabase/business';
 import { getSubscription } from '@services/supabase/subscriptions';
 import { useSubscriptionStore } from '@/store/subscription';
+import { useCashSessionStore } from '@/store/cashSession';
+import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { supabase } from '@/lib/supabase';
 import { CreateBusinessModal } from './CreateBusinessModal';
 import type { Business, UserRole } from '@pos-types';
@@ -17,6 +19,7 @@ import type { BusinessMembership } from '@services/supabase/business';
 export function BusinessSwitcher() {
   const { user, business, businesses, setBusiness, setBusinesses, setUser } = useAuthStore();
   const { setSubscription } = useSubscriptionStore();
+  const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
   const { success, error: notifError } = useNotificationStore();
   const clear = useCartStore((s) => s.clear);
   const router = useRouter();
@@ -64,6 +67,13 @@ export function BusinessSwitcher() {
         setSubscription(sub);
       } catch { /* non critique */ }
 
+      // Recharger la session de caisse pour le nouvel établissement
+      try {
+        const cashSession = await getCurrentSession(businessId);
+        setCashSession(cashSession);
+      } catch { setCashSession(null); }
+      setCashLoaded(true);
+
       clear();
       setOpen(false);
       success(`Basculé vers ${biz?.name ?? '…'}`);
@@ -101,6 +111,8 @@ export function BusinessSwitcher() {
       success(`"${newBiz.name}" créé !`);
     }
 
+    setCashSession(null);
+    setCashLoaded(true);
     clear();
     router.replace('/pos');
   }

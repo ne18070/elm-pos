@@ -172,6 +172,36 @@ export async function deleteGuest(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ─── Disponibilité ────────────────────────────────────────────────────────────
+
+export interface RoomConflict {
+  id: string;
+  check_in: string;
+  check_out: string;
+  status: ReservationStatus;
+  guest_name: string | null;
+}
+
+/**
+ * Retourne les réservations actives qui chevauchent la période demandée.
+ * Résultat vide = chambre disponible.
+ */
+export async function getRoomConflicts(
+  roomId: string,
+  checkIn: string,
+  checkOut: string,
+  excludeId?: string
+): Promise<RoomConflict[]> {
+  const { data, error } = await supabase.rpc('get_room_conflicts', {
+    p_room_id:    roomId,
+    p_check_in:   checkIn,
+    p_check_out:  checkOut,
+    p_exclude_id: excludeId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as RoomConflict[];
+}
+
 // ─── Réservations ─────────────────────────────────────────────────────────────
 
 export async function getReservations(businessId: string): Promise<HotelReservation[]> {

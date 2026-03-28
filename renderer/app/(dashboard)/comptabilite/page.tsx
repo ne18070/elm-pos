@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import {
-  getJournalEntries, syncAccounting, getTrialBalance, createManualEntry,
+  getJournalEntries, syncAccounting, syncHotelAccounting, getTrialBalance, createManualEntry,
   deleteManualEntry, getAccounts, computeIncomeStatement, computeBalanceSheet,
 } from '@services/supabase/accounting';
 import type { JournalEntry, TrialBalanceLine, Account, CreateEntryInput } from '@services/supabase/accounting';
@@ -65,6 +65,7 @@ const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
   stock:      { label: 'Achat',      color: 'text-blue-400 bg-blue-900/20 border-blue-800' },
   refund:     { label: 'Remb.',      color: 'text-orange-400 bg-orange-900/20 border-orange-800' },
   manual:     { label: 'Manuel',     color: 'text-purple-400 bg-purple-900/20 border-purple-800' },
+  hotel:      { label: 'Hôtel',      color: 'text-teal-400 bg-teal-900/20 border-teal-700' },
   adjustment: { label: 'Ajustement', color: 'text-slate-400 bg-slate-800 border-slate-700' },
 };
 
@@ -589,9 +590,13 @@ export default function ComptabilitePage() {
     if (!business?.id) return;
     setSyncing(true);
     try {
-      const count = await syncAccounting(business.id);
-      if (count > 0) {
-        success(`${count} écriture${count > 1 ? 's' : ''} synchronisée${count > 1 ? 's' : ''}`);
+      const [posCount, hotelCount] = await Promise.all([
+        syncAccounting(business.id),
+        business.type === 'hotel' ? syncHotelAccounting(business.id) : Promise.resolve(0),
+      ]);
+      const total = posCount + hotelCount;
+      if (total > 0) {
+        success(`${total} écriture${total > 1 ? 's' : ''} synchronisée${total > 1 ? 's' : ''}`);
         await load();
       } else {
         success('Journal à jour — aucune nouvelle écriture');

@@ -7,7 +7,7 @@ import {
   ShoppingCart, XCircle, RotateCcw, CreditCard,
   Package, Pencil, Trash2, Warehouse, UserCog, UserMinus,
   UserPlus, LogIn, Settings, Tag, RefreshCw, Search, Filter,
-  ShieldAlert, History,
+  ShieldAlert, History, BedDouble, LogOut, CalendarX,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -51,8 +51,12 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'user.unblocked':          { label: 'Utilisateur débloqué', Icon: UserPlus,     color: 'text-green-400' },
   'user.password_reset':     { label: 'MDP réinitialisé',     Icon: UserCog,      color: 'text-amber-400' },
   'subscription.activated':  { label: 'Abonnement activé',    Icon: ShieldAlert,  color: 'text-green-400' },
-  'snapshot.created':        { label: 'Snapshot créé',         Icon: History,      color: 'text-brand-400' },
-  'snapshot.restored':       { label: 'Restauration effectuée',Icon: RotateCcw,    color: 'text-amber-400' },
+  'snapshot.created':              { label: 'Snapshot créé',          Icon: History,    color: 'text-brand-400' },
+  'snapshot.restored':             { label: 'Restauration effectuée', Icon: RotateCcw,  color: 'text-amber-400' },
+  'hotel.reservation.created':     { label: 'Réservation hôtel',      Icon: BedDouble,  color: 'text-teal-400' },
+  'hotel.reservation.cancelled':   { label: 'Réservation annulée',    Icon: CalendarX,  color: 'text-red-400' },
+  'hotel.checkin':                 { label: 'Check-in',               Icon: LogIn,      color: 'text-green-400' },
+  'hotel.checkout':                { label: 'Check-out',              Icon: LogOut,     color: 'text-teal-400' },
 };
 
 function getActionConfig(action: string) {

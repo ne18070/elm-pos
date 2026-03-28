@@ -319,3 +319,69 @@ export async function getDailySales(
     count: (data ?? []).length,
   };
 }
+
+// ─── Hotel analytics ──────────────────────────────────────────────────────────
+
+export interface HotelRoomStat {
+  room_id:     string;
+  room_number: string;
+  room_type:   string;
+  checkouts:   number;
+  revenue:     number;
+  nights:      number;
+}
+
+export interface HotelAnalyticsSummary {
+  total_revenue:          number;
+  total_room_revenue:     number;
+  total_services_revenue: number;
+  total_checkouts:        number;
+  avg_stay_value:         number;
+  avg_nights:             number;
+  outstanding_balance:    number;
+  room_stats:             HotelRoomStat[];
+}
+
+export async function getHotelAnalytics(
+  businessId: string,
+  days = 30
+): Promise<HotelAnalyticsSummary> {
+  const { format: fmt2, subDays: sub2 } = await import('date-fns');
+  const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+
+  const { data, error } = await (supabase as any)
+    .from('hotel_reservations')
+    .select('*, room:hotel_rooms(number, type)')
+    .eq('business_id', businessId)
+    .eq('status', 'checked_out')
+    .gte('actual_check_out', `${startDate}T00:00:00Z`);
+
+  if (error) throw new Error(error.message);
+
+  const reservations = (data ?? []) as Array<{
+    id: string; room_id: string;
+    total: number; total_room: number; total_services: number; paid_amount: number;
+    check_in: string; check_out: string;
+    room: { number: string; type: string } | null;
+  }>;
+
+  const total_revenue          = reservations.reduce((s, r) => s + Number(r.total), 0);
+  const total_room_revenue     = reservations.reduce((s, r) => s + Number(r.total_room), 0);
+  const total_services_revenue = reservations.reduce((s, r) => s + Number(r.total_services), 0);
+  const total_checkouts        = reservations.length;
+  const avg_stay_value         = total_checkouts > 0 ? total_revenue / total_checkouts : 0;
+  const outstanding_balance    = reservations.reduce((s, r) => s + Math.max(0, Number(r.total) - Number(r.paid_amount)), 0);
+  const nightsTotal = reservations.reduce((s, r) => s + Math.max(1, Math.round((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 86_400_000)), 0);
+  const avg_nights = total_checkouts > 0 ? nightsTotal / total_checkouts : 0;
+
+  const roomMap = new Map<string, HotelRoomStat>();
+  for (const r of reservations) {
+    const nights = Math.max(1, Math.round((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 86_400_000));
+    const existing = roomMap.get(r.room_id);
+    if (existing) { existing.checkouts++; existing.revenue += Number(r.total); existing.nights += nights; }
+    else roomMap.set(r.room_id, { room_id: r.room_id, room_number: r.room?.number ?? '?', room_type: r.room?.type ?? '?', checkouts: 1, revenue: Number(r.total), nights });
+  }
+  const room_stats = Array.from(roomMap.values()).sort((a, b) => b.revenue - a.revenue);
+
+  return { total_revenue, total_room_revenue, total_services_revenue, total_checkouts, avg_stay_value, avg_nights, outstanding_balance, room_stats };
+}
