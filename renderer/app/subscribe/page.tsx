@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import {
   ShoppingCart, QrCode, CheckCircle, Loader2,
-  Upload, Send, X, FileImage,
+  Send, X, FileImage, Eye, EyeOff,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
-  getPlans, getPaymentSettings, uploadReceipt,
+  getPlans, getPaymentSettings,
   type Plan, type PaymentSettings,
 } from '@services/supabase/subscriptions';
 
@@ -15,6 +15,8 @@ import {
 const db = supabase as any;
 
 type Step = 'info' | 'payment' | 'sent';
+
+const isFree = (plan: Plan | null) => plan !== null && plan.price === 0;
 
 export default function SubscribePage() {
   const [loading, setLoading]     = useState(true);
@@ -29,6 +31,12 @@ export default function SubscribePage() {
   const [email, setEmail]         = useState('');
   const [phone, setPhone]         = useState('');
 
+  // Mot de passe
+  const [password, setPassword]           = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword]   = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
   // Reçu
   const [receiptFile, setReceiptFile]     = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
@@ -36,7 +44,10 @@ export default function SubscribePage() {
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
-    Promise.all([getPlans(), getPaymentSettings()])
+    Promise.all([
+      getPlans().catch(() => [] as Plan[]),
+      getPaymentSettings().catch(() => null),
+    ])
       .then(([p, s]) => { setPlans(p); setSettings(s); if (p.length) setSelectedPlan(p[0]); })
       .finally(() => setLoading(false));
   }, []);
@@ -46,27 +57,62 @@ export default function SubscribePage() {
     setReceiptPreview(URL.createObjectURL(file));
   }
 
+  function validatePassword(): boolean {
+    if (password.length < 8) {
+      setPasswordError('Le mot de passe doit comporter au moins 8 caractères.');
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setPasswordError('Les mots de passe ne correspondent pas.');
+      return false;
+    }
+    setPasswordError('');
+    return true;
+  }
+
   async function handleSubmit() {
     if (!selectedPlan || !receiptFile) return;
+    if (!validatePassword()) return;
     setSubmitting(true);
     setSubmitError('');
     try {
-      // Upload du reçu (dossier public-receipts/ sous un ID temporaire)
       const ext  = receiptFile.name.split('.').pop() ?? 'jpg';
       const path = `receipts/public-${Date.now()}.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from('product-images').upload(path, receiptFile);
       if (uploadErr) throw new Error(uploadErr.message);
       const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
-      const receiptUrl = urlData.publicUrl;
 
-      // Insérer la demande anonyme
       const { error } = await db.from('public_subscription_requests').insert({
         business_name: businessName.trim(),
         email:         email.trim().toLowerCase(),
         phone:         phone.trim(),
         plan_id:       selectedPlan.id,
-        receipt_url:   receiptUrl,
+        receipt_url:   urlData.publicUrl,
+        password,
+      });
+      if (error) throw new Error(error.message);
+      setStep('sent');
+    } catch (e) {
+      setSubmitError(String(e));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSubmitFree() {
+    if (!selectedPlan) return;
+    if (!validatePassword()) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const { error } = await db.from('public_subscription_requests').insert({
+        business_name: businessName.trim(),
+        email:         email.trim().toLowerCase(),
+        phone:         phone.trim(),
+        plan_id:       selectedPlan.id,
+        receipt_url:   null,
+        password,
       });
       if (error) throw new Error(error.message);
       setStep('sent');
@@ -110,10 +156,17 @@ export default function SubscribePage() {
             </div>
             <div>
               <p className="text-xl font-bold text-white">Demande envoyée !</p>
-              <p className="text-sm text-slate-400 mt-2 max-w-sm">
-                Nous avons bien reçu votre demande et votre reçu de paiement.
-                Votre accès sera activé sous <strong className="text-white">24h</strong>.
-              </p>
+              {isFree(selectedPlan) ? (
+                <p className="text-sm text-slate-400 mt-2 max-w-sm">
+                  Votre inscription au plan gratuit a bien été reçue.
+                  Votre accès sera activé sous <strong className="text-white">24h</strong>.
+                </p>
+              ) : (
+                <p className="text-sm text-slate-400 mt-2 max-w-sm">
+                  Nous avons bien reçu votre demande et votre reçu de paiement.
+                  Votre accès sera activé sous <strong className="text-white">24h</strong>.
+                </p>
+              )}
               <p className="text-xs text-slate-500 mt-3">
                 Un email de confirmation sera envoyé à <span className="text-slate-300">{email}</span>
               </p>
@@ -140,6 +193,36 @@ export default function SubscribePage() {
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
                   className="input" placeholder="+221 77 000 00 00" />
               </div>
+              <div>
+                <label className="label">Mot de passe *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+                    className="input pr-10"
+                    placeholder="Min. 8 caractères"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="label">Confirmer le mot de passe *</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                  className="input"
+                  placeholder="Répétez votre mot de passe"
+                />
+              </div>
+              {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
             </div>
 
             {/* Choix plan */}
@@ -167,12 +250,17 @@ export default function SubscribePage() {
               </div>
             </div>
 
+            {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+
             <button
-              onClick={() => setStep('payment')}
-              disabled={!businessName.trim() || !email.trim() || !selectedPlan}
-              className="btn-primary w-full h-12 text-base"
+              onClick={isFree(selectedPlan) ? handleSubmitFree : () => setStep('payment')}
+              disabled={!businessName.trim() || !email.trim() || !selectedPlan || !password || !confirmPassword || submitting}
+              className="btn-primary w-full h-12 text-base flex items-center justify-center gap-2"
             >
-              Continuer vers le paiement →
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isFree(selectedPlan)
+                ? (submitting ? 'Envoi en cours…' : "S'inscrire gratuitement →")
+                : 'Continuer vers le paiement →'}
             </button>
           </div>
         ) : (

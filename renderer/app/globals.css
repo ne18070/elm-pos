@@ -139,11 +139,27 @@
 [data-theme="light"] .label             { color: #475569 !important; }
 [data-theme="light"] .btn-secondary     { color: #334155 !important; }
 
-/* ── Éléments sur fond coloré : text-white reste blanc ───────────────────── */
-[data-theme="light"] .bg-brand-600 { color: #ffffff !important; }
-[data-theme="light"] .bg-brand-500 { color: #ffffff !important; }
-[data-theme="light"] .bg-red-500   { color: #ffffff !important; }
-[data-theme="light"] .bg-red-600   { color: #ffffff !important; }
+/* ── Boutons : texte blanc forcé (bg-brand/@apply ne génère pas la classe text-white) */
+[data-theme="light"] .btn-primary,
+[data-theme="light"] .btn-danger  { color: #ffffff !important; }
+
+/* ── Fonds colorés saturés : text-white reste blanc ─────────────────────── */
+[data-theme="light"] .bg-brand-500,
+[data-theme="light"] .bg-brand-600,
+[data-theme="light"] .bg-brand-700,
+[data-theme="light"] .bg-green-600,
+[data-theme="light"] .bg-green-700,
+[data-theme="light"] .bg-red-500,
+[data-theme="light"] .bg-red-600,
+[data-theme="light"] .bg-red-700,
+[data-theme="light"] .bg-amber-600,
+[data-theme="light"] .bg-amber-700,
+[data-theme="light"] .bg-teal-600,
+[data-theme="light"] .bg-teal-700,
+[data-theme="light"] .bg-purple-600,
+[data-theme="light"] .bg-purple-700,
+[data-theme="light"] .bg-slate-700,
+[data-theme="light"] .bg-slate-800 { color: #ffffff !important; }
 
 /* ── Couleurs sémantiques : "400/300" → versions sombres lisibles sur blanc ─ */
 [data-theme="light"] .text-brand-400   { color: #0369a1 !important; }

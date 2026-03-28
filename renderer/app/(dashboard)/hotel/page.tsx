@@ -72,7 +72,7 @@ function roomStatusLabel(status: RoomStatus): string {
 }
 function resStatusStyle(status: ReservationStatus): string {
   switch (status) {
-    case 'confirmed':   return 'bg-slate-700 text-slate-200';
+    case 'confirmed':   return 'bg-slate-700 text-white';
     case 'checked_in':  return 'bg-brand-700 text-white';
     case 'checked_out': return 'bg-green-900/40 text-green-300';
     case 'cancelled':   return 'bg-red-900/40 text-red-300';

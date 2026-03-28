@@ -48,6 +48,10 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
     requestId: string; businessId: string; planId: string;
     days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
+  const [approvePublicForm, setApprovePublicForm] = useState<{
+    req: PublicSubscriptionRequest; planId: string;
+    days: string; mode: 'jours' | 'mois'; note: string;
+  } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -74,6 +78,27 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
         approveForm.planId, totalDays, approveForm.note || undefined,
       );
       setApproveForm(null);
+      await load();
+    } catch (e) { alert(String(e)); }
+    finally { setProcessing(null); }
+  }
+
+  async function handleApprovePublic() {
+    if (!approvePublicForm) return;
+    setProcessing(approvePublicForm.req.id);
+    const totalDays = approvePublicForm.mode === 'mois'
+      ? (parseInt(approvePublicForm.days) || 1) * 30
+      : parseInt(approvePublicForm.days) || 30;
+    try {
+      const { approvePublicRequest } = await import('@services/supabase/subscriptions');
+      await approvePublicRequest(
+        approvePublicForm.req.id,
+        approvePublicForm.req,
+        approvePublicForm.planId,
+        totalDays,
+        approvePublicForm.note || undefined,
+      );
+      setApprovePublicForm(null);
       await load();
     } catch (e) { alert(String(e)); }
     finally { setProcessing(null); }
@@ -145,13 +170,19 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
               <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Prospects (sans compte)</h3>
               {publicPending.map((req) => (
                 <div key={req.id} className="card p-4 flex items-start gap-4">
-                  <button onClick={() => setPreview(req.receipt_url)}
-                    className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-surface-border hover:opacity-80 transition-opacity group">
-                    <img src={req.receipt_url} alt="reçu" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Eye className="w-5 h-5 text-white" />
+                  {req.receipt_url ? (
+                    <button onClick={() => setPreview(req.receipt_url!)}
+                      className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-surface-border hover:opacity-80 transition-opacity group">
+                      <img src={req.receipt_url} alt="reçu" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Eye className="w-5 h-5 text-white" />
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="shrink-0 w-16 h-16 rounded-xl border border-surface-border bg-surface-input flex items-center justify-center">
+                      <span className="text-xs text-slate-500 text-center leading-tight">Plan gratuit</span>
                     </div>
-                  </button>
+                  )}
                   <div className="flex-1 min-w-0 space-y-1">
                     <p className="font-medium text-white text-sm">{req.business_name}</p>
                     <p className="text-xs text-slate-400">{req.email}{req.phone ? ` · ${req.phone}` : ''}</p>
@@ -159,6 +190,9 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
                       Plan : <span className="text-slate-300">{req.plan_label}</span>
                       {req.plan_price != null && <> · {req.plan_price.toLocaleString('fr-FR')} {req.plan_currency}</>}
                     </p>
+                    {req.password && (
+                      <p className="text-xs text-green-400">Mot de passe fourni</p>
+                    )}
                     <p className="text-xs text-slate-500">
                       {new Date(req.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -167,6 +201,17 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border text-amber-400 bg-amber-900/20 border-amber-800">
                       En attente
                     </span>
+                    <button
+                      onClick={() => setApprovePublicForm({
+                        req,
+                        planId: req.plan_id ?? plans[0]?.id ?? '',
+                        days: '1', mode: 'mois', note: '',
+                      })}
+                      disabled={!!processing}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-green-800 text-green-400 hover:bg-green-900/30 transition-colors"
+                    >
+                      Approuver
+                    </button>
                     <button
                       onClick={() => { setRejectId({ id: req.id, isPublic: true }); setRejectNote(''); }}
                       disabled={!!processing}
@@ -189,7 +234,11 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
               ))}
               {publicOthers.map((req) => (
                 <div key={req.id} className="card p-4 flex items-center gap-4 opacity-60">
-                  <img src={req.receipt_url} alt="reçu" className="w-12 h-12 object-cover rounded-lg border border-surface-border shrink-0" />
+                  {req.receipt_url ? (
+                    <img src={req.receipt_url} alt="reçu" className="w-12 h-12 object-cover rounded-lg border border-surface-border shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg border border-surface-border bg-surface-input shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white">{req.business_name}</p>
                     <p className="text-xs text-slate-500">{req.email}</p>
@@ -296,6 +345,83 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
               >
                 {processing && <Loader2 className="w-4 h-4 animate-spin" />}
                 Activer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal approbation prospect */}
+      {approvePublicForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="card p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-semibold text-white">Approuver le prospect</h2>
+            <p className="text-xs text-slate-400">
+              Un compte sera créé pour <span className="text-slate-200">{approvePublicForm.req.email}</span>
+              {approvePublicForm.req.password
+                ? ' avec le mot de passe fourni.'
+                : ' avec un mot de passe généré automatiquement.'}
+            </p>
+
+            <div>
+              <label className="label">Plan</label>
+              <select
+                value={approvePublicForm.planId}
+                onChange={(e) => setApprovePublicForm((f) => f && { ...f, planId: e.target.value })}
+                className="input"
+              >
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {p.currency}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="label">Durée</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={approvePublicForm.days}
+                  onChange={(e) => setApprovePublicForm((f) => f && { ...f, days: e.target.value })}
+                  className="input flex-1"
+                  min={1}
+                />
+                <div className="flex rounded-xl border border-surface-border overflow-hidden shrink-0">
+                  {(['jours', 'mois'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setApprovePublicForm((f) => f && { ...f, mode: m })}
+                      className={`px-3 py-2 text-sm font-medium transition-colors
+                        ${approvePublicForm.mode === m ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      {m.charAt(0).toUpperCase() + m.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Note (optionnel)</label>
+              <input
+                type="text"
+                value={approvePublicForm.note}
+                onChange={(e) => setApprovePublicForm((f) => f && { ...f, note: e.target.value })}
+                className="input"
+                placeholder="Ex : Wave #REF123"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setApprovePublicForm(null)} className="btn-secondary px-5">Annuler</button>
+              <button
+                onClick={handleApprovePublic}
+                disabled={!!processing}
+                className="btn-primary px-5 flex items-center gap-2"
+              >
+                {processing && <Loader2 className="w-4 h-4 animate-spin" />}
+                Créer le compte
               </button>
             </div>
           </div>

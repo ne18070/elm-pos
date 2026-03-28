@@ -41,11 +41,11 @@ export default function LoginPage() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profileRows, error: profileError } = await (supabase as any)
+        .rpc('get_or_create_profile');
+
+      const profile = profileRows?.[0] ?? null;
 
       if (profileError || !profile) {
         setErreur('Impossible de charger le profil utilisateur');

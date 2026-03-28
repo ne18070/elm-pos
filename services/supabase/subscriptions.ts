@@ -56,7 +56,7 @@ export async function getPaymentSettings(): Promise<PaymentSettings | null> {
     .from('payment_settings')
     .select('*')
     .eq('id', 1)
-    .single();
+    .maybeSingle();
   return data as PaymentSettings | null;
 }
 
@@ -243,7 +243,8 @@ export interface PublicSubscriptionRequest {
   plan_label:    string | null;
   plan_price:    number | null;
   plan_currency: string | null;
-  receipt_url:   string;
+  receipt_url:   string | null;
+  password:      string | null;
   status:        'pending' | 'approved' | 'rejected';
   note:          string | null;
   created_at:    string;
@@ -270,6 +271,72 @@ export async function rejectPublicRequest(requestId: string, note?: string): Pro
     .update({ status: 'rejected', processed_at: new Date().toISOString(), note: note ?? null })
     .eq('id', requestId);
   if (error) throw new Error(error.message);
+}
+
+export async function approvePublicRequest(
+  requestId:  string,
+  req:        PublicSubscriptionRequest,
+  planId:     string,
+  days:       number,
+  note?:      string,
+): Promise<void> {
+  // Import admin client dynamically to avoid loading service role key unnecessarily
+  const { supabaseAdmin } = await import('./admin');
+
+  // 1. Create auth user with email + password
+  const password = req.password ?? Math.random().toString(36).slice(-10) + 'A1!';
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email:          req.email,
+    password,
+    email_confirm:  true,
+  });
+  if (authError) throw new Error(authError.message);
+  const userId = authData.user!.id;
+
+  // 2. Ensure public.users row exists (trigger may not fire for admin-created users)
+  const { error: userErr } = await supabaseAdmin.from('users').upsert({
+    id:        userId,
+    email:     req.email,
+    full_name: req.business_name,
+    role:      'owner',
+  }, { onConflict: 'id' });
+  if (userErr) throw new Error(userErr.message);
+
+  // 3. Create business
+  const { data: bizData, error: bizError } = await supabaseAdmin
+    .from('businesses')
+    .insert({
+      name:     req.business_name,
+      owner_id: userId,
+      type:     'retail',
+    })
+    .select('id')
+    .single();
+  if (bizError) throw new Error(bizError.message);
+  const businessId = bizData.id;
+
+  // 4. Add owner as member
+  await supabaseAdmin.from('business_members').insert({
+    business_id: businessId,
+    user_id:     userId,
+    role:        'owner',
+  });
+
+  // 5. Set business_id on user profile
+  await supabaseAdmin
+    .from('users')
+    .update({ business_id: businessId })
+    .eq('id', userId);
+
+  // 6. Activate subscription
+  await activateSubscription(businessId, planId, days, note);
+
+  // 7. Mark request as approved
+  const { error: reqError } = await db
+    .from('public_subscription_requests')
+    .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
+    .eq('id', requestId);
+  if (reqError) throw new Error(reqError.message);
 }
 
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {
