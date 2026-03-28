@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Building2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { createBusiness } from '@services/supabase/business';
@@ -30,6 +31,7 @@ const CURRENCIES = [
 ];
 
 export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalProps) {
+  const router = useRouter();
   const { error: notifError } = useNotificationStore();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -52,6 +54,8 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
         tax_rate: parseFloat(form.tax_rate) || 0,
       });
       onCreated(biz);
+      // Rediriger vers l'écran de configuration au premier lancement
+      router.push('/configure');
     } catch (err) {
       notifError(String(err));
     } finally {

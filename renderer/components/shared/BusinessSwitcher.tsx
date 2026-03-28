@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCartStore } from '@/store/cart';
 import { switchBusiness, getMyBusinesses } from '@services/supabase/business';
+import { getSubscription } from '@services/supabase/subscriptions';
+import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
 import { CreateBusinessModal } from './CreateBusinessModal';
 import type { Business, UserRole } from '@pos-types';
@@ -14,6 +16,7 @@ import type { BusinessMembership } from '@services/supabase/business';
 
 export function BusinessSwitcher() {
   const { user, business, businesses, setBusiness, setBusinesses, setUser } = useAuthStore();
+  const { setSubscription } = useSubscriptionStore();
   const { success, error: notifError } = useNotificationStore();
   const clear = useCartStore((s) => s.clear);
   const router = useRouter();
@@ -55,6 +58,12 @@ export function BusinessSwitcher() {
         .from('businesses').select('*').eq('id', businessId).single();
       if (biz) setBusiness(biz as never);
 
+      // Recharger l'abonnement pour le nouvel établissement
+      try {
+        const sub = await getSubscription(businessId);
+        setSubscription(sub);
+      } catch { /* non critique */ }
+
       clear();
       setOpen(false);
       success(`Basculé vers ${biz?.name ?? '…'}`);
@@ -79,8 +88,20 @@ export function BusinessSwitcher() {
       setBusinesses(memberships);
     } catch { /* migration pas encore appliquée */ }
 
+    // Charger l'abonnement du nouvel établissement (créé par le trigger SQL)
+    try {
+      const sub = await getSubscription(newBiz.id);
+      setSubscription(sub);
+      if (sub?.status === 'trial') {
+        success(`"${newBiz.name}" créé — essai gratuit de 7 jours activé !`);
+      } else {
+        success(`"${newBiz.name}" créé !`);
+      }
+    } catch {
+      success(`"${newBiz.name}" créé !`);
+    }
+
     clear();
-    success(`"${newBiz.name}" créé !`);
     router.replace('/pos');
   }
 

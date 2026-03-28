@@ -44,6 +44,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(profile as never);
 
+      // Superadmin → uniquement le backoffice
+      if ((profile as { is_superadmin?: boolean }).is_superadmin) {
+        setLoading(false);
+        setLoaded(true);
+        if (!pathname.startsWith('/backoffice')) router.replace('/backoffice');
+        return;
+      }
+
       // Charger l'établissement actif
       // Si l'onglet a déjà un business sélectionné (sessionStorage), ne pas l'écraser
       const hasTabBusiness = !!sessionStorage.getItem('elm-pos-active-business');

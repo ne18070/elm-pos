@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive } from 'lucide-react';
+import Link from 'next/link';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
@@ -152,6 +153,39 @@ export default function SettingsPage() {
       </div>
 
       <div className="p-6 space-y-6 max-w-2xl">
+
+        {/* Type d'activité */}
+        {(() => {
+          const TYPE_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+            retail:     { label: 'Commerce / Boutique',    icon: ShoppingBag },
+            restaurant: { label: 'Restaurant / Café',      icon: Utensils    },
+            service:    { label: 'Prestation de service',  icon: Briefcase   },
+            hotel:      { label: 'Hôtel / Hébergement',    icon: BedDouble   },
+          };
+          const t = business?.type ? TYPE_LABELS[business.type] : null;
+          const Icon = t?.icon;
+          return (
+            <div className="card p-5 flex items-center gap-4">
+              {Icon && (
+                <div className="w-10 h-10 rounded-xl bg-brand-900/40 flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-brand-400" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Type d&apos;établissement</p>
+                <p className="font-semibold text-white">{t?.label ?? '—'}</p>
+                <p className="text-xs text-slate-400 mt-0.5">Détermine les fonctionnalités affichées dans le menu</p>
+              </div>
+              <Link
+                href="/configure"
+                className="btn-secondary h-9 px-4 text-sm flex items-center gap-1.5 shrink-0"
+              >
+                Modifier <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          );
+        })()}
+
         {/* Informations établissement */}
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-white flex items-center gap-2">

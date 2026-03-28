@@ -289,6 +289,10 @@ export interface Refund {
   refunded_at: string;
 }
 
+// ─── Hôtel ────────────────────────────────────────────────────────────────────
+
+export type { RoomType, RoomStatus, ReservationStatus, HotelRoom, HotelGuest, HotelReservation, HotelService } from '../services/supabase/hotel';
+
 // ─── UI State ─────────────────────────────────────────────────────────────────
 
 export interface Notification {

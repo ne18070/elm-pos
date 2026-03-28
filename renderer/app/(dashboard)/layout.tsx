@@ -12,6 +12,7 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
+  const isSuperAdmin = (user as { is_superadmin?: boolean } | null)?.is_superadmin ?? false;
   useRealtimeSync();
   const { effectiveStatus, loaded: subLoaded } = useSubscriptionStore();
   const router   = useRouter();
@@ -21,11 +22,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (isLoading || !subLoaded) return;
     if (!user) { router.replace('/login'); return; }
 
+    // Le superadmin n'a pas accès au dashboard POS
+    if (isSuperAdmin) { router.replace('/backoffice'); return; }
+
     const status = effectiveStatus();
-    if (status === 'expired' && pathname !== '/billing') {
+    const needsBilling = (status === 'expired' || status === 'none') && pathname !== '/billing';
+    if (needsBilling) {
       router.replace('/billing');
     }
-  }, [user, isLoading, subLoaded, pathname, effectiveStatus, router]);
+  }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router]);
 
   if (isLoading) {
     return (

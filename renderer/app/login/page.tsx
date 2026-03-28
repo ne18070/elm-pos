@@ -58,6 +58,13 @@ export default function LoginPage() {
         return;
       }
 
+      if ((profile as { is_superadmin?: boolean }).is_superadmin) {
+        setUser(profile as never);
+        setLoaded(true);
+        router.replace('/backoffice');
+        return;
+      }
+
       setUser(profile as never);
 
       if (profile.business_id) {

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -19,21 +19,24 @@ import { NotificationBell } from './NotificationBell';
 import { TerminalStatus } from './TerminalStatus';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 
+// types: null = visible pour tous les types d'établissement
+// types: string[] = visible uniquement pour ces types
 const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart, label: 'Caisse',             roles: null },
-  { href: '/caisse',            icon: Vault,        label: 'Clôture caisse',     roles: ['owner', 'admin'] },
-  { href: '/livraison',         icon: Truck,        label: 'Livraisons',         roles: null },
-  { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null },
-  { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'] },
-  { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'] },
-  { href: '/revendeurs',        icon: Store,        label: 'Revendeurs',         roles: ['owner', 'admin'] },
-  { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'] },
-  { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'] },
-  { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'] },
-  { href: '/comptabilite',      icon: BookOpen,     label: 'Comptabilité',       roles: ['owner', 'admin'] },
-  { href: '/activity',          icon: ScrollText,   label: 'Journal',            roles: ['owner', 'admin'] },
-  { href: '/recovery',          icon: History,      label: 'Récupération',       roles: ['owner', 'admin'] },
-  { href: '/settings',          icon: Settings,     label: 'Paramètres',         roles: null },
+  { href: '/pos',               icon: ShoppingCart, label: 'Caisse',             roles: null,              types: null },
+  { href: '/caisse',            icon: Vault,        label: 'Clôture caisse',     roles: ['owner', 'admin'], types: null },
+  { href: '/livraison',         icon: Truck,        label: 'Livraisons',         roles: null,              types: ['retail', 'restaurant'] },
+  { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null,              types: null },
+  { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service'] },
+  { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'], types: ['retail', 'restaurant'] },
+  { href: '/revendeurs',        icon: Store,        label: 'Revendeurs',         roles: ['owner', 'admin'], types: ['retail'] },
+  { href: '/hotel',             icon: BedDouble,    label: 'Hôtel',              roles: ['owner', 'admin'], types: ['hotel'] },
+  { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service'] },
+  { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'hotel'] },
+  { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'], types: null },
+  { href: '/comptabilite',      icon: BookOpen,     label: 'Comptabilité',       roles: ['owner', 'admin'], types: null },
+  { href: '/activity',          icon: ScrollText,   label: 'Journal',            roles: ['owner', 'admin'], types: null },
+  { href: '/recovery',          icon: History,      label: 'Récupération',       roles: ['owner', 'admin'], types: null },
+  { href: '/settings',          icon: Settings,     label: 'Paramètres',         roles: null,              types: null },
 ] as const;
 
 export function Sidebar() {
@@ -74,7 +77,10 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
-        {NAV_ITEMS.filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin')).map(
+        {NAV_ITEMS
+          .filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin'))
+          .filter(({ types }) => !types || !business?.type || (types as readonly string[]).includes(business.type))
+          .map(
           ({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
             const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
