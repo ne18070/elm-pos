@@ -75,6 +75,21 @@ function runMigrations(db: Database.Database): void {
         );
       `,
     },
+    {
+      version: 2,
+      sql: `
+        -- Cache d'abonnement (sécurité offline)
+        -- Stocké dans le processus principal, inaccessible depuis le renderer/DevTools
+        CREATE TABLE IF NOT EXISTS subscription_cache (
+          business_id   TEXT PRIMARY KEY,
+          status        TEXT NOT NULL,
+          expires_at    TEXT,
+          trial_ends_at TEXT,
+          verified_at   TEXT NOT NULL,
+          grace_days    INTEGER NOT NULL DEFAULT 7
+        );
+      `,
+    },
   ];
 
   for (const migration of migrations) {
@@ -211,4 +226,89 @@ export function getSetting(key: string): string | null {
     .prepare(`SELECT value FROM app_settings WHERE key = ?`)
     .get(key) as { value: string } | undefined;
   return row?.value ?? null;
+}
+
+// ─── Subscription cache (sécurité offline) ────────────────────────────────────
+
+export interface SubscriptionCacheRow {
+  business_id:   string;
+  status:        string;
+  expires_at:    string | null;
+  trial_ends_at: string | null;
+  verified_at:   string;
+  grace_days:    number;
+}
+
+export interface OfflineSubscriptionResult {
+  allowed:  boolean;
+  status:   string;   // 'active' | 'trial' | 'expired' | 'none' | 'grace_expired'
+  reason?:  string;
+}
+
+const GRACE_DAYS = 7;
+
+/** Sauvegarde l'abonnement après une vérification en ligne réussie */
+export function saveSubscriptionCache(row: Omit<SubscriptionCacheRow, 'verified_at' | 'grace_days'>): void {
+  getLocalDb()
+    .prepare(`
+      INSERT OR REPLACE INTO subscription_cache
+        (business_id, status, expires_at, trial_ends_at, verified_at, grace_days)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      row.business_id,
+      row.status,
+      row.expires_at ?? null,
+      row.trial_ends_at ?? null,
+      new Date().toISOString(),
+      GRACE_DAYS,
+    );
+}
+
+/** Vérifie l'abonnement en offline depuis le cache SQLite */
+export function checkSubscriptionOffline(businessId: string): OfflineSubscriptionResult {
+  const row = getLocalDb()
+    .prepare(`SELECT * FROM subscription_cache WHERE business_id = ?`)
+    .get(businessId) as SubscriptionCacheRow | undefined;
+
+  if (!row) {
+    return { allowed: false, status: 'none', reason: 'Aucune donnée d\'abonnement locale' };
+  }
+
+  const now = new Date();
+
+  // 1. Vérifier la période de grâce offline (évite l'usage offline indéfini)
+  const verifiedAt  = new Date(row.verified_at);
+  const graceLimit  = new Date(verifiedAt.getTime() + row.grace_days * 24 * 60 * 60 * 1000);
+  if (now > graceLimit) {
+    return {
+      allowed: false,
+      status:  'grace_expired',
+      reason:  `Connexion requise — dernière vérification il y a plus de ${row.grace_days} jours`,
+    };
+  }
+
+  // 2. Vérifier la date d'expiration réelle de l'abonnement
+  if (row.status === 'active') {
+    if (row.expires_at && now > new Date(row.expires_at)) {
+      return { allowed: false, status: 'expired', reason: 'Abonnement expiré' };
+    }
+    return { allowed: true, status: 'active' };
+  }
+
+  if (row.status === 'trial') {
+    if (row.trial_ends_at && now > new Date(row.trial_ends_at)) {
+      return { allowed: false, status: 'expired', reason: 'Période d\'essai expirée' };
+    }
+    return { allowed: true, status: 'trial' };
+  }
+
+  return { allowed: false, status: 'expired', reason: 'Abonnement expiré' };
+}
+
+/** Supprime le cache (à la déconnexion) */
+export function clearSubscriptionCache(businessId: string): void {
+  getLocalDb()
+    .prepare(`DELETE FROM subscription_cache WHERE business_id = ?`)
+    .run(businessId);
 }

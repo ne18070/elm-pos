@@ -89,6 +89,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPlans(plans);
           setPaymentSettings(paySettings);
           setCashSession(cashSession);
+          // Sauvegarder l'abonnement dans le processus principal (sécurité offline)
+          if (sub && window.electronAPI?.invoke) {
+            window.electronAPI.invoke('subscription:save', {
+              business_id:   activeBizId,
+              status:        sub.status,
+              expires_at:    sub.expires_at ?? null,
+              trial_ends_at: sub.trial_ends_at ?? null,
+            }).catch(() => { /* non bloquant */ });
+          }
         } catch { /* non critique */ }
       }
       setLoaded(true);

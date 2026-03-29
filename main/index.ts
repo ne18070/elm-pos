@@ -18,6 +18,7 @@ if (!process.env.ELECTRON_DEV && process.env.NODE_ENV !== 'development') {
 import { registerHardwareHandlers } from './ipc/hardware';
 import { registerOrderHandlers } from './ipc/orders';
 import { registerSyncHandlers, startSyncEngine, onNetworkOnline } from './ipc/sync';
+import { registerSubscriptionHandlers } from './ipc/subscription';
 import { initLocalDb } from './store/local-db';
 
 const isDev =
@@ -175,6 +176,7 @@ async function initialize(): Promise<void> {
   registerHardwareHandlers(ipcMain);
   registerOrderHandlers(ipcMain);
   registerSyncHandlers(ipcMain);
+  registerSubscriptionHandlers(ipcMain);
   registerDisplayHandlers();
 }
 

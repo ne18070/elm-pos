@@ -16,6 +16,10 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'orders:create-local',
   'orders:get-pending',
   'orders:mark-synced',
+  // Abonnement (sécurité offline)
+  'subscription:save',
+  'subscription:check',
+  'subscription:clear',
   // Écran client
   'display:open',
   'display:close',
