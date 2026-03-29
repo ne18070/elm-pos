@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { hasRole } from '@/lib/permissions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ const ACTION_FILTERS = [
 export default function ActivityPage() {
   const { business, user } = useAuthStore();
   const { error: notifError } = useNotificationStore();
-  const isAdmin = user?.role === 'owner' || user?.role === 'admin';
+  const isAdmin = hasRole(user?.role, 'manager');
 
   const [logs, setLogs]           = useState<ActivityLog[]>([]);
   const [loading, setLoading]     = useState(true);

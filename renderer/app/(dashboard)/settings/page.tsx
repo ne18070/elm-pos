@@ -10,11 +10,13 @@ import { useNotificationStore } from '@/store/notifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { flushSyncQueue } from '@/lib/ipc';
 import { supabase } from '@/lib/supabase';
+import { canManageSettings } from '@/lib/permissions';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
 export default function SettingsPage() {
   const { business, user, setBusiness } = useAuthStore();
+  const isManagerOrAbove = canManageSettings(user?.role);
   const { success, error: notifError } = useNotificationStore();
   const { isOnline, pending: pendingCount, syncing } = useOfflineSync();
   const [saving, setSaving] = useState(false);
@@ -190,8 +192,8 @@ export default function SettingsPage() {
 
       <div className="p-6 space-y-6 max-w-2xl">
 
-        {/* Type d'activité */}
-        {(() => {
+        {/* Type d'activité — manager+ seulement */}
+        {isManagerOrAbove && (() => {
           const TYPE_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
             retail:     { label: 'Commerce / Boutique',    icon: ShoppingBag },
             restaurant: { label: 'Restaurant / Café',      icon: Utensils    },
@@ -222,7 +224,8 @@ export default function SettingsPage() {
           );
         })()}
 
-        {/* Informations établissement */}
+        {/* Informations établissement — manager+ seulement */}
+        {isManagerOrAbove && (
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-white flex items-center gap-2">
             Informations de l&apos;établissement
@@ -347,8 +350,10 @@ export default function SettingsPage() {
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </div>
+        )}
 
-        {/* Unités de stock */}
+        {/* Unités de stock — manager+ seulement */}
+        {isManagerOrAbove && (
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-white flex items-center gap-2">
             <Package className="w-4 h-4 text-slate-400" />
@@ -401,8 +406,10 @@ export default function SettingsPage() {
             {savingUnits ? 'Enregistrement...' : 'Enregistrer les unités'}
           </button>
         </div>
+        )}
 
-        {/* Modèles de facture */}
+        {/* Modèles de facture — manager+ seulement */}
+        {isManagerOrAbove && (
         <div className="card p-5 space-y-4">
           <h2 className="font-semibold text-white flex items-center gap-2">
             <Printer className="w-4 h-4 text-slate-400" />
@@ -419,6 +426,7 @@ export default function SettingsPage() {
             <TemplateManager businessId={business?.id ?? ''} onClose={() => setShowTemplateManager(false)} />
           )}
         </div>
+        )}
 
         {/* Synchronisation */}
         <div className="card p-5 space-y-4">

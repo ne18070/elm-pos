@@ -10,6 +10,7 @@ import { openWhatsApp } from '@/lib/share-invoice';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
+import { canCancelOrders } from '@/lib/permissions';
 import { useNotificationStore } from '@/store/notifications';
 import { RefundModal } from './RefundModal';
 import type { Order, OrderStatus, Refund, PaymentMethod } from '@pos-types';
@@ -69,7 +70,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
   const fmt       = (n: number) => formatCurrency(n, currency);
-  const isAdmin   = user?.role === 'owner' || user?.role === 'admin';
+  const isAdmin   = canCancelOrders(user?.role);
   const partial   = isAcompte(order);
   const paidAmt   = getPaidAmount(order);
   const remaining = getRemainingAmount(order);

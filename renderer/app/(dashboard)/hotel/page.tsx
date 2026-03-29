@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { logAction } from '@services/supabase/logger';
 import { cn } from '@/lib/utils';
+import { canManageRooms, canCancelOrders } from '@/lib/permissions';
 import {
   getRooms, createRoom, updateRoom, deleteRoom,
   getGuests, createGuest, updateGuest, deleteGuest,
@@ -272,6 +273,7 @@ type Panel =
 
 export default function HotelPage() {
   const { user, business } = useAuthStore();
+  const isManagerOrAbove = canManageRooms(user?.role);
   const { success, error: notifError } = useNotificationStore();
   const currency = business?.currency ?? 'XOF';
 
@@ -748,7 +750,7 @@ export default function HotelPage() {
             </button>
           ))}
           <div className="h-8 w-px bg-surface-border" />
-          {tab === 'chambres' && (
+          {tab === 'chambres' && isManagerOrAbove && (
             <button onClick={() => openRoomPanel(null)} className="btn-primary h-9 text-sm flex items-center gap-1.5">
               <Plus className="w-4 h-4 shrink-0" /> Nouvelle chambre
             </button>
@@ -803,7 +805,7 @@ export default function HotelPage() {
             <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-3">
               <BedDouble className="w-12 h-12 opacity-20" />
               <p>Aucune chambre</p>
-              <button onClick={() => openRoomPanel(null)} className="btn-primary h-9 text-sm">Ajouter une chambre</button>
+              {isManagerOrAbove && <button onClick={() => openRoomPanel(null)} className="btn-primary h-9 text-sm">Ajouter une chambre</button>}
             </div>
           )}
 
@@ -836,7 +838,7 @@ export default function HotelPage() {
                     if (activeRes)         openDetail(activeRes);
                     else if (confirmedRes) openDetail(confirmedRes);
                     else if (room.status === 'available') openReservationPanel(room.id);
-                    else                   openRoomPanel(room);
+                    else if (isManagerOrAbove)            openRoomPanel(room);
                   }}
                 >
                   {/* Bande de statut */}
@@ -849,6 +851,7 @@ export default function HotelPage() {
                         <p className="text-3xl font-black text-white leading-none tracking-tight">{room.number}</p>
                         {room.floor && <p className="text-[11px] text-slate-500 mt-0.5">{room.floor}</p>}
                       </div>
+                      {isManagerOrAbove && (
                       <button
                         className="opacity-0 group-hover:opacity-100 p-1.5 rounded-xl bg-surface-hover
                                    text-slate-400 hover:text-white transition-all shrink-0"
@@ -856,6 +859,7 @@ export default function HotelPage() {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
+                      )}
                     </div>
 
                     {/* Type + capacité */}
@@ -1832,7 +1836,7 @@ export default function HotelPage() {
                   <LogOut className="w-4 h-4" /> Check-out & encaisser
                 </button>
               )}
-              {(res.status === 'confirmed' || res.status === 'checked_in') && (
+              {isManagerOrAbove && (res.status === 'confirmed' || res.status === 'checked_in') && (
                 <button
                   onClick={() => handleCancelReservation(res)}
                   className="w-full h-9 rounded-xl border border-red-800 text-red-400 hover:bg-red-900/20 text-sm flex items-center justify-center gap-2 transition-colors"

@@ -17,12 +17,14 @@ import { uploadProductImage } from '@services/supabase/storage';
 import { getMyBusinesses } from '@services/supabase/business';
 import { supabase } from '@/lib/supabase';
 import type { User as UserType, UserRole } from '@pos-types';
+import { canManageTeam, hasRole } from '@/lib/permissions';
 import type { BusinessMembership } from '@services/supabase/business';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
-  owner: { label: 'Propriétaire', color: 'text-yellow-400 bg-yellow-900/20 border-yellow-800' },
-  admin: { label: 'Administrateur', color: 'text-brand-400 bg-brand-900/20 border-brand-800' },
-  staff: { label: 'Caissier',       color: 'text-slate-300 bg-slate-800 border-slate-700' },
+  owner:   { label: 'Propriétaire',   color: 'text-yellow-400 bg-yellow-900/20 border-yellow-800' },
+  admin:   { label: 'Administrateur', color: 'text-brand-400 bg-brand-900/20 border-brand-800' },
+  manager: { label: 'Manager',        color: 'text-purple-400 bg-purple-900/20 border-purple-800' },
+  staff:   { label: 'Caissier',       color: 'text-slate-300 bg-slate-800 border-slate-700' },
 };
 
 type Tab = 'profil' | 'equipe' | 'etablissements';
@@ -200,8 +202,8 @@ export default function AdminPage() {
   const trialDays  = getTrialDaysRemaining(subscription);
   const activePlan = plans.find((p) => p.id === subscription?.plan_id);
 
-  const isOwnerOrAdmin = user?.role === 'owner' || user?.role === 'admin';
-  const isOwner        = user?.role === 'owner';
+  const isOwnerOrAdmin = canManageTeam(user?.role);
+  const isOwner        = hasRole(user?.role, 'owner');
 
   const TABS: { id: Tab; icon: typeof User; label: string }[] = [
     { id: 'profil',         icon: User,      label: 'Mon profil' },

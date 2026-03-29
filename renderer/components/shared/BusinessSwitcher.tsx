@@ -13,6 +13,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { supabase } from '@/lib/supabase';
 import { CreateBusinessModal } from './CreateBusinessModal';
+import { hasRole, getRoleLabel } from '@/lib/permissions';
 import type { Business, UserRole } from '@pos-types';
 import type { BusinessMembership } from '@services/supabase/business';
 
@@ -45,7 +46,7 @@ export function BusinessSwitcher() {
       ? [{ business, role: (user?.role ?? 'staff') as UserRole }]
       : [];
 
-  const isOwner = user?.role === 'owner';
+  const isOwner = hasRole(user?.role, 'owner');
 
   async function handleSwitch(businessId: string) {
     if (businessId === business?.id) { setOpen(false); return; }
@@ -141,8 +142,7 @@ export function BusinessSwitcher() {
                 {business?.name ?? 'Mon établissement'}
               </p>
               <p className="text-xs text-slate-500 truncate leading-tight">
-                {user?.role === 'owner' ? 'Propriétaire' :
-                 user?.role === 'admin' ? 'Administrateur' : 'Caissier'}
+                {getRoleLabel(user?.role)}
               </p>
             </div>
             <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200
@@ -193,8 +193,7 @@ export function BusinessSwitcher() {
                         {biz.name}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {role === 'owner' ? 'Propriétaire' :
-                         role === 'admin' ? 'Administrateur' : 'Caissier'}
+                        {getRoleLabel(role as UserRole)}
                       </p>
                     </div>
 

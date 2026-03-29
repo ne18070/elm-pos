@@ -13,8 +13,9 @@ interface InviteModalProps {
 }
 
 const ROLES = [
-  { value: 'staff', label: 'Caissier',        desc: 'Accès à la caisse uniquement' },
-  { value: 'admin', label: 'Administrateur',  desc: 'Accès complet sauf gestion propriétaire' },
+  { value: 'staff',   label: 'Caissier',       desc: 'Accès à la caisse uniquement' },
+  { value: 'manager', label: 'Manager',         desc: 'Accès opérationnel complet, sans données financières sensibles' },
+  { value: 'admin',   label: 'Administrateur',  desc: 'Accès complet sauf gestion propriétaire' },
 ];
 
 function generatePassword(): string {

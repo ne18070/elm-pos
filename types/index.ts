@@ -1,6 +1,6 @@
 // ─── Authentication & Users ───────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'owner' | 'staff';
+export type UserRole = 'admin' | 'owner' | 'staff' | 'manager';
 
 export interface User {
   id: string;

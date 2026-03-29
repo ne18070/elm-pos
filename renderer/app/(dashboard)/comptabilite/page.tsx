@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
+import { canViewFinancials } from '@/lib/permissions';
 import {
   getJournalEntries, syncAccounting, syncHotelAccounting, getTrialBalance, createManualEntry,
   deleteManualEntry, getAccounts, computeIncomeStatement, computeBalanceSheet,
@@ -545,7 +546,8 @@ function NewEntryModal({
 // ─── Composant principal ───────────────────────────────────────────────────────
 
 export default function ComptabilitePage() {
-  const { business } = useAuthStore();
+  const { business, user } = useAuthStore();
+  const isOwnerOrAdmin = canViewFinancials(user?.role);
   const { success, error: notifErr } = useNotificationStore();
 
   const [tab, setTab]               = useState<Tab>('dashboard');
@@ -846,8 +848,10 @@ export default function ComptabilitePage() {
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3 },
     { id: 'journal',   label: 'Journal',         icon: BookOpen },
-    { id: 'balance',   label: 'Balance',          icon: Scale },
-    { id: 'etats',     label: 'États financiers', icon: FileText },
+    ...(isOwnerOrAdmin ? [
+      { id: 'balance' as Tab, label: 'Balance',          icon: Scale },
+      { id: 'etats'   as Tab, label: 'États financiers', icon: FileText },
+    ] : []),
   ];
 
   return (

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -18,25 +18,29 @@ import { BusinessSwitcher } from './BusinessSwitcher';
 import { NotificationBell } from './NotificationBell';
 import { TerminalStatus } from './TerminalStatus';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
+import { hasRole, getRoleLabel } from '@/lib/permissions';
 
 // types: null = visible pour tous les types d'établissement
 // types: string[] = visible uniquement pour ces types
+const MANAGER_ROLES = ['owner', 'admin', 'manager'] as const;
+
 const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart, label: 'Caisse',             roles: null,              types: null },
-  { href: '/caisse',            icon: Vault,        label: 'Clôture caisse',     roles: ['owner', 'admin'], types: null },
-  { href: '/livraison',         icon: Truck,        label: 'Livraisons',         roles: null,              types: ['retail', 'restaurant'] },
-  { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null,              types: null },
-  { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service', 'hotel'] },
-  { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'hotel'] },
-  { href: '/revendeurs',        icon: Store,        label: 'Revendeurs',         roles: ['owner', 'admin'], types: ['retail'] },
-  { href: '/hotel',             icon: BedDouble,    label: 'Hôtel',              roles: ['owner', 'admin'], types: ['hotel'] },
-  { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service', 'hotel'] },
-  { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'hotel'] },
-  { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'], types: null },
-  { href: '/comptabilite',      icon: BookOpen,     label: 'Comptabilité',       roles: ['owner', 'admin'], types: null },
-  { href: '/activity',          icon: ScrollText,   label: 'Journal',            roles: ['owner', 'admin'], types: null },
-  { href: '/recovery',          icon: History,      label: 'Récupération',       roles: ['owner', 'admin'], types: null },
-  { href: '/settings',          icon: Settings,     label: 'Paramètres',         roles: null,              types: null },
+  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,           types: null },
+  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,  types: null },
+  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,           types: ['retail', 'restaurant'] },
+  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,           types: null },
+  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'service', 'hotel'] },
+  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'hotel'] },
+  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'], types: ['retail'] },
+  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,           types: ['hotel'] },
+  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'service', 'hotel'] },
+  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'hotel'] },
+  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,  types: null },
+  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,  types: null },
+  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,      types: null },
+  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,  types: null },
+  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'], types: null },
+  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,           types: null },
 ] as const;
 
 export function Sidebar() {
@@ -46,7 +50,7 @@ export function Sidebar() {
   const { theme, cycle: cycleTheme } = useThemeStore();
   const { session: cashSession } = useCashSessionStore();
   const role = user?.role ?? 'staff';
-  const isAdmin = role === 'owner' || role === 'admin';
+  const isAdmin = hasRole(role, 'admin');
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
 
   function handleOpenDisplay() {
@@ -78,7 +82,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
         {NAV_ITEMS
-          .filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin'))
+          .filter(({ roles }) => !roles || (roles as readonly string[]).includes(role))
           .filter(({ types }) => !types || !business?.type || (types as readonly string[]).includes(business.type))
           .filter(({ href }) => {
             // Pour les hôtels, /pos et les menus liés sont optionnels — visibles uniquement si 'pos' est dans les features
@@ -194,7 +198,7 @@ export function Sidebar() {
           <div className="hidden lg:block min-w-0">
             <p className="text-xs font-medium text-white truncate">{user?.full_name}</p>
             <p className="text-xs text-slate-500 capitalize">
-              {role === 'owner' ? 'Propriétaire' : role === 'admin' ? 'Administrateur' : 'Caissier'}
+              {getRoleLabel(role)}
             </p>
           </div>
         </div>
