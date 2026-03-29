@@ -13,7 +13,7 @@ export interface OnboardingStep {
 
 const DISMISS_KEY = (bizId: string) => `onboarding_dismissed_${bizId}`;
 
-export function useOnboarding(businessId: string | undefined) {
+export function useOnboarding(businessId: string | undefined, businessType?: string) {
   const [steps, setSteps]         = useState<OnboardingStep[]>([]);
   const [loading, setLoading]     = useState(true);
   const [dismissed, setDismissed] = useState(false);
@@ -28,61 +28,116 @@ export function useOnboarding(businessId: string | undefined) {
       return;
     }
 
-    const [
-      { count: catCount },
-      { count: prodCount },
-      { count: orderCount },
-      { count: userCount },
-    ] = await Promise.all([
-      (supabase as any).from('categories').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
-      (supabase as any).from('products').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
-      (supabase as any).from('orders').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'paid'),
-      (supabase as any).from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
-    ]);
-
+    const db = supabase as any;
     const printerConfigured = !!localStorage.getItem('printer_config');
 
-    const newSteps: OnboardingStep[] = [
-      {
-        id: 'categories',
-        label: 'Créer une catégorie',
-        description: 'Organisez vos produits par catégories (ex : Boissons, Snacks…).',
-        href: '/categories',
-        done: (catCount ?? 0) > 0,
-      },
-      {
-        id: 'products',
-        label: 'Ajouter vos produits',
-        description: 'Ajoutez les articles que vous vendez avec leurs prix et stocks.',
-        href: '/products',
-        done: (prodCount ?? 0) > 0,
-      },
-      {
-        id: 'printer',
-        label: 'Configurer l\'imprimante',
-        description: 'Connectez votre imprimante thermique pour imprimer les reçus.',
-        href: '/settings',
-        done: printerConfigured,
-      },
-      {
-        id: 'team',
-        label: 'Inviter votre équipe',
-        description: 'Ajoutez vos caissiers et collaborateurs.',
-        href: '/admin',
-        done: (userCount ?? 0) > 1,
-      },
-      {
-        id: 'first_sale',
-        label: 'Effectuer votre première vente',
-        description: 'Allez sur la page Caisse et encaissez votre premier client.',
-        href: '/pos',
-        done: (orderCount ?? 0) > 0,
-      },
-    ];
+    let newSteps: OnboardingStep[];
+
+    if (businessType === 'hotel') {
+      const [
+        { count: roomCount },
+        { count: guestCount },
+        { count: resCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('hotel_rooms').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('hotel_guests').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('hotel_reservations').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'rooms',
+          label: 'Ajouter vos chambres',
+          description: 'Configurez les chambres de votre établissement avec leurs tarifs.',
+          href: '/hotel',
+          done: (roomCount ?? 0) > 0,
+        },
+        {
+          id: 'guest',
+          label: 'Enregistrer un client',
+          description: 'Créez votre premier profil client dans la gestion hôtelière.',
+          href: '/hotel',
+          done: (guestCount ?? 0) > 0,
+        },
+        {
+          id: 'reservation',
+          label: 'Créer une réservation',
+          description: 'Effectuez votre première réservation de chambre.',
+          href: '/hotel',
+          done: (resCount ?? 0) > 0,
+        },
+        {
+          id: 'printer',
+          label: "Configurer l'imprimante",
+          description: 'Connectez votre imprimante thermique pour imprimer les reçus.',
+          href: '/settings',
+          done: printerConfigured,
+        },
+        {
+          id: 'team',
+          label: 'Inviter votre équipe',
+          description: 'Ajoutez vos réceptionnistes et collaborateurs.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+      ];
+    } else {
+      const [
+        { count: catCount },
+        { count: prodCount },
+        { count: orderCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('categories').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('products').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('orders').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'paid'),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'categories',
+          label: 'Créer une catégorie',
+          description: 'Organisez vos produits par catégories (ex : Boissons, Snacks…).',
+          href: '/categories',
+          done: (catCount ?? 0) > 0,
+        },
+        {
+          id: 'products',
+          label: 'Ajouter vos produits',
+          description: 'Ajoutez les articles que vous vendez avec leurs prix et stocks.',
+          href: '/products',
+          done: (prodCount ?? 0) > 0,
+        },
+        {
+          id: 'printer',
+          label: "Configurer l'imprimante",
+          description: 'Connectez votre imprimante thermique pour imprimer les reçus.',
+          href: '/settings',
+          done: printerConfigured,
+        },
+        {
+          id: 'team',
+          label: 'Inviter votre équipe',
+          description: 'Ajoutez vos caissiers et collaborateurs.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+        {
+          id: 'first_sale',
+          label: 'Effectuer votre première vente',
+          description: 'Allez sur la page Caisse et encaissez votre premier client.',
+          href: '/pos',
+          done: (orderCount ?? 0) > 0,
+        },
+      ];
+    }
 
     setSteps(newSteps);
     setLoading(false);
-  }, [businessId]);
+  }, [businessId, businessType]);
 
   useEffect(() => { check(); }, [check]);
 

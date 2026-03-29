@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
-  Upload, Save, Plus, Pencil, Eye, X,
+  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import {
   getAllSubscriptions, activateSubscription,
@@ -32,6 +32,35 @@ function getRowStatus(row: SubscriptionRow): string {
   if (row.status === 'active' && row.expires_at && new Date(row.expires_at) < new Date()) return 'expired';
   if (row.status === 'trial' && row.trial_ends_at && new Date(row.trial_ends_at) < new Date()) return 'expired';
   return row.status;
+}
+
+const PAGE_SIZE = 25;
+
+function Pagination({ total, page, onChange }: { total: number; page: number; onChange: (p: number) => void }) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-surface-border text-sm text-slate-400">
+      <span>{total} entrée{total !== 1 ? 's' : ''}</span>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onChange(page - 1)} disabled={page === 1}
+          className="p-1.5 rounded-lg hover:bg-surface-input disabled:opacity-30 transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+          <button key={p} onClick={() => onChange(p)}
+            className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors
+              ${p === page ? 'bg-brand-600 text-white' : 'hover:bg-surface-input'}`}>
+            {p}
+          </button>
+        ))}
+        <button onClick={() => onChange(page + 1)} disabled={page === pages}
+          className="p-1.5 rounded-lg hover:bg-surface-input disabled:opacity-30 transition-colors">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── Onglet Demandes ───────────────────────────────────────────────────────────
@@ -120,19 +149,27 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
     finally { setProcessing(null); }
   }
 
-  const pending       = rows.filter((r) => r.status === 'pending');
-  const others        = rows.filter((r) => r.status !== 'pending');
-  const publicPending = publicRows.filter((r) => r.status === 'pending');
-  const publicOthers  = publicRows.filter((r) => r.status !== 'pending');
+  const [page, setPage] = useState(1);
+
+  // All rows merged and sorted: pending first, then by date desc
+  const allRequests = [
+    ...rows.map((r) => ({ ...r, isPublic: false as const })),
+    ...publicRows.map((r) => ({ ...r, isPublic: true as const, business_id: '' })),
+  ].sort((a, b) => {
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (a.status !== 'pending' && b.status === 'pending') return 1;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  const pendingCount = allRequests.filter((r) => r.status === 'pending').length;
+  const pageRows = allRequests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-slate-400">
-            {pending.length} demande{pending.length !== 1 ? 's' : ''} en attente
-          </p>
-        </div>
+        <p className="text-sm text-slate-400">
+          {pendingCount} demande{pendingCount !== 1 ? 's' : ''} en attente
+        </p>
         <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
           <RefreshCw className="w-4 h-4" /> Actualiser
         </button>
@@ -140,121 +177,103 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-400" /></div>
+      ) : allRequests.length === 0 ? (
+        <p className="text-center text-slate-500 py-12">Aucune demande reçue</p>
       ) : (
-        <>
-          {/* Demandes en attente */}
-          {pending.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">En attente</h3>
-              {pending.map((req) => (
-                <RequestCard
-                  key={req.id}
-                  req={req}
-                  processing={processing}
-                  onPreview={setPreview}
-                  onApprove={(r) => setApproveForm({
-                    requestId: r.id,
-                    businessId: r.business_id,
-                    planId: r.plan_id ?? plans[0]?.id ?? '',
-                    days: '1', mode: 'mois', note: '',
-                  })}
-                  onReject={(id, isPublic) => { setRejectId({ id, isPublic: !!isPublic }); setRejectNote(''); }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Prospects (demandes publiques en attente) */}
-          {publicPending.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Prospects (sans compte)</h3>
-              {publicPending.map((req) => (
-                <div key={req.id} className="card p-4 flex items-start gap-4">
-                  {req.receipt_url ? (
-                    <button onClick={() => setPreview(req.receipt_url!)}
-                      className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-surface-border hover:opacity-80 transition-opacity group">
-                      <img src={req.receipt_url} alt="reçu" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Eye className="w-5 h-5 text-white" />
-                      </div>
-                    </button>
-                  ) : (
-                    <div className="shrink-0 w-16 h-16 rounded-xl border border-surface-border bg-surface-input flex items-center justify-center">
-                      <span className="text-xs text-slate-500 text-center leading-tight">Plan gratuit</span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="font-medium text-white text-sm">{req.business_name}</p>
-                    <p className="text-xs text-slate-400">{req.email}{req.phone ? ` · ${req.phone}` : ''}</p>
-                    <p className="text-xs text-slate-500">
-                      Plan : <span className="text-slate-300">{req.plan_label}</span>
-                      {req.plan_price != null && <> · {req.plan_price.toLocaleString('fr-FR')} {req.plan_currency}</>}
-                    </p>
-                    {req.password && (
-                      <p className="text-xs text-green-400">Mot de passe fourni</p>
-                    )}
-                    <p className="text-xs text-slate-500">
-                      {new Date(req.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex flex-col items-end gap-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border text-amber-400 bg-amber-900/20 border-amber-800">
-                      En attente
-                    </span>
-                    <button
-                      onClick={() => setApprovePublicForm({
-                        req,
-                        planId: req.plan_id ?? plans[0]?.id ?? '',
-                        days: '1', mode: 'mois', note: '',
-                      })}
-                      disabled={!!processing}
-                      className="px-3 py-1.5 text-xs rounded-lg border border-green-800 text-green-400 hover:bg-green-900/30 transition-colors"
-                    >
-                      Approuver
-                    </button>
-                    <button
-                      onClick={() => { setRejectId({ id: req.id, isPublic: true }); setRejectNote(''); }}
-                      disabled={!!processing}
-                      className="px-3 py-1.5 text-xs rounded-lg border border-red-800 text-red-400 hover:bg-red-900/30 transition-colors"
-                    >
-                      Rejeter
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Demandes traitées */}
-          {(others.length > 0 || publicOthers.length > 0) && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Traitées</h3>
-              {others.map((req) => (
-                <RequestCard key={req.id} req={req} processing={processing} onPreview={setPreview} />
-              ))}
-              {publicOthers.map((req) => (
-                <div key={req.id} className="card p-4 flex items-center gap-4 opacity-60">
-                  {req.receipt_url ? (
-                    <img src={req.receipt_url} alt="reçu" className="w-12 h-12 object-cover rounded-lg border border-surface-border shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg border border-surface-border bg-surface-input shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">{req.business_name}</p>
-                    <p className="text-xs text-slate-500">{req.email}</p>
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${REQ_STATUS[req.status]?.color ?? REQ_STATUS.pending.color}`}>
-                    {REQ_STATUS[req.status]?.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {rows.length === 0 && publicRows.length === 0 && (
-            <p className="text-center text-slate-500 py-12">Aucune demande reçue</p>
-          )}
-        </>
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
+                <tr className="border-b border-surface-border text-xs text-slate-400 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 font-medium">Établissement</th>
+                  <th className="text-left px-4 py-3 font-medium">Contact</th>
+                  <th className="text-left px-4 py-3 font-medium">Plan</th>
+                  <th className="text-left px-4 py-3 font-medium">Date</th>
+                  <th className="text-left px-4 py-3 font-medium">Type</th>
+                  <th className="text-left px-4 py-3 font-medium">Statut</th>
+                  <th className="text-right px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {pageRows.map((req) => {
+                  const badge = REQ_STATUS[req.status] ?? REQ_STATUS.pending;
+                  return (
+                    <tr key={req.id} className={`hover:bg-surface-hover transition-colors ${req.status !== 'pending' ? 'opacity-50' : ''}`}>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-white">{req.business_name}</p>
+                        {req.note && <p className="text-xs text-slate-500 italic mt-0.5">&ldquo;{req.note}&rdquo;</p>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        {'email' in req ? (
+                          <>
+                            <p>{(req as PublicSubscriptionRequest).email}</p>
+                            {(req as PublicSubscriptionRequest).phone && <p className="text-xs text-slate-500">{(req as PublicSubscriptionRequest).phone}</p>}
+                            {(req as PublicSubscriptionRequest).password && (
+                              <p className="text-xs text-green-400">MDP fourni</p>
+                            )}
+                          </>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        <p>{req.plan_label ?? '—'}</p>
+                        {req.plan_price != null && (
+                          <p className="text-xs text-slate-500">{req.plan_price.toLocaleString('fr-FR')} {req.plan_currency}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
+                        <p>{new Date(req.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                        <p className="text-xs">{new Date(req.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        {req.isPublic ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full border text-amber-400 bg-amber-900/20 border-amber-800">Prospect</span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full border text-blue-400 bg-blue-900/20 border-blue-700">Compte</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${badge.color}`}>{badge.label}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {req.receipt_url && (
+                            <button onClick={() => setPreview(req.receipt_url!)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-input transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
+                          {req.status === 'pending' && (
+                            <>
+                              {req.isPublic ? (
+                                <button
+                                  onClick={() => setApprovePublicForm({ req: req as PublicSubscriptionRequest, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
+                                  disabled={!!processing}
+                                  className="px-2.5 py-1 text-xs rounded-lg border border-green-800 text-green-400 hover:bg-green-900/30 transition-colors disabled:opacity-50"
+                                >Approuver</button>
+                              ) : (
+                                <button
+                                  onClick={() => setApproveForm({ requestId: req.id, businessId: req.business_id, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
+                                  disabled={!!processing}
+                                  className="px-2.5 py-1 text-xs rounded-lg border border-green-800 text-green-400 hover:bg-green-900/30 transition-colors disabled:opacity-50"
+                                >Approuver</button>
+                              )}
+                              <button
+                                onClick={() => { setRejectId({ id: req.id, isPublic: req.isPublic }); setRejectNote(''); }}
+                                disabled={!!processing}
+                                className="px-2.5 py-1 text-xs rounded-lg border border-red-800 text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                              >Rejeter</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Pagination total={allRequests.length} page={page} onChange={setPage} />
+        </div>
       )}
 
       {/* Aperçu reçu */}
@@ -462,76 +481,6 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
   );
 }
 
-function RequestCard({
-  req, processing, onPreview, onApprove, onReject,
-}: {
-  req: SubscriptionRequest;
-  processing: string | null;
-  onPreview: (url: string) => void;
-  onApprove?: (req: SubscriptionRequest) => void;
-  onReject?: (id: string, isPublic?: boolean) => void;
-}) {
-  const badge = REQ_STATUS[req.status] ?? REQ_STATUS.pending;
-
-  return (
-    <div className="card p-4 flex items-start gap-4">
-      {/* Miniature reçu */}
-      <button
-        onClick={() => onPreview(req.receipt_url)}
-        className="relative shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-surface-border
-                   hover:opacity-80 transition-opacity group"
-      >
-        <img src={req.receipt_url} alt="reçu" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity
-                        flex items-center justify-center">
-          <Eye className="w-5 h-5 text-white" />
-        </div>
-      </button>
-
-      {/* Infos */}
-      <div className="flex-1 min-w-0 space-y-1">
-        <p className="font-medium text-white text-sm truncate">{req.business_name}</p>
-        <p className="text-xs text-slate-400">
-          Plan : <span className="text-slate-300">{req.plan_label}</span>
-          {req.plan_price != null && (
-            <> · {req.plan_price.toLocaleString('fr-FR')} {req.plan_currency}</>
-          )}
-        </p>
-        <p className="text-xs text-slate-500">
-          {new Date(req.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-        </p>
-        {req.note && <p className="text-xs text-slate-400 italic">"{req.note}"</p>}
-      </div>
-
-      {/* Statut + actions */}
-      <div className="shrink-0 flex flex-col items-end gap-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${badge.color}`}>
-          {badge.label}
-        </span>
-
-        {req.status === 'pending' && onApprove && onReject && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => onReject(req.id, false)}
-              disabled={!!processing}
-              className="px-3 py-1.5 text-xs rounded-lg border border-red-800 text-red-400
-                         hover:bg-red-900/30 transition-colors disabled:opacity-50"
-            >
-              Rejeter
-            </button>
-            <button
-              onClick={() => onApprove(req)}
-              disabled={!!processing}
-              className="btn-primary text-xs px-3 py-1.5"
-            >
-              {processing === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Approuver'}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Onglet Abonnements ────────────────────────────────────────────────────────
 
@@ -551,11 +500,15 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
   }
   useEffect(() => { load(); }, []);
 
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [search]);
+
   const filtered = rows.filter((r) =>
     !search ||
     r.business_name.toLowerCase().includes(search.toLowerCase()) ||
     (r.owner_email ?? '').toLowerCase().includes(search.toLowerCase())
   );
+  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   async function handleActivate() {
     if (!form) return;
@@ -588,57 +541,65 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-400" /></div>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-slate-500 py-12">Aucun abonnement trouvé</p>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((row) => {
-            const st    = getRowStatus(row);
-            const badge = STATUS_LABEL[st] ?? STATUS_LABEL.expired;
-            const Icon  = badge.icon;
-            return (
-              <div key={row.business_id} className="card p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-surface-input border border-surface-border
-                                flex items-center justify-center text-brand-400 font-bold shrink-0">
-                  {row.business_name.charAt(0).toUpperCase()}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white text-sm truncate">{row.business_name}</p>
-                  <p className="text-xs text-slate-500 truncate">
-                    {row.owner_name ?? '—'} · {row.owner_email ?? '—'}
-                  </p>
-                  {row.payment_note && (
-                    <p className="text-xs text-slate-400 mt-0.5 italic">"{row.payment_note}"</p>
-                  )}
-                </div>
-
-                <div className="text-right shrink-0 space-y-1">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${badge.color}`}>
-                    <Icon className="w-3 h-3" /> {badge.label}
-                  </span>
-                  {row.expires_at && (
-                    <p className="text-xs text-slate-500">
-                      Exp. {new Date(row.expires_at).toLocaleDateString('fr-FR')}
-                    </p>
-                  )}
-                  {st === 'trial' && row.trial_ends_at && (
-                    <p className="text-xs text-slate-500">
-                      Essai → {new Date(row.trial_ends_at).toLocaleDateString('fr-FR')}
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => setForm({ businessId: row.business_id, planId: plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
-                  className="btn-primary text-sm px-4 shrink-0"
-                >
-                  Activer
-                </button>
-              </div>
-            );
-          })}
-          {filtered.length === 0 && (
-            <p className="text-center text-slate-500 py-12">Aucun abonnement trouvé</p>
-          )}
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="border-b border-surface-border text-xs text-slate-400 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 font-medium">Établissement</th>
+                  <th className="text-left px-4 py-3 font-medium">Propriétaire</th>
+                  <th className="text-left px-4 py-3 font-medium">Plan</th>
+                  <th className="text-left px-4 py-3 font-medium">Statut</th>
+                  <th className="text-left px-4 py-3 font-medium">Échéance</th>
+                  <th className="text-right px-4 py-3 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-border">
+                {pageRows.map((row) => {
+                  const st    = getRowStatus(row);
+                  const badge = STATUS_LABEL[st] ?? STATUS_LABEL.expired;
+                  const Icon  = badge.icon;
+                  return (
+                    <tr key={row.business_id} className="hover:bg-surface-hover transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-white">{row.business_name}</p>
+                        {row.payment_note && <p className="text-xs text-slate-500 italic mt-0.5">&ldquo;{row.payment_note}&rdquo;</p>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        <p>{row.owner_name ?? '—'}</p>
+                        <p className="text-xs text-slate-500">{row.owner_email ?? ''}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">{row.plan_label ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${badge.color}`}>
+                          <Icon className="w-3 h-3" /> {badge.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-400 text-xs">
+                        {st === 'trial' && row.trial_ends_at
+                          ? `Essai → ${new Date(row.trial_ends_at).toLocaleDateString('fr-FR')}`
+                          : row.expires_at
+                            ? new Date(row.expires_at).toLocaleDateString('fr-FR')
+                            : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setForm({ businessId: row.business_id, planId: plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
+                          className="btn-primary text-xs px-3 py-1.5"
+                        >
+                          Activer
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Pagination total={filtered.length} page={page} onChange={setPage} />
         </div>
       )}
 
@@ -860,7 +821,7 @@ export default function BackofficePage() {
   ];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto overflow-y-auto" style={{ height: 'calc(100vh - 57px)' }}>
+    <div className="p-6 overflow-y-auto" style={{ height: 'calc(100vh - 57px)' }}>
       <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit mb-6 flex-wrap">
         {TABS.map(({ id, label, badge }) => (
           <button

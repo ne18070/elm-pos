@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth';
 
 export function OnboardingChecklist() {
   const { business } = useAuthStore();
-  const { steps, doneCount, show, dismiss } = useOnboarding(business?.id);
+  const { steps, doneCount, show, dismiss } = useOnboarding(business?.id, business?.type);
 
   if (!show) return null;
 
@@ -22,7 +22,9 @@ export function OnboardingChecklist() {
             <Rocket className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-white text-sm">Bienvenue sur Elm POS !</p>
+            <p className="font-semibold text-white text-sm">
+              {business?.type === 'hotel' ? 'Bienvenue sur Elm Hôtel !' : 'Bienvenue sur Elm POS !'}
+            </p>
             <p className="text-xs text-slate-400 mt-0.5">
               {doneCount}/{steps.length} étapes complétées
             </p>

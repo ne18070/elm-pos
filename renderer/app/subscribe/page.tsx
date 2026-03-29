@@ -132,7 +132,7 @@ export default function SubscribePage() {
   }
 
   return (
-    <div className="h-screen overflow-y-auto p-4 sm:p-8">
+    <div style={{ height: '100vh', overflowY: 'auto' }} className="p-4 sm:p-8">
       {/* Grille de fond */}
       <div className="fixed inset-0 opacity-[0.03]" style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
