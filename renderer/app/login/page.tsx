@@ -8,6 +8,8 @@ import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
+import { getCurrentSession } from '@services/supabase/cash-sessions';
+import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -18,6 +20,7 @@ export default function LoginPage() {
 
   const { setUser, setBusiness, setBusinesses } = useAuthStore();
   const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
+  const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,17 +89,20 @@ export default function LoginPage() {
       const activeBizId = profile.business_id as string | null;
       if (activeBizId) {
         try {
-          const [sub, plans, paySettings] = await Promise.all([
+          const [sub, plans, paySettings, cashSession] = await Promise.all([
             getSubscription(activeBizId),
             getPlans(),
             getPaymentSettings(),
+            getCurrentSession(activeBizId),
           ]);
           setSubscription(sub);
           setPlans(plans);
           setPaymentSettings(paySettings);
+          setCashSession(cashSession);
         } catch { /* non critique */ }
       }
       setLoaded(true);
+      setCashLoaded(true);
 
       router.replace('/pos');
     } catch {
