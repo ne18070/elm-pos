@@ -7,8 +7,8 @@ import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { useCashSessionStore } from '@/store/cashSession';
 
-const WARN_AFTER_MS  = 25 * 60 * 1000; // 25 min
-const LOGOUT_AFTER_MS = 30 * 60 * 1000; // 30 min
+const WARN_AFTER_MS  = 2 * 60 * 60 * 1000;  // 2h
+const LOGOUT_AFTER_MS = 4 * 60 * 60 * 1000; // 4h
 const LAST_SEEN_INTERVAL_MS = 5 * 60 * 1000; // update last_seen every 5 min
 
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
@@ -24,7 +24,12 @@ export function InactivityGuard() {
   const lastSeenRef     = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const doLogout = useCallback(async () => {
-    const { setSession, setLoaded: setCashLoaded } = useCashSessionStore.getState();
+    const { session: cashSession, setSession, setLoaded: setCashLoaded } = useCashSessionStore.getState();
+    // Ne pas déconnecter si une session de caisse est en cours — juste garder l'avertissement visible
+    if (cashSession) {
+      setShowWarning(true);
+      return;
+    }
     await supabase.auth.signOut();
     setSubscription(null);
     setLoaded(false);
@@ -80,7 +85,10 @@ export function InactivityGuard() {
           <div>
             <h2 className="font-semibold text-white">Session inactive</h2>
             <p className="text-sm text-slate-400 mt-1">
-              Vous serez déconnecté automatiquement dans <strong className="text-white">5 minutes</strong> en raison d&apos;inactivité.
+              Vous serez déconnecté automatiquement dans <strong className="text-white">2 heures</strong> en raison d&apos;inactivité.
+              {useCashSessionStore.getState().session && (
+                <span className="block mt-1 text-amber-400 text-xs">Une session de caisse est ouverte — la déconnexion est bloquée.</span>
+              )}
             </p>
           </div>
         </div>

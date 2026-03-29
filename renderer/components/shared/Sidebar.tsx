@@ -26,11 +26,11 @@ const NAV_ITEMS = [
   { href: '/caisse',            icon: Vault,        label: 'Clôture caisse',     roles: ['owner', 'admin'], types: null },
   { href: '/livraison',         icon: Truck,        label: 'Livraisons',         roles: null,              types: ['retail', 'restaurant'] },
   { href: '/orders',            icon: ClipboardList,label: 'Commandes',          roles: null,              types: null },
-  { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service'] },
-  { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'], types: ['retail', 'restaurant'] },
+  { href: '/products',          icon: Package,      label: 'Produits',           roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service', 'hotel'] },
+  { href: '/approvisionnement', icon: Warehouse,    label: 'Approvisionnement',  roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'hotel'] },
   { href: '/revendeurs',        icon: Store,        label: 'Revendeurs',         roles: ['owner', 'admin'], types: ['retail'] },
   { href: '/hotel',             icon: BedDouble,    label: 'Hôtel',              roles: ['owner', 'admin'], types: ['hotel'] },
-  { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service'] },
+  { href: '/categories',        icon: LayoutGrid,   label: 'Catégories',         roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'service', 'hotel'] },
   { href: '/coupons',           icon: Tag,          label: 'Coupons',            roles: ['owner', 'admin'], types: ['retail', 'restaurant', 'hotel'] },
   { href: '/analytics',         icon: BarChart2,    label: 'Statistiques',       roles: ['owner', 'admin'], types: null },
   { href: '/comptabilite',      icon: BookOpen,     label: 'Comptabilité',       roles: ['owner', 'admin'], types: null },
@@ -81,9 +81,10 @@ export function Sidebar() {
           .filter(({ roles }) => !roles || roles.includes(role as 'owner' | 'admin'))
           .filter(({ types }) => !types || !business?.type || (types as readonly string[]).includes(business.type))
           .filter(({ href }) => {
-            // Pour les hôtels, /pos est optionnel — visible uniquement si 'pos' est dans les features
-            if (href !== '/pos') return true;
+            // Pour les hôtels, /pos et les menus liés sont optionnels — visibles uniquement si 'pos' est dans les features
             if (business?.type !== 'hotel') return true;
+            const posOnly = ['/pos', '/products', '/categories', '/approvisionnement'];
+            if (!posOnly.includes(href)) return true;
             return (business?.features ?? []).includes('pos');
           })
           .map(

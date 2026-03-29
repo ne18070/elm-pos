@@ -57,6 +57,7 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'hotel.reservation.cancelled':   { label: 'Réservation annulée',    Icon: CalendarX,  color: 'text-red-400' },
   'hotel.checkin':                 { label: 'Check-in',               Icon: LogIn,      color: 'text-green-400' },
   'hotel.checkout':                { label: 'Check-out',              Icon: LogOut,     color: 'text-teal-400' },
+  'hotel.payment':                 { label: 'Acompte / Paiement',     Icon: CreditCard, color: 'text-teal-400' },
 };
 
 function getActionConfig(action: string) {

@@ -672,7 +672,7 @@ export default function ComptabilitePage() {
 
     // ── États financiers HTML ──
     const plRows = [
-      ['Ventes de marchandises (701)',    is.ventesGross,        false],
+      ['Ventes & Prestations (70x)',       is.ventesGross,        false],
       ['RRR accordés (7091)',             -is.rrrAccordes,       true],
       ['CHIFFRE D\'AFFAIRES NET',         is.caNet,              false, true],
       ['Achats de marchandises (601)',    -is.achatsMarchandises, true],
@@ -1005,7 +1005,7 @@ export default function ComptabilitePage() {
                       <tbody>
                         {entries.slice(0, 10).map((e) => {
                           const src = SOURCE_LABELS[e.source] ?? SOURCE_LABELS.manual;
-                          const amt = e.lines?.reduce((s, l) => s + l.debit, 0) / 2;
+                          const amt = e.lines?.reduce((s, l) => s + l.debit, 0) ?? 0;
                           return (
                             <tr key={e.id} className="border-b border-surface-border last:border-0 hover:bg-surface-hover">
                               <td className="px-5 py-3 text-slate-400 whitespace-nowrap">{e.entry_date}</td>
@@ -1233,7 +1233,7 @@ export default function ComptabilitePage() {
                   </div>
                   <div className="p-5 space-y-1">
                     {[
-                      { label: 'Ventes de marchandises (701)',      val: is.ventesGross,          indent: 0, style: 'text-slate-300' },
+                      { label: 'Ventes & Prestations (70x)',        val: is.ventesGross,          indent: 0, style: 'text-slate-300' },
                       { label: 'RRR accordés (7091)',               val: -is.rrrAccordes,         indent: 1, style: 'text-red-400' },
                       { label: 'CHIFFRE D\'AFFAIRES NET',          val: is.caNet,                indent: 0, style: 'font-bold text-white', separator: true },
                       { label: 'Achats de marchandises (601)',      val: -is.achatsMarchandises,  indent: 1, style: 'text-red-400' },

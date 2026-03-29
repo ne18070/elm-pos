@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
@@ -14,11 +14,13 @@ import { supabase } from '@/lib/supabase';
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
 export default function SettingsPage() {
-  const { business, user } = useAuthStore();
+  const { business, user, setBusiness } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const { isOnline, pending: pendingCount, syncing } = useOfflineSync();
   const [saving, setSaving] = useState(false);
   const [syncing2, setSyncing2] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(business?.logo_url ?? '');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [bizForm, setBizForm] = useState({
     name:           business?.name ?? '',
@@ -81,6 +83,31 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleUploadLogo(file: File) {
+    if (!business) return;
+    setUploadingLogo(true);
+    try {
+      const ext  = file.name.split('.').pop() ?? 'png';
+      const path = `${business.id}/logo.${ext}`;
+      const { error: upErr } = await (supabase as any).storage
+        .from('business-logos')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw new Error(upErr.message);
+      const { data: urlData } = (supabase as any).storage.from('business-logos').getPublicUrl(path);
+      const url = urlData.publicUrl as string;
+      const { error: dbErr } = await (supabase as any)
+        .from('businesses').update({ logo_url: url }).eq('id', business.id);
+      if (dbErr) throw new Error(dbErr.message);
+      setLogoUrl(url);
+      if (business) setBusiness({ ...business, logo_url: url });
+      success('Logo enregistré');
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
   async function handleSaveBusiness() {
     if (!business) return;
     setSaving(true);
@@ -98,6 +125,15 @@ export default function SettingsPage() {
         .eq('id', business.id);
 
       if (error) throw new Error(error.message);
+      setBusiness({
+        ...business,
+        name:           bizForm.name,
+        address:        bizForm.address,
+        phone:          bizForm.phone,
+        tax_rate:       parseFloat(bizForm.tax_rate) || 0,
+        currency:       bizForm.currency,
+        receipt_footer: bizForm.receipt_footer,
+      });
       success('Paramètres enregistrés');
     } catch (err) {
       notifError(String(err));
@@ -262,6 +298,44 @@ export default function SettingsPage() {
               rows={2}
               placeholder="Merci de votre visite !"
             />
+          </div>
+
+          {/* Logo établissement */}
+          <div>
+            <label className="label flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" />Logo de l&apos;établissement</label>
+            <div className="flex items-center gap-4">
+              {logoUrl ? (
+                <img src={logoUrl} alt="logo" className="w-16 h-16 rounded-xl object-cover border border-surface-border" />
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-surface-input border border-surface-border flex items-center justify-center">
+                  <ImageIcon className="w-6 h-6 text-slate-500" />
+                </div>
+              )}
+              <label className="btn-secondary h-9 px-4 text-sm flex items-center gap-2 cursor-pointer">
+                {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {uploadingLogo ? 'Chargement…' : 'Choisir un fichier'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={uploadingLogo}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadLogo(f); }}
+                />
+              </label>
+              {logoUrl && (
+                <button
+                  onClick={async () => {
+                    if (!business) return;
+                    await (supabase as any).from('businesses').update({ logo_url: null }).eq('id', business.id);
+                    setLogoUrl('');
+                    success('Logo supprimé');
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Supprimer
+                </button>
+              )}
+            </div>
           </div>
 
           <button

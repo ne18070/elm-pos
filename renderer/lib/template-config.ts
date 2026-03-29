@@ -521,7 +521,7 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
     .single-copy { padding: 6mm 7mm; display: flex; flex-direction: column; gap: 6px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .biz-info { display: flex; align-items: flex-start; gap: 8px; }
-    .logo { max-width: 40px; max-height: 30px; object-fit: contain; }
+    .logo { max-width: 80px; max-height: 60px; object-fit: contain; }
     .biz-name { font-size: 14px; font-weight: 800; color: #1a202c; }
     .biz-detail { font-size: 9px; color: #718096; line-height: 1.4; }
     .invoice-meta { text-align: right; }

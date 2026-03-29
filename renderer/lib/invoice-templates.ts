@@ -360,7 +360,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
     /* ── En-tête ── */
     .header       { display: flex; justify-content: space-between; align-items: flex-start; }
     .biz-info     { display: flex; align-items: flex-start; gap: 8px; }
-    .logo         { max-width: 40px; max-height: 30px; object-fit: contain; }
+    .logo         { max-width: 80px; max-height: 60px; object-fit: contain; }
     .biz-name     { font-size: 14px; font-weight: 800; color: #1a202c; }
     .biz-detail   { font-size: 9px; color: #718096; line-height: 1.4; }
     .invoice-meta { text-align: right; }
@@ -424,6 +424,216 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
   <div class="copy">
     ${buildCopy('✦ EXEMPLAIRE BOUTIQUE ✦', '#4f46e5')}
   </div>
+
+</body></html>`;
+}
+
+// ─── Facture hôtel ───────────────────────────────────────────────────────────
+
+export interface HotelInvoiceData {
+  id:              string;
+  check_in:        string;
+  check_out:       string;
+  num_guests:      number;
+  price_per_night: number;
+  total_room:      number;
+  total_services:  number;
+  total:           number;
+  paid_amount:     number;
+  notes?:          string | null;
+  actual_check_in?:  string | null;
+  actual_check_out?: string | null;
+  guest?: {
+    full_name:    string;
+    phone?:       string | null;
+    email?:       string | null;
+    id_type?:     string | null;
+    id_number?:   string | null;
+    nationality?: string | null;
+  } | null;
+  room?: {
+    number: string;
+    type:   string;
+    floor?: string | null;
+  } | null;
+}
+
+export interface HotelServiceData {
+  label:        string;
+  amount:       number;
+  service_date: string;
+}
+
+const ROOM_TYPE_LABELS: Record<string, string> = {
+  simple:    'Simple',
+  double:    'Double',
+  twin:      'Twin',
+  suite:     'Suite',
+  familiale: 'Familiale',
+};
+
+export function generateHotelInvoice(
+  res:      HotelInvoiceData,
+  services: HotelServiceData[],
+  business: Business,
+): string {
+  const cur     = business.currency ?? 'XOF';
+  const balance = Math.max(0, res.total - res.paid_amount);
+  const nights  = Math.max(1, Math.round(
+    (new Date(res.check_out).getTime() - new Date(res.check_in).getTime()) / 86_400_000
+  ));
+  const invoiceNum = res.id.replace(/-/g, '').toUpperCase().slice(0, 8);
+  const printDate  = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const servicesRows = services.map((s) => `
+    <tr>
+      <td>${s.label}</td>
+      <td class="r">${fmtDate(s.service_date)}</td>
+      <td class="r bold">${fmt(s.amount, cur)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Facture hôtel ${invoiceNum}</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .biz-name { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+  .biz-detail { font-size: 11px; color: #555; margin-top: 2px; }
+  .logo { max-height: 60px; max-width: 100px; object-fit: contain; margin-bottom: 6px; display: block; }
+  .inv-title { font-size: 22px; font-weight: 700; color: #1a1a1a; text-align: right; }
+  .inv-meta { font-size: 11px; color: #555; text-align: right; margin-top: 4px; }
+  .divider { border: none; border-top: 1px solid #ccc; margin: 14px 0; }
+  .divider-dark { border: none; border-top: 2px solid #1a1a1a; margin: 14px 0; }
+  .section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 600; margin-bottom: 6px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .info-label { font-size: 10px; color: #888; text-transform: uppercase; }
+  .info-val { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1a1a1a; color: #fff; padding: 6px 10px; text-align: left; font-size: 11px; }
+  th.r { text-align: right; }
+  td { padding: 6px 10px; font-size: 12px; border-bottom: 1px solid #eee; }
+  td.r { text-align: right; }
+  td.bold { font-weight: 600; }
+  .totals { margin-top: 16px; width: 280px; margin-left: auto; }
+  .totals td { border: none; padding: 4px 10px; }
+  .totals tr.total-row td { font-size: 14px; font-weight: 700; border-top: 2px solid #1a1a1a; padding-top: 8px; }
+  .totals tr.paid-row td { color: #16a34a; }
+  .totals tr.balance-row td { color: #d97706; font-weight: 600; }
+  .words { font-size: 11px; font-style: italic; color: #444; margin: 12px 0; line-height: 1.5; }
+  .footer { margin-top: 24px; text-align: center; font-size: 11px; color: #888; }
+  .stamp { display: inline-block; border: 2px solid #16a34a; color: #16a34a; font-size: 18px; font-weight: 700;
+           letter-spacing: 0.1em; padding: 6px 20px; border-radius: 4px; transform: rotate(-8deg);
+           margin-top: 12px; }
+</style>
+</head><body>
+
+<!-- En-tête -->
+<div class="header">
+  <div>
+    ${business.logo_url ? `<img src="${business.logo_url}" class="logo">` : ''}
+    <div class="biz-name">${business.name}</div>
+    ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+    ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
+    ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}
+  </div>
+  <div>
+    <div class="inv-title">FACTURE HÔTEL</div>
+    <div class="inv-meta">N° ${invoiceNum}</div>
+    <div class="inv-meta">Date : ${printDate}</div>
+  </div>
+</div>
+
+<hr class="divider-dark">
+
+<!-- Infos client + séjour -->
+<div class="info-grid">
+  <div>
+    <div class="section-title">Client</div>
+    <div class="info-val">${res.guest?.full_name ?? '—'}</div>
+    ${res.guest?.phone      ? `<div class="biz-detail">Tél : ${res.guest.phone}</div>` : ''}
+    ${res.guest?.email      ? `<div class="biz-detail">${res.guest.email}</div>` : ''}
+    ${res.guest?.nationality ? `<div class="biz-detail">Nationalité : ${res.guest.nationality}</div>` : ''}
+    ${res.guest?.id_number  ? `<div class="biz-detail">${res.guest.id_type ?? 'Pièce'} : ${res.guest.id_number}</div>` : ''}
+  </div>
+  <div>
+    <div class="section-title">Chambre</div>
+    <div class="info-val">Chambre ${res.room?.number ?? '—'} — ${ROOM_TYPE_LABELS[res.room?.type ?? ''] ?? res.room?.type ?? '—'}</div>
+    ${res.room?.floor ? `<div class="biz-detail">Étage : ${res.room.floor}</div>` : ''}
+    <div class="biz-detail" style="margin-top:6px">Arrivée : <strong>${fmtDate(res.check_in)}</strong></div>
+    <div class="biz-detail">Départ : <strong>${fmtDate(res.check_out)}</strong></div>
+    <div class="biz-detail">${nights} nuit${nights > 1 ? 's' : ''} · ${res.num_guests} personne${res.num_guests > 1 ? 's' : ''}</div>
+  </div>
+</div>
+
+<!-- Détail hébergement -->
+<table>
+  <thead>
+    <tr>
+      <th>Désignation</th>
+      <th class="r">Nuits</th>
+      <th class="r">Prix / nuit</th>
+      <th class="r">Montant</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hébergement — Chambre ${res.room?.number ?? ''} (${ROOM_TYPE_LABELS[res.room?.type ?? ''] ?? ''})</td>
+      <td class="r">${nights}</td>
+      <td class="r">${fmt(res.price_per_night, cur)}</td>
+      <td class="r bold">${fmt(res.total_room, cur)}</td>
+    </tr>
+  </tbody>
+</table>
+
+${services.length > 0 ? `
+<!-- Prestations -->
+<table style="margin-top:12px">
+  <thead>
+    <tr>
+      <th>Prestation</th>
+      <th class="r">Date</th>
+      <th class="r">Montant</th>
+    </tr>
+  </thead>
+  <tbody>${servicesRows}</tbody>
+</table>` : ''}
+
+${res.notes ? `<div class="biz-detail" style="margin-top:10px;font-style:italic">Note : ${res.notes}</div>` : ''}
+
+<!-- Totaux -->
+<table class="totals">
+  <tr>
+    <td>Hébergement</td>
+    <td class="r">${fmt(res.total_room, cur)}</td>
+  </tr>
+  ${res.total_services > 0 ? `<tr><td>Prestations</td><td class="r">${fmt(res.total_services, cur)}</td></tr>` : ''}
+  <tr class="total-row">
+    <td>TOTAL</td>
+    <td class="r">${fmt(res.total, cur)}</td>
+  </tr>
+  ${res.paid_amount > 0 ? `<tr class="paid-row"><td>Payé</td><td class="r">-${fmt(res.paid_amount, cur)}</td></tr>` : ''}
+  ${balance > 0 ? `<tr class="balance-row"><td>Reste à payer</td><td class="r">${fmt(balance, cur)}</td></tr>` : ''}
+</table>
+
+<!-- Montant en lettres -->
+<div class="words">
+  Arrêté la présente facture à la somme de :<br>
+  <strong>${amountInWords(res.total, cur)}</strong>
+</div>
+
+${balance <= 0 && res.paid_amount > 0 ? '<div style="text-align:right"><span class="stamp">SOLDÉ</span></div>' : ''}
+
+<hr class="divider">
+
+<!-- Pied de page -->
+<div class="footer">
+  ${business.receipt_footer ? `<p>${business.receipt_footer}</p>` : ''}
+  <p style="margin-top:4px">Édité le ${printDate} · ${business.name} · Elm Hôtel</p>
+</div>
 
 </body></html>`;
 }

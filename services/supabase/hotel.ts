@@ -263,7 +263,9 @@ export async function checkIn(reservationId: string, roomId: string): Promise<Ho
 export async function checkOut(
   reservationId: string,
   roomId: string,
-  paidAmount: number
+  additionalPayment: number,
+  sessionId: string | null = null,
+  method: 'cash' | 'card' | 'mobile_money' = 'cash',
 ): Promise<HotelReservation> {
   const now = new Date().toISOString();
 
@@ -279,10 +281,12 @@ export async function checkOut(
 
   const { data: current } = await supabase
     .from('hotel_reservations')
-    .select('total_room')
+    .select('total_room, paid_amount, business_id')
     .eq('id', reservationId)
     .single();
-  const total = Number(current?.total_room ?? 0) + total_services;
+  const total       = Number(current?.total_room ?? 0) + total_services;
+  const existingPaid = Number(current?.paid_amount ?? 0);
+  const newPaid      = existingPaid + additionalPayment;
 
   const { data, error } = await supabase
     .from('hotel_reservations')
@@ -291,7 +295,7 @@ export async function checkOut(
       actual_check_out: now,
       total_services,
       total,
-      paid_amount: paidAmount,
+      paid_amount: newPaid,
       updated_at: now,
     })
     .eq('id', reservationId)
@@ -299,6 +303,17 @@ export async function checkOut(
     .single();
   if (error) throw new Error(error.message);
   await supabase.from('hotel_rooms').update({ status: 'cleaning' }).eq('id', roomId);
+
+  // Enregistrer le paiement dans la caisse si montant > 0
+  if (additionalPayment > 0 && current?.business_id) {
+    await addHotelPayment(
+      current.business_id,
+      reservationId,
+      additionalPayment,
+      method,
+      sessionId,
+    );
+  }
   return data;
 }
 
@@ -345,6 +360,33 @@ export async function deleteService(id: string, reservationId: string): Promise<
   const { error } = await supabase.from('hotel_services').delete().eq('id', id);
   if (error) throw new Error(error.message);
   await _recalcServiceTotal(reservationId);
+}
+
+// ─── Paiements hôtel ──────────────────────────────────────────────────────────
+
+export async function addHotelPayment(
+  businessId: string,
+  reservationId: string,
+  amount: number,
+  method: 'cash' | 'card' | 'mobile_money',
+  sessionId: string | null,
+): Promise<void> {
+  const { error: pe } = await supabase
+    .from('hotel_payments')
+    .insert({ business_id: businessId, reservation_id: reservationId, session_id: sessionId, amount, method });
+  if (pe) throw new Error(pe.message);
+
+  // Mettre à jour paid_amount sur la réservation
+  const { data: res } = await supabase
+    .from('hotel_reservations')
+    .select('paid_amount')
+    .eq('id', reservationId)
+    .single();
+  const newPaid = Number(res?.paid_amount ?? 0) + amount;
+  await supabase
+    .from('hotel_reservations')
+    .update({ paid_amount: newPaid, updated_at: new Date().toISOString() })
+    .eq('id', reservationId);
 }
 
 async function _recalcServiceTotal(reservationId: string): Promise<void> {

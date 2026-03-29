@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, RefreshCw, Save } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, RefreshCw, Save, Maximize2 } from 'lucide-react';
 import {
   type TemplateConfig,
   getTemplates,
@@ -416,20 +416,32 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
               <div className="border border-surface-border rounded-xl overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border bg-surface-card">
                   <span className="text-sm font-semibold text-white">Aperçu</span>
-                  <button onClick={() => selected && refreshPreview(selected)}
-                    className="btn-secondary flex items-center gap-1.5 text-xs py-1">
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Rafraîchir l&apos;aperçu
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => selected && refreshPreview(selected)}
+                      className="btn-secondary flex items-center gap-1.5 text-xs py-1">
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Rafraîchir
+                    </button>
+                    <button
+                      onClick={() => {
+                        const win = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
+                        if (win) { win.document.open(); win.document.write(previewHtml); win.document.close(); }
+                      }}
+                      className="btn-secondary flex items-center gap-1.5 text-xs py-1"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      Taille réelle
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-slate-800 p-3">
-                  <div style={{ height: 400, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ height: 500, overflow: 'auto', position: 'relative' }}>
                     <iframe
                       srcDoc={previewHtml}
                       title="Aperçu du modèle"
                       style={{
                         width: '200%',
-                        height: '200%',
+                        height: '800px',
                         border: 'none',
                         transform: 'scale(0.5)',
                         transformOrigin: 'top left',

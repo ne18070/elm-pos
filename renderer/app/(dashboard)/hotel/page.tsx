@@ -3,9 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Plus, Search, BedDouble, Users, Pencil, Trash2, X, Check,
-  Calendar, Phone, BadgeCheck, ChevronRight, LogIn, LogOut,
-  ClipboardList, AlertCircle,
+  Calendar, Phone, BadgeCheck, ChevronRight, ChevronLeft, LogIn, LogOut,
+  ClipboardList, AlertCircle, CreditCard, Wallet, Smartphone, Printer,
 } from 'lucide-react';
+import { generateHotelInvoice, printHtml } from '@/lib/invoice-templates';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { logAction } from '@services/supabase/logger';
@@ -14,9 +15,10 @@ import {
   getRooms, createRoom, updateRoom, deleteRoom,
   getGuests, createGuest, updateGuest, deleteGuest,
   getReservations, createReservation, cancelReservation, checkIn, checkOut,
-  getServices, addService, deleteService,
+  getServices, addService, deleteService, addHotelPayment,
   getRoomConflicts, nightsBetween,
 } from '@services/supabase/hotel';
+import { getCurrentSession } from '@services/supabase/cash-sessions';
 import type {
   HotelRoom, HotelGuest, HotelReservation, HotelService,
   RoomType, RoomStatus, ReservationStatus,
@@ -89,10 +91,176 @@ function resStatusLabel(status: ReservationStatus): string {
   }
 }
 
+// ─── Sélecteur de plage de dates ─────────────────────────────────────────────
+
+const WEEK_DAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
+const MONTH_NAMES = [
+  'Janvier','Février','Mars','Avril','Mai','Juin',
+  'Juillet','Août','Septembre','Octobre','Novembre','Décembre',
+];
+
+interface BookedRange { from: string; to: string }
+
+function CalendarPicker({
+  checkIn, checkOut, onSelect, bookedRanges = [],
+}: {
+  checkIn:      string;
+  checkOut:     string;
+  onSelect:     (ci: string, co: string) => void;
+  bookedRanges?: BookedRange[];
+}) {
+  const initDate = checkIn ? new Date(checkIn + 'T12:00:00') : new Date();
+  const [year,  setYear]  = useState(initDate.getFullYear());
+  const [month, setMonth] = useState(initDate.getMonth());
+  const [hover, setHover] = useState<string | null>(null);
+
+  const today = todayStr();
+
+  function ds(y: number, m: number, d: number): string {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  function prevMonth() {
+    if (month === 0) { setMonth(11); setYear((y) => y - 1); }
+    else setMonth((m) => m - 1);
+  }
+  function nextMonth() {
+    if (month === 11) { setMonth(0); setYear((y) => y + 1); }
+    else setMonth((m) => m + 1);
+  }
+
+  function handleClick(d: string) {
+    if (!checkIn || (checkIn && checkOut)) {
+      onSelect(d, '');                              // démarrer nouvelle sélection
+    } else if (d > checkIn) {
+      onSelect(checkIn, d);                         // fin de plage
+    } else if (d < checkIn) {
+      onSelect(d, checkIn);                         // inverser : ancien début devient fin
+    } else {
+      onSelect('', '');                             // même jour = reset
+    }
+  }
+
+  function inRange(d: string): boolean {
+    const end = checkOut || hover;
+    if (!checkIn || !end) return false;
+    const [s, e] = checkIn < end ? [checkIn, end] : [end, checkIn];
+    return d > s && d < e;
+  }
+  function isBooked(d: string): boolean {
+    return bookedRanges.some((r) => d >= r.from && d < r.to);
+  }
+  function isStart(d: string)  { return d === checkIn; }
+  function isEnd(d: string)    { return d === checkOut; }
+
+  const daysInMonth   = new Date(year, month + 1, 0).getDate();
+  const firstWeekDay  = new Date(year, month, 1).getDay(); // 0=Sun
+  const startOffset   = (firstWeekDay + 6) % 7;           // shift to Mon-start
+  const totalCells    = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  return (
+    <div className="rounded-xl border border-surface-border bg-surface-input p-3 select-none">
+      {/* Navigation mois */}
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={prevMonth} className="p-1 rounded-lg hover:bg-surface-hover text-slate-400 hover:text-white">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-semibold text-white">
+          {MONTH_NAMES[month]} {year}
+        </span>
+        <button onClick={nextMonth} className="p-1 rounded-lg hover:bg-surface-hover text-slate-400 hover:text-white">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* En-têtes jours */}
+      <div className="grid grid-cols-7 mb-1">
+        {WEEK_DAYS.map((d) => (
+          <div key={d} className="text-center text-xs text-slate-500 font-medium py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Grille */}
+      <div className="grid grid-cols-7">
+        {Array.from({ length: totalCells }, (_, i) => {
+          const dayNum = i - startOffset + 1;
+          if (dayNum < 1 || dayNum > daysInMonth) {
+            return <div key={i} />;
+          }
+          const d      = ds(year, month, dayNum);
+          const start  = isStart(d);
+          const end    = isEnd(d);
+          const range  = inRange(d);
+          const booked = isBooked(d);
+          const isToday = d === today;
+          const past   = d < today;
+
+          return (
+            <div
+              key={i}
+              onMouseEnter={() => checkIn && !checkOut && setHover(d)}
+              onMouseLeave={() => setHover(null)}
+              onClick={() => !past && handleClick(d)}
+              className={cn(
+                'relative h-8 flex items-center justify-center text-xs font-medium transition-colors',
+                past ? 'text-slate-600 cursor-default' : 'cursor-pointer',
+                // range highlight (including hover preview)
+                range && !start && !end ? 'bg-brand-900/40 text-white' : '',
+                // start day
+                start ? 'rounded-l-full bg-brand-600 text-white' : '',
+                // end day
+                end ? 'rounded-r-full bg-brand-600 text-white' : '',
+                // neither start/end but in range
+                !start && !end && range ? '' : '',
+                // booked indicator
+                booked && !start && !end ? 'text-red-400' : '',
+                // today circle
+                isToday && !start && !end ? 'font-bold' : '',
+                // hover
+                !start && !end && !range && !past ? 'hover:bg-surface-hover rounded-full' : '',
+              )}
+            >
+              {isToday && !start && !end && (
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-400" />
+              )}
+              {booked && !start && !end && (
+                <span className="absolute top-1 right-1 w-1 h-1 rounded-full bg-red-500" />
+              )}
+              {dayNum}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Résumé sélection */}
+      {(checkIn || checkOut) && (
+        <div className="mt-3 pt-3 border-t border-surface-border flex items-center justify-between text-xs text-slate-400">
+          <span>{checkIn ? fmt(checkIn) : '—'} → {checkOut ? fmt(checkOut) : <span className="text-amber-400 italic">choisir départ</span>}</span>
+          {(checkIn || checkOut) && (
+            <button
+              onClick={() => onSelect('', '')}
+              className="text-slate-500 hover:text-red-400 ml-2"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      )}
+      {!checkIn && (
+        <p className="mt-2 text-xs text-slate-500 text-center">Cliquez sur la date d&apos;arrivée</p>
+      )}
+      {checkIn && !checkOut && (
+        <p className="mt-2 text-xs text-amber-400 text-center">Cliquez sur la date de départ</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Types locaux ─────────────────────────────────────────────────────────────
 
-type Tab = 'chambres' | 'reservations' | 'clients';
-type ResFilter = 'active' | 'today' | 'all';
+type Tab = 'chambres' | 'reservations' | 'clients' | 'calendrier';
+type PayMethod = 'cash' | 'card' | 'mobile_money';
+type ResFilter = 'active' | 'today' | 'all' | 'dates';
 type Panel =
   | null
   | { type: 'room';        item: HotelRoom | null }
@@ -114,10 +282,13 @@ export default function HotelPage() {
   const [services,     setServices]     = useState<HotelService[]>([]);
 
   // ── UI ──
-  const [tab,       setTab]       = useState<Tab>('chambres');
-  const [resFilter, setResFilter] = useState<ResFilter>('active');
-  const [search,    setSearch]    = useState('');
-  const [panel,     setPanel]     = useState<Panel>(null);
+  const [tab,           setTab]           = useState<Tab>('chambres');
+  const [resFilter,     setResFilter]     = useState<ResFilter>('active');
+  const [dateFilterFrom, setDateFilterFrom] = useState('');
+  const [dateFilterTo,   setDateFilterTo]   = useState('');
+  const [showDateCal,   setShowDateCal]   = useState(false);
+  const [search,        setSearch]        = useState('');
+  const [panel,         setPanel]         = useState<Panel>(null);
   const [loading,   setLoading]   = useState(true);
   const [saving,    setSaving]    = useState(false);
 
@@ -136,6 +307,7 @@ export default function HotelPage() {
     room_id: '', guest_id: '',
     check_in: todayStr(), check_out: tomorrowStr(),
     num_guests: 1, price_per_night: '', notes: '',
+    deposit: '', depositMethod: 'cash' as PayMethod,
   };
   const emptySvcForm = { label: '', amount: '', service_date: todayStr() };
 
@@ -144,6 +316,18 @@ export default function HotelPage() {
   const [resForm,   setResForm]   = useState(emptyResForm);
   const [svcForm,   setSvcForm]   = useState(emptySvcForm);
   const [checkoutPaid, setCheckoutPaid] = useState('');
+  const [checkoutMethod, setCheckoutMethod] = useState<PayMethod>('cash');
+  const [payForm, setPayForm] = useState({ amount: '', method: 'cash' as PayMethod });
+  const [savingPay, setSavingPay] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [conflictWarning, setConflictWarning] = useState<{ msg: string; onProceed: () => void } | null>(null);
+  const [guestSearch, setGuestSearch] = useState('');
+  const [guestDropOpen, setGuestDropOpen] = useState(false);
+
+  // Calendrier
+  const today2 = new Date();
+  const [calYear,  setCalYear]  = useState(today2.getFullYear());
+  const [calMonth, setCalMonth] = useState(today2.getMonth()); // 0-based
 
   // ── Chargement initial ──
   useEffect(() => {
@@ -155,14 +339,16 @@ export default function HotelPage() {
     if (!business) return;
     setLoading(true);
     try {
-      const [r, g, res] = await Promise.all([
+      const [r, g, res, sess] = await Promise.all([
         getRooms(business.id),
         getGuests(business.id),
         getReservations(business.id),
+        getCurrentSession(business.id),
       ]);
       setRooms(r);
       setGuests(g);
       setReservations(res);
+      setSessionId(sess?.id ?? null);
     } catch (e) { notifError(String(e)); }
     finally { setLoading(false); }
   }
@@ -291,7 +477,39 @@ export default function HotelPage() {
       room_id: defaultRoomId ?? '',
       price_per_night: room ? String(room.price_per_night) : '',
     });
+    setGuestSearch('');
+    setGuestDropOpen(false);
     setPanel({ type: 'reservation', item: null, defaultRoomId });
+  }
+
+  async function _doCreateReservation() {
+    if (!business || !user) return;
+    setSaving(true);
+    try {
+      const created = await createReservation(business.id, user.id, {
+        room_id:         resForm.room_id,
+        guest_id:        resForm.guest_id,
+        check_in:        resForm.check_in,
+        check_out:       resForm.check_out,
+        num_guests:      Number(resForm.num_guests),
+        price_per_night: Number(resForm.price_per_night),
+        notes:           resForm.notes.trim() || undefined,
+      });
+      setReservations((prev) => [created, ...prev]);
+      logAction({ business_id: business.id, action: 'hotel.reservation.created', entity_type: 'reservation', entity_id: created.id, metadata: { room_id: created.room_id, guest_id: created.guest_id, check_in: created.check_in, check_out: created.check_out, total: created.total } });
+      // Enregistrer acompte si renseigné
+      const depositAmt = Number(resForm.deposit);
+      if (depositAmt > 0) {
+        await addHotelPayment(business.id, created.id, depositAmt, resForm.depositMethod, sessionId);
+        logAction({ business_id: business.id, action: 'hotel.payment', entity_type: 'reservation', entity_id: created.id, metadata: { room_id: created.room_id, guest_id: created.guest_id, amount: depositAmt, method: resForm.depositMethod, type: 'deposit' } });
+        setReservations((prev) => prev.map((r) =>
+          r.id === created.id ? { ...r, paid_amount: depositAmt } : r
+        ));
+      }
+      success('Réservation créée');
+      setPanel(null);
+    } catch (e) { notifError(String(e)); }
+    finally { setSaving(false); setConflictWarning(null); }
   }
 
   async function saveReservation() {
@@ -303,31 +521,17 @@ export default function HotelPage() {
     }
     setSaving(true);
     try {
-      // Vérifier la disponibilité avant de créer
       const conflicts = await getRoomConflicts(resForm.room_id, resForm.check_in, resForm.check_out);
+      setSaving(false);
       if (conflicts.length > 0) {
         const c = conflicts[0];
         const guestLabel = c.guest_name ? ` (${c.guest_name})` : '';
-        notifError(`Chambre déjà réservée du ${c.check_in} au ${c.check_out}${guestLabel}`);
-        setSaving(false);
+        const msg = `Chambre déjà réservée du ${fmt(c.check_in)} au ${fmt(c.check_out)}${guestLabel}. Créer quand même ?`;
+        setConflictWarning({ msg, onProceed: _doCreateReservation });
         return;
       }
-
-      const created = await createReservation(business.id, user.id, {
-        room_id:        resForm.room_id,
-        guest_id:       resForm.guest_id,
-        check_in:       resForm.check_in,
-        check_out:      resForm.check_out,
-        num_guests:     Number(resForm.num_guests),
-        price_per_night: Number(resForm.price_per_night),
-        notes:          resForm.notes.trim() || undefined,
-      });
-      setReservations((prev) => [created, ...prev]);
-      logAction({ business_id: business.id, action: 'hotel.reservation.created', entity_type: 'reservation', entity_id: created.id, metadata: { room_id: created.room_id, guest_id: created.guest_id, check_in: created.check_in, check_out: created.check_out, total: created.total } });
-      success('Réservation créée');
-      setPanel(null);
-    } catch (e) { notifError(String(e)); }
-    finally { setSaving(false); }
+    } catch (e) { notifError(String(e)); setSaving(false); return; }
+    await _doCreateReservation();
   }
 
   async function handleCancelReservation(res: HotelReservation) {
@@ -353,15 +557,33 @@ export default function HotelPage() {
   }
 
   async function handleCheckOut(res: HotelReservation) {
-    const paid = Number(checkoutPaid) || 0;
+    const additional = Number(checkoutPaid) || 0;
     try {
-      const updated = await checkOut(res.id, res.room_id, paid);
+      const updated = await checkOut(res.id, res.room_id, additional, sessionId, checkoutMethod);
       setReservations((prev) => prev.map((r) => r.id === updated.id ? updated : r));
       setRooms((prev) => prev.map((r) => r.id === res.room_id ? { ...r, status: 'cleaning' } : r));
       setPanel(null);
-      if (business) logAction({ business_id: business.id, action: 'hotel.checkout', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, total: updated.total, paid_amount: paid } });
+      if (business) logAction({ business_id: business.id, action: 'hotel.checkout', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, total: updated.total, additional_payment: additional } });
       success('Check-out effectué — chambre en nettoyage');
     } catch (e) { notifError(String(e)); }
+  }
+
+  async function handleAddPayment(res: HotelReservation) {
+    if (!business) return;
+    const amount = Number(payForm.amount);
+    if (!amount || amount <= 0) return;
+    setSavingPay(true);
+    try {
+      await addHotelPayment(business.id, res.id, amount, payForm.method, sessionId);
+      logAction({ business_id: business.id, action: 'hotel.payment', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, amount, method: payForm.method } });
+      const newPaid = res.paid_amount + amount;
+      const newRes = { ...res, paid_amount: newPaid };
+      setReservations((prev) => prev.map((r) => r.id === res.id ? newRes : r));
+      if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: newRes });
+      setPayForm({ amount: '', method: 'cash' });
+      success(`Paiement de ${fmtMoney(amount, currency)} enregistré`);
+    } catch (e) { notifError(String(e)); }
+    finally { setSavingPay(false); }
   }
 
   // ─── Prestations ─────────────────────────────────────────────────────────
@@ -414,7 +636,10 @@ export default function HotelPage() {
 
   function openDetail(res: HotelReservation) {
     setPanel({ type: 'detail', reservation: res });
-    setCheckoutPaid(String(res.total));
+    const remaining = res.total - res.paid_amount;
+    setCheckoutPaid(remaining > 0 ? String(remaining) : '');
+    setCheckoutMethod('cash');
+    setPayForm({ amount: '', method: 'cash' });
     setSvcForm(emptySvcForm);
     loadServices(res.id);
   }
@@ -439,6 +664,12 @@ export default function HotelPage() {
         (r.check_in === today && (r.status === 'confirmed' || r.status === 'checked_in')) ||
         (r.check_out === today && r.status === 'checked_in')
       );
+    } else if (resFilter === 'dates' && dateFilterFrom) {
+      const to = dateFilterTo || dateFilterFrom;
+      list = list.filter((r) =>
+        r.check_in <= to && r.check_out > dateFilterFrom &&
+        r.status !== 'cancelled'
+      );
     }
     if (search) {
       const q = search.toLowerCase();
@@ -448,14 +679,16 @@ export default function HotelPage() {
       );
     }
     return list;
-  }, [reservations, resFilter, search, today]);
+  }, [reservations, resFilter, search, today, dateFilterFrom, dateFilterTo]);
 
-  const filteredGuests = useMemo(() =>
-    guests.filter((g) =>
-      g.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      (g.phone ?? '').includes(search)
-    ),
-  [guests, search]);
+  const filteredGuests = useMemo(() => {
+    const q = search.toLowerCase();
+    return guests.filter((g) =>
+      g.full_name.toLowerCase().includes(q) ||
+      (g.phone ?? '').includes(search) ||
+      (g.id_number ?? '').toLowerCase().includes(q)
+    );
+  }, [guests, search]);
 
   // Statistiques rapides
   const stats = useMemo(() => ({
@@ -475,9 +708,13 @@ export default function HotelPage() {
     : 0;
   const resTotal = resNights * Number(resForm.price_per_night || 0);
 
-  // Réservation active pour une chambre
+  // Réservation active (checked_in) pour une chambre
   function activeResForRoom(roomId: string): HotelReservation | undefined {
     return reservations.find((r) => r.room_id === roomId && r.status === 'checked_in');
+  }
+  // Réservation confirmée (à venir) pour une chambre
+  function confirmedResForRoom(roomId: string): HotelReservation | undefined {
+    return reservations.find((r) => r.room_id === roomId && r.status === 'confirmed');
   }
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
@@ -495,7 +732,7 @@ export default function HotelPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {(['chambres', 'reservations', 'clients'] as Tab[]).map((t) => (
+          {(['chambres', 'reservations', 'calendrier', 'clients'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => { setTab(t); setSearch(''); setPanel(null); }}
@@ -504,8 +741,9 @@ export default function HotelPage() {
                 tab === t ? 'bg-brand-600 text-white' : 'btn-secondary'
               )}
             >
-              {t === 'chambres' ? <><BedDouble className="w-4 h-4 inline mr-1.5" />Chambres</> :
+              {t === 'chambres'     ? <><BedDouble className="w-4 h-4 inline mr-1.5" />Chambres</> :
                t === 'reservations' ? <><ClipboardList className="w-4 h-4 inline mr-1.5" />Réservations</> :
+               t === 'calendrier'   ? <><Calendar className="w-4 h-4 inline mr-1.5" />Calendrier</> :
                <><Users className="w-4 h-4 inline mr-1.5" />Clients</>}
             </button>
           ))}
@@ -543,16 +781,17 @@ export default function HotelPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 hidden sm:flex">
               {[
-                { label: 'Disponibles', count: stats.available, color: 'text-green-400' },
-                { label: 'Occupées',    count: stats.occupied,   color: 'text-brand-400' },
-                { label: 'Nettoyage',   count: stats.cleaning,   color: 'text-amber-400' },
-                { label: 'Maintenance', count: stats.maintenance, color: 'text-slate-400' },
-              ].map(({ label, count, color }) => (
-                <div key={label} className="card px-3 py-1.5 text-center hidden sm:block">
-                  <p className={cn('text-lg font-bold', color)}>{count}</p>
-                  <p className="text-xs text-slate-500">{label}</p>
+                { label: 'Disponibles', count: stats.available,   dot: 'bg-emerald-400', num: 'text-emerald-400' },
+                { label: 'Occupées',    count: stats.occupied,    dot: 'bg-brand-400',   num: 'text-brand-400'   },
+                { label: 'Nettoyage',   count: stats.cleaning,    dot: 'bg-amber-400',   num: 'text-amber-400'   },
+                { label: 'Maintenance', count: stats.maintenance, dot: 'bg-slate-400',   num: 'text-slate-400'   },
+              ].map(({ label, count, dot, num }) => (
+                <div key={label} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-card border border-surface-border">
+                  <span className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
+                  <span className={cn('text-base font-bold', num)}>{count}</span>
+                  <span className="text-xs text-slate-500">{label}</span>
                 </div>
               ))}
             </div>
@@ -568,60 +807,137 @@ export default function HotelPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredRooms.map((room) => {
-              const activeRes = activeResForRoom(room.id);
+              const activeRes    = activeResForRoom(room.id);
+              const confirmedRes = confirmedResForRoom(room.id);
+
+              const accent = {
+                available:   'bg-gradient-to-r from-emerald-500 to-green-400',
+                occupied:    'bg-gradient-to-r from-brand-500 to-violet-500',
+                cleaning:    'bg-gradient-to-r from-amber-500 to-yellow-400',
+                maintenance: 'bg-gradient-to-r from-slate-500 to-slate-400',
+              }[room.status];
+
+              const dot = {
+                available:   'bg-emerald-400',
+                occupied:    'bg-brand-400',
+                cleaning:    'bg-amber-400',
+                maintenance: 'bg-slate-400',
+              }[room.status];
+
               return (
                 <div
                   key={room.id}
-                  className={cn(
-                    'border-2 rounded-2xl p-4 cursor-pointer transition-all hover:scale-[1.02] flex flex-col gap-2',
-                    roomStatusStyle(room.status)
-                  )}
+                  className="group relative rounded-2xl bg-surface-card border border-surface-border overflow-hidden
+                             cursor-pointer hover:border-white/20 hover:shadow-xl hover:-translate-y-0.5
+                             transition-all duration-200 flex flex-col"
                   onClick={() => {
-                    if (room.status === 'available') {
-                      openReservationPanel(room.id);
-                    } else if (activeRes) {
-                      openDetail(activeRes);
-                    } else {
-                      openRoomPanel(room);
-                    }
+                    if (activeRes)         openDetail(activeRes);
+                    else if (confirmedRes) openDetail(confirmedRes);
+                    else if (room.status === 'available') openReservationPanel(room.id);
+                    else                   openRoomPanel(room);
                   }}
                 >
-                  <div className="flex items-start justify-between gap-1">
-                    <span className="text-2xl font-black text-white">{room.number}</span>
-                    <button
-                      className="p-1 rounded-lg hover:bg-white/10 shrink-0"
-                      onClick={(e) => { e.stopPropagation(); openRoomPanel(room); }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">{ROOM_TYPES.find((t) => t.value === room.type)?.label}</p>
-                    {room.floor && <p className="text-xs opacity-70">{room.floor}</p>}
-                  </div>
-                  <p className="text-xs font-semibold mt-auto">{fmtMoney(room.price_per_night, currency)}/nuit</p>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-medium opacity-80">{roomStatusLabel(room.status)}</span>
-                    {room.status === 'available' && (
-                      <span className="text-xs bg-green-700/30 border border-green-700 rounded px-1.5 py-0.5">+ Réserver</span>
+                  {/* Bande de statut */}
+                  <div className={cn('h-1.5 w-full', accent)} />
+
+                  <div className="p-4 flex flex-col gap-3 flex-1">
+                    {/* Numéro + bouton édition */}
+                    <div className="flex items-start justify-between gap-1">
+                      <div>
+                        <p className="text-3xl font-black text-white leading-none tracking-tight">{room.number}</p>
+                        {room.floor && <p className="text-[11px] text-slate-500 mt-0.5">{room.floor}</p>}
+                      </div>
+                      <button
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-xl bg-surface-hover
+                                   text-slate-400 hover:text-white transition-all shrink-0"
+                        onClick={(e) => { e.stopPropagation(); openRoomPanel(room); }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Type + capacité */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-surface-input text-slate-300 font-medium">
+                        {ROOM_TYPES.find((t) => t.value === room.type)?.label}
+                      </span>
+                      <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
+                        <Users className="w-3 h-3" /> {room.capacity}
+                      </span>
+                    </div>
+
+                    {/* Statut */}
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
+                      <span className="text-xs font-semibold text-slate-300">{roomStatusLabel(room.status)}</span>
+                    </div>
+
+                    {/* Info client (occupée) */}
+                    {activeRes && (
+                      <div className="rounded-xl bg-brand-900/40 border border-brand-800/60 p-2.5 space-y-0.5">
+                        <p className="text-xs font-bold text-white truncate">{activeRes.guest?.full_name}</p>
+                        <p className="text-[11px] text-brand-300 flex items-center gap-1">
+                          <LogOut className="w-3 h-3 shrink-0" />
+                          Départ {fmt(activeRes.check_out)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Info réservation confirmée */}
+                    {!activeRes && confirmedRes && (
+                      <div className="rounded-xl bg-amber-900/20 border border-amber-700/40 p-2.5 space-y-0.5">
+                        <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wide">Réservée</p>
+                        <p className="text-xs text-white font-medium truncate">{confirmedRes.guest?.full_name}</p>
+                        <p className="text-[11px] text-amber-400/80">
+                          {fmt(confirmedRes.check_in)} → {fmt(confirmedRes.check_out)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Amenités */}
+                    {(room.amenities?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-auto">
+                        {room.amenities.slice(0, 3).map((a) => (
+                          <span key={a} className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-input text-slate-400">{a}</span>
+                        ))}
+                        {room.amenities.length > 3 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-input text-slate-500">+{room.amenities.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Prix */}
+                    <div className="border-t border-surface-border pt-3 flex items-baseline justify-between mt-auto">
+                      <span className="text-sm font-bold text-white">{fmtMoney(room.price_per_night, currency)}</span>
+                      <span className="text-[11px] text-slate-500">/nuit</span>
+                    </div>
+
+                    {/* CTA disponible */}
+                    {room.status === 'available' && !confirmedRes && (
+                      <div className="text-xs text-center py-1.5 rounded-xl bg-emerald-700/20 border border-emerald-700/40
+                                      text-emerald-400 font-semibold tracking-wide">
+                        + Réserver
+                      </div>
+                    )}
+
+                    {/* CTA nettoyage / maintenance */}
+                    {(room.status === 'cleaning' || room.status === 'maintenance') && (
+                      <button
+                        className="text-xs py-1.5 rounded-xl border border-surface-border hover:border-white/20
+                                   text-slate-400 hover:text-white transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateRoom(room.id, { status: 'available' })
+                            .then((r) => setRooms((p) => p.map((x) => x.id === r.id ? r : x)))
+                            .catch((e) => notifError(String(e)));
+                        }}
+                      >
+                        Marquer disponible
+                      </button>
                     )}
                   </div>
-                  {activeRes && (
-                    <div className="text-xs opacity-80 border-t border-white/10 pt-2">
-                      <p className="font-medium truncate">{activeRes.guest?.full_name}</p>
-                      <p>→ {fmt(activeRes.check_out)}</p>
-                    </div>
-                  )}
-                  {(room.status === 'cleaning' || room.status === 'maintenance') && (
-                    <button
-                      className="text-xs mt-1 border border-white/20 rounded-lg py-1 hover:bg-white/10"
-                      onClick={(e) => { e.stopPropagation(); updateRoom(room.id, { status: 'available' }).then((r) => setRooms((p) => p.map((x) => x.id === r.id ? r : x))).catch((e) => notifError(String(e))); }}
-                    >
-                      Marquer disponible
-                    </button>
-                  )}
                 </div>
               );
             })}
@@ -632,34 +948,66 @@ export default function HotelPage() {
       {/* ── Tab Réservations ── */}
       {tab === 'reservations' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 py-3 border-b border-surface-border flex items-center gap-3 flex-wrap">
-            <div className="flex gap-1.5">
-              {([
-                { value: 'active', label: 'En cours' },
-                { value: 'today',  label: 'Aujourd\'hui' },
-                { value: 'all',    label: 'Toutes' },
-              ] as { value: ResFilter; label: string }[]).map(({ value, label }) => (
+          <div className="px-6 py-3 border-b border-surface-border space-y-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  { value: 'active', label: 'En cours' },
+                  { value: 'today',  label: "Aujourd'hui" },
+                  { value: 'all',    label: 'Toutes' },
+                ] as { value: ResFilter; label: string }[]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => { setResFilter(value); setShowDateCal(false); }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-xl text-sm transition-colors',
+                      resFilter === value ? 'bg-brand-600 text-white' : 'btn-secondary'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
                 <button
-                  key={value}
-                  onClick={() => setResFilter(value)}
+                  onClick={() => {
+                    setResFilter('dates');
+                    setShowDateCal((v) => !v);
+                  }}
                   className={cn(
-                    'px-3 py-1.5 rounded-xl text-sm transition-colors',
-                    resFilter === value ? 'bg-brand-600 text-white' : 'btn-secondary'
+                    'px-3 py-1.5 rounded-xl text-sm transition-colors flex items-center gap-1.5',
+                    resFilter === 'dates' ? 'bg-brand-600 text-white' : 'btn-secondary'
                   )}
                 >
-                  {label}
+                  <Calendar className="w-3.5 h-3.5" />
+                  {resFilter === 'dates' && dateFilterFrom
+                    ? `${fmt(dateFilterFrom)}${dateFilterTo ? ` → ${fmt(dateFilterTo)}` : ''}`
+                    : 'Par dates'}
                 </button>
-              ))}
+              </div>
+              <div className="relative flex-1 min-w-48">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <input
+                  className="input pl-8 h-9 text-sm"
+                  placeholder="Chercher client, chambre…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="relative flex-1 min-w-48">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-              <input
-                className="input pl-8 h-9 text-sm"
-                placeholder="Chercher client, chambre…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+
+            {/* Calendrier de filtre */}
+            {resFilter === 'dates' && showDateCal && (
+              <div className="pb-1">
+                <CalendarPicker
+                  checkIn={dateFilterFrom}
+                  checkOut={dateFilterTo}
+                  onSelect={(from, to) => {
+                    setDateFilterFrom(from);
+                    setDateFilterTo(to);
+                    if (from && to) setShowDateCal(false);
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
@@ -768,6 +1116,149 @@ export default function HotelPage() {
           </div>
         </div>
       )}
+
+      {/* ── Tab Calendrier ── */}
+      {tab === 'calendrier' && (() => {
+        const daysInMonth  = new Date(calYear, calMonth + 1, 0).getDate();
+        const days         = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+        const monthLabel   = new Date(calYear, calMonth, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        const todayFull    = todayStr();
+
+        function prevMonth() {
+          if (calMonth === 0) { setCalMonth(11); setCalYear((y) => y - 1); }
+          else setCalMonth((m) => m - 1);
+        }
+        function nextMonth() {
+          if (calMonth === 11) { setCalMonth(0); setCalYear((y) => y + 1); }
+          else setCalMonth((m) => m + 1);
+        }
+        function dayStr(d: number) {
+          return `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
+        function resOverlapsDay(res: HotelReservation, d: number): boolean {
+          const ds = dayStr(d);
+          return ds >= res.check_in && ds < res.check_out;
+        }
+        function resStartsOnDay(res: HotelReservation, d: number): boolean {
+          return res.check_in === dayStr(d);
+        }
+
+        return (
+          <div className="flex-1 overflow-auto p-6">
+            {/* Navigation mois */}
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg btn-secondary shrink-0"><ChevronLeft className="w-4 h-4" /></button>
+              <h2 className="font-semibold text-white capitalize flex-1 text-center min-w-32">{monthLabel}</h2>
+              <button onClick={nextMonth} className="p-1.5 rounded-lg btn-secondary shrink-0"><ChevronRight className="w-4 h-4" /></button>
+
+              {/* Saisie rapide de date */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-44">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                  <input
+                    type="date"
+                    className="input pl-8 h-9 text-sm w-full"
+                    title="Aller à une date"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v) return;
+                      const d = new Date(v + 'T12:00:00');
+                      setCalYear(d.getFullYear());
+                      setCalMonth(d.getMonth());
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={() => { setCalYear(today2.getFullYear()); setCalMonth(today2.getMonth()); }}
+                  className="btn-secondary h-9 px-3 text-sm shrink-0"
+                  title="Aujourd'hui"
+                >
+                  Aujourd&apos;hui
+                </button>
+              </div>
+            </div>
+
+            {loading && <p className="text-center text-slate-500 py-16">Chargement…</p>}
+
+            {!loading && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-xs" style={{ minWidth: `${daysInMonth * 36 + 80}px` }}>
+                  <thead>
+                    <tr>
+                      <th className="text-left py-2 pr-3 text-slate-400 font-medium w-20 sticky left-0 bg-surface z-10">Chambre</th>
+                      {days.map((d) => {
+                        const ds = dayStr(d);
+                        const isToday = ds === todayFull;
+                        return (
+                          <th key={d} className={cn('text-center w-9 py-2 font-medium', isToday ? 'text-brand-400' : 'text-slate-500')}>
+                            {d}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rooms.map((room) => {
+                      const roomRes = reservations.filter((r) =>
+                        r.room_id === room.id &&
+                        r.status !== 'cancelled' &&
+                        r.check_in < `${calYear}-${String(calMonth + 1).padStart(2, '0')}-32` &&
+                        r.check_out > `${calYear}-${String(calMonth + 1).padStart(2, '0')}-00`
+                      );
+                      return (
+                        <tr key={room.id} className="border-t border-surface-border">
+                          <td className="py-1 pr-3 text-slate-300 font-semibold sticky left-0 bg-surface z-10">
+                            {room.number}
+                          </td>
+                          {days.map((d) => {
+                            const activeR = roomRes.find((r) => resOverlapsDay(r, d));
+                            const isStart = activeR ? resStartsOnDay(activeR, d) : false;
+                            const isToday = dayStr(d) === todayFull;
+                            return (
+                              <td
+                                key={d}
+                                className={cn(
+                                  'h-8 relative',
+                                  isToday && !activeR ? 'bg-brand-900/10' : ''
+                                )}
+                                onClick={() => activeR && openDetail(activeR)}
+                              >
+                                {activeR && (
+                                  <div className={cn(
+                                    'absolute inset-y-1 inset-x-0 cursor-pointer',
+                                    activeR.status === 'checked_in'  ? 'bg-brand-600/80' :
+                                    activeR.status === 'confirmed'   ? 'bg-amber-600/60' :
+                                    activeR.status === 'checked_out' ? 'bg-green-900/40' :
+                                    'bg-slate-700/40',
+                                    isStart ? 'rounded-l-md ml-1' : ''
+                                  )}>
+                                    {isStart && (
+                                      <span className="absolute inset-0 flex items-center px-1 truncate text-white font-medium" style={{ fontSize: 10 }}>
+                                        {activeR.guest?.full_name.split(' ')[0]}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Légende */}
+                <div className="flex gap-4 mt-4 text-xs text-slate-400">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-600/60 inline-block" />Confirmée</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-600/80 inline-block" />En cours</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-900/40 border border-green-800 inline-block" />Terminée</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ════════════════════════════════════════════════════════════════════════
           Panneaux latéraux
@@ -960,9 +1451,9 @@ export default function HotelPage() {
                 }}
               >
                 <option value="">— Choisir —</option>
-                {rooms.filter((r) => r.status === 'available').map((r) => (
+                {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.number} — {ROOM_TYPES.find((t) => t.value === r.type)?.label} ({fmtMoney(r.price_per_night, currency)}/nuit)
+                    {r.number} — {ROOM_TYPES.find((t) => t.value === r.type)?.label} ({fmtMoney(r.price_per_night, currency)}/nuit){r.status !== 'available' ? ` [${roomStatusLabel(r.status)}]` : ''}
                   </option>
                 ))}
               </select>
@@ -978,33 +1469,73 @@ export default function HotelPage() {
                   + Nouveau client
                 </button>
               </div>
-              <select className="input" value={resForm.guest_id} onChange={(e) => setResForm((f) => ({ ...f, guest_id: e.target.value }))}>
-                <option value="">— Choisir —</option>
-                {guests.map((g) => (
-                  <option key={g.id} value={g.id}>{g.full_name}{g.phone ? ` — ${g.phone}` : ''}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  className="input pr-8"
+                  placeholder="Rechercher un client..."
+                  value={guestSearch}
+                  onChange={(e) => { setGuestSearch(e.target.value); setGuestDropOpen(true); }}
+                  onFocus={() => setGuestDropOpen(true)}
+                  onBlur={() => setTimeout(() => setGuestDropOpen(false), 150)}
+                />
+                {resForm.guest_id && (
+                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    onClick={() => { setResForm((f) => ({ ...f, guest_id: '' })); setGuestSearch(''); }}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {guestDropOpen && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-surface-card border border-surface-border rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                    {guests
+                      .filter((g) => {
+                        const q = guestSearch.toLowerCase();
+                        return !q || g.full_name.toLowerCase().includes(q) || (g.phone ?? '').includes(q) || (g.id_number ?? '').includes(q);
+                      })
+                      .map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onMouseDown={() => {
+                            setResForm((f) => ({ ...f, guest_id: g.id }));
+                            setGuestSearch(g.full_name + (g.phone ? ` — ${g.phone}` : ''));
+                            setGuestDropOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 hover:bg-surface-hover flex items-center gap-2 transition-colors
+                            ${resForm.guest_id === g.id ? 'bg-brand-600/10 text-brand-300' : 'text-white'}`}
+                        >
+                          <div className="w-7 h-7 rounded-full bg-brand-600/20 text-brand-300 flex items-center justify-center text-xs font-bold shrink-0">
+                            {g.full_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{g.full_name}</p>
+                            {g.phone && <p className="text-xs text-slate-400">{g.phone}</p>}
+                          </div>
+                        </button>
+                      ))}
+                    {guests.filter((g) => {
+                      const q = guestSearch.toLowerCase();
+                      return !q || g.full_name.toLowerCase().includes(q) || (g.phone ?? '').includes(q) || (g.id_number ?? '').includes(q);
+                    }).length === 0 && (
+                      <p className="px-3 py-3 text-sm text-slate-500 text-center">Aucun client trouvé</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Arrivée <span className="text-red-400">*</span></label>
-                <input
-                  className="input"
-                  type="date"
-                  value={resForm.check_in}
-                  onChange={(e) => setResForm((f) => ({ ...f, check_in: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="label">Départ <span className="text-red-400">*</span></label>
-                <input
-                  className="input"
-                  type="date"
-                  value={resForm.check_out}
-                  min={resForm.check_in}
-                  onChange={(e) => setResForm((f) => ({ ...f, check_out: e.target.value }))}
-                />
-              </div>
+            <div>
+              <label className="label">Dates du séjour <span className="text-red-400">*</span></label>
+              <CalendarPicker
+                checkIn={resForm.check_in}
+                checkOut={resForm.check_out}
+                onSelect={(ci, co) => setResForm((f) => ({ ...f, check_in: ci, check_out: co }))}
+                bookedRanges={
+                  resForm.room_id
+                    ? reservations
+                        .filter((r) => r.room_id === resForm.room_id && r.status !== 'cancelled')
+                        .map((r) => ({ from: r.check_in, to: r.check_out }))
+                    : []
+                }
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1026,7 +1557,53 @@ export default function HotelPage() {
                 <strong>{resNights} nuit{resNights > 1 ? 's' : ''}</strong> → {fmtMoney(resTotal, currency)}
               </div>
             )}
+            {/* Acompte */}
+            <div>
+              <label className="label">Acompte (optionnel)</label>
+              <div className="flex gap-2">
+                <input
+                  className="input flex-1"
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={resForm.deposit}
+                  onChange={(e) => setResForm((f) => ({ ...f, deposit: e.target.value }))}
+                />
+                <select
+                  className="input w-36"
+                  value={resForm.depositMethod}
+                  onChange={(e) => setResForm((f) => ({ ...f, depositMethod: e.target.value as PayMethod }))}
+                >
+                  <option value="cash">Espèces</option>
+                  <option value="card">Carte</option>
+                  <option value="mobile_money">Mobile</option>
+                </select>
+              </div>
+            </div>
           </div>
+
+          {/* Avertissement conflit */}
+          {conflictWarning && (
+            <div className="mx-5 mb-3 p-3 rounded-xl bg-amber-900/20 border border-amber-700 text-sm text-amber-300 space-y-2">
+              <p className="flex items-start gap-2"><AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />{conflictWarning.msg}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConflictWarning(null)}
+                  className="flex-1 py-1.5 rounded-lg border border-amber-700 hover:bg-amber-900/30 text-xs"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={conflictWarning.onProceed}
+                  disabled={saving}
+                  className="flex-1 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-600 text-xs font-medium"
+                >
+                  {saving ? 'En cours…' : 'Forcer la réservation'}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="px-5 py-4 border-t border-surface-border">
             <button
               onClick={saveReservation}
@@ -1053,9 +1630,22 @@ export default function HotelPage() {
                 </span>
                 <h3 className="font-semibold text-white">Chambre {res.room?.number}</h3>
               </div>
-              <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  title="Imprimer la facture"
+                  onClick={() => {
+                    if (!business) return;
+                    const html = generateHotelInvoice(res, services, business);
+                    printHtml(html);
+                  }}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+                <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -1164,17 +1754,62 @@ export default function HotelPage() {
                 )}
               </div>
 
-              {/* Montant payé (checkout) */}
+              {/* Encaissement partiel (acompte avant check-out) */}
+              {(res.status === 'confirmed' || res.status === 'checked_in') && balance > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Encaisser un acompte</p>
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1 h-9 text-sm"
+                      type="number"
+                      min={0}
+                      placeholder={`Reste: ${fmtMoney(balance, currency)}`}
+                      value={payForm.amount}
+                      onChange={(e) => setPayForm((f) => ({ ...f, amount: e.target.value }))}
+                    />
+                    <select
+                      className="input w-28 h-9 text-sm"
+                      value={payForm.method}
+                      onChange={(e) => setPayForm((f) => ({ ...f, method: e.target.value as PayMethod }))}
+                    >
+                      <option value="cash">Espèces</option>
+                      <option value="card">Carte</option>
+                      <option value="mobile_money">Mobile</option>
+                    </select>
+                    <button
+                      onClick={() => handleAddPayment(res)}
+                      disabled={savingPay || !payForm.amount}
+                      className="btn-primary h-9 px-3 text-sm flex items-center gap-1 shrink-0"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Montant supplémentaire (check-out) */}
               {res.status === 'checked_in' && (
                 <div>
-                  <label className="label">Montant encaissé (check-out)</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    value={checkoutPaid}
-                    onChange={(e) => setCheckoutPaid(e.target.value)}
-                  />
+                  <label className="label">Montant à encaisser au check-out</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1"
+                      type="number"
+                      min={0}
+                      placeholder={balance > 0 ? `Reste: ${fmtMoney(balance, currency)}` : '0'}
+                      value={checkoutPaid}
+                      onChange={(e) => setCheckoutPaid(e.target.value)}
+                    />
+                    <select
+                      className="input w-32"
+                      value={checkoutMethod}
+                      onChange={(e) => setCheckoutMethod(e.target.value as PayMethod)}
+                    >
+                      <option value="cash">Espèces</option>
+                      <option value="card">Carte</option>
+                      <option value="mobile_money">Mobile</option>
+                    </select>
+                  </div>
                 </div>
               )}
             </div>

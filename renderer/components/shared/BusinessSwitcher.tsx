@@ -128,8 +128,10 @@ export function BusinessSwitcher() {
             ${open ? 'bg-surface-hover' : 'hover:bg-surface-hover'}`}
         >
           {/* Icône établissement */}
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-            <Building2 className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+            {business?.logo_url
+              ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
+              : <Building2 className="w-4 h-4 text-white" />}
           </div>
 
           {/* Nom + chevron — expanded seulement */}
@@ -175,12 +177,14 @@ export function BusinessSwitcher() {
                     className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left
                       ${isActive ? 'bg-brand-900/30' : 'hover:bg-surface-hover'}`}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden
                                     text-sm font-bold
                       ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-slate-300'}`}>
                       {isLoading
                         ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : biz.name.charAt(0).toUpperCase()}
+                        : biz.logo_url
+                          ? <img src={biz.logo_url} alt={biz.name} className="w-full h-full object-cover" />
+                          : biz.name.charAt(0).toUpperCase()}
                     </div>
 
                     <div className="flex-1 min-w-0">

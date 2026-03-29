@@ -199,59 +199,110 @@ export interface BalanceSheet {
 //   Crédit 706 (Hébergmt) : total
 
 export async function syncHotelAccounting(businessId: string): Promise<number> {
-  // 1. Toutes les réservations clôturées
-  const { data: reservations, error: resErr } = await (supabase as any)
-    .from('hotel_reservations')
-    .select('id, actual_check_out, check_out, total, total_room, total_services, paid_amount, room:hotel_rooms(number), guest:hotel_guests(full_name)')
-    .eq('business_id', businessId)
-    .eq('status', 'checked_out');
-  if (resErr) throw new Error(resErr.message);
-  if (!reservations?.length) return 0;
-
-  // 2. IDs déjà synchronisés
-  const { data: existing } = await db('journal_entries')
+  // Récupérer tous les source_id hôtel déjà synchronisés
+  const { data: existingAll } = await db('journal_entries')
     .select('source_id')
     .eq('business_id', businessId)
     .eq('source', 'hotel');
-  const syncedIds = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
-
-  const toSync = (reservations as {
-    id: string;
-    actual_check_out: string | null;
-    check_out: string;
-    total: number;
-    total_room: number;
-    total_services: number;
-    paid_amount: number;
-    room: { number: string } | null;
-    guest: { full_name: string } | null;
-  }[]).filter((r) => !syncedIds.has(r.id));
+  const syncedSet = new Set((existingAll ?? []).map((e: { source_id: string }) => e.source_id));
 
   let count = 0;
-  for (const res of toSync) {
+
+  // ─── 1. Sync hotel_payments (acomptes + paiements au check-out) ──────────
+  // source = 'hotel', source_id = payment UUID — distinct des réservations car UUIDs différents
+  // Chaque paiement reçu génère : Débit 571/521 · Crédit 706
+  const syncedPayments = syncedSet; // même ensemble : source='hotel', source_id=uuid
+
+  const { data: payments, error: payErr } = await (supabase as any)
+    .from('hotel_payments')
+    .select('id, amount, method, paid_at, reservation_id')
+    .eq('business_id', businessId);
+  if (payErr) throw new Error(payErr.message);
+
+  // Récupérer les infos réservations en une seule requête pour les descriptions
+  const reservationIds = [...new Set((payments ?? []).map((p: { reservation_id: string }) => p.reservation_id))];
+  let resInfoMap: Record<string, { room: string; guest: string }> = {};
+  if (reservationIds.length > 0) {
+    const { data: resInfo } = await (supabase as any)
+      .from('hotel_reservations')
+      .select('id, room:hotel_rooms!room_id(number), guest:hotel_guests!guest_id(full_name)')
+      .in('id', reservationIds);
+    for (const r of (resInfo ?? []) as { id: string; room: { number: string } | null; guest: { full_name: string } | null }[]) {
+      resInfoMap[r.id] = { room: r.room?.number ?? '', guest: r.guest?.full_name ?? 'Client' };
+    }
+  }
+
+  for (const p of (payments ?? []) as {
+    id: string; amount: number; method: string; paid_at: string; reservation_id: string;
+  }[]) {
+    if (syncedPayments.has(p.id)) continue;
+
+    const entryDate = p.paid_at.slice(0, 10);
+    const debit = p.method === 'card'
+      ? { code: '521', name: 'Banque / Carte' }
+      : { code: '571', name: p.method === 'mobile_money' ? 'Caisse / Mobile' : 'Caisse' };
+
+    const info    = resInfoMap[p.reservation_id] ?? { room: '', guest: 'Client' };
+    const desc    = `Paiement hôtel${info.room ? ` — Ch.${info.room}` : ''} — ${info.guest}`;
+
+    const { data: entry, error: entryErr } = await db('journal_entries')
+      .insert({ business_id: businessId, entry_date: entryDate, description: desc, source: 'hotel', source_id: p.id })
+      .select().single();
+    if (entryErr) throw new Error(`Erreur journal_entries: ${entryErr.message}`);
+    if (!entry) continue;
+
+    const { error: linesErr } = await db('journal_lines').insert([
+      { entry_id: entry.id, account_code: debit.code, account_name: debit.name, debit: Number(p.amount), credit: 0 },
+      { entry_id: entry.id, account_code: '706', account_name: 'Prestations hébergement', debit: 0, credit: Number(p.amount) },
+    ]);
+    if (linesErr) throw new Error(`Erreur journal_lines: ${linesErr.message}`);
+    count++;
+  }
+
+  // ─── 2. Sync réservations clôturées SANS hotel_payments ──────────────────
+  // (rétrocompatibilité + séjours sans paiement enregistré)
+  const { data: reservations, error: resErr } = await (supabase as any)
+    .from('hotel_reservations')
+    .select('id, actual_check_out, check_out, total, paid_amount, room:hotel_rooms(number), guest:hotel_guests(full_name)')
+    .eq('business_id', businessId)
+    .eq('status', 'checked_out');
+  if (resErr) throw new Error(resErr.message);
+
+  for (const res of (reservations ?? []) as {
+    id: string; actual_check_out: string | null; check_out: string;
+    total: number; paid_amount: number;
+    room: { number: string } | null; guest: { full_name: string } | null;
+  }[]) {
+    if (syncedSet.has(res.id)) continue; // déjà sync (ancienne logique)
+
+    // Vérifier s'il existe des hotel_payments pour cette réservation
+    const { data: hasPay } = await (supabase as any)
+      .from('hotel_payments')
+      .select('id')
+      .eq('reservation_id', res.id)
+      .limit(1);
+    if ((hasPay ?? []).length > 0) continue; // couvert par la section 1
+
     const entryDate   = (res.actual_check_out ?? res.check_out).slice(0, 10);
-    const roomLabel   = res.room?.number  ? `Ch.${res.room.number}` : '';
+    const roomLabel   = res.room?.number ? `Ch.${res.room.number}` : '';
     const guestLabel  = res.guest?.full_name ?? 'Client';
     const description = `Séjour hôtel${roomLabel ? ` — ${roomLabel}` : ''} — ${guestLabel}`;
-
     const total       = Number(res.total);
     const paid        = Number(res.paid_amount);
     const outstanding = Math.max(0, total - paid);
 
     const lines: { account_code: string; account_name: string; debit: number; credit: number }[] = [];
-    if (paid > 0)            lines.push({ account_code: '571', account_name: 'Caisse',                   debit: paid,        credit: 0 });
-    if (outstanding > 0.01)  lines.push({ account_code: '411', account_name: 'Clients',                  debit: outstanding, credit: 0 });
-    lines.push(               { account_code: '706', account_name: 'Prestations hébergement', debit: 0,           credit: total });
+    if (paid > 0)           lines.push({ account_code: '571', account_name: 'Caisse',                   debit: paid,        credit: 0 });
+    if (outstanding > 0.01) lines.push({ account_code: '411', account_name: 'Clients',                  debit: outstanding, credit: 0 });
+    lines.push(              { account_code: '706', account_name: 'Prestations hébergement', debit: 0,           credit: total });
 
-    if (!lines.length) continue;
-
-    const { data: entry, error: entryErr } = await db('journal_entries')
+    const { data: entry, error: entryErr2 } = await db('journal_entries')
       .insert({ business_id: businessId, entry_date: entryDate, description, source: 'hotel', source_id: res.id })
-      .select()
-      .single();
-    if (entryErr || !entry) continue;
-
-    await db('journal_lines').insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
+      .select().single();
+    if (entryErr2) throw new Error(`Erreur journal_entries (séjour): ${entryErr2.message}`);
+    if (!entry) continue;
+    const { error: linesErr2 } = await db('journal_lines').insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
+    if (linesErr2) throw new Error(`Erreur journal_lines (séjour): ${linesErr2.message}`);
     count++;
   }
 
@@ -274,7 +325,10 @@ export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeState
         return s + normal;
       }, 0);
 
-  const ventesGross        = get('701');
+  // CA = somme de tous les comptes 70x (ventes + prestations), hors 7091 (RRR)
+  const ventesGross = balance
+    .filter((r) => r.account_code.startsWith('70') && r.account_code !== '7091')
+    .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
   const rrrAccordes        = get('7091');
   const caNet              = ventesGross - rrrAccordes;
   const achatsMarchandises = get('601');
