@@ -1,5 +1,7 @@
 import { supabase } from './client';
 import { logAction } from './logger';
+import { q } from './q';
+import { calculateDiscount } from '../pricing';
 import type { Order, Cart, PaymentMethod, Coupon, Refund } from '../../types';
 
 export interface CreateOrderInput {
@@ -36,7 +38,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
   // Notes du premier coupon free_item
   const couponNotes = coupons.find((c) => c.type === 'free_item')?.free_item_label ?? null;
 
-  const { data, error } = await supabase.rpc('create_order', {
+  const order = await q<Order>(supabase.rpc('create_order', {
     order_data: {
       business_id: input.business_id,
       cashier_id:  input.cashier_id,
@@ -69,10 +71,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       customer_name:  input.customer_name  ?? null,
       customer_phone: input.customer_phone ?? null,
     },
-  });
+  }) as never);
 
-  if (error) throw new Error(error.message);
-  const order = data as unknown as Order;
   logAction({
     business_id: input.business_id,
     action:      'order.created',
@@ -80,8 +80,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     entity_id:   order.id,
     user_id:     input.cashier_id,
     metadata: {
-      total:         order.total,
-      items_count:   input.cart.items.length,
+      total:          order.total,
+      items_count:    input.cart.items.length,
       payment_method: input.payment_method,
     },
   });
@@ -120,21 +120,19 @@ export async function getOrders(
 }
 
 export async function getOrderById(id: string): Promise<Order> {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email)`)
-    .eq('id', id)
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as unknown as Order;
+  return q<Order>(
+    supabase
+      .from('orders')
+      .select(`*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email)`)
+      .eq('id', id)
+      .single() as never,
+  );
 }
 
 // ─── Annulation (restaure stock + coupon en transaction) ─────────────────────
 
 export async function cancelOrder(orderId: string): Promise<void> {
-  const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId });
-  if (error) throw new Error(error.message);
+  await q(supabase.rpc('cancel_order', { p_order_id: orderId }));
 }
 
 // ─── Remboursement ───────────────────────────────────────────────────────────
@@ -147,24 +145,18 @@ export interface RefundInput {
 }
 
 export async function refundOrder(input: RefundInput): Promise<void> {
-  const { error } = await supabase.rpc('refund_order', {
+  await q(supabase.rpc('refund_order', {
     p_order_id:    input.orderId,
     p_amount:      input.amount,
     p_reason:      input.reason ?? null,
     p_refunded_by: input.refundedBy ?? null,
-  });
-  if (error) throw new Error(error.message);
+  }));
 }
 
 export async function getRefundsForOrder(orderId: string): Promise<Refund[]> {
-  const { data, error } = await supabase
-    .from('refunds')
-    .select('*')
-    .eq('order_id', orderId)
-    .order('refunded_at', { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return data as Refund[];
+  return q<Refund[]>(
+    supabase.from('refunds').select('*').eq('order_id', orderId).order('refunded_at', { ascending: false }),
+  );
 }
 
 // ─── Livraison / Picking ─────────────────────────────────────────────────────
@@ -173,36 +165,33 @@ export async function getRefundsForOrder(orderId: string): Promise<Refund[]> {
  * Commandes payées en attente de livraison, avec barcode produit pour le scan.
  */
 export async function getOrdersForDelivery(businessId: string): Promise<Order[]> {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      cashier:cashier_id(id, full_name),
-      items:order_items(
+  return q<Order[]>(
+    supabase
+      .from('orders')
+      .select(`
         *,
-        product:products(id, barcode, image_url)
-      )
-    `)
-    .eq('business_id', businessId)
-    .in('status', ['paid', 'pending'])
-    .neq('delivery_status', 'delivered')
-    .order('created_at', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return data as unknown as Order[];
+        cashier:cashier_id(id, full_name),
+        items:order_items(
+          *,
+          product:products(id, barcode, image_url)
+        )
+      `)
+      .eq('business_id', businessId)
+      .in('status', ['paid', 'pending'])
+      .neq('delivery_status', 'delivered')
+      .order('created_at', { ascending: true }) as never,
+  );
 }
 
 export async function startOrderPicking(orderId: string): Promise<void> {
-  const { error } = await supabase.rpc('start_order_picking', { p_order_id: orderId });
-  if (error) throw new Error(error.message);
+  await q(supabase.rpc('start_order_picking', { p_order_id: orderId }));
 }
 
 export async function confirmOrderDelivery(orderId: string, deliveredBy: string): Promise<void> {
-  const { error } = await supabase.rpc('confirm_order_delivery', {
+  await q(supabase.rpc('confirm_order_delivery', {
     p_order_id:     orderId,
     p_delivered_by: deliveredBy,
-  });
-  if (error) throw new Error(error.message);
+  }));
 }
 
 // ─── Paiement complémentaire (solde acompte) ─────────────────────────────────
@@ -214,23 +203,9 @@ export interface CompletePaymentInput {
 }
 
 export async function completeOrderPayment(input: CompletePaymentInput): Promise<void> {
-  const { error } = await supabase.rpc('complete_order_payment', {
+  await q(supabase.rpc('complete_order_payment', {
     p_order_id: input.orderId,
     p_method:   input.method,
     p_amount:   input.amount,
-  });
-  if (error) throw new Error(error.message);
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function calculateDiscount(coupons: Coupon[], subtotal: number): number {
-  let total = 0;
-  for (const coupon of coupons) {
-    if (coupon.type === 'free_item') continue;
-    total += coupon.type === 'percentage'
-      ? Math.round((subtotal * coupon.value) / 100 * 100) / 100
-      : Math.min(coupon.value, subtotal);
-  }
-  return Math.min(total, subtotal);
+  }));
 }

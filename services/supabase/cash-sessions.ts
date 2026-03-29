@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { q } from './q';
 
 const db = supabase as any;
 
@@ -44,26 +45,24 @@ export async function getCurrentSession(businessId: string): Promise<CashSession
 }
 
 export async function getSessionHistory(businessId: string): Promise<CashSession[]> {
-  const { data, error } = await db
-    .from('cash_sessions')
-    .select('*')
-    .eq('business_id', businessId)
-    .order('opened_at', { ascending: false })
-    .limit(50);
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  const rows = await q<CashSession[]>(
+    db.from('cash_sessions')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('opened_at', { ascending: false })
+      .limit(50),
+  );
+  return rows ?? [];
 }
 
 export async function openSession(
   businessId: string,
   openingAmount: number
 ): Promise<CashSession> {
-  const { data, error } = await db.rpc('open_cash_session', {
+  return q<CashSession>(db.rpc('open_cash_session', {
     p_business_id:    businessId,
     p_opening_amount: openingAmount,
-  });
-  if (error) throw new Error(error.message);
-  return data;
+  }));
 }
 
 export async function closeSession(
@@ -71,19 +70,13 @@ export async function closeSession(
   actualCash: number,
   notes?: string
 ): Promise<CashSession> {
-  const { data, error } = await db.rpc('close_cash_session', {
+  return q<CashSession>(db.rpc('close_cash_session', {
     p_session_id:  sessionId,
     p_actual_cash: actualCash,
     p_notes:       notes ?? null,
-  });
-  if (error) throw new Error(error.message);
-  return data;
+  }));
 }
 
 export async function getLiveSummary(sessionId: string): Promise<SessionLiveSummary> {
-  const { data, error } = await db.rpc('get_session_live_summary', {
-    p_session_id: sessionId,
-  });
-  if (error) throw new Error(error.message);
-  return data as SessionLiveSummary;
+  return q<SessionLiveSummary>(db.rpc('get_session_live_summary', { p_session_id: sessionId }));
 }

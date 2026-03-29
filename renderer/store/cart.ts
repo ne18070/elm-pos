@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { CartItem, Coupon, Product, ProductVariant } from '@pos-types';
+import { calculateDiscount } from '../../services/pricing';
 
 // ─── Commande en attente ───────────────────────────────────────────────────────
 
@@ -79,7 +81,9 @@ function stockAvailable(product: Product, consumedInCart: number, consumption: n
   return { ok: true };
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
   items:       [],
   coupons:     [],
   notes:       '',
@@ -301,16 +305,8 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   discountAmount: () => {
     const { coupons, items } = get();
-    if (coupons.length === 0) return 0;
     const sub = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    let total = 0;
-    for (const coupon of coupons) {
-      if (coupon.type === 'free_item') continue;
-      total += coupon.type === 'percentage'
-        ? Math.round(sub * coupon.value / 100 * 100) / 100
-        : Math.min(coupon.value, sub);
-    }
-    return Math.min(total, sub);
+    return calculateDiscount(coupons, sub);
   },
 
   taxAmount: (taxRate: number) => {
@@ -325,4 +321,16 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   itemCount: () =>
     get().items.reduce((sum, i) => sum + i.quantity, 0),
-}));
+    }),
+    {
+      name: 'elm-pos-cart',
+      // Persister uniquement les données sérialisables — pas les fonctions
+      partialize: (state) => ({
+        items:      state.items,
+        coupons:    state.coupons,
+        notes:      state.notes,
+        heldOrders: state.heldOrders,
+      }),
+    }
+  )
+);

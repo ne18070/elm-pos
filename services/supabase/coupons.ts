@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { q } from './q';
 import type { Coupon } from '../../types';
 
 export async function validateCoupon(
@@ -25,45 +26,30 @@ export async function validateCoupon(
 }
 
 export async function getCoupons(businessId: string): Promise<Coupon[]> {
-  const { data, error } = await supabase
-    .from('coupons')
-    .select('*')
-    .eq('business_id', businessId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return data as Coupon[];
+  return q<Coupon[]>(
+    supabase.from('coupons').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
+  );
 }
 
 export async function createCoupon(
   coupon: Omit<Coupon, 'id' | 'created_at' | 'uses_count'>
 ): Promise<Coupon> {
-  const { data, error } = await supabase
-    .from('coupons')
-    .insert({ ...coupon, code: coupon.code.toUpperCase().trim() })
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Coupon;
+  return q<Coupon>(
+    supabase
+      .from('coupons')
+      .insert({ ...coupon, code: coupon.code.toUpperCase().trim() })
+      .select()
+      .single(),
+  );
 }
 
 export async function updateCoupon(
   id: string,
   updates: Partial<Omit<Coupon, 'id' | 'created_at'>>
 ): Promise<Coupon> {
-  const { data, error } = await supabase
-    .from('coupons')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data as Coupon;
+  return q<Coupon>(supabase.from('coupons').update(updates).eq('id', id).select().single());
 }
 
 export async function deleteCoupon(id: string): Promise<void> {
-  const { error } = await supabase.from('coupons').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await q(supabase.from('coupons').delete().eq('id', id));
 }
