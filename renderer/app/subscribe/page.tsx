@@ -134,7 +134,7 @@ export default function SubscribePage() {
   return (
     <div style={{ height: '100vh', overflowY: 'auto' }} className="p-4 sm:p-8">
       {/* Grille de fond */}
-      <div className="fixed inset-0 opacity-[0.03]" style={{
+      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
       }} />
@@ -147,6 +147,12 @@ export default function SubscribePage() {
           </div>
           <h1 className="text-2xl font-bold text-white">Elm POS</h1>
           <p className="text-slate-400 text-sm mt-1">Abonnement</p>
+          <p className="text-xs text-slate-500 mt-2">
+            Déjà un compte ?{' '}
+            <a href="/login" className="text-brand-400 hover:text-brand-300 transition-colors">
+              Se connecter
+            </a>
+          </p>
         </div>
 
         {step === 'sent' ? (

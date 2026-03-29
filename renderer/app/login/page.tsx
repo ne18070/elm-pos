@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Loader2 } from 'lucide-react';
+import { ShoppingCart, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { setUser, setBusiness, setBusinesses } = useAuthStore();
   const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
@@ -132,6 +133,12 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-white">Elm POS</h1>
           <p className="text-slate-400 text-sm mt-1">Connectez-vous à votre compte</p>
+          <p className="text-xs text-slate-500 mt-2">
+            Pas encore de compte ?{' '}
+            <a href="/subscribe" className="text-brand-400 hover:text-brand-300 transition-colors">
+              S&apos;inscrire
+            </a>
+          </p>
         </div>
 
         {/* Carte */}
@@ -154,16 +161,25 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="label">Mot de passe</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="input"
-                required
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input pr-10"
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {erreur && (

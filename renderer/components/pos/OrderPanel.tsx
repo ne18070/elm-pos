@@ -1,16 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store, User, Search } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { getProducts } from '@services/supabase/products';
+import { getClients, type Client } from '@services/supabase/clients';
 import { CouponPicker } from './CouponPicker';
 import { HoldModal } from './HoldModal';
 import { WholesaleSelector } from './WholesaleSelector';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { CartItem, Coupon } from '@pos-types';
+
+export interface SelectedClient {
+  id: string;
+  name: string;
+  phone?: string | null;
+}
 
 interface OrderPanelProps {
   taxRate: number;
@@ -20,9 +27,11 @@ interface OrderPanelProps {
   onShowHeld: () => void;
   wholesaleCtx?: WholesaleContext | null;
   onWholesaleChange?: (ctx: WholesaleContext | null) => void;
+  selectedClient?: SelectedClient | null;
+  onClientChange?: (client: SelectedClient | null) => void;
 }
 
-export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld, wholesaleCtx, onWholesaleChange }: OrderPanelProps) {
+export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld, wholesaleCtx, onWholesaleChange, selectedClient, onClientChange }: OrderPanelProps) {
   const {
     items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
     updateQuantity, removeItem, resetPriceOverrides,
@@ -31,6 +40,41 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
   } = useCartStore();
   const { warning } = useNotificationStore();
   const [showWholesale, setShowWholesale] = useState(false);
+
+  // ── Sélecteur client ─────────────────────────────────────────────────────────
+  const [clientSearch, setClientSearch]   = useState('');
+  const [clientList, setClientList]       = useState<Client[]>([]);
+  const [showClientDrop, setShowClientDrop] = useState(false);
+  const clientRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (clientRef.current && !clientRef.current.contains(e.target as Node)) {
+        setShowClientDrop(false);
+        setClientSearch('');
+      }
+    }
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, []);
+
+  async function openClientPicker() {
+    if (!showClientDrop) {
+      try {
+        const list = await getClients(businessId);
+        setClientList(list);
+      } catch { /* silencieux */ }
+    }
+    setShowClientDrop((v) => !v);
+    setClientSearch('');
+  }
+
+  const filteredClients = clientSearch.trim()
+    ? clientList.filter((c) =>
+        c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.phone ?? '').includes(clientSearch)
+      )
+    : clientList;
 
   async function handleCouponAdd(c: Coupon) {
     addCoupon(c);
@@ -336,6 +380,79 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
             </div>
           );
         })}
+
+        {/* ── Sélecteur client ── */}
+        <div className="px-4 py-2 border-t border-surface-border" ref={clientRef}>
+          {selectedClient ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-900/20 border border-brand-700">
+              <User className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-brand-300 truncate">{selectedClient.name}</p>
+                {selectedClient.phone && <p className="text-xs text-slate-500">{selectedClient.phone}</p>}
+              </div>
+              <button
+                onClick={() => onClientChange?.(null)}
+                className="text-slate-500 hover:text-white shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={openClientPicker}
+                className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors py-1"
+              >
+                <User className="w-3.5 h-3.5" />
+                Associer un client (optionnel)
+              </button>
+
+              {showClientDrop && (
+                <div className="absolute bottom-full mb-1 left-0 right-0 z-50 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden">
+                  <div className="p-2 border-b border-surface-border">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        autoFocus
+                        className="input pl-8 h-8 text-sm"
+                        placeholder="Rechercher…"
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {filteredClients.length === 0 ? (
+                      <p className="text-xs text-slate-500 text-center py-4">
+                        {clientList.length === 0 ? 'Aucun client enregistré' : 'Aucun résultat'}
+                      </p>
+                    ) : (
+                      filteredClients.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            onClientChange?.({ id: c.id, name: c.name, phone: c.phone });
+                            setShowClientDrop(false);
+                            setClientSearch('');
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-xs font-bold text-brand-400">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm text-white truncate">{c.name}</p>
+                            {c.phone && <p className="text-xs text-slate-500">{c.phone}</p>}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Récapitulatif */}
         <div className="px-4 py-3 border-t border-surface-border space-y-1.5">

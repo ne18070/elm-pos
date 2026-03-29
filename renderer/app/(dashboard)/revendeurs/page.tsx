@@ -296,9 +296,19 @@ export default function RevendeursPage() {
           {/* Détail revendeur sélectionné */}
           <div className="flex-1 overflow-y-auto p-6">
             {!selected ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3 text-center">
                 <Store className="w-12 h-12 opacity-20" />
-                <p>Sélectionnez un revendeur</p>
+                {resellers.length === 0 ? (
+                  <>
+                    <p className="text-white font-medium">Aucun revendeur enregistré</p>
+                    <p className="text-sm max-w-xs">Créez votre premier revendeur pour commencer à gérer ses clients.</p>
+                    <button onClick={() => openResellerPanel(null)} className="btn-primary flex items-center gap-2 mt-2">
+                      <Plus className="w-4 h-4" /> Nouveau revendeur
+                    </button>
+                  </>
+                ) : (
+                  <p>Sélectionnez un revendeur</p>
+                )}
               </div>
             ) : (
               <div className="max-w-2xl space-y-6">

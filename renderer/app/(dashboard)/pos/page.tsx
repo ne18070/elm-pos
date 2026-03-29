@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LayoutGrid, List } from 'lucide-react';
 import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
+import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
 import { OrderPanel } from '@/components/pos/OrderPanel';
 import { PaymentModal } from '@/components/pos/PaymentModal';
@@ -28,6 +29,7 @@ export default function PosPage() {
   const [view, setView]                          = useState<ViewMode>('list');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
   const [wholesaleCtx, setWholesaleCtx]          = useState<WholesaleContext | null>(null);
+  const [selectedClient, setSelectedClient]      = useState<SelectedClient | null>(null);
 
   const addItem = useCartStore((s) => s.addItem);
   const { business } = useAuthStore();
@@ -141,6 +143,8 @@ export default function PosPage() {
             onShowHeld={() => setHeldDrawerOpen(true)}
             wholesaleCtx={wholesaleCtx}
             onWholesaleChange={setWholesaleCtx}
+            selectedClient={selectedClient}
+            onClientChange={setSelectedClient}
           />
         </div>
       </div>
@@ -159,9 +163,10 @@ export default function PosPage() {
           taxRate={business?.tax_rate ?? 0}
           currency={business?.currency ?? 'XOF'}
           onClose={() => setPaymentOpen(false)}
-          onSuccess={() => setPaymentOpen(false)}
+          onSuccess={() => { setPaymentOpen(false); setSelectedClient(null); }}
           onPaymentConfirm={sendPaymentConfirm}
           wholesaleCtx={wholesaleCtx}
+          prefilledCustomer={selectedClient}
         />
       )}
     </div>

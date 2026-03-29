@@ -38,6 +38,7 @@ interface PaymentModalProps {
   onSuccess: () => void;
   onPaymentConfirm?: (amountPaid: number, change: number, total: number) => void;
   wholesaleCtx?: WholesaleContext | null;
+  prefilledCustomer?: { name: string; phone?: string | null } | null;
 }
 
 type Step = 'methode' | 'montant' | 'partiel' | 'attente' | 'succes';
@@ -47,7 +48,7 @@ const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', '
 
 const BC_CHANNEL = 'elm-pos-display';
 
-export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx }: PaymentModalProps) {
+export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx, prefilledCustomer }: PaymentModalProps) {
   const [step, setStep]               = useState<Step>('methode');
   const [methode, setMethode]         = useState<PaymentMethod>('cash');
   const [montantRecu, setMontantRecu] = useState('');
@@ -64,9 +65,9 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
   const [acompteConfirme, setAcompteConfirme] = useState(0);
   const [totalConfirme, setTotalConfirme]     = useState(0);
 
-  // Informations client (acompte)
-  const [customerName, setCustomerName]         = useState('');
-  const [customerPhone, setCustomerPhone]       = useState('');
+  // Informations client (acompte) — pré-rempli si un client est sélectionné dans le panier
+  const [customerName, setCustomerName]         = useState(prefilledCustomer?.name ?? '');
+  const [customerPhone, setCustomerPhone]       = useState(prefilledCustomer?.phone ?? '');
   const [customerSuggestions, setCustomerSuggestions] = useState<SavedCustomer[]>([]);
   const [showSuggestions, setShowSuggestions]         = useState(false);
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
@@ -153,7 +154,10 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
         tax_rate:       taxRate,
         coupons:        cart.coupons,
         notes:          cart.notes,
+        customer_name:  customerName.trim() || undefined,
+        customer_phone: customerPhone.trim() || undefined,
       });
+      if (customerName.trim()) saveCustomer(customerName, customerPhone);
       setOrdreId(order.id);
       setOrdre(order);
       printReceipt({
