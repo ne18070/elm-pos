@@ -1,5 +1,5 @@
-import { toUserError } from '@/lib/user-error';
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, TrendingDown, Trash2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
