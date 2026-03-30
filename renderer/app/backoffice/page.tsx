@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
-  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight,
+  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight, BarChart2,
 } from 'lucide-react';
+import { MonitoringTab } from './components/MonitoringTab';
 import {
   getAllSubscriptions, activateSubscription,
   getPlans, getPaymentSettings, upsertPaymentSettings, upsertPlan,
@@ -14,7 +15,7 @@ import {
   type SubscriptionRequest, type PublicSubscriptionRequest,
 } from '@services/supabase/subscriptions';
 
-type Tab = 'demandes' | 'abonnements' | 'plans' | 'paiement';
+type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement';
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   active:  { label: 'Actif',   color: 'text-green-400 bg-green-900/20 border-green-800',  icon: CheckCircle },
@@ -796,7 +797,7 @@ function PaymentTab() {
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function BackofficePage() {
-  const [tab, setTab]     = useState<Tab>('demandes');
+  const [tab, setTab]     = useState<Tab>('monitoring');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -813,23 +814,25 @@ export default function BackofficePage() {
     });
   }, []);
 
-  const TABS: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'demandes',    label: 'Demandes',           badge: pendingCount },
-    { id: 'abonnements', label: 'Abonnements'                             },
-    { id: 'plans',       label: 'Plans & tarifs'                          },
-    { id: 'paiement',    label: 'Paramètres paiement'                     },
+  const TABS: { id: Tab; label: string; badge?: number; icon?: typeof BarChart2 }[] = [
+    { id: 'monitoring',  label: 'Monitoring',          icon: BarChart2                },
+    { id: 'demandes',    label: 'Demandes',            badge: pendingCount            },
+    { id: 'abonnements', label: 'Abonnements'                                         },
+    { id: 'plans',       label: 'Plans & tarifs'                                      },
+    { id: 'paiement',    label: 'Paramètres paiement'                                 },
   ];
 
   return (
     <div className="p-6 overflow-y-auto" style={{ height: 'calc(100vh - 57px)' }}>
       <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit mb-6 flex-wrap">
-        {TABS.map(({ id, label, badge }) => (
+        {TABS.map(({ id, label, badge, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all
+            className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all
               ${tab === id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
           >
+            {Icon && <Icon className="w-3.5 h-3.5" />}
             {label}
             {badge != null && badge > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -840,6 +843,7 @@ export default function BackofficePage() {
         ))}
       </div>
 
+      {tab === 'monitoring'  && <MonitoringTab />}
       {tab === 'demandes'    && <RequestsTab plans={plans} />}
       {tab === 'abonnements' && <SubscriptionsTab plans={plans} />}
       {tab === 'plans'       && <PlansTab />}
