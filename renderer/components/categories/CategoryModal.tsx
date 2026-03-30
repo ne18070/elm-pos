@@ -1,5 +1,5 @@
-import { toUserError } from '@/lib/user-error';
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useState } from 'react';
 import { Loader2, Wand2 } from 'lucide-react';

@@ -1,5 +1,5 @@
-import { toUserError } from '@/lib/user-error';
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Package, TrendingUp, Search, Filter, AlertTriangle } from 'lucide-react';

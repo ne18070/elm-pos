@@ -1,5 +1,5 @@
-import { toUserError } from '@/lib/user-error';
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Truck, Clock, CheckCircle, Package } from 'lucide-react';

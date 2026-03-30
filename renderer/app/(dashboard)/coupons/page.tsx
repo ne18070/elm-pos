@@ -1,5 +1,5 @@
-import { toUserError } from '@/lib/user-error';
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useState } from 'react';
 import { Plus, Tag, Trash2, Pencil, Search, Percent, DollarSign, Gift } from 'lucide-react';

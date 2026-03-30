@@ -1,5 +1,5 @@
-import { toUserError } from '@/lib/user-error';
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
 import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle } from 'lucide-react';
