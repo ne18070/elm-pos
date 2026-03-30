@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -94,7 +95,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       await printReceipt({ order, business, cashier_name: user.full_name });
       success("Reçu envoyé à l'imprimante");
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 
@@ -115,7 +116,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       onRefresh();
       onClose();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 
@@ -161,7 +162,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       onRefresh();
       onClose();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setCompleting(false);
     }

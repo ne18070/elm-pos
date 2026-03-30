@@ -2,15 +2,17 @@ import { supabaseAdmin } from './admin';
 import { getAllSubscriptions, type SubscriptionRow } from './subscriptions';
 
 export interface BusinessMonitorRow extends SubscriptionRow {
-  orders_30d:    number;
-  last_order_at: string | null;
-  members_count: number;
+  orders_30d:     number;
+  last_order_at:  string | null;
+  members_count:  number;
+  products_count: number;
+  orders_total:   number;
 }
 
 export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [subs, ordersRaw, membersRaw] = await Promise.all([
+  const [subs, ordersRaw, membersRaw, productsRaw, ordersTotalRaw] = await Promise.all([
     getAllSubscriptions(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabaseAdmin as any)
@@ -20,6 +22,15 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabaseAdmin as any)
       .from('business_members')
+      .select('business_id'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabaseAdmin as any)
+      .from('products')
+      .select('business_id')
+      .eq('is_active', true),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabaseAdmin as any)
+      .from('orders')
       .select('business_id'),
   ]);
 
@@ -37,10 +48,24 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
     membersByBiz.set(row.business_id, (membersByBiz.get(row.business_id) ?? 0) + 1);
   }
 
+  // Aggregate products per business
+  const productsByBiz = new Map<string, number>();
+  for (const row of (productsRaw.data ?? [])) {
+    productsByBiz.set(row.business_id, (productsByBiz.get(row.business_id) ?? 0) + 1);
+  }
+
+  // Aggregate total orders per business (all time)
+  const ordersTotalByBiz = new Map<string, number>();
+  for (const row of (ordersTotalRaw.data ?? [])) {
+    ordersTotalByBiz.set(row.business_id, (ordersTotalByBiz.get(row.business_id) ?? 0) + 1);
+  }
+
   return subs.map((sub) => ({
     ...sub,
-    orders_30d:    ordersByBiz.get(sub.business_id)?.count ?? 0,
-    last_order_at: ordersByBiz.get(sub.business_id)?.last  ?? null,
-    members_count: membersByBiz.get(sub.business_id) ?? 0,
+    orders_30d:     ordersByBiz.get(sub.business_id)?.count  ?? 0,
+    last_order_at:  ordersByBiz.get(sub.business_id)?.last   ?? null,
+    members_count:  membersByBiz.get(sub.business_id)        ?? 0,
+    products_count: productsByBiz.get(sub.business_id)       ?? 0,
+    orders_total:   ordersTotalByBiz.get(sub.business_id)    ?? 0,
   }));
 }

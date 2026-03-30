@@ -48,11 +48,29 @@ export async function printReceipt(
   return api.hardware.printReceipt({ ...(data as object), printerConfig }) as Promise<{ success: boolean; error?: string }>;
 }
 
+async function testPrinterConnectionWeb(
+  ip: string,
+): Promise<{ connected: boolean; latency?: number; error?: string }> {
+  // En mode web, les sockets TCP bruts ne sont pas accessibles.
+  // On tente un fetch HTTP vers l'interface web de l'imprimante (port 80).
+  const t0 = Date.now();
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    await fetch(`http://${ip}/`, { method: 'HEAD', signal: ctrl.signal, mode: 'no-cors' });
+    clearTimeout(timer);
+    return { connected: true, latency: Date.now() - t0 };
+  } catch (e: unknown) {
+    const msg = e instanceof Error && e.name === 'AbortError' ? 'Aucune réponse après 3 secondes' : 'Adresse introuvable sur le réseau';
+    return { connected: false, error: msg };
+  }
+}
+
 export async function testPrinterConnection(
   ip: string,
   port: number
 ): Promise<{ connected: boolean; latency?: number; error?: string }> {
-  if (!api) return { connected: false, error: 'Non disponible hors Electron' };
+  if (!api) return testPrinterConnectionWeb(ip);
   const result = await (api.hardware as any).testPrinterConnection(ip, port) as { success: boolean; data?: { connected: boolean; latency?: number; error?: string } };
   return result.data ?? { connected: false };
 }

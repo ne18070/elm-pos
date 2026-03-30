@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState } from 'react';
@@ -57,7 +58,7 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
       // Rediriger vers l'écran de configuration au premier lancement
       router.push('/configure');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSaving(false);
     }

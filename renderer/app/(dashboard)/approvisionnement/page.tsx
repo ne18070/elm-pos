@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -28,7 +29,7 @@ export default function ApprovisionnementPage() {
       const data = await getStockEntries(business.id);
       setEntries(data);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       if (!silent) setLoading(false);
     }

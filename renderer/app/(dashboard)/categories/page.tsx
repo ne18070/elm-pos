@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState } from 'react';
@@ -24,7 +25,7 @@ export default function CategoriesPage() {
       success(`"${cat.name}" supprimée`);
       refetch();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 

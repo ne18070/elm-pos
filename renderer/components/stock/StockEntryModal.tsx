@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -86,7 +87,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
       success(`+${totalQty} ${unit} ajouté${totalQty > 1 ? 's' : ''} pour ${selectedProduct.name}`);
       onSuccess();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSaving(false);
     }

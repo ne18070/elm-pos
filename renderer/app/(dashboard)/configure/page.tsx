@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState } from 'react';
@@ -149,7 +150,7 @@ export default function ConfigurePage() {
       success('Configuration enregistrée');
       router.push('/pos');
     } catch (e) {
-      notifError(String(e));
+      notifError(toUserError(e));
     } finally {
       setSaving(false);
     }

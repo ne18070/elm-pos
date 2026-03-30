@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -54,7 +55,7 @@ export default function ClientsPage() {
     setLoading(true);
     try {
       setClients(await getClients(business.id));
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }
 
@@ -80,7 +81,7 @@ export default function ClientsPage() {
         success('Client ajouté');
       }
       setPanel(null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -90,7 +91,7 @@ export default function ClientsPage() {
       await deleteClient(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
       success('Client supprimé');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   const filtered = clients.filter((c) =>

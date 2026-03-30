@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -72,7 +73,7 @@ export default function DepensesPage() {
       );
       setEntries(expenses);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,7 @@ export default function DepensesPage() {
       setShowForm(false);
       await load();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSaving(false);
     }
@@ -124,7 +125,7 @@ export default function DepensesPage() {
       setDeletingId(null);
       success('Dépense supprimée');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 

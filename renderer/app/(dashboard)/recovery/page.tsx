@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -65,7 +66,7 @@ export default function RecoveryPage() {
       const data = await getSnapshots(business.id);
       setSnapshots(data);
     } catch (e) {
-      notifError(String(e));
+      notifError(toUserError(e));
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,7 @@ export default function RecoveryPage() {
       setShowCreateForm(false);
       load();
     } catch (e) {
-      notifError(String(e));
+      notifError(toUserError(e));
     } finally {
       setCreating(false);
     }
@@ -120,7 +121,7 @@ export default function RecoveryPage() {
       success('Restauration effectuée');
       load();
     } catch (e) {
-      notifError(String(e));
+      notifError(toUserError(e));
       setRestoring(null);
     } finally {
       setRestoreLoading(false);
@@ -135,7 +136,7 @@ export default function RecoveryPage() {
       success('Snapshot supprimé');
       load();
     } catch (e) {
-      notifError(String(e));
+      notifError(toUserError(e));
     }
   }
 

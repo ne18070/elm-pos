@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState } from 'react';
@@ -104,7 +105,7 @@ export default function SettingsPage() {
       if (business) setBusiness({ ...business, logo_url: url });
       success('Logo enregistré');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setUploadingLogo(false);
     }
@@ -138,7 +139,7 @@ export default function SettingsPage() {
       });
       success('Paramètres enregistrés');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSaving(false);
     }
@@ -166,7 +167,7 @@ export default function SettingsPage() {
       if (error) throw new Error(error.message);
       success('Unités enregistrées');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSavingUnits(false);
     }
@@ -178,7 +179,7 @@ export default function SettingsPage() {
       await flushSyncQueue();
       success('Synchronisation effectuée');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSyncing2(false);
     }
@@ -492,8 +493,8 @@ export default function SettingsPage() {
           {/* USB */}
           {printerConfig.type === 'usb' && (
             <p className="text-sm text-slate-400">
-              L&apos;imprimante est détectée automatiquement via USB.
-              Assurez-vous que les pilotes ESC/POS sont installés.
+              L&apos;imprimante est détectée automatiquement.
+              Vérifiez qu&apos;elle est bien branchée et allumée.
             </p>
           )}
 
@@ -536,19 +537,26 @@ export default function SettingsPage() {
               </button>
 
               {printerTestResult && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl border text-sm ${
+                <div className={`flex items-start gap-2 p-3 rounded-xl border text-sm ${
                   printerTestResult.connected
                     ? 'bg-green-900/20 border-green-800 text-green-400'
                     : 'bg-red-900/20 border-red-800 text-red-400'
                 }`}>
                   {printerTestResult.connected
-                    ? <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    : <XCircle className="w-4 h-4 shrink-0" />}
-                  <span>
-                    {printerTestResult.connected
-                      ? `Imprimante accessible — latence ${printerTestResult.latency}ms`
-                      : `Connexion impossible : ${printerTestResult.error}`}
-                  </span>
+                    ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                    : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
+                  <div>
+                    <p>
+                      {printerTestResult.connected
+                        ? `Imprimante joignable — latence ${printerTestResult.latency} ms`
+                        : `Impossible de joindre l'imprimante${printerTestResult.error ? ` (${printerTestResult.error})` : ''}`}
+                    </p>
+                    {!isElectron && (
+                      <p className="text-xs opacity-70 mt-0.5">
+                        L&apos;impression directe est disponible uniquement dans l&apos;application de bureau.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -572,7 +580,7 @@ export default function SettingsPage() {
 
           <p className="text-sm text-slate-400">
             Le tiroir-caisse s&apos;ouvre automatiquement via l&apos;imprimante thermique
-            (commande ESC/POS) après chaque paiement en espèces.
+            après chaque paiement en espèces.
           </p>
 
           {/* Toggle activé/désactivé */}

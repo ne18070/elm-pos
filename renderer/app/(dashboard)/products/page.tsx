@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState } from 'react';
@@ -65,7 +66,7 @@ export default function ProductsPage() {
       success(`"${product.name}" supprimé`);
       refetch();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 

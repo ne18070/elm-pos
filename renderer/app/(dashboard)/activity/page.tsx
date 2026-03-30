@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -131,7 +132,7 @@ export default function ActivityPage() {
       if (error) throw new Error(error.message);
       setLogs(data as ActivityLog[]);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { RefreshCw, Loader2, AlertTriangle, TrendingUp, Users, Store, Clock } from 'lucide-react';
+import { RefreshCw, Loader2, AlertTriangle, TrendingUp, Users, Store, Clock, Package, ShoppingCart } from 'lucide-react';
 import { getBusinessMonitoring, type BusinessMonitorRow } from '@services/supabase/monitoring';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -78,7 +78,9 @@ export function MonitoringTab() {
     const d = daysUntil(expiry);
     return d !== null && d >= 0 && d <= 7;
   }).length;
-  const orders30d = rows.reduce((s, r) => s + r.orders_30d, 0);
+  const orders30d      = rows.reduce((s, r) => s + r.orders_30d, 0);
+  const totalProducts  = rows.reduce((s, r) => s + r.products_count, 0);
+  const totalOrders    = rows.reduce((s, r) => s + r.orders_total, 0);
 
   // ── Filtered rows ─────────────────────────────────────────────────────────
 
@@ -114,13 +116,17 @@ export function MonitoringTab() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard icon={Store}         label="Total"              value={rows.length}  color="text-brand-400" />
-        <StatCard icon={Users}         label="Actifs"             value={active}       color="text-green-400" />
-        <StatCard icon={Clock}         label="Essai"              value={trial}        color="text-amber-400" />
-        <StatCard icon={AlertTriangle} label="Expirés"            value={expired}      color="text-red-400" />
-        <StatCard icon={TrendingUp}    label="Commandes (30j)"    value={orders30d}    color="text-purple-400"
-          sub={`↗ ${expiring} expirent bientôt`} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard icon={Store}         label="Total"           value={rows.length}  color="text-brand-400" />
+        <StatCard icon={Users}         label="Actifs"          value={active}       color="text-green-400" />
+        <StatCard icon={Clock}         label="Essai"           value={trial}        color="text-amber-400" />
+        <StatCard icon={AlertTriangle} label="Expirés"         value={expired}      color="text-red-400"
+          sub={expiring > 0 ? `⚠ ${expiring} expirent bientôt` : undefined} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <StatCard icon={TrendingUp}   label="Commandes (30j)"  value={orders30d}     color="text-purple-400" />
+        <StatCard icon={ShoppingCart} label="Commandes (total)" value={totalOrders}  color="text-cyan-400" />
+        <StatCard icon={Package}      label="Produits actifs"   value={totalProducts} color="text-orange-400" />
       </div>
 
       {/* Filters + search */}
@@ -161,6 +167,8 @@ export function MonitoringTab() {
                   <th className="text-left px-4 py-3 font-medium">Statut</th>
                   <th className="text-left px-4 py-3 font-medium">Plan</th>
                   <th className="text-left px-4 py-3 font-medium">Expiration</th>
+                  <th className="text-right px-4 py-3 font-medium">Produits</th>
+                  <th className="text-right px-4 py-3 font-medium">Cmd total</th>
                   <th className="text-right px-4 py-3 font-medium">Cmd 30j</th>
                   <th className="text-left px-4 py-3 font-medium">Dernière cmd</th>
                   <th className="text-right px-4 py-3 font-medium">Membres</th>
@@ -197,6 +205,16 @@ export function MonitoringTab() {
                             <span className="ml-1 text-xs">({days}j)</span>
                           )}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-400">
+                        {row.products_count > 0
+                          ? <span className="text-orange-400">{row.products_count}</span>
+                          : <span className="text-slate-600">0</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-400">
+                        {row.orders_total > 0
+                          ? <span className="text-cyan-400">{row.orders_total}</span>
+                          : <span className="text-slate-600">0</span>}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-300 font-medium">
                         {row.orders_30d > 0

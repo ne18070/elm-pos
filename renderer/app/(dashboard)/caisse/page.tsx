@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -336,7 +337,7 @@ export default function CaissePage() {
       });
       setHistory((h) => [closed, ...h.filter((s) => s.id !== closed.id)]);
     } catch (e) {
-      notifError(String(e));
+      notifError(toUserError(e));
     }
   }
 

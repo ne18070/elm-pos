@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -109,7 +110,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
       );
       setApproveForm(null);
       await load();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { alert(toUserError(e)); }
     finally { setProcessing(null); }
   }
 
@@ -130,7 +131,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
       );
       setApprovePublicForm(null);
       await load();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { alert(toUserError(e)); }
     finally { setProcessing(null); }
   }
 
@@ -146,7 +147,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
       setRejectId(null);
       setRejectNote('');
       await load();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { alert(toUserError(e)); }
     finally { setProcessing(null); }
   }
 
@@ -521,7 +522,7 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
       await activateSubscription(form.businessId, form.planId, totalDays, form.note || undefined);
       setForm(null);
       await load();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { alert(toUserError(e)); }
     finally { setActivating(null); }
   }
 
@@ -666,7 +667,7 @@ function PlansTab() {
     if (!editing) return;
     setSaving(true);
     try { await upsertPlan(editing); setEditing(null); await load(); }
-    catch (e) { alert(String(e)); }
+    catch (e) { alert(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -752,14 +753,14 @@ function PaymentTab() {
   async function handleUpload(type: 'wave' | 'om', file: File) {
     setUploading(type);
     try { const url = await uploadQrCode(type, file); setForm((f) => ({ ...f, [`${type}_qr_url`]: url })); }
-    catch (e) { alert(String(e)); }
+    catch (e) { alert(toUserError(e)); }
     finally { setUploading(null); }
   }
 
   async function handleSave() {
     setSaving(true);
     try { await upsertPaymentSettings(form); setSettings({ ...form }); }
-    catch (e) { alert(String(e)); }
+    catch (e) { alert(toUserError(e)); }
     finally { setSaving(false); }
   }
 

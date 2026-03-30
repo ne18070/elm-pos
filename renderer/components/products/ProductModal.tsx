@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useRef } from 'react';
@@ -89,7 +90,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
       const url = await uploadProductImage(businessId, file);
       update('image_url', url);
     } catch (err) {
-      notifError("Erreur lors de l'upload : " + String(err));
+      notifError(toUserError(err));
     } finally {
       setUploadingImage(false);
     }
@@ -139,7 +140,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
       }
       onSaved();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setLoading(false);
     }

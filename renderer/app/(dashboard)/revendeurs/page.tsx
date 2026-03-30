@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -62,14 +63,14 @@ export default function RevendeursPage() {
       setResellers(r);
       setOffers(o);
       if (r.length > 0 && !selected) setSelected(r[0]);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }
 
   async function loadClients(resellerId: string) {
     try {
       setClients(await getResellerClients(resellerId));
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   async function loadProducts() {
@@ -109,7 +110,7 @@ export default function RevendeursPage() {
         success('Revendeur créé');
       }
       setPanel(null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -120,7 +121,7 @@ export default function RevendeursPage() {
       setResellers((prev) => prev.filter((r) => r.id !== id));
       if (selected?.id === id) setSelected(resellers.find((r) => r.id !== id) ?? null);
       success('Revendeur supprimé');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   // ── CRUD Client ────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ export default function RevendeursPage() {
         success('Client ajouté');
       }
       setPanel(null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -154,7 +155,7 @@ export default function RevendeursPage() {
       await deleteResellerClient(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
       success('Client supprimé');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   // ── CRUD Offre ─────────────────────────────────────────────────────────────
@@ -179,7 +180,7 @@ export default function RevendeursPage() {
       setOffers((prev) => [created, ...prev]);
       setPanel(null);
       success('Offre créée');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -187,7 +188,7 @@ export default function RevendeursPage() {
     try {
       const updated = await updateResellerOffer(offer.id, { is_active: !offer.is_active });
       setOffers((prev) => prev.map((o) => o.id === updated.id ? { ...o, is_active: updated.is_active } : o));
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   async function removeOffer(id: string) {
@@ -196,7 +197,7 @@ export default function RevendeursPage() {
       await deleteResellerOffer(id);
       setOffers((prev) => prev.filter((o) => o.id !== id));
       success('Offre supprimée');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   const filteredResellers = resellers.filter((r) =>

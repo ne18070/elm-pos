@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -128,13 +129,13 @@ export default function HotelPage() {
       setGuests(g);
       setReservations(res);
       setSessionId(sess?.id ?? null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }
 
   async function loadServices(reservationId: string) {
     try { setServices(await getServices(reservationId)); }
-    catch (e) { notifError(String(e)); }
+    catch (e) { notifError(toUserError(e)); }
   }
 
   // ─── CRUD Chambre ──────────────────────────────────────────────────────────
@@ -170,7 +171,7 @@ export default function HotelPage() {
         success('Chambre créée');
       }
       setPanel(null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -180,7 +181,7 @@ export default function HotelPage() {
       await deleteRoom(id);
       setRooms((p) => p.filter((r) => r.id !== id));
       success('Chambre supprimée');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   function toggleAmenity(amenity: string) {
@@ -223,7 +224,7 @@ export default function HotelPage() {
         success('Client ajouté');
       }
       setPanel(null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -233,7 +234,7 @@ export default function HotelPage() {
       await deleteGuest(id);
       setGuests((p) => p.filter((g) => g.id !== id));
       success('Client supprimé');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   // ─── CRUD Réservation ─────────────────────────────────────────────────────
@@ -266,7 +267,7 @@ export default function HotelPage() {
       }
       success('Réservation créée');
       setPanel(null);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); setConflictWarning(null); }
   }
 
@@ -285,7 +286,7 @@ export default function HotelPage() {
         setConflictWarning({ msg, onProceed: _doCreateReservation });
         return;
       }
-    } catch (e) { notifError(String(e)); setSaving(false); return; }
+    } catch (e) { notifError(toUserError(e)); setSaving(false); return; }
     await _doCreateReservation();
   }
 
@@ -297,7 +298,7 @@ export default function HotelPage() {
       if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: updated });
       if (business) logAction({ business_id: business.id, action: 'hotel.reservation.cancelled', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id } });
       success('Réservation annulée');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   async function handleCheckIn(res: HotelReservation) {
@@ -308,7 +309,7 @@ export default function HotelPage() {
       if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: updated });
       if (business) logAction({ business_id: business.id, action: 'hotel.checkin', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, check_in: res.check_in } });
       success('Check-in effectué');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   async function handleCheckOut(res: HotelReservation) {
@@ -320,7 +321,7 @@ export default function HotelPage() {
       setPanel(null);
       if (business) logAction({ business_id: business.id, action: 'hotel.checkout', entity_type: 'reservation', entity_id: res.id, metadata: { room_id: res.room_id, guest_id: res.guest_id, total: updated.total, additional_payment: additional } });
       success('Check-out effectué — chambre en nettoyage');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   async function handleAddPayment(res: HotelReservation) {
@@ -337,7 +338,7 @@ export default function HotelPage() {
       if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: newRes });
       setPayForm({ amount: '', method: 'cash' });
       success(`Paiement de ${fmtMoney(amount, currency)} enregistré`);
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSavingPay(false); }
   }
 
@@ -361,7 +362,7 @@ export default function HotelPage() {
       }
       setSvcForm(emptySvcForm());
       success('Prestation ajoutée');
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -379,7 +380,7 @@ export default function HotelPage() {
         setReservations((p) => p.map((r) => r.id === reservationId ? newRes : r));
         if (panel?.type === 'detail') setPanel({ type: 'detail', reservation: newRes });
       }
-    } catch (e) { notifError(String(e)); }
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   function openDetail(res: HotelReservation) {
@@ -503,7 +504,7 @@ export default function HotelPage() {
           confirmedResForRoom={confirmedResForRoom}
           onMarkAvailable={(roomId) => updateRoom(roomId, { status: 'available' })
             .then((r) => setRooms((p) => p.map((x) => x.id === r.id ? r : x)))
-            .catch((e) => notifError(String(e)))}
+            .catch((e) => notifError(toUserError(e)))}
         />
       )}
 

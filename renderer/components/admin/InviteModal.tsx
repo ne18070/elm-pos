@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState } from 'react';
@@ -65,7 +66,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
       setDone(true);
       success(`Compte créé pour ${form.email}`);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setLoading(false);
     }

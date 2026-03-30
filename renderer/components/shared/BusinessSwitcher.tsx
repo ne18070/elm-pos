@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -80,7 +81,7 @@ export function BusinessSwitcher() {
       success(`Basculé vers ${biz?.name ?? '…'}`);
       router.replace('/pos');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSwitching(null);
     }

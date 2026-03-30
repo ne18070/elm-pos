@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -99,7 +100,7 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
       }
       onSaved();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setLoading(false);
     }

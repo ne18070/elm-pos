@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -76,7 +77,7 @@ export default function AdminPage() {
       setUser(updated);
       success('Profil mis à jour');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSavingProfile(false);
     }
@@ -92,7 +93,7 @@ export default function AdminPage() {
       setUser(updated);
       success('Avatar mis à jour');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setUploadingAvatar(false);
     }
@@ -117,7 +118,7 @@ export default function AdminPage() {
       setPwForm({ newPw: '', confirmPw: '' });
       success('Mot de passe mis à jour');
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSavingPw(false);
     }
@@ -152,7 +153,7 @@ export default function AdminPage() {
       success(`Mot de passe de ${resetTarget.full_name} réinitialisé`);
       setResetTarget(null);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setSavingReset(false);
     }
@@ -168,7 +169,7 @@ export default function AdminPage() {
       success(`${member.full_name} ${member.is_blocked ? 'débloqué' : 'bloqué'}`);
       refetch();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       setBlockingId(null);
     }
@@ -182,7 +183,7 @@ export default function AdminPage() {
       success(`Rôle de ${member.full_name} mis à jour`);
       refetch();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 
@@ -193,7 +194,7 @@ export default function AdminPage() {
       success(`${member.full_name} retiré de l'équipe`);
       refetch();
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 

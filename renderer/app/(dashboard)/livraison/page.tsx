@@ -1,3 +1,4 @@
+import { toUserError } from '@/lib/user-error';
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -37,7 +38,7 @@ export default function LivraisonPage() {
       const data = await getOrdersForDelivery(business.id);
       setOrders(data);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -80,7 +81,7 @@ export default function LivraisonPage() {
       setSelected(null);
       fetchOrders(true);
     } catch (err) {
-      notifError(String(err));
+      notifError(toUserError(err));
     }
   }
 
