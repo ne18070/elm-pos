@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User, Printer } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer, MessageCircle } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
@@ -164,7 +164,14 @@ export default function OrdersPage() {
                         ${partial ? 'border-l-2 border-l-amber-600' : ''}`}
                     >
                       <td className="px-4 py-3 font-mono text-xs text-slate-300 whitespace-nowrap">
-                        #{order.id.slice(0, 8).toUpperCase()}
+                        <div className="flex items-center gap-1.5">
+                          {(order as { source?: string }).source === 'whatsapp' && (
+                            <span title="Commande WhatsApp">
+                              <MessageCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                            </span>
+                          )}
+                          #{order.id.slice(0, 8).toUpperCase()}
+                        </div>
                       </td>
 
                       <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">
@@ -184,7 +191,10 @@ export default function OrdersPage() {
                             {order.customer_phone && (
                               <p className="text-xs text-amber-400 pl-5 truncate">{order.customer_phone}</p>
                             )}
-                            <p className="text-xs text-slate-500 pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
+                            {(order as { source?: string }).source === 'whatsapp'
+                              ? <p className="text-xs text-green-400 pl-5 flex items-center gap-1"><MessageCircle className="w-3 h-3" />WhatsApp</p>
+                              : <p className="text-xs text-slate-500 pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
+                            }
                           </div>
                         ) : (
                           <p className="text-sm text-slate-300 truncate">{order.cashier?.full_name ?? '—'}</p>

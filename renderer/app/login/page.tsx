@@ -200,7 +200,10 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          Elm POS — Caisse multi-établissements
+          Elm POS — Caisse multi-établissements &nbsp;·&nbsp;{' '}
+          <a href="/privacy" className="hover:text-slate-400 transition-colors">
+            Politique de confidentialité
+          </a>
         </p>
       </div>
     </div>

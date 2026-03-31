@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -41,6 +41,7 @@ const NAV_ITEMS = [
   { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,      types: null },
   { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,  types: null },
   { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'], types: null },
+  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,  types: null },
   { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,           types: null },
 ] as const;
 

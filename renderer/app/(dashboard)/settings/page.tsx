@@ -1,9 +1,9 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
@@ -11,7 +11,8 @@ import { useNotificationStore } from '@/store/notifications';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { flushSyncQueue } from '@/lib/ipc';
 import { supabase } from '@/lib/supabase';
-import { canManageSettings } from '@/lib/permissions';
+import { canManageSettings, hasRole } from '@/lib/permissions';
+import { getWhatsAppConfig, upsertWhatsAppConfig, regenerateVerifyToken, type WhatsAppConfig, type WhatsAppConfigForm } from '@services/supabase/whatsapp';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
@@ -42,6 +43,22 @@ export default function SettingsPage() {
   const [savingUnits, setSavingUnits] = useState(false);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  // WhatsApp Business
+  const isAdmin = hasRole(user?.role, 'admin');
+  const [waConfig, setWaConfig]       = useState<WhatsAppConfig | null>(null);
+  const [waLoaded, setWaLoaded]       = useState(false);
+  const [waForm, setWaForm]           = useState<WhatsAppConfigForm>({
+    phone_number_id: '',
+    access_token:    '',
+    display_phone:   '',
+    is_active:       false,
+    catalog_enabled: false,
+    welcome_message: 'Bienvenue ! Tapez *menu* pour voir notre catalogue 🛍️',
+  });
+  const [showToken, setShowToken]       = useState(false);
+  const [savingWa, setSavingWa]         = useState(false);
+  const [regeneratingToken, setRegeneratingToken] = useState(false);
 
   // Config tiroir-caisse
   const [drawerConfig, setDrawerConfig] = useState<CashDrawerConfig>(() => loadCashDrawerConfig());
@@ -170,6 +187,52 @@ export default function SettingsPage() {
       notifError(toUserError(err));
     } finally {
       setSavingUnits(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!business?.id || !isAdmin || waLoaded) return;
+    getWhatsAppConfig(business.id).then((cfg) => {
+      if (cfg) {
+        setWaConfig(cfg);
+        setWaForm({
+          phone_number_id: cfg.phone_number_id,
+          access_token:    cfg.access_token,
+          display_phone:   cfg.display_phone ?? '',
+          is_active:       cfg.is_active,
+          catalog_enabled: cfg.catalog_enabled,
+          welcome_message: cfg.welcome_message,
+        });
+      }
+      setWaLoaded(true);
+    }).catch(() => setWaLoaded(true));
+  }, [business?.id, isAdmin, waLoaded]);
+
+  async function handleRegenerateVerifyToken() {
+    if (!waConfig?.id) return;
+    setRegeneratingToken(true);
+    try {
+      const newToken = await regenerateVerifyToken(waConfig.id);
+      setWaConfig((prev) => prev ? { ...prev, verify_token: newToken } : prev);
+      success('Nouveau token généré — reconfigurez le webhook dans Meta Dashboard');
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setRegeneratingToken(false);
+    }
+  }
+
+  async function handleSaveWaConfig() {
+    if (!business?.id) return;
+    setSavingWa(true);
+    try {
+      const saved = await upsertWhatsAppConfig(business.id, waForm);
+      setWaConfig(saved);
+      success('Configuration WhatsApp enregistrée');
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setSavingWa(false);
     }
   }
 
@@ -625,6 +688,175 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* WhatsApp Business — admin/owner uniquement */}
+        {isAdmin && (
+          <div className="card p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-green-400" />
+              </div>
+              <h2 className="font-semibold text-white">WhatsApp Business</h2>
+            </div>
+
+            {!waLoaded ? (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />Chargement…
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Statut */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
+                  <div>
+                    <p className="text-sm font-medium text-white">Intégration active</p>
+                    <p className="text-xs text-slate-400">Activez pour recevoir et répondre aux messages</p>
+                  </div>
+                  <button
+                    onClick={() => setWaForm((f) => ({ ...f, is_active: !f.is_active }))}
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    {waForm.is_active
+                      ? <ToggleRight className="w-7 h-7 text-green-400" />
+                      : <ToggleLeft className="w-7 h-7" />}
+                  </button>
+                </div>
+
+                {/* Champs */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Phone Number ID <span className="text-slate-500">(Meta Dashboard)</span></label>
+                    <input
+                      type="text"
+                      placeholder="123456789012345"
+                      value={waForm.phone_number_id}
+                      onChange={(e) => setWaForm((f) => ({ ...f, phone_number_id: e.target.value }))}
+                      className="input font-mono text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      Access Token permanent
+                      <span className="text-slate-500 font-normal"> — obtenu depuis Meta Developer Dashboard</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showToken ? 'text' : 'password'}
+                        placeholder="EAAxxxxxxxx…"
+                        value={waForm.access_token}
+                        onChange={(e) => setWaForm((f) => ({ ...f, access_token: e.target.value }))}
+                        className="input font-mono text-sm pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowToken((s) => !s)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Ce token vient de Meta : <span className="text-slate-400">developers.facebook.com → votre App → WhatsApp → Paramètres → Token d&apos;accès permanent</span>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">Numéro affiché <span className="text-slate-500">(ex: +221 77 000 0000)</span></label>
+                    <input
+                      type="tel"
+                      placeholder="+221 77 000 0000"
+                      value={waForm.display_phone ?? ''}
+                      onChange={(e) => setWaForm((f) => ({ ...f, display_phone: e.target.value }))}
+                      className="input"
+                    />
+                  </div>
+                </div>
+
+                {/* Verify token — généré par l'app, à coller dans Meta */}
+                {waConfig?.verify_token && (
+                  <div>
+                    <label className="label">
+                      Verify Token
+                      <span className="text-slate-500 font-normal"> — généré par Elm POS, à coller dans Meta</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={waConfig.verify_token}
+                        className="input font-mono text-sm bg-surface-input flex-1 cursor-default select-all"
+                      />
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(waConfig.verify_token); success('Token copié !'); }}
+                        className="btn-secondary h-10 px-3 shrink-0"
+                        title="Copier"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleRegenerateVerifyToken}
+                        disabled={regeneratingToken}
+                        className="btn-secondary h-10 px-3 shrink-0 text-xs whitespace-nowrap"
+                        title="Régénérer un nouveau token"
+                      >
+                        {regeneratingToken
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : 'Régénérer'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-amber-500/80 mt-1">
+                      ⚠ Régénérer invalide l&apos;ancien token — vous devrez reconfigurer le webhook dans Meta.
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      URL du webhook :{' '}
+                      <span className="font-mono text-slate-400 select-all">
+                        [URL Supabase]/functions/v1/whatsapp-webhook
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Catalogue interactif */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
+                  <div>
+                    <p className="text-sm font-medium text-white">Catalogue interactif</p>
+                    <p className="text-xs text-slate-400">Les clients peuvent commander via un menu WhatsApp cliquable</p>
+                  </div>
+                  <button
+                    onClick={() => setWaForm((f) => ({ ...f, catalog_enabled: !f.catalog_enabled }))}
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    {waForm.catalog_enabled
+                      ? <ToggleRight className="w-7 h-7 text-brand-400" />
+                      : <ToggleLeft className="w-7 h-7" />}
+                  </button>
+                </div>
+
+                {/* Message de bienvenue */}
+                {waForm.catalog_enabled && (
+                  <div>
+                    <label className="label">Message de bienvenue</label>
+                    <textarea
+                      rows={2}
+                      value={waForm.welcome_message}
+                      onChange={(e) => setWaForm((f) => ({ ...f, welcome_message: e.target.value }))}
+                      className="input resize-none text-sm"
+                    />
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSaveWaConfig}
+                  disabled={savingWa || !waForm.phone_number_id || !waForm.access_token}
+                  className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                >
+                  {savingWa ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {savingWa ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Compte utilisateur */}
         <div className="card p-5 space-y-2">

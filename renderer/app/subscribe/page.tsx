@@ -355,6 +355,14 @@ export default function SubscribePage() {
         )}
       </div>
 
+      {/* Pied de page */}
+      <p className="relative text-center text-xs text-slate-600 mt-8">
+        En vous abonnant, vous acceptez notre{' '}
+        <a href="/privacy" className="text-slate-400 hover:text-slate-300 underline underline-offset-2 transition-colors">
+          Politique de confidentialité
+        </a>
+      </p>
+
       {/* Modal QR agrandi */}
       {showQr && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowQr(null)}>
