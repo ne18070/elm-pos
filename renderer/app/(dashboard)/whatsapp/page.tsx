@@ -264,17 +264,17 @@ export default function WhatsAppPage() {
                   <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 space-y-1 ${
                     msg.direction === 'outbound'
                       ? 'bg-green-700 text-white rounded-br-sm'
-                      : 'bg-surface-card text-slate-200 rounded-bl-sm border border-surface-border'
+                      : 'bg-slate-700 text-slate-100 rounded-bl-sm'
                   }`}>
                     {/* Lien commande */}
                     {msg.order_id && (
-                      <div className="flex items-center gap-1 text-xs text-green-200 mb-1">
+                      <div className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 text-white w-fit">
                         <ShoppingCart className="w-3 h-3" />
                         <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
                       </div>
                     )}
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
-                    <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-500'} text-right`}>
+                    <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
                       {format(new Date(msg.created_at), 'HH:mm', { locale: fr })}
                     </p>
                   </div>

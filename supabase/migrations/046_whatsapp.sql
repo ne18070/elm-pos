@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS whatsapp_configs (
   display_phone   TEXT,
   is_active       BOOLEAN NOT NULL DEFAULT false,
   catalog_enabled BOOLEAN NOT NULL DEFAULT false,
-  welcome_message TEXT NOT NULL DEFAULT 'Bienvenue ! Tapez *menu* pour voir notre catalogue 🛍️',
+  welcome_message TEXT NOT NULL DEFAULT 'Bienvenue chez {nom} ! Tapez *menu* pour voir notre catalogue 🛍️',
+  menu_keyword    TEXT NOT NULL DEFAULT 'menu',
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -64,7 +65,11 @@ ALTER TABLE whatsapp_configs  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE whatsapp_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE whatsapp_carts    ENABLE ROW LEVEL SECURITY;
 
--- whatsapp_configs : lecture par managers+, écriture par admin/owner
+-- whatsapp_configs
+DROP POLICY IF EXISTS "wacfg: manager read"  ON whatsapp_configs;
+DROP POLICY IF EXISTS "wacfg: admin write"   ON whatsapp_configs;
+DROP POLICY IF EXISTS "wacfg: service_role"  ON whatsapp_configs;
+
 CREATE POLICY "wacfg: manager read"
   ON whatsapp_configs FOR SELECT
   USING (business_id IN (
@@ -79,7 +84,15 @@ CREATE POLICY "wacfg: admin write"
     WHERE user_id = auth.uid() AND role IN ('owner','admin')
   ));
 
--- whatsapp_messages : lecture et écriture par tous les membres
+CREATE POLICY "wacfg: service_role"
+  ON whatsapp_configs FOR ALL USING (auth.role() = 'service_role');
+
+-- whatsapp_messages
+DROP POLICY IF EXISTS "wamsg: members read"   ON whatsapp_messages;
+DROP POLICY IF EXISTS "wamsg: members insert" ON whatsapp_messages;
+DROP POLICY IF EXISTS "wamsg: members update" ON whatsapp_messages;
+DROP POLICY IF EXISTS "wamsg: service_role"   ON whatsapp_messages;
+
 CREATE POLICY "wamsg: members read"
   ON whatsapp_messages FOR SELECT
   USING (business_id IN (
@@ -98,15 +111,14 @@ CREATE POLICY "wamsg: members update"
     SELECT business_id FROM business_members WHERE user_id = auth.uid()
   ));
 
--- service_role bypass pour l'Edge Function
-CREATE POLICY "wacfg: service_role"
-  ON whatsapp_configs  FOR ALL USING (auth.role() = 'service_role');
-
 CREATE POLICY "wamsg: service_role"
   ON whatsapp_messages FOR ALL USING (auth.role() = 'service_role');
 
+-- whatsapp_carts
+DROP POLICY IF EXISTS "wacart: service_role" ON whatsapp_carts;
+
 CREATE POLICY "wacart: service_role"
-  ON whatsapp_carts    FOR ALL USING (auth.role() = 'service_role');
+  ON whatsapp_carts FOR ALL USING (auth.role() = 'service_role');
 
 -- Trigger updated_at sur whatsapp_configs
 CREATE OR REPLACE FUNCTION update_whatsapp_config_updated_at()

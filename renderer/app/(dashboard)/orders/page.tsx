@@ -37,6 +37,7 @@ function getPaidAmount(order: Order): number {
 
 function isAcompte(order: Order): boolean {
   if (order.status === 'cancelled' || order.status === 'refunded') return false;
+  if ((order as { source?: string }).source === 'whatsapp') return false;
   return getPaidAmount(order) < order.total - 0.01;
 }
 

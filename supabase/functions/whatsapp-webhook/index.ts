@@ -45,6 +45,8 @@ interface WaConfig {
   access_token:    string;
   catalog_enabled: boolean;
   welcome_message: string;
+  menu_keyword:    string;
+  business_name?:  string;
 }
 
 interface CartItem {
@@ -101,10 +103,15 @@ serve(async (req) => {
 
         const { data: config } = await supabase
           .from('whatsapp_configs')
-          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message')
+          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,businesses(name)')
           .eq('phone_number_id', value.metadata?.phone_number_id ?? '')
           .eq('is_active', true)
-          .maybeSingle<WaConfig>();
+          .maybeSingle();
+
+        if (config) {
+          (config as WaConfig).business_name =
+            (config as { businesses?: { name?: string } }).businesses?.name ?? '';
+        }
 
         if (!config) continue;
 
@@ -177,7 +184,7 @@ async function processMessage(
         .eq('from_phone', msg.from)
         .eq('direction', 'inbound');
       if ((count ?? 0) <= 1) {
-        await sendTextMessage(config, msg.from, config.welcome_message);
+        await sendTextMessage(config, msg.from, resolvePlaceholders(config.welcome_message, config));
       }
     }
   }
@@ -206,7 +213,8 @@ async function handleCatalogFlow(
   const step: string = cart?.step ?? 'menu';
 
   // Commandes globales
-  if (['menu', 'annuler', 'cancel', 'restart', '0'].includes(lower)) {
+  const menuKeyword = (config.menu_keyword || 'menu').toLowerCase();
+  if ([menuKeyword, 'annuler', 'cancel', 'restart', '0'].includes(lower)) {
     await resetCart(supabase, config, fromPhone);
     await sendCategoryMenu(supabase, config, fromPhone);
     return;
@@ -481,6 +489,12 @@ async function resetCart(
     context:     {},
     updated_at:  new Date().toISOString(),
   }, { onConflict: 'business_id,from_phone' });
+}
+
+// ─── Placeholders ─────────────────────────────────────────────────────────────
+
+function resolvePlaceholders(template: string, config: WaConfig): string {
+  return template.replace(/\{nom\}/gi, config.business_name ?? '');
 }
 
 // ─── Helpers Meta Cloud API ───────────────────────────────────────────────────

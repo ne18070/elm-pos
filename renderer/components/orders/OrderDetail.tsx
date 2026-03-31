@@ -57,6 +57,7 @@ function getRemainingAmount(order: Order): number {
 
 function isAcompte(order: Order): boolean {
   if (order.status === 'cancelled' || order.status === 'refunded') return false;
+  if ((order as { source?: string }).source === 'whatsapp') return false;
   return getRemainingAmount(order) > 0.01;
 }
 
@@ -70,11 +71,12 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [completing, setCompleting]               = useState(false);
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
-  const fmt       = (n: number) => formatCurrency(n, currency);
-  const isAdmin   = canCancelOrders(user?.role);
-  const partial   = isAcompte(order);
-  const paidAmt   = getPaidAmount(order);
-  const remaining = getRemainingAmount(order);
+  const fmt              = (n: number) => formatCurrency(n, currency);
+  const isAdmin          = canCancelOrders(user?.role);
+  const partial          = isAcompte(order);
+  const paidAmt          = getPaidAmount(order);
+  const remaining        = getRemainingAmount(order);
+  const isWhatsAppPending = (order as { source?: string }).source === 'whatsapp' && order.status === 'pending';
 
   useEffect(() => {
     if (order.status === 'refunded') {
@@ -82,12 +84,12 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     }
   }, [order.id, order.status]);
 
-  // Pré-remplir le montant du solde quand on ouvre le formulaire
+  // Pré-remplir le montant quand on ouvre le formulaire
   useEffect(() => {
     if (showCompleteForm) {
-      setCompleteAmount(String(remaining));
+      setCompleteAmount(String(isWhatsAppPending ? order.total : remaining));
     }
-  }, [showCompleteForm, remaining]);
+  }, [showCompleteForm, remaining, isWhatsAppPending, order.total]);
 
   async function handlePrint() {
     if (!business || !user) return;
@@ -292,8 +294,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             </div>
           )}
 
-          {/* Formulaire paiement complémentaire */}
-          {partial && showCompleteForm && (
+          {/* Formulaire paiement complémentaire (acompte ou WhatsApp) */}
+          {(partial || isWhatsAppPending) && showCompleteForm && (
             <div className="bg-amber-900/20 border border-amber-800 rounded-xl p-3 space-y-3">
               <p className="text-xs text-amber-400 font-medium uppercase tracking-wider">
                 Enregistrer le solde ({fmt(remaining)})
@@ -369,7 +371,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
           )}
 
           {/* Alerte acompte */}
-          {partial && !showCompleteForm && (
+          {partial && !showCompleteForm && !isWhatsAppPending && (
             <div className="flex gap-2 p-3 bg-amber-900/20 border border-amber-800 rounded-xl text-xs text-amber-300">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>Acompte de <strong>{fmt(paidAmt)}</strong> versé. Reste à régler : <strong>{fmt(remaining)}</strong>.</span>
@@ -409,7 +411,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             </button>
           </div>
 
-          {/* Compléter le paiement */}
+          {/* Compléter le paiement — acompte */}
           {partial && !showCompleteForm && (
             <button
               onClick={() => setShowCompleteForm(true)}
@@ -418,6 +420,18 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             >
               <CreditCard className="w-4 h-4" />
               Encaisser le solde ({fmt(remaining)})
+            </button>
+          )}
+
+          {/* Payer — commande WhatsApp en attente */}
+          {isWhatsAppPending && !showCompleteForm && (
+            <button
+              onClick={() => setShowCompleteForm(true)}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
+                         bg-green-700 hover:bg-green-600 text-white font-medium text-sm transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              Payer ({fmt(order.total)})
             </button>
           )}
 

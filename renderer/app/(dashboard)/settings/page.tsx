@@ -54,7 +54,8 @@ export default function SettingsPage() {
     display_phone:   '',
     is_active:       false,
     catalog_enabled: false,
-    welcome_message: 'Bienvenue ! Tapez *menu* pour voir notre catalogue 🛍️',
+    welcome_message: 'Bienvenue chez {nom} ! Tapez *menu* pour voir notre catalogue 🛍️',
+    menu_keyword:    'menu',
   });
   const [showToken, setShowToken]       = useState(false);
   const [savingWa, setSavingWa]         = useState(false);
@@ -202,6 +203,7 @@ export default function SettingsPage() {
           is_active:       cfg.is_active,
           catalog_enabled: cfg.catalog_enabled,
           welcome_message: cfg.welcome_message,
+          menu_keyword:    cfg.menu_keyword ?? 'menu',
         });
       }
       setWaLoaded(true);
@@ -834,14 +836,45 @@ export default function SettingsPage() {
 
                 {/* Message de bienvenue */}
                 {waForm.catalog_enabled && (
+                  <div className="space-y-3">
+                  <div>
+                    <label className="label">Mot-clé pour afficher le menu</label>
+                    <input
+                      type="text"
+                      placeholder="menu"
+                      value={waForm.menu_keyword}
+                      onChange={(e) => {
+                        const newKeyword = e.target.value.toLowerCase().trim() || 'menu';
+                        setWaForm((f) => ({
+                          ...f,
+                          menu_keyword:    newKeyword,
+                          welcome_message: f.welcome_message.replace(
+                            /\*[^*]+\*/g,
+                            (match) => match.toLowerCase().includes(f.menu_keyword.toLowerCase())
+                              ? `*${newKeyword}*`
+                              : match,
+                          ),
+                        }));
+                      }}
+                      className="input font-mono text-sm"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Le client envoie ce mot pour voir le catalogue. Par défaut : <span className="font-mono text-slate-400">menu</span>
+                    </p>
+                  </div>
                   <div>
                     <label className="label">Message de bienvenue</label>
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={waForm.welcome_message}
                       onChange={(e) => setWaForm((f) => ({ ...f, welcome_message: e.target.value }))}
                       className="input resize-none text-sm"
                     />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Utilisez <span className="font-mono text-slate-400">{'{nom}'}</span> pour insérer automatiquement le nom de votre établissement.
+                      Exemple : <span className="text-slate-400 italic">Bienvenue chez {'{nom}'} !</span>
+                    </p>
+                  </div>
                   </div>
                 )}
 
