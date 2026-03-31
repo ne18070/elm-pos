@@ -16,15 +16,16 @@ export interface WhatsAppConfig {
   is_active:       boolean;
   catalog_enabled: boolean;
   welcome_message: string;
-  menu_keyword:     string;
-  confirm_message:  string;
-  created_at:       string;
+  menu_keyword:      string;
+  confirm_message:   string;
+  wave_payment_url:  string | null;
+  created_at:        string;
   updated_at:      string;
 }
 
 export type WhatsAppConfigForm = Pick<
   WhatsAppConfig,
-  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message'
+  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message' | 'wave_payment_url'
 >;
 
 export interface WhatsAppMessage {
@@ -142,6 +143,73 @@ export async function markMessagesRead(businessId: string, fromPhone: string): P
 }
 
 // ─── Envoi de message (reply depuis l'app) ────────────────────────────────────
+
+export async function sendWhatsAppImageReply(
+  config: WhatsAppConfig,
+  toPhone: string,
+  file: File,
+  userId: string,
+): Promise<string> {
+  // 1. Upload vers Meta media endpoint
+  const form = new FormData();
+  form.append('messaging_product', 'whatsapp');
+  form.append('file', file, file.name);
+  form.append('type', file.type);
+
+  const uploadRes = await fetch(
+    `https://graph.facebook.com/v19.0/${config.phone_number_id}/media`,
+    {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${config.access_token}` },
+      body:    form,
+    },
+  );
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.json().catch(() => ({}));
+    throw new Error((err as { error?: { message?: string } })?.error?.message ?? `Meta upload error ${uploadRes.status}`);
+  }
+
+  const { id: mediaId } = await uploadRes.json() as { id: string };
+
+  // 2. Envoyer l'image via WhatsApp
+  const sendRes = await fetch(
+    `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
+    {
+      method:  'POST',
+      headers: {
+        Authorization:  `Bearer ${config.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type:    'individual',
+        to:                toPhone,
+        type:              'image',
+        image:             { id: mediaId },
+      }),
+    },
+  );
+
+  if (!sendRes.ok) {
+    const err = await sendRes.json().catch(() => ({}));
+    throw new Error((err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${sendRes.status}`);
+  }
+
+  // 3. Stocker le message sortant
+  await supabase.from('whatsapp_messages').insert({
+    business_id:  config.business_id,
+    from_phone:   toPhone,
+    direction:    'outbound',
+    message_type: 'image',
+    body:         null,
+    replied_by:   userId,
+    status:       'sent',
+    payload:      { media_id: mediaId },
+  });
+
+  return mediaId;
+}
 
 export async function sendWhatsAppReply(
   config: WhatsAppConfig,

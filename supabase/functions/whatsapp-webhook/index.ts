@@ -43,11 +43,12 @@ interface WaConfig {
   business_id:     string;
   phone_number_id: string;
   access_token:    string;
-  catalog_enabled:  boolean;
-  welcome_message:  string;
-  menu_keyword:     string;
-  confirm_message:  string;
-  business_name?:   string;
+  catalog_enabled:   boolean;
+  welcome_message:   string;
+  menu_keyword:      string;
+  confirm_message:   string;
+  wave_payment_url:  string | null;
+  business_name?:    string;
 }
 
 interface CartItem {
@@ -104,7 +105,7 @@ serve(async (req) => {
 
         const { data: config } = await supabase
           .from('whatsapp_configs')
-          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,businesses(name)')
+          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,wave_payment_url,businesses(name)')
           .eq('phone_number_id', value.metadata?.phone_number_id ?? '')
           .eq('is_active', true)
           .maybeSingle();
@@ -145,8 +146,9 @@ async function processMessage(
   msg: WaMessage,
   contacts: WaContact[],
 ) {
-  const contact  = contacts.find((c) => c.wa_id === msg.from);
-  const fromName = contact?.profile?.name ?? null;
+  const fromPhone = normalizePhone(msg.from);
+  const contact   = contacts.find((c) => c.wa_id === msg.from);
+  const fromName  = contact?.profile?.name ?? null;
 
   let body = '';
   if (msg.type === 'text') {
@@ -161,7 +163,7 @@ async function processMessage(
   const { error: insertErr } = await supabase.from('whatsapp_messages').insert({
     business_id:   config.business_id,
     wa_message_id: msg.id,
-    from_phone:    msg.from,
+    from_phone:    fromPhone,
     from_name:     fromName,
     direction:     'inbound',
     message_type:  msg.type,
@@ -182,10 +184,10 @@ async function processMessage(
         .from('whatsapp_messages')
         .select('*', { count: 'exact', head: true })
         .eq('business_id', config.business_id)
-        .eq('from_phone', msg.from)
+        .eq('from_phone', fromPhone)
         .eq('direction', 'inbound');
       if ((count ?? 0) <= 1) {
-        await sendTextMessage(config, msg.from, resolvePlaceholders(config.welcome_message, config));
+        await sendTextMessage(config, fromPhone, resolvePlaceholders(config.welcome_message, config));
       }
     }
   }
@@ -200,7 +202,7 @@ async function handleCatalogFlow(
   body: string,
   fromName: string | null,
 ) {
-  const fromPhone = msg.from;
+  const fromPhone = normalizePhone(msg.from);
   const lower     = body.toLowerCase().trim();
 
   // Récupérer le panier actuel
@@ -243,12 +245,15 @@ async function handleCatalogFlow(
     return;
   }
 
-  // Sélection de produit (réponse interactive)
-  if (step === 'product' && msg.type === 'interactive'
-      && msg.interactive?.type === 'list_reply') {
-    const productId = msg.interactive.list_reply?.id ?? '';
-    await addToCart(supabase, config, cart, fromPhone, productId);
-    return;
+  // Sélection de produit (liste ou bouton image)
+  if (step === 'product' && msg.type === 'interactive') {
+    const productId = msg.interactive?.list_reply?.id
+                   ?? msg.interactive?.button_reply?.id
+                   ?? '';
+    if (productId) {
+      await addToCart(supabase, config, cart, fromPhone, productId);
+      return;
+    }
   }
 
   // Résumé panier si step = confirm
@@ -301,7 +306,7 @@ async function sendProductMenu(
 ) {
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, price')
+    .select('id, name, price, image_url')
     .eq('business_id', config.business_id)
     .eq('category_id', categoryId)
     .eq('is_active', true)
@@ -314,19 +319,63 @@ async function sendProductMenu(
   }
 
   const { data: biz } = await supabase.from('businesses').select('currency').eq('id', config.business_id).single();
-  const currency = (biz as { currency?: string } | null)?.currency ?? 'XOF';
+  const currency = displayCurrency((biz as { currency?: string } | null)?.currency ?? 'XOF');
 
-  const rows = products.map((p: { id: string; name: string; price: number }) => ({
-    id:          p.id,
-    title:       p.name.slice(0, 24),
-    description: `${p.price.toLocaleString()} ${currency}`,
-  }));
+  type Product = { id: string; name: string; price: number; image_url?: string | null };
 
-  await sendInteractiveList(config, toPhone, {
-    body:     '📦 Choisissez un produit (tapez *menu* pour revenir) :',
-    button:   'Choisir',
-    sections: [{ title: 'Produits', rows }],
-  });
+  // Séparer produits avec et sans image
+  const withImage    = (products as Product[]).filter((p) => p.image_url);
+  const withoutImage = (products as Product[]).filter((p) => !p.image_url);
+
+  // Produits avec image → message image + bouton "Ajouter"
+  for (const p of withImage) {
+    const productBody = `*${p.name}*\n💰 ${p.price.toLocaleString()} ${currency}`;
+    await callMetaAPI(config, {
+      messaging_product: 'whatsapp',
+      recipient_type:    'individual',
+      to:                toPhone,
+      type:              'interactive',
+      interactive: {
+        type: 'button',
+        header: {
+          type:  'image',
+          image: { link: p.image_url },
+        },
+        body: { text: productBody },
+        action: {
+          buttons: [
+            { type: 'reply', reply: { id: p.id, title: '🛒 Ajouter' } },
+          ],
+        },
+      },
+    });
+    // Stocker le message sortant avec l'image dans le payload
+    await supabase.from('whatsapp_messages').insert({
+      business_id:  config.business_id,
+      from_phone:   toPhone,
+      direction:    'outbound',
+      message_type: 'image',
+      body:         productBody,
+      payload:      { image_url: p.image_url, product_id: p.id, product_name: p.name },
+      status:       'sent',
+    });
+  }
+
+  // Produits sans image → liste classique groupée
+  if (withoutImage.length > 0) {
+    const rows = withoutImage.map((p) => ({
+      id:          p.id,
+      title:       p.name.slice(0, 24),
+      description: `${p.price.toLocaleString()} ${currency}`,
+    }));
+    await sendInteractiveList(config, toPhone, {
+      body:     withImage.length > 0 ? 'Autres produits :' : '📦 Choisissez un produit :',
+      button:   'Choisir',
+      sections: [{ title: 'Produits', rows }],
+    });
+  }
+
+  await sendTextMessage(config, toPhone, '_Tapez *menu* pour revenir au début._');
 }
 
 async function addToCart(
@@ -392,7 +441,7 @@ async function sendCartSummary(
   }
 
   const { data: biz } = await supabase.from('businesses').select('currency').eq('id', config.business_id).single();
-  const currency = (biz as { currency?: string } | null)?.currency ?? 'XOF';
+  const currency = displayCurrency((biz as { currency?: string } | null)?.currency ?? 'XOF');
   const total    = items.reduce((s, i) => s + i.total, 0);
   const lines    = items.map((i) => `• ${i.name} × ${i.quantity} = ${i.total.toLocaleString()} ${currency}`).join('\n');
 
@@ -455,6 +504,30 @@ async function confirmOrder(
     .eq('from_phone', fromPhone)
     .is('order_id', null);
 
+  // Enregistrer / mettre à jour le client dans la table clients
+  const { data: existingClient } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('business_id', config.business_id)
+    .eq('phone', fromPhone)
+    .maybeSingle();
+
+  if (existingClient) {
+    // Mettre à jour le nom si on l'a maintenant
+    if (fromName) {
+      await supabase.from('clients')
+        .update({ name: fromName })
+        .eq('id', (existingClient as { id: string }).id);
+    }
+  } else {
+    await supabase.from('clients').insert({
+      business_id: config.business_id,
+      name:        fromName ?? fromPhone,
+      phone:       fromPhone,
+      notes:       'Client WhatsApp',
+    });
+  }
+
   // Vider le panier
   await supabase.from('whatsapp_carts')
     .delete()
@@ -478,6 +551,22 @@ async function confirmOrder(
     order_id:     (order as { id: string }).id,
     status:       'sent',
   });
+
+  // Lien de paiement Wave (si configuré)
+  if (config.wave_payment_url) {
+    const waveLink = `${config.wave_payment_url}amount=${total}`;
+    const waveMsg  = `💳 *Payer par Wave :*\n${waveLink}`;
+    await sendTextMessage(config, fromPhone, waveMsg);
+    await supabase.from('whatsapp_messages').insert({
+      business_id:  config.business_id,
+      from_phone:   fromPhone,
+      direction:    'outbound',
+      message_type: 'text',
+      body:         waveMsg,
+      order_id:     (order as { id: string }).id,
+      status:       'sent',
+    });
+  }
 }
 
 async function resetCart(
@@ -495,7 +584,18 @@ async function resetCart(
   }, { onConflict: 'business_id,from_phone' });
 }
 
+// ─── Currency display ─────────────────────────────────────────────────────────
+
+function displayCurrency(code: string): string {
+  const map: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA' };
+  return map[code] ?? code;
+}
+
 // ─── Placeholders ─────────────────────────────────────────────────────────────
+
+function normalizePhone(phone: string): string {
+  return phone.startsWith('+') ? phone : `+${phone}`;
+}
 
 function resolvePlaceholders(template: string, config: WaConfig): string {
   return template

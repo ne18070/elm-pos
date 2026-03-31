@@ -57,6 +57,7 @@ export default function SettingsPage() {
     welcome_message: 'Bienvenue chez {nom} ! Tapez *menu* pour voir notre catalogue 🛍️',
     menu_keyword:    'menu',
     confirm_message: '✅ *Commande confirmée !*\n\nVotre commande a bien été enregistrée. Notre équipe vous contactera pour la préparation ou la livraison.\n\nMerci de votre confiance ! 🙏\n\nPour une nouvelle commande, tapez *{mot_cle}*.',
+    wave_payment_url: null,
   });
   const [showToken, setShowToken]       = useState(false);
   const [savingWa, setSavingWa]         = useState(false);
@@ -206,6 +207,7 @@ export default function SettingsPage() {
           welcome_message: cfg.welcome_message,
           menu_keyword:    cfg.menu_keyword ?? 'menu',
           confirm_message: cfg.confirm_message ?? '',
+          wave_payment_url: cfg.wave_payment_url ?? null,
         });
       }
       setWaLoaded(true);
@@ -888,6 +890,20 @@ export default function SettingsPage() {
                       Envoyé automatiquement quand le client tape <span className="font-mono text-slate-400">confirmer</span>.
                       Placeholders : <span className="font-mono text-slate-400">{'{nom}'}</span> → nom de l&apos;établissement,{' '}
                       <span className="font-mono text-slate-400">{'{mot_cle}'}</span> → mot-clé du menu.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="label">Lien de paiement Wave <span className="text-slate-500 font-normal">(optionnel)</span></label>
+                    <input
+                      type="url"
+                      value={waForm.wave_payment_url ?? ''}
+                      onChange={(e) => setWaForm((f) => ({ ...f, wave_payment_url: e.target.value || null }))}
+                      placeholder="https://pay.wave.com/m/M_xxx/c/sn/?"
+                      className="input text-sm font-mono"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      URL de base Wave du marchand (se termine par <span className="font-mono text-slate-400">?</span>).
+                      Le montant sera ajouté automatiquement à la validation de chaque commande.
                     </p>
                   </div>
                   </div>

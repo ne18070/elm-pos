@@ -6,13 +6,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   MessageCircle, Send, RefreshCw, Search, ShoppingCart,
-  ChevronRight, ArrowLeft, Phone, Loader2,
+  ChevronRight, ArrowLeft, Phone, Loader2, ImageIcon, X,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { hasRole } from '@/lib/permissions';
 import {
-  getWhatsAppConfig, getConversations, getMessages, markMessagesRead, sendWhatsAppReply,
+  getWhatsAppConfig, getConversations, getMessages, markMessagesRead,
+  sendWhatsAppReply, sendWhatsAppImageReply,
   type WhatsAppConfig, type WhatsAppMessage, type WhatsAppConversation,
 } from '@services/supabase/whatsapp';
 
@@ -30,8 +31,26 @@ export default function WhatsAppPage() {
   const [loading, setLoading]             = useState(true);
   const [loadingMsg, setLoadingMsg]       = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const canReply  = hasRole(user?.role, 'manager');
+  const [imageFile, setImageFile]     = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const bottomRef   = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const canReply    = hasRole(user?.role, 'manager');
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    e.target.value = '';
+  }
+
+  function clearImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+  }
 
   const loadConversations = useCallback(async () => {
     if (!business?.id) return;
@@ -76,14 +95,45 @@ export default function WhatsAppPage() {
   }, [messages]);
 
   async function handleSend() {
-    if (!config || !selected || !reply.trim() || !user?.id) return;
+    if (!config || !selected || !user?.id) return;
+    if (!reply.trim() && !imageFile) return;
     setSending(true);
+
+    // Envoyer l'image en premier si présente
+    if (imageFile) {
+      const localPreview = imagePreview;
+      clearImage();
+      try {
+        await sendWhatsAppImageReply(config, selected.from_phone, imageFile, user.id);
+        setMessages((prev) => [...prev, {
+          id:            crypto.randomUUID(),
+          business_id:   business!.id,
+          wa_message_id: null,
+          from_phone:    selected.from_phone,
+          from_name:     null,
+          direction:     'outbound',
+          message_type:  'image',
+          body:          null,
+          payload:       localPreview ? { image_url: localPreview } : null,
+          order_id:      null,
+          replied_by:    user.id,
+          status:        'sent',
+          created_at:    new Date().toISOString(),
+        }]);
+      } catch (err) {
+        notifError(toUserError(err));
+        setSending(false);
+        return;
+      }
+    }
+
+    // Envoyer le texte si présent
     const text = reply.trim();
+    if (!text) { setSending(false); return; }
     setReply('');
     try {
       await sendWhatsAppReply(config, selected.from_phone, text, user.id);
       success('Message envoyé');
-      // Optimistic update
       setMessages((prev) => [...prev, {
         id:            crypto.randomUUID(),
         business_id:   business!.id,
@@ -261,22 +311,39 @@ export default function WhatsAppPage() {
                   key={msg.id}
                   className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 space-y-1 ${
+                  <div className={`max-w-[75%] rounded-2xl overflow-hidden space-y-0 ${
                     msg.direction === 'outbound'
                       ? 'bg-green-700 text-white rounded-br-sm'
                       : 'bg-slate-700 text-slate-100 rounded-bl-sm'
                   }`}>
-                    {/* Lien commande */}
-                    {msg.order_id && (
-                      <div className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 text-white w-fit">
-                        <ShoppingCart className="w-3 h-3" />
-                        <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
-                      </div>
+                    {/* Image produit */}
+                    {(msg.payload as { image_url?: string } | null)?.image_url && (
+                      <img
+                        src={(msg.payload as { image_url: string }).image_url}
+                        alt={msg.body ?? ''}
+                        className="w-full max-h-48 object-cover"
+                      />
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
-                    <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
-                      {format(new Date(msg.created_at), 'HH:mm', { locale: fr })}
-                    </p>
+                    <div className="px-4 py-2.5 space-y-1">
+                      {/* Lien commande */}
+                      {msg.order_id && (
+                        <div className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 text-white w-fit">
+                          <ShoppingCart className="w-3 h-3" />
+                          <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
+                        </div>
+                      )}
+                      {/* Placeholder image sans URL (reçue depuis Meta ou après rechargement) */}
+                      {msg.message_type === 'image' && !(msg.payload as { image_url?: string } | null)?.image_url && (
+                        <div className="flex items-center gap-2 text-sm opacity-70">
+                          <ImageIcon className="w-4 h-4 shrink-0" />
+                          <span>Image</span>
+                        </div>
+                      )}
+                      {msg.body && <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>}
+                      <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
+                        {format(new Date(msg.created_at), 'HH:mm', { locale: fr })}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -285,8 +352,35 @@ export default function WhatsAppPage() {
 
             {/* Zone de réponse */}
             {canReply && config ? (
-              <div className="p-4 border-t border-surface-border">
+              <div className="p-4 border-t border-surface-border space-y-2">
+                {/* Aperçu image sélectionnée */}
+                {imagePreview && (
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-surface-border">
+                    <img src={imagePreview} alt="aperçu" className="w-full h-full object-cover" />
+                    <button
+                      onClick={clearImage}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
+                  {/* Bouton image */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 rounded-lg hover:bg-surface-hover text-slate-400 hover:text-slate-200 shrink-0"
+                    title="Joindre une image"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
                   <textarea
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
@@ -299,13 +393,13 @@ export default function WhatsAppPage() {
                   />
                   <button
                     onClick={handleSend}
-                    disabled={!reply.trim() || sending}
+                    disabled={(!reply.trim() && !imageFile) || sending}
                     className="btn-primary h-10 w-10 flex items-center justify-center shrink-0 disabled:opacity-50"
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">Entrée pour envoyer · Maj+Entrée pour saut de ligne</p>
+                <p className="text-xs text-slate-500">Entrée pour envoyer · Maj+Entrée pour saut de ligne</p>
               </div>
             ) : (
               <div className="p-4 border-t border-surface-border text-center text-xs text-slate-500">
