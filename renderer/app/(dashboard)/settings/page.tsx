@@ -56,6 +56,7 @@ export default function SettingsPage() {
     catalog_enabled: false,
     welcome_message: 'Bienvenue chez {nom} ! Tapez *menu* pour voir notre catalogue 🛍️',
     menu_keyword:    'menu',
+    confirm_message: '✅ *Commande confirmée !*\n\nVotre commande a bien été enregistrée. Notre équipe vous contactera pour la préparation ou la livraison.\n\nMerci de votre confiance ! 🙏\n\nPour une nouvelle commande, tapez *{mot_cle}*.',
   });
   const [showToken, setShowToken]       = useState(false);
   const [savingWa, setSavingWa]         = useState(false);
@@ -204,6 +205,7 @@ export default function SettingsPage() {
           catalog_enabled: cfg.catalog_enabled,
           welcome_message: cfg.welcome_message,
           menu_keyword:    cfg.menu_keyword ?? 'menu',
+          confirm_message: cfg.confirm_message ?? '',
         });
       }
       setWaLoaded(true);
@@ -871,8 +873,21 @@ export default function SettingsPage() {
                       className="input resize-none text-sm"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      Utilisez <span className="font-mono text-slate-400">{'{nom}'}</span> pour insérer automatiquement le nom de votre établissement.
-                      Exemple : <span className="text-slate-400 italic">Bienvenue chez {'{nom}'} !</span>
+                      Utilisez <span className="font-mono text-slate-400">{'{nom}'}</span> pour le nom de l&apos;établissement.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="label">Message de confirmation de commande</label>
+                    <textarea
+                      rows={5}
+                      value={waForm.confirm_message}
+                      onChange={(e) => setWaForm((f) => ({ ...f, confirm_message: e.target.value }))}
+                      className="input resize-none text-sm font-mono"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Envoyé automatiquement quand le client tape <span className="font-mono text-slate-400">confirmer</span>.
+                      Placeholders : <span className="font-mono text-slate-400">{'{nom}'}</span> → nom de l&apos;établissement,{' '}
+                      <span className="font-mono text-slate-400">{'{mot_cle}'}</span> → mot-clé du menu.
                     </p>
                   </div>
                   </div>

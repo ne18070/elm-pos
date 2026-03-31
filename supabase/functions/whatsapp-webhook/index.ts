@@ -43,10 +43,11 @@ interface WaConfig {
   business_id:     string;
   phone_number_id: string;
   access_token:    string;
-  catalog_enabled: boolean;
-  welcome_message: string;
-  menu_keyword:    string;
-  business_name?:  string;
+  catalog_enabled:  boolean;
+  welcome_message:  string;
+  menu_keyword:     string;
+  confirm_message:  string;
+  business_name?:   string;
 }
 
 interface CartItem {
@@ -103,7 +104,7 @@ serve(async (req) => {
 
         const { data: config } = await supabase
           .from('whatsapp_configs')
-          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,businesses(name)')
+          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,businesses(name)')
           .eq('phone_number_id', value.metadata?.phone_number_id ?? '')
           .eq('is_active', true)
           .maybeSingle();
@@ -461,7 +462,10 @@ async function confirmOrder(
     .eq('from_phone', fromPhone);
 
   // Confirmation au client
-  const confirmMsg = `✅ *Commande confirmée !*\n\nVotre commande a bien été enregistrée. Notre équipe vous contactera pour la préparation ou la livraison.\n\nMerci de votre confiance ! 🙏\n\nPour une nouvelle commande, tapez *menu*.`;
+  const confirmMsg = resolvePlaceholders(
+    config.confirm_message || '✅ *Commande confirmée !*\n\nMerci de votre confiance ! 🙏\n\nPour une nouvelle commande, tapez *{mot_cle}*.',
+    config,
+  );
   await sendTextMessage(config, fromPhone, confirmMsg);
 
   // Stocker le message sortant
@@ -494,7 +498,9 @@ async function resetCart(
 // ─── Placeholders ─────────────────────────────────────────────────────────────
 
 function resolvePlaceholders(template: string, config: WaConfig): string {
-  return template.replace(/\{nom\}/gi, config.business_name ?? '');
+  return template
+    .replace(/\{nom\}/gi,      config.business_name ?? '')
+    .replace(/\{mot_cle\}/gi,  config.menu_keyword  ?? 'menu');
 }
 
 // ─── Helpers Meta Cloud API ───────────────────────────────────────────────────

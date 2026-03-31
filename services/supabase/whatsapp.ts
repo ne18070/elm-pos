@@ -16,14 +16,15 @@ export interface WhatsAppConfig {
   is_active:       boolean;
   catalog_enabled: boolean;
   welcome_message: string;
-  menu_keyword:    string;
-  created_at:      string;
+  menu_keyword:     string;
+  confirm_message:  string;
+  created_at:       string;
   updated_at:      string;
 }
 
 export type WhatsAppConfigForm = Pick<
   WhatsAppConfig,
-  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword'
+  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message'
 >;
 
 export interface WhatsAppMessage {
