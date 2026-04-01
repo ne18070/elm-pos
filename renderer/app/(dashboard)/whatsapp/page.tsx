@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { hasRole } from '@/lib/permissions';
+import { supabase } from '@/lib/supabase';
 import {
   getWhatsAppConfig, getConversations, getMessages, markMessagesRead, sendWhatsAppReply,
   type WhatsAppConfig, type WhatsAppMessage, type WhatsAppConversation, type ConversationFilter,
@@ -74,9 +75,14 @@ export default function WhatsAppPage() {
   const msgContainerRef  = useRef<HTMLDivElement>(null);
   const msgRefs          = useRef<Map<string, HTMLDivElement>>(new Map());
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const instantScroll    = useRef(false);
+  const selectedRef      = useRef<WhatsAppConversation | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const canReply         = hasRole(user?.role, 'manager');
+
+  // Garde selectedRef synchronisé pour les callbacks Realtime (évite stale closure)
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
 
   // ── Chargement initial + refresh ───────────────────────────────────────────
   const loadConversations = useCallback(async (
@@ -104,6 +110,63 @@ export default function WhatsAppPage() {
     loadConversations({ page: 0, pageSize: PAGE_SIZE, unreadOnly });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Realtime — nouveaux messages WhatsApp
+  useEffect(() => {
+    if (!business?.id) return;
+
+    const channel = supabase
+      .channel(`wa-messages-${business.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event:  'INSERT',
+          schema: 'public',
+          table:  'whatsapp_messages',
+          filter: `business_id=eq.${business.id}`,
+        },
+        (payload) => {
+          const msg = payload.new as WhatsAppMessage;
+          const msgPhone = msg.from_phone.startsWith('+') ? msg.from_phone : `+${msg.from_phone}`;
+
+          // Si la conversation est ouverte, ajouter le message directement
+          const conv = selectedRef.current;
+          if (conv) {
+            const convPhone = conv.from_phone.startsWith('+') ? conv.from_phone : `+${conv.from_phone}`;
+            if (msgPhone === convPhone) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.id === msg.id)) return prev;
+                return [...prev, msg];
+              });
+              // Marquer comme lu car l'utilisateur voit la conversation
+              if (msg.direction === 'inbound' && business?.id) {
+                markMessagesRead(business.id, conv.from_phone).catch(() => {});
+                setConversations((prev) =>
+                  prev.map((c) => {
+                    const cp = c.from_phone.startsWith('+') ? c.from_phone : `+${c.from_phone}`;
+                    return cp === convPhone ? { ...c, unread: 0 } : c;
+                  })
+                );
+              }
+            }
+          }
+
+          // Rafraîchir la liste des conversations (debounce 800ms pour éviter les appels en rafale)
+          if (refreshTimer.current) clearTimeout(refreshTimer.current);
+          refreshTimer.current = setTimeout(() => {
+            setPage(0);
+            loadConversations({ search: search || undefined, unreadOnly, page: 0, pageSize: PAGE_SIZE });
+          }, 800);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id]);
 
   // Recherche avec debounce 350ms
   useEffect(() => {

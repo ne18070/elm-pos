@@ -381,7 +381,7 @@ async function askShipping(config: WaConfig, toPhone: string) {
       action: {
         buttons: [
           { type: 'reply', reply: { id: 'ship_pickup',   title: '🏠 Retrait sur place' } },
-          { type: 'reply', reply: { id: 'ship_delivery', title: '🚗 Livraison à domicile' } },
+          { type: 'reply', reply: { id: 'ship_delivery', title: '🚗 Livraison' } },
         ],
       },
     },
@@ -437,7 +437,7 @@ async function sendCategoryMenu(
         ? `🍽️ *Menu du jour*\n${dailyMenu.note}`
         : '🍽️ *Menu du jour*';
 
-      // Image du menu si disponible
+      // Image du menu si disponible — délai après pour garantir l'ordre de livraison
       if ((dailyMenu as { image_url?: string | null }).image_url) {
         await callMetaAPI(config, {
           messaging_product: 'whatsapp',
@@ -449,6 +449,7 @@ async function sendCategoryMenu(
       } else {
         await sendTextMessage(config, toPhone, introText);
       }
+      await new Promise((r) => setTimeout(r, 600));
 
       const withImage    = (dailyItems as DailyItem[]).filter((i) => i.products.image_url);
       const withoutImage = (dailyItems as DailyItem[]).filter((i) => !i.products.image_url);
@@ -492,12 +493,10 @@ async function sendCategoryMenu(
         });
       }
 
-      await sendTextMessage(config, toPhone, '_Tapez *menu* pour voir le catalogue complet._');
-      return;
     }
   }
 
-  // Catalogue normal
+  // Catalogue normal (affiché après le menu du jour ou seul s'il n'y a pas de menu du jour)
   const { data: categories } = await supabase
     .from('categories')
     .select('id, name')
