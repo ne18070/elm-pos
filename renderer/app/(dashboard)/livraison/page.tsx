@@ -2,8 +2,8 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Truck, Clock, CheckCircle, Package } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { RefreshCw, Truck, Clock, CheckCircle, Package, UserCheck, X } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -14,6 +14,13 @@ import {
   startOrderPicking,
   confirmOrderDelivery,
 } from '@services/supabase/orders';
+import {
+  getLivreurs,
+  assignLivreur,
+  sendLocationToLivreur,
+  type Livreur,
+} from '@services/supabase/livreurs';
+import { getWhatsAppConfig } from '@services/supabase/whatsapp';
 import { supabase } from '@/lib/supabase';
 import type { Order } from '@pos-types';
 
@@ -30,7 +37,14 @@ export default function LivraisonPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
 
-  // silent=true → pas de spinner (refresh Realtime / bouton)
+  const [livreurs, setLivreurs] = useState<Livreur[]>([]);
+  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
+  const [assignLivreurId, setAssignLivreurId] = useState('');
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
+  const [sending, setSending] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [waConfig, setWaConfig] = useState<any>(null);
+
   const fetchOrders = useCallback(async (silent = false) => {
     if (!business?.id) return;
     if (!silent) setLoading(true);
@@ -44,9 +58,16 @@ export default function LivraisonPage() {
     }
   }, [business?.id]);
 
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  useEffect(() => {
+    if (!business?.id) return;
+    fetchOrders();
+    getLivreurs(business.id).then(setLivreurs).catch(() => {});
+    getWhatsAppConfig(business.id).then((cfg) => {
+      setWaConfig(cfg);
+      setSendWhatsApp(!!cfg?.is_active);
+    }).catch(() => {});
+  }, [fetchOrders, business?.id]);
 
-  // Realtime : mise à jour automatique quand une commande change de statut
   useEffect(() => {
     if (!business?.id) return;
     const channel = supabase
@@ -62,7 +83,6 @@ export default function LivraisonPage() {
 
   async function handleSelect(order: Order) {
     setSelected(order);
-    // Marquer "en cours" si encore en attente
     if (order.delivery_status === 'pending') {
       try {
         await startOrderPicking(order.id);
@@ -85,8 +105,58 @@ export default function LivraisonPage() {
     }
   }
 
-  const pending   = orders.filter((o) => o.delivery_status === 'pending');
-  const picking   = orders.filter((o) => o.delivery_status === 'picking');
+  function openAssign(order: Order) {
+    setAssigningOrder(order);
+    setAssignLivreurId((order as any).livreur_id ?? '');
+    setSendWhatsApp(!!waConfig?.is_active);
+  }
+
+  async function handleAssign(forceNull = false) {
+    if (!assigningOrder) return;
+    setSending(true);
+    try {
+      const livreurId = forceNull ? null : (assignLivreurId || null);
+      await assignLivreur(assigningOrder.id, livreurId);
+
+      if (livreurId && sendWhatsApp && waConfig) {
+        const livreur = livreurs.find((l) => l.id === livreurId);
+        if (livreur) {
+          const o = assigningOrder as any;
+          await sendLocationToLivreur(
+            { phone_number_id: waConfig.phone_number_id, access_token: waConfig.access_token },
+            livreur,
+            {
+              id: assigningOrder.id,
+              customer_name: assigningOrder.customer_name,
+              customer_phone: assigningOrder.customer_phone,
+              delivery_address: o.delivery_address,
+              delivery_location: o.delivery_location,
+              total: assigningOrder.total,
+            },
+          );
+          success('Livreur assigné et notifié par WhatsApp');
+        } else {
+          success('Livreur assigné');
+        }
+      } else if (forceNull || !livreurId) {
+        success('Livreur retiré');
+      } else {
+        success('Livreur assigné');
+      }
+
+      setOrders((prev) =>
+        prev.map((o) => o.id === assigningOrder.id ? { ...o, livreur_id: livreurId } as any : o)
+      );
+      setAssigningOrder(null);
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const pending = orders.filter((o) => o.delivery_status === 'pending');
+  const picking = orders.filter((o) => o.delivery_status === 'picking');
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -124,65 +194,91 @@ export default function LivraisonPage() {
             </div>
           ) : (
             <>
-              {/* En cours en premier */}
               {[...picking, ...pending].map((order) => {
                 const badge = DELIVERY_LABELS[order.delivery_status];
                 const itemCount = order.items?.reduce((s, i) => s + i.quantity, 0) ?? 0;
                 const isSelected = selected?.id === order.id;
+                const isDelivery = (order as any).delivery_type === 'delivery';
+                const hasLivreur = !!(order as any).livreur_id;
 
                 return (
-                  <button
+                  <div
                     key={order.id}
-                    onClick={() => handleSelect(order)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all
-                      ${isSelected
+                    className={`w-full text-left rounded-xl border transition-all ${
+                      isSelected
                         ? 'border-brand-500 bg-brand-900/10'
-                        : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'}`}
+                        : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
+                    }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-mono font-bold text-white text-sm">
-                          #{order.id.slice(0, 8).toUpperCase()}
-                        </p>
-                        {order.cashier && (
-                          <p className="text-xs text-slate-500 truncate">{order.cashier.full_name}</p>
-                        )}
-                      </div>
-                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
-                        {badge.label}
-                      </span>
-                    </div>
-
-                    {/* Articles aperçu */}
-                    <div className="mt-2 space-y-1">
-                      {order.items?.slice(0, 2).map((item) => (
-                        <div key={item.id} className="flex items-center gap-1.5 text-xs text-slate-400">
-                          <Package className="w-3 h-3 shrink-0" />
-                          <span className="truncate flex-1">{item.name}</span>
-                          <span className="text-slate-500 shrink-0">×{item.quantity}</span>
+                    <button
+                      onClick={() => handleSelect(order)}
+                      className="w-full text-left p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-mono font-bold text-white text-sm">
+                            #{order.id.slice(0, 8).toUpperCase()}
+                          </p>
+                          {order.customer_name && (
+                            <p className="text-xs text-slate-400 truncate">{order.customer_name}</p>
+                          )}
+                          {order.cashier && (
+                            <p className="text-xs text-slate-500 truncate">{order.cashier.full_name}</p>
+                          )}
                         </div>
-                      ))}
-                      {(order.items?.length ?? 0) > 2 && (
-                        <p className="text-xs text-slate-600">
-                          +{order.items!.length - 2} article{order.items!.length - 2 > 1 ? 's' : ''}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-surface-border">
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: fr })}
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-slate-500">{itemCount} article{itemCount > 1 ? 's' : ''}</span>
-                        <span className="text-sm font-bold text-brand-400 ml-2">
-                          {formatCurrency(order.total, business?.currency)}
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
+                          {badge.label}
                         </span>
                       </div>
-                    </div>
-                  </button>
+
+                      <div className="mt-2 space-y-1">
+                        {order.items?.slice(0, 2).map((item) => (
+                          <div key={item.id} className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <Package className="w-3 h-3 shrink-0" />
+                            <span className="truncate flex-1">{item.name}</span>
+                            <span className="text-slate-500 shrink-0">×{item.quantity}</span>
+                          </div>
+                        ))}
+                        {(order.items?.length ?? 0) > 2 && (
+                          <p className="text-xs text-slate-600">
+                            +{order.items!.length - 2} article{order.items!.length - 2 > 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-surface-border">
+                        <div className="flex items-center gap-1 text-xs text-slate-500">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: fr })}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-slate-500">{itemCount} article{itemCount > 1 ? 's' : ''}</span>
+                          <span className="text-sm font-bold text-brand-400 ml-2">
+                            {formatCurrency(order.total, business?.currency)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+
+                    {isDelivery && livreurs.length > 0 && (
+                      <div className="px-4 pb-3 flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openAssign(order); }}
+                          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                            hasLivreur
+                              ? 'border-green-800 text-green-400 bg-green-900/20 hover:bg-green-900/30'
+                              : 'border-surface-border text-slate-400 hover:text-white hover:bg-surface-hover'
+                          }`}
+                        >
+                          <UserCheck className="w-3 h-3" />
+                          {hasLivreur
+                            ? livreurs.find((l) => l.id === (order as any).livreur_id)?.name ?? 'Livreur assigné'
+                            : 'Assigner livreur'
+                          }
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </>
@@ -204,6 +300,82 @@ export default function LivraisonPage() {
         <div className="flex-1 hidden md:flex flex-col items-center justify-center text-slate-600 gap-3">
           <Truck className="w-16 h-16 opacity-20" />
           <p className="text-sm">Sélectionnez une commande pour démarrer la vérification</p>
+        </div>
+      )}
+
+      {/* ── Modal assignation livreur ── */}
+      {assigningOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+              <h3 className="font-semibold text-white">Assigner un livreur</h3>
+              <button
+                onClick={() => setAssigningOrder(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-slate-400">
+                Commande <span className="font-mono font-bold text-white">#{assigningOrder.id.slice(0, 8).toUpperCase()}</span>
+                {assigningOrder.customer_name && <> · {assigningOrder.customer_name}</>}
+              </p>
+
+              {(assigningOrder as any).livreur_id && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-900/20 border border-green-800">
+                  <UserCheck className="w-4 h-4 text-green-400 shrink-0" />
+                  <span className="text-xs text-green-400">
+                    Actuellement : {livreurs.find((l) => l.id === (assigningOrder as any).livreur_id)?.name ?? 'Livreur assigné'}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <label className="label">Livreur</label>
+                <select
+                  className="input"
+                  value={assignLivreurId}
+                  onChange={(e) => setAssignLivreurId(e.target.value)}
+                >
+                  <option value="">— Aucun —</option>
+                  {livreurs.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name} · {l.phone}</option>
+                  ))}
+                </select>
+              </div>
+
+              {waConfig?.is_active && assignLivreurId && (
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendWhatsApp}
+                    onChange={(e) => setSendWhatsApp(e.target.checked)}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-sm text-slate-300">Envoyer la localisation par WhatsApp</span>
+                </label>
+              )}
+            </div>
+            <div className="px-5 pb-5 flex gap-2">
+              {(assigningOrder as any).livreur_id && (
+                <button
+                  onClick={() => handleAssign(true)}
+                  disabled={sending}
+                  className="btn-secondary flex-1 h-9 text-sm"
+                >
+                  Retirer livreur
+                </button>
+              )}
+              <button
+                onClick={() => handleAssign()}
+                disabled={sending || !assignLivreurId}
+                className="btn-primary flex-1 h-9 text-sm"
+              >
+                {sending ? 'Envoi…' : 'Assigner'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

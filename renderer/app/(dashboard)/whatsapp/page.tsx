@@ -570,7 +570,26 @@ export default function WhatsAppPage() {
                             <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
                           </Link>
                         )}
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
+                        {msg.message_type === 'location' && (() => {
+                          const loc = (msg.payload as { location?: { latitude?: number; longitude?: number; name?: string; address?: string } } | null)?.location;
+                          const lat = loc?.latitude;
+                          const lng = loc?.longitude;
+                          if (lat && lng) return (
+                            <a
+                              href={`https://www.google.com/maps?q=${lat},${lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-sm underline underline-offset-2 hover:opacity-80"
+                            >
+                              <span>📍</span>
+                              <span>{loc?.name ?? loc?.address ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`}</span>
+                            </a>
+                          );
+                          return <p className="text-sm">{msg.body ?? '📍 Localisation'}</p>;
+                        })()}
+                        {msg.message_type !== 'location' && (
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
+                        )}
                         <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
                           {timeStr(msg.created_at)}
                         </p>

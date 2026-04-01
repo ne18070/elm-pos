@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,           types: null },
   { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,  types: null },
   { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,           types: ['retail', 'restaurant'] },
+  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,  types: ['retail', 'restaurant'] },
   { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,           types: null },
   { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,  types: null },
   { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'service', 'hotel'] },

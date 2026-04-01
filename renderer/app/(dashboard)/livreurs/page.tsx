@@ -1,0 +1,235 @@
+'use client';
+import { toUserError } from '@/lib/user-error';
+
+import { useState, useEffect } from 'react';
+import { Plus, Phone, Pencil, Trash2, UserCheck, X, Check } from 'lucide-react';
+import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notifications';
+import {
+  getAllLivreurs, createLivreur, updateLivreur, deleteLivreur,
+  type Livreur, type LivreurForm,
+} from '@services/supabase/livreurs';
+
+const EMPTY_FORM: LivreurForm = { name: '', phone: '', is_active: true, notes: '' };
+
+export default function LivreursPage() {
+  const { business } = useAuthStore();
+  const { success, error: notifError } = useNotificationStore();
+
+  const [livreurs, setLivreurs] = useState<Livreur[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+
+  const [panel, setPanel] = useState<{ item: Livreur | null } | null>(null);
+  const [form, setForm]   = useState<LivreurForm>(EMPTY_FORM);
+
+  useEffect(() => {
+    if (!business) return;
+    load();
+  }, [business]);
+
+  async function load() {
+    if (!business) return;
+    setLoading(true);
+    try {
+      setLivreurs(await getAllLivreurs(business.id));
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setLoading(false); }
+  }
+
+  function openPanel(item: Livreur | null) {
+    setForm(item
+      ? { name: item.name, phone: item.phone, is_active: item.is_active, notes: item.notes ?? '' }
+      : EMPTY_FORM
+    );
+    setPanel({ item });
+  }
+
+  async function save() {
+    if (!business || !form.name.trim() || !form.phone.trim()) return;
+    setSaving(true);
+    try {
+      if (panel?.item) {
+        const updated = await updateLivreur(panel.item.id, form);
+        setLivreurs((prev) => prev.map((l) => l.id === updated.id ? updated : l));
+        success('Livreur mis à jour');
+      } else {
+        const created = await createLivreur(business.id, form);
+        setLivreurs((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+        success('Livreur ajouté');
+      }
+      setPanel(null);
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function remove(id: string) {
+    if (!confirm('Supprimer ce livreur ?')) return;
+    try {
+      await deleteLivreur(id);
+      setLivreurs((prev) => prev.filter((l) => l.id !== id));
+      success('Livreur supprimé');
+    } catch (e) { notifError(toUserError(e)); }
+  }
+
+  const total  = livreurs.length;
+  const actifs = livreurs.filter((l) => l.is_active).length;
+
+  return (
+    <div className="h-full flex flex-col">
+
+      {/* ── Header ── */}
+      <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-white">Livreurs</h1>
+          <p className="text-xs text-slate-500">
+            {total} livreur{total !== 1 ? 's' : ''} · {actifs} actif{actifs !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <button
+          onClick={() => openPanel(null)}
+          className="btn-primary h-9 text-sm flex items-center gap-1.5"
+        >
+          <Plus className="w-4 h-4 shrink-0" /> Ajouter
+        </button>
+      </div>
+
+      {/* ── Corps ── */}
+      <div className="flex-1 overflow-y-auto p-6">
+
+        {loading && (
+          <p className="text-center text-slate-500 py-12">Chargement…</p>
+        )}
+
+        {!loading && livreurs.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
+              <UserCheck className="w-8 h-8 text-slate-500" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-white">Aucun livreur enregistré</p>
+              <p className="text-sm text-slate-400 mt-1 max-w-sm">
+                Ajoutez vos livreurs pour pouvoir les assigner aux commandes de livraison.
+              </p>
+            </div>
+            <button onClick={() => openPanel(null)} className="btn-primary flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Ajouter un livreur
+            </button>
+          </div>
+        )}
+
+        {!loading && livreurs.length > 0 && (
+          <div className="max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {livreurs.map((l) => (
+              <div key={l.id} className="card p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-brand-400">
+                  {l.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white truncate">{l.name}</p>
+                    <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${
+                      l.is_active
+                        ? 'text-green-400 bg-green-900/20 border-green-800'
+                        : 'text-slate-400 bg-slate-800/40 border-slate-700'
+                    }`}>
+                      {l.is_active ? 'Actif' : 'Inactif'}
+                    </span>
+                  </div>
+                  <a
+                    href={`tel:${l.phone}`}
+                    className="text-xs text-slate-400 flex items-center gap-1 hover:text-brand-400 transition-colors"
+                  >
+                    <Phone className="w-3 h-3 shrink-0" /> {l.phone}
+                  </a>
+                  {l.notes && (
+                    <p className="text-xs text-slate-500 truncate">{l.notes}</p>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => openPanel(l)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => remove(l.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Panneau latéral ── */}
+      {panel && (
+        <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
+            <h3 className="font-semibold text-white">{panel.item ? 'Modifier livreur' : 'Nouveau livreur'}</h3>
+            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div>
+              <label className="label">Nom <span className="text-red-400">*</span></label>
+              <input
+                className="input"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ex : Amadou Diallo"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="label">Téléphone <span className="text-red-400">*</span></label>
+              <input
+                className="input"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="+221 77 000 00 00"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="label mb-0">Actif</label>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  form.is_active ? 'bg-brand-600' : 'bg-slate-700'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  form.is_active ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+            <div>
+              <label className="label">Notes</label>
+              <textarea
+                className="input resize-none h-20"
+                value={form.notes ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Infos utiles…"
+              />
+            </div>
+          </div>
+          <div className="px-5 py-4 border-t border-surface-border">
+            <button
+              onClick={save}
+              disabled={saving || !form.name.trim() || !form.phone.trim()}
+              className="btn-primary w-full h-10"
+            >
+              {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -128,12 +128,18 @@ export interface Order {
   customer_phone?: string;
   created_at: string;
   updated_at: string;
+  source?: string;
   // livraison
   delivery_status: DeliveryStatus;
   delivered_by?: string;
   delivered_at?: string;
+  delivery_type?: 'pickup' | 'delivery' | null;
+  delivery_address?: string | null;
+  delivery_location?: { latitude: number; longitude: number; name?: string; address?: string } | null;
+  livreur_id?: string | null;
   // joined
   cashier?: User;
+  livreur?: import('../services/supabase/livreurs').Livreur;
 }
 
 // ─── Cart (local state, not persisted to DB) ──────────────────────────────────
@@ -293,6 +299,7 @@ export interface Refund {
 // ─── Hôtel ────────────────────────────────────────────────────────────────────
 
 export type { RoomType, RoomStatus, ReservationStatus, HotelRoom, HotelGuest, HotelReservation, HotelService } from '../services/supabase/hotel';
+export type { Livreur } from '../services/supabase/livreurs';
 
 // ─── UI State ─────────────────────────────────────────────────────────────────
 
