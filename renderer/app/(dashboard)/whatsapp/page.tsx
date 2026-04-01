@@ -1,9 +1,10 @@
 'use client';
 
 import { toUserError } from '@/lib/user-error';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import Link from 'next/link';
 import {
   MessageCircle, Send, RefreshCw, Search, ShoppingCart,
   ChevronRight, ArrowLeft, Phone, Loader2, Filter, X,
@@ -71,8 +72,10 @@ export default function WhatsAppPage() {
 
   const bottomRef        = useRef<HTMLDivElement>(null);
   const msgContainerRef  = useRef<HTMLDivElement>(null);
+  const msgRefs          = useRef<Map<string, HTMLDivElement>>(new Map());
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const instantScroll    = useRef(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const canReply         = hasRole(user?.role, 'manager');
 
   // ── Chargement initial + refresh ───────────────────────────────────────────
@@ -140,7 +143,21 @@ export default function WhatsAppPage() {
     setLoadingMsg(true);
     try {
       const msgs = await getMessages(business.id, conv.from_phone);
-      instantScroll.current = true;
+      // Si une recherche est active, trouver le message correspondant pour le jump
+      if (search) {
+        const q = search.toLowerCase();
+        const match = msgs.find((m) =>
+          m.body?.toLowerCase().includes(q) ||
+          m.order_id?.toLowerCase().startsWith(q.toLowerCase())
+        );
+        if (match) {
+          setHighlightId(match.id);
+        } else {
+          instantScroll.current = true;
+        }
+      } else {
+        instantScroll.current = true;
+      }
       setMessages(msgs);
       await markMessagesRead(business.id, conv.from_phone);
       setConversations((prev) =>
@@ -153,19 +170,22 @@ export default function WhatsAppPage() {
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!msgContainerRef.current || loadingMsg) return;
     if (instantScroll.current) {
       instantScroll.current = false;
-      // RAF garantit que le DOM est rendu avant de scroller
-      requestAnimationFrame(() => {
-        if (msgContainerRef.current) {
-          msgContainerRef.current.scrollTop = msgContainerRef.current.scrollHeight;
-        }
-      });
+      msgContainerRef.current.scrollTop = msgContainerRef.current.scrollHeight;
     } else {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, loadingMsg]);
+
+  // Scroll vers le message matché par la recherche
+  useLayoutEffect(() => {
+    if (!highlightId || loadingMsg) return;
+    const el = msgRefs.current.get(highlightId);
+    if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+  }, [highlightId, loadingMsg]);
 
   async function handleSend() {
     if (!config || !selected || !reply.trim() || !user?.id) return;
@@ -458,16 +478,18 @@ export default function WhatsAppPage() {
                 }
 
                 const msg = row.msg;
+                const isHighlighted = msg.id === highlightId;
                 return (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
+                    ref={(el) => { if (el) msgRefs.current.set(msg.id, el); else msgRefs.current.delete(msg.id); }}
+                    className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'animate-pulse-once' : ''}`}
                   >
-                    <div className={`max-w-[75%] rounded-2xl overflow-hidden ${
+                    <div className={`max-w-[75%] rounded-2xl overflow-hidden transition-all ${
                       msg.direction === 'outbound'
                         ? 'bg-green-700 text-white rounded-br-sm'
                         : 'bg-slate-700 text-slate-100 rounded-bl-sm'
-                    }`}>
+                    } ${isHighlighted ? 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-transparent' : ''}`}>
                       {(msg.payload as { image_url?: string } | null)?.image_url && (
                         <img
                           src={(msg.payload as { image_url: string }).image_url}
@@ -477,10 +499,13 @@ export default function WhatsAppPage() {
                       )}
                       <div className="px-4 py-2.5 space-y-1">
                         {msg.order_id && (
-                          <div className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 text-white w-fit">
+                          <Link
+                            href={`/orders?order=${msg.order_id}`}
+                            className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 hover:bg-green-500 text-white w-fit transition-colors"
+                          >
                             <ShoppingCart className="w-3 h-3" />
                             <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
-                          </div>
+                          </Link>
                         )}
                         <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
                         <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>

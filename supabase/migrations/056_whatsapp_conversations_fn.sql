@@ -56,13 +56,21 @@ AS $$
     WHERE direction = 'inbound' AND status = 'received'
     GROUP BY nphone
   ),
-  order_phones AS (
-    -- Contacts ayant une commande dont l'ID correspond à la recherche
+  body_match AS (
+    -- Contacts ayant au moins un message dont le contenu correspond à la recherche
+    SELECT DISTINCT nphone
+    FROM norm
+    WHERE p_search IS NOT NULL AND p_search <> ''
+      AND body ILIKE '%' || p_search || '%'
+  ),
+  order_match AS (
+    -- Contacts ayant une commande dont l'UUID commence par la recherche
+    -- ex: 'A20813F6' → order_id ILIKE 'a20813f6%'
     SELECT DISTINCT nphone
     FROM norm
     WHERE order_id IS NOT NULL
       AND p_search IS NOT NULL AND p_search <> ''
-      AND order_id::TEXT ILIKE '%' || p_search || '%'
+      AND order_id::TEXT ILIKE p_search || '%'
   )
   SELECT
     lm.nphone        AS from_phone,
@@ -78,8 +86,8 @@ AS $$
       p_search IS NULL OR p_search = '' OR
       lm.nphone        ILIKE '%' || p_search || '%' OR
       ln.from_name     ILIKE '%' || p_search || '%' OR
-      lm.last_message  ILIKE '%' || p_search || '%' OR
-      lm.nphone IN (SELECT nphone FROM order_phones)
+      lm.nphone IN (SELECT nphone FROM body_match)  OR
+      lm.nphone IN (SELECT nphone FROM order_match)
     )
     AND (NOT p_unread_only OR COALESCE(u.cnt, 0) > 0)
   ORDER BY lm.last_at DESC

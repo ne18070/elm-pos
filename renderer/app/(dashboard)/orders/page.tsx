@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Search, Filter, RefreshCw, User, Printer, MessageCircle } from 'lucide-react';
@@ -71,6 +71,19 @@ export default function OrdersPage() {
 
   // Compteur acomptes pour le badge
   const acompteCount = orders.filter(isAcompte).length;
+
+  // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp
+  useEffect(() => {
+    if (!orders.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order');
+    if (!orderId) return;
+    const order = orders.find((o) => o.id === orderId);
+    if (order) {
+      setTab('all');
+      setSelectedOrder(order);
+    }
+  }, [orders]);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency);
 
