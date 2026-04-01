@@ -3,7 +3,7 @@ import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight, ChevronDown } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
@@ -60,10 +60,28 @@ export default function SettingsPage() {
     wave_payment_url: null,
     enable_pickup:    false,
     enable_delivery:  false,
+    msg_cart_footer:          'Tapez *confirmer* pour valider ou *menu* pour modifier.',
+    msg_shipping_question:    '🚚 *Comment souhaitez-vous recevoir votre commande ?*',
+    msg_address_request:      '📍 *Adresse de livraison*\n\nPartagez votre localisation 📌 ou tapez votre adresse en texte.\n\n_Tapez *annuler* pour revenir au menu._',
+    msg_delivery_confirmation: '✅ *Votre commande a été livrée !*\n\n📦 *Commande :* #{commande}\n💰 *Total :* {total} FCFA\n\nMerci pour votre confiance ! 🙏',
   });
   const [showToken, setShowToken]       = useState(false);
   const [savingWa, setSavingWa]         = useState(false);
   const [regeneratingToken, setRegeneratingToken] = useState(false);
+
+  // Sections repliables
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    etablissement: true,
+    stock:         false,
+    facture:       false,
+    sync:          false,
+    printer:       false,
+    drawer:        false,
+    whatsapp:      false,
+  });
+  function toggleSection(key: string) {
+    setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+  }
 
   // Config tiroir-caisse
   const [drawerConfig, setDrawerConfig] = useState<CashDrawerConfig>(() => loadCashDrawerConfig());
@@ -212,6 +230,10 @@ export default function SettingsPage() {
           wave_payment_url: cfg.wave_payment_url ?? null,
           enable_pickup:    cfg.enable_pickup   ?? false,
           enable_delivery:  cfg.enable_delivery ?? false,
+          msg_cart_footer:          cfg.msg_cart_footer          ?? 'Tapez *confirmer* pour valider ou *menu* pour modifier.',
+          msg_shipping_question:    cfg.msg_shipping_question    ?? '🚚 *Comment souhaitez-vous recevoir votre commande ?*',
+          msg_address_request:      cfg.msg_address_request      ?? '📍 *Adresse de livraison*\n\nPartagez votre localisation 📌 ou tapez votre adresse en texte.\n\n_Tapez *annuler* pour revenir au menu._',
+          msg_delivery_confirmation: cfg.msg_delivery_confirmation ?? '✅ *Votre commande a été livrée !*\n\n📦 *Commande :* #{commande}\n💰 *Total :* {total} FCFA\n\nMerci pour votre confiance ! 🙏',
         });
       }
       setWaLoaded(true);
@@ -300,10 +322,14 @@ export default function SettingsPage() {
 
         {/* Informations établissement — manager+ seulement */}
         {isManagerOrAbove && (
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            Informations de l&apos;établissement
-          </h2>
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSection('etablissement')} className="w-full flex items-center justify-between p-5">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              Informations de l&apos;établissement
+            </h2>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.etablissement ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.etablissement && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
 
           <div>
             <label className="label">Nom</label>
@@ -423,16 +449,21 @@ export default function SettingsPage() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
+          </div>}
         </div>
         )}
 
         {/* Unités de stock — manager+ seulement */}
         {isManagerOrAbove && (
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Package className="w-4 h-4 text-slate-400" />
-            Unités de stock
-          </h2>
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSection('stock')} className="w-full flex items-center justify-between p-5">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Package className="w-4 h-4 text-slate-400" />
+              Unités de stock
+            </h2>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.stock ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.stock && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <p className="text-xs text-slate-500">
             Ces unités seront disponibles en liste déroulante lors de la création de produits.
           </p>
@@ -479,16 +510,21 @@ export default function SettingsPage() {
             {savingUnits ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {savingUnits ? 'Enregistrement...' : 'Enregistrer les unités'}
           </button>
+          </div>}
         </div>
         )}
 
         {/* Modèles de facture — manager+ seulement */}
         {isManagerOrAbove && (
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Printer className="w-4 h-4 text-slate-400" />
-            Modèles de facture
-          </h2>
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSection('facture')} className="w-full flex items-center justify-between p-5">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Printer className="w-4 h-4 text-slate-400" />
+              Modèles de facture
+            </h2>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.facture ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.facture && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <p className="text-xs text-slate-500">
             Créez et personnalisez vos modèles d&apos;impression : format, couleurs, champs affichés, duplicata…
           </p>
@@ -499,13 +535,17 @@ export default function SettingsPage() {
           {showTemplateManager && (
             <TemplateManager businessId={business?.id ?? ''} onClose={() => setShowTemplateManager(false)} />
           )}
+          </div>}
         </div>
         )}
 
         {/* Synchronisation */}
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-white">Synchronisation & Mode hors ligne</h2>
-
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSection('sync')} className="w-full flex items-center justify-between p-5">
+            <h2 className="font-semibold text-white">Synchronisation & Mode hors ligne</h2>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.sync ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.sync && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <div className={`flex items-center gap-3 p-3 rounded-xl ${
             isOnline ? 'bg-green-900/20 border border-green-800' : 'bg-yellow-900/20 border border-yellow-800'
           }`}>
@@ -532,15 +572,19 @@ export default function SettingsPage() {
             {syncing2 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
             {syncing2 ? 'Synchronisation...' : 'Synchroniser maintenant'}
           </button>
+          </div>}
         </div>
 
         {/* Config imprimante */}
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Printer className="w-4 h-4 text-slate-400" />
-            Imprimante thermique
-          </h2>
-
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSection('printer')} className="w-full flex items-center justify-between p-5">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Printer className="w-4 h-4 text-slate-400" />
+              Imprimante thermique
+            </h2>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.printer ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.printer && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           {/* Mode de connexion */}
           <div>
             <label className="label">Mode de connexion</label>
@@ -642,15 +686,19 @@ export default function SettingsPage() {
             <Save className="w-4 h-4" />
             Enregistrer
           </button>
+          </div>}
         </div>
 
         {/* Tiroir-caisse */}
-        <div className="card p-5 space-y-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Archive className="w-4 h-4 text-slate-400" />
-            Tiroir-caisse
-          </h2>
-
+        <div className="card overflow-hidden">
+          <button onClick={() => toggleSection('drawer')} className="w-full flex items-center justify-between p-5">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Archive className="w-4 h-4 text-slate-400" />
+              Tiroir-caisse
+            </h2>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.drawer ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.drawer && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <p className="text-sm text-slate-400">
             Le tiroir-caisse s&apos;ouvre automatiquement via l&apos;imprimante thermique
             après chaque paiement en espèces.
@@ -697,18 +745,22 @@ export default function SettingsPage() {
               )}
             </div>
           )}
+          </div>}
         </div>
 
         {/* WhatsApp Business — admin/owner uniquement */}
         {isAdmin && (
-          <div className="card p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-green-400" />
+          <div className="card overflow-hidden">
+            <button onClick={() => toggleSection('whatsapp')} className="w-full flex items-center justify-between p-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
+                  <MessageCircle className="w-4 h-4 text-green-400" />
+                </div>
+                <h2 className="font-semibold text-white">WhatsApp Business</h2>
               </div>
-              <h2 className="font-semibold text-white">WhatsApp Business</h2>
-            </div>
-
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.whatsapp ? 'rotate-180' : ''}`} />
+            </button>
+            {openSections.whatsapp && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
             {!waLoaded ? (
               <div className="flex items-center gap-2 text-slate-400 text-sm">
                 <Loader2 className="w-4 h-4 animate-spin" />Chargement…
@@ -948,6 +1000,64 @@ export default function SettingsPage() {
                     </div>
 
                   </div>
+
+                  {/* Messages B2C personnalisables */}
+                  <div className="border border-slate-700 rounded-lg p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-slate-300">Messages automatiques</h4>
+                    <p className="text-xs text-slate-500">
+                      Placeholders : <span className="font-mono text-slate-400">{'{nom}'}</span> → établissement,{' '}
+                      <span className="font-mono text-slate-400">{'{mot_cle}'}</span> → mot-clé menu,{' '}
+                      <span className="font-mono text-slate-400">{'{commande}'}</span> → n° commande,{' '}
+                      <span className="font-mono text-slate-400">{'{total}'}</span> → montant.
+                    </p>
+
+                    <div>
+                      <label className="label">Pied de panier</label>
+                      <textarea
+                        rows={2}
+                        value={waForm.msg_cart_footer}
+                        onChange={(e) => setWaForm((f) => ({ ...f, msg_cart_footer: e.target.value }))}
+                        className="input resize-none text-sm font-mono"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Affiché sous le récapitulatif du panier.</p>
+                    </div>
+
+                    <div>
+                      <label className="label">Question mode de livraison</label>
+                      <textarea
+                        rows={2}
+                        value={waForm.msg_shipping_question}
+                        onChange={(e) => setWaForm((f) => ({ ...f, msg_shipping_question: e.target.value }))}
+                        className="input resize-none text-sm font-mono"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Demande au client de choisir retrait ou livraison.</p>
+                    </div>
+
+                    <div>
+                      <label className="label">Demande d&apos;adresse</label>
+                      <textarea
+                        rows={3}
+                        value={waForm.msg_address_request}
+                        onChange={(e) => setWaForm((f) => ({ ...f, msg_address_request: e.target.value }))}
+                        className="input resize-none text-sm font-mono"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Envoyé quand le client choisit la livraison à domicile.</p>
+                    </div>
+
+                    <div>
+                      <label className="label">Confirmation de livraison au client</label>
+                      <textarea
+                        rows={4}
+                        value={waForm.msg_delivery_confirmation}
+                        onChange={(e) => setWaForm((f) => ({ ...f, msg_delivery_confirmation: e.target.value }))}
+                        className="input resize-none text-sm font-mono"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Envoyé au client quand la commande est marquée livrée.
+                        Utilisez <span className="font-mono text-slate-400">{'{commande}'}</span> et <span className="font-mono text-slate-400">{'{total}'}</span>.
+                      </p>
+                    </div>
+                  </div>
                   </div>
                 )}
 
@@ -961,6 +1071,7 @@ export default function SettingsPage() {
                 </button>
               </div>
             )}
+            </div>}
           </div>
         )}
 

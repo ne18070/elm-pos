@@ -21,13 +21,17 @@ export interface WhatsAppConfig {
   wave_payment_url:  string | null;
   enable_pickup:     boolean;
   enable_delivery:   boolean;
+  msg_cart_footer:          string;
+  msg_shipping_question:    string;
+  msg_address_request:      string;
+  msg_delivery_confirmation: string;
   created_at:        string;
   updated_at:      string;
 }
 
 export type WhatsAppConfigForm = Pick<
   WhatsAppConfig,
-  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message' | 'wave_payment_url' | 'enable_pickup' | 'enable_delivery'
+  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message' | 'wave_payment_url' | 'enable_pickup' | 'enable_delivery' | 'msg_cart_footer' | 'msg_shipping_question' | 'msg_address_request' | 'msg_delivery_confirmation'
 >;
 
 export interface WhatsAppMessage {

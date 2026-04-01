@@ -56,6 +56,9 @@ interface WaConfig {
   wave_payment_url:  string | null;
   enable_pickup:     boolean;
   enable_delivery:   boolean;
+  msg_cart_footer:          string;
+  msg_shipping_question:    string;
+  msg_address_request:      string;
   business_name?:    string;
 }
 
@@ -122,7 +125,7 @@ serve(async (req) => {
 
         const { data: config } = await supabase
           .from('whatsapp_configs')
-          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,wave_payment_url,enable_pickup,enable_delivery,businesses(name)')
+          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,wave_payment_url,enable_pickup,enable_delivery,msg_cart_footer,msg_shipping_question,msg_address_request,businesses(name)')
           .eq('phone_number_id', value.metadata?.phone_number_id ?? '')
           .eq('is_active', true)
           .maybeSingle();
@@ -370,6 +373,7 @@ async function askShippingOrConfirm(
 }
 
 async function askShipping(config: WaConfig, toPhone: string) {
+  const bodyText = config.msg_shipping_question || '🚚 *Comment souhaitez-vous recevoir votre commande ?*';
   await callMetaAPI(config, {
     messaging_product: 'whatsapp',
     recipient_type:    'individual',
@@ -377,7 +381,7 @@ async function askShipping(config: WaConfig, toPhone: string) {
     type:              'interactive',
     interactive: {
       type: 'button',
-      body: { text: '🚚 *Comment souhaitez-vous recevoir votre commande ?*' },
+      body: { text: bodyText },
       action: {
         buttons: [
           { type: 'reply', reply: { id: 'ship_pickup',   title: '🏠 Retrait sur place' } },
@@ -389,11 +393,9 @@ async function askShipping(config: WaConfig, toPhone: string) {
 }
 
 async function askDeliveryAddress(config: WaConfig, toPhone: string) {
-  await sendTextMessage(
-    config,
-    toPhone,
-    '📍 *Adresse de livraison*\n\nPartagez votre localisation 📌 ou tapez votre adresse en texte.\n\n_Tapez *annuler* pour revenir au menu._',
-  );
+  const text = config.msg_address_request
+    || '📍 *Adresse de livraison*\n\nPartagez votre localisation 📌 ou tapez votre adresse en texte.\n\n_Tapez *annuler* pour revenir au menu._';
+  await sendTextMessage(config, toPhone, text);
 }
 
 // ─── Catalogue ────────────────────────────────────────────────────────────────
@@ -668,7 +670,8 @@ async function sendCartSummary(
   const total    = items.reduce((s, i) => s + i.total, 0);
   const lines    = items.map((i) => `• ${i.name} × ${i.quantity} = ${i.total.toLocaleString()} ${currency}`).join('\n');
 
-  const summary = `🛒 *Votre commande :*\n${lines}\n\n💰 *Total : ${total.toLocaleString()} ${currency}*\n\nTapez *confirmer* pour valider ou *menu* pour modifier.`;
+  const cartFooter = config.msg_cart_footer || 'Tapez *confirmer* pour valider ou *menu* pour modifier.';
+  const summary = `🛒 *Votre commande :*\n${lines}\n\n💰 *Total : ${total.toLocaleString()} ${currency}*\n\n${cartFooter}`;
   await sendTextMessage(config, fromPhone, summary);
 }
 

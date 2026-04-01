@@ -18,6 +18,7 @@ import {
   getLivreurs,
   assignLivreur,
   sendLocationToLivreur,
+  sendDeliveryConfirmationToClient,
   type Livreur,
 } from '@services/supabase/livreurs';
 import { getWhatsAppConfig } from '@services/supabase/whatsapp';
@@ -97,6 +98,13 @@ export default function LivraisonPage() {
     if (!selected || !user) return;
     try {
       await confirmOrderDelivery(selected.id, user.id);
+      if (waConfig?.is_active && selected.customer_phone) {
+        sendDeliveryConfirmationToClient(
+          { phone_number_id: waConfig.phone_number_id, access_token: waConfig.access_token, business_id: business!.id },
+          { id: selected.id, customer_name: selected.customer_name, customer_phone: selected.customer_phone, total: selected.total },
+          waConfig.msg_delivery_confirmation ?? null,
+        ).catch(() => {});
+      }
       success(`Commande #${selected.id.slice(0, 8).toUpperCase()} livrée ✓`);
       setSelected(null);
       fetchOrders(true);

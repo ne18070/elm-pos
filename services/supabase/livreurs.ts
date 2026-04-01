@@ -59,6 +59,50 @@ function normalizePhone(phone: string): string {
   return `+${cleaned}`;
 }
 
+export async function sendDeliveryConfirmationToClient(
+  config: { phone_number_id: string; access_token: string; business_id: string },
+  order: { id: string; customer_name?: string; customer_phone?: string; total: number },
+  msgTemplate?: string | null,
+): Promise<void> {
+  if (!order.customer_phone) return;
+  const phone = normalizePhone(order.customer_phone);
+  const orderId = order.id.slice(0, 8).toUpperCase();
+
+  const defaultTemplate =
+    `✅ *Votre commande a été livrée !*\n\n` +
+    `📦 *Commande :* #{commande}\n` +
+    `💰 *Total :* {total} FCFA\n\n` +
+    `Merci pour votre confiance ! 🙏`;
+
+  const body = (msgTemplate || defaultTemplate)
+    .replace(/\{commande\}/gi, orderId)
+    .replace(/\{total\}/gi, String(order.total))
+    .replace(/\{nom_client\}/gi, order.customer_name ?? '');
+
+  const res = await fetch(
+    `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.access_token}` },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'text', text: { body } }),
+    },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error?.message ?? `Erreur API Meta (${res.status})`);
+  }
+
+  await supabase.from('whatsapp_messages').insert({
+    business_id:  config.business_id,
+    from_phone:   phone,
+    direction:    'outbound',
+    message_type: 'text',
+    body,
+    order_id:     order.id,
+    status:       'sent',
+  });
+}
+
 export async function sendLocationToLivreur(
   config: { phone_number_id: string; access_token: string },
   livreur: Livreur,
