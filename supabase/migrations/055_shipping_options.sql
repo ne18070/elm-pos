@@ -1,8 +1,7 @@
 -- Shipping options configuration on whatsapp_configs
 ALTER TABLE whatsapp_configs
   ADD COLUMN IF NOT EXISTS enable_pickup    BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS enable_delivery  BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS delivery_fee     INTEGER NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS enable_delivery  BOOLEAN NOT NULL DEFAULT false;
 
 -- Delivery info on orders
 ALTER TABLE orders

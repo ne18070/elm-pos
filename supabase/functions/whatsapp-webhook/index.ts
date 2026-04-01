@@ -33,6 +33,12 @@ interface WaMessage {
     list_reply?:   { id: string; title: string; description?: string };
     button_reply?: { id: string; title: string };
   };
+  location?: {
+    latitude:  number;
+    longitude: number;
+    name?:     string;
+    address?:  string;
+  };
 }
 
 interface WaStatus { id: string; status: string; }
@@ -48,6 +54,8 @@ interface WaConfig {
   menu_keyword:      string;
   confirm_message:   string;
   wave_payment_url:  string | null;
+  enable_pickup:     boolean;
+  enable_delivery:   boolean;
   business_name?:    string;
 }
 
@@ -57,6 +65,15 @@ interface CartItem {
   price:      number;
   quantity:   number;
   total:      number;
+}
+
+type DeliveryType = 'pickup' | 'delivery' | null;
+
+interface DeliveryLocation {
+  latitude:  number;
+  longitude: number;
+  name?:     string;
+  address?:  string;
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
@@ -105,7 +122,7 @@ serve(async (req) => {
 
         const { data: config } = await supabase
           .from('whatsapp_configs')
-          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,wave_payment_url,businesses(name)')
+          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,wave_payment_url,enable_pickup,enable_delivery,businesses(name)')
           .eq('phone_number_id', value.metadata?.phone_number_id ?? '')
           .eq('is_active', true)
           .maybeSingle();
@@ -157,6 +174,8 @@ async function processMessage(
     body = msg.interactive?.list_reply?.title
         ?? msg.interactive?.button_reply?.title
         ?? '';
+  } else if (msg.type === 'location') {
+    body = msg.location?.name ?? msg.location?.address ?? '📍 Localisation partagée';
   }
 
   // Stocker le message (idempotent via contrainte UNIQUE sur wa_message_id)
@@ -215,21 +234,62 @@ async function handleCatalogFlow(
 
   const step: string = cart?.step ?? 'menu';
 
-  // Commandes globales
+  // Commandes globales (sauf à l'étape address où le texte = adresse)
   const menuKeyword = (config.menu_keyword || 'menu').toLowerCase();
-  if ([menuKeyword, 'annuler', 'cancel', 'restart', '0'].includes(lower)) {
+  if (step !== 'address' && [menuKeyword, 'annuler', 'cancel', 'restart', '0'].includes(lower)) {
     await resetCart(supabase, config, fromPhone);
     await sendCategoryMenu(supabase, config, fromPhone);
     return;
   }
 
-  // Confirmation de commande
-  if (['confirmer', 'confirm', 'oui', 'yes', 'ok'].includes(lower) && step === 'confirm') {
-    await confirmOrder(supabase, config, cart, fromPhone, fromName);
+  // ── Étape : adresse de livraison ─────────────────────────────────────────
+  if (step === 'address') {
+    if (msg.type === 'location' && msg.location) {
+      const loc = msg.location;
+      const address = [loc.name, loc.address].filter(Boolean).join(', ') || null;
+      await finalizeOrder(supabase, config, cart, fromPhone, fromName, 'delivery', address, loc);
+    } else if (msg.type === 'text' && body.trim()) {
+      if ([menuKeyword, 'annuler', 'cancel', '0'].includes(lower)) {
+        await resetCart(supabase, config, fromPhone);
+        await sendCategoryMenu(supabase, config, fromPhone);
+      } else {
+        await finalizeOrder(supabase, config, cart, fromPhone, fromName, 'delivery', body.trim(), null);
+      }
+    } else {
+      await askDeliveryAddress(config, fromPhone);
+    }
     return;
   }
 
-  // Sélection de catégorie (réponse interactive)
+  // ── Étape : choix retrait / livraison ─────────────────────────────────────
+  if (step === 'shipping' && msg.type === 'interactive'
+      && msg.interactive?.type === 'button_reply') {
+    const choice = msg.interactive.button_reply?.id ?? '';
+    if (choice === 'ship_pickup') {
+      await finalizeOrder(supabase, config, cart, fromPhone, fromName, 'pickup', null, null);
+    } else if (choice === 'ship_delivery') {
+      await supabase.from('whatsapp_carts').upsert({
+        business_id: config.business_id,
+        from_phone:  fromPhone,
+        step:        'address',
+        items:       cart?.items ?? [],
+        context:     { ...(cart?.context ?? {}), delivery_type: 'delivery' },
+        updated_at:  new Date().toISOString(),
+      }, { onConflict: 'business_id,from_phone' });
+      await askDeliveryAddress(config, fromPhone);
+    } else {
+      await askShipping(config, fromPhone);
+    }
+    return;
+  }
+
+  // ── Confirmation de commande ──────────────────────────────────────────────
+  if (['confirmer', 'confirm', 'oui', 'yes', 'ok'].includes(lower) && step === 'confirm') {
+    await askShippingOrConfirm(supabase, config, cart, fromPhone, fromName);
+    return;
+  }
+
+  // ── Sélection de catégorie (réponse interactive) ──────────────────────────
   if ((step === 'menu' || step === 'category') && msg.type === 'interactive'
       && msg.interactive?.type === 'list_reply') {
     const catId = msg.interactive.list_reply?.id ?? '';
@@ -245,7 +305,7 @@ async function handleCatalogFlow(
     return;
   }
 
-  // Sélection de produit (liste ou bouton image)
+  // ── Sélection de produit ──────────────────────────────────────────────────
   if (step === 'product' && msg.type === 'interactive') {
     const productId = msg.interactive?.list_reply?.id
                    ?? msg.interactive?.button_reply?.id
@@ -256,7 +316,7 @@ async function handleCatalogFlow(
     }
   }
 
-  // Résumé panier si step = confirm
+  // ── Résumé panier si step = confirm ──────────────────────────────────────
   if (step === 'confirm') {
     await sendCartSummary(supabase, config, cart, fromPhone);
     return;
@@ -265,6 +325,78 @@ async function handleCatalogFlow(
   // Fallback : envoyer le menu
   await sendCategoryMenu(supabase, config, fromPhone);
 }
+
+// ─── Shipping flow ────────────────────────────────────────────────────────────
+
+async function askShippingOrConfirm(
+  supabase: ReturnType<typeof createClient>,
+  config: WaConfig,
+  cart: Record<string, unknown> | null,
+  fromPhone: string,
+  fromName: string | null,
+) {
+  const hasPickup   = config.enable_pickup;
+  const hasDelivery = config.enable_delivery;
+
+  if (hasPickup && hasDelivery) {
+    // Les deux options disponibles → laisser le client choisir
+    await supabase.from('whatsapp_carts').upsert({
+      business_id: config.business_id,
+      from_phone:  fromPhone,
+      step:        'shipping',
+      items:       cart?.items ?? [],
+      context:     cart?.context ?? {},
+      updated_at:  new Date().toISOString(),
+    }, { onConflict: 'business_id,from_phone' });
+    await askShipping(config, fromPhone);
+  } else if (hasDelivery) {
+    // Livraison uniquement → demander l'adresse directement
+    await supabase.from('whatsapp_carts').upsert({
+      business_id: config.business_id,
+      from_phone:  fromPhone,
+      step:        'address',
+      items:       cart?.items ?? [],
+      context:     { ...(cart?.context ?? {}), delivery_type: 'delivery' },
+      updated_at:  new Date().toISOString(),
+    }, { onConflict: 'business_id,from_phone' });
+    await askDeliveryAddress(config, fromPhone);
+  } else if (hasPickup) {
+    // Retrait uniquement → confirmer directement
+    await finalizeOrder(supabase, config, cart, fromPhone, fromName, 'pickup', null, null);
+  } else {
+    // Pas de configuration shipping → confirmer sans info livraison
+    await finalizeOrder(supabase, config, cart, fromPhone, fromName, null, null, null);
+  }
+}
+
+async function askShipping(config: WaConfig, toPhone: string) {
+  await callMetaAPI(config, {
+    messaging_product: 'whatsapp',
+    recipient_type:    'individual',
+    to:                toPhone,
+    type:              'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: '🚚 *Comment souhaitez-vous recevoir votre commande ?*' },
+      action: {
+        buttons: [
+          { type: 'reply', reply: { id: 'ship_pickup',   title: '🏠 Retrait sur place' } },
+          { type: 'reply', reply: { id: 'ship_delivery', title: '🚗 Livraison à domicile' } },
+        ],
+      },
+    },
+  });
+}
+
+async function askDeliveryAddress(config: WaConfig, toPhone: string) {
+  await sendTextMessage(
+    config,
+    toPhone,
+    '📍 *Adresse de livraison*\n\nPartagez votre localisation 📌 ou tapez votre adresse en texte.\n\n_Tapez *annuler* pour revenir au menu._',
+  );
+}
+
+// ─── Catalogue ────────────────────────────────────────────────────────────────
 
 async function sendCategoryMenu(
   supabase: ReturnType<typeof createClient>,
@@ -442,7 +574,6 @@ async function sendProductMenu(
         },
       },
     });
-    // Stocker le message sortant avec l'image dans le payload
     await supabase.from('whatsapp_messages').insert({
       business_id:  config.business_id,
       from_phone:   toPhone,
@@ -542,12 +673,17 @@ async function sendCartSummary(
   await sendTextMessage(config, fromPhone, summary);
 }
 
-async function confirmOrder(
+// ─── Finalisation de commande ─────────────────────────────────────────────────
+
+async function finalizeOrder(
   supabase: ReturnType<typeof createClient>,
   config: WaConfig,
   cart: Record<string, unknown> | null,
   fromPhone: string,
   fromName: string | null,
+  deliveryType: DeliveryType,
+  deliveryAddress: string | null,
+  deliveryLocation: DeliveryLocation | null,
 ) {
   const items: CartItem[] = (cart?.items as CartItem[] | null) ?? [];
 
@@ -556,20 +692,32 @@ async function confirmOrder(
     return;
   }
 
-  const total = items.reduce((s, i) => s + i.total, 0);
+  const subtotal = items.reduce((s, i) => s + i.total, 0);
+  const total    = subtotal;
+
+  // Notes avec info livraison
+  let notes = `Commande WhatsApp — ${fromName ?? fromPhone}`;
+  if (deliveryType === 'pickup')   notes += '\n🏠 Retrait sur place';
+  if (deliveryType === 'delivery') {
+    notes += '\n🚗 Livraison à domicile';
+    if (deliveryAddress) notes += `\n📍 ${deliveryAddress}`;
+  }
 
   const { data: order, error: orderErr } = await supabase.from('orders').insert({
-    business_id:     config.business_id,
-    cashier_id:      null,
-    status:          'pending',
-    subtotal:        total,
-    tax_amount:      0,
-    discount_amount: 0,
+    business_id:       config.business_id,
+    cashier_id:        null,
+    status:            'pending',
+    subtotal,
+    tax_amount:        0,
+    discount_amount:   0,
     total,
-    notes:           `Commande WhatsApp — ${fromName ?? fromPhone}`,
-    customer_name:   fromName ?? fromPhone,
-    customer_phone:  fromPhone,
-    source:          'whatsapp',
+    notes,
+    customer_name:     fromName ?? fromPhone,
+    customer_phone:    fromPhone,
+    source:            'whatsapp',
+    delivery_type:     deliveryType,
+    delivery_address:  deliveryAddress,
+    delivery_location: deliveryLocation,
   }).select().single();
 
   if (orderErr || !order) {
@@ -597,7 +745,7 @@ async function confirmOrder(
     .eq('from_phone', fromPhone)
     .is('order_id', null);
 
-  // Enregistrer / mettre à jour le client dans la table clients
+  // Enregistrer / mettre à jour le client
   const { data: existingClient } = await supabase
     .from('clients')
     .select('id')
@@ -606,7 +754,6 @@ async function confirmOrder(
     .maybeSingle();
 
   if (existingClient) {
-    // Mettre à jour le nom si on l'a maintenant
     if (fromName) {
       await supabase.from('clients')
         .update({ name: fromName })
@@ -634,7 +781,6 @@ async function confirmOrder(
   );
   await sendTextMessage(config, fromPhone, confirmMsg);
 
-  // Stocker le message sortant
   await supabase.from('whatsapp_messages').insert({
     business_id:  config.business_id,
     from_phone:   fromPhone,
@@ -684,7 +830,7 @@ function displayCurrency(code: string): string {
   return map[code] ?? code;
 }
 
-// ─── Placeholders ─────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function normalizePhone(phone: string): string {
   return phone.startsWith('+') ? phone : `+${phone}`;

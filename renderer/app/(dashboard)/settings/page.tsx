@@ -58,6 +58,8 @@ export default function SettingsPage() {
     menu_keyword:    'menu',
     confirm_message: '✅ *Commande confirmée !*\n\nVotre commande a bien été enregistrée. Notre équipe vous contactera pour la préparation ou la livraison.\n\nMerci de votre confiance ! 🙏\n\nPour une nouvelle commande, tapez *{mot_cle}*.',
     wave_payment_url: null,
+    enable_pickup:    false,
+    enable_delivery:  false,
   });
   const [showToken, setShowToken]       = useState(false);
   const [savingWa, setSavingWa]         = useState(false);
@@ -208,6 +210,8 @@ export default function SettingsPage() {
           menu_keyword:    cfg.menu_keyword ?? 'menu',
           confirm_message: cfg.confirm_message ?? '',
           wave_payment_url: cfg.wave_payment_url ?? null,
+          enable_pickup:    cfg.enable_pickup   ?? false,
+          enable_delivery:  cfg.enable_delivery ?? false,
         });
       }
       setWaLoaded(true);
@@ -905,6 +909,44 @@ export default function SettingsPage() {
                       URL de base Wave du marchand (se termine par <span className="font-mono text-slate-400">?</span>).
                       Le montant sera ajouté automatiquement à la validation de chaque commande.
                     </p>
+                  </div>
+
+                  {/* Options de livraison */}
+                  <div className="border border-slate-700 rounded-lg p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-300">Options de commande</h4>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-300">Retrait sur place</p>
+                        <p className="text-xs text-slate-500">Le client peut venir chercher sa commande</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWaForm((f) => ({ ...f, enable_pickup: !f.enable_pickup }))}
+                        className="text-slate-400 hover:text-white transition-colors"
+                      >
+                        {waForm.enable_pickup
+                          ? <ToggleRight className="w-7 h-7 text-green-400" />
+                          : <ToggleLeft className="w-7 h-7" />}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-300">Livraison à domicile</p>
+                        <p className="text-xs text-slate-500">Le client partage son adresse ou sa localisation</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWaForm((f) => ({ ...f, enable_delivery: !f.enable_delivery }))}
+                        className="text-slate-400 hover:text-white transition-colors"
+                      >
+                        {waForm.enable_delivery
+                          ? <ToggleRight className="w-7 h-7 text-green-400" />
+                          : <ToggleLeft className="w-7 h-7" />}
+                      </button>
+                    </div>
+
                   </div>
                   </div>
                 )}
