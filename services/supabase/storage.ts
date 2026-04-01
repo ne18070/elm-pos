@@ -24,6 +24,23 @@ export async function uploadProductImage(
 }
 
 /**
+ * Upload une image pour le menu du jour.
+ */
+export async function uploadMenuImage(businessId: string, file: File): Promise<string> {
+  const ext  = file.name.split('.').pop() ?? 'jpg';
+  const path = `${businessId}/menu/${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { upsert: true });
+
+  if (error) throw new Error(error.message);
+
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
  * Supprime une image produit à partir de son URL publique.
  */
 export async function deleteProductImage(publicUrl: string): Promise<void> {

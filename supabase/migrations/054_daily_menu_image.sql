@@ -1,0 +1,1 @@
+ALTER TABLE daily_menus ADD COLUMN IF NOT EXISTS image_url TEXT;

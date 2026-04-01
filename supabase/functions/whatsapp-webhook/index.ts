@@ -271,6 +271,101 @@ async function sendCategoryMenu(
   config: WaConfig,
   toPhone: string,
 ) {
+  await resetCart(supabase, config, toPhone);
+
+  // Menu du jour — affiché en premier s'il existe pour aujourd'hui
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: dailyMenu } = await supabase
+    .from('daily_menus')
+    .select('id, note, image_url')
+    .eq('business_id', config.business_id)
+    .eq('date', today)
+    .maybeSingle();
+
+  if (dailyMenu) {
+    const { data: dailyItems } = await supabase
+      .from('daily_menu_items')
+      .select('product_id, custom_price, sort_order, products(name, price, image_url)')
+      .eq('daily_menu_id', dailyMenu.id)
+      .order('sort_order')
+      .limit(10);
+
+    if (dailyItems?.length) {
+      const { data: biz } = await supabase.from('businesses').select('currency').eq('id', config.business_id).single();
+      const currency = displayCurrency((biz as { currency?: string } | null)?.currency ?? 'XOF');
+
+      type DailyItem = {
+        product_id: string;
+        custom_price: number | null;
+        sort_order: number;
+        products: { name: string; price: number; image_url: string | null };
+      };
+
+      const introText = dailyMenu.note
+        ? `🍽️ *Menu du jour*\n${dailyMenu.note}`
+        : '🍽️ *Menu du jour*';
+
+      // Image du menu si disponible
+      if ((dailyMenu as { image_url?: string | null }).image_url) {
+        await callMetaAPI(config, {
+          messaging_product: 'whatsapp',
+          recipient_type:    'individual',
+          to:                toPhone,
+          type:              'image',
+          image:             { link: (dailyMenu as { image_url: string }).image_url, caption: introText },
+        });
+      } else {
+        await sendTextMessage(config, toPhone, introText);
+      }
+
+      const withImage    = (dailyItems as DailyItem[]).filter((i) => i.products.image_url);
+      const withoutImage = (dailyItems as DailyItem[]).filter((i) => !i.products.image_url);
+
+      for (const item of withImage) {
+        const price = item.custom_price ?? item.products.price;
+        const body  = `*${item.products.name}*\n💰 ${price.toLocaleString()} ${currency}`;
+        await callMetaAPI(config, {
+          messaging_product: 'whatsapp',
+          recipient_type:    'individual',
+          to:                toPhone,
+          type:              'interactive',
+          interactive: {
+            type:   'button',
+            header: { type: 'image', image: { link: item.products.image_url } },
+            body:   { text: body },
+            action: { buttons: [{ type: 'reply', reply: { id: item.product_id, title: '🛒 Ajouter' } }] },
+          },
+        });
+        await supabase.from('whatsapp_messages').insert({
+          business_id: config.business_id, from_phone: toPhone,
+          direction: 'outbound', message_type: 'image', body,
+          payload: { image_url: item.products.image_url, product_id: item.product_id, product_name: item.products.name },
+          status: 'sent',
+        });
+      }
+
+      if (withoutImage.length > 0) {
+        const rows = withoutImage.map((item) => {
+          const price = item.custom_price ?? item.products.price;
+          return {
+            id:          item.product_id,
+            title:       item.products.name.slice(0, 24),
+            description: `${price.toLocaleString()} ${currency}`,
+          };
+        });
+        await sendInteractiveList(config, toPhone, {
+          body:     withImage.length > 0 ? 'Autres plats du jour :' : '🍽️ Choisissez un plat :',
+          button:   'Choisir',
+          sections: [{ title: 'Menu du jour', rows }],
+        });
+      }
+
+      await sendTextMessage(config, toPhone, '_Tapez *menu* pour voir le catalogue complet._');
+      return;
+    }
+  }
+
+  // Catalogue normal
   const { data: categories } = await supabase
     .from('categories')
     .select('id, name')
@@ -282,8 +377,6 @@ async function sendCategoryMenu(
     await sendTextMessage(config, toPhone, "Notre catalogue n'est pas encore disponible. Revenez bientôt !");
     return;
   }
-
-  await resetCart(supabase, config, toPhone);
 
   const rows = categories.map((c: { id: string; name: string }) => ({
     id:          c.id,

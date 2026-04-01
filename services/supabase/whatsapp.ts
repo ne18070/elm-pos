@@ -19,13 +19,16 @@ export interface WhatsAppConfig {
   menu_keyword:      string;
   confirm_message:   string;
   wave_payment_url:  string | null;
+  enable_pickup:     boolean;
+  enable_delivery:   boolean;
+  delivery_fee:      number;
   created_at:        string;
   updated_at:      string;
 }
 
 export type WhatsAppConfigForm = Pick<
   WhatsAppConfig,
-  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message' | 'wave_payment_url'
+  'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message' | 'wave_payment_url' | 'enable_pickup' | 'enable_delivery' | 'delivery_fee'
 >;
 
 export interface WhatsAppMessage {
@@ -140,6 +143,130 @@ export async function markMessagesRead(businessId: string, fromPhone: string): P
     .eq('from_phone', fromPhone)
     .eq('direction', 'inbound')
     .eq('status', 'received');
+}
+
+// ─── Broadcast menu du jour ───────────────────────────────────────────────────
+
+export interface BroadcastResult {
+  sent:    number;
+  skipped: number;
+  failed:  number;
+  errors:  string[];
+}
+
+export interface BroadcastLog {
+  phone:   string;
+  sent_at: string;
+}
+
+export async function getBroadcastLog(businessId: string, date: string): Promise<BroadcastLog[]> {
+  const { data } = await supabase
+    .from('whatsapp_broadcast_logs')
+    .select('phone, sent_at')
+    .eq('business_id', businessId)
+    .eq('date', date)
+    .order('sent_at', { ascending: false });
+  return (data ?? []) as BroadcastLog[];
+}
+
+export async function broadcastDailyMenu(
+  config: WhatsAppConfig,
+  text: string,
+  userId: string,
+  date: string,
+  imageUrl?: string | null,
+): Promise<BroadcastResult> {
+  // Récupérer tous les clients avec un numéro de téléphone
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('id, name, phone')
+    .eq('business_id', config.business_id)
+    .not('phone', 'is', null);
+
+  const result: BroadcastResult = { sent: 0, skipped: 0, failed: 0, errors: [] };
+  if (!clients?.length) return result;
+
+  // Récupérer les contacts déjà contactés aujourd'hui
+  const { data: logs } = await supabase
+    .from('whatsapp_broadcast_logs')
+    .select('phone')
+    .eq('business_id', config.business_id)
+    .eq('date', date);
+
+  const alreadySent = new Set((logs ?? []).map((l: { phone: string }) => l.phone));
+
+  for (const client of clients as { id: string; name: string; phone: string }[]) {
+    // Sauter si déjà envoyé aujourd'hui
+    if (alreadySent.has(client.phone)) {
+      result.skipped++;
+      continue;
+    }
+
+    try {
+      // Si image — envoyer image avec caption
+      const payload = imageUrl
+        ? {
+            messaging_product: 'whatsapp',
+            recipient_type:    'individual',
+            to:                client.phone,
+            type:              'image',
+            image:             { link: imageUrl, caption: text },
+          }
+        : {
+            messaging_product: 'whatsapp',
+            recipient_type:    'individual',
+            to:                client.phone,
+            type:              'text',
+            text:              { preview_url: false, body: text },
+          };
+
+      const res = await fetch(
+        `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
+        {
+          method:  'POST',
+          headers: {
+            Authorization:  `Bearer ${config.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = (err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${res.status}`;
+        result.failed++;
+        result.errors.push(`${client.name} (${client.phone}): ${msg}`);
+        continue;
+      }
+
+      // Enregistrer dans les messages WhatsApp
+      await supabase.from('whatsapp_messages').insert({
+        business_id:  config.business_id,
+        from_phone:   client.phone,
+        direction:    'outbound',
+        message_type: 'text',
+        body:         text,
+        replied_by:   userId,
+        status:       'sent',
+      });
+
+      // Enregistrer dans l'historique broadcast (contrainte UNIQUE empêche les doublons)
+      await supabase.from('whatsapp_broadcast_logs').insert({
+        business_id: config.business_id,
+        date,
+        phone:       client.phone,
+      });
+
+      result.sent++;
+      await new Promise((r) => setTimeout(r, 120));
+    } catch {
+      result.failed++;
+      result.errors.push(`${client.name} (${client.phone}): erreur réseau`);
+    }
+  }
+
+  return result;
 }
 
 // ─── Envoi de message (reply depuis l'app) ────────────────────────────────────

@@ -5,7 +5,8 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-const CURRENCY_LABEL: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA' };
+export const CURRENCY_LABEL: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA' };
+export function displayCurrency(code: string): string { return CURRENCY_LABEL[code] ?? code; }
 const CURRENCY_DECIMALS: Record<string, number> = { XOF: 0, XAF: 0, JPY: 0 };
 
 export function formatCurrency(amount: number, currency = 'USD'): string {
