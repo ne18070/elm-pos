@@ -54,6 +54,18 @@ export interface WhatsAppConversation {
   unread:       number;
 }
 
+export interface ConversationFilter {
+  search?:     string;
+  unreadOnly?: boolean;
+  page?:       number;
+  pageSize?:   number;
+}
+
+export interface ConversationPage {
+  items:   WhatsAppConversation[];
+  hasMore: boolean;
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export async function getWhatsAppConfig(businessId: string): Promise<WhatsAppConfig | null> {
@@ -88,58 +100,63 @@ export async function regenerateVerifyToken(configId: string): Promise<string> {
   return (data as { verify_token: string }).verify_token;
 }
 
+// ─── Phone normalization ──────────────────────────────────────────────────────
+
+function normalizePhone(phone: string): string {
+  if (!phone) return phone;
+  return phone.startsWith('+') ? phone : `+${phone}`;
+}
+
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
-export async function getConversations(businessId: string): Promise<WhatsAppConversation[]> {
-  const messages = await q<WhatsAppMessage[]>(
-    supabase
-      .from('whatsapp_messages')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: false })
-      .limit(500),
-  ) ?? [];
+export async function getConversations(
+  businessId: string,
+  filter?: ConversationFilter,
+): Promise<ConversationPage> {
+  const pageSize = filter?.pageSize ?? 25;
+  const offset   = (filter?.page ?? 0) * pageSize;
 
-  const map = new Map<string, WhatsAppConversation>();
-  for (const m of messages) {
-    if (!map.has(m.from_phone)) {
-      map.set(m.from_phone, {
-        from_phone:   m.from_phone,
-        from_name:    m.from_name,
-        last_message: m.body,
-        last_at:      m.created_at,
-        unread:       m.direction === 'inbound' && m.status === 'received' ? 1 : 0,
-      });
-    } else if (m.direction === 'inbound' && m.status === 'received') {
-      map.get(m.from_phone)!.unread += 1;
-    }
-  }
+  const { data, error } = await supabase.rpc('get_whatsapp_conversations', {
+    p_business_id: businessId,
+    p_search:      filter?.search      || null,
+    p_unread_only: filter?.unreadOnly  ?? false,
+    p_limit:       pageSize,
+    p_offset:      offset,
+  });
 
-  return Array.from(map.values()).sort(
-    (a, b) => new Date(b.last_at).getTime() - new Date(a.last_at).getTime(),
-  );
+  if (error) throw error;
+
+  const rows = (data ?? []) as WhatsAppConversation[];
+  return {
+    items:   rows.slice(0, pageSize),
+    hasMore: rows.length > pageSize,
+  };
 }
 
 export async function getMessages(
   businessId: string,
   fromPhone: string,
 ): Promise<WhatsAppMessage[]> {
-  return q<WhatsAppMessage[]>(
-    supabase
-      .from('whatsapp_messages')
-      .select('*')
-      .eq('business_id', businessId)
-      .eq('from_phone', fromPhone)
-      .order('created_at', { ascending: true }),
-  ) ?? [];
+  const normalized = normalizePhone(fromPhone);
+  // Récupère les messages avec et sans le préfixe '+' pour couvrir les anciens enregistrements
+  const withoutPlus = normalized.slice(1);
+  const { data } = await supabase
+    .from('whatsapp_messages')
+    .select('*')
+    .eq('business_id', businessId)
+    .or(`from_phone.eq.${normalized},from_phone.eq.${withoutPlus}`)
+    .order('created_at', { ascending: true });
+  return (data ?? []) as WhatsAppMessage[];
 }
 
 export async function markMessagesRead(businessId: string, fromPhone: string): Promise<void> {
+  const normalized = normalizePhone(fromPhone);
+  const withoutPlus = normalized.slice(1);
   await supabase
     .from('whatsapp_messages')
     .update({ status: 'read' })
     .eq('business_id', businessId)
-    .eq('from_phone', fromPhone)
+    .or(`from_phone.eq.${normalized},from_phone.eq.${withoutPlus}`)
     .eq('direction', 'inbound')
     .eq('status', 'received');
 }
@@ -192,11 +209,13 @@ export async function broadcastDailyMenu(
     .eq('business_id', config.business_id)
     .eq('date', date);
 
-  const alreadySent = new Set((logs ?? []).map((l: { phone: string }) => l.phone));
+  const alreadySent = new Set((logs ?? []).map((l: { phone: string }) => normalizePhone(l.phone)));
 
   for (const client of clients as { id: string; name: string; phone: string }[]) {
+    const phone = normalizePhone(client.phone);
+
     // Sauter si déjà envoyé aujourd'hui
-    if (alreadySent.has(client.phone)) {
+    if (alreadySent.has(phone)) {
       result.skipped++;
       continue;
     }
@@ -207,14 +226,14 @@ export async function broadcastDailyMenu(
         ? {
             messaging_product: 'whatsapp',
             recipient_type:    'individual',
-            to:                client.phone,
+            to:                phone,
             type:              'image',
             image:             { link: imageUrl, caption: text },
           }
         : {
             messaging_product: 'whatsapp',
             recipient_type:    'individual',
-            to:                client.phone,
+            to:                phone,
             type:              'text',
             text:              { preview_url: false, body: text },
           };
@@ -242,7 +261,7 @@ export async function broadcastDailyMenu(
       // Enregistrer dans les messages WhatsApp
       await supabase.from('whatsapp_messages').insert({
         business_id:  config.business_id,
-        from_phone:   client.phone,
+        from_phone:   phone,
         direction:    'outbound',
         message_type: 'text',
         body:         text,
@@ -254,7 +273,7 @@ export async function broadcastDailyMenu(
       await supabase.from('whatsapp_broadcast_logs').insert({
         business_id: config.business_id,
         date,
-        phone:       client.phone,
+        phone,
       });
 
       result.sent++;
@@ -276,6 +295,8 @@ export async function sendWhatsAppReply(
   text: string,
   userId: string,
 ): Promise<void> {
+  const phone = normalizePhone(toPhone);
+
   // Appel direct à Meta Cloud API (depuis le renderer via fetch)
   const res = await fetch(
     `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
@@ -288,7 +309,7 @@ export async function sendWhatsAppReply(
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         recipient_type:    'individual',
-        to:                toPhone,
+        to:                phone,
         type:              'text',
         text:              { preview_url: false, body: text },
       }),
@@ -303,7 +324,7 @@ export async function sendWhatsAppReply(
   // Stocker le message sortant
   await supabase.from('whatsapp_messages').insert({
     business_id:  config.business_id,
-    from_phone:   toPhone,
+    from_phone:   phone,
     direction:    'outbound',
     message_type: 'text',
     body:         text,

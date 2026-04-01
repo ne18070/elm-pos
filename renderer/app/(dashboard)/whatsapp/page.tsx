@@ -2,19 +2,50 @@
 
 import { toUserError } from '@/lib/user-error';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   MessageCircle, Send, RefreshCw, Search, ShoppingCart,
-  ChevronRight, ArrowLeft, Phone, Loader2,
+  ChevronRight, ArrowLeft, Phone, Loader2, Filter, X,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { hasRole } from '@/lib/permissions';
 import {
   getWhatsAppConfig, getConversations, getMessages, markMessagesRead, sendWhatsAppReply,
-  type WhatsAppConfig, type WhatsAppMessage, type WhatsAppConversation,
+  type WhatsAppConfig, type WhatsAppMessage, type WhatsAppConversation, type ConversationFilter,
 } from '@services/supabase/whatsapp';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function dayLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isToday(d))     return "Aujourd'hui";
+  if (isYesterday(d)) return 'Hier';
+  return format(d, 'EEEE d MMMM yyyy', { locale: fr });
+}
+
+function timeStr(dateStr: string): string {
+  return format(new Date(dateStr), 'HH:mm', { locale: fr });
+}
+
+function groupByDay(convos: WhatsAppConversation[]): { label: string; items: WhatsAppConversation[] }[] {
+  const groups: { label: string; items: WhatsAppConversation[] }[] = [];
+  let currentLabel = '';
+  for (const conv of convos) {
+    const label = dayLabel(conv.last_at);
+    if (label !== currentLabel) {
+      groups.push({ label, items: [] });
+      currentLabel = label;
+    }
+    groups[groups.length - 1].items.push(conv);
+  }
+  return groups;
+}
+
+const PAGE_SIZE = 25;
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WhatsAppPage() {
   const { business, user } = useAuthStore();
@@ -22,41 +53,94 @@ export default function WhatsAppPage() {
 
   const [config, setConfig]               = useState<WhatsAppConfig | null>(null);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
+  const [hasMore, setHasMore]             = useState(false);
+  const [page, setPage]                   = useState(0);
   const [selected, setSelected]           = useState<WhatsAppConversation | null>(null);
   const [messages, setMessages]           = useState<WhatsAppMessage[]>([]);
-  const [search, setSearch]               = useState('');
-  const [reply, setReply]                 = useState('');
-  const [sending, setSending]             = useState(false);
-  const [loading, setLoading]             = useState(true);
-  const [loadingMsg, setLoadingMsg]       = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const canReply  = hasRole(user?.role, 'manager');
+  // Filtres
+  const [search, setSearch]         = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const loadConversations = useCallback(async () => {
+  const [reply, setReply]         = useState('');
+  const [sending, setSending]     = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [loadingMsg, setLoadingMsg] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const bottomRef        = useRef<HTMLDivElement>(null);
+  const msgContainerRef  = useRef<HTMLDivElement>(null);
+  const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const instantScroll    = useRef(false);
+  const canReply         = hasRole(user?.role, 'manager');
+
+  // ── Chargement initial + refresh ───────────────────────────────────────────
+  const loadConversations = useCallback(async (
+    filter: ConversationFilter,
+    append = false,
+  ) => {
     if (!business?.id) return;
     try {
-      const [cfg, convos] = await Promise.all([
-        getWhatsAppConfig(business.id),
-        getConversations(business.id),
+      const [cfg, result] = await Promise.all([
+        append ? Promise.resolve(config) : getWhatsAppConfig(business.id),
+        getConversations(business.id, filter),
       ]);
-      setConfig(cfg);
-      setConversations(convos);
+      if (!append && cfg !== config) setConfig(cfg as WhatsAppConfig | null);
+      setConversations((prev) => append ? [...prev, ...result.items] : result.items);
+      setHasMore(result.hasMore);
     } catch (err) {
       notifError(toUserError(err));
     } finally {
       setLoading(false);
     }
-  }, [business?.id, notifError]);
+  }, [business?.id, config, notifError]);
 
-  useEffect(() => { loadConversations(); }, [loadConversations]);
+  // Premier chargement
+  useEffect(() => {
+    loadConversations({ page: 0, pageSize: PAGE_SIZE, unreadOnly });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Recherche avec debounce 350ms
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setPage(0);
+      loadConversations({ search: search || undefined, unreadOnly, page: 0, pageSize: PAGE_SIZE });
+    }, 350);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, unreadOnly]);
+
+  async function handleLoadMore() {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    setLoadingMore(true);
+    try {
+      await loadConversations(
+        { search: search || undefined, unreadOnly, page: nextPage, pageSize: PAGE_SIZE },
+        true,
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function handleRefresh() {
+    setPage(0);
+    setLoading(true);
+    loadConversations({ search: search || undefined, unreadOnly, page: 0, pageSize: PAGE_SIZE });
+  }
+
+  // ── Conversation ───────────────────────────────────────────────────────────
   async function openConversation(conv: WhatsAppConversation) {
     if (!business?.id) return;
     setSelected(conv);
     setLoadingMsg(true);
     try {
       const msgs = await getMessages(business.id, conv.from_phone);
+      instantScroll.current = true;
       setMessages(msgs);
       await markMessagesRead(business.id, conv.from_phone);
       setConversations((prev) =>
@@ -70,8 +154,16 @@ export default function WhatsAppPage() {
   }
 
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (instantScroll.current) {
+      instantScroll.current = false;
+      // RAF garantit que le DOM est rendu avant de scroller
+      requestAnimationFrame(() => {
+        if (msgContainerRef.current) {
+          msgContainerRef.current.scrollTop = msgContainerRef.current.scrollHeight;
+        }
+      });
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
@@ -106,12 +198,23 @@ export default function WhatsAppPage() {
     }
   }
 
-  const filtered = conversations.filter((c) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return c.from_phone.includes(q) || (c.from_name?.toLowerCase().includes(q) ?? false);
-  });
+  // ── Séparateurs de date dans le fil ───────────────────────────────────────
+  const messageRows: ({ type: 'separator'; label: string } | { type: 'msg'; msg: WhatsAppMessage })[] = [];
+  let lastDay: Date | null = null;
+  for (const msg of messages) {
+    const d = new Date(msg.created_at);
+    if (!lastDay || !isSameDay(d, lastDay)) {
+      messageRows.push({ type: 'separator', label: dayLabel(msg.created_at) });
+      lastDay = d;
+    }
+    messageRows.push({ type: 'msg', msg });
+  }
 
+  const totalUnread    = conversations.reduce((s, c) => s + c.unread, 0);
+  const groupedConvos  = groupByDay(conversations);
+  const activeFilters  = (search ? 1 : 0) + (unreadOnly ? 1 : 0);
+
+  // ── États de chargement / config ──────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-slate-400">
@@ -141,15 +244,26 @@ export default function WhatsAppPage() {
     <div className="flex h-full overflow-hidden">
       {/* ── Liste des conversations ───────────────────────────────────────── */}
       <div className={`w-full md:w-80 shrink-0 border-r border-surface-border flex flex-col ${selected ? 'hidden md:flex' : 'flex'}`}>
+
         {/* Header */}
         <div className="p-4 border-b border-surface-border space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
+              <div className="relative w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
                 <MessageCircle className="w-4 h-4 text-green-400" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                )}
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-white">WhatsApp</h1>
+                <h1 className="text-sm font-semibold text-white flex items-center gap-2">
+                  WhatsApp
+                  {totalUnread > 0 && (
+                    <span className="text-xs font-normal text-green-400">{totalUnread} non lu{totalUnread > 1 ? 's' : ''}</span>
+                  )}
+                </h1>
                 {config.display_phone && (
                   <p className="text-xs text-slate-400 flex items-center gap-1">
                     <Phone className="w-3 h-3" />{config.display_phone}
@@ -157,65 +271,142 @@ export default function WhatsAppPage() {
                 )}
               </div>
             </div>
-            <button onClick={loadConversations} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
-              <RefreshCw className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowFilters((f) => !f)}
+                className={`relative p-1.5 rounded-lg hover:bg-surface-hover transition-colors ${showFilters ? 'text-brand-400' : 'text-slate-400'}`}
+                title="Filtres"
+              >
+                <Filter className="w-4 h-4" />
+                {activeFilters > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {activeFilters}
+                  </span>
+                )}
+              </button>
+              <button onClick={handleRefresh} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+
+          {/* Recherche */}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Rechercher…"
+              placeholder="Nom, téléphone, message, n° commande…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input pl-8 text-sm h-8"
+              className="input pl-8 pr-8 text-sm h-8"
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
+
+          {/* Filtres avancés */}
+          {showFilters && (
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => setUnreadOnly((v) => !v)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  unreadOnly
+                    ? 'bg-green-900/40 border border-green-700/50 text-green-300'
+                    : 'bg-surface-hover text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${unreadOnly ? 'bg-green-400' : 'bg-slate-600'}`} />
+                Non lus uniquement
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Conversations */}
+        {/* Conversations groupées par date */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
+          {groupedConvos.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-slate-500 text-sm gap-2">
               <MessageCircle className="w-8 h-8 opacity-30" />
-              <span>Aucune conversation</span>
+              <span>{search || unreadOnly ? 'Aucun résultat' : 'Aucune conversation'}</span>
+              {(search || unreadOnly) && (
+                <button
+                  onClick={() => { setSearch(''); setUnreadOnly(false); }}
+                  className="text-xs text-brand-400 hover:text-brand-300"
+                >
+                  Effacer les filtres
+                </button>
+              )}
             </div>
-          ) : filtered.map((conv) => (
-            <button
-              key={conv.from_phone}
-              onClick={() => openConversation(conv)}
-              className={`w-full flex items-center gap-3 px-4 py-3 border-b border-surface-border hover:bg-surface-hover transition-colors text-left ${
-                selected?.from_phone === conv.from_phone ? 'bg-surface-hover' : ''
-              }`}
-            >
-              {/* Avatar */}
-              <div className="w-9 h-9 rounded-full bg-green-900/40 border border-green-700/40 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-green-400">
-                  {(conv.from_name ?? conv.from_phone).charAt(0).toUpperCase()}
-                </span>
-              </div>
+          ) : (
+            <>
+              {groupedConvos.map((group) => (
+                <div key={group.label}>
+                  <div className="sticky top-0 z-10 px-4 py-1.5 bg-surface-card/90 backdrop-blur-sm border-b border-surface-border">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{group.label}</span>
+                  </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-white truncate">
-                    {conv.from_name ?? conv.from_phone}
-                  </p>
-                  <span className="text-xs text-slate-500 shrink-0 ml-2">
-                    {format(new Date(conv.last_at), 'HH:mm', { locale: fr })}
-                  </span>
+                  {group.items.map((conv) => (
+                    <button
+                      key={conv.from_phone}
+                      onClick={() => openConversation(conv)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 border-b border-surface-border hover:bg-surface-hover transition-colors text-left ${
+                        selected?.from_phone === conv.from_phone ? 'bg-surface-hover' : ''
+                      }`}
+                    >
+                      <div className="relative w-9 h-9 rounded-full bg-green-900/40 border border-green-700/40 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-semibold text-green-400">
+                          {(conv.from_name ?? conv.from_phone).charAt(0).toUpperCase()}
+                        </span>
+                        {conv.unread > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border border-surface-card" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm truncate ${conv.unread > 0 ? 'font-semibold text-white' : 'font-medium text-white'}`}>
+                            {conv.from_name ?? conv.from_phone}
+                          </p>
+                          <span className="text-xs text-slate-500 shrink-0 ml-2">{timeStr(conv.last_at)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-xs truncate ${conv.unread > 0 ? 'text-white' : 'text-slate-400'}`}>
+                            {conv.last_message ?? '—'}
+                          </p>
+                          {conv.unread > 0 && (
+                            <span className="ml-2 shrink-0 min-w-[20px] h-5 px-1 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">
+                              {conv.unread}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+                    </button>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400 truncate">{conv.last_message ?? '—'}</p>
-                  {conv.unread > 0 && (
-                    <span className="ml-2 shrink-0 w-5 h-5 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">
-                      {conv.unread}
-                    </span>
-                  )}
+              ))}
+
+              {/* Pagination — Charger plus */}
+              {hasMore && (
+                <div className="p-3 flex justify-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-slate-400 hover:text-white text-sm transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                    {loadingMore ? 'Chargement…' : 'Charger plus'}
+                  </button>
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
-            </button>
-          ))}
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -249,46 +440,57 @@ export default function WhatsAppPage() {
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* Messages avec séparateurs de date */}
+            <div ref={msgContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
               {loadingMsg ? (
-                <div className="flex justify-center text-slate-400">
+                <div className="flex justify-center text-slate-400 py-8">
                   <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
-              ) : messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-[75%] rounded-2xl overflow-hidden space-y-0 ${
-                    msg.direction === 'outbound'
-                      ? 'bg-green-700 text-white rounded-br-sm'
-                      : 'bg-slate-700 text-slate-100 rounded-bl-sm'
-                  }`}>
-                    {/* Image produit */}
-                    {(msg.payload as { image_url?: string } | null)?.image_url && (
-                      <img
-                        src={(msg.payload as { image_url: string }).image_url}
-                        alt={msg.body ?? ''}
-                        className="w-full max-h-48 object-cover"
-                      />
-                    )}
-                    <div className="px-4 py-2.5 space-y-1">
-                      {/* Lien commande */}
-                      {msg.order_id && (
-                        <div className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 text-white w-fit">
-                          <ShoppingCart className="w-3 h-3" />
-                          <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
-                        </div>
+              ) : messageRows.map((row, i) => {
+                if (row.type === 'separator') {
+                  return (
+                    <div key={`sep-${i}`} className="flex items-center gap-3 py-3">
+                      <div className="flex-1 h-px bg-surface-border" />
+                      <span className="text-xs text-slate-500 font-medium px-2 shrink-0">{row.label}</span>
+                      <div className="flex-1 h-px bg-surface-border" />
+                    </div>
+                  );
+                }
+
+                const msg = row.msg;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-[75%] rounded-2xl overflow-hidden ${
+                      msg.direction === 'outbound'
+                        ? 'bg-green-700 text-white rounded-br-sm'
+                        : 'bg-slate-700 text-slate-100 rounded-bl-sm'
+                    }`}>
+                      {(msg.payload as { image_url?: string } | null)?.image_url && (
+                        <img
+                          src={(msg.payload as { image_url: string }).image_url}
+                          alt={msg.body ?? ''}
+                          className="w-full max-h-48 object-cover"
+                        />
                       )}
-                      <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
-                      <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
-                        {format(new Date(msg.created_at), 'HH:mm', { locale: fr })}
-                      </p>
+                      <div className="px-4 py-2.5 space-y-1">
+                        {msg.order_id && (
+                          <div className="flex items-center gap-1 text-xs font-medium mb-1 px-2 py-0.5 rounded-full bg-green-600 text-white w-fit">
+                            <ShoppingCart className="w-3 h-3" />
+                            <span>Commande #{msg.order_id.slice(0, 8).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
+                        <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
+                          {timeStr(msg.created_at)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={bottomRef} />
             </div>
 
