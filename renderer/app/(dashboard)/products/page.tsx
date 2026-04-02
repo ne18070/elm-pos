@@ -10,6 +10,7 @@ import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlert
 import { formatCurrency } from '@/lib/utils';
 import { ProductModal } from '@/components/products/ProductModal';
 import { ImportProductsModal } from '@/components/products/ImportProductsModal';
+import { BarcodePrintModal } from '@/components/products/BarcodePrintModal';
 import { deleteProduct } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
@@ -23,6 +24,7 @@ export default function ProductsPage() {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showBarcode, setShowBarcode] = useState(false);
 
   const { products, loading, refetch } = useProducts(business?.id ?? '');
   const { lowStock } = useLowStockAlerts(business?.id ?? '');
@@ -90,6 +92,14 @@ export default function ProductsPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowBarcode(true)}
+              className="btn-secondary flex items-center gap-2"
+              title="Imprimer codes-barres"
+            >
+              <Barcode className="w-4 h-4" />
+              <span className="hidden sm:inline">Codes-barres</span>
+            </button>
             <button
               onClick={exportCSV}
               className="btn-secondary flex items-center gap-2"
@@ -407,6 +417,15 @@ export default function ProductsPage() {
           businessId={business?.id ?? ''}
           onClose={() => setShowImport(false)}
           onImported={() => { setShowImport(false); refetch(); }}
+        />
+      )}
+
+      {showBarcode && (
+        <BarcodePrintModal
+          products={filtered}
+          currency={business?.currency ?? 'XOF'}
+          onClose={() => setShowBarcode(false)}
+          onRefetch={refetch}
         />
       )}
     </div>
