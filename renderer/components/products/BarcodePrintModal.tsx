@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Printer, X, RotateCcw, Check, Minus, Plus, Barcode } from 'lucide-react';
 import type { Product } from '@pos-types';
 import { formatCurrency } from '@/lib/utils';
@@ -143,25 +143,40 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
 
   // ── Impression ─────────────────────────────────────────────────────────────
 
-  const printRef = useRef<HTMLDivElement>(null);
+  const [printing, setPrinting] = useState(false);
 
-  const handlePrint = useCallback(() => {
-    if (!printRef.current) return;
-    const win = window.open('', '_blank', 'width=800,height=600');
-    if (!win) return;
+  async function handlePrint() {
+    if (selected.length === 0) return;
+    setPrinting(true);
+    try {
+      const { default: JsBarcode } = await import('jsbarcode');
 
-    // Dupliquer les labels selon qty
-    const labelsHtml = selected.flatMap((item) =>
-      Array.from({ length: item.qty }, () => `
-        <div class="label">
-          <div class="barcode-wrap">${printRef.current!.querySelector(`[data-id="${item.product.id}"] svg`)?.outerHTML ?? ''}</div>
-          <div class="name">${item.product.name}</div>
-          <div class="price">${formatCurrency(item.product.price, currency)}</div>
-        </div>
-      `)
-    ).join('');
+      // Générer chaque SVG en mémoire (synchrone après l'import)
+      function makeSvg(value: string): string {
+        const ns  = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg') as SVGSVGElement;
+        try {
+          JsBarcode(svg, value, { format: 'EAN13',  width: 1.5, height: 45, fontSize: 10, margin: 4, displayValue: true, textMargin: 2 });
+        } catch {
+          JsBarcode(svg, value, { format: 'CODE128', width: 1.5, height: 45, fontSize: 10, margin: 4, displayValue: true, textMargin: 2 });
+        }
+        return new XMLSerializer().serializeToString(svg);
+      }
 
-    win.document.write(`<!DOCTYPE html>
+      const labelsHtml = selected.flatMap((item) =>
+        Array.from({ length: item.qty }, () => `
+          <div class="label">
+            <div class="barcode-wrap">${makeSvg(item.barcode)}</div>
+            <div class="name">${item.product.name}</div>
+            <div class="price">${formatCurrency(item.product.price, currency)}</div>
+          </div>
+        `)
+      ).join('');
+
+      const win = window.open('', '_blank', 'width=820,height=600');
+      if (!win) return;
+
+      win.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -177,12 +192,10 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
       page-break-inside: avoid;
     }
     .barcode-wrap svg { width: 100%; height: auto; }
-    .name { font-size: 8pt; font-weight: bold; text-align: center; margin-top: 1mm; max-width: 58mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .name { font-size: 8pt; font-weight: bold; text-align: center; margin-top: 1mm;
+            max-width: 58mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .price { font-size: 9pt; color: #333; margin-top: 0.5mm; }
-    @media print {
-      body { margin: 0; }
-      .page { padding: 8mm; }
-    }
+    @media print { body { margin: 0; } .page { padding: 8mm; } }
   </style>
 </head>
 <body>
@@ -190,8 +203,11 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
   <script>window.onload = () => { window.print(); window.close(); }<\/script>
 </body>
 </html>`);
-    win.document.close();
-  }, [selected, currency]);
+      win.document.close();
+    } finally {
+      setPrinting(false);
+    }
+  }
 
   // ─── UI ────────────────────────────────────────────────────────────────────
 
@@ -281,15 +297,6 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
           </div>
         </div>
 
-        {/* Aperçu barcode (caché, pour la copie SVG dans le print) */}
-        <div ref={printRef} className="hidden">
-          {selected.map((item) => (
-            <div key={item.product.id} data-id={item.product.id}>
-              <BarcodeImage value={item.barcode} height={45} />
-            </div>
-          ))}
-        </div>
-
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-4 border-t border-surface-border bg-surface-input/20">
           <div className="text-xs text-slate-500">
@@ -310,11 +317,11 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
             )}
             <button
               onClick={handlePrint}
-              disabled={selected.length === 0}
+              disabled={selected.length === 0 || printing}
               className="btn-primary flex items-center gap-2"
             >
               <Printer className="w-4 h-4" />
-              Imprimer
+              {printing ? 'Préparation…' : 'Imprimer'}
             </button>
           </div>
         </div>
