@@ -460,8 +460,8 @@ export default function AdminPage() {
                             className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer
                               bg-transparent ${badge.color}`}
                           >
-                            <option value="staff">Caissier</option>
-                            <option value="admin">Administrateur</option>
+                            <option value="staff"  className="bg-gray-900 text-white">Caissier</option>
+                            <option value="admin"  className="bg-gray-900 text-white">Administrateur</option>
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
                         </div>
