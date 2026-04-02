@@ -200,7 +200,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
 </head>
 <body>
   <div class="page"><div class="grid">${labelsHtml}</div></div>
-  <script>window.onload = () => { window.print(); window.close(); }<\/script>
+  <script>window.onload = () => { window.print(); }; window.onafterprint = () => window.close();<\/script>
 </body>
 </html>`);
       win.document.close();
