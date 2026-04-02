@@ -137,6 +137,7 @@ export default function PosPage() {
         <div className="w-96 flex flex-col bg-surface-card">
           <OrderPanel
             taxRate={business?.tax_rate ?? 0}
+            taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'}
             businessId={business?.id ?? ''}
             onCheckout={() => setPaymentOpen(true)}
@@ -161,6 +162,7 @@ export default function PosPage() {
       {paymentOpen && (
         <PaymentModal
           taxRate={business?.tax_rate ?? 0}
+          taxInclusive={business?.tax_inclusive ?? false}
           currency={business?.currency ?? 'XOF'}
           onClose={() => setPaymentOpen(false)}
           onSuccess={() => { setPaymentOpen(false); setSelectedClient(null); }}

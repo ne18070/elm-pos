@@ -59,8 +59,8 @@ interface CartState {
 
   subtotal: () => number;
   discountAmount: () => number;
-  taxAmount: (taxRate: number) => number;
-  total: (taxRate: number) => number;
+  taxAmount: (taxRate: number, taxInclusive?: boolean) => number;
+  total: (taxRate: number, taxInclusive?: boolean) => number;
   itemCount: () => number;
 }
 
@@ -309,13 +309,16 @@ export const useCartStore = create<CartState>()(
     return calculateDiscount(coupons, sub);
   },
 
-  taxAmount: (taxRate: number) => {
+  taxAmount: (taxRate: number, taxInclusive = false) => {
     const s = get();
-    return Math.round((s.subtotal() - s.discountAmount()) * taxRate) / 100;
+    const taxable = s.subtotal() - s.discountAmount();
+    if (taxInclusive) return taxRate > 0 ? Math.round(taxable * taxRate / (100 + taxRate) * 100) / 100 : 0;
+    return Math.round(taxable * taxRate) / 100;
   },
 
-  total: (taxRate: number) => {
+  total: (taxRate: number, taxInclusive = false) => {
     const s = get();
+    if (taxInclusive) return s.subtotal() - s.discountAmount();
     return s.subtotal() - s.discountAmount() + s.taxAmount(taxRate);
   },
 

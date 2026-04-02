@@ -28,6 +28,7 @@ export interface Business {
   logo_url?: string;
   currency: string;
   tax_rate: number;          // percentage, e.g. 18
+  tax_inclusive: boolean;    // true = prix TTC (TVA déduite), false = prix HT (TVA ajoutée)
   receipt_footer?: string;
   stock_units?: string[];    // unités de stock configurables
   features: string[];        // optional modules enabled, e.g. ['pos']

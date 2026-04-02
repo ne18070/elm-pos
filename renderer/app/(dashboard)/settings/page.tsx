@@ -31,6 +31,7 @@ export default function SettingsPage() {
     address:        business?.address ?? '',
     phone:          business?.phone ?? '',
     tax_rate:       String(business?.tax_rate ?? '0'),
+    tax_inclusive:  business?.tax_inclusive ?? false,
     currency:       business?.currency ?? 'XOF',
     receipt_footer: business?.receipt_footer ?? '',
   });
@@ -162,6 +163,7 @@ export default function SettingsPage() {
           address:        bizForm.address,
           phone:          bizForm.phone,
           tax_rate:       parseFloat(bizForm.tax_rate) || 0,
+          tax_inclusive:  bizForm.tax_inclusive,
           currency:       bizForm.currency,
           receipt_footer: bizForm.receipt_footer,
         })
@@ -174,6 +176,7 @@ export default function SettingsPage() {
         address:        bizForm.address,
         phone:          bizForm.phone,
         tax_rate:       parseFloat(bizForm.tax_rate) || 0,
+        tax_inclusive:  bizForm.tax_inclusive,
         currency:       bizForm.currency,
         receipt_footer: bizForm.receipt_footer,
       });
@@ -390,6 +393,23 @@ export default function SettingsPage() {
               onChange={(e) => setBizForm({ ...bizForm, tax_rate: e.target.value })}
               className="input"
             />
+            {parseFloat(bizForm.tax_rate) > 0 && (
+              <button
+                type="button"
+                onClick={() => setBizForm({ ...bizForm, tax_inclusive: !bizForm.tax_inclusive })}
+                className="mt-2 flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
+              >
+                {bizForm.tax_inclusive
+                  ? <ToggleRight className="w-5 h-5 text-brand-400" />
+                  : <ToggleLeft  className="w-5 h-5 text-slate-500" />}
+                <span>
+                  TVA incluse dans les prix
+                  <span className="ml-1 text-xs text-slate-500">
+                    ({bizForm.tax_inclusive ? 'prix TTC saisis — TVA déduite' : 'prix HT saisis — TVA ajoutée'})
+                  </span>
+                </span>
+              </button>
+            )}
           </div>
 
           <div>

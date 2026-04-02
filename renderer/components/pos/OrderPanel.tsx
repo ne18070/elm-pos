@@ -21,6 +21,7 @@ export interface SelectedClient {
 
 interface OrderPanelProps {
   taxRate: number;
+  taxInclusive: boolean;
   currency: string;
   businessId: string;
   onCheckout: () => void;
@@ -31,7 +32,7 @@ interface OrderPanelProps {
   onClientChange?: (client: SelectedClient | null) => void;
 }
 
-export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHeld, wholesaleCtx, onWholesaleChange, selectedClient, onClientChange }: OrderPanelProps) {
+export function OrderPanel({ taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld, wholesaleCtx, onWholesaleChange, selectedClient, onClientChange }: OrderPanelProps) {
   const {
     items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
     updateQuantity, removeItem, resetPriceOverrides,
@@ -468,13 +469,13 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
           )}
           {taxRate > 0 && (
             <div className="flex justify-between text-sm text-slate-400">
-              <span>TVA ({taxRate}%)</span>
-              <span>{fmt(taxAmount(taxRate))}</span>
+              <span>TVA ({taxRate}%{taxInclusive ? ' incluse' : ''})</span>
+              <span>{fmt(taxAmount(taxRate, taxInclusive))}</span>
             </div>
           )}
           <div className="flex justify-between text-lg font-bold text-white pt-1 border-t border-surface-border">
             <span>Total</span>
-            <span className="text-brand-400">{fmt(total(taxRate))}</span>
+            <span className="text-brand-400">{fmt(total(taxRate, taxInclusive))}</span>
           </div>
         </div>
 
@@ -490,7 +491,7 @@ export function OrderPanel({ taxRate, currency, businessId, onCheckout, onShowHe
           >
             {hasOverStock
               ? 'Ajustez les quantités'
-              : `Encaisser · ${fmt(total(taxRate))}`}
+              : `Encaisser · ${fmt(total(taxRate, taxInclusive))}`}
           </button>
         </div>
       </div>

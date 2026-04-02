@@ -33,6 +33,7 @@ import type { PaymentMethod } from '@pos-types';
 
 interface PaymentModalProps {
   taxRate: number;
+  taxInclusive: boolean;
   currency: string;
   onClose: () => void;
   onSuccess: () => void;
@@ -48,7 +49,7 @@ const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', '
 
 const BC_CHANNEL = 'elm-pos-display';
 
-export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx, prefilledCustomer }: PaymentModalProps) {
+export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx, prefilledCustomer }: PaymentModalProps) {
   const [step, setStep]               = useState<Step>('methode');
   const [methode, setMethode]         = useState<PaymentMethod>('cash');
   const [montantRecu, setMontantRecu] = useState('');
@@ -86,7 +87,8 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
   const { subtotal, discountAmount, taxAmount, total } = computeOrderTotals(
     cart.items,
     cart.coupons,
-    taxRate
+    taxRate,
+    taxInclusive
   );
 
   const montantRecuNum = parseFloat(montantRecu) || 0;
@@ -182,6 +184,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
         paymentMethod: methode,
         paymentAmount: methode === 'cash' ? montantRecuNum : total,
         taxRate,
+        taxInclusive,
         notes:         cart.notes,
       });
       await enqueueToSync('create_order', dbPayload);
@@ -255,6 +258,7 @@ export function PaymentModal({ taxRate, currency, onClose, onSuccess, onPaymentC
       paymentMethod: methode,
       paymentAmount: methode === 'cash' ? montantRecuNum : total,
       taxRate,
+      taxInclusive,
     });
     if (orderError) { setErreur(formatOrderError(orderError)); return; }
 

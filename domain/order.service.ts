@@ -23,6 +23,7 @@ export interface CreateOrderPayload {
   paymentMethod: PaymentMethod;
   paymentAmount: number;  // montant effectivement encaissé (≥ total pour espèces)
   taxRate: number;        // en %, ex: 18
+  taxInclusive?: boolean; // true = prix TTC saisis
   notes?: string;
 }
 
@@ -58,13 +59,25 @@ export function computeTax(taxableAmount: number, taxRate: number): number {
 export function computeOrderTotals(
   items: CartItem[],
   coupons: Coupon[] | Coupon | null | undefined,
-  taxRate: number
+  taxRate: number,
+  taxInclusive = false
 ): OrderTotals {
   const subtotal       = computeSubtotal(items);
   const discountAmount = computeDiscount(coupons, subtotal);
   const taxable        = subtotal - discountAmount;
-  const taxAmount      = computeTax(taxable, taxRate);
-  const total          = round2(taxable + taxAmount);
+
+  let taxAmount: number;
+  let total: number;
+
+  if (taxInclusive) {
+    // Prix TTC saisis : on extrait la TVA sans changer le total
+    total     = taxable;
+    taxAmount = taxRate > 0 ? round2(total * taxRate / (100 + taxRate)) : 0;
+  } else {
+    // Prix HT saisis : on ajoute la TVA au total
+    taxAmount = computeTax(taxable, taxRate);
+    total     = round2(taxable + taxAmount);
+  }
 
   return { subtotal, discountAmount, taxAmount, total };
 }
@@ -86,7 +99,8 @@ export function validateOrderPayload(
   const { total } = computeOrderTotals(
     payload.cart.items,
     payload.cart.coupons,
-    payload.taxRate
+    payload.taxRate,
+    payload.taxInclusive
   );
 
   // Pour espèces (paiement complet), le montant reçu doit couvrir le total
@@ -111,7 +125,8 @@ export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string,
   const { subtotal, discountAmount, taxAmount, total } = computeOrderTotals(
     payload.cart.items,
     payload.cart.coupons,
-    payload.taxRate
+    payload.taxRate,
+    payload.taxInclusive
   );
 
   const coupons = payload.cart.coupons ?? [];
