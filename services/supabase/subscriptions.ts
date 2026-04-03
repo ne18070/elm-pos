@@ -34,32 +34,14 @@ export interface PaymentSettings {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
-export async function getSubscription(userId: string, businessId?: string | null): Promise<Subscription | null> {
-  // 1. Par owner_id (owner du compte)
-  const { data: byOwner } = await db
-    .from('subscriptions')
-    .select('*')
-    .eq('owner_id', userId)
-    .maybeSingle();
-  if (byOwner) return byOwner as Subscription;
-
-  // 2. Par business_id actif (caissier / admin / staff — la RLS autorise la lecture)
-  if (businessId) {
-    const { data: byBiz } = await db
-      .from('subscriptions')
-      .select('*')
-      .eq('business_id', businessId)
-      .maybeSingle();
-    if (byBiz) return byBiz as Subscription;
+export async function getSubscription(_userId?: string, _businessId?: string | null): Promise<Subscription | null> {
+  // La RPC résout correctement pour owner ET staff/caissier
+  // en remontant via business_members → owner → subscription
+  const { data, error } = await (supabase as any).rpc('get_my_subscription');
+  if (!error && data && (data as Subscription[]).length > 0) {
+    return (data as Subscription[])[0];
   }
-
-  // 3. Fallback legacy : userId utilisé comme business_id
-  const { data: byLegacy } = await db
-    .from('subscriptions')
-    .select('*')
-    .eq('business_id', userId)
-    .maybeSingle();
-  return (byLegacy ?? null) as Subscription | null;
+  return null;
 }
 
 export async function getPlans(): Promise<Plan[]> {
