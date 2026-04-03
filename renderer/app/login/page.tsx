@@ -91,7 +91,7 @@ export default function LoginPage() {
       if (activeBizId) {
         try {
           const [sub, plans, paySettings, cashSession] = await Promise.all([
-            getSubscription(data.user.id),
+            getSubscription(data.user.id, activeBizId),
             getPlans(),
             getPaymentSettings(),
             getCurrentSession(activeBizId),

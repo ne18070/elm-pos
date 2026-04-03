@@ -68,9 +68,9 @@ export function BusinessSwitcher() {
         .from('businesses').select('*').eq('id', businessId).single();
       if (biz) setBusiness(biz as never);
 
-      // Recharger l'abonnement (par owner_id — valable pour tous les établissements)
+      // Recharger l'abonnement (owner_id en priorité, fallback par business_id pour les non-owners)
       try {
-        const sub = await getSubscription(user!.id);
+        const sub = await getSubscription(user!.id, businessId);
         setSubscription(sub);
       } catch { /* non critique */ }
 
@@ -107,7 +107,7 @@ export function BusinessSwitcher() {
 
     // Charger l'abonnement par owner (un seul abonnement par compte)
     try {
-      const sub = await getSubscription(user!.id);
+      const sub = await getSubscription(user!.id, newBiz.id);
       setSubscription(sub);
       if (sub?.status === 'trial') {
         success(`"${newBiz.name}" créé — essai gratuit de 7 jours activé !`);

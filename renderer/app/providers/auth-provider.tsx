@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (activeBizId) {
         try {
           const [sub, plans, paySettings, cashSession] = await Promise.all([
-            getSubscription(session.user.id),
+            getSubscription(session.user.id, activeBizId),
             getPlans(),
             getPaymentSettings(),
             getCurrentSession(activeBizId),

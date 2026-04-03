@@ -34,8 +34,8 @@ export interface PaymentSettings {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
-export async function getSubscription(userId: string): Promise<Subscription | null> {
-  // Chercher par owner_id (nouveau comportement : abonnement par compte)
+export async function getSubscription(userId: string, businessId?: string | null): Promise<Subscription | null> {
+  // 1. Par owner_id (owner du compte)
   const { data: byOwner } = await db
     .from('subscriptions')
     .select('*')
@@ -43,13 +43,23 @@ export async function getSubscription(userId: string): Promise<Subscription | nu
     .maybeSingle();
   if (byOwner) return byOwner as Subscription;
 
-  // Fallback : chercher par business_id (ancien comportement, compatibilité)
-  const { data: byBiz } = await db
+  // 2. Par business_id actif (caissier / admin / staff — la RLS autorise la lecture)
+  if (businessId) {
+    const { data: byBiz } = await db
+      .from('subscriptions')
+      .select('*')
+      .eq('business_id', businessId)
+      .maybeSingle();
+    if (byBiz) return byBiz as Subscription;
+  }
+
+  // 3. Fallback legacy : userId utilisé comme business_id
+  const { data: byLegacy } = await db
     .from('subscriptions')
     .select('*')
     .eq('business_id', userId)
     .maybeSingle();
-  return (byBiz ?? null) as Subscription | null;
+  return (byLegacy ?? null) as Subscription | null;
 }
 
 export async function getPlans(): Promise<Plan[]> {
