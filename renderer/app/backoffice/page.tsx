@@ -4,9 +4,10 @@ import { toUserError } from '@/lib/user-error';
 import { useEffect, useState } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
-  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight, BarChart2,
+  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight, BarChart2, Layers,
 } from 'lucide-react';
 import { MonitoringTab } from './components/MonitoringTab';
+import { ModulesTab } from './components/ModulesTab';
 import {
   getAllSubscriptions, activateSubscription,
   getPlans, getPaymentSettings, upsertPaymentSettings, upsertPlan,
@@ -16,7 +17,7 @@ import {
   type SubscriptionRequest, type PublicSubscriptionRequest,
 } from '@services/supabase/subscriptions';
 
-type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement';
+type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules';
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   active:  { label: 'Actif',   color: 'text-green-400 bg-green-900/20 border-green-800',  icon: CheckCircle },
@@ -833,6 +834,7 @@ export default function BackofficePage() {
     { id: 'abonnements', label: 'Abonnements'                                         },
     { id: 'plans',       label: 'Plans & tarifs'                                      },
     { id: 'paiement',    label: 'Paramètres paiement'                                 },
+    { id: 'modules',     label: 'Modules & Types', icon: Layers                       },
   ];
 
   return (
@@ -861,6 +863,7 @@ export default function BackofficePage() {
       {tab === 'abonnements' && <SubscriptionsTab plans={plans} />}
       {tab === 'plans'       && <PlansTab />}
       {tab === 'paiement'    && <PaymentTab />}
+      {tab === 'modules'     && <ModulesTab />}
     </div>
   );
 }

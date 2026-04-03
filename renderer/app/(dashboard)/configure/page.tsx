@@ -1,116 +1,43 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import * as LucideIcons from 'lucide-react';
 import {
-  ShoppingBag, Utensils, Briefcase, BedDouble,
-  Check, ArrowRight, CheckCircle2, XCircle, ToggleLeft, ToggleRight,
+  Check, ArrowRight, CheckCircle2, XCircle, ToggleLeft, ToggleRight, Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import type { BusinessType } from '@pos-types';
+import {
+  getBusinessTypesWithModules, getAppModules,
+  type BusinessTypeWithModules, type AppModule,
+} from '@services/supabase/business-config';
 
-// ─── Matrice de fonctionnalités par type ─────────────────────────────────────
+// ─── Icon resolver ────────────────────────────────────────────────────────────
 
-interface Feature { label: string; active: boolean }
+function getIcon(name: string): React.ComponentType<{ className?: string }> {
+  return (LucideIcons as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }>
+    ?? LucideIcons.Package;
+}
 
-const TYPE_CONFIG: Record<BusinessType, {
-  icon:        React.ComponentType<{ className?: string }>;
-  label:       string;
-  description: string;
-  accentBg:    string;
-  accentBorder:string;
-  accentIcon:  string;
-  features:    Feature[];
-}> = {
-  retail: {
-    icon:         ShoppingBag,
-    label:        'Commerce / Boutique',
-    description:  'Vente au détail, gestion de stock et livraisons aux clients',
-    accentBg:     'bg-brand-900/30',
-    accentBorder: 'border-brand-600',
-    accentIcon:   'text-brand-400 bg-brand-900/50',
-    features: [
-      { label: 'Caisse & encaissement',    active: true  },
-      { label: 'Produits & gestion stock', active: true  },
-      { label: 'Approvisionnement',        active: true  },
-      { label: 'Livraisons & picking',     active: true  },
-      { label: 'Revendeurs & grossistes',  active: true  },
-      { label: 'Coupons promotionnels',    active: true  },
-      { label: 'Comptabilité & journal',   active: true  },
-      { label: 'Module hôtel',             active: false },
-    ],
-  },
-  restaurant: {
-    icon:         Utensils,
-    label:        'Restaurant / Café',
-    description:  'Restauration, bar, commandes en salle et à emporter',
-    accentBg:     'bg-orange-900/20',
-    accentBorder: 'border-orange-600',
-    accentIcon:   'text-orange-400 bg-orange-900/40',
-    features: [
-      { label: 'Caisse & encaissement',    active: true  },
-      { label: 'Produits & gestion stock', active: true  },
-      { label: 'Approvisionnement',        active: true  },
-      { label: 'Livraisons & picking',     active: true  },
-      { label: 'Coupons promotionnels',    active: true  },
-      { label: 'Comptabilité & journal',   active: true  },
-      { label: 'Revendeurs & grossistes',  active: false },
-      { label: 'Module hôtel',             active: false },
-    ],
-  },
-  service: {
-    icon:         Briefcase,
-    label:        'Prestation de service',
-    description:  'Factures, devis et services professionnels',
-    accentBg:     'bg-purple-900/20',
-    accentBorder: 'border-purple-600',
-    accentIcon:   'text-purple-400 bg-purple-900/40',
-    features: [
-      { label: 'Caisse & encaissement',    active: true  },
-      { label: 'Catalogue de services',    active: true  },
-      { label: 'Gestion des commandes',    active: true  },
-      { label: 'Comptabilité & journal',   active: true  },
-      { label: 'Produits & gestion stock', active: false },
-      { label: 'Livraisons & picking',     active: false },
-      { label: 'Revendeurs & grossistes',  active: false },
-      { label: 'Coupons promotionnels',    active: false },
-      { label: 'Module hôtel',             active: false },
-    ],
-  },
-  hotel: {
-    icon:         BedDouble,
-    label:        'Hôtel / Hébergement',
-    description:  'Chambres, réservations, check-in / check-out et prestations',
-    accentBg:     'bg-teal-900/20',
-    accentBorder: 'border-teal-600',
-    accentIcon:   'text-teal-400 bg-teal-900/40',
-    features: [
-      { label: 'Caisse & encaissement',    active: true  },
-      { label: 'Gestion des chambres',     active: true  },
-      { label: 'Réservations & séjours',   active: true  },
-      { label: 'Check-in / Check-out',     active: true  },
-      { label: 'Coupons promotionnels',    active: true  },
-      { label: 'Comptabilité & journal',   active: true  },
-      { label: 'Produits & gestion stock', active: false },
-      { label: 'Livraisons & picking',     active: false },
-      { label: 'Revendeurs & grossistes',  active: false },
-    ],
-  },
+// ─── Accent color map ─────────────────────────────────────────────────────────
+
+const ACCENT_MAP: Record<string, { bg: string; border: string; icon: string }> = {
+  brand:  { bg: 'bg-brand-900/30',  border: 'border-brand-600',  icon: 'text-brand-400 bg-brand-900/50'  },
+  orange: { bg: 'bg-orange-900/20', border: 'border-orange-600', icon: 'text-orange-400 bg-orange-900/40' },
+  purple: { bg: 'bg-purple-900/20', border: 'border-purple-600', icon: 'text-purple-400 bg-purple-900/40' },
+  teal:   { bg: 'bg-teal-900/20',   border: 'border-teal-600',   icon: 'text-teal-400 bg-teal-900/40'   },
+  red:    { bg: 'bg-red-900/20',    border: 'border-red-600',    icon: 'text-red-400 bg-red-900/40'     },
+  green:  { bg: 'bg-green-900/20',  border: 'border-green-600',  icon: 'text-green-400 bg-green-900/40' },
 };
+const defaultAccent = { bg: 'bg-surface-card', border: 'border-surface-border', icon: 'text-slate-400 bg-surface-input' };
 
-const TYPES = Object.entries(TYPE_CONFIG) as [BusinessType, (typeof TYPE_CONFIG)[BusinessType]][];
-
-// ─── Options supplémentaires par type ────────────────────────────────────────
-
-const TYPE_OPTIONS: Partial<Record<BusinessType, { key: string; label: string; description: string }[]>> = {
-  hotel: [
-    { key: 'pos', label: 'Caisse POS', description: 'Activer la vente de produits (bar, boutique…) en plus du module hôtel' },
-  ],
-};
+function accent(color: string) {
+  return ACCENT_MAP[color] ?? defaultAccent;
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -119,11 +46,31 @@ export default function ConfigurePage() {
   const { business, setBusiness } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
 
-  const [selected, setSelected] = useState<BusinessType>(
-    (business?.type as BusinessType) ?? 'retail'
+  const [types,   setTypes]   = useState<BusinessTypeWithModules[]>([]);
+  const [modules, setModules] = useState<AppModule[]>([]);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+
+  const [selected, setSelected] = useState<string[]>(
+    business?.types?.length ? business.types : (business?.type ? [business.type] : ['retail'])
   );
   const [features, setFeatures] = useState<string[]>(business?.features ?? []);
   const [saving, setSaving] = useState(false);
+
+  // Toggle un type (multi-select) — quand on ajoute un type, union des modules par défaut
+  function toggleType(typeId: string) {
+    setSelected((prev) => {
+      const next = prev.includes(typeId) ? prev.filter((x) => x !== typeId) : [...prev, typeId];
+      // Recalculer features = union des defaults de tous les types sélectionnés
+      if (!prev.includes(typeId)) {
+        const t = types.find((t) => t.id === typeId);
+        if (t) {
+          const newDefaults = t.modules.filter((m) => m.is_default).map((m) => m.module_id);
+          setFeatures((f) => Array.from(new Set([...f, ...newDefaults])));
+        }
+      }
+      return next;
+    });
+  }
 
   function toggleFeature(key: string) {
     setFeatures((prev) =>
@@ -131,8 +78,28 @@ export default function ConfigurePage() {
     );
   }
 
+  useEffect(() => {
+    async function load() {
+      setLoadingConfig(true);
+      try {
+        const [t, m] = await Promise.all([getBusinessTypesWithModules(), getAppModules()]);
+        setTypes(t);
+        setModules(m);
+        if (!business?.features?.length && t.length > 0) {
+          const initType = t.find((x) => selected.includes(x.id)) ?? t[0];
+          if (!selected.length) setSelected([initType.id]);
+          setFeatures(initType.modules.filter((m) => m.is_default).map((m) => m.module_id));
+        }
+      } finally {
+        setLoadingConfig(false);
+      }
+    }
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hasChanged =
-    selected !== business?.type ||
+    JSON.stringify([...selected].sort()) !== JSON.stringify([...(business?.types ?? (business?.type ? [business.type] : []))].sort()) ||
     JSON.stringify([...features].sort()) !== JSON.stringify([...(business?.features ?? [])].sort());
 
   async function handleSave() {
@@ -141,12 +108,11 @@ export default function ConfigurePage() {
     try {
       const { error } = await (supabase as any)
         .from('businesses')
-        .update({ type: selected, features })
+        .update({ types: selected, type: selected[0] ?? null, features })
         .eq('id', business.id);
       if (error) throw new Error(error.message);
 
-      // Mise à jour du store local
-      setBusiness({ ...business, type: selected, features });
+      setBusiness({ ...business, types: selected, type: (selected[0] ?? business.type) as any, features });
       success('Configuration enregistrée');
       router.push('/pos');
     } catch (e) {
@@ -155,6 +121,21 @@ export default function ConfigurePage() {
       setSaving(false);
     }
   }
+
+  if (loadingConfig) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+      </div>
+    );
+  }
+
+  const selectedTypes = types.filter((t) => selected.includes(t.id));
+  const ac = accent(selectedTypes[0]?.accent_color ?? 'brand');
+
+  // Union des modules liés à tous les types sélectionnés
+  const linkedModuleIds = new Set(selectedTypes.flatMap((t) => t.modules.map((m) => m.module_id)));
+  const linkedModules = modules.filter((m) => linkedModuleIds.has(m.id));
 
   return (
     <div className="h-full overflow-y-auto">
@@ -169,19 +150,23 @@ export default function ConfigurePage() {
         </div>
 
         {/* ── Grille des types ── */}
+        <p className="text-xs text-slate-500 -mb-4">Vous pouvez sélectionner plusieurs types.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {TYPES.map(([type, cfg]) => {
-            const Icon = cfg.icon;
-            const isSelected = selected === type;
+          {types.map((t) => {
+            const Icon = getIcon(t.icon);
+            const isSelected = selected.includes(t.id);
+            const a = accent(t.accent_color);
+            const typeModules = modules.filter((m) => t.modules.some((tm) => tm.module_id === m.id));
+            const defaultMods = t.modules.filter((tm) => tm.is_default).map((tm) => tm.module_id);
             return (
               <button
-                key={type}
-                onClick={() => setSelected(type)}
+                key={t.id}
+                onClick={() => toggleType(t.id)}
                 className={cn(
                   'relative text-left rounded-2xl border-2 p-5 transition-all duration-150',
                   'flex flex-col gap-4',
                   isSelected
-                    ? cn('border-2', cfg.accentBorder, cfg.accentBg)
+                    ? cn('border-2', a.border, a.bg)
                     : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
                 )}
               >
@@ -193,92 +178,94 @@ export default function ConfigurePage() {
                 )}
 
                 {/* Icône */}
-                <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center', cfg.accentIcon)}>
+                <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center', a.icon)}>
                   <Icon className="w-6 h-6" />
                 </div>
 
                 {/* Titre + description */}
                 <div>
-                  <p className="font-semibold text-white">{cfg.label}</p>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{cfg.description}</p>
+                  <p className="font-semibold text-white">{t.label}</p>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{t.description}</p>
                 </div>
 
                 {/* Fonctionnalités */}
                 <ul className="space-y-1.5 mt-auto">
-                  {cfg.features.map((f) => (
-                    <li key={f.label} className={cn(
-                      'flex items-center gap-2 text-xs',
-                      f.active ? 'text-slate-200' : 'text-slate-600'
-                    )}>
-                      {f.active
-                        ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                        : <XCircle      className="w-3.5 h-3.5 text-slate-700 shrink-0" />}
-                      {f.label}
-                    </li>
-                  ))}
+                  {typeModules.map((m) => {
+                    const active = defaultMods.includes(m.id);
+                    return (
+                      <li key={m.id} className={cn(
+                        'flex items-center gap-2 text-xs',
+                        active ? 'text-slate-200' : 'text-slate-600'
+                      )}>
+                        {active
+                          ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                          : <XCircle      className="w-3.5 h-3.5 text-slate-700 shrink-0" />}
+                        {m.label}
+                      </li>
+                    );
+                  })}
                 </ul>
               </button>
             );
           })}
         </div>
 
-        {/* ── Options supplémentaires (selon type) ── */}
-        {TYPE_OPTIONS[selected] && (
+        {/* ── Options (modules liés aux types sélectionnés) ── */}
+        {selectedTypes.length > 0 && linkedModules.length > 0 && (
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-white">Options supplémentaires</h2>
-            {TYPE_OPTIONS[selected]!.map(({ key, label, description }) => {
-              const enabled = features.includes(key);
-              return (
-                <button
-                  key={key}
-                  onClick={() => toggleFeature(key)}
-                  className={cn(
-                    'w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all',
-                    enabled
-                      ? 'border-brand-600 bg-brand-900/20'
-                      : 'border-surface-border bg-surface-card hover:border-slate-600'
-                  )}
-                >
-                  {enabled
-                    ? <ToggleRight className="w-7 h-7 text-brand-400 shrink-0" />
-                    : <ToggleLeft  className="w-7 h-7 text-slate-600 shrink-0" />}
-                  <div>
-                    <p className={cn('text-sm font-semibold', enabled ? 'text-brand-300' : 'text-slate-300')}>
-                      {label}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">{description}</p>
-                  </div>
-                </button>
-              );
-            })}
+            <h2 className="text-sm font-semibold text-white">Fonctionnalités actives</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {linkedModules.map((m) => {
+                const enabled = features.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleFeature(m.id)}
+                    className={cn(
+                      'w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all',
+                      enabled
+                        ? 'border-brand-600 bg-brand-900/20'
+                        : 'border-surface-border bg-surface-card hover:border-slate-600'
+                    )}
+                  >
+                    {enabled
+                      ? <ToggleRight className="w-7 h-7 text-brand-400 shrink-0" />
+                      : <ToggleLeft  className="w-7 h-7 text-slate-600 shrink-0" />}
+                    <div>
+                      <p className={cn('text-sm font-semibold', enabled ? 'text-brand-300' : 'text-slate-300')}>
+                        {m.label}
+                      </p>
+                      {m.description && (
+                        <p className="text-xs text-slate-500 mt-0.5">{m.description}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
         {/* ── Résumé sélection ── */}
-        {(() => {
-          const cfg = TYPE_CONFIG[selected];
-          const active   = cfg.features.filter((f) => f.active);
-          const inactive = cfg.features.filter((f) => !f.active);
-          return (
-            <div className={cn('card p-5 border', cfg.accentBorder)}>
-              <p className="text-sm font-semibold text-white mb-3">
-                {cfg.label} — {active.length} fonctionnalité{active.length > 1 ? 's' : ''} active{active.length > 1 ? 's' : ''}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {active.map((f) => (
-                  <span key={f.label} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-900/20 border border-green-800 text-green-300">
-                    <Check className="w-3 h-3" />{f.label}
-                  </span>
-                ))}
-                {inactive.map((f) => (
-                  <span key={f.label} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface-input text-slate-600">
-                    <XCircle className="w-3 h-3" />{f.label}
-                  </span>
-                ))}
-              </div>
+        {selectedTypes.length > 0 && (
+          <div className={cn('card p-5 border', ac.border)}>
+            <p className="text-sm font-semibold text-white mb-3">
+              {selectedTypes.map((t) => t.label).join(' + ')} — {features.length} fonctionnalité{features.length > 1 ? 's' : ''} active{features.length > 1 ? 's' : ''}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {modules.filter((m) => features.includes(m.id)).map((m) => (
+                <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-900/20 border border-green-800 text-green-300">
+                  <Check className="w-3 h-3" />{m.label}
+                </span>
+              ))}
+              {modules.filter((m) => !features.includes(m.id) && linkedModuleIds.has(m.id)).map((m) => (
+                <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface-input text-slate-600">
+                  <XCircle className="w-3 h-3" />{m.label}
+                </span>
+              ))}
             </div>
-          );
-        })()}
+          </div>
+        )}
 
         {/* ── Actions ── */}
         <div className="flex items-center justify-between gap-4 pb-6">
@@ -290,7 +277,7 @@ export default function ConfigurePage() {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !hasChanged}
+            disabled={saving || !hasChanged || selected.length === 0}
             className="btn-primary h-10 px-6 text-sm flex items-center gap-2 disabled:opacity-50"
           >
             {saving

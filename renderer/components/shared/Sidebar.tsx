@@ -21,31 +21,32 @@ import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
 import { useState, useEffect } from 'react';
 
-// types: null = visible pour tous les types d'établissement
-// types: string[] = visible uniquement pour ces types
+// feature: null = toujours visible (pas lié à un module)
+// feature: string = visible seulement si ce module est dans business.features
+// Si business.features est vide (non configuré), tout est visible (rétro-compatibilité)
 const MANAGER_ROLES = ['owner', 'admin', 'manager'] as const;
 
 const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,           types: null },
-  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,  types: null },
-  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,           types: ['retail', 'restaurant'] },
-  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,  types: ['retail', 'restaurant'] },
-  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,           types: null },
-  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,  types: null },
-  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'service', 'hotel'] },
-  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'hotel'] },
-  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'], types: ['retail'] },
-  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,           types: ['hotel'] },
-  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'service', 'hotel'] },
-  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,  types: ['retail', 'restaurant', 'hotel'] },
-  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,  types: null },
-  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,  types: null },
-  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,  types: null },
-  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,  types: null },
-  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'], types: null },
-  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,  types: null },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,  types: null },
-  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,           types: null },
+  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: null              },
+  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: null              },
+  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison'       },
+  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison'       },
+  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null              },
+  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,       feature: null              },
+  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,       feature: 'stock'           },
+  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,       feature: 'approvisionnement'},
+  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'],  feature: 'revendeurs'      },
+  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,                feature: 'hotel'           },
+  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,       feature: 'stock'           },
+  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,       feature: 'coupons'         },
+  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,       feature: null              },
+  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,       feature: null              },
+  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,       feature: 'comptabilite'    },
+  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,       feature: null              },
+  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null              },
+  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null              },
+  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null              },
+  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null              },
 ] as const;
 
 const COLLAPSED_KEY = 'elm-pos-sidebar-collapsed';
@@ -104,12 +105,11 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
         {NAV_ITEMS
           .filter(({ roles }) => !roles || (roles as readonly string[]).includes(role))
-          .filter(({ types }) => !types || !business?.type || (types as readonly string[]).includes(business.type))
-          .filter(({ href }) => {
-            if (business?.type !== 'hotel') return true;
-            const posOnly = ['/pos', '/products', '/categories', '/approvisionnement'];
-            if (!posOnly.includes(href)) return true;
-            return (business?.features ?? []).includes('pos');
+          .filter(({ feature }) => {
+            if (!feature) return true;
+            const features = business?.features ?? [];
+            if (features.length === 0) return true; // non configuré → tout visible
+            return features.includes(feature);
           })
           .map(({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);

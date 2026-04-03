@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { RefreshCw, Loader2, AlertTriangle, TrendingUp, Users, Store, Clock, Package, ShoppingCart } from 'lucide-react';
-import { getBusinessMonitoring, type BusinessMonitorRow } from '@services/supabase/monitoring';
+import { RefreshCw, Loader2, AlertTriangle, TrendingUp, Users, Store, Clock, Package, ShoppingCart, Settings, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { getBusinessMonitoring, updateBusinessConfig, type BusinessMonitorRow } from '@services/supabase/monitoring';
+import { getAppModules, getAllBusinessTypes, type AppModule, type BusinessTypeRow } from '@services/supabase/business-config';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -49,17 +50,165 @@ function StatCard({ icon: Icon, label, value, sub, color = 'text-brand-400' }:
   );
 }
 
+// ── Business config modal ─────────────────────────────────────────────────────
+
+function BusinessConfigModal({
+  row,
+  allTypes,
+  allModules,
+  onClose,
+  onSaved,
+}: {
+  row:        BusinessMonitorRow;
+  allTypes:   BusinessTypeRow[];
+  allModules: AppModule[];
+  onClose:    () => void;
+  onSaved:    (businessId: string, types: string[], features: string[]) => void;
+}) {
+  const [bizTypes, setBizTypes] = useState<string[]>(row.business_types);
+  const [features, setFeatures] = useState<string[]>(row.features);
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState<string | null>(null);
+
+  function toggleType(id: string) {
+    setBizTypes((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]);
+  }
+
+  function toggleFeature(id: string) {
+    setFeatures((prev) => prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setErr(null);
+    try {
+      await updateBusinessConfig(row.business_id, bizTypes, features);
+      onSaved(row.business_id, bizTypes, features);
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
+          <div>
+            <p className="text-white font-semibold">{row.business_name}</p>
+            <p className="text-xs text-slate-400 mt-0.5">Type & modules</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+          {/* Type multi-select */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Types d&apos;établissement <span className="text-slate-600 font-normal normal-case">(plusieurs possibles)</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {allTypes.map((t) => {
+                const active = bizTypes.includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => toggleType(t.id)}
+                    className={`p-3 rounded-xl border-2 text-left transition-all flex items-center gap-2 ${
+                      active
+                        ? 'border-brand-600 bg-brand-900/20'
+                        : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
+                    }`}
+                  >
+                    {active
+                      ? <ToggleRight className="w-4 h-4 text-brand-400 shrink-0" />
+                      : <ToggleLeft  className="w-4 h-4 text-slate-600 shrink-0" />}
+                    <p className={`text-sm font-medium ${active ? 'text-brand-300' : 'text-slate-300'}`}>
+                      {t.label}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Module toggles */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Modules actifs</p>
+            <div className="space-y-2">
+              {allModules.map((m) => {
+                const enabled = features.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleFeature(m.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                      enabled
+                        ? 'border-brand-600 bg-brand-900/20'
+                        : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
+                    }`}
+                  >
+                    {enabled
+                      ? <ToggleRight className="w-6 h-6 text-brand-400 shrink-0" />
+                      : <ToggleLeft  className="w-6 h-6 text-slate-600 shrink-0" />}
+                    <div>
+                      <p className={`text-sm font-medium ${enabled ? 'text-brand-300' : 'text-slate-400'}`}>
+                        {m.label}
+                      </p>
+                      {m.description && (
+                        <p className="text-xs text-slate-500">{m.description}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-3 p-4 border-t border-surface-border shrink-0">
+          {err && <p className="text-xs text-red-400 flex-1">{err}</p>}
+          <div className="flex gap-2 ml-auto">
+            <button onClick={onClose} className="btn-secondary text-sm">Annuler</button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary text-sm disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function MonitoringTab() {
-  const [rows, setRows]     = useState<BusinessMonitorRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'trial' | 'expired' | 'expiring'>('all');
+  const [rows, setRows]           = useState<BusinessMonitorRow[]>([]);
+  const [allModules, setModules]  = useState<AppModule[]>([]);
+  const [allTypes, setTypes]      = useState<BusinessTypeRow[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState('');
+  const [filter, setFilter]       = useState<'all' | 'active' | 'trial' | 'expired' | 'expiring'>('all');
+  const [configModal, setConfigModal] = useState<BusinessMonitorRow | null>(null);
 
   async function load() {
     setLoading(true);
-    try { setRows(await getBusinessMonitoring()); }
+    try {
+      const [data, mods, types] = await Promise.all([getBusinessMonitoring(), getAppModules(), getAllBusinessTypes()]);
+      setRows(data);
+      setModules(mods);
+      setTypes(types);
+    }
     catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
@@ -172,6 +321,7 @@ export function MonitoringTab() {
                   <th className="text-right px-4 py-3 font-medium">Cmd 30j</th>
                   <th className="text-left px-4 py-3 font-medium">Dernière cmd</th>
                   <th className="text-right px-4 py-3 font-medium">Membres</th>
+                  <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border">
@@ -223,6 +373,15 @@ export function MonitoringTab() {
                       </td>
                       <td className="px-4 py-3 text-slate-400 text-xs">{fmtDate(row.last_order_at)}</td>
                       <td className="px-4 py-3 text-right text-slate-400">{row.members_count}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setConfigModal(row)}
+                          title="Gérer type & modules"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-900/20 transition-colors"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -230,6 +389,21 @@ export function MonitoringTab() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Per-business config modal */}
+      {configModal && (
+        <BusinessConfigModal
+          row={configModal}
+          allTypes={allTypes}
+          allModules={allModules}
+          onClose={() => setConfigModal(null)}
+          onSaved={(businessId, types, features) => {
+            setRows((prev) => prev.map((r) =>
+              r.business_id === businessId ? { ...r, business_types: types, features } : r
+            ));
+          }}
+        />
       )}
     </div>
   );
