@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   QrCode, CheckCircle, Clock, Loader2, RefreshCw,
-  Upload, Send, X, FileImage,
+  Send, X, FileImage,
 } from 'lucide-react';
 import { useSubscriptionStore } from '@/store/subscription';
 import { useAuthStore } from '@/store/auth';
@@ -24,7 +24,7 @@ const STATUS_REQUEST: Record<string, { label: string; color: string }> = {
 
 export default function BillingPage() {
   const { effectiveStatus, trialDaysRemaining, subscription, setSubscription } = useSubscriptionStore();
-  const { business } = useAuthStore();
+  const { business, user } = useAuthStore();
   const router = useRouter();
 
   const [loading, setLoading]       = useState(true);
@@ -45,10 +45,10 @@ export default function BillingPage() {
   const days   = trialDaysRemaining();
 
   async function handleCheck() {
-    if (!business) return;
+    if (!user) return;
     setChecking(true);
     try {
-      const sub = await getSubscription(business.id);
+      const sub = await getSubscription(user.id);
       setSubscription(sub);
       if (sub?.status === 'active' && sub.expires_at && new Date(sub.expires_at) > new Date()) {
         router.replace('/pos');
@@ -103,14 +103,14 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="h-full overflow-y-auto p-6">
       <div className="max-w-2xl mx-auto space-y-8">
 
         {/* ── Statut actuel ── */}

@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User, Printer, MessageCircle } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
 import { OrderDetail } from '@/components/orders/OrderDetail';
 import { InvoiceModal } from '@/components/shared/InvoiceModal';
+import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
 import type { Order, OrderStatus } from '@pos-types';
 
 type FilterTab = OrderStatus | 'all' | 'acompte';
@@ -42,11 +43,12 @@ function isAcompte(order: Order): boolean {
 }
 
 export default function OrdersPage() {
-  const { business } = useAuthStore();
+  const { business, user } = useAuthStore();
   const [tab, setTab]               = useState<FilterTab>('all');
   const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   // Pour le filtre "acompte", on charge tout puis on filtre côté client
   const dbStatus = tab === 'all' || tab === 'acompte' ? undefined : tab as OrderStatus;
@@ -94,10 +96,16 @@ export default function OrdersPage() {
         <div className="p-6 border-b border-surface-border space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-white">Commandes</h1>
-            <button onClick={refetch} className="btn-secondary flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Actualiser
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Importer
+              </button>
+              <button onClick={refetch} className="btn-secondary flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Actualiser
+              </button>
+            </div>
           </div>
 
           {/* Recherche */}
@@ -276,6 +284,14 @@ export default function OrdersPage() {
       {/* Modal impression */}
       {printOrder && (
         <InvoiceModal order={printOrder} onClose={() => setPrintOrder(null)} />
+      )}
+      {showImport && business && user && (
+        <ImportOrdersModal
+          businessId={business.id}
+          userId={user.id}
+          onClose={() => setShowImport(false)}
+          onDone={() => { refetch(); }}
+        />
       )}
     </div>
   );

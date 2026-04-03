@@ -4,7 +4,7 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import {
   Plus, Search, Phone, MapPin, Users, Pencil, Trash2,
-  ChevronRight, X, Check, Gift, Store, Upload,
+  ChevronRight, X, Check, Gift, Store, Upload, Loader2,
 } from 'lucide-react';
 import { ImportModal } from '@/components/resellers/ImportModal';
 import { useAuthStore } from '@/store/auth';
@@ -34,6 +34,9 @@ export default function RevendeursPage() {
   const [products, setProducts]     = useState<Product[]>([]);
   const [panel, setPanel]           = useState<Panel>(null);
   const [importType, setImportType] = useState<'resellers' | 'clients' | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [deletingClients, setDeletingClients] = useState(false);
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
 
@@ -154,8 +157,38 @@ export default function RevendeursPage() {
     try {
       await deleteResellerClient(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
+      setSelectedClientIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
       success('Client supprimé');
     } catch (e) { notifError(toUserError(e)); }
+  }
+
+  async function removeSelectedClients() {
+    if (selectedClientIds.size === 0) return;
+    if (!confirm(`Supprimer ${selectedClientIds.size} client(s) ?`)) return;
+    setDeletingClients(true);
+    try {
+      await Promise.all([...selectedClientIds].map((id) => deleteResellerClient(id)));
+      setClients((prev) => prev.filter((c) => !selectedClientIds.has(c.id)));
+      setSelectedClientIds(new Set());
+      success(`${selectedClientIds.size} client(s) supprimé(s)`);
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setDeletingClients(false); }
+  }
+
+  function toggleClientSelect(id: string) {
+    setSelectedClientIds((prev) => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  }
+
+  function toggleAllClients() {
+    if (selectedClientIds.size === filteredClients.length && filteredClients.length > 0) {
+      setSelectedClientIds(new Set());
+    } else {
+      setSelectedClientIds(new Set(filteredClients.map((c) => c.id)));
+    }
   }
 
   // ── CRUD Offre ─────────────────────────────────────────────────────────────
@@ -203,6 +236,12 @@ export default function RevendeursPage() {
   const filteredResellers = resellers.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
     (r.phone ?? '').includes(search)
+  );
+
+  const filteredClients = clients.filter((c) =>
+    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    (c.phone ?? '').includes(clientSearch) ||
+    (c.address ?? '').toLowerCase().includes(clientSearch.toLowerCase())
   );
 
   const isPanelOffer = tab === 'offres' && panel?.type === 'reseller' && panel.item === null && oForm.product_id !== undefined;
@@ -338,18 +377,65 @@ export default function RevendeursPage() {
                       <Users className="w-4 h-4 text-brand-400" />
                       Clients ({clients.length})
                     </h3>
-                    <button onClick={() => openClientPanel(selected, null)} className="btn-secondary h-8 text-xs px-3 flex items-center gap-1">
-                      <Plus className="w-3.5 h-3.5 shrink-0" /> Ajouter
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {selectedClientIds.size > 0 && (
+                        <button
+                          onClick={removeSelectedClients}
+                          disabled={deletingClients}
+                          className="h-8 text-xs px-3 flex items-center gap-1 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                        >
+                          {deletingClients
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Trash2 className="w-3.5 h-3.5" />}
+                          Supprimer ({selectedClientIds.size})
+                        </button>
+                      )}
+                      <button onClick={() => openClientPanel(selected, null)} className="btn-secondary h-8 text-xs px-3 flex items-center gap-1">
+                        <Plus className="w-3.5 h-3.5 shrink-0" /> Ajouter
+                      </button>
+                    </div>
                   </div>
+
+                  {clients.length > 0 && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                        <input
+                          className="input pl-8 h-8 text-sm w-full"
+                          placeholder="Rechercher un client…"
+                          value={clientSearch}
+                          onChange={(e) => setClientSearch(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        onClick={toggleAllClients}
+                        className="h-8 text-xs px-3 btn-secondary shrink-0"
+                        title={selectedClientIds.size === filteredClients.length && filteredClients.length > 0 ? 'Tout désélectionner' : 'Tout sélectionner'}
+                      >
+                        {selectedClientIds.size === filteredClients.length && filteredClients.length > 0 ? 'Désélect.' : 'Tout'}
+                      </button>
+                    </div>
+                  )}
 
                   {clients.length === 0 && (
                     <p className="text-sm text-slate-500 text-center py-6 card">Aucun client enregistré</p>
                   )}
+                  {clients.length > 0 && filteredClients.length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-6 card">Aucun résultat</p>
+                  )}
 
                   <div className="space-y-2">
-                    {clients.map((c) => (
-                      <div key={c.id} className="card p-3 flex items-center gap-3">
+                    {filteredClients.map((c) => {
+                      const isChecked = selectedClientIds.has(c.id);
+                      return (
+                      <div
+                        key={c.id}
+                        onClick={() => toggleClientSelect(c.id)}
+                        className={`card p-3 flex items-center gap-3 cursor-pointer transition-colors ${isChecked ? 'border border-brand-600 bg-brand-900/20' : 'hover:bg-surface-hover'}`}
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-brand-600 border-brand-600' : 'border-slate-600'}`}>
+                          {isChecked && <Check className="w-3 h-3 text-white" />}
+                        </div>
                         <div className="w-8 h-8 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-xs font-bold text-slate-300">
                           {c.name.charAt(0).toUpperCase()}
                         </div>
@@ -358,7 +444,7 @@ export default function RevendeursPage() {
                           {c.phone && <p className="text-xs text-slate-500">{c.phone}</p>}
                           {c.address && <p className="text-xs text-slate-500 truncate">{c.address}</p>}
                         </div>
-                        <div className="flex gap-1 shrink-0">
+                        <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                           <button onClick={() => openClientPanel(selected, c)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
@@ -367,7 +453,8 @@ export default function RevendeursPage() {
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>

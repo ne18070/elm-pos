@@ -505,10 +505,13 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [search]);
 
+  const q = search.toLowerCase();
   const filtered = rows.filter((r) =>
     !search ||
-    r.business_name.toLowerCase().includes(search.toLowerCase()) ||
-    (r.owner_email ?? '').toLowerCase().includes(search.toLowerCase())
+    r.business_name.toLowerCase().includes(q) ||
+    (r.owner_email ?? '').toLowerCase().includes(q) ||
+    (r.owner_name ?? '').toLowerCase().includes(q) ||
+    (Array.isArray(r.businesses) && r.businesses.some((b) => b.name.toLowerCase().includes(q)))
   );
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -533,7 +536,7 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher par établissement ou email…"
+          placeholder="Rechercher par nom, email, établissement…"
           className="input flex-1 max-w-sm"
         />
         <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
@@ -551,8 +554,8 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="border-b border-surface-border text-xs text-slate-400 uppercase tracking-wider">
-                  <th className="text-left px-4 py-3 font-medium">Établissement</th>
-                  <th className="text-left px-4 py-3 font-medium">Propriétaire</th>
+                  <th className="text-left px-4 py-3 font-medium">Compte propriétaire</th>
+                  <th className="text-left px-4 py-3 font-medium">Établissements</th>
                   <th className="text-left px-4 py-3 font-medium">Plan</th>
                   <th className="text-left px-4 py-3 font-medium">Statut</th>
                   <th className="text-left px-4 py-3 font-medium">Échéance</th>
@@ -564,15 +567,24 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
                   const st    = getRowStatus(row);
                   const badge = STATUS_LABEL[st] ?? STATUS_LABEL.expired;
                   const Icon  = badge.icon;
+                  const bizList = Array.isArray(row.businesses) ? row.businesses : [];
                   return (
-                    <tr key={row.business_id} className="hover:bg-surface-hover transition-colors">
+                    <tr key={row.owner_id ?? row.business_id} className="hover:bg-surface-hover transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-white">{row.business_name}</p>
+                        <p className="font-medium text-white">{row.owner_name ?? '—'}</p>
+                        <p className="text-xs text-slate-500">{row.owner_email ?? ''}</p>
                         {row.payment_note && <p className="text-xs text-slate-500 italic mt-0.5">&ldquo;{row.payment_note}&rdquo;</p>}
                       </td>
-                      <td className="px-4 py-3 text-slate-300">
-                        <p>{row.owner_name ?? '—'}</p>
-                        <p className="text-xs text-slate-500">{row.owner_email ?? ''}</p>
+                      <td className="px-4 py-3">
+                        {bizList.length === 0 ? (
+                          <p className="text-sm text-slate-500">{row.business_name ?? '—'}</p>
+                        ) : (
+                          <div className="space-y-0.5">
+                            {bizList.map((b) => (
+                              <p key={b.id} className="text-xs text-slate-300">{b.name}</p>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-slate-300">{row.plan_label ?? '—'}</td>
                       <td className="px-4 py-3">

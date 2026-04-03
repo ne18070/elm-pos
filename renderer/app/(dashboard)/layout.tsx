@@ -76,7 +76,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <main className="flex-1 overflow-hidden flex flex-col">
         <TrialBanner />
-        {children}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -47,37 +47,114 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  for (const line of lines) {
-    const cols: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-        else inQuotes = !inQuotes;
-      } else if (ch === ',' && !inQuotes) {
-        cols.push(cur.trim()); cur = '';
-      } else {
-        cur += ch;
-      }
-    }
-    cols.push(cur.trim());
-    rows.push(cols);
-  }
-  return rows;
+// ─── Aliases acceptés pour chaque champ ──────────────────────────────────────
+
+const FIELD_ALIASES: Record<keyof Omit<ParsedRow, 'line' | 'errors'>, string[]> = {
+  nom:          ['nom', 'name', 'produit', 'product', 'libelle', 'libellé', 'designation', 'désignation', 'article'],
+  description:  ['description', 'desc', 'details', 'détails'],
+  prix:         ['prix', 'price', 'prix_unitaire', 'unit_price', 'tarif', 'montant'],
+  categorie:    ['categorie', 'catégorie', 'category', 'famille', 'rayon', 'type'],
+  code_barres:  ['code_barres', 'code-barres', 'barcode', 'ean', 'upc', 'gtin', 'code'],
+  sku:          ['sku', 'reference', 'réf', 'ref', 'reference_interne', 'code_article', 'code article'],
+  stock:        ['stock', 'quantite', 'quantité', 'quantity', 'qty', 'qte', 'qté', 'inventaire'],
+  suivre_stock: ['suivre_stock', 'suivi_stock', 'track_stock', 'gestion_stock'],
+  actif:        ['actif', 'active', 'statut', 'status', 'enabled', 'disponible'],
+};
+
+const KNOWN_HEADER_WORDS = new Set(
+  Object.values(FIELD_ALIASES).flat()
+);
+
+function normalizeKey(k: string): string {
+  return k.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[\s\-_]+/g, '_');
 }
 
-function validateRow(raw: string[], lineNum: number): ParsedRow {
-  const [nom = '', description = '', prix = '', categorie = '', code_barres = '', sku = '', stock = '', suivre_stock = '', actif = ''] = raw;
+function detectSeparator(firstLine: string): string {
+  const counts = { ',': 0, ';': 0, '\t': 0, '|': 0 };
+  for (const ch of firstLine) {
+    if (ch in counts) counts[ch as keyof typeof counts]++;
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function parseLine(line: string, sep: string): string[] {
+  const cols: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === sep && !inQuotes) {
+      cols.push(cur.trim()); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+function isHeaderRow(cols: string[]): boolean {
+  // A row is a header if ≥ 2 cells match known field aliases
+  const matches = cols.filter((c) => KNOWN_HEADER_WORDS.has(normalizeKey(c)));
+  return matches.length >= 2;
+}
+
+function buildColumnMap(headerCols: string[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  headerCols.forEach((h, i) => {
+    const norm = normalizeKey(h);
+    for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+      if (aliases.some((a) => normalizeKey(a) === norm)) {
+        map[field] = i;
+        break;
+      }
+    }
+  });
+  return map;
+}
+
+function mapRowToFields(
+  cols: string[],
+  colMap: Record<string, number> | null,
+): Omit<ParsedRow, 'line' | 'errors'> {
+  function get(field: keyof typeof FIELD_ALIASES, fallbackIdx: number): string {
+    const idx = colMap ? (colMap[field] ?? -1) : fallbackIdx;
+    return idx >= 0 ? (cols[idx] ?? '').trim() : '';
+  }
+  return {
+    nom:          get('nom',          0),
+    description:  get('description',  1),
+    prix:         get('prix',         2),
+    categorie:    get('categorie',    3),
+    code_barres:  get('code_barres',  4),
+    sku:          get('sku',          5),
+    stock:        get('stock',        6),
+    suivre_stock: get('suivre_stock', 7),
+    actif:        get('actif',        8),
+  };
+}
+
+function parseCSVText(text: string): { rows: string[][]; sep: string } {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length) return { rows: [], sep: ',' };
+  const sep  = detectSeparator(lines[0]);
+  const rows = lines.map((l) => parseLine(l, sep));
+  return { rows, sep };
+}
+
+function validateRow(cols: string[], colMap: Record<string, number> | null, lineNum: number): ParsedRow {
+  const fields = mapRowToFields(cols, colMap);
   const errors: string[] = [];
-  if (!nom.trim()) errors.push('Nom requis');
-  if (!prix.trim() || isNaN(parseFloat(prix))) errors.push('Prix invalide');
-  if (stock.trim() && isNaN(parseFloat(stock))) errors.push('Stock invalide');
-  return { line: lineNum, nom, description, prix, categorie, code_barres, sku, stock, suivre_stock, actif, errors };
+  if (!fields.nom) errors.push('Nom requis');
+  const prixNum = parseFloat(fields.prix.replace(',', '.'));
+  if (!fields.prix || isNaN(prixNum) || prixNum < 0) errors.push('Prix invalide');
+  if (fields.stock && isNaN(parseFloat(fields.stock.replace(',', '.')))) errors.push('Stock invalide');
+  return { line: lineNum, ...fields, errors };
 }
 
 export function ImportProductsModal({ businessId, onClose, onImported }: ImportProductsModalProps) {
@@ -94,14 +171,38 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    function process(text: string) {
+      const { rows: all } = parseCSVText(text);
+      if (!all.length) { setRows([]); return; }
+
+      // Détecter si la 1ère ligne est un en-tête
+      let colMap: Record<string, number> | null = null;
+      let dataRows = all;
+      if (isHeaderRow(all[0])) {
+        colMap    = buildColumnMap(all[0]);
+        dataRows  = all.slice(1);
+      }
+
+      const parsed = dataRows
+        .filter((r) => r.some((c) => c))
+        .map((r, i) => validateRow(r, colMap, i + (colMap ? 2 : 1)));
+      setRows(parsed);
+      setImported(0);
+    }
+
+    // Essayer UTF-8 d'abord, puis latin1 si caractères illisibles
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      const all  = parseCSV(text);
-      // Ignorer la ligne d'en-tête si elle contient "nom"
-      const data = all[0]?.[0]?.toLowerCase() === 'nom' ? all.slice(1) : all;
-      setRows(data.filter((r) => r.some((c) => c)).map((r, i) => validateRow(r, i + 2)));
-      setImported(0);
+      if (text.includes('\uFFFD')) {
+        // Caractères mal décodés → relire en latin1
+        const reader2 = new FileReader();
+        reader2.onload = (ev2) => process(ev2.target?.result as string);
+        reader2.readAsText(file, 'windows-1252');
+      } else {
+        process(text);
+      }
     };
     reader.readAsText(file, 'utf-8');
     e.target.value = '';
@@ -126,11 +227,11 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
           business_id:  businessId,
           name:         row.nom.trim(),
           description:  row.description.trim() || null,
-          price:        parseFloat(row.prix),
+          price:        parseFloat(row.prix.replace(',', '.')),
           category_id:  cat?.id ?? null,
           barcode:      row.code_barres.trim() || null,
           sku:          row.sku.trim() || null,
-          stock:        trackStock && row.stock ? parseFloat(row.stock) : null,
+          stock:        trackStock && row.stock ? parseFloat(row.stock.replace(',', '.')) : null,
           track_stock:  trackStock,
           is_active:    isActive,
           image_url:    null,

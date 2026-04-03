@@ -2,6 +2,7 @@ import { supabase } from './client';
 
 export interface Subscription {
   business_id:   string;
+  owner_id:      string | null;
   plan_id:       string | null;
   status:        'trial' | 'active' | 'expired';
   trial_ends_at: string | null;
@@ -33,13 +34,22 @@ export interface PaymentSettings {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
-export async function getSubscription(businessId: string): Promise<Subscription | null> {
-  const { data } = await db
+export async function getSubscription(userId: string): Promise<Subscription | null> {
+  // Chercher par owner_id (nouveau comportement : abonnement par compte)
+  const { data: byOwner } = await db
     .from('subscriptions')
     .select('*')
-    .eq('business_id', businessId)
-    .single();
-  return data as Subscription | null;
+    .eq('owner_id', userId)
+    .maybeSingle();
+  if (byOwner) return byOwner as Subscription;
+
+  // Fallback : chercher par business_id (ancien comportement, compatibilité)
+  const { data: byBiz } = await db
+    .from('subscriptions')
+    .select('*')
+    .eq('business_id', userId)
+    .maybeSingle();
+  return (byBiz ?? null) as Subscription | null;
 }
 
 export async function getPlans(): Promise<Plan[]> {
@@ -86,16 +96,18 @@ export function getTrialDaysRemaining(sub: Subscription | null): number {
 // ── Back office ───────────────────────────────────────────────────────────────
 
 export interface SubscriptionRow {
+  owner_id:      string | null;
+  owner_email:   string | null;
+  owner_name:    string | null;
   business_id:   string;
   business_name: string;
+  businesses:    { id: string; name: string }[];  // tous les établissements du compte
   plan_label:    string | null;
   status:        string;
   trial_ends_at: string | null;
   expires_at:    string | null;
   activated_at:  string | null;
   payment_note:  string | null;
-  owner_email:   string | null;
-  owner_name:    string | null;
 }
 
 export async function getAllSubscriptions(): Promise<SubscriptionRow[]> {
