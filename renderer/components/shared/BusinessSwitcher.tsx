@@ -20,7 +20,7 @@ import type { BusinessMembership } from '@services/supabase/business';
 
 export function BusinessSwitcher() {
   const { user, business, businesses, setBusiness, setBusinesses, setUser } = useAuthStore();
-  const { setSubscription } = useSubscriptionStore();
+  const { setSubscription, subscription, plans } = useSubscriptionStore();
   const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
   const { success, error: notifError } = useNotificationStore();
   const clear = useCartStore((s) => s.clear);
@@ -48,6 +48,11 @@ export function BusinessSwitcher() {
       : [];
 
   const isOwner = hasRole(user?.role, 'owner');
+
+  // Le plan Pro autorise les multi-établissements (feature contenant "multi")
+  const currentPlan   = plans.find(p => p.id === subscription?.plan_id);
+  const canMultiBiz   = currentPlan?.features.some(f => /multi/i.test(f)) ?? false;
+  const canCreateBiz  = isOwner && (canMultiBiz || businesses.length === 0);
 
   async function handleSwitch(businessId: string) {
     if (businessId === business?.id) { setOpen(false); return; }
@@ -212,8 +217,8 @@ export function BusinessSwitcher() {
               )}
             </div>
 
-            {/* Créer un établissement — visible pour tous (pas encore membre = peut créer) */}
-            {isOwner && (
+            {/* Créer un établissement — Pro uniquement si déjà 1 établissement */}
+            {canCreateBiz && (
               <div className="border-t border-surface-border py-1">
                 <button
                   onClick={() => { setOpen(false); setShowCreate(true); }}
