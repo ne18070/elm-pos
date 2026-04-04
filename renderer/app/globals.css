@@ -216,7 +216,7 @@
 [data-theme="light"] .bg-slate-800 .text-slate-400,
 [data-theme="light"] .bg-slate-900 .text-slate-400 { color: #94a3b8 !important; }
 
-/* ── .dark-section : zones toujours sombres (landing nav, hero, etc.) ────── */
+/* ── .dark-section : zones toujours sombres (landing page, etc.) ─────────── */
 [data-theme="light"] .dark-section,
 [data-theme="light"] .dark-section .text-white     { color: #ffffff !important; }
 [data-theme="light"] .dark-section .text-slate-100 { color: #f1f5f9 !important; }
@@ -228,6 +228,41 @@
 [data-theme="light"] .dark-section .hover\:text-white:hover { color: #ffffff !important; }
 [data-theme="light"] .dark-section .text-brand-400 { color: #38bdf8 !important; }
 [data-theme="light"] .dark-section .text-brand-300 { color: #7dd3fc !important; }
+
+/* ── Contre-règles : containers clairs DANS une dark-section ─────────────
+   bg-surface-card / bg-surface-input / bg-white → fond clair en light mode,
+   le texte doit redevenir sombre même si le parent est dark-section.        */
+[data-theme="light"] .dark-section .bg-surface-card .text-white,
+[data-theme="light"] .dark-section .bg-white        .text-white,
+[data-theme="light"] .dark-section .card            .text-white  { color: #0f172a !important; }
+
+[data-theme="light"] .dark-section .bg-surface-card .text-slate-100,
+[data-theme="light"] .dark-section .bg-white        .text-slate-100,
+[data-theme="light"] .dark-section .card            .text-slate-100 { color: #1e293b !important; }
+
+[data-theme="light"] .dark-section .bg-surface-card .text-slate-200,
+[data-theme="light"] .dark-section .bg-white        .text-slate-200,
+[data-theme="light"] .dark-section .card            .text-slate-200 { color: #334155 !important; }
+
+[data-theme="light"] .dark-section .bg-surface-card .text-slate-300,
+[data-theme="light"] .dark-section .bg-white        .text-slate-300,
+[data-theme="light"] .dark-section .card            .text-slate-300 { color: #475569 !important; }
+
+[data-theme="light"] .dark-section .bg-surface-card .text-slate-400,
+[data-theme="light"] .dark-section .bg-white        .text-slate-400,
+[data-theme="light"] .dark-section .card            .text-slate-400 { color: #64748b !important; }
+
+[data-theme="light"] .dark-section .bg-surface-card .text-slate-500,
+[data-theme="light"] .dark-section .bg-white        .text-slate-500,
+[data-theme="light"] .dark-section .card            .text-slate-500 { color: #475569 !important; }
+
+[data-theme="light"] .dark-section .bg-surface-card .text-brand-400 { color: #0369a1 !important; }
+[data-theme="light"] .dark-section .bg-surface-card .text-green-400 { color: #15803d !important; }
+
+[data-theme="light"] .dark-section .bg-surface-input .text-white    { color: #0f172a !important; }
+[data-theme="light"] .dark-section .bg-surface-input .text-slate-300 { color: #475569 !important; }
+[data-theme="light"] .dark-section .bg-surface-input .text-slate-400 { color: #64748b !important; }
+[data-theme="light"] .dark-section .bg-surface-input .text-slate-500 { color: #475569 !important; }
 
 /* ── Couleurs sémantiques : "400/300" → versions sombres lisibles sur blanc ─ */
 [data-theme="light"] .text-brand-400   { color: #0369a1 !important; }
