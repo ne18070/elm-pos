@@ -27,6 +27,8 @@ export async function getMyBusinesses(): Promise<BusinessMembership[]> {
       id:             row.id,
       name:           row.name,
       type:           row.type,
+      types:          (row as any).types    ?? [],
+      features:       (row as any).features ?? [],
       address:        row.address,
       phone:          row.phone,
       email:          row.email,

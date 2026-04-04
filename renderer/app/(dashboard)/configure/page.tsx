@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as LucideIcons from 'lucide-react';
 import {
-  Check, ArrowRight, CheckCircle2, XCircle, ToggleLeft, ToggleRight, Loader2,
+  Check, ArrowRight, CheckCircle2, XCircle, ToggleLeft, ToggleRight, Loader2, Lock,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -50,27 +50,13 @@ export default function ConfigurePage() {
   const [modules, setModules] = useState<AppModule[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(true);
 
-  const [selected, setSelected] = useState<string[]>(
-    business?.types?.length ? business.types : (business?.type ? [business.type] : ['retail'])
-  );
+  // Types définis par l'admin — le client ne peut pas les changer
+  const businessTypes: string[] = business?.types?.length
+    ? business.types
+    : business?.type ? [business.type as string] : [];
+
   const [features, setFeatures] = useState<string[]>(business?.features ?? []);
   const [saving, setSaving] = useState(false);
-
-  // Toggle un type (multi-select) — quand on ajoute un type, union des modules par défaut
-  function toggleType(typeId: string) {
-    setSelected((prev) => {
-      const next = prev.includes(typeId) ? prev.filter((x) => x !== typeId) : [...prev, typeId];
-      // Recalculer features = union des defaults de tous les types sélectionnés
-      if (!prev.includes(typeId)) {
-        const t = types.find((t) => t.id === typeId);
-        if (t) {
-          const newDefaults = t.modules.filter((m) => m.is_default).map((m) => m.module_id);
-          setFeatures((f) => Array.from(new Set([...f, ...newDefaults])));
-        }
-      }
-      return next;
-    });
-  }
 
   function toggleFeature(key: string) {
     setFeatures((prev) =>
@@ -85,10 +71,12 @@ export default function ConfigurePage() {
         const [t, m] = await Promise.all([getBusinessTypesWithModules(), getAppModules()]);
         setTypes(t);
         setModules(m);
-        if (!business?.features?.length && t.length > 0) {
-          const initType = t.find((x) => selected.includes(x.id)) ?? t[0];
-          if (!selected.length) setSelected([initType.id]);
-          setFeatures(initType.modules.filter((m) => m.is_default).map((m) => m.module_id));
+        // Si pas encore de features → initialiser depuis les defaults des types assignés
+        if (!business?.features?.length && businessTypes.length > 0) {
+          const defaults = t
+            .filter((x) => businessTypes.includes(x.id))
+            .flatMap((x) => x.modules.filter((mod) => mod.is_default).map((mod) => mod.module_id));
+          setFeatures(Array.from(new Set(defaults)));
         }
       } finally {
         setLoadingConfig(false);
@@ -99,7 +87,6 @@ export default function ConfigurePage() {
   }, []);
 
   const hasChanged =
-    JSON.stringify([...selected].sort()) !== JSON.stringify([...(business?.types ?? (business?.type ? [business.type] : []))].sort()) ||
     JSON.stringify([...features].sort()) !== JSON.stringify([...(business?.features ?? [])].sort());
 
   async function handleSave() {
@@ -108,11 +95,11 @@ export default function ConfigurePage() {
     try {
       const { error } = await (supabase as any)
         .from('businesses')
-        .update({ types: selected, type: selected[0] ?? null, features })
+        .update({ features })
         .eq('id', business.id);
       if (error) throw new Error(error.message);
 
-      setBusiness({ ...business, types: selected, type: (selected[0] ?? business.type) as any, features });
+      setBusiness({ ...business, features });
       success('Configuration enregistrée');
       router.push('/pos');
     } catch (e) {
@@ -130,10 +117,10 @@ export default function ConfigurePage() {
     );
   }
 
-  const selectedTypes = types.filter((t) => selected.includes(t.id));
+  const selectedTypes = types.filter((t) => businessTypes.includes(t.id));
   const ac = accent(selectedTypes[0]?.accent_color ?? 'brand');
 
-  // Union des modules liés à tous les types sélectionnés
+  // Union des modules liés à tous les types assignés
   const linkedModuleIds = new Set(selectedTypes.flatMap((t) => t.modules.map((m) => m.module_id)));
   const linkedModules = modules.filter((m) => linkedModuleIds.has(m.id));
 
@@ -143,74 +130,47 @@ export default function ConfigurePage() {
 
         {/* ── En-tête ── */}
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white">Type d&apos;établissement</h1>
+          <h1 className="text-2xl font-bold text-white">Configuration</h1>
           <p className="text-slate-400">
-            Choisissez votre activité — seules les fonctionnalités utiles seront affichées dans le menu.
+            Activez ou désactivez les fonctionnalités disponibles pour votre établissement.
           </p>
         </div>
 
-        {/* ── Grille des types ── */}
-        <p className="text-xs text-slate-500 -mb-4">Vous pouvez sélectionner plusieurs types.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {types.map((t) => {
-            const Icon = getIcon(t.icon);
-            const isSelected = selected.includes(t.id);
-            const a = accent(t.accent_color);
-            const typeModules = modules.filter((m) => t.modules.some((tm) => tm.module_id === m.id));
-            const defaultMods = t.modules.filter((tm) => tm.is_default).map((tm) => tm.module_id);
-            return (
-              <button
-                key={t.id}
-                onClick={() => toggleType(t.id)}
-                className={cn(
-                  'relative text-left rounded-2xl border-2 p-5 transition-all duration-150',
-                  'flex flex-col gap-4',
-                  isSelected
-                    ? cn('border-2', a.border, a.bg)
-                    : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
-                )}
-              >
-                {/* Coche sélection */}
-                {isSelected && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
-                  </span>
-                )}
-
-                {/* Icône */}
-                <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center', a.icon)}>
-                  <Icon className="w-6 h-6" />
-                </div>
-
-                {/* Titre + description */}
-                <div>
-                  <p className="font-semibold text-white">{t.label}</p>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{t.description}</p>
-                </div>
-
-                {/* Fonctionnalités */}
-                <ul className="space-y-1.5 mt-auto">
-                  {typeModules.map((m) => {
-                    const active = defaultMods.includes(m.id);
-                    return (
-                      <li key={m.id} className={cn(
-                        'flex items-center gap-2 text-xs',
-                        active ? 'text-slate-200' : 'text-slate-600'
-                      )}>
-                        {active
-                          ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                          : <XCircle      className="w-3.5 h-3.5 text-slate-700 shrink-0" />}
-                        {m.label}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </button>
-            );
-          })}
+        {/* ── Types assignés (read-only) ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-white">Type d&apos;établissement</h2>
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              <Lock className="w-3 h-3" /> Géré par l&apos;administrateur
+            </span>
+          </div>
+          {selectedTypes.length === 0 ? (
+            <p className="text-sm text-slate-500 italic">Aucun type assigné — contactez l&apos;administrateur.</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {selectedTypes.map((t) => {
+                const Icon = getIcon(t.icon);
+                const a = accent(t.accent_color);
+                return (
+                  <div
+                    key={t.id}
+                    className={cn(
+                      'flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2',
+                      a.border, a.bg
+                    )}
+                  >
+                    <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', a.icon)}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-semibold text-white">{t.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* ── Options (modules liés aux types sélectionnés) ── */}
+        {/* ── Fonctionnalités (toggleable) ── */}
         {selectedTypes.length > 0 && linkedModules.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-white">Fonctionnalités actives</h2>
@@ -246,7 +206,7 @@ export default function ConfigurePage() {
           </div>
         )}
 
-        {/* ── Résumé sélection ── */}
+        {/* ── Résumé ── */}
         {selectedTypes.length > 0 && (
           <div className={cn('card p-5 border', ac.border)}>
             <p className="text-sm font-semibold text-white mb-3">
@@ -277,7 +237,7 @@ export default function ConfigurePage() {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !hasChanged || selected.length === 0}
+            disabled={saving || !hasChanged}
             className="btn-primary h-10 px-6 text-sm flex items-center gap-2 disabled:opacity-50"
           >
             {saving

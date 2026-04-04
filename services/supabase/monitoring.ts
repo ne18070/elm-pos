@@ -16,16 +16,21 @@ export async function updateBusinessConfig(
   types:      string[],
   features:   string[],
 ): Promise<void> {
+  // Toujours sauvegarder type (premier) + features — ne pas bloquer si types[] n'existe pas
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabaseAdmin as any)
     .from('businesses')
-    .update({
-      types,
-      type: types[0] ?? null, // rétro-compat colonne type
-      features,
-    })
+    .update({ type: types[0] ?? null, features })
     .eq('id', businessId);
   if (error) throw new Error(error.message);
+
+  // Best-effort : sauvegarder le tableau types[] si la colonne existe (migration 066)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabaseAdmin as any)
+    .from('businesses')
+    .update({ types })
+    .eq('id', businessId)
+    .then(() => {}, () => {});
 }
 
 export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
@@ -93,14 +98,29 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
     bizById.set(row.id, { features: row.features ?? [], types });
   }
 
-  return subs.map((sub) => ({
-    ...sub,
-    orders_30d:      ordersByBiz.get(sub.business_id)?.count    ?? 0,
-    last_order_at:   ordersByBiz.get(sub.business_id)?.last     ?? null,
-    members_count:   membersByBiz.get(sub.business_id)          ?? 0,
-    products_count:  productsByBiz.get(sub.business_id)         ?? 0,
-    orders_total:    ordersTotalByBiz.get(sub.business_id)      ?? 0,
-    features:        bizById.get(sub.business_id)?.features     ?? [],
-    business_types:  bizById.get(sub.business_id)?.types        ?? [],
-  }));
+  // Étendre : une ligne par établissement (pas par abonnement)
+  // Un owner peut avoir plusieurs businesses — sub.businesses[] les liste tous
+  const rows: BusinessMonitorRow[] = [];
+  for (const sub of subs) {
+    // Tous les établissements de cet owner (au moins sub.business_id si businesses[] vide)
+    const bizList = sub.businesses?.length
+      ? sub.businesses
+      : [{ id: sub.business_id, name: sub.business_name }];
+
+    for (const biz of bizList) {
+      rows.push({
+        ...sub,
+        business_id:   biz.id,
+        business_name: biz.name,
+        orders_30d:      ordersByBiz.get(biz.id)?.count    ?? 0,
+        last_order_at:   ordersByBiz.get(biz.id)?.last     ?? null,
+        members_count:   membersByBiz.get(biz.id)          ?? 0,
+        products_count:  productsByBiz.get(biz.id)         ?? 0,
+        orders_total:    ordersTotalByBiz.get(biz.id)      ?? 0,
+        features:        bizById.get(biz.id)?.features     ?? [],
+        business_types:  bizById.get(biz.id)?.types        ?? [],
+      });
+    }
+  }
+  return rows;
 }

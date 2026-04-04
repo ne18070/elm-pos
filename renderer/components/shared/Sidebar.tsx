@@ -6,6 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
+  Scale, Receipt,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -21,32 +22,35 @@ import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
 import { useState, useEffect } from 'react';
 
-// feature: null = toujours visible (pas lié à un module)
+// feature: null   = pas lié à un module → visible si le business a des features configurées
 // feature: string = visible seulement si ce module est dans business.features
-// Si business.features est vide (non configuré), tout est visible (rétro-compatibilité)
+// bizTypes: null  = tous types d'établissement
+// bizTypes: []    = visible uniquement si le type du business correspond
 const MANAGER_ROLES = ['owner', 'admin', 'manager'] as const;
 
 const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: null              },
-  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: null              },
-  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison'       },
-  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison'       },
-  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null              },
-  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,       feature: null              },
-  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,       feature: 'stock'           },
-  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,       feature: 'approvisionnement'},
-  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'],  feature: 'revendeurs'      },
-  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,                feature: 'hotel'           },
-  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,       feature: 'stock'           },
-  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,       feature: 'coupons'         },
-  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,       feature: null              },
-  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,       feature: null              },
-  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,       feature: 'comptabilite'    },
-  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,       feature: null              },
-  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null              },
-  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null              },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null              },
-  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null              },
+  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: null,               bizTypes: null              },
+  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
+  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison',        bizTypes: null              },
+  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison',        bizTypes: null              },
+  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null,               bizTypes: null              },
+  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
+  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,       feature: 'stock',            bizTypes: null              },
+  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,       feature: 'approvisionnement', bizTypes: null             },
+  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'],  feature: 'revendeurs',       bizTypes: null              },
+  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,                feature: 'hotel',            bizTypes: null              },
+  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,       feature: 'stock',            bizTypes: null              },
+  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,       feature: 'coupons',          bizTypes: null              },
+  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
+  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
+  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,       feature: 'comptabilite',     bizTypes: null              },
+  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
+  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null,               bizTypes: null              },
+  { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', roles: MANAGER_ROLES,      feature: 'dossiers',         bizTypes: null              },
+  { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',       bizTypes: null              },
+  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,               bizTypes: ['restaurant']    },
+  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
+  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,               bizTypes: null              },
 ] as const;
 
 const COLLAPSED_KEY = 'elm-pos-sidebar-collapsed';
@@ -105,11 +109,17 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
         {NAV_ITEMS
           .filter(({ roles }) => !roles || (roles as readonly string[]).includes(role))
-          .filter(({ feature }) => {
-            if (!feature) return true;
+          .filter(({ feature, bizTypes }) => {
             const features = business?.features ?? [];
-            if (features.length === 0) return true; // non configuré → tout visible
-            return features.includes(feature);
+            const bizType  = business?.type ?? '';
+
+            // Filtre par module activé — strict, pas de fallback
+            if (feature && !features.includes(feature)) return false;
+
+            // Filtre par type d'établissement
+            if (bizTypes && bizType && !(bizTypes as readonly string[]).includes(bizType)) return false;
+
+            return true;
           })
           .map(({ href, icon: Icon, label }) => {
             const active = pathname.startsWith(href);
