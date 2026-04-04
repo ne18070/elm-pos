@@ -143,6 +143,17 @@
   color: #0f172a !important;
 }
 [data-theme="light"] .input::placeholder { color: #94a3b8 !important; }
+
+/* Select natif : le navigateur ignore parfois background/color sans cet override */
+[data-theme="light"] select.input,
+[data-theme="light"] select.input option {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+[data-theme="light"] select.input option:checked {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+}
 [data-theme="light"] .label             { color: #475569 !important; }
 [data-theme="light"] .btn-secondary     { color: #334155 !important; }
 
