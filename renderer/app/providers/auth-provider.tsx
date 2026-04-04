@@ -10,7 +10,7 @@ import { getSubscription, getPlans, getPaymentSettings } from '@services/supabas
 import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { useCashSessionStore } from '@/store/cashSession';
 
-const PUBLIC_PATHS = ['/login', '/display', '/subscribe', '/privacy'];
+const PUBLIC_PATHS = ['/', '/login', '/display', '/subscribe', '/privacy'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
