@@ -79,7 +79,7 @@ export default function ApprovisionnementPage() {
               className="btn-primary flex items-center gap-2 h-10 px-4"
             >
               <Plus className="w-4 h-4" />
-              Nouvel approvisionnement
+              <span className="hidden sm:inline">Nouvel approvisionnement</span>
             </button>
           </div>
         </div>
