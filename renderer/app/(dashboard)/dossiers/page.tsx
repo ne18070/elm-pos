@@ -66,7 +66,7 @@ function DossierModal({
   tribunaux:    RefItem[];
   statuts:      RefItem[];
   onClose:      () => void;
-  onSaved:      () => void;
+  onSaved:      (dossier: Dossier) => void;
 }) {
   const { error: notifError, success } = useNotificationStore();
   const [form, setForm] = useState({
@@ -108,10 +108,18 @@ function DossierModal({
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const q = (supabase as any).from('dossiers');
-      const { error } = initial ? await q.update(payload).eq('id', initial.id) : await q.insert(payload);
-      if (error) throw new Error(error.message);
+      let saved: Dossier;
+      if (initial) {
+        const { data, error } = await q.update(payload).eq('id', initial.id).select().single();
+        if (error) throw new Error(error.message);
+        saved = data as Dossier;
+      } else {
+        const { data, error } = await q.insert(payload).select().single();
+        if (error) throw new Error(error.message);
+        saved = data as Dossier;
+      }
       success(initial ? 'Dossier mis à jour' : 'Dossier créé');
-      onSaved();
+      onSaved(saved);
     } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
@@ -471,7 +479,8 @@ export default function DossiersPage() {
             <p className="text-xs text-slate-400 mt-0.5">Gestion des affaires judiciaires et clients</p>
           </div>
           <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Nouveau dossier
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nouveau dossier</span>
           </button>
         </div>
 
@@ -599,7 +608,12 @@ export default function DossiersPage() {
           tribunaux={tribunaux}
           statuts={statuts}
           onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); load(); }}
+          onSaved={(dossier) => {
+            setModal(null);
+            load();
+            // Après création → ouvrir directement le panneau fichiers
+            if (!modal || modal === 'new') setFichiersPanel(dossier);
+          }}
         />
       )}
 
