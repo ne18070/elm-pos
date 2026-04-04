@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   ShoppingCart, BarChart2, Truck, MessageCircle, BedDouble, Scale,
-  Wifi, WifiOff, Check, ArrowRight, Store, Package,
+  WifiOff, Check, ArrowRight, Store, Package,
   Users, Receipt, Zap, Globe, UserCircle, Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -451,7 +451,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-6 text-sm text-slate-600">
           <Link href="/privacy" className="hover:text-slate-400 transition-colors">Confidentialité</Link>
-          <a href="mailto:support@elm-app.click" className="hover:text-slate-400 transition-colors">Contact</a>
+          <a href="mailto:contact@elm-app.click" className="hover:text-slate-400 transition-colors">Contact</a>
           <span className="flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5" /> Sénégal · Afrique
           </span>
