@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ShoppingCart, BarChart2, Truck, MessageCircle, BedDouble, Scale,
-  Wifi, WifiOff, ChevronRight, Check, ArrowRight, Store, Package,
-  Users, Receipt, Zap, Globe, UserCircle,
+  Wifi, WifiOff, Check, ArrowRight, Store, Package,
+  Users, Receipt, Zap, Globe, UserCircle, Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useEffect, useState } from 'react';
+import { getPlans, type Plan } from '@services/supabase/subscriptions';
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -327,28 +327,20 @@ function Avantages() {
 
 // ─── Tarifs ───────────────────────────────────────────────────────────────────
 
-const PLANS = [
-  {
-    name: 'Starter',
-    price: 'Gratuit',
-    sub: '7 jours d\'essai',
-    color: 'border-white/10',
-    features: ['1 établissement', 'Caisse & commandes', 'Jusqu\'à 3 utilisateurs', 'Support email'],
-    cta: 'Commencer',
-    primary: false,
-  },
-  {
-    name: 'Pro',
-    price: '15 000',
-    sub: 'FCFA / mois',
-    color: 'border-brand-600',
-    features: ['Établissements illimités', 'Tous les modules', 'Équipe illimitée', 'WhatsApp, livraisons, hôtel', 'Support prioritaire'],
-    cta: 'Choisir Pro',
-    primary: true,
-  },
-];
-
 function Tarifs() {
+  const [plans, setPlans]     = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getPlans()
+      .then(setPlans)
+      .catch(() => setPlans([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Determine which plan is "recommended" (highest price among active plans)
+  const maxPrice = plans.length ? Math.max(...plans.map((p) => p.price)) : 0;
+
   return (
     <section id="tarifs" className="py-24 px-4 bg-black/20">
       <div className="max-w-3xl mx-auto space-y-12">
@@ -357,37 +349,56 @@ function Tarifs() {
           <p className="text-slate-400">Pas de frais cachés. Pas de surprise.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {PLANS.map((plan) => (
-            <div key={plan.name} className={`bg-surface-card border-2 rounded-2xl p-8 space-y-6 relative ${plan.color}`}>
-              {plan.primary && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white text-xs font-bold px-4 py-1 rounded-full">
-                  RECOMMANDÉ
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
+          </div>
+        ) : (
+          <div className={`grid grid-cols-1 gap-6 ${plans.length === 2 ? 'sm:grid-cols-2' : plans.length >= 3 ? 'sm:grid-cols-3' : ''}`}>
+            {plans.map((plan) => {
+              const isFree    = plan.price === 0;
+              const isPrimary = plan.price === maxPrice && !isFree;
+              const priceStr  = isFree
+                ? 'Gratuit'
+                : plan.price.toLocaleString('fr-FR');
+              const subStr    = isFree
+                ? `${plan.duration_days} jours d'essai`
+                : `${plan.currency} / mois`;
+
+              return (
+                <div key={plan.id}
+                  className={`bg-surface-card border-2 rounded-2xl p-8 space-y-6 relative
+                    ${isPrimary ? 'border-brand-600' : 'border-white/10'}`}>
+                  {isPrimary && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white text-xs font-bold px-4 py-1 rounded-full">
+                      RECOMMANDÉ
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">{plan.label || plan.name}</p>
+                    <p className="text-3xl font-black text-white mt-1">{priceStr}</p>
+                    <p className="text-sm text-slate-500">{subStr}</p>
+                  </div>
+                  <ul className="space-y-3">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
+                        <Check className={`w-4 h-4 shrink-0 ${isPrimary ? 'text-brand-400' : 'text-slate-500'}`} />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/subscribe"
+                    className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-all
+                      ${isPrimary
+                        ? 'bg-brand-600 hover:bg-brand-500 text-white'
+                        : 'border border-white/10 hover:border-white/20 text-slate-300 hover:text-white'}`}>
+                    {isFree ? 'Commencer' : `Choisir ${plan.label || plan.name}`}
+                  </Link>
                 </div>
-              )}
-              <div>
-                <p className="text-slate-400 text-sm font-medium">{plan.name}</p>
-                <p className="text-3xl font-black text-white mt-1">{plan.price}</p>
-                <p className="text-sm text-slate-500">{plan.sub}</p>
-              </div>
-              <ul className="space-y-3">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
-                    <Check className={`w-4 h-4 shrink-0 ${plan.primary ? 'text-brand-400' : 'text-slate-500'}`} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/login"
-                className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-all
-                  ${plan.primary
-                    ? 'bg-brand-600 hover:bg-brand-500 text-white'
-                    : 'border border-white/10 hover:border-white/20 text-slate-300 hover:text-white'}`}>
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

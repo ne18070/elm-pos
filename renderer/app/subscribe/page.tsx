@@ -125,17 +125,17 @@ export default function SubscribePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto' }} className="p-4 sm:p-8">
+    <div style={{ height: '100dvh', overflowY: 'auto' }} className="bg-surface p-4 sm:p-8">
       {/* Grille de fond */}
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+      <div className="subscribe-grid-bg fixed inset-0 opacity-[0.03] pointer-events-none" style={{
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
       }} />
 

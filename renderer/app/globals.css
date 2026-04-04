@@ -234,8 +234,12 @@
 [data-theme="light"] .bg-red-900\/30    { background-color: #ffe4e6 !important; }
 [data-theme="light"] .bg-red-900\/40    { background-color: #fecdd3 !important; }
 [data-theme="light"] .bg-blue-900\/20   { background-color: #eff6ff !important; }
+[data-theme="light"] .bg-blue-900\/10   { background-color: #f0f9ff !important; }
 [data-theme="light"] .bg-amber-900\/30  { background-color: #fffbeb !important; }
 [data-theme="light"] .bg-slate-800\/60  { background-color: #f1f5f9 !important; }
+[data-theme="light"] .bg-orange-900\/10 { background-color: #fff7ed !important; }
+[data-theme="light"] .bg-slate-900\/50  { background-color: #f1f5f9 !important; }
+[data-theme="light"] .bg-black\/20      { background-color: #f8fafc !important; }
 
 /* ── Bordures colorées sur fond clair ───────────────────────────────────── */
 [data-theme="light"] .border-green-800  { border-color: #16a34a !important; }
@@ -244,8 +248,18 @@
 [data-theme="light"] .border-red-700    { border-color: #b91c1c !important; }
 [data-theme="light"] .border-blue-700   { border-color: #1d4ed8 !important; }
 [data-theme="light"] .border-blue-800   { border-color: #1e40af !important; }
+[data-theme="light"] .border-orange-700 { border-color: #c2410c !important; }
 [data-theme="light"] .border-amber-800\/50 { border-color: #d97706 !important; }
+[data-theme="light"] .border-brand-500  { border-color: #0284c7 !important; }
+[data-theme="light"] .border-brand-700\/50 { border-color: #0369a1 !important; }
+[data-theme="light"] .hover\:border-slate-500:hover { border-color: #64748b !important; }
 
 /* ── Liste de fonctionnalités : distinction actif / inactif ─────────────── */
 [data-theme="light"] .text-slate-600 { color: #94a3b8 !important; }
 [data-theme="light"] .text-slate-700 { color: #64748b !important; }
+
+/* ── Subscribe page : fond grille + éléments spécifiques ───────────────── */
+[data-theme="light"] .subscribe-grid-bg { display: none; }
+[data-theme="light"] .text-brand-300    { color: #0284c7 !important; }
+[data-theme="light"] .border-brand-800\/50 { border-color: #bae6fd !important; }
+[data-theme="light"] .bg-brand-900\/50   { background-color: #dbeafe !important; }
