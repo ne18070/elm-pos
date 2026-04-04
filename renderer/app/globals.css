@@ -179,6 +179,56 @@
 [data-theme="light"] .bg-slate-700,
 [data-theme="light"] .bg-slate-800 { color: #ffffff !important; }
 
+/* ── Enfants de containers sombres : restaurer les couleurs claires ──────
+   Le sélecteur enfant (.bg-X .text-Y) est plus spécifique que (.text-Y seul)
+   donc il écrase les overrides globaux ci-dessus.                          */
+[data-theme="light"] .bg-brand-500 .text-white,
+[data-theme="light"] .bg-brand-600 .text-white,
+[data-theme="light"] .bg-brand-700 .text-white,
+[data-theme="light"] .bg-green-600 .text-white,
+[data-theme="light"] .bg-green-700 .text-white,
+[data-theme="light"] .bg-red-500   .text-white,
+[data-theme="light"] .bg-red-600   .text-white,
+[data-theme="light"] .bg-red-700   .text-white,
+[data-theme="light"] .bg-amber-600 .text-white,
+[data-theme="light"] .bg-amber-700 .text-white,
+[data-theme="light"] .bg-teal-600  .text-white,
+[data-theme="light"] .bg-teal-700  .text-white,
+[data-theme="light"] .bg-purple-600 .text-white,
+[data-theme="light"] .bg-purple-700 .text-white,
+[data-theme="light"] .bg-slate-700 .text-white,
+[data-theme="light"] .bg-slate-800 .text-white,
+[data-theme="light"] .bg-slate-900 .text-white { color: #ffffff !important; }
+
+[data-theme="light"] .bg-brand-500 .text-slate-100,
+[data-theme="light"] .bg-brand-600 .text-slate-100,
+[data-theme="light"] .bg-slate-700 .text-slate-100,
+[data-theme="light"] .bg-slate-800 .text-slate-100,
+[data-theme="light"] .bg-slate-900 .text-slate-100 { color: #f1f5f9 !important; }
+
+[data-theme="light"] .bg-brand-600 .text-slate-300,
+[data-theme="light"] .bg-slate-700 .text-slate-300,
+[data-theme="light"] .bg-slate-800 .text-slate-300,
+[data-theme="light"] .bg-slate-900 .text-slate-300 { color: #cbd5e1 !important; }
+
+[data-theme="light"] .bg-brand-600 .text-slate-400,
+[data-theme="light"] .bg-slate-700 .text-slate-400,
+[data-theme="light"] .bg-slate-800 .text-slate-400,
+[data-theme="light"] .bg-slate-900 .text-slate-400 { color: #94a3b8 !important; }
+
+/* ── .dark-section : zones toujours sombres (landing nav, hero, etc.) ────── */
+[data-theme="light"] .dark-section,
+[data-theme="light"] .dark-section .text-white     { color: #ffffff !important; }
+[data-theme="light"] .dark-section .text-slate-100 { color: #f1f5f9 !important; }
+[data-theme="light"] .dark-section .text-slate-200 { color: #e2e8f0 !important; }
+[data-theme="light"] .dark-section .text-slate-300 { color: #cbd5e1 !important; }
+[data-theme="light"] .dark-section .text-slate-400 { color: #94a3b8 !important; }
+[data-theme="light"] .dark-section .text-slate-500 { color: #64748b !important; }
+[data-theme="light"] .dark-section .text-slate-600 { color: #475569 !important; }
+[data-theme="light"] .dark-section .hover\:text-white:hover { color: #ffffff !important; }
+[data-theme="light"] .dark-section .text-brand-400 { color: #38bdf8 !important; }
+[data-theme="light"] .dark-section .text-brand-300 { color: #7dd3fc !important; }
+
 /* ── Couleurs sémantiques : "400/300" → versions sombres lisibles sur blanc ─ */
 [data-theme="light"] .text-brand-400   { color: #0369a1 !important; }
 [data-theme="light"] .text-brand-300   { color: #0284c7 !important; }
