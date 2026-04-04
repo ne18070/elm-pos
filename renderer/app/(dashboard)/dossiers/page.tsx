@@ -2,12 +2,17 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Briefcase, Search, Loader2, X, Check, Pencil, Trash2, Phone, Scale, Calendar } from 'lucide-react';
+import { Plus, Briefcase, Search, Loader2, X, Check, Pencil, Trash2, Phone, Scale, Calendar, Paperclip, Upload, ExternalLink, HardDrive, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
 import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
+import {
+  getFichiers, uploadFichier, deleteFichier, getSignedUrl, getStorageInfo,
+  formatBytes, getFileIcon,
+  type DossierFichier, type StorageInfo,
+} from '@services/supabase/dossier-fichiers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -214,6 +219,166 @@ function DossierModal({
   );
 }
 
+// ─── Panneau fichiers ─────────────────────────────────────────────────────────
+
+function FichiersPanel({
+  dossier, businessId, storageInfo,
+  onClose, onStorageChange,
+}: {
+  dossier:         Dossier;
+  businessId:      string;
+  storageInfo:     StorageInfo | null;
+  onClose:         () => void;
+  onStorageChange: () => void;
+}) {
+  const { error: notifError, success } = useNotificationStore();
+  const [fichiers, setFichiers] = useState<DossierFichier[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
+
+  useEffect(() => {
+    getFichiers(dossier.id)
+      .then(setFichiers)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [dossier.id]);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const f = await uploadFichier(dossier.id, businessId, file, setUploadPct);
+        setFichiers((prev) => [f, ...prev]);
+      }
+      success('Fichier(s) ajouté(s)');
+      onStorageChange();
+    } catch (e) {
+      notifError(e instanceof Error ? e.message : 'Erreur upload');
+    } finally {
+      setUploading(false);
+      setUploadPct(0);
+    }
+  }
+
+  async function handleOpen(f: DossierFichier) {
+    try {
+      const url = await getSignedUrl(f.storage_path);
+      window.open(url, '_blank');
+    } catch { notifError('Impossible d\'ouvrir le fichier'); }
+  }
+
+  async function handleDelete(f: DossierFichier) {
+    if (!confirm(`Supprimer "${f.nom}" ?`)) return;
+    try {
+      await deleteFichier(f);
+      setFichiers((prev) => prev.filter((x) => x.id !== f.id));
+      success('Fichier supprimé');
+      onStorageChange();
+    } catch (e) { notifError(e instanceof Error ? e.message : 'Erreur'); }
+  }
+
+  const quotaPct = storageInfo?.used_pct ?? 0;
+  const nearLimit = quotaPct >= 80;
+
+  return (
+    <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border shrink-0">
+        <div>
+          <p className="text-sm font-semibold text-white flex items-center gap-2">
+            <Paperclip className="w-4 h-4 text-purple-400" />
+            Fichiers — {dossier.reference}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">{fichiers.length} fichier{fichiers.length !== 1 ? 's' : ''}</p>
+        </div>
+        <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-surface-hover">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Quota bar */}
+      {storageInfo && (
+        <div className="px-4 py-3 border-b border-surface-border shrink-0 space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1 text-slate-400">
+              <HardDrive className="w-3 h-3" /> Stockage utilisé
+            </span>
+            <span className={nearLimit ? 'text-amber-400 font-medium' : 'text-slate-500'}>
+              {formatBytes(storageInfo.used_bytes)} / {formatBytes(storageInfo.quota_bytes)}
+            </span>
+          </div>
+          <div className="h-1.5 bg-surface-input rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${nearLimit ? 'bg-amber-500' : 'bg-brand-500'}`}
+              style={{ width: `${quotaPct}%` }}
+            />
+          </div>
+          {nearLimit && (
+            <p className="text-xs text-amber-400 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              {quotaPct >= 100 ? 'Quota atteint — upgrade nécessaire' : `${100 - quotaPct}% restant`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Upload zone */}
+      <div className="px-4 py-3 shrink-0">
+        <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors
+          ${uploading ? 'border-brand-600 bg-brand-900/10' : 'border-surface-border hover:border-brand-600 hover:bg-brand-900/10'}`}>
+          {uploading ? (
+            <>
+              <Loader2 className="w-5 h-5 text-brand-400 animate-spin" />
+              <span className="text-xs text-brand-400">Upload en cours… {uploadPct}%</span>
+            </>
+          ) : (
+            <>
+              <Upload className="w-5 h-5 text-slate-500" />
+              <span className="text-xs text-slate-400 text-center">
+                Cliquez ou glissez un fichier<br />
+                <span className="text-slate-600">Max 50 Mo par fichier</span>
+              </span>
+            </>
+          )}
+          <input type="file" className="hidden" multiple disabled={uploading}
+            onChange={(e) => handleFiles(e.target.files)} />
+        </label>
+      </div>
+
+      {/* Liste fichiers */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-slate-500" /></div>
+        ) : fichiers.length === 0 ? (
+          <p className="text-center text-slate-600 text-sm py-8">Aucun fichier joint</p>
+        ) : (
+          fichiers.map((f) => (
+            <div key={f.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-input hover:bg-surface-hover transition-colors group">
+              <span className="text-xl shrink-0">{getFileIcon(f.mime_type)}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white truncate">{f.nom}</p>
+                <p className="text-xs text-slate-500">{formatBytes(f.taille_bytes)}</p>
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => handleOpen(f)}
+                  className="p-1.5 text-slate-400 hover:text-brand-400 rounded-lg hover:bg-surface-card" title="Ouvrir">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleDelete(f)}
+                  className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-900/20" title="Supprimer">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DossiersPage() {
@@ -230,6 +395,8 @@ export default function DossiersPage() {
   const [filterType, setFilterType]     = useState('tous');
   const [modal, setModal]               = useState<'new' | Dossier | null>(null);
   const [deletingId, setDeletingId]     = useState<string | null>(null);
+  const [fichiersPanel, setFichiersPanel] = useState<Dossier | null>(null);
+  const [storageInfo, setStorageInfo]     = useState<StorageInfo | null>(null);
 
   const load = useCallback(async () => {
     if (!business) return;
@@ -251,7 +418,12 @@ export default function DossiersPage() {
     finally { setLoading(false); }
   }, [business, notifError]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadStorage = useCallback(async () => {
+    if (!business) return;
+    try { setStorageInfo(await getStorageInfo(business.id)); } catch { /* silencieux */ }
+  }, [business]);
+
+  useEffect(() => { load(); loadStorage(); }, [load, loadStorage]);
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer ce dossier ?')) return;
@@ -393,6 +565,10 @@ export default function DossiersPage() {
                         <td className="px-4 py-3"><StatusBadge status={d.status} statuts={statuts} /></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 justify-end">
+                            <button onClick={() => setFichiersPanel(d)} title="Fichiers joints"
+                              className="p-1.5 text-slate-500 hover:text-purple-400 rounded-lg hover:bg-surface-input transition-colors">
+                              <Paperclip className="w-3.5 h-3.5" />
+                            </button>
                             <button onClick={() => setModal(d)} className="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-surface-input transition-colors">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
@@ -424,6 +600,16 @@ export default function DossiersPage() {
           statuts={statuts}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); load(); }}
+        />
+      )}
+
+      {fichiersPanel && (
+        <FichiersPanel
+          dossier={fichiersPanel}
+          businessId={business?.id ?? ''}
+          storageInfo={storageInfo}
+          onClose={() => setFichiersPanel(null)}
+          onStorageChange={loadStorage}
         />
       )}
     </div>
