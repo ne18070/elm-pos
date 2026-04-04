@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, ShoppingCart } from 'lucide-react';
 import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
 import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
@@ -21,6 +21,7 @@ import { getProductByBarcode } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
 type ViewMode = 'grid' | 'list';
+type MobileTab = 'catalog' | 'cart';
 
 export default function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -30,8 +31,10 @@ export default function PosPage() {
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
   const [wholesaleCtx, setWholesaleCtx]          = useState<WholesaleContext | null>(null);
   const [selectedClient, setSelectedClient]      = useState<SelectedClient | null>(null);
+  const [mobileTab, setMobileTab]                = useState<MobileTab>('catalog');
 
-  const addItem = useCartStore((s) => s.addItem);
+  const addItem   = useCartStore((s) => s.addItem);
+  const cartCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const { business } = useAuthStore();
   const router = useRouter();
 
@@ -73,17 +76,15 @@ export default function PosPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <OfflineBanner />
+      <BarcodeListener onScan={handleBarcodeScanned} />
 
-      <div className="flex flex-1 overflow-hidden">
-        <BarcodeListener onScan={handleBarcodeScanned} />
-
+      {/* ── Desktop layout ── */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Gauche : catalogue */}
         <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-border">
-          {/* Onboarding — visible uniquement pour les nouveaux établissements */}
           <div className="px-4 pt-3 empty:hidden">
             <OnboardingChecklist />
           </div>
-          {/* Barre recherche + toggle vue */}
           <div className="px-4 py-3 border-b border-surface-border flex gap-2">
             <input
               type="text"
@@ -93,60 +94,96 @@ export default function PosPage() {
               className="input flex-1"
             />
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
-              <button
-                onClick={() => setView('grid')}
-                title="Vue grille"
-                className={`p-2 rounded-lg transition-colors ${
-                  view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
+              <button onClick={() => setView('grid')} title="Vue grille"
+                className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => setView('list')}
-                title="Vue liste"
-                className={`p-2 rounded-lg transition-colors ${
-                  view === 'list' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
+              <button onClick={() => setView('list')} title="Vue liste"
+                className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
                 <List className="w-4 h-4" />
               </button>
             </div>
           </div>
-
-          {/* Catégories */}
-          <CategoryBar
-            businessId={business?.id ?? ''}
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
-
-          {/* Produits */}
+          <CategoryBar businessId={business?.id ?? ''} selected={selectedCategory} onSelect={setSelectedCategory} />
           <div className="flex-1 overflow-y-auto p-4">
-            <ProductGrid
-              businessId={business?.id ?? ''}
-              categoryId={selectedCategory}
-              search={searchQuery}
-              view={view}
-              onSelect={handleProductSelect}
-            />
+            <ProductGrid businessId={business?.id ?? ''} categoryId={selectedCategory} search={searchQuery} view={view} onSelect={handleProductSelect} />
           </div>
         </div>
-
         {/* Droite : panier */}
         <div className="w-96 flex flex-col bg-surface-card">
           <OrderPanel
-            taxRate={business?.tax_rate ?? 0}
-            taxInclusive={business?.tax_inclusive ?? false}
-            currency={business?.currency ?? 'XOF'}
-            businessId={business?.id ?? ''}
-            onCheckout={() => setPaymentOpen(true)}
-            onShowHeld={() => setHeldDrawerOpen(true)}
-            wholesaleCtx={wholesaleCtx}
-            onWholesaleChange={setWholesaleCtx}
-            selectedClient={selectedClient}
-            onClientChange={setSelectedClient}
+            taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
+            currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
+            onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
+            wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
+            selectedClient={selectedClient} onClientChange={setSelectedClient}
           />
+        </div>
+      </div>
+
+      {/* ── Mobile layout ── */}
+      <div className="flex md:hidden flex-col flex-1 overflow-hidden relative">
+        {/* Catalogue (visible quand mobileTab === 'catalog') */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${mobileTab === 'catalog' ? '' : 'hidden'}`}>
+          <div className="px-3 py-2 border-b border-surface-border flex gap-2">
+            <input
+              type="text"
+              placeholder="Rechercher…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input flex-1 text-sm"
+            />
+            <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
+              <button onClick={() => setView('grid')}
+                className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400'}`}>
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button onClick={() => setView('list')}
+                className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-slate-400'}`}>
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <CategoryBar businessId={business?.id ?? ''} selected={selectedCategory} onSelect={setSelectedCategory} />
+          <div className="flex-1 overflow-y-auto p-3 pb-20">
+            <ProductGrid businessId={business?.id ?? ''} categoryId={selectedCategory} search={searchQuery} view={view} onSelect={handleProductSelect} />
+          </div>
+          {/* FAB panier */}
+          <button
+            onClick={() => setMobileTab('cart')}
+            className="absolute bottom-4 right-4 h-14 px-5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl shadow-lg flex items-center gap-2.5 transition-colors"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="font-semibold">Panier</span>
+            {cartCount > 0 && (
+              <span className="bg-white text-brand-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Panier (visible quand mobileTab === 'cart') */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${mobileTab === 'cart' ? '' : 'hidden'}`}>
+          {/* Back button */}
+          <div className="px-3 py-2 border-b border-surface-border flex items-center gap-2">
+            <button
+              onClick={() => setMobileTab('catalog')}
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              ← Retour au catalogue
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <OrderPanel
+              taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
+              currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
+              onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
+              wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
+              selectedClient={selectedClient} onClientChange={setSelectedClient}
+            />
+          </div>
         </div>
       </div>
 

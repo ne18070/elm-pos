@@ -9,11 +9,27 @@ import { cn } from '@/lib/utils';
  * qu'il y a des opérations en attente / en échec.
  * Visible dans la barre latérale et en bandeau si critique.
  */
-export function OfflineBadge() {
+export function OfflineBadge({ compact = false }: { compact?: boolean }) {
   const { isOnline, syncing, pending, failed, flush, retryFailed } = useOfflineSync();
 
   // En ligne + rien en attente = ne rien afficher
   if (isOnline && pending === 0 && failed === 0) return null;
+
+  // Version compacte pour la top bar mobile
+  if (compact) {
+    const hasFailed = failed > 0;
+    return (
+      <div className={cn(
+        'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium',
+        hasFailed ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'
+      )}>
+        {hasFailed
+          ? <AlertTriangle className="w-3.5 h-3.5" />
+          : <WifiOff className="w-3.5 h-3.5" />}
+        {(pending + failed) > 0 && <span>{pending + failed}</span>}
+      </div>
+    );
+  }
 
   const hasFailed = failed > 0;
 

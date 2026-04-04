@@ -93,17 +93,17 @@ export default function OrdersPage() {
     <div className="flex h-full overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-surface-border space-y-4">
+        <div className="px-4 py-3 sm:p-6 border-b border-surface-border space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-white">Commandes</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-white">Commandes</h1>
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-2">
+              <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <Upload className="w-4 h-4" />
-                Importer
+                <span className="hidden sm:inline">Importer</span>
               </button>
-              <button onClick={refetch} className="btn-secondary flex items-center gap-2">
+              <button onClick={refetch} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <RefreshCw className="w-4 h-4" />
-                Actualiser
+                <span className="hidden sm:inline">Actualiser</span>
               </button>
             </div>
           </div>

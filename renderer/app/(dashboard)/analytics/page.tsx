@@ -112,26 +112,18 @@ export default function AnalyticsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-surface-border flex items-center justify-between shrink-0">
-        <h1 className="text-xl font-bold text-white">Statistiques</h1>
+      <div className="px-4 py-3 border-b border-surface-border flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <h1 className="text-lg font-bold text-white">Statistiques</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => loadAll(true)}
-            disabled={refreshing}
-            className="btn-secondary p-2"
-            title="Actualiser"
-          >
+          <button onClick={() => loadAll(true)} disabled={refreshing} className="btn-secondary p-2" title="Actualiser">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           <div className="flex gap-1 bg-surface-input rounded-xl p-1">
             {PERIODS.map(({ label, value }) => (
-              <button
-                key={value}
-                onClick={() => setPeriod(value)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              <button key={value} onClick={() => setPeriod(value)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   period === value ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
+                }`}>
                 {label}
               </button>
             ))}
@@ -157,12 +149,12 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 sm:space-y-5">
 
         {/* ── Général ── */}
         {tab === 'general' && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {kpis.map(({ label, value, icon: Icon, color, bg, sub }) => (
                 <div key={label} className={`p-4 rounded-xl border ${bg}`}>
                   <div className="flex items-center justify-between mb-2">

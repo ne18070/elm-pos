@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
-import { Sidebar } from '@/components/shared/Sidebar';
+import { Sidebar, MobileTopBar, MobileBottomNav, useOpenSidebar } from '@/components/shared/Sidebar';
 import { TrialBanner } from '@/components/shared/TrialBanner';
 import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { Loader2 } from 'lucide-react';
@@ -70,16 +70,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <InactivityGuard />
-      <Sidebar />
-      <main className="flex-1 overflow-hidden flex flex-col">
-        <TrialBanner />
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {children}
+  function MobileLayout({ children }: { children: React.ReactNode }) {
+    const openSidebar = useOpenSidebar();
+    return (
+      <div className="flex h-screen overflow-hidden">
+        <InactivityGuard />
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Mobile top bar */}
+          <MobileTopBar onMenuOpen={openSidebar} />
+          <TrialBanner />
+          <main className="flex-1 min-h-0 overflow-hidden">
+            {children}
+          </main>
+          {/* Mobile bottom nav */}
+          <MobileBottomNav />
         </div>
-      </main>
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <MobileLayout>
+      {children}
+    </MobileLayout>
   );
 }

@@ -6,7 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
-  Scale, Receipt,
+  Scale, Receipt, Menu, X,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -22,40 +22,55 @@ import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
 import { useState, useEffect } from 'react';
 
-// feature: null   = pas lié à un module → visible si le business a des features configurées
-// feature: string = visible seulement si ce module est dans business.features
-// bizTypes: null  = tous types d'établissement
-// bizTypes: []    = visible uniquement si le type du business correspond
 const MANAGER_ROLES = ['owner', 'admin', 'manager'] as const;
 
 const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: null,               bizTypes: null              },
-  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
-  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison',        bizTypes: null              },
-  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison',        bizTypes: null              },
-  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null,               bizTypes: null              },
-  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
-  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,       feature: 'stock',            bizTypes: null              },
-  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,       feature: 'approvisionnement', bizTypes: null             },
-  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'],  feature: 'revendeurs',       bizTypes: null              },
-  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,                feature: 'hotel',            bizTypes: null              },
-  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,       feature: 'stock',            bizTypes: null              },
-  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,       feature: 'coupons',          bizTypes: null              },
-  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
-  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
-  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,       feature: 'comptabilite',     bizTypes: null              },
-  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
-  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null,               bizTypes: null              },
-  { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', roles: MANAGER_ROLES,      feature: 'dossiers',         bizTypes: null              },
-  { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',       bizTypes: null              },
-  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,               bizTypes: ['restaurant']    },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null,               bizTypes: null              },
-  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,               bizTypes: null              },
+  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: null,                bizTypes: null           },
+  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison',         bizTypes: null           },
+  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison',         bizTypes: null           },
+  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null,                bizTypes: null           },
+  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,       feature: 'stock',             bizTypes: null           },
+  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,       feature: 'approvisionnement', bizTypes: null           },
+  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'],  feature: 'revendeurs',        bizTypes: null           },
+  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,                feature: 'hotel',             bizTypes: null           },
+  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,       feature: 'stock',             bizTypes: null           },
+  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,       feature: 'coupons',           bizTypes: null           },
+  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,       feature: 'comptabilite',      bizTypes: null           },
+  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null,                bizTypes: null           },
+  { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', roles: MANAGER_ROLES,      feature: 'dossiers',          bizTypes: null           },
+  { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',        bizTypes: null           },
+  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,                bizTypes: ['restaurant'] },
+  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,                bizTypes: null           },
 ] as const;
 
 const COLLAPSED_KEY = 'elm-pos-sidebar-collapsed';
 
-export function Sidebar() {
+// ─── Bottom nav (mobile) ── 5 items max ───────────────────────────────────────
+
+const BOTTOM_NAV = [
+  { href: '/pos',     icon: ShoppingCart,  label: 'Caisse'     },
+  { href: '/orders',  icon: ClipboardList, label: 'Commandes'  },
+  { href: '/products',icon: Package,       label: 'Produits'   },
+  { href: '/analytics',icon: BarChart2,   label: 'Stats'      },
+] as const;
+
+// ─── Sidebar content (shared between drawer and desktop) ─────────────────────
+
+function SidebarContent({
+  collapsed,
+  onClose,
+  onCollapse,
+}: {
+  collapsed: boolean;
+  onClose?: () => void;   // mobile drawer close
+  onCollapse?: () => void; // desktop collapse toggle
+}) {
   const pathname = usePathname();
   const { user, business, clear } = useAuthStore();
   const { setSubscription, setLoaded } = useSubscriptionStore();
@@ -64,15 +79,7 @@ export function Sidebar() {
   const role = user?.role ?? 'staff';
   const isAdmin = hasRole(role, 'admin');
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
-
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(COLLAPSED_KEY) === 'true';
-  });
-
-  useEffect(() => {
-    localStorage.setItem(COLLAPSED_KEY, String(collapsed));
-  }, [collapsed]);
+  const expanded = !collapsed;
 
   function handleOpenDisplay() {
     if (window.electronAPI?.display?.open) {
@@ -92,84 +99,82 @@ export function Sidebar() {
     clear();
   }
 
-  const expanded = !collapsed;
+  const visibleItems = NAV_ITEMS
+    .filter(({ roles }) => !roles || (roles as readonly string[]).includes(role))
+    .filter(({ feature, bizTypes }) => {
+      const features = business?.features ?? [];
+      const bizType  = business?.type ?? '';
+      if (feature && !features.includes(feature)) return false;
+      if (bizTypes && bizType && !(bizTypes as readonly string[]).includes(bizType)) return false;
+      return true;
+    });
 
   return (
-    <aside className={cn(
-      'h-full bg-surface-card border-r border-surface-border flex flex-col shrink-0 transition-all duration-200',
-      expanded ? 'w-60' : 'w-16',
-    )}>
-
-      {/* Sélecteur d'établissement */}
-      <div className="px-2 pt-3 pb-2 border-b border-surface-border">
-        <BusinessSwitcher />
+    <div className="flex flex-col h-full">
+      {/* Header : business switcher + close (mobile) */}
+      <div className="px-2 pt-3 pb-2 border-b border-surface-border flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <BusinessSwitcher />
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
-      {/* Navigation */}
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
-        {NAV_ITEMS
-          .filter(({ roles }) => !roles || (roles as readonly string[]).includes(role))
-          .filter(({ feature, bizTypes }) => {
-            const features = business?.features ?? [];
-            const bizType  = business?.type ?? '';
-
-            // Filtre par module activé — strict, pas de fallback
-            if (feature && !features.includes(feature)) return false;
-
-            // Filtre par type d'établissement
-            if (bizTypes && bizType && !(bizTypes as readonly string[]).includes(bizType)) return false;
-
-            return true;
-          })
-          .map(({ href, icon: Icon, label }) => {
-            const active = pathname.startsWith(href);
-            const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
-            const sessionDot = href === '/caisse';
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={collapsed ? label : undefined}
-                className={cn(
-                  'flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors duration-150',
-                  collapsed ? 'justify-center' : '',
-                  active
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+        {visibleItems.map(({ href, icon: Icon, label }) => {
+          const active = pathname.startsWith(href);
+          const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
+          const sessionDot = href === '/caisse';
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onClose}
+              title={collapsed ? label : undefined}
+              className={cn(
+                'flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors duration-150',
+                collapsed ? 'justify-center' : '',
+                active
+                  ? 'bg-brand-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+              )}
+            >
+              <div className="relative shrink-0">
+                <Icon className="w-5 h-5" />
+                {badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
+                                   flex items-center justify-center rounded-full
+                                   bg-red-500 text-white text-[9px] font-bold leading-none">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
                 )}
-              >
-                <div className="relative shrink-0">
-                  <Icon className="w-5 h-5" />
+                {sessionDot && (
+                  <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-surface-card
+                    ${cashSession ? 'bg-green-400' : 'bg-slate-600'}`}
+                  />
+                )}
+              </div>
+              {expanded && (
+                <>
+                  <span className="text-sm font-medium flex-1">{label}</span>
                   {badge > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
-                                     flex items-center justify-center rounded-full
-                                     bg-red-500 text-white text-[9px] font-bold leading-none">
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1
+                                     rounded-full bg-red-500 text-white text-xs font-bold">
                       {badge > 99 ? '99+' : badge}
                     </span>
                   )}
-                  {sessionDot && (
-                    <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-surface-card
-                      ${cashSession ? 'bg-green-400' : 'bg-slate-600'}`}
-                    />
-                  )}
-                </div>
-                {expanded && (
-                  <>
-                    <span className="text-sm font-medium flex-1">{label}</span>
-                    {badge > 0 && (
-                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1
-                                       rounded-full bg-red-500 text-white text-xs font-bold">
-                        {badge > 99 ? '99+' : badge}
-                      </span>
-                    )}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+                </>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Badge offline */}
+      {/* Offline + terminal */}
       {expanded && (
         <div className="px-2 py-2 space-y-1">
           <OfflineBadge />
@@ -177,28 +182,24 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Utilisateur + Actions */}
+      {/* Footer actions */}
       <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
-        {/* Notifications */}
         <NotificationBell />
 
-        {/* Aide */}
         <Link
           href="/help"
+          onClick={onClose}
           title={collapsed ? 'Aide' : undefined}
           className={cn(
             'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
             collapsed ? 'justify-center' : '',
-            pathname.startsWith('/help')
-              ? 'bg-brand-600 text-white'
-              : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+            pathname.startsWith('/help') ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white hover:bg-surface-hover'
           )}
         >
           <HelpCircle className="w-4 h-4 shrink-0" />
           {expanded && <span className="text-sm">Aide</span>}
         </Link>
 
-        {/* Écran client */}
         <button
           onClick={handleOpenDisplay}
           title="Ouvrir l'écran client"
@@ -213,13 +214,12 @@ export function Sidebar() {
 
         <Link
           href="/admin"
+          onClick={onClose}
           title={collapsed ? (isAdmin ? 'Administration' : 'Mon profil') : undefined}
           className={cn(
             'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
             collapsed ? 'justify-center' : '',
-            pathname.startsWith('/admin')
-              ? 'bg-brand-600 text-white'
-              : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+            pathname.startsWith('/admin') ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white hover:bg-surface-hover'
           )}
         >
           <ShieldCheck className="w-4 h-4 shrink-0" />
@@ -230,11 +230,9 @@ export function Sidebar() {
         <div className={cn('flex items-center gap-3 px-2 py-2', collapsed ? 'justify-center' : '')}>
           <div className="w-8 h-8 rounded-lg bg-surface-input overflow-hidden flex items-center justify-center
                           text-sm font-bold text-brand-400 shrink-0">
-            {user?.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              user?.full_name?.charAt(0).toUpperCase() ?? '?'
-            )}
+            {user?.avatar_url
+              ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+              : user?.full_name?.charAt(0).toUpperCase() ?? '?'}
           </div>
           {expanded && (
             <div className="min-w-0">
@@ -276,21 +274,160 @@ export function Sidebar() {
           {expanded && <span className="text-sm">Déconnexion</span>}
         </button>
 
-        {/* Bouton collapse */}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          title={collapsed ? 'Agrandir' : 'Réduire'}
-          className={cn(
-            'w-full flex items-center gap-3 px-2 py-2 rounded-xl text-slate-500 hover:text-white hover:bg-surface-hover transition-colors',
-            collapsed ? 'justify-center' : '',
-          )}
-        >
-          {collapsed
-            ? <ChevronRight className="w-4 h-4 shrink-0" />
-            : <ChevronLeft  className="w-4 h-4 shrink-0" />}
-          {expanded && <span className="text-sm">Réduire</span>}
-        </button>
+        {/* Collapse (desktop only) */}
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            title={collapsed ? 'Agrandir' : 'Réduire'}
+            className={cn(
+              'w-full flex items-center gap-3 px-2 py-2 rounded-xl text-slate-500 hover:text-white hover:bg-surface-hover transition-colors',
+              collapsed ? 'justify-center' : '',
+            )}
+          >
+            {collapsed
+              ? <ChevronRight className="w-4 h-4 shrink-0" />
+              : <ChevronLeft  className="w-4 h-4 shrink-0" />}
+            {expanded && <span className="text-sm">Réduire</span>}
+          </button>
+        )}
       </div>
-    </aside>
+    </div>
   );
+}
+
+// ─── Mobile top bar ───────────────────────────────────────────────────────────
+
+export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
+  const { business } = useAuthStore();
+  return (
+    <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-surface-card border-b border-surface-border shrink-0">
+      <button
+        onClick={onMenuOpen}
+        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+      <p className="text-sm font-semibold text-white truncate flex-1">
+        {business?.name ?? 'Elm'}
+      </p>
+      <OfflineBadge compact />
+    </div>
+  );
+}
+
+// ─── Mobile bottom nav ────────────────────────────────────────────────────────
+
+export function MobileBottomNav() {
+  const pathname = usePathname();
+  const { user, business } = useAuthStore();
+  const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
+  const role = user?.role ?? 'staff';
+
+  const visible = BOTTOM_NAV.filter(({ href }) => {
+    if (href === '/products') {
+      const features = business?.features ?? [];
+      if (!features.includes('stock')) return false;
+      if (!['owner','admin','manager'].includes(role)) return false;
+    }
+    return true;
+  });
+
+  return (
+    <nav className="md:hidden flex items-center bg-surface-card border-t border-surface-border shrink-0 safe-area-pb">
+      {visible.map(({ href, icon: Icon, label }) => {
+        const active = pathname.startsWith(href);
+        const badge  = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              'flex-1 flex flex-col items-center gap-1 py-2.5 px-1 transition-colors relative',
+              active ? 'text-brand-400' : 'text-slate-500 hover:text-slate-300'
+            )}
+          >
+            <div className="relative">
+              <Icon className="w-5 h-5" />
+              {badge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
+                                 flex items-center justify-center rounded-full
+                                 bg-red-500 text-white text-[9px] font-bold leading-none">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-medium leading-none">{label}</span>
+            {active && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-brand-500 rounded-full" />
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ─── Main Sidebar export ──────────────────────────────────────────────────────
+
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(COLLAPSED_KEY) === 'true';
+  });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(COLLAPSED_KEY, String(collapsed));
+  }, [collapsed]);
+
+  // Close drawer on route change
+  const pathname = usePathname();
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+
+  return (
+    <>
+      {/* ── Desktop sidebar ── */}
+      <aside className={cn(
+        'hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-200',
+        collapsed ? 'w-16' : 'w-60',
+      )}>
+        <SidebarContent
+          collapsed={collapsed}
+          onCollapse={() => setCollapsed((c) => !c)}
+        />
+      </aside>
+
+      {/* ── Mobile drawer overlay ── */}
+      {drawerOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile drawer ── */}
+      <aside className={cn(
+        'md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-card border-r border-surface-border flex flex-col',
+        'transition-transform duration-250',
+        drawerOpen ? 'translate-x-0' : '-translate-x-full',
+      )}>
+        <SidebarContent
+          collapsed={false}
+          onClose={() => setDrawerOpen(false)}
+        />
+      </aside>
+
+      {/* ── Expose open fn via data attr for MobileTopBar ── */}
+      <div id="sidebar-drawer-trigger" className="hidden" data-open={String(drawerOpen)}
+        onClick={() => setDrawerOpen(true)} />
+    </>
+  );
+}
+
+// ─── Hook to open drawer from outside ────────────────────────────────────────
+
+export function useOpenSidebar() {
+  return () => {
+    document.getElementById('sidebar-drawer-trigger')?.click();
+  };
 }

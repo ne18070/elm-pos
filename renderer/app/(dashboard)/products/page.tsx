@@ -80,8 +80,8 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-surface-border">
-        <div className="flex items-center justify-between mb-4">
+      <div className="px-4 py-3 sm:p-6 border-b border-surface-border">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div>
             <h1 className="text-xl font-bold text-white">Produits</h1>
             {!loading && (
