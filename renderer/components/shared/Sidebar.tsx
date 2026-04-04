@@ -300,7 +300,10 @@ function SidebarContent({
 export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const { business } = useAuthStore();
   return (
-    <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-surface-card border-b border-surface-border shrink-0">
+    <div
+      className="md:hidden flex items-center gap-3 px-4 py-3 bg-surface-card border-b border-surface-border shrink-0"
+      style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
+    >
       <button
         onClick={onMenuOpen}
         className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
@@ -333,7 +336,10 @@ export function MobileBottomNav() {
   });
 
   return (
-    <nav className="md:hidden flex items-center bg-surface-card border-t border-surface-border shrink-0 safe-area-pb">
+    <nav
+      className="md:hidden flex items-center bg-surface-card border-t border-surface-border shrink-0"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {visible.map(({ href, icon: Icon, label }) => {
         const active = pathname.startsWith(href);
         const badge  = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
