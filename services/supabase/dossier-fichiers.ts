@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { supabaseAdmin } from './admin';
 
 export interface DossierFichier {
   id:           string;
@@ -21,6 +22,20 @@ export interface StorageInfo {
 
 const BUCKET = 'dossier-files';
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB par fichier
+
+/** Crée le bucket s'il n'existe pas encore (idempotent) */
+async function ensureBucket(): Promise<void> {
+  const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+  if (buckets?.some((b) => b.name === BUCKET)) return;
+  const { error } = await supabaseAdmin.storage.createBucket(BUCKET, {
+    public: false,
+    fileSizeLimit: MAX_FILE_BYTES,
+  });
+  // Ignorer l'erreur "already exists" au cas où
+  if (error && !error.message.includes('already exists')) {
+    throw new Error(`Impossible de créer le bucket : ${error.message}`);
+  }
+}
 
 // ── Lecture ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +84,9 @@ export async function uploadFichier(
   if (file.size > MAX_FILE_BYTES) {
     throw new Error(`Fichier trop volumineux (max 50 Mo, reçu ${formatBytes(file.size)})`);
   }
+
+  // Créer le bucket si nécessaire
+  await ensureBucket();
 
   // Vérifier le quota restant
   const info = await getStorageInfo(businessId);
