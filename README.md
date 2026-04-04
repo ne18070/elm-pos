@@ -282,7 +282,3 @@ Toutes les tables ont **Row Level Security (RLS)** activé.
 - [ ] Programme de fidélité (points / tampons)
 
 ---
-
-## Licence
-
-MIT — Libre d'utilisation commerciale.
