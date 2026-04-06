@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'ELM APP <contact@elm-app.click>';
 
 // ─── Email templates ──────────────────────────────────────────────────────────
@@ -141,6 +140,7 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const html = (template as (d: any) => string)(data);
 
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const { data: result, error } = await resend.emails.send({ from: FROM, to, subject, html });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
