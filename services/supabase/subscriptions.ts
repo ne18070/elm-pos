@@ -269,12 +269,23 @@ export async function getPublicSubscriptionRequests(): Promise<PublicSubscriptio
   }));
 }
 
-export async function rejectPublicRequest(requestId: string, note?: string): Promise<void> {
+export async function rejectPublicRequest(requestId: string, note?: string, req?: Pick<PublicSubscriptionRequest, 'email' | 'business_name'>): Promise<void> {
   const { error } = await db
     .from('public_subscription_requests')
     .update({ status: 'rejected', processed_at: new Date().toISOString(), note: note ?? null })
     .eq('id', requestId);
   if (error) throw new Error(error.message);
+
+  // Send rejection email (non-blocking)
+  if (req?.email) {
+    const { sendEmail } = await import('../resend');
+    sendEmail({
+      type:    'subscription_rejected',
+      to:      req.email,
+      subject: 'Votre demande ELM APP',
+      data: { business_name: req.business_name, note },
+    }).catch(() => { /* non bloquant */ });
+  }
 }
 
 export async function approvePublicRequest(
@@ -333,6 +344,8 @@ export async function approvePublicRequest(
     .eq('id', userId);
 
   // 6. Activate subscription
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + days);
   await activateSubscription(businessId, planId, days, note);
 
   // 7. Mark request as approved
@@ -341,6 +354,21 @@ export async function approvePublicRequest(
     .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
     .eq('id', requestId);
   if (reqError) throw new Error(reqError.message);
+
+  // 8. Send approval email with credentials (non-blocking)
+  const { sendEmail } = await import('../resend');
+  sendEmail({
+    type:    'subscription_approved',
+    to:      req.email,
+    subject: '✅ Votre accès ELM APP est activé',
+    data: {
+      business_name: req.business_name,
+      email:         req.email,
+      password,
+      plan_label:    req.plan_label ?? 'Pro',
+      expires_at:    expiresAt.toISOString(),
+    },
+  }).catch(() => { /* non bloquant */ });
 }
 
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {

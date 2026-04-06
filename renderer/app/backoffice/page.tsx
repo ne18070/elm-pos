@@ -141,7 +141,8 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
     setProcessing(rejectId.id);
     try {
       if (rejectId.isPublic) {
-        await rejectPublicRequest(rejectId.id, rejectNote || undefined);
+        const pubReq = publicRows.find(r => r.id === rejectId.id);
+        await rejectPublicRequest(rejectId.id, rejectNote || undefined, pubReq);
       } else {
         await rejectSubscriptionRequest(rejectId.id, rejectNote || undefined);
       }

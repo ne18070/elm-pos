@@ -10,6 +10,7 @@ import {
   getPlans, getPaymentSettings,
   type Plan, type PaymentSettings,
 } from '@services/supabase/subscriptions';
+import { sendEmail } from '@services/resend';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -92,6 +93,12 @@ export default function SubscribePage() {
         password,
       });
       if (error) throw new Error(error.message);
+      sendEmail({
+        type:    'subscription_received',
+        to:      email.trim().toLowerCase(),
+        subject: '📩 Demande reçue — ELM APP',
+        data:    { business_name: businessName.trim(), plan_label: selectedPlan.label ?? selectedPlan.name },
+      }).catch(() => {});
       setStep('sent');
     } catch (e) {
       setSubmitError(String(e));
@@ -115,6 +122,12 @@ export default function SubscribePage() {
         password,
       });
       if (error) throw new Error(error.message);
+      sendEmail({
+        type:    'subscription_received',
+        to:      email.trim().toLowerCase(),
+        subject: '📩 Demande reçue — ELM APP',
+        data:    { business_name: businessName.trim(), plan_label: selectedPlan.label ?? selectedPlan.name },
+      }).catch(() => {});
       setStep('sent');
     } catch (e) {
       setSubmitError(String(e));
