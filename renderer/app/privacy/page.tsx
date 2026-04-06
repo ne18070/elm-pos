@@ -43,6 +43,9 @@ export default function PrivacyPage() {
               l&apos;application est joignable à l&apos;adresse :{' '}
               <a href="mailto:contact@elm-app.click" className="text-brand-400 hover:text-brand-300">
                 contact@elm-app.click
+              </a>{' '}ou sur WhatsApp au{' '}
+              <a href="https://wa.me/33746436801" className="text-brand-400 hover:text-brand-300">
+                +33 7 46 43 68 01
               </a>.
             </p>
           </Section>

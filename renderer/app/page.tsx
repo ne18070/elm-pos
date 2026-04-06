@@ -451,6 +451,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-6 text-sm text-slate-600">
           <Link href="/privacy" className="hover:text-slate-400 transition-colors">Confidentialité</Link>
+          <a href="https://wa.me/33746436801" className="hover:text-slate-400 transition-colors">WhatsApp</a>
           <a href="mailto:contact@elm-app.click" className="hover:text-slate-400 transition-colors">Contact</a>
           <span className="flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5" /> Sénégal · Afrique
