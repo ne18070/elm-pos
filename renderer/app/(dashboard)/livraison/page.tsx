@@ -115,7 +115,7 @@ export default function LivraisonPage() {
 
   function openAssign(order: Order) {
     setAssigningOrder(order);
-    setAssignLivreurId((order as any).livreur_id ?? '');
+    setAssignLivreurId((order as Order & { livreur_id?: string }).livreur_id ?? '');
     setSendWhatsApp(!!waConfig?.is_active);
   }
 
@@ -129,7 +129,7 @@ export default function LivraisonPage() {
       if (livreurId && sendWhatsApp && waConfig) {
         const livreur = livreurs.find((l) => l.id === livreurId);
         if (livreur) {
-          const o = assigningOrder as any;
+          const o = assigningOrder as Order & { delivery_address?: string; delivery_location?: unknown };
           await sendLocationToLivreur(
             { phone_number_id: waConfig.phone_number_id, access_token: waConfig.access_token },
             livreur,
@@ -206,8 +206,10 @@ export default function LivraisonPage() {
                 const badge = DELIVERY_LABELS[order.delivery_status];
                 const itemCount = order.items?.reduce((s, i) => s + i.quantity, 0) ?? 0;
                 const isSelected = selected?.id === order.id;
-                const isDelivery = (order as any).delivery_type === 'delivery';
-                const hasLivreur = !!(order as any).livreur_id;
+                type ExtOrder = Order & { delivery_type?: string; livreur_id?: string };
+                const ext = order as ExtOrder;
+                const isDelivery = ext.delivery_type === 'delivery';
+                const hasLivreur = !!ext.livreur_id;
 
                 return (
                   <div
@@ -280,7 +282,7 @@ export default function LivraisonPage() {
                         >
                           <UserCheck className="w-3 h-3" />
                           {hasLivreur
-                            ? livreurs.find((l) => l.id === (order as any).livreur_id)?.name ?? 'Livreur assigné'
+                            ? livreurs.find((l) => l.id === ext.livreur_id)?.name ?? 'Livreur assigné'
                             : 'Assigner livreur'
                           }
                         </button>

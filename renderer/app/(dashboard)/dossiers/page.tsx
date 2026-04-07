@@ -87,7 +87,12 @@ function DossierModal({
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   async function handleSave() {
-    if (!form.client_name.trim() || !form.reference.trim()) return;
+    if (!form.client_name.trim()) { notifError('Le nom du client est requis'); return; }
+    if (!form.reference.trim())   { notifError('La référence est requise'); return; }
+    if (form.date_audience && form.date_audience < form.date_ouverture) {
+      notifError("La date d'audience ne peut pas être avant la date d'ouverture du dossier");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -106,16 +111,15 @@ function DossierModal({
         date_audience:  form.date_audience        || null,
         updated_at:     new Date().toISOString(),
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const q = (supabase as any).from('dossiers');
+      const db = supabase.from('dossiers' as never) as ReturnType<typeof supabase.from>;
       let saved: Dossier;
       if (initial) {
-        const { data, error } = await q.update(payload).eq('id', initial.id).select().single();
-        if (error) throw new Error(error.message);
+        const { data, error } = await db.update(payload as never).eq('id', initial.id).select().single();
+        if (error) throw new Error((error as { message: string }).message);
         saved = data as Dossier;
       } else {
-        const { data, error } = await q.insert(payload).select().single();
-        if (error) throw new Error(error.message);
+        const { data, error } = await db.insert(payload as never).select().single();
+        if (error) throw new Error((error as { message: string }).message);
         saved = data as Dossier;
       }
       success(initial ? 'Dossier mis à jour' : 'Dossier créé');

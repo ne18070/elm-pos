@@ -1,8 +1,8 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, BedDouble, Users, ClipboardList, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, BedDouble, Users, ClipboardList, Calendar, LogOut, LogIn } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { logAction } from '@services/supabase/logger';
@@ -443,49 +443,93 @@ export default function HotelPage() {
   function activeResForRoom(roomId: string) { return reservations.find((r) => r.room_id === roomId && r.status === 'checked_in'); }
   function confirmedResForRoom(roomId: string) { return reservations.find((r) => r.room_id === roomId && r.status === 'confirmed'); }
 
+  const checkoutsToday = useMemo(() =>
+    reservations.filter((r) => r.check_out === today && r.status === 'checked_in'),
+  [reservations, today]);
+
+  const checkinsToday = useMemo(() =>
+    reservations.filter((r) => r.check_in === today && r.status === 'confirmed'),
+  [reservations, today]);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="h-full flex flex-col relative">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold text-white">Hôtel</h1>
-          <p className="text-xs text-slate-500">
-            {stats.available} disponible{stats.available !== 1 ? 's' : ''} · {stats.occupied} occupée{stats.occupied !== 1 ? 's' : ''} · {stats.total} chambre{stats.total !== 1 ? 's' : ''}
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-surface-border flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-bold text-white">Hôtel</h1>
+          <p className="text-xs text-slate-500 truncate">
+            {stats.available} dispo · {stats.occupied} occupée{stats.occupied !== 1 ? 's' : ''} · {stats.total} chambre{stats.total !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {(['chambres', 'reservations', 'calendrier', 'clients'] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setSearch(''); setPanel(null); }}
-              className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-colors', tab === t ? 'bg-brand-600 text-white' : 'btn-secondary')}
-            >
-              {t === 'chambres'     ? <><BedDouble className="w-4 h-4 inline mr-1.5" />Chambres</> :
-               t === 'reservations' ? <><ClipboardList className="w-4 h-4 inline mr-1.5" />Réservations</> :
-               t === 'calendrier'   ? <><Calendar className="w-4 h-4 inline mr-1.5" />Calendrier</> :
-               <><Users className="w-4 h-4 inline mr-1.5" />Clients</>}
-            </button>
-          ))}
-          <div className="h-8 w-px bg-surface-border" />
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Onglets — scroll horizontal sur mobile */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {([
+              { id: 'chambres',     label: 'Chambres',      icon: BedDouble     },
+              { id: 'reservations', label: 'Réservations',  icon: ClipboardList },
+              { id: 'calendrier',   label: 'Calendrier',    icon: Calendar      },
+              { id: 'clients',      label: 'Clients',       icon: Users         },
+            ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => { setTab(id); setSearch(''); setPanel(null); }}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0',
+                  tab === id ? 'bg-brand-600 text-white' : 'btn-secondary',
+                )}
+              >
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden xs:inline">{label}</span>
+              </button>
+            ))}
+          </div>
           {tab === 'chambres' && isManagerOrAbove && (
-            <button onClick={() => openRoomPanel(null)} className="btn-primary h-9 text-sm flex items-center gap-1.5">
-              <Plus className="w-4 h-4 shrink-0" /> Nouvelle chambre
+            <button onClick={() => openRoomPanel(null)} className="btn-primary h-9 text-xs sm:text-sm flex items-center gap-1 shrink-0">
+              <Plus className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Chambre</span>
             </button>
           )}
           {tab === 'reservations' && (
-            <button onClick={() => openReservationPanel()} className="btn-primary h-9 text-sm flex items-center gap-1.5">
-              <Plus className="w-4 h-4 shrink-0" /> Réservation
+            <button onClick={() => openReservationPanel()} className="btn-primary h-9 text-xs sm:text-sm flex items-center gap-1 shrink-0">
+              <Plus className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Réservation</span>
             </button>
           )}
           {tab === 'clients' && (
-            <button onClick={() => openGuestPanel(null)} className="btn-primary h-9 text-sm flex items-center gap-1.5">
-              <Plus className="w-4 h-4 shrink-0" /> Nouveau client
+            <button onClick={() => openGuestPanel(null)} className="btn-primary h-9 text-xs sm:text-sm flex items-center gap-1 shrink-0">
+              <Plus className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Client</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Banner départs / arrivées du jour */}
+      {(checkoutsToday.length > 0 || checkinsToday.length > 0) && (
+        <div className="mx-4 mt-3 flex flex-col sm:flex-row gap-2">
+          {checkoutsToday.length > 0 && (
+            <button
+              onClick={() => { setTab('reservations'); setResFilter('today'); }}
+              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-amber-900/20 border border-amber-800/50 text-left hover:bg-amber-900/30 transition-colors"
+            >
+              <LogOut className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="text-sm text-amber-300 font-medium">
+                {checkoutsToday.length} départ{checkoutsToday.length > 1 ? 's' : ''} aujourd&apos;hui
+              </span>
+            </button>
+          )}
+          {checkinsToday.length > 0 && (
+            <button
+              onClick={() => { setTab('reservations'); setResFilter('today'); }}
+              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-green-900/20 border border-green-800/50 text-left hover:bg-green-900/30 transition-colors"
+            >
+              <LogIn className="w-4 h-4 text-green-400 shrink-0" />
+              <span className="text-sm text-green-300 font-medium">
+                {checkinsToday.length} arrivée{checkinsToday.length > 1 ? 's' : ''} prévue{checkinsToday.length > 1 ? 's' : ''} aujourd&apos;hui
+              </span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       {tab === 'chambres' && (

@@ -85,11 +85,14 @@ function HonorairesModal({
   }
 
   async function handleSave() {
-    if (!form.client_name.trim() || !form.montant) return;
+    const montant     = parseFloat(form.montant)      || 0;
+    const montantPaye = parseFloat(form.montant_paye) || 0;
+    if (!form.client_name.trim()) { notifError('Le nom du client est requis'); return; }
+    if (montant <= 0) { notifError('Le montant doit être supérieur à 0'); return; }
+    if (montantPaye < 0) { notifError('Le montant payé ne peut pas être négatif'); return; }
+    if (montantPaye > montant) { notifError('Le montant payé ne peut pas dépasser le montant facturé'); return; }
     setSaving(true);
     try {
-      const montant     = parseFloat(form.montant)      || 0;
-      const montantPaye = parseFloat(form.montant_paye) || 0;
       const payload = {
         business_id:     businessId,
         dossier_id:      form.dossier_id      || null,
@@ -101,9 +104,10 @@ function HonorairesModal({
         status:          computeStatus(montant, montantPaye),
         date_facture:    form.date_facture,
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const q = (supabase as any).from('honoraires_cabinet');
-      const { error } = initial ? await q.update(payload).eq('id', initial.id) : await q.insert(payload);
+      const db = supabase.from('honoraires_cabinet' as never);
+      const { error } = initial
+        ? await (db as ReturnType<typeof supabase.from>).update(payload as never).eq('id', initial.id)
+        : await (db as ReturnType<typeof supabase.from>).insert(payload as never);
       if (error) throw new Error(error.message);
       success(initial ? 'Honoraires mis à jour' : 'Honoraires enregistrés');
       onSaved();

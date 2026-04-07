@@ -3,9 +3,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   TrendingUp, ShoppingBag, BarChart, DollarSign, Sun,
-  RefreshCw, Store, Tag, BedDouble, LogIn, LogOut, Banknote, Wrench,
+  RefreshCw, Store, Tag, BedDouble, LogIn, LogOut, Banknote, Wrench, Download,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import {
   getAnalyticsSummary, getDailySales, getCouponStats, getHotelAnalytics,
@@ -27,6 +28,7 @@ type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel';
 
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
+  const { error: notifError } = useNotificationStore();
   const [period, setPeriod]   = useState(30);
   const [tab, setTab]         = useState<Tab>('general');
   const [loading, setLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function AnalyticsPage() {
       setToday(todayData);
       setCoupons(couponData);
     } catch (err) {
-      console.error(err);
+      notifError('Erreur lors du chargement des statistiques');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -101,6 +103,27 @@ export default function AnalyticsPage() {
     },
   ];
 
+  function exportCSV() {
+    if (!data) return;
+    const rows = [
+      ['Date', 'Ventes (CA)', 'Commandes', 'Panier moyen'],
+      ...data.daily_stats.map((d) => [
+        d.date,
+        d.total_sales.toFixed(0),
+        d.order_count,
+        d.avg_order_value?.toFixed(0) ?? '0',
+      ]),
+    ];
+    const csv = rows.map((r) => r.join(';')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `stats-${period}j-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: 'general',   label: 'Général',   icon: TrendingUp },
     { id: 'produits',  label: 'Produits',  icon: BarChart   },
@@ -115,6 +138,9 @@ export default function AnalyticsPage() {
       <div className="px-4 py-3 border-b border-surface-border flex flex-wrap items-center justify-between gap-2 shrink-0">
         <h1 className="text-lg font-bold text-white">Statistiques</h1>
         <div className="flex items-center gap-2">
+          <button onClick={exportCSV} disabled={!data} className="btn-secondary p-2" title="Exporter CSV">
+            <Download className="w-4 h-4" />
+          </button>
           <button onClick={() => loadAll(true)} disabled={refreshing} className="btn-secondary p-2" title="Actualiser">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>

@@ -1,4 +1,5 @@
 'use client';
+import { toUserError } from '@/lib/user-error';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -76,7 +77,7 @@ export default function BillingPage() {
       const reqs = await getMySubscriptionRequests(business.id);
       setMyRequests(reqs);
     } catch (e) {
-      setSubmitError(String(e));
+      setSubmitError(toUserError(e));
     } finally {
       setSubmitting(false);
     }
