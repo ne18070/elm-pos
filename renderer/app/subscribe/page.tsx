@@ -6,6 +6,7 @@ import {
   Send, X, FileImage, Eye, EyeOff,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { displayCurrency } from '@/lib/utils';
 import {
   getPlans, getPaymentSettings,
   type Plan, type PaymentSettings,
@@ -255,7 +256,7 @@ export default function SubscribePage() {
                     <p className="font-bold text-white text-lg">{plan.label}</p>
                     <p className="text-2xl font-bold text-brand-400 mt-1">
                       {plan.price.toLocaleString('fr-FR')}
-                      <span className="text-sm font-normal text-slate-400"> {plan.currency}/mois</span>
+                      <span className="text-sm font-normal text-slate-400"> {displayCurrency(plan.currency)}/mois</span>
                     </p>
                     <ul className="mt-3 space-y-1">
                       {plan.features.map((f) => (
@@ -296,14 +297,14 @@ export default function SubscribePage() {
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                 <span className="text-sm text-slate-300">{selectedPlan?.label}</span>
                 <span className="font-bold text-brand-400">
-                  {selectedPlan?.price.toLocaleString('fr-FR')} {selectedPlan?.currency}
+                  {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
                 </span>
               </div>
 
               <ol className="space-y-3">
                 {[
                   { n: 1, text: 'Scannez le QR code Wave ou Orange Money ci-dessous' },
-                  { n: 2, text: `Effectuez le paiement de ${selectedPlan?.price.toLocaleString('fr-FR') ?? '—'} ${selectedPlan?.currency ?? ''}` },
+                  { n: 2, text: `Effectuez le paiement de ${selectedPlan?.price.toLocaleString('fr-FR') ?? '—'} ${displayCurrency(selectedPlan?.currency ?? '')}` },
                   { n: 3, text: 'Prenez une photo de votre reçu de paiement' },
                   { n: 4, text: 'Joignez le reçu et envoyez votre demande' },
                 ].map(({ n, text }) => (
@@ -382,7 +383,7 @@ export default function SubscribePage() {
           <div className="bg-white rounded-2xl p-4 max-w-xs w-full" onClick={(e) => e.stopPropagation()}>
             <img src={showQr === 'wave' ? settings?.wave_qr_url! : settings?.om_qr_url!} alt="QR" className="w-full h-auto rounded-xl" />
             <p className="text-center text-sm text-slate-700 font-medium mt-3">
-              {showQr === 'wave' ? 'Wave' : 'Orange Money'} — {selectedPlan?.price.toLocaleString('fr-FR')} {selectedPlan?.currency}
+              {showQr === 'wave' ? 'Wave' : 'Orange Money'} — {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
             </p>
           </div>
         </div>

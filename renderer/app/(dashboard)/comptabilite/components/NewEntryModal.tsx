@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
 import { createManualEntry } from '@services/supabase/accounting';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, displayCurrency } from '@/lib/utils';
 import type { Account } from '@services/supabase/accounting';
 import {
   OP_CATEGORIES, OP_TEMPLATES, PAY_ACCOUNTS,
@@ -188,7 +188,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                         onChange={(e) => setAmount(e.target.value)} placeholder="0"
                         className="input text-xl font-bold text-white text-right pr-16" />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
-                        {currency ?? 'XOF'}
+                        {displayCurrency(currency ?? 'XOF')}
                       </span>
                     </div>
                   </div>

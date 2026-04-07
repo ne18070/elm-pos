@@ -1,5 +1,6 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
+import { displayCurrency } from '@/lib/utils';
 
 import { useEffect, useState } from 'react';
 import {
@@ -221,7 +222,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
                       <td className="px-4 py-3 text-slate-300">
                         <p>{req.plan_label ?? '—'}</p>
                         {req.plan_price != null && (
-                          <p className="text-xs text-slate-500">{req.plan_price.toLocaleString('fr-FR')} {req.plan_currency}</p>
+                          <p className="text-xs text-slate-500">{req.plan_price.toLocaleString('fr-FR')} {displayCurrency(req.plan_currency ?? '')}</p>
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
@@ -312,7 +313,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
                 className="input"
               >
                 {plans.map((p) => (
-                  <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {p.currency}</option>
+                  <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {displayCurrency(p.currency)}</option>
                 ))}
               </select>
             </div>
@@ -394,7 +395,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
                 className="input"
               >
                 {plans.map((p) => (
-                  <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {p.currency}</option>
+                  <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {displayCurrency(p.currency)}</option>
                 ))}
               </select>
             </div>
@@ -626,7 +627,7 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
             <div>
               <label className="label">Plan</label>
               <select value={form.planId} onChange={(e) => setForm((f) => f && { ...f, planId: e.target.value })} className="input">
-                {plans.map((p) => <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {p.currency}</option>)}
+                {plans.map((p) => <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString('fr-FR')} {displayCurrency(p.currency)}</option>)}
               </select>
             </div>
             <div>
@@ -702,7 +703,7 @@ function PlansTab() {
                 <p className="font-medium text-white">{plan.label}</p>
                 {!plan.is_active && <span className="text-xs text-slate-500 border border-slate-700 px-1.5 py-0.5 rounded">Inactif</span>}
               </div>
-              <p className="text-sm text-brand-400">{plan.price.toLocaleString('fr-FR')} {plan.currency} / {plan.duration_days}j</p>
+              <p className="text-sm text-brand-400">{plan.price.toLocaleString('fr-FR')} {displayCurrency(plan.currency)} / {plan.duration_days}j</p>
               <p className="text-xs text-slate-500 mt-0.5">{plan.features.join(' · ')}</p>
             </div>
             <button onClick={() => setEditing({ ...plan })} className="btn-secondary p-2"><Pencil className="w-4 h-4" /></button>

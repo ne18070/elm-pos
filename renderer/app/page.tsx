@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useEffect, useState } from 'react';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
+import { displayCurrency } from '@/lib/utils';
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -363,7 +364,7 @@ function Tarifs() {
                 : plan.price.toLocaleString('fr-FR');
               const subStr    = isFree
                 ? `${plan.duration_days} jours d'essai`
-                : `${plan.currency} / mois`;
+                : `${displayCurrency(plan.currency)} / mois`;
 
               return (
                 <div key={plan.id}

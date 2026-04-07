@@ -1,5 +1,6 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
+import { displayCurrency } from '@/lib/utils';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -208,7 +209,7 @@ export default function BillingPage() {
                     <p className="font-bold text-white text-lg">{plan.label}</p>
                     <p className="text-2xl font-bold text-brand-400 mt-1">
                       {plan.price.toLocaleString('fr-FR')}{' '}
-                      <span className="text-sm font-normal text-slate-400">{plan.currency}/mois</span>
+                      <span className="text-sm font-normal text-slate-400">{displayCurrency(plan.currency)}/mois</span>
                     </p>
                     <ul className="mt-3 space-y-1">
                       {plan.features.map((f) => (
@@ -231,7 +232,7 @@ export default function BillingPage() {
                 <ol className="space-y-3">
                   {[
                     { n: 1, text: 'Scannez le QR code Wave ou Orange Money ci-dessous' },
-                    { n: 2, text: `Effectuez le paiement de ${selectedPlan?.price.toLocaleString('fr-FR') ?? '—'} ${selectedPlan?.currency ?? ''}` },
+                    { n: 2, text: `Effectuez le paiement de ${selectedPlan?.price.toLocaleString('fr-FR') ?? '—'} ${displayCurrency(selectedPlan?.currency ?? '')}` },
                     { n: 3, text: 'Prenez une photo ou capture de votre reçu de paiement' },
                     { n: 4, text: 'Joignez le reçu et envoyez votre demande via le formulaire ci-dessous' },
                   ].map(({ n, text }) => (
@@ -357,7 +358,7 @@ export default function BillingPage() {
               className="w-full h-auto rounded-xl"
             />
             <p className="text-center text-sm text-slate-700 font-medium mt-3">
-              {showQr === 'wave' ? 'Wave' : 'Orange Money'} — {selectedPlan?.price.toLocaleString('fr-FR')} {selectedPlan?.currency}
+              {showQr === 'wave' ? 'Wave' : 'Orange Money'} — {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
             </p>
           </div>
         </div>

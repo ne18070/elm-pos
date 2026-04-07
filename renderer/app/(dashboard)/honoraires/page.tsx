@@ -8,6 +8,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
 import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
+import { displayCurrency } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ interface HonoraireLine {
 interface Dossier { id: string; reference: string; client_name: string }
 
 function fmtMoney(n: number, currency: string) {
-  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + currency;
+  return new Intl.NumberFormat('fr-FR').format(n) + '\u00a0' + displayCurrency(currency);
 }
 
 function fmtDate(d: string) {
@@ -177,7 +178,7 @@ function HonorairesModal({
             <div className={`p-3 rounded-xl border text-sm ${
               reste === 0 ? 'border-green-800 bg-green-900/20 text-green-400' : 'border-amber-800 bg-amber-900/20 text-amber-400'
             }`}>
-              Reste à payer : <strong>{fmtMoney(reste, 'XOF')}</strong>
+              Reste à payer : <strong>{fmtMoney(reste, businessId ? (business?.currency ?? 'XOF') : 'XOF')}</strong>
             </div>
           )}
 

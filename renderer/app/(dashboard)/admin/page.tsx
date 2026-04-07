@@ -8,6 +8,7 @@ import {
   CreditCard, Clock, CheckCircle, XCircle, Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { displayCurrency } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notifications';
 import { useTeam } from '@/hooks/useTeam';
 import { InviteModal } from '@/components/admin/InviteModal';
@@ -560,7 +561,7 @@ export default function AdminPage() {
                         )}
                       </div>
                       <p className="text-xs text-slate-500">
-                        {biz.currency} · {biz.type}
+                        {displayCurrency(biz.currency ?? 'XOF')} · {biz.type}
                         {biz.address ? ` · ${biz.address}` : ''}
                       </p>
                     </div>

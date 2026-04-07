@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { displayCurrency } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notifications';
 import { canViewFinancials } from '@/lib/permissions';
 import {
@@ -116,7 +117,7 @@ export default function ComptabilitePage() {
     const bizName  = business?.name ?? 'Établissement';
     const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const fmt = (n: number) =>
-      new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(n) + ' ' + (business?.currency ?? 'XOF');
+      new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(n) + ' ' + displayCurrency(business?.currency ?? 'XOF');
 
     const TAB_TITLES: Record<Tab, string> = {
       dashboard: 'Tableau de bord',
