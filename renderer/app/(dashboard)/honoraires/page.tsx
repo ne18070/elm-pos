@@ -178,7 +178,7 @@ function HonorairesModal({
             <div className={`p-3 rounded-xl border text-sm ${
               reste === 0 ? 'border-green-800 bg-green-900/20 text-green-400' : 'border-amber-800 bg-amber-900/20 text-amber-400'
             }`}>
-              Reste à payer : <strong>{fmtMoney(reste, businessId ? (business?.currency ?? 'XOF') : 'XOF')}</strong>
+              Reste à payer : <strong>{fmtMoney(reste, 'XOF')}</strong>
             </div>
           )}
 
