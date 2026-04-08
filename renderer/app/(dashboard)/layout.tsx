@@ -10,6 +10,24 @@ import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { Loader2 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
+function MobileLayout({ children }: { children: React.ReactNode }) {
+  const openSidebar = useOpenSidebar();
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <InactivityGuard />
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <MobileTopBar onMenuOpen={openSidebar} />
+        <TrialBanner />
+        <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          {children}
+        </main>
+        <MobileBottomNav />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, business } = useAuthStore();
   const isSuperAdmin = (user as { is_superadmin?: boolean } | null)?.is_superadmin ?? false;
@@ -69,26 +87,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) return null;
-
-  function MobileLayout({ children }: { children: React.ReactNode }) {
-    const openSidebar = useOpenSidebar();
-    return (
-      <div className="flex h-screen overflow-hidden">
-        <InactivityGuard />
-        <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {/* Mobile top bar */}
-          <MobileTopBar onMenuOpen={openSidebar} />
-          <TrialBanner />
-          <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            {children}
-          </main>
-          {/* Mobile bottom nav */}
-          <MobileBottomNav />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <MobileLayout>
