@@ -6,7 +6,8 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Plus, Car, FileText, Pencil, Trash2, X, Loader2,
   Send, Archive, Share2, CheckCircle, Clock, FileSignature,
-  ChevronLeft, Eye, Download, Copy, Check,
+  ChevronLeft, Eye, Download, Copy, Check, Bold, Italic,
+  List, Heading2, Minus, Type,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -17,6 +18,7 @@ import {
   buildWhatsAppLink, daysCount, fillTemplate, uploadVehicleImage, uploadContractPdf,
   type RentalVehicle, type ContractTemplate, type Contract, type CreateContractInput,
 } from '@services/supabase/contracts';
+import { getClients, type Client } from '@services/supabase/clients';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -706,6 +708,25 @@ function VehiclePanel({
 
 // ─── Template Panel ───────────────────────────────────────────────────────────
 
+const VARIABLES = [
+  { key: 'client_name',      label: 'Nom client' },
+  { key: 'client_phone',     label: 'Tél client' },
+  { key: 'client_id_number', label: 'Pièce identité' },
+  { key: 'client_address',   label: 'Adresse client' },
+  { key: 'vehicle_name',     label: 'Véhicule' },
+  { key: 'license_plate',    label: 'Immatriculation' },
+  { key: 'start_date',       label: 'Date départ' },
+  { key: 'end_date',         label: 'Date retour' },
+  { key: 'duration_days',    label: 'Durée (jours)' },
+  { key: 'pickup_location',  label: 'Lieu prise' },
+  { key: 'return_location',  label: 'Lieu retour' },
+  { key: 'price_per_day',    label: 'Prix/jour' },
+  { key: 'total_amount',     label: 'Total' },
+  { key: 'deposit_amount',   label: 'Caution' },
+  { key: 'currency',         label: 'Devise' },
+  { key: 'business_name',    label: 'Établissement' },
+];
+
 function TemplatePanel({
   template, businessId, onClose, onSaved, notifError, notifSuccess,
 }: {
@@ -716,12 +737,53 @@ function TemplatePanel({
   notifError: (m: string) => void;
   notifSuccess: (m: string) => void;
 }) {
-  const [name, setName]   = useState(template?.name ?? '');
-  const [body, setBody]   = useState(template?.body ?? DEFAULT_TEMPLATE);
+  const [name, setName]     = useState(template?.name ?? '');
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Initialise le contenu de l'éditeur
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = template?.body ?? DEFAULT_TEMPLATE;
+    }
+  }, []);
+
+  function getBody(): string {
+    return editorRef.current?.innerHTML ?? '';
+  }
+
+  // Commandes de mise en forme
+  function fmt(cmd: string, value?: string) {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, value);
+  }
+
+  function insertVariable(key: string) {
+    editorRef.current?.focus();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.className = 'var-chip';
+    span.style.cssText = 'display:inline-block;background:#1e3a5f;color:#7dd3fc;border:1px solid #2563eb;border-radius:4px;padding:0 4px;font-size:12px;font-family:monospace;user-select:all;';
+    span.contentEditable = 'false';
+    span.textContent = `{{${key}}}`;
+    range.deleteContents();
+    range.insertNode(span);
+    range.setStartAfter(span);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function insertSeparator() {
+    editorRef.current?.focus();
+    document.execCommand('insertHTML', false, '<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;">');
+  }
 
   async function save() {
+    const body = getBody();
     if (!name.trim()) { notifError('Nom du modèle requis'); return; }
     if (!body.trim()) { notifError('Contenu du modèle requis'); return; }
     setSaving(true);
@@ -741,32 +803,68 @@ function TemplatePanel({
     }
   }
 
+  const toolbarBtn = (title: string, onClick: () => void, children: React.ReactNode) => (
+    <button type="button" title={title} onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      className="p-1.5 rounded hover:bg-slate-600 text-slate-300 hover:text-white transition-colors">
+      {children}
+    </button>
+  );
+
   return (
     <SlidePanel title={template ? 'Modifier le modèle' : 'Nouveau modèle'} onClose={onClose} wide>
-      <div className="space-y-4">
+      <div className="space-y-4 flex-1">
         <Field label="Nom du modèle *" value={name} onChange={setName} placeholder="Contrat standard" />
 
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-slate-400">Contenu HTML</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs text-slate-400 font-medium">Contenu du contrat</label>
             <button type="button" onClick={() => setPreview(!preview)}
-              className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+              className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300">
               <Eye className="w-3.5 h-3.5" /> {preview ? 'Éditer' : 'Aperçu'}
             </button>
           </div>
-          {preview
-            ? <div className="bg-white rounded-xl p-4 text-sm text-gray-800 overflow-auto max-h-96"
-                dangerouslySetInnerHTML={{ __html: body }} />
-            : <textarea value={body} onChange={(e) => setBody(e.target.value)}
-                rows={16} className="input w-full text-xs font-mono resize-y"
-                placeholder="<div>Votre contrat...</div>" />
-          }
-          <p className="text-xs text-slate-500 mt-1">
-            Variables disponibles : {'{{client_name}}'}, {'{{vehicle_name}}'}, {'{{start_date}}'}, {'{{end_date}}'},
-            {'{{total_amount}}'}, {'{{deposit_amount}}'}, {'{{currency}}'}, {'{{pickup_location}}'},
-            {'{{return_location}}'}, {'{{price_per_day}}'}, {'{{duration_days}}'}, {'{{client_phone}}'},
-            {'{{client_id_number}}'}, {'{{client_address}}'}, {'{{license_plate}}'}, {'{{business_name}}'}
-          </p>
+
+          {preview ? (
+            <div className="bg-white rounded-xl p-5 text-sm text-gray-800 overflow-auto max-h-[50vh] border border-gray-200"
+              dangerouslySetInnerHTML={{ __html: getBody() }} />
+          ) : (
+            <div className="border border-surface-border rounded-xl overflow-hidden">
+              {/* Toolbar */}
+              <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-slate-800 border-b border-surface-border">
+                {toolbarBtn('Gras', () => fmt('bold'),           <Bold      className="w-3.5 h-3.5" />)}
+                {toolbarBtn('Italique', () => fmt('italic'),     <Italic    className="w-3.5 h-3.5" />)}
+                <div className="w-px h-4 bg-slate-600 mx-1" />
+                {toolbarBtn('Titre', () => fmt('formatBlock', 'h2'), <Heading2  className="w-3.5 h-3.5" />)}
+                {toolbarBtn('Paragraphe', () => fmt('formatBlock', 'p'), <Type className="w-3.5 h-3.5" />)}
+                {toolbarBtn('Liste', () => fmt('insertUnorderedList'), <List className="w-3.5 h-3.5" />)}
+                {toolbarBtn('Séparateur', insertSeparator,      <Minus     className="w-3.5 h-3.5" />)}
+              </div>
+
+              {/* Variables */}
+              <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-slate-900 border-b border-surface-border">
+                <span className="text-[10px] text-slate-500 self-center mr-1">Insérer :</span>
+                {VARIABLES.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); insertVariable(key); }}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-800 hover:bg-blue-800/50 transition-colors font-mono"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Editor area */}
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                className="min-h-[320px] max-h-[45vh] overflow-y-auto p-4 text-sm bg-white text-gray-900 focus:outline-none"
+                style={{ lineHeight: '1.6' }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -799,7 +897,6 @@ function ContractPanel({
 }) {
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
-
   const [form, setForm] = useState({
     vehicle_id:       vehicles[0]?.id ?? '',
     template_id:      templates[0]?.id ?? '',
@@ -816,7 +913,43 @@ function ContractPanel({
     notes:            '',
   });
 
+  // Client search
+  const [clients, setClients]               = useState<Client[]>([]);
+  const [clientQuery, setClientQuery]       = useState('');
+  const [showDropdown, setShowDropdown]     = useState(false);
+  const [clientSelected, setClientSelected] = useState(false);
+
+  useEffect(() => {
+    getClients(businessId).then(setClients).catch(() => {});
+  }, [businessId]);
+
+  const filteredClients = clientQuery.length >= 1
+    ? clients.filter((c) =>
+        c.name.toLowerCase().includes(clientQuery.toLowerCase()) ||
+        (c.phone ?? '').includes(clientQuery)
+      ).slice(0, 8)
+    : [];
+
   function set(k: string, v: string) { setForm((f) => ({ ...f, [k]: v })); }
+
+  function selectClient(c: Client) {
+    setForm((f) => ({
+      ...f,
+      client_name:    c.name,
+      client_phone:   c.phone ?? '',
+      client_email:   c.email ?? '',
+      client_address: c.address ?? '',
+    }));
+    setClientQuery(c.name);
+    setClientSelected(true);
+    setShowDropdown(false);
+  }
+
+  function clearClient() {
+    setForm((f) => ({ ...f, client_name: '', client_phone: '', client_email: '', client_id_number: '', client_address: '' }));
+    setClientQuery('');
+    setClientSelected(false);
+  }
 
   const selectedVehicle = vehicles.find((v) => v.id === form.vehicle_id) ?? null;
   const selectedTemplate = templates.find((t) => t.id === form.template_id) ?? null;
@@ -948,7 +1081,61 @@ function ContractPanel({
         <div className="pt-2 border-t border-surface-border">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Client</p>
           <div className="space-y-3">
-            <Field label="Nom complet *" value={form.client_name} onChange={(v) => set('client_name', v)} placeholder="Amadou Diallo" />
+
+            {/* Search */}
+            <div className="relative">
+              <label className="text-xs text-slate-400 block mb-1">Rechercher un client *</label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={clientQuery}
+                    onChange={(e) => { setClientQuery(e.target.value); setClientSelected(false); setShowDropdown(true); set('client_name', e.target.value); }}
+                    onFocus={() => setShowDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+                    placeholder="Nom ou téléphone…"
+                    className="input w-full text-sm pr-8"
+                    autoComplete="off"
+                  />
+                  {clientSelected && (
+                    <button type="button" onClick={clearClient}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dropdown */}
+              {showDropdown && filteredClients.length > 0 && (
+                <div className="absolute z-20 left-0 right-0 mt-1 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden">
+                  {filteredClients.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={() => selectClient(c)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-brand-900/40 flex items-center justify-center shrink-0 text-brand-400 font-bold text-sm">
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{c.name}</p>
+                        {c.phone && <p className="text-xs text-slate-400">{c.phone}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showDropdown && clientQuery.length >= 1 && filteredClients.length === 0 && (
+                <div className="absolute z-20 left-0 right-0 mt-1 bg-surface-card border border-surface-border rounded-xl px-3 py-2.5 text-xs text-slate-500">
+                  Aucun client trouvé — vous pouvez saisir manuellement ci-dessous
+                </div>
+              )}
+            </div>
+
+            {/* Champs préremplis ou manuels */}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Téléphone" value={form.client_phone} onChange={(v) => set('client_phone', v)} placeholder="+221 77 000 00 00" />
               <Field label="Email" value={form.client_email} onChange={(v) => set('client_email', v)} type="email" />
