@@ -114,7 +114,7 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width:
 
 export default function ContratsPage() {
   const { business, user } = useAuthStore();
-  const { notifSuccess, notifError } = useNotificationStore();
+  const { success: notifSuccess, error: notifError } = useNotificationStore();
 
   const [tab, setTab]               = useState<Tab>('contrats');
   const [loading, setLoading]       = useState(true);

@@ -130,6 +130,18 @@ CREATE POLICY "public_sign_contract" ON contracts
     status IN ('sent', 'signed')
   );
 
+-- ─── Module dans app_modules ─────────────────────────────────────────────────
+INSERT INTO app_modules (id, label, description, icon, is_core, sort_order) VALUES
+  ('contrats', 'Contrats & Location', 'Location de véhicules avec signature électronique de contrat', 'FileSignature', false, 10)
+ON CONFLICT (id) DO NOTHING;
+
+-- Associer le module à tous les types d'établissement qui pourraient l'utiliser
+-- (optionnel par défaut — à activer selon le business)
+INSERT INTO business_type_modules (business_type_id, module_id, is_default)
+SELECT id, 'contrats', false
+FROM business_types
+ON CONFLICT DO NOTHING;
+
 -- ─── Storage bucket pour signatures et PDFs ───────────────────
 -- (à créer dans le dashboard Supabase si pas existant)
 -- Bucket : "contracts"  — public read
