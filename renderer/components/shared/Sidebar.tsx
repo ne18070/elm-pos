@@ -6,7 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
-  Scale, Receipt, Menu, X,
+  Scale, Receipt, Menu, X, FileSignature,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null,                bizTypes: null           },
   { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', roles: MANAGER_ROLES,      feature: 'dossiers',          bizTypes: null           },
   { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',        bizTypes: null           },
+  { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location', roles: MANAGER_ROLES,       feature: 'contrats',          bizTypes: null           },
   { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,                bizTypes: ['restaurant'] },
   { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
   { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,                bizTypes: null           },
