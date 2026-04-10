@@ -87,8 +87,9 @@ export function InvoiceModal({
 
   function getHtml(): string {
     if (!business || !selected) return '';
-    const extra = order.reseller_name
-      ? { resellerName: order.reseller_name, resellerClientName: order.reseller_client_name ?? undefined, resellerClientPhone: order.reseller_client_phone ?? undefined }
+    const o = order as Order & { reseller_name?: string; reseller_client_name?: string; reseller_client_phone?: string };
+    const extra = o.reseller_name
+      ? { resellerName: o.reseller_name, resellerClientName: o.reseller_client_name ?? undefined, resellerClientPhone: o.reseller_client_phone ?? undefined }
       : undefined;
     return renderTemplate(order, business, selected, extra);
   }
