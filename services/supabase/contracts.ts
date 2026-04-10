@@ -239,19 +239,47 @@ export async function sendContract(id: string): Promise<void> {
   expires.setDate(expires.getDate() + 7);
   const token = generateToken();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('contracts')
     .update({ status: 'sent', token, token_expires_at: expires.toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .select('vehicle_id')
+    .single();
   if (error) throw new Error(error.message);
+
+  // Marquer le véhicule comme indisponible
+  if (data?.vehicle_id) {
+    await supabase
+      .from('rental_vehicles')
+      .update({ is_available: false })
+      .eq('id', data.vehicle_id);
+  }
 }
 
 export async function archiveContract(id: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('contracts')
     .update({ status: 'archived' })
-    .eq('id', id);
+    .eq('id', id)
+    .select('vehicle_id')
+    .single();
   if (error) throw new Error(error.message);
+
+  // Remettre le véhicule disponible si aucun contrat actif ne l'utilise
+  if (data?.vehicle_id) {
+    const { count } = await supabase
+      .from('contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('vehicle_id', data.vehicle_id)
+      .in('status', ['sent', 'signed']);
+
+    if ((count ?? 0) === 0) {
+      await supabase
+        .from('rental_vehicles')
+        .update({ is_available: true })
+        .eq('id', data.vehicle_id);
+    }
+  }
 }
 
 export async function updateContractPdf(id: string, pdf_url: string): Promise<void> {

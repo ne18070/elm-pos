@@ -429,7 +429,12 @@ export default function ContratsPage() {
                 <p className="text-sm">Aucun véhicule enregistré</p>
               </div>
             )}
-            {vehicles.map((v) => (
+            {vehicles.map((v) => {
+              // Contrats actifs liés à ce véhicule
+              const activeContracts = contracts.filter(
+                (c) => c.vehicle_id === v.id && (c.status === 'sent' || c.status === 'signed')
+              );
+              return (
               <div key={v.id} className="flex items-center gap-3 px-4 py-3">
                 {v.image_url
                   ? <img src={v.image_url} alt={v.name} className="w-12 h-12 rounded-xl object-cover shrink-0 border border-surface-border" />
@@ -447,6 +452,15 @@ export default function ContratsPage() {
                     {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/jour
                     {v.price_per_hour ? ` · ${v.price_per_hour.toLocaleString('fr-FR')}/h` : ''}
                   </p>
+                  {activeContracts.length > 0 && (
+                    <button
+                      onClick={() => { setTab('contrats'); setDetailContract(activeContracts[0]); }}
+                      className="mt-1 text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                    >
+                      <FileText className="w-3 h-3" />
+                      {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''} actif{activeContracts.length > 1 ? 's' : ''} — {activeContracts[0].client_name}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -471,7 +485,8 @@ export default function ContratsPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -1026,34 +1041,38 @@ function ContractPanel({
     <SlidePanel title="Nouveau contrat" onClose={onClose} wide>
       <div className="space-y-4">
         {/* Véhicule */}
-        {vehicles.length > 0 && (
-          <div>
-            <label className="text-xs text-slate-400 block mb-1">Véhicule</label>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Véhicule</label>
+          {vehicles.length === 0 ? (
+            <div className="flex items-center gap-2 input text-sm text-slate-500 cursor-default">
+              <Car className="w-4 h-4 shrink-0" />
+              Aucun véhicule — ajoutez-en un dans l'onglet Véhicules
+            </div>
+          ) : (
             <select value={form.vehicle_id} onChange={(e) => set('vehicle_id', e.target.value)}
               className="input w-full text-sm">
               <option value="">— Sans véhicule spécifique —</option>
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} — {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
+                  {!v.is_available ? ' ⚠ Indisponible' : ''}
                 </option>
               ))}
             </select>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Modèle */}
-        {templates.length > 0 && (
-          <div>
-            <label className="text-xs text-slate-400 block mb-1">Modèle de contrat</label>
-            <select value={form.template_id} onChange={(e) => set('template_id', e.target.value)}
-              className="input w-full text-sm">
-              <option value="">— Modèle par défaut —</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Modèle de contrat</label>
+          <select value={form.template_id} onChange={(e) => set('template_id', e.target.value)}
+            className="input w-full text-sm">
+            <option value="">— Modèle par défaut —</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Dates */}
         <div className="grid grid-cols-2 gap-3">
