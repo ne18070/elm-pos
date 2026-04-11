@@ -127,9 +127,9 @@ export function useRealtimeSync() {
         // Mettre à jour uniquement les champs de config (pas les données sensibles)
         setBusiness({
           ...currentBiz,
-          features: (updated.features as string[]) ?? currentBiz.features,
-          types:    (updated.types    as string[]) ?? currentBiz.types,
-          type:     (updated.type     as string)   ?? currentBiz.type,
+          features: (updated.features as string[])   ?? currentBiz.features,
+          types:    (updated.types    as string[])   ?? currentBiz.types,
+          type:     (updated.type     as typeof currentBiz.type) ?? currentBiz.type,
         });
       }
     );
