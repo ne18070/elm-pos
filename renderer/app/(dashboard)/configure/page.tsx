@@ -120,9 +120,8 @@ export default function ConfigurePage() {
   const selectedTypes = types.filter((t) => businessTypes.includes(t.id));
   const ac = accent(selectedTypes[0]?.accent_color ?? 'brand');
 
-  // Union des modules liés à tous les types assignés
-  const linkedModuleIds = new Set(selectedTypes.flatMap((t) => t.modules.map((m) => m.module_id)));
-  const linkedModules = modules.filter((m) => linkedModuleIds.has(m.id));
+  // Tous les modules actifs (is_active=true côté backoffice) sont proposés au client
+  const linkedModules = modules; // already filtered by is_active in getAppModules()
 
   return (
     <div className="h-full overflow-y-auto">
@@ -218,7 +217,7 @@ export default function ConfigurePage() {
                   <Check className="w-3 h-3" />{m.label}
                 </span>
               ))}
-              {modules.filter((m) => !features.includes(m.id) && linkedModuleIds.has(m.id)).map((m) => (
+              {modules.filter((m) => !features.includes(m.id)).map((m) => (
                 <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface-input text-slate-600">
                   <XCircle className="w-3 h-3" />{m.label}
                 </span>

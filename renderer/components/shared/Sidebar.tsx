@@ -25,8 +25,8 @@ import { useState, useEffect } from 'react';
 const MANAGER_ROLES = ['owner', 'admin', 'manager'] as const;
 
 const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: null,                bizTypes: null           },
-  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: 'caisse',            bizTypes: null           },
+  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: 'caisse',            bizTypes: null           },
   { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison',         bizTypes: null           },
   { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison',         bizTypes: null           },
   { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null,                bizTypes: null           },
@@ -46,7 +46,7 @@ const NAV_ITEMS = [
   { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',        bizTypes: null           },
   { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location', roles: MANAGER_ROLES,       feature: 'contrats',          bizTypes: null           },
   { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,                bizTypes: ['restaurant'] },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
+  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: 'whatsapp',          bizTypes: null           },
   { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,                bizTypes: null           },
 ] as const;
 
@@ -328,8 +328,9 @@ export function MobileBottomNav() {
   const role = user?.role ?? 'staff';
 
   const visible = BOTTOM_NAV.filter(({ href }) => {
+    const features = business?.features ?? [];
+    if (href === '/pos' && !features.includes('caisse')) return false;
     if (href === '/products') {
-      const features = business?.features ?? [];
       if (!features.includes('stock')) return false;
       if (!['owner','admin','manager'].includes(role)) return false;
     }
