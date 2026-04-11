@@ -426,8 +426,10 @@ function Tarifs() {
           </div>
         ) : (
           <div className={`grid grid-cols-1 gap-4
-            ${plans.length === 2 ? 'sm:grid-cols-2 max-w-2xl' :
-              plans.length >= 3 ? 'sm:grid-cols-3' : 'max-w-sm'}`}>
+            ${plans.length === 1 ? 'max-w-sm' :
+              plans.length === 2 ? 'sm:grid-cols-2 max-w-2xl' :
+              plans.length === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
+              'sm:grid-cols-3'}`}>
             {plans.map((plan) => (
               <PlanCard
                 key={plan.id}
