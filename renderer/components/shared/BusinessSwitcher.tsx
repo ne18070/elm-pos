@@ -15,6 +15,7 @@ import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { supabase } from '@/lib/supabase';
 import { CreateBusinessModal } from './CreateBusinessModal';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import type { Business, UserRole } from '@pos-types';
 import type { BusinessMembership } from '@services/supabase/business';
 
@@ -84,7 +85,7 @@ export function BusinessSwitcher() {
       clear();
       setOpen(false);
       success(`Basculé vers ${biz?.name ?? '…'}`);
-      router.replace('/pos');
+      router.replace(getDefaultRoute((biz as { features?: string[] })?.features ?? []));
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -121,7 +122,7 @@ export function BusinessSwitcher() {
     setCashSession(null);
     setCashLoaded(true);
     clear();
-    router.replace('/pos');
+    router.replace(getDefaultRoute(newBiz.features ?? []));
   }
 
   return (

@@ -11,6 +11,7 @@ import { getSubscription, getPlans, getPaymentSettings } from '@services/supabas
 import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -71,22 +72,30 @@ export default function LoginPage() {
 
       setUser(profile as never);
 
+      let activeBusiness: { features?: string[] } | null = null;
       if (profile.business_id) {
         const { data: business } = await supabase
           .from('businesses')
           .select('*')
           .eq('id', profile.business_id)
           .single();
-        if (business) setBusiness(business as never);
+        if (business) {
+          setBusiness(business as never);
+          activeBusiness = business as { features?: string[] };
+        }
       }
 
       // Charger tous les établissements avant la redirection
       try {
         const memberships = await getMyBusinesses();
         setBusinesses(memberships);
+        // Utiliser les features du membership actif si disponibles
+        if (!activeBusiness && memberships.length > 0) {
+          activeBusiness = memberships[0].business;
+        }
       } catch { /* migration pas encore appliquée */ }
 
-      // Charger l'abonnement avant la redirection (auth-provider ne re-tourne pas après login)
+      // Charger l'abonnement avant la redirection
       const activeBizId = profile.business_id as string | null;
       if (activeBizId) {
         try {
@@ -105,7 +114,7 @@ export default function LoginPage() {
       setLoaded(true);
       setCashLoaded(true);
 
-      router.replace('/pos');
+      router.replace(getDefaultRoute(activeBusiness?.features ?? []));
     } catch {
       setErreur("Une erreur inattendue s'est produite");
     } finally {

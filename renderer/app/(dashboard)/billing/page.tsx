@@ -15,6 +15,7 @@ import {
   uploadReceipt, submitSubscriptionRequest,
   type Plan, type PaymentSettings, type SubscriptionRequest,
 } from '@services/supabase/subscriptions';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 
 type Step = 'form' | 'sent';
 
@@ -53,7 +54,7 @@ export default function BillingPage() {
       const sub = await getSubscription(user.id, business?.id);
       setSubscription(sub);
       if (sub?.status === 'active' && sub.expires_at && new Date(sub.expires_at) > new Date()) {
-        router.replace('/pos');
+        router.replace(getDefaultRoute(business?.features ?? []));
       }
     } finally {
       setChecking(false);
