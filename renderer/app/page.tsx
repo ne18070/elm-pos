@@ -32,7 +32,7 @@ function Nav() {
           <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
             <ShoppingCart className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-white font-semibold text-sm tracking-tight">Elm POS</span>
+          <span className="text-white font-semibold text-sm tracking-tight">ELM APP</span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-500">
@@ -216,7 +216,7 @@ function Secteurs() {
           <p className="text-xs font-semibold text-slate-500 tracking-widest uppercase mb-3">Secteurs</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-white">Adapté à votre activité</h2>
           <p className="text-slate-500 mt-2 text-sm max-w-md">
-            Elm se configure selon votre secteur. Vous ne voyez que ce qui vous est utile.
+            ELM se configure selon votre secteur. Vous ne voyez que ce qui vous est utile.
           </p>
         </div>
 
@@ -423,7 +423,7 @@ function Footer() {
           <div className="w-6 h-6 rounded-md bg-brand-600 flex items-center justify-center">
             <ShoppingCart className="w-3 h-3 text-white" />
           </div>
-          <span className="text-white font-semibold text-sm">Elm POS</span>
+          <span className="text-white font-semibold text-sm">ELM APP</span>
         </div>
         <div className="flex items-center gap-6 text-xs text-slate-600">
           <Link href="/privacy" className="hover:text-slate-400 transition-colors">Confidentialité</Link>
@@ -433,7 +433,7 @@ function Footer() {
             <Globe className="w-3 h-3" /> Sénégal · Afrique
           </span>
         </div>
-        <p className="text-xs text-slate-700">© {new Date().getFullYear()} Elm POS</p>
+        <p className="text-xs text-slate-700">© {new Date().getFullYear()} ELM APP</p>
       </div>
     </footer>
   );
