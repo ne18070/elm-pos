@@ -206,6 +206,7 @@ const SECTEURS: {
   { icon: ShoppingCart, iconColor: 'text-brand-300',  iconBg: 'bg-brand-950',  border: 'border-brand-900',  title: 'Boutique & Retail',       desc: 'Caisse rapide, codes-barres, variantes, promotions.' },
   { icon: BedDouble,    iconColor: 'text-teal-300',   iconBg: 'bg-teal-950',   border: 'border-teal-900',   title: 'Hôtellerie',              desc: 'Réservations, check-in/out, services additionnels.' },
   { icon: Scale,        iconColor: 'text-purple-300', iconBg: 'bg-purple-950', border: 'border-purple-900', title: 'Cabinet juridique',        desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.' },
+  { icon: Users,        iconColor: 'text-cyan-300',   iconBg: 'bg-cyan-950',   border: 'border-cyan-900',   title: 'Prestation de service',   desc: 'Devis, factures, suivi clients, honoraires et encaissements.' },
 ];
 
 function Secteurs() {
