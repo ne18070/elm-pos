@@ -55,7 +55,7 @@ function Nav() {
                 className="text-sm text-slate-400 hover:text-white transition-colors hidden sm:block">
                 Connexion
               </Link>
-              <Link href="/login"
+              <Link href="/subscribe"
                 className="text-sm font-semibold text-white bg-brand-600 hover:bg-brand-500 px-4 py-1.5 rounded-lg transition-colors">
                 Essai gratuit
               </Link>
@@ -113,7 +113,7 @@ function Hero() {
               </Link>
             ) : (
               <>
-                <Link href="/login"
+                <Link href="/subscribe"
                   className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
                   Démarrer gratuitement <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -356,7 +356,7 @@ function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
         ))}
       </ul>
 
-      <Link href="/login"
+      <Link href="/subscribe"
         className={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors
           ${isPrimary
             ? 'bg-brand-600 hover:bg-brand-500 text-white'
@@ -465,7 +465,7 @@ function CtaFinal() {
             Accéder à mon espace <ArrowRight className="w-4 h-4" />
           </Link>
         ) : (
-          <Link href="/login"
+          <Link href="/subscribe"
             className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shrink-0">
             Commencer gratuitement <ArrowRight className="w-4 h-4" />
           </Link>
