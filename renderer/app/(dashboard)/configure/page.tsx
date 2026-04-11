@@ -112,9 +112,10 @@ export default function ConfigurePage() {
   const selectedTypes = types.filter((t) => businessTypes.includes(t.id));
   const ac = accent(selectedTypes[0]?.accent_color ?? 'brand');
 
-  // Modules disponibles pour ce store = ceux que l'admin a autorisés via allowed_modules
-  const allowedIds = new Set(business?.allowed_modules ?? []);
-  const allowedModules = modules.filter((m) => allowedIds.has(m.id));
+  // Modules visibles = ceux que l'admin a activés pour ce store (business.features)
+  // intersectés avec les modules globalement actifs (is_active=true dans app_modules)
+  const adminFeatures = new Set(business?.features ?? []);
+  const allowedModules = modules.filter((m) => adminFeatures.has(m.id));
 
   return (
     <div className="h-full overflow-y-auto">

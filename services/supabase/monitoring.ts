@@ -2,26 +2,24 @@ import { supabaseAdmin } from './admin';
 import { getAllSubscriptions, type SubscriptionRow } from './subscriptions';
 
 export interface BusinessMonitorRow extends SubscriptionRow {
-  orders_30d:      number;
-  last_order_at:   string | null;
-  members_count:   number;
-  products_count:  number;
-  orders_total:    number;
-  features:        string[];
-  allowed_modules: string[];
-  business_types:  string[];
+  orders_30d:     number;
+  last_order_at:  string | null;
+  members_count:  number;
+  products_count: number;
+  orders_total:   number;
+  features:       string[];
+  business_types: string[];
 }
 
 export async function updateBusinessConfig(
-  businessId:      string,
-  types:           string[],
-  allowedModules:  string[],
+  businessId: string,
+  types:      string[],
+  features:   string[],
 ): Promise<void> {
-  // Sauvegarder type (premier) + allowed_modules (modules disponibles pour ce store)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabaseAdmin as any)
     .from('businesses')
-    .update({ type: types[0] ?? null, allowed_modules: allowedModules })
+    .update({ type: types[0] ?? null, features })
     .eq('id', businessId);
   if (error) throw new Error(error.message);
 
@@ -60,7 +58,7 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabaseAdmin as any)
       .from('businesses')
-      .select('id, features, allowed_modules, type, types'),
+      .select('id, features, type, types'),
   ]);
 
   // Aggregate orders per business
@@ -89,17 +87,13 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
     ordersTotalByBiz.set(row.business_id, (ordersTotalByBiz.get(row.business_id) ?? 0) + 1);
   }
 
-  // Index business features, allowed_modules and type
-  const bizById = new Map<string, { features: string[]; allowed_modules: string[]; types: string[] }>();
+  // Index business features and type
+  const bizById = new Map<string, { features: string[]; types: string[] }>();
   for (const row of (bizRaw.data ?? [])) {
     const types = (row.types && row.types.length > 0)
       ? row.types
       : row.type ? [row.type] : [];
-    bizById.set(row.id, {
-      features:        row.features         ?? [],
-      allowed_modules: row.allowed_modules  ?? [],
-      types,
-    });
+    bizById.set(row.id, { features: row.features ?? [], types });
   }
 
   // Étendre : une ligne par établissement (pas par abonnement)
@@ -121,9 +115,8 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
         members_count:   membersByBiz.get(biz.id)          ?? 0,
         products_count:  productsByBiz.get(biz.id)         ?? 0,
         orders_total:    ordersTotalByBiz.get(biz.id)      ?? 0,
-        features:        bizById.get(biz.id)?.features        ?? [],
-        allowed_modules: bizById.get(biz.id)?.allowed_modules ?? [],
-        business_types:  bizById.get(biz.id)?.types           ?? [],
+        features:       bizById.get(biz.id)?.features ?? [],
+        business_types: bizById.get(biz.id)?.types   ?? [],
       });
     }
   }

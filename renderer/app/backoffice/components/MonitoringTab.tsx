@@ -68,12 +68,10 @@ function BusinessConfigModal({
   onClose:    () => void;
   onSaved:    (businessId: string, types: string[], features: string[]) => void;
 }) {
-  const [bizTypes, setBizTypes]         = useState<string[]>(row.business_types);
-  const [allowedModules, setAllowed]    = useState<string[]>(
-    row.allowed_modules.length > 0 ? row.allowed_modules : row.features
-  );
-  const [saving, setSaving]             = useState(false);
-  const [err, setErr]                   = useState<string | null>(null);
+  const [bizTypes, setBizTypes] = useState<string[]>(row.business_types);
+  const [features, setFeatures] = useState<string[]>(row.features);
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState<string | null>(null);
 
   function toggleType(id: string) {
     const wasSelected = bizTypes.includes(id);
@@ -82,21 +80,21 @@ function BusinessConfigModal({
       const typeInfo = allTypes.find((t) => t.id === id);
       if (typeInfo) {
         const defaults = typeInfo.modules.filter((m) => m.is_default).map((m) => m.module_id);
-        setAllowed((prev) => Array.from(new Set([...prev, ...defaults])));
+        setFeatures((prev) => Array.from(new Set([...prev, ...defaults])));
       }
     }
   }
 
-  function toggleModule(id: string) {
-    setAllowed((prev) => prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]);
+  function toggleFeature(id: string) {
+    setFeatures((prev) => prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]);
   }
 
   async function handleSave() {
     setSaving(true);
     setErr(null);
     try {
-      await updateBusinessConfig(row.business_id, bizTypes, allowedModules);
-      onSaved(row.business_id, bizTypes, allowedModules);
+      await updateBusinessConfig(row.business_id, bizTypes, features);
+      onSaved(row.business_id, bizTypes, features);
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
@@ -151,16 +149,16 @@ function BusinessConfigModal({
           {/* Modules */}
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Modules disponibles pour ce store
-              <span className="text-slate-600 font-normal normal-case ml-1">(le client verra uniquement ceux-ci)</span>
+              Modules actifs
+              <span className="text-slate-600 font-normal normal-case ml-1">— le client verra uniquement ceux activés ici</span>
             </p>
             <div className="space-y-2">
               {allModules.map((m) => {
-                const enabled = allowedModules.includes(m.id);
+                const enabled = features.includes(m.id);
                 return (
                   <button
                     key={m.id}
-                    onClick={() => toggleModule(m.id)}
+                    onClick={() => toggleFeature(m.id)}
                     className={cn(
                       'w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all',
                       enabled ? 'border-brand-600 bg-brand-900/20' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
@@ -487,9 +485,9 @@ export function MonitoringTab() {
           allTypes={allTypes}
           allModules={allModules}
           onClose={() => setConfigModal(null)}
-          onSaved={(businessId, types, allowedModules) => {
+          onSaved={(businessId, types, features) => {
             setRows((prev) => prev.map((r) =>
-              r.business_id === businessId ? { ...r, business_types: types, allowed_modules: allowedModules } : r
+              r.business_id === businessId ? { ...r, business_types: types, features } : r
             ));
           }}
         />

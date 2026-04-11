@@ -41,6 +41,43 @@ function computeStatus(montant: number, paye: number): string {
   return 'partiel';
 }
 
+// ─── Sync comptabilité honoraires ─────────────────────────────────────────────
+
+async function syncHonorairesEntry(
+  db: typeof supabase,
+  businessId: string,
+  honoraireId: string,
+  data: { montant: number; montantPaye: number; date_facture: string; client_name: string; dossier_ref?: string },
+) {
+  const s = db as any;
+  // Supprimer l'écriture existante pour cet honoraire
+  await s.from('journal_entries')
+    .delete()
+    .eq('business_id', businessId)
+    .eq('source', 'honoraires')
+    .eq('source_id', honoraireId);
+
+  if (data.montantPaye <= 0) return; // rien encaissé → pas d'écriture
+
+  const outstanding = Math.max(0, data.montant - data.montantPaye);
+  const desc = `Honoraires — ${data.client_name}${data.dossier_ref ? ` (${data.dossier_ref})` : ''}`;
+
+  const lines: { account_code: string; account_name: string; debit: number; credit: number }[] = [
+    { account_code: '571', account_name: 'Caisse', debit: data.montantPaye, credit: 0 },
+    ...(outstanding > 0.01 ? [{ account_code: '411', account_name: 'Clients', debit: outstanding, credit: 0 }] : []),
+    { account_code: '706', account_name: 'Honoraires & Prestations', debit: 0, credit: data.montant },
+  ];
+
+  const { data: entry, error: entryErr } = await s.from('journal_entries')
+    .insert({ business_id: businessId, entry_date: data.date_facture, description: desc, source: 'honoraires', source_id: honoraireId })
+    .select().single();
+  if (entryErr) throw new Error(entryErr.message);
+
+  const { error: linesErr } = await s.from('journal_lines')
+    .insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
+  if (linesErr) throw new Error(linesErr.message);
+}
+
 function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }) {
   const s = statuts.find((x) => x.value === status);
   const cls = (s?.metadata?.cls as string) ?? 'bg-slate-800 text-slate-400 border-slate-700';
@@ -105,11 +142,25 @@ function HonorairesModal({
         status:          computeStatus(montant, montantPaye),
         date_facture:    form.date_facture,
       };
-      const db = supabase.from('honoraires_cabinet' as never);
-      const { error } = initial
-        ? await (db as ReturnType<typeof supabase.from>).update(payload as never).eq('id', initial.id)
-        : await (db as ReturnType<typeof supabase.from>).insert(payload as never);
-      if (error) throw new Error(error.message);
+
+      let honoraireId: string;
+      if (initial) {
+        const { error } = await (supabase as any).from('honoraires_cabinet').update(payload).eq('id', initial.id);
+        if (error) throw new Error(error.message);
+        honoraireId = initial.id;
+      } else {
+        const { data, error } = await (supabase as any).from('honoraires_cabinet').insert(payload).select('id').single();
+        if (error) throw new Error(error.message);
+        honoraireId = data.id;
+      }
+
+      // Sync écriture comptable
+      const dossierRef = dossiers.find((d) => d.id === form.dossier_id)?.reference;
+      await syncHonorairesEntry(supabase, businessId, honoraireId, {
+        montant, montantPaye, date_facture: form.date_facture,
+        client_name: form.client_name.trim(), dossier_ref: dossierRef,
+      });
+
       success(initial ? 'Honoraires mis à jour' : 'Honoraires enregistrés');
       onSaved();
     } catch (e) { notifError(toUserError(e)); }
@@ -247,6 +298,10 @@ export default function HonorairesPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any).from('honoraires_cabinet').delete().eq('id', id);
       if (error) throw new Error(error.message);
+      // Supprimer l'écriture comptable liée
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('journal_entries').delete()
+        .eq('source', 'honoraires').eq('source_id', id);
       success('Supprimé');
       setLines((prev) => prev.filter((l) => l.id !== id));
     } catch (e) { notifError(toUserError(e)); }

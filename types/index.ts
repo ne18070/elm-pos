@@ -31,9 +31,8 @@ export interface Business {
   tax_inclusive: boolean;    // true = prix TTC (TVA déduite), false = prix HT (TVA ajoutée)
   receipt_footer?: string;
   stock_units?: string[];    // unités de stock configurables
-  types: string[];           // multi-type: e.g. ['retail', 'hotel']
-  allowed_modules: string[]; // modules disponibles pour ce store (géré par l'admin)
-  features: string[];        // modules activés par le client (sous-ensemble de allowed_modules)
+  types: string[];    // multi-type: e.g. ['retail', 'hotel']
+  features: string[]; // modules activés pour ce store (géré par l'admin via backoffice)
   owner_id: string;
   created_at: string;
 }
