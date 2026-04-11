@@ -299,26 +299,125 @@ function MultiEtablissements() {
 
 // ─── Tarifs ───────────────────────────────────────────────────────────────────
 
+function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
+  const isFree   = plan.price === 0;
+  const isAnnual = plan.duration_days >= 300;
+  const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
+
+  return (
+    <div className={`relative rounded-xl p-6 border flex flex-col gap-5
+      ${isPrimary ? 'bg-[#0d1a2d] border-brand-700/60' : 'bg-[#0c1020] border-white/[0.08]'}`}>
+
+      {isPrimary && (
+        <span className="absolute top-4 right-4 text-[10px] font-semibold text-brand-300 bg-brand-900/60 border border-brand-700/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
+          Recommandé
+        </span>
+      )}
+
+      {isAnnual && !isFree && (
+        <span className="absolute top-4 left-4 text-[10px] font-semibold text-green-300 bg-green-900/40 border border-green-800/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
+          1 mois offert
+        </span>
+      )}
+
+      <div className={isAnnual && !isFree ? 'pt-5' : ''}>
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+          {plan.label || plan.name}
+        </p>
+        {isFree ? (
+          <>
+            <p className="text-3xl font-bold text-white">Gratuit</p>
+            <p className="text-xs text-slate-600 mt-1">{plan.duration_days} jours d&apos;essai</p>
+          </>
+        ) : isAnnual ? (
+          <>
+            <p className="text-3xl font-bold text-white">{plan.price.toLocaleString('fr-FR')}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {displayCurrency(plan.currency)} / an
+              <span className="ml-2 text-slate-600">
+                ({monthlyEquiv?.toLocaleString('fr-FR')} / mois)
+              </span>
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-3xl font-bold text-white">{plan.price.toLocaleString('fr-FR')}</p>
+            <p className="text-xs text-slate-600 mt-1">{displayCurrency(plan.currency)} / mois</p>
+          </>
+        )}
+      </div>
+
+      <ul className="space-y-2.5 flex-1">
+        {plan.features.map((f) => (
+          <li key={f} className="flex items-start gap-2.5 text-xs text-slate-400">
+            <Check className="w-3.5 h-3.5 text-brand-400 shrink-0 mt-0.5" />
+            {f}
+          </li>
+        ))}
+      </ul>
+
+      <Link href="/login"
+        className={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors
+          ${isPrimary
+            ? 'bg-brand-600 hover:bg-brand-500 text-white'
+            : 'border border-white/10 hover:border-white/20 text-slate-300 hover:text-white'}`}>
+        {isFree ? 'Commencer' : `Choisir ${plan.label || plan.name}`}
+      </Link>
+    </div>
+  );
+}
+
 function Tarifs() {
-  const [plans, setPlans]     = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allPlans, setAllPlans] = useState<Plan[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [period, setPeriod]     = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     getPlans()
-      .then(setPlans)
-      .catch(() => setPlans([]))
+      .then(setAllPlans)
+      .catch(() => setAllPlans([]))
       .finally(() => setLoading(false));
   }, []);
 
-  const maxPrice = plans.length ? Math.max(...plans.map((p) => p.price)) : 0;
+  const trialPlans   = allPlans.filter((p) => p.price === 0);
+  const paidMonthly  = allPlans.filter((p) => p.price > 0 && p.duration_days < 300);
+  const paidAnnual   = allPlans.filter((p) => p.price > 0 && p.duration_days >= 300);
+
+  const hasAnnual  = paidAnnual.length > 0;
+  const hasMonthly = paidMonthly.length > 0;
+
+  const shownPaid  = period === 'annual' && hasAnnual ? paidAnnual : paidMonthly;
+  const plans      = [...trialPlans, ...shownPaid];
+  const maxPrice   = plans.length ? Math.max(...plans.map((p) => p.price)) : 0;
 
   return (
     <section id="tarifs" className="py-24 px-5 bg-[#060a15]">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-14">
-          <p className="text-xs font-semibold text-slate-500 tracking-widest uppercase mb-3">Tarifs</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white">Simple et transparent</h2>
-          <p className="text-slate-500 mt-2 text-sm">Pas de frais cachés. Pas de surprise.</p>
+        <div className="mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 tracking-widest uppercase mb-3">Tarifs</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">Simple et transparent</h2>
+            <p className="text-slate-500 mt-2 text-sm">Pas de frais cachés. Pas de surprise.</p>
+          </div>
+
+          {hasAnnual && hasMonthly && (
+            <div className="flex items-center bg-[#0c1020] border border-white/[0.07] rounded-lg p-1 self-start sm:self-auto shrink-0">
+              {(['monthly', 'annual'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors
+                    ${period === p ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                  {p === 'monthly' ? 'Mensuel' : (
+                    <span className="flex items-center gap-1.5">
+                      Annuel
+                      <span className="text-[10px] font-bold text-green-400">−8%</span>
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -326,55 +425,16 @@ function Tarifs() {
             <Loader2 className="w-6 h-6 text-brand-400 animate-spin" />
           </div>
         ) : (
-          <div className={`grid grid-cols-1 gap-4 ${plans.length === 2 ? 'sm:grid-cols-2 max-w-2xl' : plans.length >= 3 ? 'sm:grid-cols-3' : 'max-w-sm'}`}>
-            {plans.map((plan) => {
-              const isFree    = plan.price === 0;
-              const isPrimary = plan.price === maxPrice && !isFree;
-
-              return (
-                <div key={plan.id}
-                  className={`relative rounded-xl p-6 border space-y-5
-                    ${isPrimary
-                      ? 'bg-brand-900/20 border-brand-700/50'
-                      : 'bg-white/[0.02] border-white/[0.07]'}`}>
-
-                  {isPrimary && (
-                    <span className="absolute top-4 right-4 text-[10px] font-semibold text-brand-300 bg-brand-900/60 border border-brand-700/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
-                      Recommandé
-                    </span>
-                  )}
-
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
-                      {plan.label || plan.name}
-                    </p>
-                    <p className="text-3xl font-bold text-white">
-                      {isFree ? 'Gratuit' : plan.price.toLocaleString('fr-FR')}
-                    </p>
-                    <p className="text-xs text-slate-600 mt-1">
-                      {isFree ? `${plan.duration_days} jours d'essai` : `${displayCurrency(plan.currency)} / mois`}
-                    </p>
-                  </div>
-
-                  <ul className="space-y-2.5">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2.5 text-xs text-slate-400">
-                        <Check className="w-3.5 h-3.5 text-brand-400 shrink-0 mt-0.5" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link href="/login"
-                    className={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors
-                      ${isPrimary
-                        ? 'bg-brand-600 hover:bg-brand-500 text-white'
-                        : 'border border-white/10 hover:border-white/20 text-slate-300 hover:text-white'}`}>
-                    {isFree ? 'Commencer' : `Choisir ${plan.label || plan.name}`}
-                  </Link>
-                </div>
-              );
-            })}
+          <div className={`grid grid-cols-1 gap-4
+            ${plans.length === 2 ? 'sm:grid-cols-2 max-w-2xl' :
+              plans.length >= 3 ? 'sm:grid-cols-3' : 'max-w-sm'}`}>
+            {plans.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                isPrimary={plan.price === maxPrice && plan.price > 0}
+              />
+            ))}
           </div>
         )}
       </div>

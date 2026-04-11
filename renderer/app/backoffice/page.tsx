@@ -720,7 +720,6 @@ function PlansTab() {
               { field: 'name', label: 'Identifiant', type: 'text' },
               { field: 'price', label: 'Prix', type: 'number' },
               { field: 'currency', label: 'Devise', type: 'text' },
-              { field: 'duration_days', label: 'Durée (jours)', type: 'number' },
               { field: 'sort_order', label: "Ordre d'affichage", type: 'number' },
             ].map(({ field, label, type }) => (
               <div key={field}>
@@ -728,6 +727,24 @@ function PlansTab() {
                 <input type={type} value={(editing as Record<string, unknown>)[field] as string ?? ''} onChange={(e) => setEditing((p) => p && ({ ...p, [field]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className="input" />
               </div>
             ))}
+            <div>
+              <label className="label">Période de facturation</label>
+              <div className="flex gap-2 mb-2">
+                {[{ label: 'Mensuel', days: 30 }, { label: 'Annuel', days: 365 }].map(({ label, days }) => (
+                  <button
+                    key={days}
+                    type="button"
+                    onClick={() => setEditing((p) => p && ({ ...p, duration_days: days }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                      ${editing.duration_days === days
+                        ? 'bg-brand-600 border-brand-500 text-white'
+                        : 'border-surface-border text-slate-400 hover:text-white'}`}>
+                    {label} ({days}j)
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={editing.duration_days ?? 30} onChange={(e) => setEditing((p) => p && ({ ...p, duration_days: parseFloat(e.target.value) || 30 }))} className="input" placeholder="Durée personnalisée en jours" />
+            </div>
             <div>
               <label className="label">Fonctionnalités (une par ligne)</label>
               <textarea value={(editing.features ?? []).join('\n')} onChange={(e) => setEditing((p) => p && ({ ...p, features: e.target.value.split('\n').filter(Boolean) }))} className="input min-h-[80px] resize-y" />

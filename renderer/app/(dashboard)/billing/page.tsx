@@ -32,7 +32,8 @@ export default function BillingPage() {
 
   const [loading, setLoading]       = useState(true);
   const [checking, setChecking]     = useState(false);
-  const [plans, setPlans]           = useState<Plan[]>([]);
+  const [allPlans, setAllPlans]     = useState<Plan[]>([]);
+  const [period, setPeriod]         = useState<'monthly' | 'annual'>('monthly');
   const [settings, setSettings]     = useState<PaymentSettings | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showQr, setShowQr]         = useState<'wave' | 'om' | null>(null);
@@ -93,11 +94,11 @@ export default function BillingPage() {
       getMySubscriptionRequests(business.id),
     ])
       .then(([p, s, reqs]) => {
-        setPlans(p);
+        setAllPlans(p);
         setSettings(s);
-        if (p.length) setSelectedPlan(p[0]);
+        const firstPaid = p.find((pl) => pl.price > 0 && pl.duration_days < 300);
+        if (firstPaid) setSelectedPlan(firstPaid);
         setMyRequests(reqs);
-        // Si une demande est déjà en attente, passer directement à l'étape "sent"
         if (reqs.some((r) => r.status === 'pending')) setStep('sent');
       })
       .finally(() => setLoading(false));
@@ -193,35 +194,75 @@ export default function BillingPage() {
         )}
 
         {/* ── Choix du plan ── */}
-        {step === 'form' && (
+        {step === 'form' && (() => {
+          const paidMonthly = allPlans.filter((p) => p.price > 0 && p.duration_days < 300);
+          const paidAnnual  = allPlans.filter((p) => p.price > 0 && p.duration_days >= 300);
+          const hasAnnual   = paidAnnual.length > 0;
+          const hasMonthly  = paidMonthly.length > 0;
+          const shownPlans  = period === 'annual' && hasAnnual ? paidAnnual : paidMonthly;
+
+          return (
           <>
             <div>
-              <h2 className="text-lg font-bold text-white mb-4">Choisissez votre plan</h2>
+              <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+                <h2 className="text-lg font-bold text-white">Choisissez votre plan</h2>
+                {hasAnnual && hasMonthly && (
+                  <div className="flex items-center bg-surface-input border border-surface-border rounded-lg p-1 shrink-0">
+                    {(['monthly', 'annual'] as const).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => { setPeriod(p); setSelectedPlan(null); }}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
+                          ${period === p ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                        {p === 'monthly' ? 'Mensuel' : (
+                          <span className="flex items-center gap-1">Annuel <span className="text-green-400">−8%</span></span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {plans.map((plan) => (
-                  <button
-                    key={plan.id}
-                    onClick={() => setSelectedPlan(plan)}
-                    className={`text-left p-5 rounded-2xl border transition-all
-                      ${selectedPlan?.id === plan.id
-                        ? 'border-brand-500 bg-brand-900/20'
-                        : 'border-surface-border hover:border-slate-500'}`}
-                  >
-                    <p className="font-bold text-white text-lg">{plan.label}</p>
-                    <p className="text-2xl font-bold text-brand-400 mt-1">
-                      {plan.price.toLocaleString('fr-FR')}{' '}
-                      <span className="text-sm font-normal text-slate-400">{displayCurrency(plan.currency)}/mois</span>
-                    </p>
-                    <ul className="mt-3 space-y-1">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
-                          <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                ))}
+                {shownPlans.map((plan) => {
+                  const isAnnual = plan.duration_days >= 300;
+                  const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan)}
+                      className={`text-left p-5 rounded-2xl border transition-all relative
+                        ${selectedPlan?.id === plan.id
+                          ? 'border-brand-500 bg-brand-900/20'
+                          : 'border-surface-border hover:border-slate-500'}`}
+                    >
+                      {isAnnual && (
+                        <span className="absolute top-3 right-3 text-[10px] font-bold text-green-300 bg-green-900/40 border border-green-800/40 px-1.5 py-0.5 rounded-full">
+                          1 mois offert
+                        </span>
+                      )}
+                      <p className="font-bold text-white text-base">{plan.label}</p>
+                      <p className="text-2xl font-bold text-brand-400 mt-1">
+                        {plan.price.toLocaleString('fr-FR')}{' '}
+                        <span className="text-sm font-normal text-slate-400">
+                          {displayCurrency(plan.currency)}/{isAnnual ? 'an' : 'mois'}
+                        </span>
+                      </p>
+                      {monthlyEquiv && (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          soit {monthlyEquiv.toLocaleString('fr-FR')} {displayCurrency(plan.currency)}/mois
+                        </p>
+                      )}
+                      <ul className="mt-3 space-y-1">
+                        {plan.features.map((f) => (
+                          <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
+                            <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -322,7 +363,8 @@ export default function BillingPage() {
               </div>
             </div>
           </>
-        )}
+          );
+        })()}
 
         {/* ── Confirmation envoi ── */}
         {step === 'sent' && (
