@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import {
   ShoppingCart, BarChart2, Truck, MessageCircle, BedDouble, Scale,
@@ -193,11 +194,18 @@ function Features() {
 
 // ─── Secteurs ─────────────────────────────────────────────────────────────────
 
-const SECTEURS = [
-  { icon: Store,      color: 'text-orange-400', bg: 'bg-orange-900/20 border-orange-800/30', title: 'Commerce & Distribution', desc: 'Stocks, revendeurs, fournisseurs, prix de gros.' },
-  { icon: ShoppingCart, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800/30',  title: 'Boutique & Retail',       desc: 'Caisse rapide, codes-barres, variantes, promotions.' },
-  { icon: BedDouble,  color: 'text-teal-400',   bg: 'bg-teal-900/20 border-teal-800/30',    title: 'Hôtellerie',              desc: 'Réservations, check-in/out, services additionnels.' },
-  { icon: Scale,      color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800/30',title: 'Cabinet juridique',        desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.' },
+const SECTEURS: {
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
+  iconBg: string;
+  border: string;
+  title: string;
+  desc: string;
+}[] = [
+  { icon: Store,        iconColor: 'text-orange-300', iconBg: 'bg-orange-950', border: 'border-orange-900', title: 'Commerce & Distribution', desc: 'Stocks, revendeurs, fournisseurs, prix de gros.' },
+  { icon: ShoppingCart, iconColor: 'text-brand-300',  iconBg: 'bg-brand-950',  border: 'border-brand-900',  title: 'Boutique & Retail',       desc: 'Caisse rapide, codes-barres, variantes, promotions.' },
+  { icon: BedDouble,    iconColor: 'text-teal-300',   iconBg: 'bg-teal-950',   border: 'border-teal-900',   title: 'Hôtellerie',              desc: 'Réservations, check-in/out, services additionnels.' },
+  { icon: Scale,        iconColor: 'text-purple-300', iconBg: 'bg-purple-950', border: 'border-purple-900', title: 'Cabinet juridique',        desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.' },
 ];
 
 function Secteurs() {
@@ -213,15 +221,15 @@ function Secteurs() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {SECTEURS.map(({ icon: Icon, color, bg, title, desc }) => (
+          {SECTEURS.map(({ icon: Icon, iconColor, iconBg, border, title, desc }) => (
             <div key={title}
-              className={`flex items-start gap-4 p-5 rounded-xl border ${bg} transition-colors`}>
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-black/20`}>
-                <Icon className={`w-4.5 h-4.5 ${color}`} />
+              className={`flex items-start gap-4 p-5 rounded-xl border bg-[#0c1020] ${border} transition-colors`}>
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
+                <Icon className={`w-4 h-4 ${iconColor}`} />
               </div>
               <div>
-                <p className="text-white font-medium text-sm mb-1">{title}</p>
-                <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
+                <p className="text-slate-100 font-medium text-sm mb-1">{title}</p>
+                <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
               </div>
             </div>
           ))}
