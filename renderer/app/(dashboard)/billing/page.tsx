@@ -215,7 +215,7 @@ export default function BillingPage() {
                         className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
                           ${period === p ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
                         {p === 'monthly' ? 'Mensuel' : (
-                          <span className="flex items-center gap-1">Annuel <span className="text-green-400">−8%</span></span>
+                          <span className="flex items-center gap-1">Annuel <span className="text-green-400">−10%</span></span>
                         )}
                       </button>
                     ))}

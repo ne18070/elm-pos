@@ -411,7 +411,7 @@ function Tarifs() {
                   {p === 'monthly' ? 'Mensuel' : (
                     <span className="flex items-center gap-1.5">
                       Annuel
-                      <span className="text-[10px] font-bold text-green-400">−8%</span>
+                      <span className="text-[10px] font-bold text-green-400">−10%</span>
                     </span>
                   )}
                 </button>
