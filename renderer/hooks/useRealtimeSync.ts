@@ -115,6 +115,25 @@ export function useRealtimeSync() {
       }
     );
 
+    // ── businesses (features / config changée par l'admin) ───────────────────
+    channel.on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'businesses',
+        filter: `id=eq.${businessId}` },
+      (payload) => {
+        const updated = payload.new as Record<string, unknown>;
+        const { setBusiness, business: currentBiz } = useAuthStore.getState();
+        if (!currentBiz) return;
+        // Mettre à jour uniquement les champs de config (pas les données sensibles)
+        setBusiness({
+          ...currentBiz,
+          features: (updated.features as string[]) ?? currentBiz.features,
+          types:    (updated.types    as string[]) ?? currentBiz.types,
+          type:     (updated.type     as string)   ?? currentBiz.type,
+        });
+      }
+    );
+
     // ── Presence ─────────────────────────────────────────────────────────────
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<{
