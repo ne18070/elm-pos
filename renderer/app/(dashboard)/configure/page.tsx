@@ -5,15 +5,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as LucideIcons from 'lucide-react';
 import {
-  Check, ArrowRight, CheckCircle2, XCircle, ToggleLeft, ToggleRight, Loader2, Lock,
+  Check, ArrowRight, XCircle, ToggleLeft, ToggleRight, Loader2, Lock,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import {
-  getBusinessTypesWithModules, getAppModules,
-  type BusinessTypeWithModules, type AppModule,
+  getBusinessTypes, getAppModules,
+  type BusinessTypeRow, type AppModule,
 } from '@services/supabase/business-config';
 
 // ─── Icon resolver ────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ export default function ConfigurePage() {
   const { business, setBusiness } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
 
-  const [types,   setTypes]   = useState<BusinessTypeWithModules[]>([]);
+  const [types,   setTypes]   = useState<BusinessTypeRow[]>([]);
   const [modules, setModules] = useState<AppModule[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(true);
 
@@ -68,16 +68,9 @@ export default function ConfigurePage() {
     async function load() {
       setLoadingConfig(true);
       try {
-        const [t, m] = await Promise.all([getBusinessTypesWithModules(), getAppModules()]);
+        const [t, m] = await Promise.all([getBusinessTypes(), getAppModules()]);
         setTypes(t);
         setModules(m);
-        // Si pas encore de features → initialiser depuis les defaults des types assignés
-        if (!business?.features?.length && businessTypes.length > 0) {
-          const defaults = t
-            .filter((x) => businessTypes.includes(x.id))
-            .flatMap((x) => x.modules.filter((mod) => mod.is_default).map((mod) => mod.module_id));
-          setFeatures(Array.from(new Set(defaults)));
-        }
       } finally {
         setLoadingConfig(false);
       }
@@ -101,7 +94,6 @@ export default function ConfigurePage() {
 
       setBusiness({ ...business, features });
       success('Configuration enregistrée');
-      router.push('/pos');
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -120,8 +112,9 @@ export default function ConfigurePage() {
   const selectedTypes = types.filter((t) => businessTypes.includes(t.id));
   const ac = accent(selectedTypes[0]?.accent_color ?? 'brand');
 
-  // Tous les modules actifs (is_active=true côté backoffice) sont proposés au client
-  const linkedModules = modules; // already filtered by is_active in getAppModules()
+  // Modules disponibles pour ce store = ceux que l'admin a autorisés via allowed_modules
+  const allowedIds = new Set(business?.allowed_modules ?? []);
+  const allowedModules = modules.filter((m) => allowedIds.has(m.id));
 
   return (
     <div className="h-full overflow-y-auto">
@@ -170,11 +163,15 @@ export default function ConfigurePage() {
         </div>
 
         {/* ── Fonctionnalités (toggleable) ── */}
-        {selectedTypes.length > 0 && linkedModules.length > 0 && (
+        {allowedModules.length === 0 ? (
+          <p className="text-sm text-slate-500 italic">
+            Aucun module disponible — contactez l&apos;administrateur.
+          </p>
+        ) : (
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-white">Fonctionnalités actives</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {linkedModules.map((m) => {
+              {allowedModules.map((m) => {
                 const enabled = features.includes(m.id);
                 return (
                   <button
@@ -206,18 +203,18 @@ export default function ConfigurePage() {
         )}
 
         {/* ── Résumé ── */}
-        {selectedTypes.length > 0 && (
+        {allowedModules.length > 0 && (
           <div className={cn('card p-5 border', ac.border)}>
             <p className="text-sm font-semibold text-white mb-3">
-              {selectedTypes.map((t) => t.label).join(' + ')} — {features.length} fonctionnalité{features.length > 1 ? 's' : ''} active{features.length > 1 ? 's' : ''}
+              {features.length} fonctionnalité{features.length > 1 ? 's' : ''} active{features.length > 1 ? 's' : ''} sur {allowedModules.length} disponible{allowedModules.length > 1 ? 's' : ''}
             </p>
             <div className="flex flex-wrap gap-2">
-              {modules.filter((m) => features.includes(m.id)).map((m) => (
+              {allowedModules.filter((m) => features.includes(m.id)).map((m) => (
                 <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-900/20 border border-green-800 text-green-300">
                   <Check className="w-3 h-3" />{m.label}
                 </span>
               ))}
-              {modules.filter((m) => !features.includes(m.id)).map((m) => (
+              {allowedModules.filter((m) => !features.includes(m.id)).map((m) => (
                 <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface-input text-slate-600">
                   <XCircle className="w-3 h-3" />{m.label}
                 </span>

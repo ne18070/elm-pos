@@ -65,8 +65,27 @@ export interface Contract {
   created_by:       string | null;
   created_at:       string;
   updated_at:       string;
+  // paiement
+  amount_paid:      number | null;
+  payment_date:     string | null;
+  payment_method:   'cash' | 'card' | 'transfer' | 'mobile_money' | null;
   // join
   rental_vehicles?: RentalVehicle | null;
+}
+
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mobile_money';
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash:         'Espèces',
+  card:         'Carte bancaire',
+  transfer:     'Virement',
+  mobile_money: 'Mobile Money',
+};
+
+export interface RecordPaymentInput {
+  amount_paid:    number;
+  payment_date:   string;
+  payment_method: PaymentMethod;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -391,4 +410,64 @@ export function daysCount(start: string, end: string): number {
   const s = new Date(start);
   const e = new Date(end);
   return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 86400000));
+}
+
+// ─── Paiement location + écriture comptable ───────────────────────────────────
+
+export async function recordPayment(
+  contractId: string,
+  businessId: string,
+  input: RecordPaymentInput,
+  contract: { client_name: string; total_amount: number | null },
+): Promise<void> {
+  // 1. Mettre à jour le contrat
+  const { error: updateErr } = await supabase
+    .from('contracts')
+    .update({
+      amount_paid:    input.amount_paid,
+      payment_date:   input.payment_date,
+      payment_method: input.payment_method,
+    })
+    .eq('id', contractId);
+  if (updateErr) throw new Error(updateErr.message);
+
+  // 2. Supprimer l'écriture comptable existante pour ce contrat (mise à jour)
+  await (supabase as any)
+    .from('journal_entries')
+    .delete()
+    .eq('business_id', businessId)
+    .eq('source', 'rental')
+    .eq('source_id', contractId);
+
+  // 3. Créer la nouvelle écriture comptable
+  const total       = contract.total_amount ?? 0;
+  const paid        = input.amount_paid;
+  const outstanding = Math.max(0, total - paid);
+
+  const debitAccount = input.payment_method === 'card'
+    ? { code: '521', name: 'Banque / Carte' }
+    : { code: '571', name: input.payment_method === 'mobile_money' ? 'Caisse / Mobile' : 'Caisse' };
+
+  const lines: { account_code: string; account_name: string; debit: number; credit: number }[] = [];
+  if (paid > 0)           lines.push({ account_code: debitAccount.code, account_name: debitAccount.name, debit: paid,        credit: 0 });
+  if (outstanding > 0.01) lines.push({ account_code: '411',            account_name: 'Clients',          debit: outstanding, credit: 0 });
+  lines.push(              { account_code: '706',            account_name: 'Location de véhicule',debit: 0,           credit: total });
+
+  const { data: entry, error: entryErr } = await (supabase as any)
+    .from('journal_entries')
+    .insert({
+      business_id: businessId,
+      entry_date:  input.payment_date,
+      description: `Location — ${contract.client_name}`,
+      source:      'rental',
+      source_id:   contractId,
+    })
+    .select()
+    .single();
+  if (entryErr) throw new Error(entryErr.message);
+
+  const { error: linesErr } = await (supabase as any)
+    .from('journal_lines')
+    .insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
+  if (linesErr) throw new Error(linesErr.message);
 }

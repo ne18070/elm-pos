@@ -32,7 +32,8 @@ export interface Business {
   receipt_footer?: string;
   stock_units?: string[];    // unités de stock configurables
   types: string[];           // multi-type: e.g. ['retail', 'hotel']
-  features: string[];        // optional modules enabled, e.g. ['pos']
+  allowed_modules: string[]; // modules disponibles pour ce store (géré par l'admin)
+  features: string[];        // modules activés par le client (sous-ensemble de allowed_modules)
   owner_id: string;
   created_at: string;
 }

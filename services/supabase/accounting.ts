@@ -35,7 +35,7 @@ export interface JournalEntry {
   entry_date: string;
   reference: string | null;
   description: string;
-  source: 'manual' | 'order' | 'stock' | 'refund' | 'adjustment' | 'hotel';
+  source: 'manual' | 'order' | 'stock' | 'refund' | 'adjustment' | 'hotel' | 'rental';
   source_id: string | null;
   created_at: string;
   lines: JournalLine[];

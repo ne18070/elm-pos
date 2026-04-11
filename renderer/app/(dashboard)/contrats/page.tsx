@@ -7,7 +7,7 @@ import {
   Plus, Car, FileText, Pencil, Trash2, X, Loader2,
   Send, Archive, Share2, CheckCircle, Clock, FileSignature,
   ChevronLeft, Eye, Download, Copy, Check, Bold, Italic,
-  List, Heading2, Minus, Type,
+  List, Heading2, Minus, Type, Banknote, AlertCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -16,7 +16,10 @@ import {
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
   getContracts, createContract, sendContract, archiveContract, savePdfUrl,
   buildWhatsAppLink, daysCount, fillTemplate, uploadVehicleImage, uploadContractPdf,
+  recordPayment,
+  PAYMENT_METHOD_LABELS,
   type RentalVehicle, type ContractTemplate, type Contract, type CreateContractInput,
+  type PaymentMethod,
 } from '@services/supabase/contracts';
 import { getClients, type Client } from '@services/supabase/clients';
 
@@ -30,6 +33,12 @@ const STATUS_CFG: Record<string, { label: string; color: string }> = {
   signed:   { label: 'Signé',      color: 'bg-green-900/50 text-green-300' },
   archived: { label: 'Archivé',    color: 'bg-slate-800 text-slate-500' },
 };
+
+const PAYMENT_STATUS_CFG = {
+  pending: { label: 'Non payé', color: 'bg-red-900/40 text-red-400'     },
+  partial: { label: 'Acompte',  color: 'bg-amber-900/40 text-amber-400' },
+  paid:    { label: 'Payé',     color: 'bg-green-900/40 text-green-400' },
+} as const;
 
 const TODAY = new Date().toISOString().split('T')[0];
 const TOMORROW = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -135,6 +144,12 @@ export default function ContratsPage() {
 
   const [copied, setCopied] = useState(false);
 
+  // Payment
+  const [paymentForm, setPaymentForm] = useState<{
+    amount_paid: string; payment_date: string; payment_method: PaymentMethod;
+  }>({ amount_paid: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'cash' });
+  const [savingPayment, setSavingPayment] = useState(false);
+
   // ─── Load ────────────────────────────────────────────────────────────────────
 
   async function load() {
@@ -201,6 +216,39 @@ export default function ContratsPage() {
     window.open(link, '_blank');
   }
 
+  async function handleRecordPayment(c: Contract) {
+    if (!business) return;
+    const amount = parseFloat(paymentForm.amount_paid);
+    if (!amount || amount <= 0) { notifError('Montant invalide'); return; }
+    setSavingPayment(true);
+    try {
+      await recordPayment(c.id, business.id, {
+        amount_paid:    amount,
+        payment_date:   paymentForm.payment_date,
+        payment_method: paymentForm.payment_method,
+      }, { client_name: c.client_name, total_amount: c.total_amount });
+      notifSuccess('Paiement enregistré et écriture comptable créée');
+      load();
+      setDetailContract({
+        ...c,
+        amount_paid:    amount,
+        payment_date:   paymentForm.payment_date,
+        payment_method: paymentForm.payment_method,
+      });
+    } catch (e) {
+      notifError(toUserError(e));
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
+  function paymentStatus(c: Contract): 'pending' | 'partial' | 'paid' {
+    if (!c.amount_paid || c.amount_paid <= 0) return 'pending';
+    if (c.total_amount && c.amount_paid >= c.total_amount) return 'paid';
+    return 'partial';
+  }
+
+
   // ─── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -254,6 +302,100 @@ export default function ContratsPage() {
               <div><p className="text-slate-500">Caution</p><p className="text-white">{fmtMoney(c.deposit_amount, c.currency)}</p></div>
             </div>
           </div>
+
+          {/* ── Paiement ── */}
+          {c.status !== 'archived' && (
+            <div className="card p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <Banknote className="w-4 h-4" /> Paiement encaissé
+                </h3>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
+                  {PAYMENT_STATUS_CFG[paymentStatus(c)].label}
+                </span>
+              </div>
+
+              {/* Résumé si déjà payé */}
+              {c.amount_paid != null && c.amount_paid > 0 && (
+                <div className="bg-surface-input rounded-xl p-3 text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Montant encaissé</span>
+                    <span className="text-green-400 font-semibold">{fmtMoney(c.amount_paid, c.currency)}</span>
+                  </div>
+                  {c.total_amount != null && c.amount_paid < c.total_amount && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Reste dû</span>
+                      <span className="text-amber-400 font-semibold">{fmtMoney(c.total_amount - c.amount_paid, c.currency)}</span>
+                    </div>
+                  )}
+                  {c.payment_date && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Date</span>
+                      <span className="text-slate-300">{fmtDate(c.payment_date)}</span>
+                    </div>
+                  )}
+                  {c.payment_method && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Méthode</span>
+                      <span className="text-slate-300">{PAYMENT_METHOD_LABELS[c.payment_method]}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Formulaire enregistrement */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="label text-xs">Montant encaissé</label>
+                    <input
+                      type="number"
+                      className="input text-sm h-9"
+                      placeholder={c.total_amount?.toString() ?? '0'}
+                      value={paymentForm.amount_paid}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, amount_paid: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Date</label>
+                    <input
+                      type="date"
+                      className="input text-sm h-9"
+                      value={paymentForm.payment_date}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, payment_date: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="label text-xs">Méthode de paiement</label>
+                  <select
+                    className="input text-sm h-9"
+                    value={paymentForm.payment_method}
+                    onChange={(e) => setPaymentForm((p) => ({ ...p, payment_method: e.target.value as PaymentMethod }))}
+                  >
+                    {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([k, v]) => (
+                      <option key={k} value={k} className="bg-gray-900">{v}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={() => handleRecordPayment(c)}
+                  disabled={savingPayment || !paymentForm.amount_paid}
+                  className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-10 disabled:opacity-50"
+                >
+                  {savingPayment
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <><Banknote className="w-4 h-4" />{c.amount_paid ? 'Mettre à jour le paiement' : 'Enregistrer le paiement'}</>}
+                </button>
+                {c.amount_paid != null && c.amount_paid > 0 && (
+                  <p className="text-[11px] text-slate-500 text-center flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Une écriture comptable est automatiquement créée / mise à jour
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {c.status === 'signed' && (
             <div className="card p-4 space-y-3">
@@ -413,6 +555,11 @@ export default function ContratsPage() {
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
                     <span className="text-xs text-brand-400 font-medium">{fmtMoney(c.total_amount, c.currency)}</span>
+                    {c.status !== 'archived' && (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
+                        {PAYMENT_STATUS_CFG[paymentStatus(c)].label}
+                      </span>
+                    )}
                   </div>
                 </button>
               );
