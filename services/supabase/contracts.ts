@@ -60,8 +60,9 @@ export interface Contract {
   status:           ContractStatus;
   signed_at:        string | null;
   signature_image:  string | null;
-  pdf_url:          string | null;
-  notes:            string | null;
+  pdf_url:                  string | null;
+  lessor_signature_image:   string | null;
+  notes:                    string | null;
   created_by:       string | null;
   created_at:       string;
   updated_at:       string;
@@ -252,6 +253,56 @@ export async function createContract(
   return data;
 }
 
+export async function updateContract(
+  id: string,
+  input: CreateContractInput,
+  invalidate: boolean,
+): Promise<Contract> {
+  const patch: Record<string, unknown> = {
+    vehicle_id:       input.vehicle_id,
+    template_id:      input.template_id,
+    client_name:      input.client_name,
+    client_phone:     input.client_phone   || null,
+    client_email:     input.client_email   || null,
+    client_id_number: input.client_id_number || null,
+    client_address:   input.client_address || null,
+    start_date:       input.start_date,
+    end_date:         input.end_date,
+    pickup_location:  input.pickup_location || null,
+    return_location:  input.return_location || null,
+    price_per_day:    input.price_per_day,
+    deposit_amount:   input.deposit_amount,
+    total_amount:     input.total_amount,
+    currency:         input.currency,
+    body:             input.body,
+    notes:            input.notes || null,
+  };
+
+  if (invalidate) {
+    const token   = generateToken();
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 7);
+    Object.assign(patch, {
+      status:                 'draft',
+      token,
+      token_expires_at:       expires.toISOString(),
+      signed_at:              null,
+      signature_image:        null,
+      lessor_signature_image: null,
+      pdf_url:                null,
+    });
+  }
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .update(patch)
+    .eq('id', id)
+    .select('*, rental_vehicles(name, license_plate, brand, model)')
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function sendContract(id: string): Promise<void> {
   // Renouvelle le token pour 7 jours
   const expires = new Date();
@@ -359,6 +410,26 @@ export async function savePdfUrl(token: string, pdf_url: string): Promise<void> 
     .from('contracts')
     .update({ pdf_url })
     .eq('token', token);
+  if (error) throw new Error(error.message);
+}
+
+// ─── Signature loueur ─────────────────────────────────────────────────────────
+
+export async function uploadLessorSignature(contractId: string, blob: Blob): Promise<string> {
+  const path = `lessor-signatures/${contractId}.png`;
+  const { error } = await supabase.storage
+    .from('contracts')
+    .upload(path, blob, { contentType: 'image/png', upsert: true });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('contracts').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function saveLessorSignature(contractId: string, imageUrl: string): Promise<void> {
+  const { error } = await supabase
+    .from('contracts')
+    .update({ lessor_signature_image: imageUrl })
+    .eq('id', contractId);
   if (error) throw new Error(error.message);
 }
 

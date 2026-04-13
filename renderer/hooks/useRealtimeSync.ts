@@ -19,7 +19,8 @@ export type RealtimeTable =
   | 'products'
   | 'categories'
   | 'coupons'
-  | 'cash_sessions';
+  | 'cash_sessions'
+  | 'contracts';
 
 export function dispatchTableChanged(table: RealtimeTable, detail?: unknown) {
   window.dispatchEvent(
@@ -112,6 +113,25 @@ export function useRealtimeSync() {
           setSession(session);
         } catch { /* ignore */ }
         dispatchTableChanged('cash_sessions');
+      }
+    );
+
+    // ── contracts ────────────────────────────────────────────────────────────
+    channel.on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'contracts',
+        filter: `business_id=eq.${businessId}` },
+      (payload) => {
+        addEvent({ table: 'contracts', eventType: payload.eventType, at: new Date() });
+        dispatchTableChanged('contracts', { eventType: payload.eventType, record: payload.new });
+        // Notification spéciale quand un locataire signe
+        if ((payload.new as Record<string, unknown>).status === 'signed') {
+          window.dispatchEvent(
+            new CustomEvent('elm-pos:contracts:signed', {
+              detail: { record: payload.new },
+            })
+          );
+        }
       }
     );
 

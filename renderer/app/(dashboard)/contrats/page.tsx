@@ -2,25 +2,27 @@
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency } from '@/lib/utils';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Car, FileText, Pencil, Trash2, X, Loader2,
   Send, Archive, Share2, CheckCircle, Clock, FileSignature,
   ChevronLeft, Eye, Download, Copy, Check, Bold, Italic,
-  List, Heading2, Minus, Type, Banknote, AlertCircle,
+  List, Heading2, Minus, Type, Banknote, AlertCircle, RefreshCw,
+  PenLine, RotateCcw,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import {
   getVehicles, createVehicle, updateVehicle, deleteVehicle, toggleVehicleAvailability,
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
-  getContracts, createContract, sendContract, archiveContract, savePdfUrl,
+  getContracts, createContract, updateContract, sendContract, archiveContract, savePdfUrl,
   buildWhatsAppLink, daysCount, fillTemplate, uploadVehicleImage, uploadContractPdf,
-  recordPayment,
+  recordPayment, uploadLessorSignature, saveLessorSignature,
   PAYMENT_METHOD_LABELS,
   type RentalVehicle, type ContractTemplate, type Contract, type CreateContractInput,
   type PaymentMethod,
 } from '@services/supabase/contracts';
+import { generateContractPdf, imageUrlToDataUrl, dataUrlToBlob } from '@/lib/contract-pdf';
 import { getClients, type Client } from '@services/supabase/clients';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -106,19 +108,19 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width:
 
   <p>En cas de sinistre causé par la faute du locataire, celui-ci sera tenu responsable des dommages au-delà de la caution versée.</p>
 
-  <div style="margin-top: 60px; display: flex; justify-content: space-between;">
-    <div style="text-align: center; width: 45%;">
-      <p><strong>Le Loueur</strong></p>
-      <p style="margin-top: 60px;">Signature</p>
-    </div>
-    <div style="text-align: center; width: 45%;">
-      <p><strong>Le Locataire</strong></p>
-      <p style="margin-top: 10px;">Lu et approuvé</p>
-      <p>Signature électronique :</p>
-    </div>
-  </div>
-
-  {{signature_block}}
+  <table style="width: 100%; margin-top: 60px; border-collapse: collapse;">
+    <tr>
+      <td style="width: 50%; text-align: center; vertical-align: top; padding: 10px;">
+        <p style="margin: 0 0 8px 0;"><strong>Le Loueur</strong></p>
+        <div style="height: 80px; border-top: 1px solid #ccc; margin-top: 8px;">{{lessor_signature_block}}</div>
+      </td>
+      <td style="width: 50%; text-align: center; vertical-align: top; padding: 10px;">
+        <p style="margin: 0 0 4px 0;"><strong>Le Locataire</strong></p>
+        <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">Lu et approuvé</p>
+        <div style="height: 80px; border-top: 1px solid #ccc; margin-top: 8px;">{{signature_block}}</div>
+      </td>
+    </tr>
+  </table>
 </div>`;
 
 // ─── Page principale ──────────────────────────────────────────────────────────
@@ -141,6 +143,7 @@ export default function ContratsPage() {
 
   const [editVehicle, setEditVehicle]     = useState<RentalVehicle | null>(null);
   const [editTemplate, setEditTemplate]   = useState<ContractTemplate | null>(null);
+  const [editContract, setEditContract]   = useState<Contract | null>(null);
 
   const [copied, setCopied] = useState(false);
 
@@ -149,6 +152,15 @@ export default function ContratsPage() {
     amount_paid: string; payment_date: string; payment_method: PaymentMethod;
   }>({ amount_paid: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'cash' });
   const [savingPayment, setSavingPayment] = useState(false);
+
+  // Signature loueur
+  const [lessorSigOpen, setLessorSigOpen]   = useState(false);
+  const [lessorSigTab, setLessorSigTab]     = useState<'draw' | 'upload'>('draw');
+  const [lessorSigFile, setLessorSigFile]   = useState<string | null>(null); // data URL
+  const [savingLessorSig, setSavingLessorSig] = useState(false);
+  const lessorCanvasRef   = useRef<HTMLCanvasElement>(null);
+  const lessorDrawing     = useRef(false);
+  const lessorHasStrokes  = useRef(false);
 
   // ─── Load ────────────────────────────────────────────────────────────────────
 
@@ -173,15 +185,48 @@ export default function ContratsPage() {
 
   useEffect(() => { load(); }, [business?.id]);
 
+  // ─── Realtime: notification quand un locataire signe ─────────────────────
+
+  useEffect(() => {
+    if (!business?.id) return;
+
+    // Rafraîchissement général (INSERT/UPDATE sur contracts)
+    const handleChanged = () => { load(); };
+    window.addEventListener('elm-pos:contracts:changed', handleChanged);
+
+    // Notification spéciale : contrat signé par le locataire
+    const handleSigned = (e: Event) => {
+      const record = (e as CustomEvent<{ record: Record<string, unknown> }>).detail?.record;
+      const clientName = (record?.client_name as string) ?? 'le locataire';
+      notifSuccess(`Contrat signé par ${clientName} ✓`);
+      load();
+    };
+    window.addEventListener('elm-pos:contracts:signed', handleSigned);
+
+    return () => {
+      window.removeEventListener('elm-pos:contracts:changed', handleChanged);
+      window.removeEventListener('elm-pos:contracts:signed', handleSigned);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id]);
+
   // ─── Contract actions ─────────────────────────────────────────────────────
 
   async function handleSend(c: Contract) {
     try {
       await sendContract(c.id);
       notifSuccess('Contrat envoyé — lien de signature actif 7 jours');
-      load();
+      const [v, t, freshContracts] = await Promise.all([
+        getVehicles(business!.id),
+        getTemplates(business!.id),
+        getContracts(business!.id),
+      ]);
+      setVehicles(v);
+      setTemplates(t);
+      setContracts(freshContracts);
       if (detailContract?.id === c.id) {
-        setDetailContract({ ...detailContract, status: 'sent' });
+        const fresh = freshContracts.find((x) => x.id === c.id);
+        if (fresh) setDetailContract(fresh);
       }
     } catch (e) {
       notifError(toUserError(e));
@@ -242,6 +287,53 @@ export default function ContratsPage() {
     }
   }
 
+  async function handleSaveLessorSignature(c: Contract, sigDataUrl: string) {
+    setSavingLessorSig(true);
+    try {
+      const blob = dataUrlToBlob(sigDataUrl);
+      const url  = await uploadLessorSignature(c.id, blob);
+      await saveLessorSignature(c.id, url);
+
+      // Regénérer le PDF avec les deux signatures
+      try {
+        const clientSrc = c.signature_image
+          ? await imageUrlToDataUrl(c.signature_image)
+          : '';
+        if (clientSrc) {
+          const pdfBlob = await generateContractPdf(c.body, clientSrc, sigDataUrl);
+          const pdfUrl  = await uploadContractPdf(c.token, pdfBlob);
+          await savePdfUrl(c.token, pdfUrl);
+          const updated = { ...c, lessor_signature_image: url, pdf_url: pdfUrl };
+          setDetailContract(updated);
+          setContracts((prev) => prev.map((x) => x.id === c.id ? updated : x));
+        } else {
+          const updated = { ...c, lessor_signature_image: url };
+          setDetailContract(updated);
+          setContracts((prev) => prev.map((x) => x.id === c.id ? updated : x));
+        }
+      } catch {
+        const updated = { ...c, lessor_signature_image: url };
+        setDetailContract(updated);
+        setContracts((prev) => prev.map((x) => x.id === c.id ? updated : x));
+      }
+
+      setLessorSigOpen(false);
+      lessorHasStrokes.current = false;
+      notifSuccess('Signature du loueur enregistrée');
+    } catch (e) {
+      notifError(toUserError(e));
+    } finally {
+      setSavingLessorSig(false);
+    }
+  }
+
+  function lessorClearCanvas() {
+    const canvas = lessorCanvasRef.current;
+    if (!canvas) return;
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+    lessorHasStrokes.current = false;
+  }
+
   function paymentStatus(c: Contract): 'pending' | 'partial' | 'paid' {
     if (!c.amount_paid || c.amount_paid <= 0) return 'pending';
     if (c.total_amount && c.amount_paid >= c.total_amount) return 'paid';
@@ -266,6 +358,7 @@ export default function ContratsPage() {
     const status = STATUS_CFG[c.status] ?? STATUS_CFG.draft;
     const link = contractLink(c);
     return (
+      <>
       <div className="h-full flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
@@ -277,6 +370,15 @@ export default function ContratsPage() {
             <p className="text-xs text-slate-400">{fmtDate(c.start_date)} → {fmtDate(c.end_date)}</p>
           </div>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>{status.label}</span>
+          {c.status !== 'archived' && (
+            <button
+              onClick={() => { setEditContract(c); setShowContractPanel(true); }}
+              className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
+              title="Modifier le contrat"
+            >
+              <Pencil className="w-4 h-4 text-slate-400" />
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -369,7 +471,7 @@ export default function ContratsPage() {
                 <div>
                   <label className="label text-xs">Méthode de paiement</label>
                   <select
-                    className="input text-sm h-9"
+                    className="input text-sm h-10"
                     value={paymentForm.payment_method}
                     onChange={(e) => setPaymentForm((p) => ({ ...p, payment_method: e.target.value as PaymentMethod }))}
                   >
@@ -397,15 +499,27 @@ export default function ContratsPage() {
             </div>
           )}
 
+          {/* ── Contrat signé : lecture seule ── */}
           {c.status === 'signed' && (
             <div className="card p-4 space-y-3">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-400" /> Signé
               </h3>
               {c.signed_at && <p className="text-sm text-slate-400">Le {fmtDate(c.signed_at)}</p>}
-              {c.signature_image && (
-                <img src={c.signature_image} alt="signature" className="h-20 bg-white rounded-xl p-2 object-contain" />
-              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center">
+                  <p className="text-xs text-slate-500 mb-2">Loueur</p>
+                  {c.lessor_signature_image
+                    ? <img src={c.lessor_signature_image} alt="signature loueur" className="h-14 bg-white rounded-xl p-2 object-contain mx-auto" />
+                    : <p className="text-xs text-slate-600 italic">Non signé</p>}
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-slate-500 mb-2">Locataire</p>
+                  {c.signature_image
+                    ? <img src={c.signature_image} alt="signature locataire" className="h-14 bg-white rounded-xl p-2 object-contain mx-auto" />
+                    : <p className="text-xs text-slate-600 italic">Non signé</p>}
+                </div>
+              </div>
               {c.pdf_url && (
                 <a href={c.pdf_url} target="_blank" rel="noreferrer"
                    className="btn-secondary text-sm flex items-center gap-2 w-full justify-center">
@@ -415,30 +529,141 @@ export default function ContratsPage() {
             </div>
           )}
 
-          {/* Lien de signature */}
-          {(c.status === 'sent' || c.status === 'draft') && (
-            <div className="card p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lien de signature</h3>
-              {c.status === 'sent' ? (
-                <>
-                  <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2">
-                    <p className="text-xs text-slate-400 truncate flex-1">{link}</p>
-                    <button onClick={() => handleCopyLink(c)} className="shrink-0 text-slate-400 hover:text-white transition-colors">
-                      {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <button onClick={() => handleWhatsApp(c)} className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-10">
-                    <Share2 className="w-4 h-4" /> Envoyer par WhatsApp
+          {/* ── Signature du loueur + envoi (draft) ── */}
+          {c.status === 'draft' && (
+            <div className="card p-4 space-y-4">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <PenLine className="w-4 h-4" /> Votre signature (loueur)
+              </h3>
+
+              {c.lessor_signature_image && !lessorSigOpen ? (
+                <div className="space-y-2">
+                  <img src={c.lessor_signature_image} alt="signature loueur" className="h-16 bg-white rounded-xl p-2 object-contain" />
+                  <button onClick={() => { setLessorSigOpen(true); setLessorSigTab('draw'); lessorClearCanvas(); }}
+                          className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+                    <RotateCcw className="w-3 h-3" /> Remplacer
                   </button>
-                  <p className="text-xs text-slate-500 text-center">
-                    Expire le {fmtDate(c.token_expires_at)}
-                  </p>
-                </>
+                </div>
               ) : (
-                <button onClick={() => handleSend(c)} className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-10">
+                <div className="space-y-3">
+                  {/* Tabs */}
+                  <div className="flex gap-1 bg-surface-input rounded-lg p-1">
+                    {(['draw', 'upload'] as const).map((t) => (
+                      <button key={t}
+                              onClick={() => { setLessorSigTab(t); setLessorSigFile(null); lessorClearCanvas(); }}
+                              className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${lessorSigTab === t ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                        {t === 'draw' ? 'Dessiner' : 'Uploader'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {lessorSigTab === 'draw' && (
+                    <div>
+                      <div className="border border-dashed border-slate-600 rounded-xl overflow-hidden bg-white">
+                        <canvas
+                          ref={lessorCanvasRef}
+                          width={500} height={150}
+                          className="w-full touch-none cursor-crosshair"
+                          style={{ display: 'block' }}
+                          onMouseDown={(e) => {
+                            const cv = lessorCanvasRef.current; if (!cv) return;
+                            lessorDrawing.current = true; lessorHasStrokes.current = true;
+                            const r = cv.getBoundingClientRect();
+                            const ctx = cv.getContext('2d');
+                            ctx?.beginPath(); ctx?.moveTo((e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height);
+                          }}
+                          onMouseMove={(e) => {
+                            if (!lessorDrawing.current) return;
+                            const cv = lessorCanvasRef.current; if (!cv) return;
+                            const r = cv.getBoundingClientRect();
+                            const ctx = cv.getContext('2d');
+                            if (!ctx) return;
+                            ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1e293b';
+                            ctx.lineTo((e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height);
+                            ctx.stroke();
+                          }}
+                          onMouseUp={() => { lessorDrawing.current = false; }}
+                          onMouseLeave={() => { lessorDrawing.current = false; }}
+                        />
+                      </div>
+                      <div className="flex justify-end mt-1">
+                        <button onClick={lessorClearCanvas} className="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+                          <RotateCcw className="w-3 h-3" /> Effacer
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {lessorSigTab === 'upload' && (
+                    <label className="block cursor-pointer">
+                      <div className="border border-dashed border-slate-600 rounded-xl p-4 text-center hover:border-brand-500 transition-colors">
+                        {lessorSigFile
+                          ? <img src={lessorSigFile} alt="preview" className="h-16 mx-auto object-contain" />
+                          : <p className="text-xs text-slate-400">Cliquez pour choisir une image (PNG/JPG)</p>}
+                      </div>
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                        const file = e.target.files?.[0]; if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setLessorSigFile(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }} />
+                    </label>
+                  )}
+
+                  <button
+                    disabled={savingLessorSig}
+                    onClick={() => {
+                      if (lessorSigTab === 'draw') {
+                        if (!lessorHasStrokes.current) { notifError('Veuillez dessiner votre signature'); return; }
+                        handleSaveLessorSignature(c, lessorCanvasRef.current!.toDataURL('image/png'));
+                      } else {
+                        if (!lessorSigFile) { notifError('Veuillez choisir une image'); return; }
+                        handleSaveLessorSignature(c, lessorSigFile);
+                      }
+                    }}
+                    className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-9 disabled:opacity-60">
+                    {savingLessorSig
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <><CheckCircle className="w-4 h-4" /> Enregistrer ma signature</>}
+                  </button>
+                </div>
+              )}
+
+              <div className="border-t border-surface-border pt-3">
+                {!c.lessor_signature_image && (
+                  <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" /> Signez le contrat avant de l'envoyer
+                  </p>
+                )}
+                <button onClick={() => handleSend(c)}
+                        className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-10">
                   <Send className="w-4 h-4" /> Envoyer pour signature
                 </button>
-              )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Lien actif (sent) ── */}
+          {c.status === 'sent' && (
+            <div className="card p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lien de signature</h3>
+              <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2">
+                <p className="text-xs text-slate-400 truncate flex-1">{link}</p>
+                <button onClick={() => handleCopyLink(c)} className="shrink-0 text-slate-400 hover:text-white transition-colors">
+                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleWhatsApp(c)} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm h-10">
+                  <Share2 className="w-4 h-4" /> WhatsApp
+                </button>
+                <button onClick={() => handleSend(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-3" title="Regénérer le lien (nouveau token, 7 jours)">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 text-center">
+                Expire le {fmtDate(c.token_expires_at)}
+              </p>
             </div>
           )}
 
@@ -455,11 +680,6 @@ export default function ContratsPage() {
         {/* Footer actions */}
         {c.status !== 'archived' && (
           <div className="shrink-0 p-4 border-t border-surface-border flex gap-2">
-            {c.status === 'draft' && (
-              <button onClick={() => handleSend(c)} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm h-10">
-                <Send className="w-4 h-4" /> Envoyer
-              </button>
-            )}
             {c.status === 'sent' && (
               <button onClick={() => handleWhatsApp(c)} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm h-10">
                 <Share2 className="w-4 h-4" /> WhatsApp
@@ -471,6 +691,30 @@ export default function ContratsPage() {
           </div>
         )}
       </div>
+
+      {/* Overlay d'édition — doit être dans ce return pour être au-dessus du detail */}
+      {showContractPanel && (
+        <ContractPanel
+          vehicles={vehicles}
+          templates={templates}
+          contracts={contracts}
+          businessId={business?.id ?? ''}
+          userId={user?.id ?? ''}
+          businessName={business?.name ?? ''}
+          currency={business?.currency ?? 'XOF'}
+          contract={editContract}
+          onClose={() => { setShowContractPanel(false); setEditContract(null); }}
+          onSaved={(saved) => {
+            setShowContractPanel(false);
+            setEditContract(null);
+            load();
+            setDetailContract(saved);
+          }}
+          notifError={notifError}
+          notifSuccess={notifSuccess}
+        />
+      )}
+      </>
     );
   }
 
@@ -535,7 +779,7 @@ export default function ContratsPage() {
               return (
                 <button
                   key={c.id}
-                  onClick={() => setDetailContract(c)}
+                  onClick={() => { setDetailContract(c); setLessorSigOpen(false); setLessorSigFile(null); }}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover transition-colors text-left"
                 >
                   <div className="w-9 h-9 rounded-xl bg-brand-900/30 flex items-center justify-center shrink-0">
@@ -704,13 +948,16 @@ export default function ContratsPage() {
         <ContractPanel
           vehicles={vehicles}
           templates={templates}
+          contracts={contracts}
           businessId={business?.id ?? ''}
           userId={user?.id ?? ''}
           businessName={business?.name ?? ''}
           currency={business?.currency ?? 'XOF'}
-          onClose={() => setShowContractPanel(false)}
+          contract={editContract}
+          onClose={() => { setShowContractPanel(false); setEditContract(null); }}
           onSaved={(c) => {
             setShowContractPanel(false);
+            setEditContract(null);
             load();
             setDetailContract(c);
           }}
@@ -912,7 +1159,19 @@ function TemplatePanel({
   }, []);
 
   function getBody(): string {
-    return editorRef.current?.innerHTML ?? '';
+    if (!editorRef.current) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = editorRef.current.innerHTML;
+    // Remplacer les chips de variables par leur texte brut {{key}}
+    tmp.querySelectorAll('.var-chip').forEach((el) => {
+      el.replaceWith(el.textContent ?? '');
+    });
+    // Remplacer les blocs visuels de signature par leur placeholder brut {{type}}
+    tmp.querySelectorAll('[data-sigblock]').forEach((el) => {
+      const type = el.getAttribute('data-sigblock') ?? '';
+      el.replaceWith(`{{${type}}}`);
+    });
+    return tmp.innerHTML;
   }
 
   // Commandes de mise en forme
@@ -942,6 +1201,22 @@ function TemplatePanel({
   function insertSeparator() {
     editorRef.current?.focus();
     document.execCommand('insertHTML', false, '<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;">');
+  }
+
+  function insertSignatureBlock(type: 'signature_block' | 'lessor_signature_block') {
+    editorRef.current?.focus();
+    const isLessor = type === 'lessor_signature_block';
+    const color  = isLessor ? '#92400e' : '#166534';
+    const bg     = isLessor ? '#fffbeb' : '#f0fdf4';
+    const border = isLessor ? '#d97706' : '#16a34a';
+    const label  = isLessor ? 'Signature du Loueur' : 'Signature du Locataire';
+    document.execCommand('insertHTML', false,
+      `<div data-sigblock="${type}" contenteditable="false"
+           style="display:block;border:2px dashed ${border};background:${bg};text-align:center;padding:14px 10px;margin:8px 0;border-radius:6px;">
+         <span style="font-family:monospace;font-size:11px;color:${color};">{{${type}}}</span>
+         <p style="margin:4px 0 0;font-size:11px;color:${color};">✏️ ${label}</p>
+       </div>`
+    );
   }
 
   async function save() {
@@ -1016,6 +1291,25 @@ function TemplatePanel({
                   </button>
                 ))}
               </div>
+              {/* Blocs de signature */}
+              <div className="flex flex-wrap gap-2 px-2 py-1.5 bg-slate-950 border-b border-surface-border">
+                <span className="text-[10px] text-slate-500 self-center mr-1">Signatures :</span>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); insertSignatureBlock('lessor_signature_block'); }}
+                  className="text-[10px] px-2 py-1 rounded bg-amber-900/40 text-amber-300 border border-amber-700 hover:bg-amber-800/50 transition-colors font-medium flex items-center gap-1"
+                >
+                  <PenLine className="w-3 h-3" /> Zone signature Loueur
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); insertSignatureBlock('signature_block'); }}
+                  className="text-[10px] px-2 py-1 rounded bg-green-900/40 text-green-300 border border-green-700 hover:bg-green-800/50 transition-colors font-medium flex items-center gap-1"
+                >
+                  <PenLine className="w-3 h-3" /> Zone signature Locataire
+                </button>
+                <span className="text-[10px] text-slate-600 self-center">← cliquer positionne le curseur, puis cliquer le bouton</span>
+              </div>
 
               {/* Editor area */}
               <div
@@ -1044,36 +1338,58 @@ function TemplatePanel({
 // ─── Contract Panel ───────────────────────────────────────────────────────────
 
 function ContractPanel({
-  vehicles, templates, businessId, userId, businessName, currency, onClose, onSaved, notifError, notifSuccess,
+  vehicles, templates, contracts: allContracts, businessId, userId, businessName, currency, onClose, onSaved, notifError, notifSuccess,
+  contract,
 }: {
   vehicles: RentalVehicle[];
   templates: ContractTemplate[];
+  contracts: Contract[];
   businessId: string;
   userId: string;
   businessName: string;
   currency: string;
+  contract?: Contract | null;
   onClose: () => void;
   onSaved: (c: Contract) => void;
   notifError: (m: string) => void;
   notifSuccess: (m: string) => void;
 }) {
+  const isEdit = !!contract;
+  const needsInvalidation = isEdit && (contract.status === 'signed' || contract.status === 'sent');
+
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState(false);
   const [form, setForm] = useState({
-    vehicle_id:       vehicles[0]?.id ?? '',
-    template_id:      templates[0]?.id ?? '',
-    client_name:      '',
-    client_phone:     '',
-    client_email:     '',
-    client_id_number: '',
-    client_address:   '',
-    start_date:       TODAY,
-    end_date:         TOMORROW,
-    pickup_location:  '',
-    return_location:  '',
-    deposit_amount:   '',
-    notes:            '',
+    vehicle_id:       contract?.vehicle_id ?? vehicles[0]?.id ?? '',
+    template_id:      contract?.template_id ?? templates[0]?.id ?? '',
+    client_name:      contract?.client_name ?? '',
+    client_phone:     contract?.client_phone ?? '',
+    client_email:     contract?.client_email ?? '',
+    client_id_number: contract?.client_id_number ?? '',
+    client_address:   contract?.client_address ?? '',
+    start_date:       contract?.start_date ?? TODAY,
+    end_date:         contract?.end_date ?? TOMORROW,
+    pickup_location:  contract?.pickup_location ?? '',
+    return_location:  contract?.return_location ?? '',
+    deposit_amount:   contract?.deposit_amount?.toString() ?? '',
+    notes:            contract?.notes ?? '',
   });
+
+  // Véhicules déjà réservés pour la période sélectionnée
+  const bookedVehicleIds = useMemo(() => {
+    if (!form.start_date || !form.end_date) return new Set<string>();
+    return new Set(
+      allContracts
+        .filter((c) =>
+          c.vehicle_id &&
+          (c.status === 'sent' || c.status === 'signed') &&
+          c.id !== contract?.id &&        // exclure le contrat courant en édition
+          c.start_date < form.end_date && // chevauchement : A.start < B.end
+          c.end_date > form.start_date    //               & A.end  > B.start
+        )
+        .map((c) => c.vehicle_id as string)
+    );
+  }, [allContracts, form.start_date, form.end_date, contract?.id]);
+  const [preview, setPreview] = useState(false);
 
   // Client search
   const [clients, setClients]               = useState<Client[]>([]);
@@ -1142,7 +1458,6 @@ function ContractPanel({
       total_amount:     totalAmount.toLocaleString('fr-FR'),
       deposit_amount:   depositAmount.toLocaleString('fr-FR'),
       currency:         displayCurrency(cur),
-      signature_block:  '',
       owner_name:       '',
     };
     return fillTemplate(templateBody, vars);
@@ -1152,6 +1467,10 @@ function ContractPanel({
     if (!form.client_name.trim()) { notifError('Nom du client requis'); return; }
     if (!form.start_date || !form.end_date) { notifError('Dates requises'); return; }
     if (form.end_date <= form.start_date) { notifError('La date de fin doit être après la date de début'); return; }
+    if (form.vehicle_id && bookedVehicleIds.has(form.vehicle_id)) {
+      notifError('Ce véhicule est déjà réservé pour cette période. Choisissez d\'autres dates ou un autre véhicule.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -1174,9 +1493,18 @@ function ContractPanel({
         body:             buildBody(),
         notes:            form.notes.trim(),
       };
-      const contract = await createContract(businessId, userId, input);
-      notifSuccess('Contrat créé');
-      onSaved(contract);
+
+      if (isEdit && contract) {
+        const updated = await updateContract(contract.id, input, needsInvalidation);
+        notifSuccess(needsInvalidation
+          ? 'Contrat modifié — signature invalidée, à refaire signer'
+          : 'Contrat modifié');
+        onSaved(updated);
+      } else {
+        const created = await createContract(businessId, userId, input);
+        notifSuccess('Contrat créé');
+        onSaved(created);
+      }
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -1185,8 +1513,24 @@ function ContractPanel({
   }
 
   return (
-    <SlidePanel title="Nouveau contrat" onClose={onClose} wide>
+    <SlidePanel title={isEdit ? 'Modifier le contrat' : 'Nouveau contrat'} onClose={onClose} wide>
       <div className="space-y-4">
+
+        {/* Avertissement invalidation */}
+        {needsInvalidation && (
+          <div className="flex items-start gap-3 bg-amber-900/30 border border-amber-700 rounded-xl px-4 py-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-300">Ce contrat sera invalidé</p>
+              <p className="text-xs text-amber-400 mt-0.5">
+                {contract?.status === 'signed'
+                  ? 'La signature du locataire sera effacée. Le contrat devra être renvoyé et resigné.'
+                  : 'Le lien envoyé au locataire deviendra invalide. Un nouveau lien devra être envoyé.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Véhicule */}
         <div>
           <label className="text-xs text-slate-400 block mb-1">Véhicule</label>
@@ -1196,16 +1540,27 @@ function ContractPanel({
               Aucun véhicule — ajoutez-en un dans l'onglet Véhicules
             </div>
           ) : (
-            <select value={form.vehicle_id} onChange={(e) => set('vehicle_id', e.target.value)}
-              className="input w-full text-sm">
-              <option value="">— Sans véhicule spécifique —</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} — {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
-                  {!v.is_available ? ' ⚠ Indisponible' : ''}
-                </option>
-              ))}
-            </select>
+            <>
+              <select value={form.vehicle_id} onChange={(e) => set('vehicle_id', e.target.value)}
+                className="input w-full text-sm">
+                <option value="">— Sans véhicule spécifique —</option>
+                {vehicles.map((v) => {
+                  const booked = bookedVehicleIds.has(v.id);
+                  return (
+                    <option key={v.id} value={v.id} disabled={booked}>
+                      {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} — {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
+                      {booked ? ' 🔒 Déjà loué sur cette période' : (!v.is_available ? ' ⚠ Indisponible' : '')}
+                    </option>
+                  );
+                })}
+              </select>
+              {form.vehicle_id && bookedVehicleIds.has(form.vehicle_id) && (
+                <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  Ce véhicule est déjà réservé sur cette période. Choisissez d'autres dates ou un autre véhicule.
+                </p>
+              )}
+            </>
           )}
         </div>
 
@@ -1333,7 +1688,9 @@ function ContractPanel({
         <button onClick={onClose} className="btn-secondary flex-1 h-10 text-sm">Annuler</button>
         <button onClick={save} disabled={saving} className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-2">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          Créer le contrat
+          {isEdit
+            ? (needsInvalidation ? 'Modifier et invalider' : 'Enregistrer les modifications')
+            : 'Créer le contrat'}
         </button>
       </div>
     </SlidePanel>

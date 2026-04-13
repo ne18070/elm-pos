@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Loader2, CheckCircle, AlertTriangle, PenLine, RotateCcw, Send, Download,
@@ -9,6 +9,7 @@ import {
   getContractByToken, signContract, savePdfUrl, uploadContractPdf,
   type Contract,
 } from '@services/supabase/contracts';
+import { generateContractPdf, imageUrlToDataUrl } from '@/lib/contract-pdf';
 
 // ─── Page publique de signature de contrat ────────────────────────────────────
 
@@ -30,6 +31,17 @@ export default function ContractSignPage() {
   const hasStrokes = useRef(false);
 
   // ─── Load ──────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -114,9 +126,17 @@ export default function ContractSignPage() {
       const sigDataUrl = canvas.toDataURL('image/png');
       await signContract(token, sigDataUrl);
 
-      // Generate and upload PDF
+      // Generate and upload PDF (avec signature loueur si déjà présente)
       try {
-        const pdfBlob = await generatePdf(contract, sigDataUrl);
+        let lessorSigSrc: string | undefined;
+        if (contract.lessor_signature_image) {
+          try {
+            lessorSigSrc = await imageUrlToDataUrl(contract.lessor_signature_image);
+          } catch {
+            // non-bloquant : PDF généré sans signature loueur si fetch échoue
+          }
+        }
+        const pdfBlob = await generateContractPdf(contract.body, sigDataUrl, lessorSigSrc);
         const pdfUrl  = await uploadContractPdf(token, pdfBlob);
         await savePdfUrl(token, pdfUrl);
         setContract((prev) => prev ? { ...prev, pdf_url: pdfUrl } : prev);
@@ -331,58 +351,4 @@ function MobileShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-// ─── PDF generation (client-side, jsPDF + html2canvas) ───────────────────────
-
-async function generatePdf(contract: Contract, signatureDataUrl: string): Promise<Blob> {
-  const [jsPDFModule, html2canvasModule] = await Promise.all([
-    import('jspdf'),
-    import('html2canvas'),
-  ]);
-  const jsPDF     = jsPDFModule.default;
-  const html2canvas = html2canvasModule.default;
-
-  // Build signed HTML
-  const signedHtml = contract.body.replace(
-    '{{signature_block}}',
-    `<div style="text-align:center; margin-top: 20px;">
-      <img src="${signatureDataUrl}" alt="signature" style="height:80px; border: 1px solid #ddd; border-radius: 8px; padding: 8px; background: white;" />
-      <p style="font-size:11px; color:#666; margin-top:4px;">Signé électroniquement le ${new Date().toLocaleDateString('fr-FR')}</p>
-    </div>`
-  ) || (contract.body + `<div style="text-align:center; margin-top: 40px;">
-    <img src="${signatureDataUrl}" alt="signature" style="height:80px; border: 1px solid #ddd; border-radius: 8px; padding: 8px; background: white;" />
-    <p style="font-size:11px; color:#666; margin-top:4px;">Signé électroniquement le ${new Date().toLocaleDateString('fr-FR')}</p>
-  </div>`);
-
-  // Render HTML to canvas
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed; left:-9999px; top:0; width:794px; background:white;';
-  container.innerHTML = signedHtml;
-  document.body.appendChild(container);
-
-  try {
-    const canvas = await html2canvas(container, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/jpeg', 0.85);
-
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pdfW = pdf.internal.pageSize.getWidth();
-    const pdfH = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pdfW) / canvas.width;
-
-    let posY = 0;
-    let remaining = imgH;
-    let pageCount = 0;
-    while (remaining > 0) {
-      if (pageCount > 0) pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, imgH);
-      posY += pdfH;
-      remaining -= pdfH;
-      pageCount++;
-    }
-
-    return pdf.output('blob');
-  } finally {
-    document.body.removeChild(container);
-  }
 }
