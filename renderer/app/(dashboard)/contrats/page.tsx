@@ -162,6 +162,47 @@ export default function ContratsPage() {
   const lessorDrawing     = useRef(false);
   const lessorHasStrokes  = useRef(false);
 
+  // Non-passive touch listeners for Samsung Internet / Android WebView
+  // React synthetic touch events are passive by default → preventDefault() is ignored → page scrolls instead of drawing
+  useEffect(() => {
+    if (!lessorSigOpen || lessorSigTab !== 'draw') return;
+    const canvas = lessorCanvasRef.current;
+    if (!canvas) return;
+
+    function scaled(t: Touch) {
+      const r = canvas!.getBoundingClientRect();
+      return { x: (t.clientX - r.left) * canvas!.width / r.width, y: (t.clientY - r.top) * canvas!.height / r.height };
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      e.preventDefault();
+      lessorDrawing.current = true; lessorHasStrokes.current = true;
+      const ctx = canvas!.getContext('2d'); if (!ctx) return;
+      const p = scaled(e.touches[0]);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!lessorDrawing.current) return;
+      e.preventDefault();
+      const ctx = canvas!.getContext('2d'); if (!ctx) return;
+      const p = scaled(e.touches[0]);
+      ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1e293b';
+      ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
+
+    function onTouchEnd() { lessorDrawing.current = false; }
+
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',   onTouchEnd);
+    return () => {
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove',  onTouchMove);
+      canvas.removeEventListener('touchend',   onTouchEnd);
+    };
+  }, [lessorSigOpen, lessorSigTab]);
+
   // ─── Load ────────────────────────────────────────────────────────────────────
 
   async function load() {
