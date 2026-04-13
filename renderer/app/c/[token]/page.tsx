@@ -61,44 +61,90 @@ export default function ContractSignPage() {
   }, [token]);
 
   // ─── Canvas drawing ────────────────────────────────────────────────────────
+  //
+  // Touch handlers are registered as native non-passive listeners so that
+  // e.preventDefault() actually works on Samsung Internet (and Android WebView).
+  // React synthetic touch events default to passive=true, which ignores preventDefault.
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width  / rect.width;
-    const scaleY = canvas.height / rect.height;
-    if ('touches' in e) {
-      const t = e.touches[0];
-      return { x: (t.clientX - rect.left) * scaleX, y: (t.clientY - rect.top) * scaleY };
-    }
-    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
-  };
-
-  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
+  useEffect(() => {
+    if (stage !== 'signing') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    e.preventDefault();
-    drawing.current = true;
+
+    function getScaled(touch: Touch) {
+      const rect   = canvas!.getBoundingClientRect();
+      const scaleX = canvas!.width  / rect.width;
+      const scaleY = canvas!.height / rect.height;
+      return { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY };
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      e.preventDefault();
+      const ctx = canvas!.getContext('2d');
+      if (!ctx) return;
+      drawing.current    = true;
+      hasStrokes.current = true;
+      const pos = getScaled(e.touches[0]);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!drawing.current) return;
+      e.preventDefault();
+      const ctx = canvas!.getContext('2d');
+      if (!ctx) return;
+      const pos = getScaled(e.touches[0]);
+      ctx.lineWidth   = 2.5;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function onTouchEnd() { drawing.current = false; }
+
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',   onTouchEnd);
+
+    return () => {
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove',  onTouchMove);
+      canvas.removeEventListener('touchend',   onTouchEnd);
+    };
+  }, [stage]);
+
+  // Mouse handlers (desktop / Chrome DevTools)
+  const startDrawMouse = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    drawing.current    = true;
     hasStrokes.current = true;
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const pos = getPos(e, canvas);
     ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
+    ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
   };
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+  const drawMouse = (e: React.MouseEvent) => {
     if (!drawing.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    e.preventDefault();
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const pos = getPos(e, canvas);
-    ctx.lineWidth = 2.5;
-    ctx.lineCap   = 'round';
-    ctx.lineJoin  = 'round';
+    ctx.lineWidth   = 2.5;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
     ctx.strokeStyle = '#1e293b';
-    ctx.lineTo(pos.x, pos.y);
+    ctx.lineTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
     ctx.stroke();
   };
 
@@ -290,13 +336,10 @@ export default function ContractSignPage() {
                   height={200}
                   className="w-full touch-none cursor-crosshair"
                   style={{ display: 'block' }}
-                  onMouseDown={startDraw}
-                  onMouseMove={draw}
+                  onMouseDown={startDrawMouse}
+                  onMouseMove={drawMouse}
                   onMouseUp={endDraw}
                   onMouseLeave={endDraw}
-                  onTouchStart={startDraw}
-                  onTouchMove={draw}
-                  onTouchEnd={endDraw}
                 />
                 <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
                   <div className="w-48 h-px bg-gray-300" />
