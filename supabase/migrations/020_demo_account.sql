@@ -1,5 +1,5 @@
 -- ============================================================
--- Elm POS — Compte démo complet
+-- ELM APP — Compte démo complet
 -- email    : demo@elm-pos.app
 -- password : passer123
 -- ============================================================
@@ -79,7 +79,7 @@ INSERT INTO auth.users (
   crypt('passer123', gen_salt('bf')),
   NOW(),
   '{"provider":"email","providers":["email"]}',
-  '{"full_name":"Démo Elm POS","role":"owner"}',
+  '{"full_name":"Démo ELM APP","role":"owner"}',
   NOW(), NOW(),
   '', '', '', ''
 );
@@ -93,7 +93,7 @@ INSERT INTO businesses (
   v_business_id,
   'Boutique Démo', 'retail',
   'Avenue Bourguiba, Dakar', '+221 77 000 00 00', 'demo@elm-pos.app',
-  'XOF', 0, 'Merci de votre visite ! — Elm POS',
+  'XOF', 0, 'Merci de votre visite ! — ELM APP',
   v_user_id,
   '["pièce","kg","litre","sachet","carton","boîte"]'::jsonb
 );
@@ -103,7 +103,7 @@ INSERT INTO businesses (
 -- public.users est créé par le trigger handle_new_user lors de l'INSERT auth.users
 -- On met à jour business_id et role (le trigger crée la ligne avec business_id=NULL)
 UPDATE users
-SET full_name   = 'Démo Elm POS',
+SET full_name   = 'Démo ELM APP',
     role        = 'owner',
     business_id = v_business_id
 WHERE id = v_user_id;

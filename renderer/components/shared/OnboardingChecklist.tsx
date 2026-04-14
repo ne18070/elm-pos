@@ -23,7 +23,7 @@ export function OnboardingChecklist() {
           </div>
           <div>
             <p className="font-semibold text-white text-sm">
-              {business?.type === 'hotel' ? 'Bienvenue sur Elm Hôtel !' : 'Bienvenue sur Elm POS !'}
+              {business?.type === 'hotel' ? 'Bienvenue sur Elm Hôtel !' : 'Bienvenue sur ELM APP !'}
             </p>
             <p className="text-xs text-slate-400 mt-0.5">
               {doneCount}/{steps.length} étapes complétées

@@ -5,7 +5,7 @@ import { ThemeProvider } from './providers/theme-provider';
 import { NotificationContainer } from '@/components/ui/NotificationContainer';
 
 export const metadata: Metadata = {
-  title: 'Elm POS',
+  title: 'ELM APP',
   description: 'Multi-business Point of Sale System',
 };
 

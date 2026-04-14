@@ -47,7 +47,7 @@ export default function PosPage() {
   const { warning } = useNotificationStore();
 
   const { sendPaymentConfirm } = useCustomerDisplay({
-    businessName: business?.name ?? 'Elm POS',
+    businessName: business?.name ?? 'ELM APP',
     logoUrl:      business?.logo_url,
     currency:     business?.currency ?? 'XOF',
     taxRate:      business?.tax_rate ?? 0,

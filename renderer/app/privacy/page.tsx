@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ShoppingCart, ArrowLeft } from 'lucide-react';
 
 export const metadata = {
-  title: 'Politique de confidentialité — Elm POS',
+  title: 'Politique de confidentialité — ELM APP',
 };
 
 export default function PrivacyPage() {
@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center mb-4 shadow-glow">
             <ShoppingCart className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Elm POS</h1>
+          <h1 className="text-2xl font-bold text-white">ELM APP</h1>
           <p className="text-slate-400 text-sm mt-1">Politique de confidentialité</p>
         </div>
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
           <div className="space-y-2">
             <p className="text-xs text-slate-500">Dernière mise à jour : avril 2026</p>
             <p>
-              Elm POS s&apos;engage à protéger la vie privée de ses utilisateurs. La présente politique de
+              ELM APP s&apos;engage à protéger la vie privée de ses utilisateurs. La présente politique de
               confidentialité décrit les données que nous collectons, la manière dont nous les utilisons et
               les droits dont vous disposez à leur égard.
             </p>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
           {/* 1 */}
           <Section title="1. Qui sommes-nous ?">
             <p>
-              Elm POS est une solution de gestion de point de vente (caisse, stocks, commandes, comptabilité)
+              ELM APP est une solution de gestion de point de vente (caisse, stocks, commandes, comptabilité)
               destinée aux commerçants, restaurants, hôtels et prestataires de service. L&apos;éditeur de
               l&apos;application est joignable à l&apos;adresse :{' '}
               <a href="mailto:contact@elm-app.click" className="text-brand-400 hover:text-brand-300">
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
 
           {/* 2 */}
           <Section title="2. Données collectées">
-            <p>Dans le cadre de l&apos;utilisation d&apos;Elm POS, nous collectons les catégories de données suivantes :</p>
+            <p>Dans le cadre de l&apos;utilisation d&apos;ELM APP, nous collectons les catégories de données suivantes :</p>
             <ul className="list-disc pl-5 space-y-1.5 mt-2">
               <li>
                 <span className="text-white font-medium">Données de compte :</span> nom complet, adresse
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
           {/* 5 */}
           <Section title="5. Hébergement et sous-traitants">
             <p>
-              Elm POS utilise <span className="text-white font-medium">Supabase</span> (infrastructure cloud
+              ELM APP utilise <span className="text-white font-medium">Supabase</span> (infrastructure cloud
               basée sur PostgreSQL) pour l&apos;hébergement des données. Les serveurs sont localisés dans des
               centres de données certifiés ISO 27001.
             </p>
@@ -197,7 +197,7 @@ export default function PrivacyPage() {
           {/* 9 */}
           <Section title="9. Cookies et stockage local">
             <p>
-              Elm POS est une application de bureau (Electron). Elle utilise le stockage local du navigateur
+              ELM APP est une application de bureau (Electron). Elle utilise le stockage local du navigateur
               intégré uniquement pour conserver les préférences de configuration (imprimante, tiroir-caisse,
               thème) sur votre appareil. Aucun cookie de traçage publicitaire n&apos;est utilisé.
             </p>
@@ -218,7 +218,7 @@ export default function PrivacyPage() {
               Pour toute question relative à la présente politique ou au traitement de vos données personnelles :
             </p>
             <div className="mt-3 p-4 rounded-xl bg-surface-input border border-surface-border space-y-1">
-              <p className="text-white font-medium">Elm POS</p>
+              <p className="text-white font-medium">ELM APP</p>
               <p>
                 E-mail :{' '}
                 <a href="mailto:privacy@elm-app.click" className="text-brand-400 hover:text-brand-300">

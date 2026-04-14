@@ -293,7 +293,7 @@ export default function ComptabilitePage() {
   </div>
   ${body}
   <p style="margin-top:32px;font-size:10px;color:#94a3b8;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px">
-    Document généré par ${bizName} · Elm POS · ${printDate}
+    Document généré par ${bizName} · ELM APP · ${printDate}
   </p>
 </body></html>`;
 

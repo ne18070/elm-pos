@@ -859,7 +859,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="label">
                       Verify Token
-                      <span className="text-slate-500 font-normal"> — généré par Elm POS, à coller dans Meta</span>
+                      <span className="text-slate-500 font-normal"> — généré par ELM APP, à coller dans Meta</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <input

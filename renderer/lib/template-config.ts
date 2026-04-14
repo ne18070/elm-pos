@@ -516,7 +516,7 @@ function renderFooter(ctx: RenderCtx, isThermal: boolean): string {
         ${config.footerText || (biz.receipt_footer ?? 'Merci de votre visite !')}
       </div>
       <div class="center small" style="margin-top:6px;color:#aaa">
-        ${fmtDate(order.created_at)} — Elm POS
+        ${fmtDate(order.created_at)} — ELM APP
       </div>
       ${config.showQRCode ? `
       <div class="center" style="margin-top:8px">

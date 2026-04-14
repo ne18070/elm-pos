@@ -67,7 +67,7 @@
   },
   "build": {
     "appId": "com.elmpos.app",
-    "productName": "Elm POS",
+    "productName": "ELM APP",
     "directories": {
       "output": "release"
     },

@@ -140,7 +140,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mb-4 shadow-glow">
             <ShoppingCart className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Elm POS</h1>
+          <h1 className="text-2xl font-bold text-white">ELM APP</h1>
           <p className="text-slate-400 text-sm mt-1">Connectez-vous à votre compte</p>
           <p className="text-xs text-slate-500 mt-2">
             Pas encore de compte ?{' '}
@@ -209,7 +209,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          Elm POS — Caisse multi-établissements &nbsp;·&nbsp;{' '}
+          ELM APP — Caisse multi-établissements &nbsp;·&nbsp;{' '}
           <a href="/privacy" className="hover:text-slate-400 transition-colors">
             Politique de confidentialité
           </a>

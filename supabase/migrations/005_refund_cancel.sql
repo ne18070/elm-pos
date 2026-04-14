@@ -1,5 +1,5 @@
 -- ============================================================
--- Elm POS — Annulation et remboursement transactionnels
+-- ELM APP — Annulation et remboursement transactionnels
 -- À exécuter dans : Supabase Dashboard > SQL Editor
 -- ============================================================
 

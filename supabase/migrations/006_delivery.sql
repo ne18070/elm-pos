@@ -1,5 +1,5 @@
 -- ============================================================
--- Elm POS — Système de vérification livraison / picking
+-- ELM APP — Système de vérification livraison / picking
 -- À exécuter dans : Supabase Dashboard > SQL Editor
 -- ============================================================
 

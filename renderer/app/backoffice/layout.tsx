@@ -47,7 +47,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
             <ShieldCheck className="w-4 h-4 text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white">Elm POS — Back Office</p>
+            <p className="text-sm font-bold text-white">ELM APP — Back Office</p>
             <p className="text-xs text-slate-500">{user.email}</p>
           </div>
         </div>

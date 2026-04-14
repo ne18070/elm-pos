@@ -152,7 +152,7 @@ export default function BillingPage() {
               <>
                 <p className="font-semibold text-red-400">Accès expiré</p>
                 <p className="text-sm text-slate-400 mt-0.5">
-                  Souscrivez un abonnement pour continuer à utiliser Elm POS.
+                  Souscrivez un abonnement pour continuer à utiliser ELM APP.
                 </p>
               </>
             )}

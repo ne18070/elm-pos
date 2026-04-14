@@ -61,7 +61,7 @@ export function NotificationBell() {
       type: 'danger',
       icon: Clock,
       title: days === 0 ? "Essai expiré aujourd'hui" : `Essai expire dans ${days} jour${days > 1 ? 's' : ''}`,
-      description: 'Souscrivez un abonnement pour continuer à utiliser Elm POS.',
+      description: 'Souscrivez un abonnement pour continuer à utiliser ELM APP.',
       href: '/billing',
     });
   } else if (status === 'trial' && days <= 7) {
