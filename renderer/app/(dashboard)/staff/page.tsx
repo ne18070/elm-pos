@@ -47,7 +47,6 @@ const MONTH_NAMES = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
-
 function fmtMoney(amount: number, currency: string) {
   return `${amount.toLocaleString('fr-FR')} ${displayCurrency(currency)}`;
 }
