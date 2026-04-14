@@ -1,5 +1,5 @@
 import type { Order, Business } from '../../types';
-import type { Staff, StaffPayment } from '../services/supabase/staff';
+import type { Staff, StaffPayment } from '../../services/supabase/staff';
 
 // ─── Montant en lettres (français) ───────────────────────────────────────────
 
