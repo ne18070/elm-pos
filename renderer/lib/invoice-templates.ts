@@ -1,4 +1,5 @@
 import type { Order, Business } from '../../types';
+import type { Staff, StaffPayment } from '../services/supabase/staff';
 
 // ─── Montant en lettres (français) ───────────────────────────────────────────
 
@@ -633,6 +634,164 @@ ${balance <= 0 && res.paid_amount > 0 ? '<div style="text-align:right"><span cla
 <div class="footer">
   ${business.receipt_footer ? `<p>${business.receipt_footer}</p>` : ''}
   <p style="margin-top:4px">Édité le ${printDate} · ${business.name} · Elm Hôtel</p>
+</div>
+
+</body></html>`;
+}
+
+// ─── Bulletin de paie ────────────────────────────────────────────────────────
+
+export function generateStaffPayslip(
+  staff: Staff,
+  payment: StaffPayment,
+  business: Business,
+): string {
+  const cur = business.currency ?? 'XOF';
+  const payslipNum = payment.id.replace(/-/g, '').toUpperCase().slice(0, 8);
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Bulletin de paie ${staff.name} - ${payslipNum}</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #1f2937; line-height: 1.5; }
+  .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+  .biz-name { font-size: 18px; font-weight: 800; color: #111827; }
+  .biz-detail { font-size: 10px; color: #6b7280; margin-top: 2px; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { font-size: 20px; font-weight: 800; color: #4f46e5; margin-bottom: 4px; }
+  .doc-title p { font-size: 11px; color: #6b7280; }
+  
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
+  .box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; }
+  .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; margin-bottom: 4px; }
+  .val { font-size: 12px; font-weight: 700; color: #111827; }
+  
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th { background: #1f2937; color: #ffffff; padding: 8px 12px; text-align: left; font-size: 10px; text-transform: uppercase; }
+  td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; }
+  .r { text-align: right; }
+  .bold { font-weight: 700; }
+  
+  .totals-container { display: flex; justify-content: flex-end; }
+  .totals-table { width: 280px; }
+  .totals-table td { padding: 6px 12px; border: none; }
+  .total-row { background: #4f46e5; color: #ffffff; }
+  .total-row td { font-size: 14px; font-weight: 800; padding: 10px 12px; }
+  
+  .footer { margin-top: 50px; border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; font-size: 10px; color: #9ca3af; }
+  .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
+  .sig-box { width: 200px; text-align: center; }
+  .sig-label { font-size: 10px; font-weight: 600; color: #4b5563; margin-bottom: 40px; }
+  .sig-line { border-bottom: 1px solid #d1d5db; }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    <div class="biz-name">${business.name}</div>
+    ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+    ${business.phone ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
+    ${business.email ? `<div class="biz-detail">${business.email}</div>` : ''}
+  </div>
+  <div class="doc-title">
+    <h1>BULLETIN DE PAIE</h1>
+    <p>N° ${payslipNum} — Édité le ${printDate}</p>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="box">
+    <div class="label">Salarié</div>
+    <div class="val">${staff.name}</div>
+    <div class="biz-detail">Poste : ${staff.position ?? '—'}</div>
+    <div class="biz-detail">Département : ${staff.department ?? '—'}</div>
+  </div>
+  <div class="box">
+    <div class="label">Période</div>
+    <div class="val">${fmtDate(payment.period_start)} au ${fmtDate(payment.period_end)}</div>
+    <div class="biz-detail">Mode de paiement : ${payment.payment_method}</div>
+    <div class="biz-detail">Date de paiement : ${payment.payment_date ? fmtDate(payment.payment_date) : '—'}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Désignation</th>
+      <th class="r">Base / Quantité</th>
+      <th class="r">Taux</th>
+      <th class="r">Montant</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Salaire de base (${staff.salary_type})</td>
+      <td class="r">${staff.salary_type === 'hourly' ? (payment.hours_worked ?? '—') + ' h' : (payment.days_worked ?? '—') + ' j'}</td>
+      <td class="r">${fmt(staff.salary_rate, cur)}</td>
+      <td class="r bold">${fmt(payment.base_amount, cur)}</td>
+    </tr>
+    ${payment.bonuses > 0 ? `
+    <tr>
+      <td>Primes et gratifications</td>
+      <td class="r">—</td>
+      <td class="r">—</td>
+      <td class="r bold">+ ${fmt(payment.bonuses, cur)}</td>
+    </tr>` : ''}
+    ${payment.deductions > 0 ? `
+    <tr>
+      <td>Retenues et avances</td>
+      <td class="r">—</td>
+      <td class="r">—</td>
+      <td class="r bold" style="color:#dc2626">- ${fmt(payment.deductions, cur)}</td>
+    </tr>` : ''}
+  </tbody>
+</table>
+
+<div class="totals-container">
+  <table class="totals-table">
+    <tr>
+      <td>Total Brut</td>
+      <td class="r">${fmt(payment.base_amount + payment.bonuses, cur)}</td>
+    </tr>
+    <tr>
+      <td>Total Retenues</td>
+      <td class="r" style="color:#dc2626">-${fmt(payment.deductions, cur)}</td>
+    </tr>
+    <tr class="total-row">
+      <td>NET À PAYER</td>
+      <td class="r">${fmt(payment.net_amount, cur)}</td>
+    </tr>
+  </table>
+</div>
+
+<div style="margin-top:20px; font-style:italic; font-size:10px;">
+  Arrêté le présent bulletin de paie à la somme de :<br>
+  <strong style="text-transform: uppercase;">${amountInWords(payment.net_amount, cur)}</strong>
+</div>
+
+${payment.notes ? `
+<div style="margin-top:20px; padding:10px; background:#fef3c7; border-radius:6px; font-size:10px; color:#92400e;">
+  <strong>Notes :</strong> ${payment.notes}
+</div>` : ''}
+
+<div class="signatures">
+  <div class="sig-box">
+    <div class="sig-label">Signature de l'employeur</div>
+    <div class="sig-line"></div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">Signature du salarié</div>
+    <div class="sig-line"></div>
+  </div>
+</div>
+
+<div class="footer">
+  ${business.receipt_footer ?? 'Merci pour votre contribution au développement de l\'entreprise.'}<br>
+  Document généré par ELM APP
 </div>
 
 </body></html>`;
