@@ -26,6 +26,7 @@ import {
 } from '@services/supabase/staff';
 import { getTeamMembers, inviteUser } from '@services/supabase/users';
 import type { User as SystemUser } from '@pos-types';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 
@@ -81,6 +82,8 @@ export default function StaffPage() {
 
   // Search
   const [search, setSearch] = useState('');
+
+  const { askConfirm, ConfirmDialog } = useConfirm();
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -189,26 +192,28 @@ export default function StaffPage() {
   }
 
   async function bulkMarkAttendance(day: number) {
-    if (!business || !confirm(`Marquer tous les employés actifs comme Présents pour le ${day}/${month}/${year} ?`)) return;
-    setLoading(true);
-    try {
-      const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const results = await Promise.all(activeStaff.map((s) =>
-        upsertAttendance({
-          business_id:  business.id,
-          staff_id:     s.id,
-          date,
-          status:       'present',
-          hours_worked: 8,
-        })
-      ));
-      setAttendance((prev) => {
-        const filtered = prev.filter((a) => a.date !== date);
-        return [...filtered, ...results];
-      });
-      notifSuccess(`Présences enregistrées pour le ${day}/${month}`);
-    } catch (e) { notifError(toUserError(e)); }
-    finally { setLoading(false); }
+    if (!business) return;
+    askConfirm(`Marquer tous les employés actifs comme Présents pour le ${day}/${month}/${year} ?`, async () => {
+      setLoading(true);
+      try {
+        const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const results = await Promise.all(staffList.filter((s) => s.status === 'active').map((s) =>
+          upsertAttendance({
+            business_id:  business.id,
+            staff_id:     s.id,
+            date,
+            status:       'present',
+            hours_worked: 8,
+          })
+        ));
+        setAttendance((prev) => {
+          const filtered = prev.filter((a) => a.date !== date);
+          return [...filtered, ...results];
+        });
+        notifSuccess(`Présences enregistrées pour le ${day}/${month}`);
+      } catch (e) { notifError(toUserError(e)); }
+      finally { setLoading(false); }
+    });
   }
 
   function handlePrintPayslip(staff: Staff, payment: StaffPayment) {
@@ -220,12 +225,13 @@ export default function StaffPage() {
   // ── Staff actions ────────────────────────────────────────────────────────────
 
   async function handleDeleteStaff(s: Staff) {
-    if (!confirm(`Supprimer ${s.name} ? Cette action est irréversible.`)) return;
-    try {
-      await deleteStaff(s.id);
-      setStaff((prev) => prev.filter((x) => x.id !== s.id));
-      notifSuccess(`${s.name} supprimé`);
-    } catch (e) { notifError(toUserError(e)); }
+    askConfirm(`Supprimer ${s.name} ? Cette action est irréversible.`, async () => {
+      try {
+        await deleteStaff(s.id);
+        setStaff((prev) => prev.filter((x) => x.id !== s.id));
+        notifSuccess(`${s.name} supprimé`);
+      } catch (e) { notifError(toUserError(e)); }
+    });
   }
 
   // ── Payroll ──────────────────────────────────────────────────────────────────
@@ -337,14 +343,13 @@ export default function StaffPage() {
                       onEdit={() => setStaffPanel({ item: s })}
                       onDelete={() => handleDeleteStaff(s)}
                       onLinkAccount={() => setLinkModal({ staff: s })}
-                      onUnlinkAccount={async () => {
-                        if (!confirm(`Supprimer le compte de connexion de ${s.name} ?`)) return;
+                      onUnlinkAccount={() => askConfirm(`Supprimer le compte de connexion de ${s.name} ?`, async () => {
                         try {
                           await unlinkStaffUser(s.id);
                           setStaff((prev) => prev.map((x) => x.id === s.id ? { ...x, user_id: null } : x));
                           notifSuccess('Compte délié');
                         } catch (e) { notifError(toUserError(e)); }
-                      }}
+                      })}
                     />
                   ))}
                 </div>
@@ -612,13 +617,12 @@ export default function StaffPage() {
                             className="p-1 text-slate-500 hover:text-white transition-colors" title="Imprimer">
                             <Printer className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={async () => {
-                            if (!confirm('Supprimer ce paiement ?')) return;
+                          <button onClick={() => askConfirm('Supprimer ce paiement ?', async () => {
                             try {
                               await deletePayment(p.id);
                               setPayments((prev) => prev.filter((x) => x.id !== p.id));
                             } catch (e) { notifError(toUserError(e)); }
-                          }} className="p-1 text-slate-600 hover:text-red-400 transition-colors">
+                          })} className="p-1 text-slate-600 hover:text-red-400 transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -688,6 +692,8 @@ export default function StaffPage() {
           notifSuccess={notifSuccess}
         />
       )}
+
+      <ConfirmDialog />
     </div>
   );
 }
