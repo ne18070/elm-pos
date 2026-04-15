@@ -210,6 +210,7 @@ export default function PosPage() {
             selectedClient={selectedClient} onClientChange={setSelectedClient}
             tableId={selectedTable?.id}
             onTableClear={() => setSelectedTable(null)}
+            isRestaurant={business?.type === 'restaurant' || business?.features?.includes('restaurant')}
           />
         </div>
       </div>
@@ -275,6 +276,7 @@ export default function PosPage() {
               onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
               wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
               selectedClient={selectedClient} onClientChange={setSelectedClient}
+              isRestaurant={business?.type === 'restaurant' || business?.features?.includes('restaurant')}
             />
           </div>
         </div>

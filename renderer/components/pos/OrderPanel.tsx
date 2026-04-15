@@ -32,12 +32,13 @@ interface OrderPanelProps {
   onClientChange?: (client: SelectedClient | null) => void;
   tableId?: string;
   onTableClear?: () => void;
+  isRestaurant?: boolean;
 }
 
 export function OrderPanel({ 
-  taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld, 
+  taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld,
   wholesaleCtx, onWholesaleChange, selectedClient, onClientChange,
-  tableId, onTableClear
+  tableId, onTableClear, isRestaurant
 }: OrderPanelProps) {
   const {
     items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
@@ -416,7 +417,7 @@ export function OrderPanel({
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-          ) : (business?.type === 'restaurant' || business?.features?.includes('restaurant')) && (
+          ) : isRestaurant && (
             <p className="text-[10px] text-slate-500 italic px-1">Aucune table sélectionnée</p>
           )}
 
