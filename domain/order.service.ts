@@ -25,6 +25,7 @@ export interface CreateOrderPayload {
   taxRate: number;        // en %, ex: 18
   taxInclusive?: boolean; // true = prix TTC saisis
   notes?: string;
+  tableId?: string;
 }
 
 export type OrderValidationError =
@@ -160,6 +161,7 @@ export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string,
     coupon_ids:  coupons.map((c) => c.id),
     coupon_codes: coupons.map((c) => c.code),
     notes:       payload.notes ?? payload.cart.notes,
+    table_id:    payload.tableId ?? null,
   };
 }
 

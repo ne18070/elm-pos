@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble } from 'lucide-react';
 import { useCustomersStore } from '@/store/customers';
 import type { SavedCustomer } from '@/store/customers';
 import { Modal } from '@/components/ui/Modal';
@@ -16,6 +16,7 @@ import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
 import { createOrder } from '@services/supabase/orders';
 import { enqueueToSync } from '@/lib/ipc';
+import { RoomPicker } from './RoomPicker';
 import {
   computeChange,
   suggestRoundAmounts,
@@ -29,7 +30,7 @@ import {
   computeOrderTotals,
   formatOrderError,
 } from '@domain/order.service';
-import type { PaymentMethod } from '@pos-types';
+import type { PaymentMethod, HotelReservation } from '@pos-types';
 
 interface PaymentModalProps {
   taxRate: number;
@@ -40,16 +41,17 @@ interface PaymentModalProps {
   onPaymentConfirm?: (amountPaid: number, change: number, total: number) => void;
   wholesaleCtx?: WholesaleContext | null;
   prefilledCustomer?: { name: string; phone?: string | null } | null;
+  tableId?: string;
 }
 
-type Step = 'methode' | 'montant' | 'partiel' | 'attente' | 'succes';
+type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes';
 
 const SIMPLE_METHODES: PaymentMethod[] = ['cash', 'card', 'mobile_money'];
 const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', 'mobile_money'];
 
 const BC_CHANNEL = 'elm-pos-display';
 
-export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx, prefilledCustomer }: PaymentModalProps) {
+export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSuccess, onPaymentConfirm, wholesaleCtx, prefilledCustomer, tableId }: PaymentModalProps) {
   const [step, setStep]               = useState<Step>('methode');
   const [methode, setMethode]         = useState<PaymentMethod>('cash');
   const [montantRecu, setMontantRecu] = useState('');
@@ -58,6 +60,9 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [ordre, setOrdre]             = useState<Order | null>(null);
   const [erreur, setErreur]           = useState('');
   const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | null>(null);
+
+  // Hôtel
+  const [selectedReservation, setSelectedReservation] = useState<HotelReservation | null>(null);
 
   // Paiement partiel (acompte)
   const [partialMethod, setPartialMethod]     = useState<Exclude<PaymentMethod, 'partial'>>('cash');
@@ -156,10 +161,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         tax_rate:       taxRate,
         coupons:        cart.coupons,
         notes:          cart.notes,
-        customer_name:  customerName.trim() || undefined,
-        customer_phone: customerPhone.trim() || undefined,
+        customer_name:  (methode === 'room_charge' ? selectedReservation?.guest?.full_name : customerName.trim()) || undefined,
+        customer_phone: (methode === 'room_charge' ? selectedReservation?.guest?.phone : customerPhone.trim()) || undefined,
+        hotel_reservation_id: selectedReservation?.id,
+        table_id:       tableId,
       });
-      if (customerName.trim()) saveCustomer(customerName, customerPhone);
+      if (customerName.trim() && methode !== 'room_charge') saveCustomer(customerName, customerPhone);
       setOrdreId(order.id);
       setOrdre(order);
       printReceipt({
@@ -176,7 +183,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       onPaymentConfirm?.(methode === 'cash' ? montantRecuNum : total, rendu, total);
       cart.clear();
       setStep('succes');
-    } catch {
+    } catch (err: any) {
+      console.error('Order creation failed:', err);
       const dbPayload = buildOrderDbPayload({
         businessId:    business.id,
         cashierId:     user.id,
@@ -186,7 +194,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         taxRate,
         taxInclusive,
         notes:         cart.notes,
+        tableId:       tableId,
       });
+      if (selectedReservation) {
+        (dbPayload as any).hotel_reservation_id = selectedReservation.id;
+      }
       await enqueueToSync('create_order', dbPayload);
       notifWarning('Hors ligne — vente enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
@@ -214,6 +226,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         notes:          cart.notes,
         customer_name:  customerName.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
+        table_id:       tableId,
       });
       setOrdreId(order.id);
       setOrdre(order);
@@ -233,6 +246,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         paymentAmount: acompteNum,
         taxRate,
         notes:         cart.notes,
+        tableId:       tableId,
       });
       (dbPayload as Record<string, unknown>).customer_name  = customerName.trim() || null;
       (dbPayload as Record<string, unknown>).customer_phone = customerPhone.trim() || null;
@@ -332,6 +346,19 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   <span className="text-xs font-medium text-center">{PAYMENT_METHOD_LABELS[m]}</span>
                 </button>
               ))}
+              {(business?.type === 'hotel' || business?.features?.includes('hotel')) && (
+                <button
+                  onClick={() => setMethode('room_charge')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
+                    ${methode === 'room_charge'
+                      ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400'
+                      : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                    }`}
+                >
+                  <BedDouble className="w-6 h-6" />
+                  <span className="text-xs font-medium text-center">{PAYMENT_METHOD_LABELS['room_charge']}</span>
+                </button>
+              )}
               <button
                 onClick={() => setMethode('partial')}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
@@ -347,7 +374,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           </div>
 
           <button
-            onClick={() => methode === 'partial' ? setStep('partiel') : setStep('montant')}
+            onClick={() => {
+              if (methode === 'partial') setStep('partiel');
+              else if (methode === 'room_charge') setStep('room');
+              else setStep('montant');
+            }}
             className="btn-primary w-full h-11"
           >
             Continuer
@@ -630,6 +661,19 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── Étape 2c : Note de chambre ───────────────────────────────────── */}
+      {step === 'room' && (
+        <RoomPicker
+          businessId={business?.id!}
+          currency={currency}
+          onSelect={(res) => {
+            setSelectedReservation(res);
+            preConfirmerSimple();
+          }}
+          onCancel={() => setStep('methode')}
+        />
       )}
 
       {/* ── Étape 3 : attente validation client ───────────────────────────── */}

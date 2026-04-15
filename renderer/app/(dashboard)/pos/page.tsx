@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutGrid, List, ShoppingCart, X } from 'lucide-react';
+import { LayoutGrid, List, ShoppingCart, X, Map as MapIcon, Utensils } from 'lucide-react';
 import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
 import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
@@ -11,6 +11,7 @@ import { PaymentModal } from '@/components/pos/PaymentModal';
 import { CategoryBar } from '@/components/pos/CategoryBar';
 import { BarcodeListener } from '@/components/pos/BarcodeListener';
 import { HeldOrdersDrawer } from '@/components/pos/HeldOrdersDrawer';
+import { FloorPlan } from '@/components/pos/FloorPlan';
 import { OfflineBanner } from '@/components/shared/OfflineBanner';
 import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 import { useCartStore } from '@/store/cart';
@@ -18,19 +19,22 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { getProductByBarcode } from '@services/supabase/products';
-import type { Product } from '@pos-types';
+import type { Product, RestaurantTable } from '@pos-types';
 
 type ViewMode = 'grid' | 'list';
 type MobileTab = 'catalog' | 'cart';
+type LayoutMode = 'catalog' | 'map';
 
 export default function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery]            = useState('');
   const [paymentOpen, setPaymentOpen]            = useState(false);
   const [view, setView]                          = useState<ViewMode>('list');
+  const [layout, setLayout]                      = useState<LayoutMode>('catalog');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
   const [wholesaleCtx, setWholesaleCtx]          = useState<WholesaleContext | null>(null);
   const [selectedClient, setSelectedClient]      = useState<SelectedClient | null>(null);
+  const [selectedTable, setSelectedTable]        = useState<RestaurantTable | null>(null);
   const [mobileTab, setMobileTab]                = useState<MobileTab>('catalog');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -144,7 +148,27 @@ export default function PosPage() {
                 </button>
               )}
             </div>
+            
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
+              {(business?.type === 'restaurant' || business?.features?.includes('restaurant')) && (
+                <>
+                  <button 
+                    onClick={() => setLayout('catalog')} 
+                    title="Catalogue"
+                    className={`p-2 rounded-lg transition-colors ${layout === 'catalog' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    <Utensils className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setLayout('map')} 
+                    title="Plan de salle"
+                    className={`p-2 rounded-lg transition-colors ${layout === 'map' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    <MapIcon className="w-4 h-4" />
+                  </button>
+                  <div className="w-px h-4 bg-slate-700 mx-1" />
+                </>
+              )}
               <button onClick={() => setView('grid')} title="Vue grille"
                 className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
                 <LayoutGrid className="w-4 h-4" />
@@ -155,10 +179,26 @@ export default function PosPage() {
               </button>
             </div>
           </div>
-          <CategoryBar businessId={business?.id ?? ''} selected={selectedCategory} onSelect={setSelectedCategory} />
-          <div className="flex-1 overflow-y-auto p-4">
-            <ProductGrid businessId={business?.id ?? ''} categoryId={selectedCategory} search={searchQuery} view={view} onSelect={handleProductSelect} />
-          </div>
+
+          {layout === 'map' ? (
+            <div className="flex-1 p-4 overflow-hidden">
+              <FloorPlan 
+                businessId={business?.id ?? ''} 
+                onTableSelect={(table) => {
+                  setSelectedTable(table);
+                  setLayout('catalog');
+                }}
+                selectedTableId={selectedTable?.id}
+              />
+            </div>
+          ) : (
+            <>
+              <CategoryBar businessId={business?.id ?? ''} selected={selectedCategory} onSelect={setSelectedCategory} />
+              <div className="flex-1 overflow-y-auto p-4">
+                <ProductGrid businessId={business?.id ?? ''} categoryId={selectedCategory} search={searchQuery} view={view} onSelect={handleProductSelect} />
+              </div>
+            </>
+          )}
         </div>
         {/* Droite : panier */}
         <div className="w-96 flex flex-col bg-surface-card">
@@ -168,6 +208,8 @@ export default function PosPage() {
             onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
             wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
             selectedClient={selectedClient} onClientChange={setSelectedClient}
+            tableId={selectedTable?.id}
+            onTableClear={() => setSelectedTable(null)}
           />
         </div>
       </div>
@@ -253,10 +295,15 @@ export default function PosPage() {
           taxInclusive={business?.tax_inclusive ?? false}
           currency={business?.currency ?? 'XOF'}
           onClose={() => setPaymentOpen(false)}
-          onSuccess={() => { setPaymentOpen(false); setSelectedClient(null); }}
+          onSuccess={() => { 
+            setPaymentOpen(false); 
+            setSelectedClient(null); 
+            setSelectedTable(null); // Reset table after sale
+          }}
           onPaymentConfirm={sendPaymentConfirm}
           wholesaleCtx={wholesaleCtx}
           prefilledCustomer={selectedClient}
+          tableId={selectedTable?.id}
         />
       )}
     </div>

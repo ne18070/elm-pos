@@ -16,6 +16,8 @@ export interface CreateOrderInput {
   /** Informations client (obligatoires pour les acomptes) */
   customer_name?: string;
   customer_phone?: string;
+  hotel_reservation_id?: string;
+  table_id?: string;
   /** Pour paiement partiel : liste détaillée des lignes de paiement */
   payments?: Array<{ method: string; amount: number }>;
 }
@@ -42,6 +44,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     order_data: {
       business_id: input.business_id,
       cashier_id:  input.cashier_id,
+      hotel_reservation_id: input.hotel_reservation_id ?? null,
       items: input.cart.items.map((item) => ({
         product_id:       item.product_id,
         variant_id:       item.variant_id ?? null,
@@ -70,6 +73,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       notes:          input.notes          ?? null,
       customer_name:  input.customer_name  ?? null,
       customer_phone: input.customer_phone ?? null,
+      table_id:       input.table_id       ?? null,
     },
   }) as never);
 

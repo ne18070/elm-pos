@@ -85,7 +85,7 @@ export interface Product {
 
 export type OrderStatus   = 'pending' | 'paid' | 'cancelled' | 'refunded';
 export type DeliveryStatus = 'pending' | 'picking' | 'delivered';
-export type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'partial';
+export type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'partial' | 'room_charge' | 'free';
 
 export interface OrderItem {
   id: string;
@@ -128,6 +128,8 @@ export interface Order {
   notes?: string;
   customer_name?: string;
   customer_phone?: string;
+  hotel_reservation_id?: string;
+  table_id?: string;
   created_at: string;
   updated_at: string;
   source?: string;
@@ -142,6 +144,38 @@ export interface Order {
   // joined
   cashier?: User;
   livreur?: import('../services/supabase/livreurs').Livreur;
+}
+
+// ─── Restaurant & Seating ────────────────────────────────────────────────────
+
+export interface RestaurantFloor {
+  id: string;
+  business_id: string;
+  name: string;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type TableShape = 'square' | 'round' | 'rectangle';
+export type TableStatus = 'free' | 'occupied' | 'reserved' | 'cleaning';
+
+export interface RestaurantTable {
+  id: string;
+  business_id: string;
+  floor_id: string;
+  name: string;
+  capacity: number;
+  shape: TableShape;
+  pos_x: number;
+  pos_y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  status: TableStatus;
+  current_order_id?: string | null;
+  is_active: boolean;
+  created_at: string;
 }
 
 // ─── Cart (local state, not persisted to DB) ──────────────────────────────────

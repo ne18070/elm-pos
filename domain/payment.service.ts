@@ -77,6 +77,8 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   card:         'Carte bancaire',
   mobile_money: 'Mobile Money',
   partial:      'Paiement partiel',
+  room_charge:  'Note de chambre',
+  free:         'Gratuité / Offert',
 };
 
 export const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
@@ -84,6 +86,8 @@ export const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   card:         'CreditCard',
   mobile_money: 'Smartphone',
   partial:      'SplitSquareHorizontal',
+  room_charge:  'BedDouble',
+  free:         'Gift',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

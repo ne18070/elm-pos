@@ -30,15 +30,32 @@ interface OrderPanelProps {
   onWholesaleChange?: (ctx: WholesaleContext | null) => void;
   selectedClient?: SelectedClient | null;
   onClientChange?: (client: SelectedClient | null) => void;
+  tableId?: string;
+  onTableClear?: () => void;
 }
 
-export function OrderPanel({ taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld, wholesaleCtx, onWholesaleChange, selectedClient, onClientChange }: OrderPanelProps) {
+export function OrderPanel({ 
+  taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld, 
+  wholesaleCtx, onWholesaleChange, selectedClient, onClientChange,
+  tableId, onTableClear
+}: OrderPanelProps) {
   const {
     items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
     updateQuantity, removeItem, resetPriceOverrides,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
   } = useCartStore();
+  
+  const [tables, setTables] = useState<import('@pos-types').RestaurantTable[]>([]);
+  
+  useEffect(() => {
+    if (tableId) {
+      // Small optimization: if we have a tableId, fetch its info to show the name
+      import('@services/supabase/restaurant').then(m => m.getTables(businessId)).then(setTables);
+    }
+  }, [tableId, businessId]);
+
+  const selectedTable = tables.find(t => t.id === tableId);
   const { warning } = useNotificationStore();
   const [showWholesale, setShowWholesale] = useState(false);
 
@@ -383,7 +400,26 @@ export function OrderPanel({ taxRate, taxInclusive, currency, businessId, onChec
         })}
 
         {/* ── Sélecteur client ── */}
-        <div className="px-4 py-2 border-t border-surface-border" ref={clientRef}>
+        <div className="px-4 py-2 border-t border-surface-border space-y-2">
+          {/* Table Selector */}
+          {selectedTable ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-900/20 border border-indigo-700 animate-in fade-in slide-in-from-bottom-2">
+              <Utensils className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-indigo-300 truncate">Table {selectedTable.name}</p>
+                <p className="text-[10px] text-slate-500 uppercase font-semibold">{selectedTable.floor?.name}</p>
+              </div>
+              <button
+                onClick={onTableClear}
+                className="text-slate-500 hover:text-white shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (business?.type === 'restaurant' || business?.features?.includes('restaurant')) && (
+            <p className="text-[10px] text-slate-500 italic px-1">Aucune table sélectionnée</p>
+          )}
+
           {selectedClient ? (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-900/20 border border-brand-700">
               <User className="w-3.5 h-3.5 text-brand-400 shrink-0" />
