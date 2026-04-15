@@ -346,6 +346,26 @@
 [data-theme="light"] .subscribe-grid-bg { display: none; }
 [data-theme="light"] .border-brand-800\/50 { border-color: #bae6fd !important; }
 
+/* ── Fonds haute opacité (cellules présences, boutons statut) ────────────── */
+[data-theme="light"] .bg-green-900\/60   { background-color: #bbf7d0 !important; }
+[data-theme="light"] .bg-red-900\/60     { background-color: #fecaca !important; }
+[data-theme="light"] .bg-amber-900\/60   { background-color: #fde68a !important; }
+[data-theme="light"] .bg-blue-900\/60    { background-color: #bfdbfe !important; }
+[data-theme="light"] .bg-green-900\/40   { background-color: #bbf7d0 !important; }
+[data-theme="light"] .bg-green-950\/20   { background-color: #f0fdf4 !important; }
+[data-theme="light"] .bg-slate-900\/20   { background-color: #f8fafc !important; }
+
+/* ── Couleurs de texte manquantes ───────────────────────────────────────── */
+[data-theme="light"] .text-blue-300      { color: #1d4ed8 !important; }
+
+/* ── Bordures manquantes ────────────────────────────────────────────────── */
+[data-theme="light"] .border-amber-700   { border-color: #b45309 !important; }
+[data-theme="light"] .border-slate-600   { border-color: #94a3b8 !important; }
+[data-theme="light"] .border-slate-700   { border-color: #94a3b8 !important; }
+[data-theme="light"] .border-slate-800   { border-color: #cbd5e1 !important; }
+[data-theme="light"] .border-brand-800   { border-color: #bae6fd !important; }
+[data-theme="light"] .border-green-900\/50 { border-color: #86efac !important; }
+
 /* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
 
 @keyframes cart-item-enter {

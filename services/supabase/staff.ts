@@ -60,7 +60,7 @@ export interface StaffPayment {
   status:         PaymentStatus;
   notes:          string | null;
   created_at:     string;
-  staff?:         Pick<Staff, 'name' | 'position' | 'salary_type'> | null;
+  staff?:         Pick<Staff, 'name' | 'position' | 'salary_type' | 'salary_rate'> | null;
 }
 
 export type StaffForm = Omit<Staff, 'id' | 'business_id' | 'created_at' | 'updated_at'>;
@@ -169,7 +169,7 @@ export async function getPayments(
 ): Promise<StaffPayment[]> {
   let query = supabase
     .from('staff_payments')
-    .select('*, staff(name, position, salary_type)')
+    .select('*, staff(name, position, salary_type, salary_rate)')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
 
@@ -204,7 +204,7 @@ export async function createPayment(input: {
   const { data, error } = await supabase
     .from('staff_payments')
     .insert(input)
-    .select('*, staff(name, position, salary_type)')
+    .select('*, staff(name, position, salary_type, salary_rate)')
     .single();
   if (error) throw new Error(error.message);
   return data;

@@ -13,7 +13,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import {
-  generateStaffPayslip, printHtml,
+  generateStaffPayslip, generateStaffAttendanceSheet, printHtml,
 } from '@/lib/invoice-templates';
 import {
   getStaff, createStaff, updateStaff, deleteStaff,
@@ -37,7 +37,7 @@ const ATTENDANCE_CFG: Record<AttendanceStatus, { label: string; short: string; c
   absent:   { label: 'Absent',        short: 'A',  color: 'text-red-300',    bg: 'bg-red-900/60 border-red-700'      },
   half_day: { label: 'Demi-journée',  short: 'D',  color: 'text-amber-300',  bg: 'bg-amber-900/60 border-amber-700'  },
   leave:    { label: 'Congé',         short: 'C',  color: 'text-blue-300',   bg: 'bg-blue-900/60 border-blue-700'    },
-  holiday:  { label: 'Férié',         short: 'F',  color: 'text-slate-400',  bg: 'bg-slate-800 border-slate-700'     },
+  holiday:  { label: 'Férié',         short: 'F',  color: 'text-slate-400',  bg: 'bg-surface-hover border-surface-border' },
 };
 
 // Cycle on click: empty → present → absent → half_day → leave → holiday → (delete)
@@ -216,9 +216,18 @@ export default function StaffPage() {
     });
   }
 
-  function handlePrintPayslip(staff: Staff, payment: StaffPayment) {
+  function handlePrintPayslip(staff: Staff | Partial<Staff>, payment: StaffPayment) {
     if (!business) return;
-    const html = generateStaffPayslip(staff, payment, business);
+    // Fallback: try to find the full staff record in our list to ensure we have all fields (like salary_rate)
+    const fullStaff = staffList.find((s) => s.id === payment.staff_id) || staff;
+    const html = generateStaffPayslip(fullStaff as Staff, payment, business);
+    printHtml(html);
+  }
+
+  function handlePrintAttendanceSheet(staff: Staff) {
+    if (!business) return;
+    const staffAttendance = attendance.filter((a) => a.staff_id === staff.id);
+    const html = generateStaffAttendanceSheet(staff, staffAttendance, year, month, business);
     printHtml(html);
   }
 
@@ -320,7 +329,7 @@ export default function StaffPage() {
           <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto bg-surface/50">
+        <div className="flex-1 overflow-y-auto bg-surface">
           {/* ─── Tab: Employés ────────────────────────────────── */}
           {tab === 'employes' && (
             <div className="p-4 max-w-7xl mx-auto space-y-4">
@@ -465,8 +474,19 @@ export default function StaffPage() {
                           return (
                             <tr key={s.id} className="border-t border-surface-border hover:bg-surface-hover/10 transition-colors text-slate-300">
                               <td className="sticky left-0 z-10 bg-surface-card border-r border-surface-border px-4 py-2.5">
-                                <p className="font-bold text-white truncate max-w-[130px]">{s.name}</p>
-                                {s.position && <p className="text-[9px] text-slate-500 font-bold truncate uppercase tracking-tight">{s.position}</p>}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-white truncate max-w-[100px]">{s.name}</p>
+                                    {s.position && <p className="text-[9px] text-slate-500 font-bold truncate uppercase tracking-tight">{s.position}</p>}
+                                  </div>
+                                  <button
+                                    onClick={() => handlePrintAttendanceSheet(s)}
+                                    title="Imprimer la feuille de présence"
+                                    className="p-1.5 text-slate-500 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-all"
+                                  >
+                                    <Printer className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </td>
                               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
                                 const record = getAttendanceRecord(s.id, d);
@@ -964,7 +984,7 @@ function StaffPanel({
                     form.status === s
                       ? s === 'active'
                         ? 'bg-green-900/40 border-green-700 text-green-300'
-                        : 'bg-slate-800 border-slate-600 text-slate-300'
+                        : 'bg-surface-hover border-surface-border text-slate-400'
                       : 'border-surface-border text-slate-500 hover:text-slate-300'
                   }`}>
                   {s === 'active' ? 'Actif' : 'Inactif'}

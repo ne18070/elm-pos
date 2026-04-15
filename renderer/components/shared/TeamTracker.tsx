@@ -11,12 +11,15 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
   const { warning, error } = useNotificationStore();
   const watchId = useRef<number | null>(null);
 
+  const STORAGE_KEY = 'elm-pos-tracking-active';
+
   const startTracking = () => {
     if (!navigator.geolocation) {
       error("La géolocalisation n'est pas supportée par votre navigateur");
       return;
     }
 
+    sessionStorage.setItem(STORAGE_KEY, '1');
     setTracking(true);
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -40,6 +43,7 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
   };
 
   const stopTracking = () => {
+    sessionStorage.removeItem(STORAGE_KEY);
     if (watchId.current !== null) {
       navigator.geolocation.clearWatch(watchId.current);
       watchId.current = null;
@@ -48,12 +52,17 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
     setLocation(null);
   };
 
+  // Auto-restart tracking after a page refresh if it was active before
   useEffect(() => {
+    if (sessionStorage.getItem(STORAGE_KEY) === '1') {
+      startTracking();
+    }
     return () => {
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

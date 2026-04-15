@@ -1,5 +1,5 @@
 import type { Order, Business } from '../../types';
-import type { Staff, StaffPayment } from '../../services/supabase/staff';
+import type { Staff, StaffPayment, StaffAttendance } from '../../services/supabase/staff';
 
 // ─── Montant en lettres (français) ───────────────────────────────────────────
 
@@ -792,6 +792,171 @@ ${payment.notes ? `
 <div class="footer">
   ${business.receipt_footer ?? 'Merci pour votre contribution au développement de l\'entreprise.'}<br>
   Document généré par ELM APP
+</div>
+
+</body></html>`;
+}
+
+// ─── Feuille de présence ─────────────────────────────────────────────────────
+
+export function generateStaffAttendanceSheet(
+  staff: Staff,
+  attendance: StaffAttendance[],
+  year: number,
+  month: number,
+  business: Business,
+): string {
+  const monthName = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(new Date(year, month - 1));
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const ATTENDANCE_LABELS: Record<string, string> = {
+    present:  'Présent',
+    absent:   'Absent',
+    half_day: 'Demi-journée',
+    leave:    'Congé',
+    holiday:  'Férié',
+  };
+
+  const rows = Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const record = attendance.find((a) => a.date === dateStr);
+    const dayOfWeek = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(new Date(year, month - 1, d));
+    const isWeekend = new Date(year, month - 1, d).getDay() === 0 || new Date(year, month - 1, d).getDay() === 6;
+
+    return `
+      <tr class="${isWeekend ? 'weekend' : ''}">
+        <td>${String(d).padStart(2, '0')}/${String(month).padStart(2, '0')}</td>
+        <td>${dayOfWeek.toUpperCase()}</td>
+        <td class="bold">${record ? ATTENDANCE_LABELS[record.status] ?? record.status : '—'}</td>
+        <td class="r">${record?.clock_in ?? '—'}</td>
+        <td class="r">${record?.clock_out ?? '—'}</td>
+        <td class="r">${record?.hours_worked ? record.hours_worked + ' h' : '—'}</td>
+        <td class="small italic">${record?.notes ?? ''}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Stats
+  const present  = attendance.filter(a => a.status === 'present').length;
+  const halfDays = attendance.filter(a => a.status === 'half_day').length;
+  const absent   = attendance.filter(a => a.status === 'absent').length;
+  const totalDays = present + (halfDays * 0.5);
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Feuille de présence ${staff.name} - ${monthName} ${year}</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #1f2937; line-height: 1.4; }
+  .header { display: flex; justify-content: space-between; margin-bottom: 25px; border-bottom: 2px solid #1f2937; padding-bottom: 15px; }
+  .biz-name { font-size: 18px; font-weight: 800; color: #111827; }
+  .biz-detail { font-size: 10px; color: #6b7280; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { font-size: 18px; font-weight: 800; color: #111827; }
+  
+  .info-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; padding: 12px; background: #f3f4f6; border-radius: 8px; }
+  .info-item { display: flex; flex-direction: column; }
+  .label { font-size: 9px; text-transform: uppercase; color: #6b7280; font-weight: 600; }
+  .val { font-size: 12px; font-weight: 700; color: #111827; }
+  
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th { background: #1f2937; color: #ffffff; padding: 8px 10px; text-align: left; font-size: 9px; text-transform: uppercase; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
+  .r { text-align: right; }
+  .bold { font-weight: 700; }
+  .weekend { background: #f9fafb; color: #9ca3af; }
+  
+  .stats { display: flex; gap: 30px; margin-bottom: 30px; padding: 15px; border: 1px dashed #d1d5db; border-radius: 8px; }
+  .stat-item { text-align: center; }
+  .stat-val { font-size: 16px; font-weight: 800; color: #4f46e5; }
+  
+  .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
+  .sig-box { width: 200px; text-align: center; }
+  .sig-label { font-size: 10px; font-weight: 600; margin-bottom: 50px; }
+  .sig-line { border-bottom: 1px solid #d1d5db; }
+  .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 15px; }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    <div class="biz-name">${business.name}</div>
+    <div class="biz-detail">${business.address ?? ''}</div>
+    <div class="biz-detail">${business.phone ?? ''}</div>
+  </div>
+  <div class="doc-title">
+    <h1>FEUILLE DE PRÉSENCE</h1>
+    <p style="text-transform: uppercase; font-weight: 700; color: #4f46e5;">${monthName} ${year}</p>
+  </div>
+</div>
+
+<div class="info-bar">
+  <div class="info-item">
+    <span class="label">Employé</span>
+    <span class="val">${staff.name}</span>
+  </div>
+  <div class="info-item">
+    <span class="label">Poste</span>
+    <span class="val">${staff.position ?? '—'}</span>
+  </div>
+  <div class="info-item">
+    <span class="label">Département</span>
+    <span class="val">${staff.department ?? '—'}</span>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 60px;">Date</th>
+      <th style="width: 60px;">Jour</th>
+      <th>Statut</th>
+      <th class="r">Arrivée</th>
+      <th class="r">Départ</th>
+      <th class="r">Heures</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+
+<div class="stats">
+  <div class="stat-item">
+    <div class="label">Jours Présents</div>
+    <div class="stat-val">${present}</div>
+  </div>
+  <div class="stat-item">
+    <div class="label">Demi-journées</div>
+    <div class="stat-val">${halfDays}</div>
+  </div>
+  <div class="stat-item">
+    <div class="label">Total Travaillé</div>
+    <div class="stat-val">${totalDays} j</div>
+  </div>
+  <div class="stat-item">
+    <div class="label">Absences</div>
+    <div class="stat-val" style="color: #dc2626;">${absent}</div>
+  </div>
+</div>
+
+<div class="signatures">
+  <div class="sig-box">
+    <div class="sig-label">Visa Employeur</div>
+    <div class="sig-line"></div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">Signature Employé</div>
+    <div class="sig-line"></div>
+  </div>
+</div>
+
+<div class="footer">
+  Imprimé le ${printDate} — Document généré par ELM APP
 </div>
 
 </body></html>`;
