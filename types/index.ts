@@ -176,6 +176,8 @@ export interface RestaurantTable {
   current_order_id?: string | null;
   is_active: boolean;
   created_at: string;
+  // joined
+  floor?: { name: string };
 }
 
 // ─── Cart (local state, not persisted to DB) ──────────────────────────────────
