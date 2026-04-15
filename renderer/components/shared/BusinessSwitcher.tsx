@@ -1,5 +1,6 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
+import { cn } from '@/lib/utils';
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -19,7 +20,7 @@ import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import type { Business, UserRole } from '@pos-types';
 import type { BusinessMembership } from '@services/supabase/business';
 
-export function BusinessSwitcher() {
+export function BusinessSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const { user, business, businesses, setBusiness, setBusinesses, setUser } = useAuthStore();
   const { setSubscription, subscription, plans } = useSubscriptionStore();
   const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
@@ -31,6 +32,8 @@ export function BusinessSwitcher() {
   const [switching, setSwitching]   = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const expanded = !collapsed;
 
   useEffect(() => {
     function onOutside(e: MouseEvent) {
@@ -132,8 +135,12 @@ export function BusinessSwitcher() {
         {/* ── Bouton déclencheur ── */}
         <button
           onClick={() => setOpen((o) => !o)}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-colors group
-            ${open ? 'bg-surface-hover' : 'hover:bg-surface-hover'}`}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-colors group",
+            open ? "bg-surface-hover" : "hover:bg-surface-hover",
+            collapsed ? "justify-center" : ""
+          )}
+          title={collapsed ? business?.name : undefined}
         >
           {/* Icône établissement */}
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
@@ -143,25 +150,28 @@ export function BusinessSwitcher() {
           </div>
 
           {/* Nom + chevron — expanded seulement */}
-          <div className="hidden lg:flex flex-1 items-center justify-between min-w-0">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate leading-tight">
-                {business?.name ?? 'Mon établissement'}
-              </p>
-              <p className="text-xs text-slate-500 truncate leading-tight">
-                {getRoleLabel(user?.role)}
-              </p>
+          {expanded && (
+            <div className="flex flex-1 items-center justify-between min-w-0">
+              <div className="min-w-0 text-left">
+                <p className="text-sm font-semibold text-white truncate leading-tight">
+                  {business?.name ?? 'Mon établissement'}
+                </p>
+                <p className="text-xs text-slate-500 truncate leading-tight">
+                  {getRoleLabel(user?.role)}
+                </p>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200
+                ${open ? 'rotate-180' : ''}`} />
             </div>
-            <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200
-              ${open ? 'rotate-180' : ''}`} />
-          </div>
+          )}
         </button>
 
         {/* ── Dropdown ── */}
         {open && (
-          <div className="absolute left-0 top-full mt-1.5 z-50
-                          bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden
-                          w-72 lg:w-full">
+          <div className={cn(
+            "absolute left-0 top-full mt-1.5 z-50 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden w-72",
+            expanded ? "lg:w-full" : "md:left-full md:top-0 md:mt-0 md:ml-2"
+          )}>
 
             {/* En-tête */}
             <div className="px-3 py-2 border-b border-surface-border">

@@ -6,12 +6,12 @@ import {
   Clock, CheckCircle, AlertCircle, CalendarDays, Banknote, UserMinus,
   UserCheck, Coffee, Plane, Star, Phone, Mail, Building2, Save,
   TrendingUp, DollarSign, Link2, Unlink, RefreshCw, Copy, Check, LogIn,
-  Printer, FileText,
+  Printer, FileText, LayoutList, Calendar, Wallet, Search as SearchIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
-import { displayCurrency } from '@/lib/utils';
+import { displayCurrency, cn } from '@/lib/utils';
 import {
   generateStaffPayslip, printHtml,
 } from '@/lib/invoice-templates';
@@ -271,30 +271,46 @@ export default function StaffPage() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-surface">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
-        <Users className="w-5 h-5 text-brand-400 shrink-0" />
-        <h1 className="font-semibold text-white flex-1">Personnel & Paie</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface-card shrink-0">
+        <div className="flex items-center gap-3">
+          <Users className="w-5 h-5 text-slate-400" />
+          <h1 className="font-bold text-white text-xl tracking-tight">Personnel</h1>
+        </div>
+        
         {tab === 'employes' && (
-          <button onClick={() => setStaffPanel({ item: null })}
-            className="btn-primary flex items-center gap-2 text-sm h-9 px-3">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Employé</span>
+          <button 
+            onClick={() => setStaffPanel({ item: null })}
+            className="btn-primary flex items-center gap-2 text-sm h-10 px-4 transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline font-medium">Ajouter un employé</span>
           </button>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-surface-border shrink-0">
-        {(['employes', 'presences', 'paie'] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-              tab === t
-                ? 'bg-surface-card text-brand-400 border border-b-surface-card border-surface-border -mb-px'
-                : 'text-slate-400 hover:text-white'
-            }`}>
-            {t === 'employes' ? 'Employés' : t === 'presences' ? 'Présences' : 'Paie'}
+      {/* Tabs - Professional & Sober */}
+      <div className="flex px-4 bg-surface-card border-b border-surface-border shrink-0 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'employes', label: 'Équipe', icon: LayoutList },
+          { id: 'presences', label: 'Présences', icon: Calendar },
+          { id: 'paie', label: 'Paie & Salaires', icon: Wallet },
+        ].map((t) => (
+          <button 
+            key={t.id} 
+            onClick={() => setTab(t.id as Tab)}
+            className={`flex items-center gap-2.5 px-6 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
+              tab === t.id
+                ? 'text-brand-400'
+                : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            <t.icon className="w-4 h-4" />
+            <span>{t.label}</span>
+            {tab === t.id && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-t-full" />
+            )}
           </button>
         ))}
       </div>
@@ -304,39 +320,58 @@ export default function StaffPage() {
           <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-surface/50">
           {/* ─── Tab: Employés ────────────────────────────────── */}
           {tab === 'employes' && (
-            <div className="p-4 space-y-4">
-              {/* Search + stats */}
-              <div className="flex gap-3 items-center">
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher un employé…"
-                  className="input flex-1 text-sm"
-                />
-                <span className="text-xs text-slate-500 whitespace-nowrap">
-                  {activeStaff.length} actif{activeStaff.length > 1 ? 's' : ''}
-                </span>
+            <div className="p-4 max-w-7xl mx-auto space-y-4">
+              {/* Search + filter bar */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher (nom, poste, dépt)..."
+                    className="input pl-10 text-sm h-11 bg-surface-input/50 focus:bg-surface-input"
+                  />
+                  {search && (
+                    <button 
+                      onClick={() => setSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    {filteredStaff.length} Résultat{filteredStaff.length > 1 ? 's' : ''}
+                  </span>
+                  <div className="sm:hidden h-8 w-px bg-surface-border mx-4" />
+                  <div className="text-xs text-slate-500">
+                    <span className="text-green-500 font-bold">{activeStaff.length}</span> actifs
+                  </div>
+                </div>
               </div>
 
               {filteredStaff.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <Users className="w-12 h-12 text-slate-600 mb-4" />
-                  <p className="text-slate-400 font-medium">Aucun employé</p>
-                  <p className="text-slate-600 text-sm mt-1">
-                    {search ? 'Aucun résultat pour cette recherche' : 'Ajoutez votre premier employé'}
+                <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-card/30 rounded-3xl border border-dashed border-surface-border">
+                  <div className="w-20 h-20 bg-surface-input rounded-full flex items-center justify-center mb-6">
+                    <Users className="w-10 h-10 text-slate-600" />
+                  </div>
+                  <p className="text-slate-300 font-bold text-lg">Aucun employé trouvé</p>
+                  <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">
+                    {search ? "Réessayez avec d'autres mots-clés ou effacez la recherche." : "Commencez par ajouter votre premier employé à l'équipe."}
                   </p>
                   {!search && (
                     <button onClick={() => setStaffPanel({ item: null })}
-                      className="mt-4 btn-primary text-sm px-4 py-2 flex items-center gap-2">
-                      <Plus className="w-4 h-4" /> Ajouter un employé
+                      className="mt-8 btn-primary px-6 py-3 flex items-center gap-2 font-bold shadow-glow">
+                      <Plus className="w-5 h-5" /> Ajouter un employé
                     </button>
                   )}
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-20 sm:pb-4">
                   {filteredStaff.map((s) => (
                     <StaffCard key={s.id} staff={s} currency={cur}
                       teamMember={teamMembers.find((m) => m.id === s.user_id) ?? null}
@@ -359,112 +394,110 @@ export default function StaffPage() {
 
           {/* ─── Tab: Présences ───────────────────────────────── */}
           {tab === 'presences' && (
-            <div className="p-4 space-y-4">
-              {/* Month nav */}
-              <div className="flex items-center justify-between">
-                <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-surface-hover transition-colors">
-                  <ChevronLeft className="w-5 h-5 text-slate-400" />
+            <div className="p-4 max-w-7xl mx-auto space-y-6">
+              {/* Month nav - Clean & Functional */}
+              <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
+                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <h2 className="font-semibold text-white text-base">
-                  {MONTH_NAMES[month - 1]} {year}
-                </h2>
-                <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-surface-hover transition-colors">
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                <div className="text-center">
+                  <h2 className="font-bold text-white text-base leading-tight">
+                    {MONTH_NAMES[month - 1]}
+                  </h2>
+                  <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{year}</p>
+                </div>
+                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Attendance stats */}
-              <div className="grid grid-cols-4 gap-2">
+              {/* Attendance stats - Professional Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: 'Présences',      value: attStats.presentDays, icon: UserCheck,  color: 'text-green-400' },
-                  { label: 'Absences',       value: attStats.absentDays,  icon: UserMinus,  color: 'text-red-400'   },
-                  { label: 'Demi-journées',  value: attStats.halfDays,    icon: Coffee,     color: 'text-amber-400' },
-                  { label: 'Congés',         value: attStats.leaveDays,   icon: Plane,      color: 'text-blue-400'  },
-                ].map(({ label, value, icon: Icon, color }) => (
-                  <div key={label} className="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-                    <Icon className={`w-4 h-4 mx-auto mb-1 ${color}`} />
-                    <p className="text-lg font-bold text-white">{value}</p>
-                    <p className="text-xs text-slate-500">{label}</p>
+                  { label: 'Présents',      value: attStats.presentDays, icon: UserCheck,  color: 'text-green-500',  border: 'border-green-900/30' },
+                  { label: 'Absents',       value: attStats.absentDays,  icon: UserMinus,  color: 'text-red-500',    border: 'border-red-900/30'   },
+                  { label: 'Demi-j.',       value: attStats.halfDays,    icon: Coffee,     color: 'text-amber-500',  border: 'border-amber-900/30' },
+                  { label: 'Congés',         value: attStats.leaveDays,   icon: Plane,      color: 'text-blue-500',   border: 'border-blue-900/30'  },
+                ].map(({ label, value, icon: Icon, color, border }) => (
+                  <div key={label} className={`bg-surface-card border ${border} rounded-xl p-4 flex flex-col items-center justify-center`}>
+                    <Icon className={`w-4 h-4 mb-2 ${color}`} />
+                    <p className="text-xl font-bold text-white">{value}</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">{label}</p>
                   </div>
                 ))}
               </div>
 
-              {/* Legend */}
-              <div className="flex flex-wrap gap-3 text-xs">
-                {Object.entries(ATTENDANCE_CFG).map(([key, cfg]) => (
-                  <span key={key} className={`flex items-center gap-1 px-2 py-0.5 rounded border ${cfg.bg} ${cfg.color}`}>
-                    <span className="font-bold">{cfg.short}</span> {cfg.label}
-                  </span>
-                ))}
-                <span className="text-slate-500 italic">Cliquez sur une case pour changer le statut</span>
-              </div>
-
-              {/* Grid */}
+              {/* Grid with horizontal scroll */}
               {activeStaff.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-10">Aucun employé actif</p>
+                <p className="text-slate-500 text-sm text-center py-20 bg-surface-card/20 rounded-xl border border-dashed border-surface-border italic">Aucun employé actif pour ce mois</p>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-surface-border">
-                  <table className="min-w-full text-xs">
-                    <thead>
-                      <tr className="bg-surface-hover">
-                        <th className="sticky left-0 z-10 bg-surface-hover text-left px-3 py-2 text-slate-400 font-medium min-w-[140px]">
-                          Employé
-                        </th>
-                        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
-                          const dow = new Date(year, month - 1, d).getDay();
-                          const isWeekend = dow === 0 || dow === 6;
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Registre de présence</h3>
+                    <span className="text-[10px] text-slate-500 italic">Clic pour cycler le statut</span>
+                  </div>
+                  
+                  <div className="overflow-x-auto rounded-xl border border-surface-border bg-surface-card shadow-sm no-scrollbar">
+                    <table className="min-w-full text-[11px] border-collapse">
+                      <thead>
+                        <tr className="bg-surface-hover/30">
+                          <th className="sticky left-0 z-20 bg-surface-card border-r border-surface-border text-left px-4 py-3 text-slate-500 font-bold uppercase tracking-tight min-w-[150px]">
+                            Employé
+                          </th>
+                          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+                            const dateObj = new Date(year, month - 1, d);
+                            const dow = dateObj.getDay();
+                            const isWeekend = dow === 0 || dow === 6;
+                            return (
+                              <th key={d}
+                                onClick={() => bulkMarkAttendance(d)}
+                                className={`px-1 py-3 text-center font-bold w-10 min-w-[36px] cursor-pointer hover:bg-surface-hover transition-colors border-r border-surface-border/50 last:border-r-0 ${isWeekend ? 'text-red-500/40 bg-red-500/5' : 'text-slate-500'}`}>
+                                {d}
+                              </th>
+                            );
+                          })}
+                          <th className="px-4 py-3 text-right text-brand-400 font-bold uppercase tracking-tight min-w-[70px]">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeStaff.map((s) => {
+                          const calc = computePayroll(s, attendance, year, month);
                           return (
-                            <th key={d}
-                              onClick={() => bulkMarkAttendance(d)}
-                              title="Cliquer pour marquer tout le monde présent ce jour"
-                              className={`px-1 py-2 text-center font-medium w-8 min-w-[32px] cursor-pointer hover:bg-surface-border transition-colors ${isWeekend ? 'text-slate-600' : 'text-slate-400'}`}>
-                              {d}
-                            </th>
+                            <tr key={s.id} className="border-t border-surface-border hover:bg-surface-hover/10 transition-colors text-slate-300">
+                              <td className="sticky left-0 z-10 bg-surface-card border-r border-surface-border px-4 py-2.5">
+                                <p className="font-bold text-white truncate max-w-[130px]">{s.name}</p>
+                                {s.position && <p className="text-[9px] text-slate-500 font-bold truncate uppercase tracking-tight">{s.position}</p>}
+                              </td>
+                              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+                                const record = getAttendanceRecord(s.id, d);
+                                const key = `${s.id}-${d}`;
+                                const spinning = savingAttendance === key;
+                                const cfg = record ? ATTENDANCE_CFG[record.status] : null;
+                                return (
+                                  <td key={d} className="px-1 py-1.5 text-center border-r border-surface-border/30 last:border-r-0">
+                                    <button
+                                      onClick={() => cycleAttendance(s.id, d)}
+                                      disabled={spinning}
+                                      className={cn(
+                                        "w-7 h-7 rounded text-[10px] font-bold transition-all flex items-center justify-center mx-auto",
+                                        spinning ? "opacity-30" : "active:opacity-70",
+                                        cfg ? `${cfg.bg} ${cfg.color} border` : "bg-surface-input/20 text-slate-800 hover:text-slate-500"
+                                      )}
+                                    >
+                                      {spinning ? <Loader2 className="w-3 h-3 animate-spin" /> : (cfg?.short ?? '·')}
+                                    </button>
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-2.5 text-right font-bold bg-surface-hover/5">
+                                <p className="text-slate-200">{calc.daysWorked}j</p>
+                              </td>
+                            </tr>
                           );
                         })}
-                        <th className="px-3 py-2 text-right text-slate-400 font-medium min-w-[80px]">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activeStaff.map((s) => {
-                        const calc = computePayroll(s, attendance, year, month);
-                        return (
-                          <tr key={s.id} className="border-t border-surface-border hover:bg-surface-hover/30">
-                            <td className="sticky left-0 z-10 bg-surface-card px-3 py-1.5">
-                              <p className="font-medium text-white truncate max-w-[120px]">{s.name}</p>
-                              {s.position && <p className="text-slate-500 truncate">{s.position}</p>}
-                            </td>
-                            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
-                              const record = getAttendanceRecord(s.id, d);
-                              const key = `${s.id}-${d}`;
-                              const spinning = savingAttendance === key;
-                              const cfg = record ? ATTENDANCE_CFG[record.status] : null;
-                              return (
-                                <td key={d} className="px-0.5 py-1 text-center">
-                                  <button
-                                    onClick={() => cycleAttendance(s.id, d)}
-                                    disabled={spinning}
-                                    title={cfg?.label ?? 'Non renseigné'}
-                                    className={`w-7 h-7 rounded text-xs font-bold transition-all border ${
-                                      spinning ? 'opacity-50' : 'hover:scale-110 active:scale-95'
-                                    } ${cfg ? `${cfg.bg} ${cfg.color}` : 'border-transparent text-slate-700 hover:border-slate-600 hover:text-slate-400'}`}
-                                  >
-                                    {spinning ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : (cfg?.short ?? '·')}
-                                  </button>
-                                </td>
-                              );
-                            })}
-                            <td className="px-3 py-1.5 text-right">
-                              <p className="font-medium text-white">{calc.daysWorked}j</p>
-                              {s.salary_type === 'hourly' && (
-                                <p className="text-slate-500">{calc.hoursWorked}h</p>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -472,111 +505,108 @@ export default function StaffPage() {
 
           {/* ─── Tab: Paie ────────────────────────────────────── */}
           {tab === 'paie' && (
-            <div className="p-4 space-y-4">
+            <div className="p-4 max-w-7xl mx-auto space-y-6">
               {/* Month nav */}
-              <div className="flex items-center justify-between">
-                <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-surface-hover transition-colors">
-                  <ChevronLeft className="w-5 h-5 text-slate-400" />
+              <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
+                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <h2 className="font-semibold text-white text-base">
-                  {MONTH_NAMES[month - 1]} {year}
-                </h2>
-                <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-surface-hover transition-colors">
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                <div className="text-center">
+                  <h2 className="font-bold text-white text-base leading-tight">
+                    {MONTH_NAMES[month - 1]}
+                  </h2>
+                  <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{year}</p>
+                </div>
+                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Payroll summary */}
+              {/* Payroll summary - Discreet cards */}
               {payrollData.length > 0 && (
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-                    <TrendingUp className="w-4 h-4 mx-auto mb-1 text-brand-400" />
-                    <p className="text-sm font-bold text-white">{fmtMoney(payrollData.reduce((s, d) => s + d.calc.baseAmount, 0), cur)}</p>
-                    <p className="text-xs text-slate-500">Masse salariale</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-surface-card border border-surface-border rounded-xl p-5 flex items-center gap-4">
+                    <TrendingUp className="w-5 h-5 text-brand-500" />
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Masse salariale</p>
+                      <p className="text-lg font-bold text-white leading-tight">{fmtMoney(payrollData.reduce((s, d) => s + d.calc.baseAmount, 0), cur)}</p>
+                    </div>
                   </div>
-                  <div className="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-                    <CheckCircle className="w-4 h-4 mx-auto mb-1 text-green-400" />
-                    <p className="text-sm font-bold text-white">{payrollData.filter((d) => d.paid).length}</p>
-                    <p className="text-xs text-slate-500">Payés</p>
+                  <div className="bg-surface-card border border-surface-border rounded-xl p-5 flex items-center gap-4">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Employés Payés</p>
+                      <p className="text-lg font-bold text-white leading-tight">{payrollData.filter((d) => d.paid).length} / {payrollData.length}</p>
+                    </div>
                   </div>
-                  <div className="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-                    <Clock className="w-4 h-4 mx-auto mb-1 text-amber-400" />
-                    <p className="text-sm font-bold text-white">{payrollData.filter((d) => !d.paid).length}</p>
-                    <p className="text-xs text-slate-500">En attente</p>
+                  <div className="bg-surface-card border border-surface-border rounded-xl p-5 flex items-center gap-4">
+                    <Clock className="w-5 h-5 text-amber-600" />
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">En attente</p>
+                      <p className="text-lg font-bold text-white leading-tight">{payrollData.filter((d) => !d.paid).length}</p>
+                    </div>
                   </div>
                 </div>
               )}
 
               {payrollData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <Banknote className="w-12 h-12 text-slate-600 mb-4" />
-                  <p className="text-slate-400 font-medium">Aucun employé actif</p>
-                  <p className="text-slate-600 text-sm mt-1">Ajoutez des employés dans l'onglet Employés</p>
+                <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-card/20 rounded-xl border border-dashed border-surface-border">
+                  <Banknote className="w-10 h-10 text-slate-700 mb-4" />
+                  <p className="text-slate-500 font-bold">Aucun employé actif pour ce mois</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                   {payrollData.map(({ staff: s, calc, paid }) => (
                     <div key={s.id}
-                      className="bg-surface-card border border-surface-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                      {/* Avatar + info */}
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-brand-900/50 border border-brand-700 flex items-center justify-center shrink-0">
-                          <span className="text-brand-300 text-sm font-bold">{initials(s.name)}</span>
+                      className="bg-surface-card border border-surface-border rounded-xl p-5 flex flex-col gap-4">
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-lg bg-surface-input border border-surface-border flex items-center justify-center shrink-0">
+                          <span className="text-slate-300 text-base font-bold">{initials(s.name)}</span>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-white truncate">{s.name}</p>
-                          <p className="text-xs text-slate-400">{s.position ?? SALARY_TYPE_LABELS[s.salary_type]}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-white text-base truncate leading-tight">{s.name}</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.position ?? SALARY_TYPE_LABELS[s.salary_type]}</p>
                         </div>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="flex gap-4 text-sm shrink-0">
-                        <div className="text-center">
-                          <p className="font-semibold text-white">{calc.daysWorked}j</p>
-                          <p className="text-xs text-slate-500">Travaillés</p>
-                        </div>
-                        {s.salary_type === 'hourly' && (
-                          <div className="text-center">
-                            <p className="font-semibold text-white">{calc.hoursWorked}h</p>
-                            <p className="text-xs text-slate-500">Heures</p>
+                        {paid && (
+                          <div className="text-green-600">
+                            <CheckCircle className="w-5 h-5" />
                           </div>
                         )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1 bg-surface-input/20 border border-surface-border/50 rounded-lg p-3">
                         <div className="text-center">
-                          <p className="font-semibold text-white">{calc.absentDays}j</p>
-                          <p className="text-xs text-slate-500">Absences</p>
+                          <p className="text-xs font-bold text-white">{calc.daysWorked}j</p>
+                          <p className="text-[9px] font-bold text-slate-500 uppercase">Présences</p>
                         </div>
                         <div className="text-center">
-                          <p className="font-bold text-brand-300">{fmtMoney(calc.baseAmount, cur)}</p>
-                          <p className="text-xs text-slate-500">Montant</p>
+                          <p className="text-xs font-bold text-white">{calc.absentDays}j</p>
+                          <p className="text-[9px] font-bold text-slate-500 uppercase">Absences</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-brand-400">{fmtMoney(calc.baseAmount, cur)}</p>
+                          <p className="text-[9px] font-bold text-slate-500 uppercase">Salaire</p>
                         </div>
                       </div>
 
-                      {/* Action */}
-                      <div className="shrink-0 flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-4 pt-1">
                         {paid ? (
-                          <>
+                          <div className="flex items-center gap-4 w-full">
                             <button onClick={() => handlePrintPayslip(s, paid)}
-                              className="p-2 rounded-lg bg-surface-hover text-slate-400 hover:text-white transition-colors"
-                              title="Imprimer le bulletin">
-                              <Printer className="w-4 h-4" />
+                              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-surface-hover hover:bg-surface-border text-slate-400 font-bold text-xs rounded-lg transition-colors">
+                              <Printer className="w-4 h-4" /> Bulletin
                             </button>
-                            <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
-                              <CheckCircle className="w-4 h-4" />
-                              <div>
-                                <p>Payé</p>
-                                {paid.payment_date && (
-                                  <p className="text-xs text-slate-500">
-                                    {new Date(paid.payment_date).toLocaleDateString('fr-FR')}
-                                  </p>
-                                )}
-                              </div>
+                            <div className="text-right">
+                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Payé le</p>
+                              <p className="text-xs font-bold text-slate-400 leading-none">{paid.payment_date ? new Date(paid.payment_date).toLocaleDateString('fr-FR') : '—'}</p>
                             </div>
-                          </>
+                          </div>
                         ) : (
                           <button
                             onClick={() => setPayModal({ staff: s })}
-                            className="btn-primary text-sm px-4 py-2 flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" /> Payer
+                            className="w-full btn-primary flex items-center justify-center gap-2 py-3 font-bold text-xs rounded-lg transition-colors">
+                            <DollarSign className="w-4 h-4" /> Enregistrer le paiement
                           </button>
                         )}
                       </div>
@@ -585,46 +615,40 @@ export default function StaffPage() {
                 </div>
               )}
 
-              {/* Payment history */}
+              {/* Payment history - Professional List */}
               {payments.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                    Historique des paiements
-                  </h3>
-                  <div className="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
-                    {payments.map((p, i) => (
-                      <div key={p.id}
-                        className={`flex items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-surface-border' : ''}`}>
-                        <div>
-                          <p className="text-sm font-medium text-white">{p.staff?.name ?? '—'}</p>
-                          <p className="text-xs text-slate-500">
-                            {p.payment_date
-                              ? new Date(p.payment_date).toLocaleDateString('fr-FR')
-                              : '—'}
+                <div className="pt-6">
+                  <div className="flex items-center gap-2 mb-4 px-1">
+                    <History className="w-4 h-4 text-slate-600" />
+                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Historique des paiements</h3>
+                  </div>
+                  
+                  <div className="bg-surface-card border border-surface-border rounded-xl overflow-hidden divide-y divide-surface-border">
+                    {payments.map((p) => (
+                      <div key={p.id} className="px-5 py-4 flex items-center justify-between hover:bg-surface-hover/20 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-200 truncate">{p.staff?.name ?? '—'}</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                            {p.payment_date ? new Date(p.payment_date).toLocaleDateString('fr-FR') : '—'}
                             {' · '}{PAYMENT_METHOD_LABELS[p.payment_method]}
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <p className="font-semibold text-white">{fmtMoney(p.net_amount, cur)}</p>
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            p.status === 'paid'
-                              ? 'bg-green-900/40 text-green-400'
-                              : 'bg-amber-900/40 text-amber-400'
-                          }`}>
-                            {p.status === 'paid' ? 'Payé' : 'En attente'}
-                          </span>
-                          <button onClick={() => handlePrintPayslip(p.staff as Staff, p)}
-                            className="p-1 text-slate-500 hover:text-white transition-colors" title="Imprimer">
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => askConfirm('Supprimer ce paiement ?', async () => {
-                            try {
-                              await deletePayment(p.id);
-                              setPayments((prev) => prev.filter((x) => x.id !== p.id));
-                            } catch (e) { notifError(toUserError(e)); }
-                          })} className="p-1 text-slate-600 hover:text-red-400 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        <div className="flex items-center gap-6">
+                          <p className="font-bold text-slate-300">{fmtMoney(p.net_amount, cur)}</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => handlePrintPayslip(p.staff as Staff, p)}
+                              className="p-1.5 text-slate-500 hover:text-slate-300 transition-colors">
+                              <Printer className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => askConfirm('Supprimer ce paiement ?', async () => {
+                              try {
+                                await deletePayment(p.id);
+                                setPayments((prev) => prev.filter((x) => x.id !== p.id));
+                              } catch (e) { notifError(toUserError(e)); }
+                            })} className="p-1.5 text-slate-600 hover:text-red-500 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -715,97 +739,88 @@ function StaffCard({
     ? `${s.salary_rate.toLocaleString('fr-FR')} ${displayCurrency(currency)}/h`
     : s.salary_type === 'daily'
       ? `${s.salary_rate.toLocaleString('fr-FR')} ${displayCurrency(currency)}/j`
-      : `${s.salary_rate.toLocaleString('fr-FR')} ${displayCurrency(currency)}/mois`;
+      : `${s.salary_rate.toLocaleString('fr-FR')} ${displayCurrency(currency)}/m`;
 
   return (
-    <div className="bg-surface-card border border-surface-border rounded-xl p-4 flex flex-col gap-3">
-      {/* Top row */}
-      <div className="flex items-start gap-3">
-        <div className="w-11 h-11 rounded-full bg-brand-900/50 border border-brand-700 flex items-center justify-center shrink-0">
-          <span className="text-brand-300 font-bold text-sm">{initials(s.name)}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold text-white truncate">{s.name}</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-              s.status === 'active'
-                ? 'bg-green-900/40 text-green-400'
-                : 'bg-slate-800 text-slate-500'
-            }`}>
-              {s.status === 'active' ? 'Actif' : 'Inactif'}
-            </span>
+    <div className="bg-surface-card border border-surface-border rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden transition-all hover:border-slate-700">
+      {/* Discreet status indicator */}
+      <div className={`absolute top-0 left-0 w-1 h-full ${s.status === 'active' ? 'bg-green-600' : 'bg-slate-700'}`} />
+      
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-surface-input border border-surface-border flex items-center justify-center shrink-0">
+            <span className="text-slate-300 font-bold text-lg">{initials(s.name)}</span>
           </div>
-          {s.position && <p className="text-sm text-slate-400 truncate">{s.position}</p>}
-          {s.department && <p className="text-xs text-slate-500 truncate">{s.department}</p>}
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-base truncate">{s.name}</h3>
+            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">{s.position ?? 'Poste non défini'}</p>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-end shrink-0">
+          <p className="text-sm font-bold text-brand-400">{rate}</p>
+          <span className={`text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded border ${
+            s.status === 'active' ? 'border-green-900/50 text-green-500 bg-green-950/20' : 'border-slate-800 text-slate-500 bg-slate-900/20'
+          }`}>
+            {s.status === 'active' ? 'ACTIF' : 'INACTIF'}
+          </span>
         </div>
       </div>
 
-      {/* Details */}
-      <div className="space-y-1.5 text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <Star className="w-3.5 h-3.5 shrink-0 text-brand-500" />
-          <span>{SALARY_TYPE_LABELS[s.salary_type]} · <span className="text-white font-medium">{rate}</span></span>
-        </div>
+      <div className="grid grid-cols-1 gap-2.5 py-4 border-y border-surface-border/50">
         {s.phone && (
-          <div className="flex items-center gap-2">
-            <Phone className="w-3.5 h-3.5 shrink-0" />
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <Phone className="w-3.5 h-3.5" />
             <span>{s.phone}</span>
           </div>
         )}
         {s.email && (
-          <div className="flex items-center gap-2">
-            <Mail className="w-3.5 h-3.5 shrink-0" />
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <Mail className="w-3.5 h-3.5" />
             <span className="truncate">{s.email}</span>
           </div>
         )}
-        {s.hire_date && (
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-3.5 h-3.5 shrink-0" />
-            <span>Embauché le {new Date(s.hire_date).toLocaleDateString('fr-FR')}</span>
+        {s.department && (
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Département : {s.department}</span>
           </div>
         )}
       </div>
 
-      {s.notes && (
-        <div className="bg-surface-hover/50 p-2 rounded-lg">
-          <p className="text-[10px] text-slate-500 italic line-clamp-2">
-            "{s.notes}"
-          </p>
-        </div>
-      )}
-
-      {/* Account status */}
-      {teamMember ? (
-        <div className="flex items-center justify-between bg-green-900/20 border border-green-800/50 rounded-lg px-3 py-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <LogIn className="w-3.5 h-3.5 text-green-400 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-green-300">Compte actif</p>
-              <p className="text-xs text-green-600 truncate">{teamMember.email}</p>
+      <div className="space-y-3 pt-1">
+        {teamMember ? (
+          <div className="flex items-center justify-between bg-surface-input/50 border border-surface-border rounded-lg px-3 py-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <LogIn className="w-3.5 h-3.5 text-green-600" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Accès utilisateur</p>
+                <p className="text-xs text-slate-300 truncate font-medium">{teamMember.email}</p>
+              </div>
             </div>
+            <button onClick={onUnlinkAccount} 
+              className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+              title="Délier le compte">
+              <Unlink className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={onUnlinkAccount} title="Délier le compte"
-            className="p-1 text-green-700 hover:text-red-400 transition-colors shrink-0 ml-2">
-            <Unlink className="w-3.5 h-3.5" />
+        ) : (
+          <button onClick={onLinkAccount}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-slate-700 text-slate-500 hover:text-brand-400 hover:border-brand-500 transition-all text-xs font-semibold">
+            <Link2 className="w-4 h-4" /> Activer accès application
+          </button>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={onEdit}
+            className="flex-1 flex items-center justify-center gap-2 py-2 bg-surface-hover hover:bg-surface-border text-slate-300 rounded-lg transition-all text-xs font-semibold">
+            <Pencil className="w-3.5 h-3.5" /> Modifier
+          </button>
+          <button onClick={onDelete}
+            className="px-3 flex items-center justify-center border border-surface-border hover:border-red-900/50 hover:bg-red-950/10 text-slate-500 hover:text-red-500 rounded-lg transition-all">
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      ) : (
-        <button onClick={onLinkAccount}
-          className="flex items-center justify-center gap-2 text-xs py-2 rounded-lg border border-dashed border-slate-600 text-slate-500 hover:text-brand-300 hover:border-brand-600 transition-colors">
-          <Link2 className="w-3.5 h-3.5" /> Créer / lier un compte de connexion
-        </button>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-1 border-t border-surface-border">
-        <button onClick={onEdit}
-          className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg hover:bg-surface-hover text-slate-400 hover:text-white transition-colors">
-          <Pencil className="w-3.5 h-3.5" /> Modifier
-        </button>
-        <button onClick={onDelete}
-          className="flex items-center justify-center gap-1.5 text-xs py-1.5 px-3 rounded-lg hover:bg-red-900/30 text-slate-500 hover:text-red-400 transition-colors">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
       </div>
     </div>
   );

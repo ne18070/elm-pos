@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, Loader2, Eye, EyeOff } from 'lucide-react';
+import { ShoppingCart, Loader2, Eye, EyeOff, X, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   const { setUser, setBusiness, setBusinesses } = useAuthStore();
   const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
@@ -169,7 +170,16 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="label">Mot de passe</label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="label mb-0">Mot de passe</label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(true)}
+                  className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                >
+                  Mot de passe oublié ?
+                </button>
+              </div>
               <div className="relative">
                 <input
                   id="password"
@@ -208,12 +218,99 @@ export default function LoginPage() {
           </form>
         </div>
 
+        {showForgotModal && (
+          <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />
+        )}
+
         <p className="text-center text-xs text-slate-600 mt-6">
           ELM APP — Caisse multi-établissements &nbsp;·&nbsp;{' '}
           <a href="/privacy" className="hover:text-slate-400 transition-colors">
             Politique de confidentialité
           </a>
         </p>
+      </div>
+    </div>
+  );
+}
+
+function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleReset(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) throw resetError;
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "Une erreur est survenue");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="card w-full max-w-sm p-6 relative">
+        <button onClick={onClose} className="absolute right-4 top-4 text-slate-500 hover:text-white">
+          <X className="w-5 h-5" />
+        </button>
+
+        <h2 className="text-xl font-bold text-white mb-2">Mot de passe oublié</h2>
+        
+        {success ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-6 h-6 text-green-400" />
+            </div>
+            <p className="text-slate-300 text-sm mb-6">
+              Un e-mail de réinitialisation a été envoyé à <strong>{email}</strong>. 
+              Veuillez vérifier votre boîte de réception.
+            </p>
+            <button onClick={onClose} className="btn-primary w-full">Fermer</button>
+          </div>
+        ) : (
+          <form onSubmit={handleReset} className="space-y-4 mt-4">
+            <p className="text-slate-400 text-sm">
+              Saisissez votre adresse e-mail pour recevoir un lien de réinitialisation.
+            </p>
+            
+            <div>
+              <label className="label">Adresse e-mail</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@exemple.com"
+                className="input"
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <div className="text-xs text-red-400 bg-red-900/20 border border-red-800 p-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {loading ? 'Envoi...' : 'Envoyer le lien'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

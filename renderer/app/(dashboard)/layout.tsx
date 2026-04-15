@@ -7,6 +7,7 @@ import { useSubscriptionStore } from '@/store/subscription';
 import { Sidebar, MobileTopBar, MobileBottomNav, useOpenSidebar } from '@/components/shared/Sidebar';
 import { TrialBanner } from '@/components/shared/TrialBanner';
 import { InactivityGuard } from '@/components/shared/InactivityGuard';
+import { CommandPalette } from '@/components/shared/CommandPalette';
 import { Loader2 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
@@ -15,6 +16,7 @@ function MobileLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden">
       <InactivityGuard />
+      <CommandPalette />
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <MobileTopBar onMenuOpen={openSidebar} />

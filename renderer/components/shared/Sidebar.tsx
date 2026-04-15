@@ -116,7 +116,7 @@ function SidebarContent({
       {/* Header : business switcher + close (mobile) */}
       <div className="px-2 pt-3 pb-2 border-b border-surface-border flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <BusinessSwitcher />
+          <BusinessSwitcher collapsed={collapsed} />
         </div>
         {onClose && (
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors shrink-0">
@@ -186,7 +186,7 @@ function SidebarContent({
 
       {/* Footer actions */}
       <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
-        <NotificationBell />
+        <NotificationBell collapsed={collapsed} />
 
         <Link
           href="/help"

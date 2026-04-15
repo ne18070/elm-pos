@@ -7,6 +7,7 @@ import { useSubscriptionStore } from '@/store/subscription';
 import { useCashSessionStore } from '@/store/cashSession';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { useAuthStore } from '@/store/auth';
+import { cn } from '@/lib/utils';
 
 interface Alert {
   id: string;
@@ -17,7 +18,7 @@ interface Alert {
   href?: string;
 }
 
-export function NotificationBell() {
+export function NotificationBell({ collapsed = false }: { collapsed?: boolean }) {
   const { business } = useAuthStore();
   const { effectiveStatus, trialDaysRemaining, subscription } = useSubscriptionStore();
   const { session } = useCashSessionStore();
@@ -25,6 +26,8 @@ export function NotificationBell() {
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const expanded = !collapsed;
 
   // Fermer en cliquant dehors
   useEffect(() => {
@@ -127,8 +130,11 @@ export function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-slate-400 hover:text-white hover:bg-surface-hover"
-        title="Notifications"
+        className={cn(
+          "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-slate-400 hover:text-white hover:bg-surface-hover",
+          collapsed ? "justify-center" : ""
+        )}
+        title={collapsed ? "Notifications" : undefined}
       >
         <div className="relative shrink-0">
           <Bell className="w-4 h-4" />
@@ -140,9 +146,9 @@ export function NotificationBell() {
             </span>
           )}
         </div>
-        <span className="text-sm hidden lg:block flex-1 text-left">Notifications</span>
-        {count > 0 && (
-          <span className="hidden lg:flex items-center justify-center min-w-[20px] h-5 px-1
+        {expanded && <span className="text-sm flex-1 text-left">Notifications</span>}
+        {expanded && count > 0 && (
+          <span className="flex items-center justify-center min-w-[20px] h-5 px-1
                            rounded-full bg-red-500 text-white text-xs font-bold">
             {count}
           </span>
@@ -150,9 +156,10 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 lg:left-full mb-2 lg:mb-0 lg:ml-2 lg:bottom-0
-                        w-72 bg-surface-card border border-surface-border rounded-xl shadow-xl z-50
-                        overflow-hidden">
+        <div className={cn(
+          "absolute bottom-full left-0 mb-2 w-72 bg-surface-card border border-surface-border rounded-xl shadow-xl z-50 overflow-hidden",
+          "md:bottom-0 md:mb-0 md:ml-2 md:left-full"
+        )}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
             <p className="text-sm font-semibold text-white">Notifications</p>
             <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-white">

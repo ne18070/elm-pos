@@ -18,6 +18,7 @@
   :root {
     --safe-area-top:    env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --brand-600-rgb: 2, 132, 199;
   }
 
 
@@ -344,3 +345,31 @@
 /* ── Subscribe page : fond grille ───────────────────────────────────────── */
 [data-theme="light"] .subscribe-grid-bg { display: none; }
 [data-theme="light"] .border-brand-800\/50 { border-color: #bae6fd !important; }
+
+/* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
+
+@keyframes cart-item-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+    background-color: rgba(var(--brand-600-rgb), 0.2);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    background-color: transparent;
+  }
+}
+
+.animate-cart-item {
+  animation: cart-item-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes flash-brand {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(var(--brand-600-rgb), 0.1); }
+}
+
+.animate-flash {
+  animation: flash-brand 0.5s ease-in-out;
+}

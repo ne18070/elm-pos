@@ -235,7 +235,7 @@ export function OrderPanel({ taxRate, taxInclusive, currency, businessId, onChec
             return (
               <div
                 key={`${item.product_id}::${item.variant_id ?? ''}`}
-                className={`rounded-xl p-3 border transition-colors ${
+                className={`rounded-xl p-3 border transition-colors animate-cart-item ${
                   over
                     ? 'bg-red-900/10 border-red-800'
                     : 'bg-surface-input border-transparent'

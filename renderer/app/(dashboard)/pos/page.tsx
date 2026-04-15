@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutGrid, List, ShoppingCart } from 'lucide-react';
+import { LayoutGrid, List, ShoppingCart, X } from 'lucide-react';
 import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
 import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
@@ -33,10 +33,50 @@ export default function PosPage() {
   const [selectedClient, setSelectedClient]      = useState<SelectedClient | null>(null);
   const [mobileTab, setMobileTab]                = useState<MobileTab>('catalog');
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const addItem   = useCartStore((s) => s.addItem);
-  const cartCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
+  const cartItems = useCartStore((s) => s.items);
+  const cartCount = cartItems.reduce((n, i) => n + i.quantity, 0);
   const { business } = useAuthStore();
   const router = useRouter();
+
+  // Auto-collapse sidebar on POS page to maximize space
+  useEffect(() => {
+    const isCollapsed = localStorage.getItem('elm-pos-sidebar-collapsed') === 'true';
+    if (!isCollapsed) {
+      // Small delay to let the page settle
+      const t = setTimeout(() => {
+        const btn = document.querySelector('button[title="Réduire"]') as HTMLButtonElement;
+        btn?.click();
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // F1 or / : Focus search
+      if (e.key === 'F1' || (e.key === '/' && document.activeElement?.tagName !== 'INPUT')) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      // F12 or Space (if not in input) : Checkout
+      if ((e.key === 'F12' || (e.key === ' ' && document.activeElement?.tagName !== 'INPUT')) && cartItems.length > 0 && !paymentOpen) {
+        e.preventDefault();
+        setPaymentOpen(true);
+      }
+      // Esc : Clear search or close modals
+      if (e.key === 'Escape') {
+        if (searchQuery) {
+          setSearchQuery('');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cartItems.length, paymentOpen, searchQuery]);
 
   // Les hôtels sans POS activé sont redirigés vers /hotel
   useEffect(() => {
@@ -86,13 +126,24 @@ export default function PosPage() {
             <OnboardingChecklist />
           </div>
           <div className="px-4 py-3 border-b border-surface-border flex gap-2">
-            <input
-              type="text"
-              placeholder="Rechercher un produit ou scanner un code-barres…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input flex-1"
-            />
+            <div className="relative flex-1 group">
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Rechercher (F1) ou scanner un code-barres…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input w-full pr-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-500 hover:text-white hover:bg-surface-hover transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
               <button onClick={() => setView('grid')} title="Vue grille"
                 className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
