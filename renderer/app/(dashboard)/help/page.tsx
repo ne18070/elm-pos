@@ -4,8 +4,9 @@ import { useState } from 'react';
 import {
   HelpCircle, ChevronDown, ShoppingCart, Package, ClipboardList,
   Truck, Tag, BarChart2, Settings, Warehouse, LayoutGrid,
-  Upload, Download, Users, Monitor, CreditCard, Search,
-  AlertCircle, CheckCircle, Info,
+  Users, Monitor, CreditCard, Search,
+  AlertCircle, CheckCircle, Info, MapPin, Vault,
+  Store, BedDouble, BookOpen, History,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,89 @@ interface Topic {
 
 const SECTIONS: Section[] = [
   {
+    id: 'productivite',
+    icon: LayoutGrid,
+    title: 'Productivité & Raccourcis',
+    color: 'text-brand-400',
+    topics: [
+      {
+        question: 'Comment utiliser la Palette de Commandes (Ctrl+K) ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>La palette de commandes est l&apos;outil le plus rapide pour naviguer dans l&apos;application sans utiliser la souris.</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Appuyez sur <kbd className="px-1.5 py-0.5 rounded bg-surface-input border border-surface-border text-[10px] font-bold text-white">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-surface-input border border-surface-border text-[10px] font-bold text-white">K</kbd> (ou Cmd+K sur Mac).</li>
+              <li>Saisissez le nom d&apos;un module (ex: &quot;Stock&quot;, &quot;Caisse&quot;, &quot;Compta&quot;).</li>
+              <li>Utilisez les flèches <kbd className="px-1.5 py-0.5 rounded bg-surface-input border border-surface-border text-[10px] font-bold text-white">↑</kbd><kbd className="px-1.5 py-0.5 rounded bg-surface-input border border-surface-border text-[10px] font-bold text-white">↓</kbd> pour choisir.</li>
+              <li>Appuyez sur <kbd className="px-1.5 py-0.5 rounded bg-surface-input border border-surface-border text-[10px] font-bold text-white">Entrée</kbd> pour valider.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        question: 'Quels sont les raccourcis clavier globaux ?',
+        answer: (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+            <div className="p-3 bg-surface-input/50 rounded-xl border border-surface-border">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Navigation</p>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-300">Ouvrir la palette</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[10px] font-bold text-white whitespace-nowrap">Ctrl + K</kbd>
+              </div>
+            </div>
+            <div className="p-3 bg-surface-input/50 rounded-xl border border-surface-border">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Affichage</p>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-300">Changer de thème</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[10px] font-bold text-white whitespace-nowrap">Ctrl + T</kbd>
+              </div>
+            </div>
+            <div className="p-3 bg-surface-input/50 rounded-xl border border-surface-border">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Journal</p>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-300">Voir l&apos;audit (Journal)</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[10px] font-bold text-white whitespace-nowrap">Ctrl + J</kbd>
+              </div>
+            </div>
+            <div className="p-3 bg-surface-input/50 rounded-xl border border-surface-border">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Système</p>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-300">Paramètres</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[10px] font-bold text-white whitespace-nowrap">Ctrl + ,</kbd>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        question: 'Raccourcis spécifiques à la Caisse',
+        answer: (
+          <div className="space-y-3 text-slate-300">
+            <p>Optimisez vos encaissements avec ces touches rapides :</p>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between border-b border-surface-border pb-1">
+                <span>Focus sur la recherche produit</span>
+                <kbd className="text-white font-bold">F1</kbd>
+              </li>
+              <li className="flex justify-between border-b border-surface-border pb-1">
+                <span>Ouvrir le modal de paiement</span>
+                <kbd className="text-white font-bold">F12</kbd>
+              </li>
+              <li className="flex justify-between border-b border-surface-border pb-1">
+                <span>Vider la recherche / Fermer modal</span>
+                <kbd className="text-white font-bold">Echap</kbd>
+              </li>
+              <li className="flex justify-between border-b border-surface-border pb-1">
+                <span>Focus recherche (si pas en saisie)</span>
+                <kbd className="text-white font-bold">/</kbd>
+              </li>
+            </ul>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
     id: 'caisse',
     icon: ShoppingCart,
     title: 'Caisse (POS)',
@@ -37,7 +121,7 @@ const SECTIONS: Section[] = [
           <ol className="list-decimal list-inside space-y-2 text-slate-300">
             <li>Allez dans <strong className="text-white">Caisse</strong> depuis le menu.</li>
             <li>Recherchez un produit par nom, code-barres ou SKU dans la barre de recherche, ou parcourez la liste.</li>
-            <li>Cliquez sur un produit pour l'ajouter au panier (colonne droite).</li>
+            <li>Cliquez sur un produit pour l&apos;ajouter au panier (colonne droite).</li>
             <li>Ajustez la quantité avec <strong className="text-white">+</strong> / <strong className="text-white">−</strong> dans le panier.</li>
             <li>Cliquez sur <strong className="text-white">Encaisser</strong> pour ouvrir le modal de paiement.</li>
             <li>Choisissez le mode de paiement (espèces, mobile money, carte…) et confirmez.</li>
@@ -49,9 +133,9 @@ const SECTIONS: Section[] = [
         answer: (
           <div className="space-y-2 text-slate-300">
             <p>Dans le panneau panier, cliquez sur <strong className="text-white">Ajouter une promotion</strong>.</p>
-            <p>Une liste déroulante affiche tous les coupons actifs et éligibles selon le montant et le nombre d'articles.</p>
-            <p>Cliquez sur un coupon pour l'appliquer — vous pouvez en appliquer <strong className="text-white">plusieurs à la fois</strong>.</p>
-            <p>Les coupons appliqués s'affichent sous forme de badges dans le panier. Cliquez sur <strong className="text-white">×</strong> pour en retirer un.</p>
+            <p>Une liste déroulante affiche tous les coupons actifs et éligibles selon le montant et le nombre d&apos;articles.</p>
+            <p>Cliquez sur un coupon pour l&apos;appliquer — vous pouvez en appliquer <strong className="text-white">plusieurs à la fois</strong>.</p>
+            <p>Les coupons appliqués s&apos;affichent sous forme de badges dans le panier. Cliquez sur <strong className="text-white">×</strong> pour en retirer un.</p>
             <div className="flex gap-2 mt-3 p-3 bg-surface-input rounded-lg">
               <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-sm">Les coupons de type <em>Article offert</em> ajoutent automatiquement le produit gratuit au panier et le déduisent du stock.</p>
@@ -60,32 +144,124 @@ const SECTIONS: Section[] = [
         ),
       },
       {
-        question: 'Comment mettre une commande en attente ?',
+        question: 'Comment gérer les sessions et clôturer la caisse ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Cliquez sur <strong className="text-white">Mettre en attente</strong> (icône horloge) en haut du panier.</p>
-            <p>Pour rappeler une commande en attente, cliquez sur <strong className="text-white">Commandes en attente</strong> (icône tiroir) et choisissez la commande à rappeler.</p>
+            <p>Allez dans <strong className="text-white">Clôture caisse</strong> pour voir l&apos;état de la session actuelle.</p>
+            <p>Vous y verrez le fonds de caisse initial, le total des ventes par mode de paiement et le solde théorique.</p>
+            <p>Pour clôturer, cliquez sur <strong className="text-white">Clôturer la session</strong>. Un rapport détaillé est généré.</p>
+            <div className="flex gap-2 p-3 bg-red-900/10 border border-red-800 rounded-lg mt-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-300">Une session ouverte trop longtemps (plus de 24h) déclenchera une alerte dans l&apos;application.</p>
+            </div>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'personnel',
+    icon: Users,
+    title: 'Personnel & Paie',
+    color: 'text-orange-400',
+    roles: ['owner', 'admin'],
+    topics: [
+      {
+        question: 'Comment gérer les fiches employés ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Dans l&apos;onglet <strong className="text-white">Équipe</strong>, vous pouvez ajouter vos employés avec leurs coordonnées, poste et type de rémunération (horaire, journalier ou mensuel).</p>
+            <p>Vous pouvez également leur <strong className="text-white">lier un compte utilisateur</strong> pour qu&apos;ils puissent se connecter à l&apos;application.</p>
           </div>
         ),
       },
       {
-        question: 'Comment gérer un paiement partiel (acompte) ?',
+        question: 'Comment suivre les présences ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Dans le modal de paiement, sélectionnez <strong className="text-white">Acompte / partiel</strong>.</p>
-            <p>Saisissez le montant versé. Le solde restant sera affiché et la commande sera en statut <em>Attente</em>.</p>
-            <p>Pour compléter le paiement plus tard, retrouvez la commande dans <strong className="text-white">Commandes</strong> et cliquez sur <em>Compléter le paiement</em>.</p>
+            <p>Dans l&apos;onglet <strong className="text-white">Présences</strong>, cliquez sur les cases du registre pour cycler entre les statuts : <em>Présent, Absent, Demi-journée, Congé, Férié</em>.</p>
+            <p>L&apos;application calcule automatiquement les jours travaillés pour le calcul de la paie.</p>
+            <p>Vous pouvez imprimer une <strong className="text-white">feuille de présence mensuelle</strong> signable via l&apos;icône imprimante.</p>
           </div>
         ),
       },
       {
-        question: 'Comment ouvrir l\'écran client (affichage client) ?',
+        question: 'Comment générer les bulletins de paie ?',
+        answer: (
+          <ol className="list-decimal list-inside space-y-2 text-slate-300">
+            <li>Allez dans l&apos;onglet <strong className="text-white">Paie & Salaires</strong>.</li>
+            <li>Sélectionnez le mois concerné.</li>
+            <li>Cliquez sur <strong className="text-white">Enregistrer le paiement</strong> pour un employé.</li>
+            <li>Ajustez les primes ou retenues si nécessaire et validez.</li>
+            <li>Une fois payé, cliquez sur <strong className="text-white">Bulletin</strong> pour imprimer la fiche de paie au format A4.</li>
+          </ol>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'tracking',
+    icon: MapPin,
+    title: 'Tracking terrain (GPS)',
+    color: 'text-cyan-400',
+    topics: [
+      {
+        question: 'Comment activer mon tracking ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Cliquez sur <strong className="text-white">Écran client</strong> en bas du menu latéral (icône moniteur).</p>
-            <p>Une nouvelle fenêtre s'ouvre et affiche en temps réel le contenu du panier, le total et le logo de votre établissement.</p>
-            <p>Idéalement placée sur un second écran face au client.</p>
+            <p>Le tracking permet de partager votre position avec votre équipe pendant vos missions terrain.</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Dans la barre latérale, cliquez sur <strong className="text-white">Tracking Terrain</strong> (icône localisation).</li>
+              <li>Autorisez l&apos;accès à votre position GPS.</li>
+              <li>L&apos;icône s&apos;anime pour indiquer que le partage est actif.</li>
+            </ol>
+            <p className="text-xs text-slate-500 italic mt-2">Le tracking s&apos;arrête dès que vous fermez l&apos;application.</p>
           </div>
+        ),
+      },
+      {
+        question: 'Comment suivre les membres sur le terrain ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Allez dans le module <strong className="text-white">Tracking terrain</strong> depuis le menu.</p>
+            <p>Vous y verrez en temps réel la position des membres actifs, la précision de leur signal GPS, et sur quelle page de l&apos;application ils travaillent.</p>
+            <p>Un bouton <strong className="text-white">Navigation</strong> permet d&apos;ouvrir leur position exacte dans Google Maps.</p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'revendeurs',
+    icon: Store,
+    title: 'Vente en gros & Revendeurs',
+    color: 'text-teal-400',
+    roles: ['owner', 'admin'],
+    topics: [
+      {
+        question: 'Comment appliquer un tarif revendeur ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Dans la <strong className="text-white">Caisse</strong>, cliquez sur l&apos;icône utilisateur au-dessus du panier pour sélectionner un client ou un revendeur.</p>
+            <p>Si le client est enregistré comme revendeur, les prix du panier s&apos;ajustent automatiquement selon ses conditions tarifaires (ex: prix de gros).</p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'hotel',
+    icon: BedDouble,
+    title: 'Hébergement (Hôtel)',
+    color: 'text-sky-400',
+    topics: [
+      {
+        question: 'Comment gérer les chambres ?',
+        answer: (
+          <p className="text-slate-300">
+            Le module <strong className="text-white">Hôtel</strong> permet de visualiser l&apos;état des chambres (Libre, Occupée, Ménage).
+            Vous pouvez effectuer des Check-in, enregistrer les consommations et générer la facture finale au Check-out.
+          </p>
         ),
       },
     ],
@@ -106,41 +282,12 @@ const SECTIONS: Section[] = [
         ),
       },
       {
-        question: 'Comment rembourser une commande ?',
-        answer: (
-          <ol className="list-decimal list-inside space-y-2 text-slate-300">
-            <li>Trouvez la commande payée dans la liste.</li>
-            <li>Cliquez sur la commande puis sur <strong className="text-white">Rembourser</strong>.</li>
-            <li>Sélectionnez les articles à rembourser et confirmez. Le stock est automatiquement réajusté.</li>
-          </ol>
-        ),
-      },
-      {
-        question: 'Comment annuler une commande ?',
+        question: 'Comment rembourser ou annuler ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Sur la commande, cliquez sur <strong className="text-white">Annuler</strong>. Seules les commandes en attente ou non livrées peuvent être annulées.</p>
-            <p>L'annulation restitue le stock des articles.</p>
+            <p>Cliquez sur une commande pour voir ses détails. Utilisez le bouton <strong className="text-white">Rembourser</strong> (pour une vente payée) ou <strong className="text-white">Annuler</strong> (pour une vente en attente).</p>
+            <p>Le stock est automatiquement restitué lors d&apos;un remboursement ou d&apos;une annulation.</p>
           </div>
-        ),
-      },
-    ],
-  },
-  {
-    id: 'livraison',
-    icon: Truck,
-    title: 'Livraisons',
-    color: 'text-orange-400',
-    topics: [
-      {
-        question: 'Comment gérer les livraisons ?',
-        answer: (
-          <ol className="list-decimal list-inside space-y-2 text-slate-300">
-            <li>Allez dans <strong className="text-white">Livraisons</strong>.</li>
-            <li>Les commandes avec livraison en attente apparaissent dans la liste.</li>
-            <li>Cliquez sur <strong className="text-white">Commencer la préparation</strong> pour passer une commande en statut <em>En cours</em>.</li>
-            <li>Une fois livrée, cliquez sur <strong className="text-white">Marquer comme livrée</strong>.</li>
-          </ol>
         ),
       },
     ],
@@ -148,7 +295,7 @@ const SECTIONS: Section[] = [
   {
     id: 'produits',
     icon: Package,
-    title: 'Produits',
+    title: 'Produits & Stock',
     color: 'text-green-400',
     roles: ['owner', 'admin'],
     topics: [
@@ -158,202 +305,39 @@ const SECTIONS: Section[] = [
           <ol className="list-decimal list-inside space-y-2 text-slate-300">
             <li>Allez dans <strong className="text-white">Produits</strong> et cliquez sur <strong className="text-white">Nouveau produit</strong>.</li>
             <li>Remplissez le nom, prix, catégorie, et éventuellement le code-barres et le SKU.</li>
-            <li>Activez <em>Suivre le stock</em> si vous gérez les niveaux de stock pour ce produit.</li>
-            <li>Ajoutez une image en cliquant sur la zone image.</li>
-            <li>Cliquez sur <strong className="text-white">Enregistrer</strong>.</li>
+            <li>Activez <em>Suivre le stock</em> si vous gérez les niveaux de stock.</li>
+            <li>Ajoutez une image si nécessaire et enregistrez.</li>
           </ol>
         ),
       },
       {
-        question: 'Comment importer des produits en masse (CSV) ?',
-        answer: (
-          <div className="space-y-3 text-slate-300">
-            <p>Cliquez sur <strong className="text-white">Importer</strong> (icône flèche montante) dans la page Produits.</p>
-            <p className="font-medium text-white">Format du fichier CSV attendu :</p>
-            <div className="bg-surface-input rounded-lg p-3 overflow-x-auto">
-              <code className="text-xs text-green-400 whitespace-pre">{`nom,description,prix,categorie,code_barres,sku,stock,suivre_stock,actif
-"Coca-Cola 50cl","Boisson gazeuse",500,"Boissons","123456","CC50",100,oui,oui
-"Eau minérale","Eau plate 1,5L",200,"Boissons",,,,non,oui`}</code>
-            </div>
-            <ul className="space-y-1 text-sm">
-              <li><strong className="text-white">nom</strong> — obligatoire</li>
-              <li><strong className="text-white">prix</strong> — nombre sans symbole monétaire</li>
-              <li><strong className="text-white">suivre_stock</strong> — <code className="text-green-400">oui</code> ou <code className="text-red-400">non</code></li>
-              <li><strong className="text-white">actif</strong> — <code className="text-green-400">oui</code> ou <code className="text-red-400">non</code></li>
-              <li>Les colonnes optionnelles peuvent être laissées vides.</li>
-            </ul>
-            <div className="flex gap-2 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-300">Encodage requis : <strong>UTF-8</strong>. Ouvrez le fichier dans Excel ou Google Sheets, puis exportez en CSV UTF-8.</p>
-            </div>
-          </div>
-        ),
-      },
-      {
-        question: 'Comment exporter les produits ?',
-        answer: (
-          <p className="text-slate-300">
-            Cliquez sur <strong className="text-white">Exporter CSV</strong> (icône flèche descendante). Un fichier CSV est téléchargé avec tous les produits visibles (selon votre recherche actuelle).
-            Le fichier peut être ouvert dans Excel, LibreOffice ou Google Sheets.
-          </p>
-        ),
-      },
-    ],
-  },
-  {
-    id: 'approvisionnement',
-    icon: Warehouse,
-    title: 'Approvisionnement',
-    color: 'text-cyan-400',
-    roles: ['owner', 'admin'],
-    topics: [
-      {
-        question: 'Comment enregistrer une entrée de stock ?',
-        answer: (
-          <ol className="list-decimal list-inside space-y-2 text-slate-300">
-            <li>Allez dans <strong className="text-white">Approvisionnement</strong> et cliquez sur <strong className="text-white">Nouvelle entrée</strong>.</li>
-            <li>Sélectionnez le produit concerné.</li>
-            <li>Saisissez la quantité reçue, le conditionnement (ex. : cartons de 12), le fournisseur et le coût unitaire.</li>
-            <li>Confirmez — le stock du produit est automatiquement mis à jour.</li>
-          </ol>
-        ),
-      },
-    ],
-  },
-  {
-    id: 'categories',
-    icon: LayoutGrid,
-    title: 'Catégories',
-    color: 'text-purple-400',
-    roles: ['owner', 'admin'],
-    topics: [
-      {
-        question: 'Comment créer une catégorie ?',
-        answer: (
-          <p className="text-slate-300">
-            Allez dans <strong className="text-white">Catégories</strong> et cliquez sur <strong className="text-white">Nouvelle catégorie</strong>.
-            Donnez-lui un nom et éventuellement une couleur ou icône. Les catégories permettent de filtrer les produits à la caisse.
-          </p>
-        ),
-      },
-    ],
-  },
-  {
-    id: 'coupons',
-    icon: Tag,
-    title: 'Coupons & Promotions',
-    color: 'text-rose-400',
-    roles: ['owner', 'admin'],
-    topics: [
-      {
-        question: 'Comment créer un coupon de réduction ?',
-        answer: (
-          <ol className="list-decimal list-inside space-y-2 text-slate-300">
-            <li>Allez dans <strong className="text-white">Coupons</strong> et cliquez sur <strong className="text-white">Nouveau coupon</strong>.</li>
-            <li>Choisissez le type : <em>Pourcentage</em>, <em>Montant fixe</em> ou <em>Article offert</em>.</li>
-            <li>Définissez le code, la valeur et les conditions (montant minimum, quantité minimale, date d'expiration, utilisations max).</li>
-            <li>Activez le coupon et enregistrez.</li>
-          </ol>
-        ),
-      },
-      {
-        question: 'Comment fonctionne le coupon "Article offert" ?',
+        question: 'Comment importer des produits (CSV) ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Ce type de coupon permet d'offrir un article spécifique gratuitement (ex. : achetez 10 cartons, recevez 1 bouteille offerte).</p>
-            <p>Lors de l'application à la caisse, le produit offert est automatiquement ajouté au panier à prix 0 et son stock est décompté.</p>
-            <p>Configurez les conditions : <em>Quantité minimum</em> dans le panier avant que le coupon soit éligible.</p>
+            <p>Cliquez sur <strong className="text-white">Importer</strong> dans la page Produits. Utilisez un fichier CSV encodé en <strong className="text-white">UTF-8</strong>.</p>
+            <div className="bg-surface-input rounded-lg p-3 overflow-x-auto text-[10px]">
+              <code className="text-green-400 whitespace-pre">{`nom,description,prix,categorie,code_barres,sku,stock,suivre_stock,actif
+"Coca-Cola 50cl","Boisson gazeuse",500,"Boissons","123456","CC50",100,oui,oui`}</code>
+            </div>
           </div>
         ),
       },
     ],
   },
   {
-    id: 'analytics',
-    icon: BarChart2,
-    title: 'Statistiques',
-    color: 'text-yellow-400',
+    id: 'compta',
+    icon: BookOpen,
+    title: 'Comptabilité',
+    color: 'text-indigo-400',
     roles: ['owner', 'admin'],
     topics: [
       {
-        question: 'Quelles statistiques sont disponibles ?',
+        question: 'Comment consulter le journal des ventes ?',
         answer: (
-          <ul className="list-disc list-inside space-y-1.5 text-slate-300">
-            <li>Chiffre d'affaires par jour, semaine ou mois</li>
-            <li>Nombre de ventes et panier moyen</li>
-            <li>Top produits les plus vendus</li>
-            <li>Répartition par mode de paiement</li>
-            <li>Évolution du stock (alertes de rupture)</li>
-          </ul>
-        ),
-      },
-    ],
-  },
-  {
-    id: 'paiement',
-    icon: CreditCard,
-    title: 'Modes de paiement',
-    color: 'text-emerald-400',
-    topics: [
-      {
-        question: 'Quels modes de paiement sont supportés ?',
-        answer: (
-          <ul className="list-disc list-inside space-y-1.5 text-slate-300">
-            <li><strong className="text-white">Espèces</strong> — calcul automatique du rendu monnaie</li>
-            <li><strong className="text-white">Mobile money</strong> — (Orange Money, Wave, etc.)</li>
-            <li><strong className="text-white">Carte bancaire</strong></li>
-            <li><strong className="text-white">Paiement mixte</strong> — combinez plusieurs modes pour une même vente</li>
-            <li><strong className="text-white">Acompte / partiel</strong> — encaissez une partie maintenant, le reste plus tard</li>
-          </ul>
-        ),
-      },
-    ],
-  },
-  {
-    id: 'admin',
-    icon: Users,
-    title: 'Administration & Équipe',
-    color: 'text-slate-400',
-    roles: ['owner', 'admin'],
-    topics: [
-      {
-        question: 'Comment inviter un membre de l\'équipe ?',
-        answer: (
-          <ol className="list-decimal list-inside space-y-2 text-slate-300">
-            <li>Allez dans <strong className="text-white">Administration → Équipe</strong>.</li>
-            <li>Cliquez sur <strong className="text-white">Inviter un agent</strong>.</li>
-            <li>Saisissez l'adresse e-mail de la personne et son rôle (<em>Admin</em> ou <em>Caissier</em>).</li>
-            <li>La personne reçoit un e-mail d'invitation pour créer son compte.</li>
-          </ol>
-        ),
-      },
-      {
-        question: 'Quels sont les rôles disponibles ?',
-        answer: (
-          <div className="space-y-3">
-            <div className="flex gap-3 p-3 bg-surface-input rounded-lg">
-              <span className="text-xs font-bold text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded h-fit">Propriétaire</span>
-              <p className="text-sm text-slate-300">Accès complet. Peut créer de nouveaux établissements, gérer l'équipe, voir toutes les statistiques.</p>
-            </div>
-            <div className="flex gap-3 p-3 bg-surface-input rounded-lg">
-              <span className="text-xs font-bold text-blue-400 bg-blue-900/30 px-2 py-0.5 rounded h-fit">Administrateur</span>
-              <p className="text-sm text-slate-300">Accès à tout sauf la création d'établissement. Peut gérer produits, coupons, équipe.</p>
-            </div>
-            <div className="flex gap-3 p-3 bg-surface-input rounded-lg">
-              <span className="text-xs font-bold text-slate-400 bg-slate-700 px-2 py-0.5 rounded h-fit">Caissier</span>
-              <p className="text-sm text-slate-300">Accès à la caisse, commandes et livraisons uniquement.</p>
-            </div>
-          </div>
-        ),
-      },
-      {
-        question: 'Comment gérer plusieurs établissements ?',
-        answer: (
-          <div className="space-y-2 text-slate-300">
-            <p>Cliquez sur le <strong className="text-white">nom de votre établissement</strong> en haut du menu latéral pour ouvrir le sélecteur.</p>
-            <p>Pour créer un nouvel établissement, cliquez sur <strong className="text-white">Nouvel établissement</strong> en bas du sélecteur (visible pour les propriétaires).</p>
-            <p>Pour basculer vers un autre établissement, cliquez simplement sur son nom dans la liste. Toutes les données (produits, commandes, stock) sont séparées par établissement.</p>
-          </div>
+          <p className="text-slate-300">
+            Allez dans <strong className="text-white">Comptabilité</strong> pour voir le journal détaillé de toutes les transactions,
+            les flux de trésorerie et exporter des rapports pour votre comptable.
+          </p>
         ),
       },
     ],
@@ -365,24 +349,11 @@ const SECTIONS: Section[] = [
     color: 'text-slate-400',
     topics: [
       {
-        question: 'Comment configurer mon établissement ?',
-        answer: (
-          <p className="text-slate-300">
-            Dans <strong className="text-white">Paramètres</strong>, vous pouvez modifier le nom, le type d'activité, la devise, le taux de TVA, le logo et le pied de page du ticket de caisse.
-            Ces informations apparaissent sur les reçus imprimés.
-          </p>
-        ),
-      },
-      {
-        question: 'Comment configurer l\'imprimante de reçus ?',
+        question: 'Comment configurer l\'imprimante ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Branchez votre imprimante thermique USB. L'application détecte automatiquement les imprimantes USB compatibles ESC/POS.</p>
-            <p>Dans <strong className="text-white">Paramètres → Imprimante</strong>, testez l'impression avec le bouton <em>Imprimer un test</em>.</p>
-            <div className="flex gap-2 p-3 bg-surface-input rounded-lg">
-              <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-              <p className="text-sm">Compatible avec la plupart des imprimantes thermiques ESC/POS 80mm (Epson, Star, Bixolon, etc.).</p>
-            </div>
+            <p>Branchez votre imprimante thermique USB. Allez dans <strong className="text-white">Paramètres → Imprimante</strong> et testez l&apos;impression.</p>
+            <p>Compatible avec les imprimantes standard ESC/POS (Epson, Star, etc.).</p>
           </div>
         ),
       },
@@ -474,8 +445,8 @@ export default function HelpPage() {
             <HelpCircle className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Centre d'aide</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Guides d'utilisation de l'application</p>
+            <h1 className="text-xl font-bold text-white">Centre d&apos;aide</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Guides d&apos;utilisation de l&apos;application</p>
           </div>
         </div>
 
@@ -484,7 +455,7 @@ export default function HelpPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Rechercher dans l'aide…"
+            placeholder="Rechercher dans l&apos;aide…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="input pl-10"
@@ -515,7 +486,7 @@ export default function HelpPage() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <HelpCircle className="w-12 h-12 mb-3 opacity-30" />
-            <p className="font-medium">Aucun résultat pour "{search}"</p>
+            <p className="font-medium">Aucun résultat pour &quot;{search}&quot;</p>
           </div>
         ) : (
           filtered.map((section) => (
