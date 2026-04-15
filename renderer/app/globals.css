@@ -87,11 +87,11 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 /* Fond principal */
-[data-theme="light"] body                  { background-color: #f1f5f9 !important; color: #1e293b !important; }
-[data-theme="light"] .bg-surface           { background-color: #f1f5f9 !important; }
+[data-theme="light"] body                  { background-color: #f8fafc !important; color: #1e293b !important; }
+[data-theme="light"] .bg-surface           { background-color: #f8fafc !important; }
 [data-theme="light"] .bg-surface-card      { background-color: #ffffff !important; }
-[data-theme="light"] .bg-surface-input     { background-color: #f8fafc !important; }
-[data-theme="light"] .bg-surface-border    { background-color: #e2e8f0 !important; }
+[data-theme="light"] .bg-surface-input     { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+[data-theme="light"] .bg-surface-border    { background-color: #f1f5f9 !important; }
 [data-theme="light"] .bg-surface-hover     { background-color: #f1f5f9 !important; }
 
 /* Sidebar : annule les overrides ci-dessus pour garder le look sombre */

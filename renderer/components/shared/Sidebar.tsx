@@ -6,7 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
-  Scale, Receipt, Menu, X, FileSignature, UsersRound,
+  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { OfflineBadge } from './OfflineBadge';
 import { BusinessSwitcher } from './BusinessSwitcher';
 import { NotificationBell } from './NotificationBell';
+import { TeamTracker } from './TeamTracker';
 import { TerminalStatus } from './TerminalStatus';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',        bizTypes: null           },
   { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location', roles: MANAGER_ROLES,       feature: 'contrats',          bizTypes: null           },
   { href: '/staff',             icon: UsersRound,    label: 'Personnel & Paie',   roles: MANAGER_ROLES,       feature: 'staff',             bizTypes: null           },
+  { href: '/team-tracking',     icon: MapPin,        label: 'Tracking terrain',   roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
   { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,                bizTypes: ['restaurant'] },
   { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: 'whatsapp',          bizTypes: null           },
   { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,                bizTypes: null           },
@@ -186,6 +188,7 @@ function SidebarContent({
 
       {/* Footer actions */}
       <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
+        <TeamTracker collapsed={collapsed} />
         <NotificationBell collapsed={collapsed} />
 
         <Link

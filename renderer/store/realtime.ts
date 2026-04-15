@@ -7,6 +7,8 @@ export interface TerminalInfo {
   user_name:   string;
   pathname:    string;
   joined_at:   string;
+  is_tracking?: boolean;
+  location?:    { lat: number; lng: number; accuracy?: number };
 }
 
 export interface RealtimeEvent {
@@ -23,6 +25,11 @@ interface RealtimeState {
   setStatus:   (s: RealtimeStatus) => void;
   setTerminals:(t: TerminalInfo[]) => void;
   addEvent:    (e: RealtimeEvent) => void;
+  // Local state for the current terminal's tracking
+  isTracking:  boolean;
+  location:    { lat: number; lng: number; accuracy?: number } | null;
+  setTracking: (active: boolean) => void;
+  setLocation: (loc: { lat: number; lng: number; accuracy?: number } | null) => void;
 }
 
 function getOrCreateTerminalId(): string {
@@ -41,10 +48,14 @@ export const useRealtimeStore = create<RealtimeState>((set) => ({
   terminalId: getOrCreateTerminalId(),
   terminals:  [],
   lastEvents: [],
+  isTracking: false,
+  location:   null,
 
   setStatus:    (status)    => set({ status }),
   setTerminals: (terminals) => set({ terminals }),
   addEvent:     (e)         => set((s) => ({
     lastEvents: [e, ...s.lastEvents].slice(0, 30),
   })),
+  setTracking:  (isTracking) => set({ isTracking }),
+  setLocation:  (location)   => set({ location }),
 }));

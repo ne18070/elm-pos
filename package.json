@@ -23,7 +23,9 @@
     "web:build": "cd renderer && next build",
     "web:start": "cd renderer && next start --port 3001",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-rebuild"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

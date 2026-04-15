@@ -6,7 +6,7 @@ import {
   Clock, CheckCircle, AlertCircle, CalendarDays, Banknote, UserMinus,
   UserCheck, Coffee, Plane, Star, Phone, Mail, Building2, Save,
   TrendingUp, DollarSign, Link2, Unlink, RefreshCw, Copy, Check, LogIn,
-  Printer, FileText, LayoutList, Calendar, Wallet, Search as SearchIcon
+  Printer, FileText, LayoutList, Calendar, Wallet, Search as SearchIcon, History
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';

@@ -41,7 +41,12 @@ export function useRealtimeSync() {
   const { setSession } = useCashSessionStore();
   const pathname = usePathname();
 
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const channelRef      = useRef<RealtimeChannel | null>(null);
+  // Stable joined_at — set once when the channel connects, never updated
+  const joinedAtRef     = useRef<string>(new Date().toISOString());
+  // Throttle refs — local, don't trigger re-renders
+  const lastLocTrackRef = useRef<number>(0);
+  const lastLocationRef = useRef<string>('');
 
   // ── Channel lifecycle (recreate only when business/user changes) ────────────
   useEffect(() => {
@@ -157,9 +162,11 @@ export function useRealtimeSync() {
     // ── Presence ─────────────────────────────────────────────────────────────
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<{
-        user_name: string;
-        pathname:  string;
-        joined_at: string;
+        user_name:   string;
+        pathname:    string;
+        joined_at:   string;
+        is_tracking?: boolean;
+        location?:    { lat: number; lng: number; accuracy?: number };
       }>();
 
       const terminals = Object.entries(state).map(([termId, presences]) => ({
@@ -167,6 +174,8 @@ export function useRealtimeSync() {
         user_name:   presences[0]?.user_name  ?? 'Inconnu',
         pathname:    presences[0]?.pathname   ?? '/',
         joined_at:   presences[0]?.joined_at  ?? new Date().toISOString(),
+        is_tracking: presences[0]?.is_tracking,
+        location:    presences[0]?.location,
       }));
 
       setTerminals(terminals);
@@ -176,11 +185,17 @@ export function useRealtimeSync() {
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setStatus('connected');
-        await channel.track({
-          user_name: user.full_name,
-          pathname,
-          joined_at: new Date().toISOString(),
-        });
+        joinedAtRef.current = new Date().toISOString(); // set once, never updated
+        try {
+          const { isTracking, location } = useRealtimeStore.getState();
+          await channel.track({
+            user_name:   user.full_name,
+            pathname,
+            joined_at:   joinedAtRef.current,
+            is_tracking: isTracking,
+            location:    location ?? undefined,
+          });
+        } catch { /* ignore */ }
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
         setStatus('disconnected');
       }
@@ -195,13 +210,36 @@ export function useRealtimeSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id, user?.id]);
 
-  // ── Update presence on route change ────────────────────────────────────────
+  // ── Update presence on route change, tracking toggle or new location ───────
+  const { isTracking, location, status } = useRealtimeStore();
+
   useEffect(() => {
-    if (!channelRef.current || !user) return;
+    if (!channelRef.current || !user || status !== 'connected') return;
+
+    // For location updates: throttle to at most once every 10 s to avoid
+    // flooding Supabase Realtime. Other changes (pathname, isTracking) always
+    // go through immediately — we only check the location-specific throttle
+    // when the location value itself changed.
+    const locKey = location ? `${location.lat.toFixed(4)},${location.lng.toFixed(4)}` : '';
+    const locationChanged = locKey !== lastLocationRef.current;
+
+    if (locationChanged && location !== null) {
+      const now = Date.now();
+      if (now - lastLocTrackRef.current < 10_000) return; // throttled
+      lastLocTrackRef.current = now;
+      lastLocationRef.current = locKey;
+    } else if (locationChanged && location === null) {
+      // tracking stopped — always send immediately
+      lastLocationRef.current = '';
+    }
+
     channelRef.current.track({
-      user_name: user.full_name,
+      user_name:   user.full_name,
       pathname,
-      joined_at: new Date().toISOString(),
+      joined_at:   joinedAtRef.current, // stable, never changes
+      is_tracking: isTracking,
+      location:    location ?? undefined,
     }).catch(() => {});
-  }, [pathname, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, user?.id, isTracking, location, status]);
 }
