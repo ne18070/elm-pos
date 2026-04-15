@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store, User, Search } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store, User, Search, Utensils } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
