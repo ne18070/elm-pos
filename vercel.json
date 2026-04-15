@@ -1,7 +1,7 @@
 {
   "buildCommand": "cd renderer && ../node_modules/.bin/next build",
   "outputDirectory": "renderer/.next",
-  "installCommand": "yarn install",
+  "installCommand": "yarn install --ignore-scripts",
   "devCommand": "cd renderer && ../node_modules/.bin/next dev",
   "framework": "nextjs"
 }
