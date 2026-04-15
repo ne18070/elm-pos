@@ -74,42 +74,6 @@ export default function SubscribePage() {
   }
 
   async function handleSubmit() {
-    if (!selectedPlan || !receiptFile) return;
-    if (!validatePassword()) return;
-    setSubmitting(true);
-    setSubmitError('');
-    try {
-      const ext  = receiptFile.name.split('.').pop() ?? 'jpg';
-      const path = `receipts/public-${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from('product-images').upload(path, receiptFile);
-      if (uploadErr) throw new Error(uploadErr.message);
-      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
-
-      const { error } = await db.from('public_subscription_requests').insert({
-        business_name: businessName.trim(),
-        email:         email.trim().toLowerCase(),
-        phone:         phone.trim(),
-        plan_id:       selectedPlan.id,
-        receipt_url:   urlData.publicUrl,
-        password,
-      });
-      if (error) throw new Error(error.message);
-      sendEmail({
-        type:    'subscription_received',
-        to:      email.trim().toLowerCase(),
-        subject: '📩 Demande reçue — ELM APP',
-        data:    { business_name: businessName.trim(), plan_label: selectedPlan.label ?? selectedPlan.name },
-      }).catch(() => {});
-      setStep('sent');
-    } catch (e) {
-      setSubmitError(String(e));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleSubmitFree() {
     if (!selectedPlan) return;
     if (!validatePassword()) return;
     setSubmitting(true);
@@ -137,6 +101,10 @@ export default function SubscribePage() {
       setSubmitting(false);
     }
   }
+
+  /* PAYMENT STEP BYPASSED — will be re-enabled once payment API is ready
+  async function handleSubmitWithReceipt() { ... }
+  */
 
   if (loading) {
     return (
@@ -319,21 +287,28 @@ export default function SubscribePage() {
               );
             })()}
 
+            {/* Note paiement */}
+            {selectedPlan && !isFree(selectedPlan) && (
+              <div className="rounded-xl bg-brand-900/30 border border-brand-800/50 px-4 py-3 text-sm text-brand-300">
+                Notre équipe vous contactera pour finaliser le paiement après réception de votre demande.
+              </div>
+            )}
+
             {submitError && <p className="text-sm text-red-400">{submitError}</p>}
 
             <button
-              onClick={isFree(selectedPlan) ? handleSubmitFree : () => setStep('payment')}
+              onClick={handleSubmit}
               disabled={!businessName.trim() || !email.trim() || !selectedPlan || !password || !confirmPassword || submitting}
               className="btn-primary w-full h-12 text-base flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isFree(selectedPlan)
-                ? (submitting ? 'Envoi en cours…' : "S'inscrire gratuitement →")
-                : 'Continuer vers le paiement →'}
+              {submitting ? 'Envoi en cours…' : isFree(selectedPlan) ? "S'inscrire gratuitement →" : 'Envoyer ma demande →'}
             </button>
           </div>
-        ) : (
-          /* ── Étape 2 : Paiement + reçu ── */
+        ) : null /* PAYMENT STEP BYPASSED */}
+
+        {false && step === 'payment' && (
+          /* ── Étape 2 : Paiement + reçu — désactivé temporairement ── */
           <div className="space-y-6">
             <button onClick={() => setStep('info')} className="text-sm text-slate-400 hover:text-white transition-colors">
               ← Retour
@@ -386,7 +361,7 @@ export default function SubscribePage() {
 
                 {receiptPreview ? (
                   <div className="relative w-fit">
-                    <img src={receiptPreview} alt="reçu" className="h-36 w-auto rounded-xl border border-surface-border object-cover" />
+                    <img src={receiptPreview ?? undefined} alt="reçu" className="h-36 w-auto rounded-xl border border-surface-border object-cover" />
                     <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
                       <X className="w-3.5 h-3.5 text-white" />
