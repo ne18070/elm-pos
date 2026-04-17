@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
-  BarChart2, Settings, LogOut, Tag, LayoutGrid, ShieldCheck, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, History, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
+  BarChart2, Settings, LogOut, Tag, LayoutGrid, Truck, Warehouse,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
   Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -100,6 +100,7 @@ function SidebarContent({
   onClose?: () => void;   // mobile drawer close
   onCollapse?: () => void; // desktop collapse toggle
 }) {
+  const router = useRouter();
   const pathname = usePathname();
   const { user, business, clear } = useAuthStore();
   const { setSubscription, setLoaded } = useSubscriptionStore();
@@ -121,12 +122,13 @@ function SidebarContent({
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    clear();
     setSubscription(null);
     setLoaded(false);
     const { setSession: setCash, setLoaded: setCashLoaded } = useCashSessionStore.getState();
     setCash(null);
     setCashLoaded(false);
-    clear();
+    router.push('/login');
   }
 
   const visibleSections = NAV_SECTIONS.map(section => ({

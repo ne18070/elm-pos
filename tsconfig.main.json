@@ -15,7 +15,8 @@
     "paths": {
       "@types/*": ["types/*"],
       "@services/*": ["services/*"],
-      "@hardware/*": ["hardware/*"]
+      "@hardware/*": ["hardware/*"],
+      "@pos-types": ["types/index"]
     }
   },
   "include": ["main/**/*", "hardware/**/*", "services/**/*", "types/**/*"],
