@@ -47,6 +47,9 @@ export function useRealtimeSync() {
   // Throttle refs — local, don't trigger re-renders
   const lastLocTrackRef = useRef<number>(0);
   const lastLocationRef = useRef<string>('');
+  // Previous values to detect which dep actually changed in the update effect
+  const prevIsTrackingRef = useRef<boolean>(false);
+  const prevPathnameRef   = useRef<string>('');
 
   // ── Channel lifecycle (recreate only when business/user changes) ────────────
   useEffect(() => {
@@ -185,7 +188,10 @@ export function useRealtimeSync() {
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setStatus('connected');
-        joinedAtRef.current = new Date().toISOString(); // set once, never updated
+        joinedAtRef.current     = new Date().toISOString();
+        // Reset throttle so first location after reconnect always goes through
+        lastLocTrackRef.current = 0;
+        lastLocationRef.current = '';
         try {
           const { isTracking, location } = useRealtimeStore.getState();
           await channel.track({
@@ -216,27 +222,32 @@ export function useRealtimeSync() {
   useEffect(() => {
     if (!channelRef.current || !user || status !== 'connected') return;
 
-    // For location updates: throttle to at most once every 10 s to avoid
-    // flooding Supabase Realtime. Other changes (pathname, isTracking) always
-    // go through immediately — we only check the location-specific throttle
-    // when the location value itself changed.
-    const locKey = location ? `${location.lat.toFixed(4)},${location.lng.toFixed(4)}` : '';
+    const isTrackingChanged = isTracking !== prevIsTrackingRef.current;
+    const pathnameChanged   = pathname   !== prevPathnameRef.current;
+    prevIsTrackingRef.current = isTracking;
+    prevPathnameRef.current   = pathname;
+
+    const locKey          = location ? `${location.lat.toFixed(4)},${location.lng.toFixed(4)}` : '';
     const locationChanged = locKey !== lastLocationRef.current;
 
-    if (locationChanged && location !== null) {
+    // Throttle pure location updates to at most once every 10 s.
+    // isTracking and pathname changes always bypass the throttle — without this
+    // guard a simultaneous isTracking+location change would silently drop the
+    // isTracking update until the next un-throttled location tick.
+    if (locationChanged && location !== null && !isTrackingChanged && !pathnameChanged) {
       const now = Date.now();
-      if (now - lastLocTrackRef.current < 10_000) return; // throttled
-      lastLocTrackRef.current = now;
+      if (now - lastLocTrackRef.current < 10_000) return;
+    }
+
+    if (locationChanged) {
       lastLocationRef.current = locKey;
-    } else if (locationChanged && location === null) {
-      // tracking stopped — always send immediately
-      lastLocationRef.current = '';
+      if (location !== null) lastLocTrackRef.current = Date.now();
     }
 
     channelRef.current.track({
       user_name:   user.full_name,
       pathname,
-      joined_at:   joinedAtRef.current, // stable, never changes
+      joined_at:   joinedAtRef.current,
       is_tracking: isTracking,
       location:    location ?? undefined,
     }).catch(() => {});

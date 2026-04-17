@@ -2,10 +2,11 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Loader2, Save, UserPlus, Shield, UserX, ChevronDown,
   Users, User, Building2, Check, Lock, Ban, RefreshCw, Copy,
-  CreditCard, Clock, CheckCircle, XCircle, Zap,
+  CreditCard, Clock, CheckCircle, XCircle, Zap, ExternalLink,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { displayCurrency } from '@/lib/utils';
@@ -23,15 +24,16 @@ import { canManageTeam, hasRole } from '@/lib/permissions';
 import type { BusinessMembership } from '@services/supabase/business';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
-  owner:   { label: 'Propriétaire',   color: 'text-yellow-400 bg-yellow-900/20 border-yellow-800' },
-  admin:   { label: 'Administrateur', color: 'text-brand-400 bg-brand-900/20 border-brand-800' },
-  manager: { label: 'Manager',        color: 'text-purple-400 bg-purple-900/20 border-purple-800' },
-  staff:   { label: 'Caissier',       color: 'text-slate-300 bg-slate-800 border-slate-700' },
+  owner:   { label: 'Propriétaire',   color: 'text-indigo-900 bg-indigo-100 border-indigo-200 dark:text-indigo-400 dark:bg-indigo-900/20 dark:border-indigo-800' },
+  admin:   { label: 'Administrateur', color: 'text-brand-900 bg-brand-100 border-brand-200 dark:text-brand-400 dark:bg-brand-900/20 dark:border-brand-800' },
+  manager: { label: 'Manager',        color: 'text-purple-900 bg-purple-100 border-purple-200 dark:text-purple-400 dark:bg-purple-900/20 dark:border-purple-800' },
+  staff:   { label: 'Caissier',       color: 'text-slate-900 bg-slate-100 border-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700' },
 };
 
-type Tab = 'profil' | 'equipe' | 'etablissements';
+type Tab = 'profil' | 'equipe' | 'etablissements' | 'facturation';
 
 export default function AdminPage() {
+  const router = useRouter();
   const { user, business, businesses, setUser, setBusinesses } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const { members, loading: loadingTeam, refetch } = useTeam(business?.id ?? '');
@@ -207,10 +209,11 @@ export default function AdminPage() {
   const isOwnerOrAdmin = canManageTeam(user?.role);
   const isOwner        = hasRole(user?.role, 'owner');
 
-  const TABS: { id: Tab; icon: typeof User; label: string }[] = [
-    { id: 'profil',         icon: User,      label: 'Mon profil' },
-    { id: 'equipe',         icon: Users,     label: 'Équipe' },
-    ...(isOwner ? [{ id: 'etablissements' as Tab, icon: Building2, label: 'Établissements' }] : []),
+  const TABS: { id: Tab; icon: typeof User; label: string; navigate?: string }[] = [
+    { id: 'profil',         icon: User,       label: 'Mon profil' },
+    { id: 'equipe',         icon: Users,      label: 'Équipe' },
+    ...(isOwner ? [{ id: 'etablissements' as Tab, icon: Building2,  label: 'Établissements' }] : []),
+    ...(isOwner ? [{ id: 'facturation'    as Tab, icon: CreditCard, label: 'Facturation', navigate: '/billing' }] : []),
   ];
 
   return (
@@ -231,15 +234,16 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
-          {TABS.map(({ id, icon: Icon, label }) => (
+          {TABS.map(({ id, icon: Icon, label, navigate }) => (
             <button
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => navigate ? router.push(navigate) : setTab(id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
                 ${tab === id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
             >
               <Icon className="w-4 h-4" />
               {label}
+              {navigate && <ExternalLink className="w-3 h-3 opacity-50" />}
             </button>
           ))}
         </div>
@@ -353,11 +357,14 @@ export default function AdminPage() {
                   <CreditCard className="w-4 h-4 text-slate-400" />
                   Abonnement
                 </h2>
-                {subStatus !== 'active' && (
-                  <a href="/billing" className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300">
-                    <Zap className="w-3 h-3" /> S'abonner
-                  </a>
-                )}
+                <button
+                  onClick={() => router.push('/billing')}
+                  className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                >
+                  {subStatus === 'active'
+                    ? <><ExternalLink className="w-3 h-3" /> Gérer</>
+                    : <><Zap className="w-3 h-3" /> S'abonner</>}
+                </button>
               </div>
 
               <div className="flex items-center gap-3">
@@ -419,6 +426,26 @@ export default function AdminPage() {
               )}
             </div>
 
+            {/* Role Counts */}
+            {!loadingTeam && (
+              <div className="flex flex-wrap gap-2">
+                {(['owner', 'admin', 'manager', 'staff'] as UserRole[]).map((role) => {
+                  const count = members.filter((m) => m.role === role).length;
+                  if (count === 0 && role !== 'staff') return null;
+                  const label = ROLE_LABELS[role];
+                  return (
+                    <div
+                      key={role}
+                      className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 ${label.color}`}
+                    >
+                      <span>{label.label}s</span>
+                      <span className="bg-black/20 px-1.5 py-0.5 rounded-lg min-w-[20px] text-center">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {loadingTeam ? (
               <div className="text-slate-400 text-center py-12">Chargement…</div>
             ) : (
@@ -458,11 +485,12 @@ export default function AdminPage() {
                           <select
                             value={member.role}
                             onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
-                            className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer
-                              bg-transparent ${badge.color}`}
+                            className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer ${badge.color}`}
+                            style={{ background: '#111827', colorScheme: 'dark' }}
                           >
-                            <option value="staff"  className="bg-gray-900 text-white">Caissier</option>
-                            <option value="admin"  className="bg-gray-900 text-white">Administrateur</option>
+                            <option value="staff"   style={{ background: '#111827', color: '#fff' }}>Caissier</option>
+                            <option value="manager" style={{ background: '#111827', color: '#fff' }}>Manager</option>
+                            <option value="admin"   style={{ background: '#111827', color: '#fff' }}>Administrateur</option>
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
                         </div>
@@ -516,10 +544,10 @@ export default function AdminPage() {
             {/* Légende rôles */}
             <div className="card p-4 space-y-2 mt-4">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rôles</p>
-              <div className="space-y-1.5 text-xs text-slate-400">
-                <p><span className="text-yellow-400 font-medium">Propriétaire</span> — Accès total, gestion des établissements et de l'équipe</p>
-                <p><span className="text-brand-400 font-medium">Administrateur</span> — Produits, commandes, coupons, statistiques</p>
-                <p><span className="text-slate-300 font-medium">Caissier</span> — Caisse et historique de ses commandes uniquement</p>
+              <div className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <p><span className="text-indigo-700 dark:text-indigo-400 font-bold">Propriétaire</span> — Accès total, gestion des établissements et de l'équipe</p>
+                <p><span className="text-brand-700 dark:text-brand-400 font-bold">Administrateur</span> — Produits, commandes, coupons, statistiques</p>
+                <p><span className="text-slate-700 dark:text-slate-300 font-bold">Caissier</span> — Caisse et historique de ses commandes uniquement</p>
               </div>
             </div>
           </div>

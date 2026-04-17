@@ -202,7 +202,7 @@ export async function getMySubscriptionRequests(businessId: string): Promise<Sub
     .select('*, plans(label, price, currency)')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(20);
   if (error) throw new Error(error.message);
   return (data ?? []).map((r: Record<string, any>) => ({
     ...r,
