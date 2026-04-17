@@ -21,7 +21,6 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
   const check = useCallback(async () => {
     if (!businessId) return;
 
-    // Déjà fermé par l'utilisateur ?
     if (localStorage.getItem(DISMISS_KEY(businessId)) === '1') {
       setDismissed(true);
       setLoading(false);
@@ -30,9 +29,9 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
 
     const db = supabase as any;
     const printerConfigured = !!localStorage.getItem('printer_config');
-
     let newSteps: OnboardingStep[];
 
+    // ── Hôtel ─────────────────────────────────────────────────────────────────
     if (businessType === 'hotel') {
       const [
         { count: roomCount },
@@ -50,7 +49,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         {
           id: 'rooms',
           label: 'Ajouter vos chambres',
-          description: 'Configurez les chambres de votre établissement avec leurs tarifs.',
+          description: 'Configurez les chambres de votre établissement avec leurs types et tarifs.',
           href: '/hotel',
           done: (roomCount ?? 0) > 0,
         },
@@ -83,6 +82,105 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
           done: (userCount ?? 0) > 1,
         },
       ];
+
+    // ── Restaurant / Café ──────────────────────────────────────────────────────
+    } else if (businessType === 'restaurant') {
+      const [
+        { count: catCount },
+        { count: prodCount },
+        { count: orderCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('categories').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('products').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('orders').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'paid'),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'categories',
+          label: 'Créer vos catégories',
+          description: 'Organisez votre menu par sections : Entrées, Plats, Desserts, Boissons…',
+          href: '/categories',
+          done: (catCount ?? 0) > 0,
+        },
+        {
+          id: 'products',
+          label: 'Ajouter vos plats',
+          description: 'Renseignez vos plats et boissons avec leurs noms, prix et photos.',
+          href: '/products',
+          done: (prodCount ?? 0) > 0,
+        },
+        {
+          id: 'printer',
+          label: "Configurer l'imprimante",
+          description: 'Connectez votre imprimante thermique pour les tickets de caisse et de cuisine.',
+          href: '/settings',
+          done: printerConfigured,
+        },
+        {
+          id: 'team',
+          label: 'Inviter votre équipe',
+          description: 'Ajoutez vos serveurs, gérants et collaborateurs.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+        {
+          id: 'first_sale',
+          label: 'Enregistrer votre première commande',
+          description: 'Ouvrez la caisse et encaissez votre premier client.',
+          href: '/pos',
+          done: (orderCount ?? 0) > 0,
+        },
+      ];
+
+    // ── Cabinet Juridique ──────────────────────────────────────────────────────
+    } else if (businessType === 'juridique') {
+      const [
+        { count: clientCount },
+        { count: dossierCount },
+        { count: honoraireCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('clients').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('dossiers').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('honoraires_cabinet').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'client',
+          label: 'Ajouter votre premier client',
+          description: 'Créez la fiche d\'un client ou mandant pour commencer à gérer ses affaires.',
+          href: '/clients',
+          done: (clientCount ?? 0) > 0,
+        },
+        {
+          id: 'dossier',
+          label: 'Ouvrir un dossier',
+          description: 'Créez un dossier judiciaire ou consultatif lié à un client.',
+          href: '/dossiers',
+          done: (dossierCount ?? 0) > 0,
+        },
+        {
+          id: 'honoraires',
+          label: 'Émettre des honoraires',
+          description: 'Facturez vos prestations et enregistrez un paiement.',
+          href: '/honoraires',
+          done: (honoraireCount ?? 0) > 0,
+        },
+        {
+          id: 'team',
+          label: 'Inviter votre équipe',
+          description: 'Ajoutez vos collaborateurs, associés ou assistants.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+      ];
+
+    // ── Retail / Commerce (défaut) ─────────────────────────────────────────────
     } else {
       const [
         { count: catCount },
@@ -147,9 +245,9 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
     setDismissed(true);
   }
 
-  const doneCount  = steps.filter((s) => s.done).length;
-  const allDone    = steps.length > 0 && doneCount === steps.length;
-  const show       = !dismissed && !loading && !allDone && steps.length > 0;
+  const doneCount = steps.filter((s) => s.done).length;
+  const allDone   = steps.length > 0 && doneCount === steps.length;
+  const show      = !dismissed && !loading && !allDone && steps.length > 0;
 
   return { steps, loading, dismissed, allDone, doneCount, show, dismiss, refetch: check };
 }
