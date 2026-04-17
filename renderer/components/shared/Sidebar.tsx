@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, ChevronLeft, ChevronRight, CalendarDays, UserCheck,
+  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, CalendarDays, UserCheck,
   Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -22,6 +22,7 @@ import { TerminalStatus } from './TerminalStatus';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
 import { useState, useEffect } from 'react';
+import { useSidebarStore } from '@/store/sidebar';
 
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions-map';
@@ -78,8 +79,6 @@ export const NAV_SECTIONS: {
 
 export const NAV_ITEMS = NAV_SECTIONS.flatMap(section => section.items);
 
-const COLLAPSED_KEY = 'elm-pos-sidebar-collapsed';
-
 // ─── Bottom nav (mobile) ── 5 items max ───────────────────────────────────────
 
 const BOTTOM_NAV = [
@@ -93,12 +92,12 @@ const BOTTOM_NAV = [
 
 function SidebarContent({
   collapsed,
+  isHovering = false,
   onClose,
-  onCollapse,
 }: {
   collapsed: boolean;
+  isHovering?: boolean;
   onClose?: () => void;   // mobile drawer close
-  onCollapse?: () => void; // desktop collapse toggle
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -154,22 +153,24 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full">
       {/* App Logo */}
-      <div className={cn(
-        "px-4 py-6 flex items-center gap-3",
-        collapsed ? "justify-center" : ""
-      )}>
-        <div className={cn(
-          "rounded-xl bg-white flex items-center justify-center shrink-0 p-1.5 shadow-md border border-white/20",
-          collapsed ? "w-10 h-10" : "w-20 h-7"
-        )}>
-          <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
+      <div className="px-4 py-6 flex items-center">
+        <div className="w-10 flex items-center justify-center shrink-0">
+          <div className={cn(
+            "rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md border border-white/20 transition-all duration-300 overflow-hidden p-1",
+            collapsed ? "w-10 h-10" : "w-20 h-8"
+          )}>
+            <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
+          </div>
         </div>
       </div>
 
       {/* Header : business switcher + close (mobile) */}
-      <div className="px-2 pb-4 border-b border-surface-border/50 flex items-center gap-2">
+      <div className={cn(
+        "relative z-40 px-2 border-b border-surface-border/50 flex items-center gap-2 transition-all duration-300",
+        collapsed ? "max-h-0 opacity-0 pb-0 border-b-0 overflow-hidden" : "max-h-32 opacity-100 pb-4"
+      )}>
         <div className="flex-1 min-w-0">
-          <BusinessSwitcher collapsed={collapsed} />
+          <BusinessSwitcher collapsed={collapsed} isHovering={isHovering} />
         </div>
         {onClose && (
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors shrink-0">
@@ -179,14 +180,17 @@ function SidebarContent({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 space-y-6 px-3 custom-scrollbar">
+      <nav className="flex-1 overflow-y-auto py-4 space-y-6 px-2 custom-scrollbar">
         {visibleSections.map((section) => (
           <div key={section.label} className="space-y-1">
-            {expanded && (
-              <h3 className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+            <div className={cn(
+              "px-3 transition-all duration-300 overflow-hidden",
+              expanded ? "h-6 opacity-100" : "h-0 opacity-0"
+            )}>
+              <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 truncate">
                 {section.label}
               </h3>
-            )}
+            </div>
             <div className="space-y-0.5">
               {section.items.map(({ href, icon: Icon, label }) => {
                 const active = pathname.startsWith(href);
@@ -199,8 +203,7 @@ function SidebarContent({
                     onClick={onClose}
                     title={collapsed ? label : undefined}
                     className={cn(
-                      'group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 relative',
-                      collapsed ? 'justify-center' : '',
+                      'group flex items-center gap-0 rounded-xl transition-all duration-200 relative p-1',
                       active
                         ? 'bg-brand-500/10 text-brand-400 shadow-sm'
                         : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
@@ -209,38 +212,39 @@ function SidebarContent({
                     {active && (
                       <div className="absolute left-0 w-1 h-5 bg-brand-500 rounded-r-full" />
                     )}
-                    <div className="relative shrink-0">
+                    <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
                       <Icon className={cn(
                         "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
                         active ? "text-brand-400" : "text-slate-400 group-hover:text-slate-100"
                       )} />
                       {badge > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
+                        <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5
                                          flex items-center justify-center rounded-full
                                          bg-red-500 text-white text-[9px] font-bold leading-none shadow-sm">
                           {badge > 99 ? '99+' : badge}
                         </span>
                       )}
                       {sessionDot && (
-                        <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-surface-card
+                        <span className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full border-2 border-surface-card
                           ${cashSession ? 'bg-green-400' : 'bg-slate-600'}`}
                         />
                       )}
                     </div>
-                    {expanded && (
-                      <>
-                        <span className={cn(
-                          "text-sm font-medium flex-1 truncate",
-                          active ? "text-brand-300" : ""
-                        )}>{label}</span>
-                        {badge > 0 && (
-                          <span className="flex items-center justify-center min-w-[20px] h-5 px-1
-                                           rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
-                            {badge > 99 ? '99+' : badge}
-                          </span>
-                        )}
-                      </>
-                    )}
+                    <div className={cn(
+                      "flex flex-1 items-center justify-between min-w-0 transition-all duration-300",
+                      expanded ? "opacity-100 ml-2" : "opacity-0 w-0 pointer-events-none"
+                    )}>
+                      <span className={cn(
+                        "text-sm font-medium truncate",
+                        active ? "text-brand-300" : ""
+                      )}>{label}</span>
+                      {badge > 0 && (
+                        <span className="flex items-center justify-center min-w-[20px] h-5 px-1
+                                         rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
+                          {badge > 99 ? '99+' : badge}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 );
               })}
@@ -250,15 +254,16 @@ function SidebarContent({
       </nav>
 
       {/* Offline + terminal */}
-      {expanded && (
-        <div className="px-2 py-2 space-y-1">
-          <OfflineBadge />
-          <TerminalStatus />
-        </div>
-      )}
+      <div className={cn(
+        "px-2 py-2 space-y-1 transition-all duration-300",
+        expanded ? "opacity-100" : "opacity-0 h-0 overflow-hidden"
+      )}>
+        <OfflineBadge />
+        <TerminalStatus />
+      </div>
 
       {/* Footer actions */}
-      <div className="px-3 py-4 border-t border-surface-border/50 space-y-1">
+      <div className="px-2 py-4 border-t border-surface-border/50 space-y-1">
         <div className="space-y-0.5 mb-4">
           {(business?.features ?? []).includes('tracking') && (
             <TeamTracker collapsed={collapsed} />
@@ -270,31 +275,43 @@ function SidebarContent({
             onClick={onClose}
             title={collapsed ? 'Aide' : undefined}
             className={cn(
-              'w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group',
-              collapsed ? 'justify-center' : '',
+              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 group p-1',
               pathname.startsWith('/help') ? 'bg-brand-500/10 text-brand-400' : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
             )}
           >
-            <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
-            {expanded && <span className="text-sm font-medium">Centre d'aide</span>}
+            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+              <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className={cn(
+              "transition-all duration-300 truncate",
+              expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
+            )}>
+              <span className="text-sm font-medium">Centre d'aide</span>
+            </div>
           </Link>
 
           <button
             onClick={handleOpenDisplay}
             title="Ouvrir l'écran client"
             className={cn(
-              'w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-white/5 group',
-              collapsed ? 'justify-center' : '',
+              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-white/5 group p-1',
             )}
           >
-            <Monitor className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
-            {expanded && <span className="text-sm font-medium">Écran client</span>}
+            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+              <Monitor className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
+            </div>
+            <div className={cn(
+              "transition-all duration-300 truncate",
+              expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
+            )}>
+              <span className="text-sm font-medium">Écran client</span>
+            </div>
           </button>
         </div>
 
         {/* User Profile Card */}
         <div className={cn(
-          "mb-2 transition-all duration-200",
+          "mb-2 transition-all duration-300",
           expanded ? "bg-white/5 rounded-2xl p-2 border border-white/5" : ""
         )}>
           <Link
@@ -302,64 +319,70 @@ function SidebarContent({
             onClick={onClose}
             title={collapsed ? (isAdmin ? 'Administration' : 'Mon profil') : undefined}
             className={cn(
-              'flex items-center gap-3 rounded-xl transition-all duration-200 group',
-              collapsed ? 'justify-center p-2' : 'p-1',
+              'flex items-center gap-0 rounded-xl transition-all duration-200 group p-1',
             )}
           >
-            <div className="relative shrink-0">
+            <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
               <div className="w-9 h-9 rounded-lg bg-brand-500/20 overflow-hidden flex items-center justify-center
                               text-sm font-bold text-brand-400 border border-brand-500/30">
                 {user?.avatar_url
                   ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                   : user?.full_name?.charAt(0).toUpperCase() ?? '?'}
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-surface-card rounded-full" />
+              <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-surface-card rounded-full" />
             </div>
             
-            {expanded && (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-100 truncate leading-tight">{user?.full_name}</p>
-                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{getRoleLabel(role)}</p>
-              </div>
-            )}
+            <div className={cn(
+              "min-w-0 flex-1 transition-all duration-300",
+              expanded ? "opacity-100 ml-2" : "opacity-0 w-0 overflow-hidden"
+            )}>
+              <p className="text-xs font-bold text-slate-100 truncate leading-tight">{user?.full_name}</p>
+              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{getRoleLabel(role)}</p>
+            </div>
           </Link>
 
-          {expanded && (
-            <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-1">
-              <button
-                onClick={cycleTheme}
-                title="Changer le thème"
-                className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-brand-500/10 transition-all group"
-              >
-                {theme === 'light'  ? <Sun     className="w-4 h-4 group-hover:rotate-45 transition-transform" /> :
-                 theme === 'dark'   ? <Moon    className="w-4 h-4 group-hover:-rotate-12 transition-transform" /> :
-                                      <SunMoon className="w-4 h-4" />}
-              </button>
-              
-              <button
-                onClick={handleLogout}
-                title="Déconnexion"
-                className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
-              >
-                <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-          )}
+          <div className={cn(
+            "transition-all duration-300 flex items-center gap-1",
+            expanded ? "mt-2 pt-2 border-t border-white/5 h-auto opacity-100" : "h-0 opacity-0 overflow-hidden"
+          )}>
+            <button
+              onClick={cycleTheme}
+              title="Changer le thème"
+              className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-brand-500/10 transition-all group"
+            >
+              {theme === 'light'  ? <Sun     className="w-4 h-4 group-hover:rotate-45 transition-transform" /> :
+               theme === 'dark'   ? <Moon    className="w-4 h-4 group-hover:-rotate-12 transition-transform" /> :
+                                    <SunMoon className="w-4 h-4" />}
+            </button>
+            
+            <button
+              onClick={handleLogout}
+              title="Déconnexion"
+              className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+            >
+              <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
         </div>
 
         {/* Version & Badge */}
-        <div className={cn(
-          "flex items-center px-2",
-          collapsed ? "justify-center" : "justify-between"
-        )}>
-          {expanded && (
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
+        <div className="flex items-center px-2">
+          <div className="w-10 flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-mono text-slate-700">
+              {version ? version.charAt(0) : '1'}
+            </span>
+          </div>
+          <div className={cn(
+            "flex items-center justify-between flex-1 min-w-0 transition-all duration-300",
+            expanded ? "opacity-100 ml-1" : "opacity-0 w-0"
+          )}>
+            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter truncate">
               ELM APP
             </span>
-          )}
-          <span className="text-[10px] font-mono text-slate-700">
-            v{version || '1.0.0'}
-          </span>
+            <span className="text-[10px] font-mono text-slate-700 ml-1">
+              v{version || '1.0.0'}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -448,17 +471,9 @@ export function MobileBottomNav() {
 // ─── Main Sidebar export ──────────────────────────────────────────────────────
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    const saved = localStorage.getItem(COLLAPSED_KEY);
-    return saved === null ? true : saved === 'true';
-  });
+  const collapsed = useSidebarStore((s) => s.collapsed);
   const [isHovering, setIsHovering] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem(COLLAPSED_KEY, String(collapsed));
-  }, [collapsed]);
 
   // Close drawer on route change
   const pathname = usePathname();
@@ -479,10 +494,7 @@ export function Sidebar() {
       >
         <SidebarContent
           collapsed={effectiveCollapsed}
-          onCollapse={() => {
-            setCollapsed((c) => !c);
-            setIsHovering(false); // Reset hover on manual toggle
-          }}
+          isHovering={isHovering}
         />
       </aside>
 

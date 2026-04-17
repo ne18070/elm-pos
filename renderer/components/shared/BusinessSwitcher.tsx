@@ -20,7 +20,13 @@ import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import type { Business, UserRole } from '@pos-types';
 import type { BusinessMembership } from '@services/supabase/business';
 
-export function BusinessSwitcher({ collapsed = false }: { collapsed?: boolean }) {
+export function BusinessSwitcher({ 
+  collapsed = false,
+  isHovering = false 
+}: { 
+  collapsed?: boolean;
+  isHovering?: boolean;
+}) {
   const { user, business, businesses, setBusiness, setBusinesses, setUser } = useAuthStore();
   const { setSubscription, subscription, plans } = useSubscriptionStore();
   const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
@@ -33,7 +39,7 @@ export function BusinessSwitcher({ collapsed = false }: { collapsed?: boolean })
   const [showCreate, setShowCreate] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const expanded = !collapsed;
+  const expanded = !collapsed || isHovering;
 
   useEffect(() => {
     function onOutside(e: MouseEvent) {
@@ -136,34 +142,38 @@ export function BusinessSwitcher({ collapsed = false }: { collapsed?: boolean })
         <button
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-colors group",
-            open ? "bg-surface-hover" : "hover:bg-surface-hover",
-            collapsed ? "justify-center" : ""
+            "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-all duration-300 group",
+            open ? "bg-surface-hover" : "hover:bg-surface-hover"
           )}
           title={collapsed ? business?.name : undefined}
         >
-          {/* Icône établissement */}
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
-            {business?.logo_url
-              ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
-              : <Building2 className="w-4 h-4 text-white" />}
+          {/* Icône établissement - Fixed width to keep it centered when collapsed */}
+          <div className="w-10 h-10 flex items-center justify-center shrink-0 transition-all duration-300">
+            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-sm overflow-hidden">
+              {business?.logo_url
+                ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
+                : <Building2 className="w-4 h-4 text-white" />}
+            </div>
           </div>
 
-          {/* Nom + chevron — expanded seulement */}
-          {expanded && (
-            <div className="flex flex-1 items-center justify-between min-w-0">
-              <div className="min-w-0 text-left">
-                <p className="text-sm font-semibold text-white truncate leading-tight">
-                  {business?.name ?? 'Mon établissement'}
-                </p>
-                <p className="text-xs text-slate-500 truncate leading-tight">
-                  {getRoleLabel(user?.role)}
-                </p>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200
-                ${open ? 'rotate-180' : ''}`} />
+          {/* Nom + chevron */}
+          <div className={cn(
+            "flex flex-1 items-center justify-between min-w-0 transition-all duration-300 ease-in-out",
+            expanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none w-0 overflow-hidden"
+          )}>
+            <div className="min-w-0 text-left">
+              <p className="text-sm font-semibold text-white truncate leading-tight">
+                {business?.name ?? 'Mon établissement'}
+              </p>
+              <p className="text-xs text-slate-500 truncate leading-tight">
+                {getRoleLabel(user?.role)}
+              </p>
             </div>
-          )}
+            <ChevronDown className={cn(
+              "w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200",
+              open ? 'rotate-180' : ''
+            )} />
+          </div>
         </button>
 
         {/* ── Dropdown ── */}

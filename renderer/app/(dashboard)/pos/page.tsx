@@ -21,6 +21,8 @@ import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { getProductByBarcode } from '@services/supabase/products';
 import type { Product, RestaurantTable } from '@pos-types';
 
+import { useSidebarStore } from '@/store/sidebar';
+
 type ViewMode = 'grid' | 'list';
 type MobileTab = 'catalog' | 'cart';
 type LayoutMode = 'catalog' | 'map';
@@ -38,6 +40,7 @@ export default function PosPage() {
   const [mobileTab, setMobileTab]                = useState<MobileTab>('catalog');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const setCollapsed = useSidebarStore((s) => s.setCollapsed);
 
   const addItem   = useCartStore((s) => s.addItem);
   const cartItems = useCartStore((s) => s.items);
@@ -47,16 +50,8 @@ export default function PosPage() {
 
   // Auto-collapse sidebar on POS page to maximize space
   useEffect(() => {
-    const isCollapsed = localStorage.getItem('elm-pos-sidebar-collapsed') === 'true';
-    if (!isCollapsed) {
-      // Small delay to let the page settle
-      const t = setTimeout(() => {
-        const btn = document.querySelector('button[title="Réduire"]') as HTMLButtonElement;
-        btn?.click();
-      }, 500);
-      return () => clearTimeout(t);
-    }
-  }, []);
+    setCollapsed(true);
+  }, [setCollapsed]);
 
   // Keyboard Shortcuts
   useEffect(() => {
