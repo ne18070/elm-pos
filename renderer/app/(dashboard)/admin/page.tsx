@@ -21,6 +21,7 @@ import { getMyBusinesses } from '@services/supabase/business';
 import { supabase } from '@/lib/supabase';
 import type { User as UserType, UserRole } from '@pos-types';
 import { canManageTeam, hasRole } from '@/lib/permissions';
+import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 import type { BusinessMembership } from '@services/supabase/business';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
@@ -30,7 +31,7 @@ const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   staff:   { label: 'Caissier',       color: 'text-slate-900 bg-slate-100 border-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700' },
 };
 
-type Tab = 'profil' | 'equipe' | 'etablissements' | 'facturation';
+type Tab = 'profil' | 'equipe' | 'permissions' | 'etablissements' | 'facturation';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -212,6 +213,7 @@ export default function AdminPage() {
   const TABS: { id: Tab; icon: typeof User; label: string; navigate?: string }[] = [
     { id: 'profil',         icon: User,       label: 'Mon profil' },
     { id: 'equipe',         icon: Users,      label: 'Équipe' },
+    ...(canManageTeam(user?.role) ? [{ id: 'permissions' as Tab, icon: Shield, label: 'Permissions' }] : []),
     ...(isOwner ? [{ id: 'etablissements' as Tab, icon: Building2,  label: 'Établissements' }] : []),
     ...(isOwner ? [{ id: 'facturation'    as Tab, icon: CreditCard, label: 'Facturation', navigate: '/billing' }] : []),
   ];
@@ -550,6 +552,20 @@ export default function AdminPage() {
                 <p><span className="text-slate-700 dark:text-slate-300 font-bold">Caissier</span> — Caisse et historique de ses commandes uniquement</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Onglet Permissions (admin only) ────────────────────────────── */}
+        {tab === 'permissions' && business && (
+          <div className="max-w-4xl">
+            <PermissionsPanel
+              businessId={business.id}
+              members={members.map(m => ({
+                user_id: m.id,
+                user_name: m.full_name,
+                role: m.role
+              }))}
+            />
           </div>
         )}
 

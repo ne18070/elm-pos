@@ -4,12 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
+import { usePermissionsStore } from '@/store/permissions';
 import { Sidebar, MobileTopBar, MobileBottomNav, useOpenSidebar } from '@/components/shared/Sidebar';
 import { TrialBanner } from '@/components/shared/TrialBanner';
 import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { CommandPalette } from '@/components/shared/CommandPalette';
 import { Loader2 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { NAV_ITEMS } from '@/components/shared/Sidebar';
+import { checkPermission } from '@/lib/permissions';
 
 function MobileLayout({ children }: { children: React.ReactNode }) {
   const openSidebar = useOpenSidebar();
@@ -33,14 +36,23 @@ function MobileLayout({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, business } = useAuthStore();
   const isSuperAdmin = (user as { is_superadmin?: boolean } | null)?.is_superadmin ?? false;
+  const { setOverrides, reset: resetPermissions } = usePermissionsStore();
   useRealtimeSync();
   const { effectiveStatus, loaded: subLoaded } = useSubscriptionStore();
   const router   = useRouter();
   const pathname = usePathname();
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-  // Résultat de la vérification offline (null = pas encore vérifié)
   const [offlineCheck, setOfflineCheck] = useState<{ allowed: boolean; status: string; reason?: string } | null>(null);
+
+  // Load per-member permission overrides when user + business are known
+  useEffect(() => {
+    if (!user?.id || !business?.id) { resetPermissions(); return; }
+    import('@services/supabase/permissions')
+      .then(({ getMyPermissions }) => getMyPermissions(business.id))
+      .then(setOverrides)
+      .catch(() => { /* permissions stay at role defaults */ });
+  }, [user?.id, business?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Vérification offline via IPC quand pas de connexion
   useEffect(() => {
@@ -77,6 +89,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const needsBilling = (status === 'expired' || status === 'none') && pathname !== '/billing';
     if (needsBilling) {
       router.replace('/billing');
+      return;
+    }
+
+    // Protection des routes par permission
+    const currentNavItem = NAV_ITEMS.find((item) => pathname.startsWith(item.href));
+    if (currentNavItem?.permission) {
+      const { overrides } = usePermissionsStore.getState();
+      const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides);
+      if (!hasAccess) {
+        // Rediriger vers la page par défaut de l'établissement (probablement /pos ou /hotel)
+        router.replace('/pos');
+      }
     }
   }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck]);
 

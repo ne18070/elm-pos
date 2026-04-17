@@ -23,35 +23,36 @@ import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
 import { useState, useEffect } from 'react';
 
-const MANAGER_ROLES = ['owner', 'admin', 'manager'] as const;
+import { useCan } from '@/hooks/usePermission';
+import type { PermissionKey } from '@/lib/permissions-map';
 
-const NAV_ITEMS = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             roles: null,                feature: 'caisse',            bizTypes: null           },
-  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     roles: MANAGER_ROLES,       feature: 'caisse',            bizTypes: null           },
-  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         roles: null,                feature: 'livraison',         bizTypes: null           },
-  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           roles: MANAGER_ROLES,       feature: 'livraison',         bizTypes: null           },
-  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          roles: null,                feature: null,                bizTypes: null           },
-  { href: '/clients',           icon: Users,         label: 'Clients',            roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
-  { href: '/products',          icon: Package,       label: 'Produits',           roles: MANAGER_ROLES,       feature: 'stock',             bizTypes: null           },
-  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  roles: MANAGER_ROLES,       feature: 'approvisionnement', bizTypes: null           },
-  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         roles: ['owner', 'admin'],  feature: 'revendeurs',        bizTypes: null           },
-  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              roles: null,                feature: 'hotel',             bizTypes: null           },
-  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         roles: MANAGER_ROLES,       feature: 'stock',             bizTypes: null           },
-  { href: '/coupons',           icon: Tag,           label: 'Coupons',            roles: MANAGER_ROLES,       feature: 'coupons',           bizTypes: null           },
-  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
-  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
-  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       roles: MANAGER_ROLES,       feature: 'comptabilite',      bizTypes: null           },
-  { href: '/activity',          icon: ScrollText,    label: 'Journal',            roles: MANAGER_ROLES,       feature: null,                bizTypes: null           },
-  { href: '/recovery',          icon: History,       label: 'Récupération',       roles: ['owner', 'admin'],  feature: null,                bizTypes: null           },
-  { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', roles: MANAGER_ROLES,      feature: 'dossiers',          bizTypes: null           },
-  { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         roles: MANAGER_ROLES,       feature: 'honoraires',        bizTypes: null           },
-  { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location', roles: MANAGER_ROLES,       feature: 'contrats',          bizTypes: null           },
-  { href: '/staff',             icon: UsersRound,    label: 'Personnel & Paie',   roles: MANAGER_ROLES,       feature: 'staff',             bizTypes: null           },
-  { href: '/team-tracking',     icon: MapPin,        label: 'Tracking terrain',   roles: MANAGER_ROLES,       feature: 'tracking',          bizTypes: null           },
-  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       roles: MANAGER_ROLES,       feature: null,                bizTypes: ['restaurant'] },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           roles: MANAGER_ROLES,       feature: 'whatsapp',          bizTypes: null           },
-  { href: '/settings',          icon: Settings,      label: 'Paramètres',         roles: null,                feature: null,                bizTypes: null           },
-] as const;
+export const NAV_ITEMS: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | null; bizTypes: string[] | null }[] = [
+  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             permission: 'view_pos',               feature: 'caisse',            bizTypes: null           },
+  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: 'caisse',            bizTypes: null           },
+  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         permission: 'view_livraisons',        feature: 'livraison',         bizTypes: null           },
+  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           permission: 'view_livreurs',          feature: 'livraison',         bizTypes: null           },
+  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: null,                bizTypes: null           },
+  { href: '/clients',           icon: Users,         label: 'Clients',            permission: 'view_clients',           feature: null,                bizTypes: null           },
+  { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: 'stock',             bizTypes: null           },
+  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: 'approvisionnement', bizTypes: null           },
+  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: 'revendeurs',        bizTypes: null           },
+  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              permission: 'view_hotel',             feature: 'hotel',             bizTypes: null           },
+  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: 'stock',             bizTypes: null           },
+  { href: '/coupons',           icon: Tag,           label: 'Coupons',            permission: 'view_coupons',           feature: 'coupons',           bizTypes: null           },
+  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       permission: 'view_analytics',         feature: null,                bizTypes: null           },
+  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           permission: 'view_depenses',          feature: null,                bizTypes: null           },
+  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       permission: 'view_comptabilite',      feature: 'comptabilite',      bizTypes: null           },
+  { href: '/activity',          icon: ScrollText,    label: 'Journal',            permission: 'view_activity',          feature: null,                bizTypes: null           },
+  { href: '/recovery',          icon: History,       label: 'Récupération',       permission: 'view_recovery',          feature: null,                bizTypes: null           },
+  { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', permission: 'view_dossiers',          feature: 'dossiers',          bizTypes: null           },
+  { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         permission: 'view_honoraires',        feature: 'honoraires',        bizTypes: null           },
+  { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location', permission: 'view_contrats',          feature: 'contrats',          bizTypes: null           },
+  { href: '/staff',             icon: UsersRound,    label: 'Personnel & Paie',   permission: 'view_staff',             feature: 'staff',             bizTypes: null           },
+  { href: '/team-tracking',     icon: MapPin,        label: 'Tracking terrain',   permission: 'view_team_tracking',     feature: 'tracking',          bizTypes: null           },
+  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
+  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           permission: 'view_whatsapp',          feature: 'whatsapp',          bizTypes: null           },
+  { href: '/settings',          icon: Settings,      label: 'Paramètres',         permission: 'view_settings',          feature: null,                bizTypes: null           },
+];
 
 const COLLAPSED_KEY = 'elm-pos-sidebar-collapsed';
 
@@ -80,6 +81,7 @@ function SidebarContent({
   const { setSubscription, setLoaded } = useSubscriptionStore();
   const { theme, cycle: cycleTheme } = useThemeStore();
   const { session: cashSession } = useCashSessionStore();
+  const can = useCan();
   const role = user?.role ?? 'staff';
   const isAdmin = hasRole(role, 'admin');
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
@@ -104,7 +106,7 @@ function SidebarContent({
   }
 
   const visibleItems = NAV_ITEMS
-    .filter(({ roles }) => !roles || (roles as readonly string[]).includes(role))
+    .filter(({ permission }) => !permission || can(permission))
     .filter(({ feature, bizTypes }) => {
       const features = business?.features ?? [];
       const bizType  = business?.type ?? '';
@@ -385,8 +387,9 @@ export function MobileBottomNav() {
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(COLLAPSED_KEY) === 'true';
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem(COLLAPSED_KEY);
+    return saved === null ? true : saved === 'true';
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
 

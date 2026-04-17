@@ -182,3 +182,4 @@ export async function inviteUser(payload: InvitePayload): Promise<void> {
 
   if (rpcError) throw new Error(rpcError.message);
 }
+

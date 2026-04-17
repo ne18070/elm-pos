@@ -13,6 +13,7 @@ interface AuthState {
   setBusiness:    (business: Business | null) => void;
   setBusinesses:  (list: BusinessMembership[]) => void;
   setLoading:     (loading: boolean) => void;
+  setPermissionsOverrides: (overrides: Record<string, boolean>) => void;
   clear: () => void;
 }
 
@@ -46,6 +47,9 @@ export const useAuthStore = create<AuthState>()(
       setBusiness:   (business)   => { saveBusinessToSession(business); set({ business }); },
       setBusinesses: (businesses) => set({ businesses }),
       setLoading:    (isLoading)  => set({ isLoading }),
+      setPermissionsOverrides: (permissions_overrides) => set((state) => ({
+        user: state.user ? { ...state.user, permissions_overrides } : null
+      })),
       clear: () => {
         saveBusinessToSession(null);
         set({ user: null, business: null, businesses: [] });

@@ -8,7 +8,9 @@ import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
+import { getMyPermissions } from '@services/supabase/permissions';
 import { useCashSessionStore } from '@/store/cashSession';
+import { usePermissionsStore } from '@/store/permissions';
 
 const PUBLIC_PATHS = ['/', '/login', '/display', '/subscribe', '/privacy', '/c'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
@@ -16,6 +18,7 @@ const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.sta
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
   const { setSubscription, setPlans, setPaymentSettings, setLoaded } = useSubscriptionStore();
+  const { setOverrides, reset: resetPermissions } = usePermissionsStore();
   const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -79,16 +82,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (activeBizId) {
         try {
-          const [sub, plans, paySettings, cashSession] = await Promise.all([
+          const [sub, plans, paySettings, cashSession, overrides] = await Promise.all([
             getSubscription(session.user.id, activeBizId),
             getPlans(),
             getPaymentSettings(),
             getCurrentSession(activeBizId),
+            getMyPermissions(activeBizId),
           ]);
           setSubscription(sub);
           setPlans(plans);
           setPaymentSettings(paySettings);
           setCashSession(cashSession);
+          setOverrides(overrides);
           // Sauvegarder l'abonnement dans le processus principal (sécurité offline)
           if (sub && window.electronAPI?.invoke) {
             window.electronAPI.invoke('subscription:save', {
@@ -110,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathname)) {
           clear();
+          resetPermissions();
           router.replace('/login');
         }
       }

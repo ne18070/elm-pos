@@ -11,6 +11,8 @@ export interface User {
   avatar_url?: string;
   is_blocked?:    boolean;
   is_superadmin?: boolean;
+  /** Permission overrides for the current business: { permissionKey: granted } */
+  permissions_overrides?: Record<string, boolean>;
   created_at: string;
 }
 

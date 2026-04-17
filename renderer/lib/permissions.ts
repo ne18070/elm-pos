@@ -60,3 +60,36 @@ export const canManageTeam        = (r: UserRole | null | undefined) => hasRole(
 
 /** Peut supprimer des données critiques */
 export const canDelete            = (r: UserRole | null | undefined) => hasRole(r, 'admin');
+
+// ─── Permissions granulaires ──────────────────────────────────────────────────
+
+import type { PermissionKey } from './permissions-map';
+import { PERMISSIONS, IMMUTABLE_OWNER_PERMISSIONS } from './permissions-map';
+
+/**
+ * Resolves a single permission given a role and optional per-member overrides.
+ * Override map keys are permission keys, values are granted (true) or denied (false).
+ * Owner always has IMMUTABLE_OWNER_PERMISSIONS regardless of overrides.
+ */
+export function checkPermission(
+  role:       UserRole | null | undefined,
+  permission: PermissionKey,
+  overrides:  Record<string, boolean> = {},
+): boolean {
+  const r = role ?? 'staff';
+
+  // Owners cannot have critical permissions denied
+  if (r === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(permission)) {
+    return true;
+  }
+
+  // Explicit override wins over role default
+  if (permission in overrides) {
+    return overrides[permission];
+  }
+
+  // Fall back to role default
+  const meta = PERMISSIONS[permission];
+  if (!meta) return false;
+  return (meta.defaultRoles as readonly string[]).includes(r);
+}
