@@ -2,12 +2,12 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle } from 'lucide-react';
+import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle, Link } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { openWhatsApp } from '@/lib/share-invoice';
+import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
@@ -69,6 +69,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [completeMethod, setCompleteMethod]       = useState<Exclude<PaymentMethod, 'partial'>>('cash');
   const [completeAmount, setCompleteAmount]       = useState('');
   const [completing, setCompleting]               = useState(false);
+  const [sharingWa, setSharingWa]                 = useState(false);
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
   const fmt              = (n: number) => formatCurrency(n, currency);
@@ -90,6 +91,23 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       setCompleteAmount(String(isWhatsAppPending ? order.total : remaining));
     }
   }, [showCompleteForm, remaining, isWhatsAppPending, order.total]);
+
+  async function handleWhatsAppShare() {
+    if (!order || !business || !user) return;
+    setSharingWa(true);
+    try {
+      const res = await sendInvoiceViaWhatsApp(order, business, user.id);
+      if (res.success) {
+        success('Facture envoyée par WhatsApp');
+      } else {
+        notifError(res.error || "Erreur lors de l'envoi");
+      }
+    } catch (err) {
+      notifError("Erreur lors de l'envoi WhatsApp");
+    } finally {
+      setSharingWa(false);
+    }
+  }
 
   async function handlePrint() {
     if (!business || !user) return;
@@ -381,33 +399,41 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
         {/* Actions */}
         <div className="p-4 border-t border-surface-border space-y-2">
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handlePrint}
-              className="btn-secondary flex-1 flex items-center justify-center gap-2 h-10"
+              className="btn-secondary flex items-center justify-center gap-2 h-10 text-xs"
             >
               <Printer className="w-4 h-4" />
               Reçu
             </button>
             <button
               onClick={() => onPrint?.(order)}
-              className="btn-secondary flex-1 flex items-center justify-center gap-2 h-10"
+              className="btn-secondary flex items-center justify-center gap-2 h-10 text-xs"
             >
               <FileText className="w-4 h-4" />
               Facture
             </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => openWhatsApp({
-                phone:        order.customer_phone ?? undefined,
-                orderRef:     order.id.slice(0, 8).toUpperCase(),
-                total:        order.total,
-                currency,
-                customerName: order.customer_name ?? undefined,
-              })}
-              className="flex items-center justify-center gap-1.5 px-3 h-10 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 transition-colors"
+              onClick={handleWhatsAppShare}
+              disabled={sharingWa}
+              className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 transition-colors text-xs font-medium"
               title="Partager via WhatsApp"
             >
-              <MessageCircle className="w-4 h-4" />
+              {sharingWa ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+              WhatsApp
+            </button>
+            <button
+              onClick={handleCopyLink}
+              disabled={copying}
+              className="btn-secondary flex items-center justify-center gap-1.5 h-10 text-xs font-medium"
+              title="Copier le lien PDF"
+            >
+              {copying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link className="w-4 h-4" />}
+              Lien PDF
             </button>
           </div>
 

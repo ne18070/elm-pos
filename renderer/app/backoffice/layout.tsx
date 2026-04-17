@@ -42,12 +42,12 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
   return (
     <div className="min-h-screen bg-surface-bg flex flex-col">
       <div className="border-b border-surface-border px-6 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-4 h-4 text-white" />
+        <div className="flex items-center gap-4">
+          <div className="w-24 h-8 rounded-lg bg-white overflow-hidden flex items-center justify-center shadow-md p-1 border border-white/20">
+            <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white">ELM APP — Back Office</p>
+            <p className="text-base font-black text-white tracking-tighter">ELM APP — Back Office</p>
             <p className="text-xs text-slate-500">{user.email}</p>
           </div>
         </div>

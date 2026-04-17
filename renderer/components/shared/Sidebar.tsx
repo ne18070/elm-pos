@@ -117,6 +117,19 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col h-full">
+      {/* App Logo */}
+      <div className={cn(
+        "px-4 py-4 flex items-center gap-3",
+        collapsed ? "justify-center" : ""
+      )}>
+        <div className={cn(
+          "rounded-xl bg-white flex items-center justify-center shrink-0 p-1.5 shadow-sm border border-white/20",
+          collapsed ? "w-12 h-12" : "w-24 h-8"
+        )}>
+          <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
+        </div>
+      </div>
+
       {/* Header : business switcher + close (mobile) */}
       <div className="px-2 pt-3 pb-2 border-b border-surface-border flex items-center gap-2">
         <div className="flex-1 min-w-0">

@@ -155,7 +155,7 @@ export function generateThermalReceipt(order: Order, business: Business): string
 
   <!-- En-tête établissement -->
   <div class="center" style="margin-bottom:8px">
-    ${business.logo_url ? `<img src="${business.logo_url}" style="max-width:60px;max-height:40px;margin-bottom:4px"><br>` : ''}
+    <img src="${business.logo_url || '/logo.png'}" style="max-width:60px;max-height:40px;margin-bottom:4px"><br>
     <div class="bold big">${business.name}</div>
     ${business.address ? `<div class="small">${business.address}</div>` : ''}
     ${business.phone   ? `<div class="small">Tél : ${business.phone}</div>` : ''}
@@ -246,7 +246,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
       <!-- ═══ EN-TÊTE ═══ -->
       <div class="header">
         <div class="biz-info">
-          ${business.logo_url ? `<img src="${business.logo_url}" class="logo">` : ''}
+          <img src="${business.logo_url || '/logo.png'}" class="logo">
           <div>
             <div class="biz-name">${business.name}</div>
             ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}

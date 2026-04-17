@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble, Link } from 'lucide-react';
 import { useCustomersStore } from '@/store/customers';
 import type { SavedCustomer } from '@/store/customers';
 import { Modal } from '@/components/ui/Modal';
@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt, openCashDrawer } from '@/lib/ipc';
-import { openWhatsApp } from '@/lib/share-invoice';
+import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
 import { createOrder } from '@services/supabase/orders';
@@ -56,6 +56,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [methode, setMethode]         = useState<PaymentMethod>('cash');
   const [montantRecu, setMontantRecu] = useState('');
   const [chargement, setChargement]   = useState(false);
+  const [sendingWa, setSendingWa]     = useState(false);
   const [ordreId, setOrdreId]         = useState<string | null>(null);
   const [ordre, setOrdre]             = useState<Order | null>(null);
   const [erreur, setErreur]           = useState('');
@@ -303,6 +304,39 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     submitRef.current = submitAcompte;
     sendConfirmToDisplay(acompteNum);
     setStep('attente');
+  }
+
+  async function handleWhatsApp() {
+    if (!ordre || !business || !user) return;
+    setSendingWa(true);
+    try {
+      const res = await sendInvoiceViaWhatsApp(ordre, business, user.id);
+      if (res.success) {
+        notifSuccess('Facture envoyée par WhatsApp');
+      } else {
+        notifWarning(`Échec de l'envoi : ${res.error}`);
+      }
+    } catch (err) {
+      notifWarning("Erreur lors de l'envoi WhatsApp");
+    } finally {
+      setSendingWa(false);
+    }
+  }
+
+  const [copying, setCopying] = useState(false);
+  async function handleCopyLink() {
+    if (!ordre || !business) return;
+    setCopying(true);
+    try {
+      const { generateInvoiceLink } = await import('@/lib/share-invoice');
+      const url = await generateInvoiceLink(ordre, business);
+      await navigator.clipboard.writeText(url);
+      notifSuccess('Lien copié dans le presse-papier');
+    } catch (err) {
+      notifWarning('Erreur lors de la génération du lien');
+    } finally {
+      setCopying(false);
+    }
   }
 
   return (
@@ -791,7 +825,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           {/* Partage facture */}
           <div className="w-full space-y-2">
             <p className="text-xs text-slate-500 text-center">Partager la facture</p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => ordre && printReceipt({
                   order: ordre,
@@ -802,21 +836,26 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
                 })}
                 disabled={!ordre}
-                className="btn-secondary flex-1 h-10 text-sm flex items-center justify-center gap-1.5"
+                className="btn-secondary h-10 text-xs flex items-center justify-center gap-1.5"
               >
-                <Download className="w-4 h-4 shrink-0" /> PDF
+                <Download className="w-3.5 h-3.5 shrink-0" /> PDF
               </button>
               <button
-                onClick={() => openWhatsApp({
-                  phone:        ordre?.customer_phone ?? undefined,
-                  orderRef:     (ordreId ?? '').slice(0, 8).toUpperCase(),
-                  total,
-                  currency,
-                  customerName: ordre?.customer_name ?? undefined,
-                })}
-                className="flex-1 h-10 flex items-center justify-center gap-1.5 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 text-sm font-medium transition-colors"
+                onClick={handleWhatsApp}
+                disabled={!ordre || sendingWa}
+                className="h-10 flex items-center justify-center gap-1.5 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 text-xs font-medium transition-colors"
               >
-                <MessageCircle className="w-4 h-4 shrink-0" /> WhatsApp
+                {sendingWa ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5 shrink-0" />}
+                WhatsApp
+              </button>
+              <button
+                onClick={handleCopyLink}
+                disabled={!ordre || copying}
+                className="btn-secondary h-10 text-xs flex items-center justify-center gap-1.5"
+                title="Copier le lien PDF"
+              >
+                {copying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link className="w-3.5 h-3.5 shrink-0" />}
+                Lien
               </button>
             </div>
           </div>

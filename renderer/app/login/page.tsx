@@ -138,10 +138,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mb-4 shadow-glow">
-            <ShoppingCart className="w-8 h-8 text-white" />
+          <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
+            <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-white">ELM APP</h1>
           <p className="text-slate-400 text-sm mt-1">Connectez-vous à votre compte</p>
           <p className="text-xs text-slate-500 mt-2">
             Pas encore de compte ?{' '}

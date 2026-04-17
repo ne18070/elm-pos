@@ -336,3 +336,53 @@ export async function sendWhatsAppReply(
     status:       'sent',
   });
 }
+
+/** Envoie un document (PDF) par WhatsApp via URL publique */
+export async function sendWhatsAppDocument(
+  config: WhatsAppConfig,
+  toPhone: string,
+  docUrl: string,
+  filename: string,
+  caption: string,
+  userId: string,
+): Promise<void> {
+  const phone = normalizePhone(toPhone);
+
+  const res = await fetch(
+    `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
+    {
+      method:  'POST',
+      headers: {
+        Authorization:  `Bearer ${config.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type:    'individual',
+        to:                phone,
+        type:              'document',
+        document: {
+          link:     docUrl,
+          filename: filename,
+          caption:  caption,
+        },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${res.status}`);
+  }
+
+  // Stocker le message sortant
+  await supabase.from('whatsapp_messages').insert({
+    business_id:  config.business_id,
+    from_phone:   phone,
+    direction:    'outbound',
+    message_type: 'document',
+    body:         `Document: ${filename}`,
+    replied_by:   userId,
+    status:       'sent',
+  });
+}

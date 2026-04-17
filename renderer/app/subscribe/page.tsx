@@ -125,10 +125,9 @@ export default function SubscribePage() {
       <div className="relative max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mb-4 shadow-glow">
-            <ShoppingCart className="w-7 h-7 text-white" />
+          <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
+            <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-white">ELM APP</h1>
           <p className="text-slate-400 text-sm mt-1">Abonnement</p>
           <p className="text-xs text-slate-500 mt-2">
             Déjà un compte ?{' '}
