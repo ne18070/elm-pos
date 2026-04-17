@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
+import { sendInvoiceViaWhatsApp, generateInvoiceLink } from '@/lib/share-invoice';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
@@ -70,6 +70,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [completeAmount, setCompleteAmount]       = useState('');
   const [completing, setCompleting]               = useState(false);
   const [sharingWa, setSharingWa]                 = useState(false);
+  const [copying, setCopying]                     = useState(false);
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
   const fmt              = (n: number) => formatCurrency(n, currency);
@@ -106,6 +107,20 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       notifError("Erreur lors de l'envoi WhatsApp");
     } finally {
       setSharingWa(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!order || !business) return;
+    setCopying(true);
+    try {
+      const url = await generateInvoiceLink(order, business);
+      await navigator.clipboard.writeText(url);
+      success('Lien copié dans le presse-papier');
+    } catch (err) {
+      notifError("Erreur lors de la génération du lien");
+    } finally {
+      setCopying(false);
     }
   }
 

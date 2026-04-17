@@ -19,7 +19,9 @@
       "@/*": ["renderer/*"],
       "@types/*": ["types/*"],
       "@services/*": ["services/*"],
-      "@hardware/*": ["hardware/*"]
+      "@hardware/*": ["hardware/*"],
+      "@pos-types": ["types/index"],
+      "@domain/*": ["domain/*"]
     }
   },
   "include": ["renderer/**/*", "types/**/*", "services/**/*"],
