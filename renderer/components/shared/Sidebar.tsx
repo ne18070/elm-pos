@@ -26,33 +26,57 @@ import { useState, useEffect } from 'react';
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions-map';
 
-export const NAV_ITEMS: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | null; bizTypes: string[] | null }[] = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             permission: 'view_pos',               feature: 'caisse',            bizTypes: null           },
-  { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: 'caisse',            bizTypes: null           },
-  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         permission: 'view_livraisons',        feature: 'livraison',         bizTypes: null           },
-  { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           permission: 'view_livreurs',          feature: 'livraison',         bizTypes: null           },
-  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: null,                bizTypes: null           },
-  { href: '/clients',           icon: Users,         label: 'Clients',            permission: 'view_clients',           feature: null,                bizTypes: null           },
-  { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: 'stock',             bizTypes: null           },
-  { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: 'approvisionnement', bizTypes: null           },
-  { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: 'revendeurs',        bizTypes: null           },
-  { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              permission: 'view_hotel',             feature: 'hotel',             bizTypes: null           },
-  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: 'stock',             bizTypes: null           },
-  { href: '/coupons',           icon: Tag,           label: 'Coupons',            permission: 'view_coupons',           feature: 'coupons',           bizTypes: null           },
-  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       permission: 'view_analytics',         feature: null,                bizTypes: null           },
-  { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           permission: 'view_depenses',          feature: null,                bizTypes: null           },
-  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       permission: 'view_comptabilite',      feature: 'comptabilite',      bizTypes: null           },
-  { href: '/activity',          icon: ScrollText,    label: 'Journal',            permission: 'view_activity',          feature: null,                bizTypes: null           },
-  { href: '/recovery',          icon: History,       label: 'Récupération',       permission: 'view_recovery',          feature: null,                bizTypes: null           },
-  { href: '/dossiers',          icon: Scale,         label: 'Dossiers & Affaires', permission: 'view_dossiers',          feature: 'dossiers',          bizTypes: null           },
-  { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         permission: 'view_honoraires',        feature: 'honoraires',        bizTypes: null           },
-  { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location', permission: 'view_contrats',          feature: 'contrats',          bizTypes: null           },
-  { href: '/staff',             icon: UsersRound,    label: 'Personnel & Paie',   permission: 'view_staff',             feature: 'staff',             bizTypes: null           },
-  { href: '/team-tracking',     icon: MapPin,        label: 'Tracking terrain',   permission: 'view_team_tracking',     feature: 'tracking',          bizTypes: null           },
-  { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           permission: 'view_whatsapp',          feature: 'whatsapp',          bizTypes: null           },
-  { href: '/settings',          icon: Settings,      label: 'Paramètres',         permission: 'view_settings',          feature: null,                bizTypes: null           },
+export const NAV_SECTIONS: { 
+  label: string; 
+  items: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | null; bizTypes: string[] | null }[] 
+}[] = [
+  {
+    label: 'Ventes',
+    items: [
+      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             permission: 'view_pos',               feature: 'caisse',            bizTypes: null           },
+      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: 'caisse',            bizTypes: null           },
+      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: null,                bizTypes: null           },
+      { href: '/livraison',         icon: Truck,         label: 'Livraisons',         permission: 'view_livraisons',        feature: 'livraison',         bizTypes: null           },
+      { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           permission: 'view_livreurs',          feature: 'livraison',         bizTypes: null           },
+      { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
+    ]
+  },
+  {
+    label: 'Gestion & Catalogue',
+    items: [
+      { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: 'stock',             bizTypes: null           },
+      { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: 'stock',             bizTypes: null           },
+      { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: 'approvisionnement', bizTypes: null           },
+      { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: 'revendeurs',        bizTypes: null           },
+      { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              permission: 'view_hotel',             feature: 'hotel',             bizTypes: null           },
+    ]
+  },
+  {
+    label: 'Clients & Marketing',
+    items: [
+      { href: '/clients',           icon: Users,         label: 'Clients',            permission: 'view_clients',           feature: null,                bizTypes: null           },
+      { href: '/coupons',           icon: Tag,           label: 'Coupons',            permission: 'view_coupons',           feature: 'coupons',           bizTypes: null           },
+      { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           permission: 'view_whatsapp',          feature: 'whatsapp',          bizTypes: null           },
+    ]
+  },
+  {
+    label: 'Finance & Admin',
+    items: [
+      { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       permission: 'view_analytics',         feature: null,                bizTypes: null           },
+      { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           permission: 'view_depenses',          feature: null,                bizTypes: null           },
+      { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       permission: 'view_comptabilite',      feature: 'comptabilite',      bizTypes: null           },
+      { href: '/activity',          icon: ScrollText,    label: 'Journal',            permission: 'view_activity',          feature: null,                bizTypes: null           },
+      { href: '/dossiers',          icon: Scale,         label: 'Dossiers',           permission: 'view_dossiers',          feature: 'dossiers',          bizTypes: null           },
+      { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         permission: 'view_honoraires',        feature: 'honoraires',        bizTypes: null           },
+      { href: '/contrats',          icon: FileSignature, label: 'Contrats',           permission: 'view_contrats',          feature: 'contrats',          bizTypes: null           },
+      { href: '/staff',             icon: UsersRound,    label: 'Personnel',          permission: 'view_staff',             feature: 'staff',             bizTypes: null           },
+      { href: '/team-tracking',     icon: MapPin,        label: 'Tracking',           permission: 'view_team_tracking',     feature: 'tracking',          bizTypes: null           },
+      { href: '/settings',          icon: Settings,      label: 'Paramètres',         permission: 'view_settings',          feature: null,                bizTypes: null           },
+    ]
+  }
 ];
+
+export const NAV_ITEMS = NAV_SECTIONS.flatMap(section => section.items);
 
 const COLLAPSED_KEY = 'elm-pos-sidebar-collapsed';
 
@@ -105,15 +129,17 @@ function SidebarContent({
     clear();
   }
 
-  const visibleItems = NAV_ITEMS
-    .filter(({ permission }) => !permission || can(permission))
-    .filter(({ feature, bizTypes }) => {
+  const visibleSections = NAV_SECTIONS.map(section => ({
+    ...section,
+    items: section.items.filter(({ permission, feature, bizTypes }) => {
+      const canAccess = !permission || can(permission);
       const features = business?.features ?? [];
       const bizType  = business?.type ?? '';
-      if (feature && !features.includes(feature)) return false;
-      if (bizTypes && bizType && !(bizTypes as readonly string[]).includes(bizType)) return false;
-      return true;
-    });
+      const hasFeature = !feature || features.includes(feature);
+      const hasBizType = !bizTypes || !bizType || bizTypes.includes(bizType);
+      return canAccess && hasFeature && hasBizType;
+    })
+  })).filter(section => section.items.length > 0);
 
   const [version, setVersion] = useState<string>('');
 
@@ -127,19 +153,19 @@ function SidebarContent({
     <div className="flex flex-col h-full">
       {/* App Logo */}
       <div className={cn(
-        "px-4 py-4 flex items-center gap-3",
+        "px-4 py-6 flex items-center gap-3",
         collapsed ? "justify-center" : ""
       )}>
         <div className={cn(
-          "rounded-xl bg-white flex items-center justify-center shrink-0 p-1.5 shadow-sm border border-white/20",
-          collapsed ? "w-12 h-12" : "w-24 h-8"
+          "rounded-xl bg-white flex items-center justify-center shrink-0 p-1.5 shadow-md border border-white/20",
+          collapsed ? "w-10 h-10" : "w-20 h-7"
         )}>
           <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
         </div>
       </div>
 
       {/* Header : business switcher + close (mobile) */}
-      <div className="px-2 pt-3 pb-2 border-b border-surface-border flex items-center gap-2">
+      <div className="px-2 pb-4 border-b border-surface-border/50 flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <BusinessSwitcher collapsed={collapsed} />
         </div>
@@ -151,54 +177,74 @@ function SidebarContent({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
-        {visibleItems.map(({ href, icon: Icon, label }) => {
-          const active = pathname.startsWith(href);
-          const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
-          const sessionDot = href === '/caisse';
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              title={collapsed ? label : undefined}
-              className={cn(
-                'flex items-center gap-3 px-2 py-2.5 rounded-xl transition-colors duration-150',
-                collapsed ? 'justify-center' : '',
-                active
-                  ? 'bg-brand-600 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-surface-hover'
-              )}
-            >
-              <div className="relative shrink-0">
-                <Icon className="w-5 h-5" />
-                {badge > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
-                                   flex items-center justify-center rounded-full
-                                   bg-red-500 text-white text-[9px] font-bold leading-none">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-                {sessionDot && (
-                  <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-surface-card
-                    ${cashSession ? 'bg-green-400' : 'bg-slate-600'}`}
-                  />
-                )}
-              </div>
-              {expanded && (
-                <>
-                  <span className="text-sm font-medium flex-1">{label}</span>
-                  {badge > 0 && (
-                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1
-                                     rounded-full bg-red-500 text-white text-xs font-bold">
-                      {badge > 99 ? '99+' : badge}
-                    </span>
-                  )}
-                </>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-4 space-y-6 px-3 custom-scrollbar">
+        {visibleSections.map((section) => (
+          <div key={section.label} className="space-y-1">
+            {expanded && (
+              <h3 className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                {section.label}
+              </h3>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map(({ href, icon: Icon, label }) => {
+                const active = pathname.startsWith(href);
+                const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
+                const sessionDot = href === '/caisse';
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onClose}
+                    title={collapsed ? label : undefined}
+                    className={cn(
+                      'group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 relative',
+                      collapsed ? 'justify-center' : '',
+                      active
+                        ? 'bg-brand-500/10 text-brand-400 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                    )}
+                  >
+                    {active && (
+                      <div className="absolute left-0 w-1 h-5 bg-brand-500 rounded-r-full" />
+                    )}
+                    <div className="relative shrink-0">
+                      <Icon className={cn(
+                        "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
+                        active ? "text-brand-400" : "text-slate-400 group-hover:text-slate-100"
+                      )} />
+                      {badge > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
+                                         flex items-center justify-center rounded-full
+                                         bg-red-500 text-white text-[9px] font-bold leading-none shadow-sm">
+                          {badge > 99 ? '99+' : badge}
+                        </span>
+                      )}
+                      {sessionDot && (
+                        <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-surface-card
+                          ${cashSession ? 'bg-green-400' : 'bg-slate-600'}`}
+                        />
+                      )}
+                    </div>
+                    {expanded && (
+                      <>
+                        <span className={cn(
+                          "text-sm font-medium flex-1 truncate",
+                          active ? "text-brand-300" : ""
+                        )}>{label}</span>
+                        {badge > 0 && (
+                          <span className="flex items-center justify-center min-w-[20px] h-5 px-1
+                                           rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
+                            {badge > 99 ? '99+' : badge}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Offline + terminal */}
@@ -210,122 +256,108 @@ function SidebarContent({
       )}
 
       {/* Footer actions */}
-      <div className="px-2 py-3 border-t border-surface-border space-y-0.5">
-        {(business?.features ?? []).includes('tracking') && (
-          <TeamTracker collapsed={collapsed} />
-        )}
-        <NotificationBell collapsed={collapsed} />
-
-        <Link
-          href="/help"
-          onClick={onClose}
-          title={collapsed ? 'Aide' : undefined}
-          className={cn(
-            'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
-            collapsed ? 'justify-center' : '',
-            pathname.startsWith('/help') ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+      <div className="px-3 py-4 border-t border-surface-border/50 space-y-1">
+        <div className="space-y-0.5 mb-4">
+          {(business?.features ?? []).includes('tracking') && (
+            <TeamTracker collapsed={collapsed} />
           )}
-        >
-          <HelpCircle className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-sm">Aide</span>}
-        </Link>
+          <NotificationBell collapsed={collapsed} />
 
-        <button
-          onClick={handleOpenDisplay}
-          title="Ouvrir l'écran client"
-          className={cn(
-            'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-slate-400 hover:text-white hover:bg-surface-hover',
-            collapsed ? 'justify-center' : '',
-          )}
-        >
-          <Monitor className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-sm">Écran client</span>}
-        </button>
+          <Link
+            href="/help"
+            onClick={onClose}
+            title={collapsed ? 'Aide' : undefined}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group',
+              collapsed ? 'justify-center' : '',
+              pathname.startsWith('/help') ? 'bg-brand-500/10 text-brand-400' : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+            )}
+          >
+            <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
+            {expanded && <span className="text-sm font-medium">Centre d'aide</span>}
+          </Link>
 
-        <Link
-          href="/admin"
-          onClick={onClose}
-          title={collapsed ? (isAdmin ? 'Administration' : 'Mon profil') : undefined}
-          className={cn(
-            'w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors',
-            collapsed ? 'justify-center' : '',
-            pathname.startsWith('/admin') ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white hover:bg-surface-hover'
-          )}
-        >
-          <ShieldCheck className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-sm">{isAdmin ? 'Administration' : 'Mon profil'}</span>}
-        </Link>
+          <button
+            onClick={handleOpenDisplay}
+            title="Ouvrir l'écran client"
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-white/5 group',
+              collapsed ? 'justify-center' : '',
+            )}
+          >
+            <Monitor className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
+            {expanded && <span className="text-sm font-medium">Écran client</span>}
+          </button>
+        </div>
 
-        {/* Identité */}
-        <div className={cn('flex items-center gap-3 px-2 py-2', collapsed ? 'justify-center' : '')}>
-          <div className="w-8 h-8 rounded-lg bg-surface-input overflow-hidden flex items-center justify-center
-                          text-sm font-bold text-brand-400 shrink-0">
-            {user?.avatar_url
-              ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-              : user?.full_name?.charAt(0).toUpperCase() ?? '?'}
-          </div>
+        {/* User Profile Card */}
+        <div className={cn(
+          "mb-2 transition-all duration-200",
+          expanded ? "bg-white/5 rounded-2xl p-2 border border-white/5" : ""
+        )}>
+          <Link
+            href="/admin"
+            onClick={onClose}
+            title={collapsed ? (isAdmin ? 'Administration' : 'Mon profil') : undefined}
+            className={cn(
+              'flex items-center gap-3 rounded-xl transition-all duration-200 group',
+              collapsed ? 'justify-center p-2' : 'p-1',
+            )}
+          >
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-brand-500/20 overflow-hidden flex items-center justify-center
+                              text-sm font-bold text-brand-400 border border-brand-500/30">
+                {user?.avatar_url
+                  ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  : user?.full_name?.charAt(0).toUpperCase() ?? '?'}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-surface-card rounded-full" />
+            </div>
+            
+            {expanded && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-100 truncate leading-tight">{user?.full_name}</p>
+                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{getRoleLabel(role)}</p>
+              </div>
+            )}
+          </Link>
+
           {expanded && (
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-white truncate">{user?.full_name}</p>
-              <p className="text-xs text-slate-500 capitalize">{getRoleLabel(role)}</p>
+            <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-1">
+              <button
+                onClick={cycleTheme}
+                title="Changer le thème"
+                className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-brand-500/10 transition-all group"
+              >
+                {theme === 'light'  ? <Sun     className="w-4 h-4 group-hover:rotate-45 transition-transform" /> :
+                 theme === 'dark'   ? <Moon    className="w-4 h-4 group-hover:-rotate-12 transition-transform" /> :
+                                      <SunMoon className="w-4 h-4" />}
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                title="Déconnexion"
+                className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+              >
+                <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
             </div>
           )}
         </div>
 
-        {/* Thème */}
-        <button
-          onClick={cycleTheme}
-          title={collapsed ? 'Changer le thème' : undefined}
-          className={cn(
-            'w-full flex items-center gap-3 px-2 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-colors',
-            collapsed ? 'justify-center' : '',
-          )}
-        >
-          {theme === 'light'  ? <Sun     className="w-4 h-4 shrink-0" /> :
-           theme === 'dark'   ? <Moon    className="w-4 h-4 shrink-0" /> :
-                                <SunMoon className="w-4 h-4 shrink-0" />}
+        {/* Version & Badge */}
+        <div className={cn(
+          "flex items-center px-2",
+          collapsed ? "justify-center" : "justify-between"
+        )}>
           {expanded && (
-            <span className="text-sm">
-              {theme === 'light' ? 'Mode clair' : theme === 'dark' ? 'Mode sombre' : 'Auto'}
+            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
+              ELM APP
             </span>
           )}
-        </button>
-
-        {/* Déconnexion */}
-        <button
-          onClick={handleLogout}
-          title={collapsed ? 'Déconnexion' : undefined}
-          className={cn(
-            'w-full flex items-center gap-3 px-2 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-surface-hover transition-colors',
-            collapsed ? 'justify-center' : '',
-          )}
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          {expanded && <span className="text-sm">Déconnexion</span>}
-        </button>
-
-        {/* Collapse (desktop only) */}
-        {onCollapse && (
-          <button
-            onClick={onCollapse}
-            title={collapsed ? 'Agrandir' : 'Réduire'}
-            className={cn(
-              'w-full flex items-center gap-3 px-2 py-2 rounded-xl text-slate-500 hover:text-white hover:bg-surface-hover transition-colors',
-              collapsed ? 'justify-center' : '',
-            )}
-          >
-            {collapsed
-              ? <ChevronRight className="w-4 h-4 shrink-0" />
-              : <ChevronLeft  className="w-4 h-4 shrink-0" />}
-            {expanded && <span className="text-sm">Réduire</span>}
-          </button>
-        )}
-
-        {/* Version */}
-        <div className={cn("px-2 py-2 flex items-center", collapsed ? "justify-center" : "justify-start")}>
-           <span className="text-[10px] font-medium text-slate-600 tracking-wider">
-             v{version || '1.0.0'}
-           </span>
+          <span className="text-[10px] font-mono text-slate-700">
+            v{version || '1.0.0'}
+          </span>
         </div>
       </div>
     </div>
@@ -419,6 +451,7 @@ export function Sidebar() {
     const saved = localStorage.getItem(COLLAPSED_KEY);
     return saved === null ? true : saved === 'true';
   });
+  const [isHovering, setIsHovering] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -429,16 +462,25 @@ export function Sidebar() {
   const pathname = usePathname();
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
+  const effectiveCollapsed = collapsed && !isHovering;
+
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className={cn(
-        'hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-200',
-        collapsed ? 'w-16' : 'w-60',
-      )}>
+      <aside 
+        onMouseEnter={() => collapsed && setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        className={cn(
+          'hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-300 ease-in-out z-30 shadow-xl',
+          effectiveCollapsed ? 'w-16' : 'w-64',
+        )}
+      >
         <SidebarContent
-          collapsed={collapsed}
-          onCollapse={() => setCollapsed((c) => !c)}
+          collapsed={effectiveCollapsed}
+          onCollapse={() => {
+            setCollapsed((c) => !c);
+            setIsHovering(false); // Reset hover on manual toggle
+          }}
         />
       </aside>
 
