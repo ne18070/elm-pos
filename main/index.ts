@@ -167,6 +167,10 @@ function registerDisplayHandlers(): void {
 
   // Dernier état connu (demandé par l'écran client après montage React)
   ipcMain.handle('display:get-state', () => lastDisplayState);
+
+  // ─── App Infos ─────────────────────────────────────────────────────────────
+
+  ipcMain.handle('app:version', () => app.getVersion());
 }
 
 // ─── Initialisation ───────────────────────────────────────────────────────────

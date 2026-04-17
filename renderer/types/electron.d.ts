@@ -38,6 +38,7 @@ interface ElectronAPI {
     getPending: () => Promise<unknown>;
   };
   app: {
+    getVersion: () => Promise<string>;
     version: string;
     platform: string;
   };

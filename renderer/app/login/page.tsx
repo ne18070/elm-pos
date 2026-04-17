@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Loader2, Eye, EyeOff, X, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -123,6 +123,14 @@ export default function LoginPage() {
     }
   }
 
+  const [version, setVersion] = useState<string>('');
+
+  useEffect(() => {
+    if (window.electronAPI?.app?.getVersion) {
+      window.electronAPI.app.getVersion().then(setVersion);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       {/* Grille de fond */}
@@ -138,9 +146,10 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
+          <div className="w-64 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
+          <h1 className="text-3xl font-black text-white tracking-tighter">ELM APP</h1>
           <p className="text-slate-400 text-sm mt-1">Connectez-vous à votre compte</p>
           <p className="text-xs text-slate-500 mt-2">
             Pas encore de compte ?{' '}
@@ -221,12 +230,16 @@ export default function LoginPage() {
           <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />
         )}
 
-        <p className="text-center text-xs text-slate-600 mt-6">
-          ELM APP — Caisse multi-établissements &nbsp;·&nbsp;{' '}
-          <a href="/privacy" className="hover:text-slate-400 transition-colors">
-            Politique de confidentialité
-          </a>
-        </p>
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-[10px] font-medium text-slate-600 tracking-widest uppercase">
+            ELM APP v{version || '1.0.0'}
+          </p>
+          <p className="text-xs text-slate-700">
+            <a href="/privacy" className="hover:text-slate-400 transition-colors">
+              Politique de confidentialité
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

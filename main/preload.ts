@@ -25,6 +25,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'display:close',
   'display:status',
   'display:get-state',
+  'app:version',
 ]);
 
 const ALLOWED_LISTEN_CHANNELS = new Set([
@@ -175,6 +176,7 @@ const api = {
   // ─── App ─────────────────────────────────────────────────────────────────────
 
   app: {
+    getVersion: () => ipcRenderer.invoke('app:version'),
     version:  process.versions.electron,
     platform: process.platform,
   },

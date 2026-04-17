@@ -115,6 +115,14 @@ function SidebarContent({
       return true;
     });
 
+  const [version, setVersion] = useState<string>('');
+
+  useEffect(() => {
+    if (window.electronAPI?.app?.getVersion) {
+      window.electronAPI.app.getVersion().then(setVersion);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       {/* App Logo */}
@@ -312,6 +320,13 @@ function SidebarContent({
             {expanded && <span className="text-sm">Réduire</span>}
           </button>
         )}
+
+        {/* Version */}
+        <div className={cn("px-2 py-2 flex items-center", collapsed ? "justify-center" : "justify-start")}>
+           <span className="text-[10px] font-medium text-slate-600 tracking-wider">
+             v{version || '1.0.0'}
+           </span>
+        </div>
       </div>
     </div>
   );
