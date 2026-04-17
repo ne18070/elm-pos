@@ -7,6 +7,32 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 export type Database = {
   public: {
     Tables: {
+      email_templates: {
+        Row: {
+          id: string;
+          key: string;
+          name: string;
+          description: string | null;
+          html_body: string;
+          variables: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          name: string;
+          description?: string | null;
+          html_body: string;
+          variables?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['email_templates']['Insert']>;
+        Relationships: [];
+      };
       businesses: {
         Row: {
           id: string;

@@ -5,10 +5,12 @@ import { displayCurrency } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
-  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight, BarChart2, Layers,
+  Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight, BarChart2, Layers, Megaphone,
 } from 'lucide-react';
 import { MonitoringTab } from './components/MonitoringTab';
 import { ModulesTab } from './components/ModulesTab';
+import { MarketingTab } from './components/MarketingTab';
+import { EmailTemplatesTab } from './components/EmailTemplatesTab';
 import {
   getAllSubscriptions, activateSubscription,
   getPlans, getPaymentSettings, upsertPaymentSettings, upsertPlan,
@@ -18,7 +20,7 @@ import {
   type SubscriptionRequest, type PublicSubscriptionRequest,
 } from '@services/supabase/subscriptions';
 
-type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules';
+type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules' | 'marketing' | 'emails';
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   active:  { label: 'Actif',   color: 'text-green-400 bg-green-900/20 border-green-800',  icon: CheckCircle },
@@ -852,6 +854,8 @@ export default function BackofficePage() {
     { id: 'demandes',    label: 'Demandes',            badge: pendingCount            },
     { id: 'abonnements', label: 'Abonnements'                                         },
     { id: 'plans',       label: 'Plans & tarifs'                                      },
+    { id: 'marketing',   label: 'Marketing',           icon: Megaphone                },
+    { id: 'emails',      label: 'Templates email'                                     },
     { id: 'paiement',    label: 'Paramètres paiement'                                 },
     { id: 'modules',     label: 'Modules & Types', icon: Layers                       },
   ];
@@ -881,6 +885,8 @@ export default function BackofficePage() {
       {tab === 'demandes'    && <RequestsTab plans={plans} />}
       {tab === 'abonnements' && <SubscriptionsTab plans={plans} />}
       {tab === 'plans'       && <PlansTab />}
+      {tab === 'marketing'   && <MarketingTab />}
+      {tab === 'emails'      && <EmailTemplatesTab />}
       {tab === 'paiement'    && <PaymentTab />}
       {tab === 'modules'     && <ModulesTab />}
     </div>

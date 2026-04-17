@@ -47,7 +47,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
             <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
           </div>
           <div>
-            <p className="text-base font-black text-white tracking-tighter">ELM APP — Back Office</p>
+            <p className="text-base font-black text-white tracking-tighter">Back Office</p>
             <p className="text-xs text-slate-500">{user.email}</p>
           </div>
         </div>

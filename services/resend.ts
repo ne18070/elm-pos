@@ -3,7 +3,8 @@
 export type EmailType =
   | 'subscription_received'
   | 'subscription_approved'
-  | 'subscription_rejected';
+  | 'subscription_rejected'
+  | 'marketing';
 
 interface SendEmailOpts {
   type:    EmailType;
