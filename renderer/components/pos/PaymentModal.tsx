@@ -10,7 +10,6 @@ import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
-import { printReceipt, openCashDrawer } from '@/lib/ipc';
 import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
