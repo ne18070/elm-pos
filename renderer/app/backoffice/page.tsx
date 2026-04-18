@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
   Upload, Save, Plus, Pencil, Eye, X, ChevronLeft, ChevronRight, BarChart2, Layers, Megaphone,
+  Smartphone
 } from 'lucide-react';
 import { MonitoringTab } from './components/MonitoringTab';
 import { ModulesTab } from './components/ModulesTab';
@@ -19,6 +20,7 @@ import {
   type SubscriptionRow, type Plan, type PaymentSettings,
   type SubscriptionRequest, type PublicSubscriptionRequest,
 } from '@services/supabase/subscriptions';
+import { getIntouchConfig, upsertIntouchConfig, type IntouchConfig } from '@services/supabase/intouch';
 
 type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules' | 'marketing' | 'emails';
 
@@ -500,9 +502,30 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
     businessId: string; planId: string; days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
 
+  // Intouch Config
+  const [intouchForm, setIntouchForm] = useState<{
+    businessId: string; partner_id: string; api_key: string; merchant_id: string; is_active: boolean;
+  } | null>(null);
+  const [intouchLoading, setIntouchLoading] = useState(false);
+  const [intouchConfigs, setIntouchConfigs] = useState<Record<string, boolean>>({});
+
   async function load() {
     setLoading(true);
-    try { setRows(await getAllSubscriptions()); } catch { /* pas superadmin */ }
+    try {
+      const [subs, configs] = await Promise.all([
+        getAllSubscriptions(),
+        (async () => {
+           const { data } = await (getIntouchConfig as any).supabase
+            .from('intouch_configs_public')
+            .select('business_id, is_active');
+           const map: Record<string, boolean> = {};
+           (data ?? []).forEach((c: any) => { map[c.business_id] = c.is_active; });
+           return map;
+        })().catch(() => ({})),
+      ]);
+      setRows(subs);
+      setIntouchConfigs(configs);
+    } catch { /* pas superadmin */ }
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
@@ -534,6 +557,36 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
     finally { setActivating(null); }
   }
 
+  async function openIntouch(businessId: string) {
+    setIntouchLoading(true);
+    try {
+      const config = await getIntouchConfig(businessId) as any;
+      setIntouchForm({
+        businessId,
+        partner_id:  config?.partner_id ?? '',
+        api_key:     config?.api_key ?? '', // Only visible if superadmin has access to base table
+        merchant_id: config?.merchant_id ?? '',
+        is_active:   config?.is_active ?? false,
+      });
+    } catch (e) { alert(toUserError(e)); }
+    finally { setIntouchLoading(false); }
+  }
+
+  async function handleSaveIntouch() {
+    if (!intouchForm) return;
+    setIntouchLoading(true);
+    try {
+      await upsertIntouchConfig(intouchForm.businessId, {
+        partner_id:  intouchForm.partner_id,
+        api_key:     intouchForm.api_key,
+        merchant_id: intouchForm.merchant_id,
+        is_active:   intouchForm.is_active,
+      });
+      setIntouchForm(null);
+    } catch (e) { alert(toUserError(e)); }
+    finally { setIntouchLoading(false); }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -556,7 +609,7 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
       ) : (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
+            <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="border-b border-surface-border text-xs text-slate-400 uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">Compte propriétaire</th>
@@ -593,9 +646,16 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
                       </td>
                       <td className="px-4 py-3 text-slate-300">{row.plan_label ?? '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${badge.color}`}>
-                          <Icon className="w-3 h-3" /> {badge.label}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${badge.color}`}>
+                            <Icon className="w-3 h-3" /> {badge.label}
+                          </span>
+                          {intouchConfigs[row.business_id] && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border border-brand-800 bg-brand-900/20 text-brand-400">
+                              <Smartphone className="w-2.5 h-2.5" /> Mobile-Pay
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-slate-400 text-xs">
                         {st === 'trial' && row.trial_ends_at
@@ -604,13 +664,21 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
                             ? new Date(row.expires_at).toLocaleDateString('fr-FR')
                             : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => setForm({ businessId: row.business_id, planId: plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
-                          className="btn-primary text-xs px-3 py-1.5"
-                        >
-                          Activer
-                        </button>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openIntouch(row.business_id)}
+                            className="btn-secondary text-[10px] px-2 py-1"
+                          >
+                            Intouch
+                          </button>
+                          <button
+                            onClick={() => setForm({ businessId: row.business_id, planId: plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
+                            className="btn-primary text-xs px-3 py-1.5"
+                          >
+                            Activer
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -619,6 +687,71 @@ function SubscriptionsTab({ plans }: { plans: Plan[] }) {
             </table>
           </div>
           <Pagination total={filtered.length} page={page} onChange={setPage} />
+        </div>
+      )}
+
+      {/* Modal Intouch */}
+      {intouchForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="card p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-semibold text-white">Configuration Intouch</h2>
+            <p className="text-xs text-slate-400 italic">Identifiants pour cet établissement spécifique.</p>
+
+            <div>
+              <label className="label">Partner ID</label>
+              <input
+                type="text"
+                value={intouchForm.partner_id}
+                onChange={(e) => setIntouchForm({ ...intouchForm, partner_id: e.target.value })}
+                className="input"
+                placeholder="Ex : MY_PARTNER_ID"
+              />
+            </div>
+
+            <div>
+              <label className="label">API Key</label>
+              <input
+                type="password"
+                value={intouchForm.api_key}
+                onChange={(e) => setIntouchForm({ ...intouchForm, api_key: e.target.value })}
+                className="input"
+                placeholder="••••••••••••"
+              />
+            </div>
+
+            <div>
+              <label className="label">Merchant ID</label>
+              <input
+                type="text"
+                value={intouchForm.merchant_id}
+                onChange={(e) => setIntouchForm({ ...intouchForm, merchant_id: e.target.value })}
+                className="input"
+                placeholder="Ex : MY_MERCHANT_ID"
+              />
+            </div>
+
+            <label className="flex items-center gap-3 cursor-pointer py-2">
+              <input
+                type="checkbox"
+                checked={intouchForm.is_active}
+                onChange={(e) => setIntouchForm({ ...intouchForm, is_active: e.target.checked })}
+                className="w-4 h-4 accent-brand-500"
+              />
+              <span className="text-sm text-white">Paiements Intouch activés</span>
+            </label>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setIntouchForm(null)} className="btn-secondary px-5">Annuler</button>
+              <button
+                onClick={handleSaveIntouch}
+                disabled={intouchLoading}
+                className="btn-primary px-5 flex items-center gap-2"
+              >
+                {intouchLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Enregistrer
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

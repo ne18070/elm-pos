@@ -15,7 +15,9 @@ import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
 import { createOrder } from '@services/supabase/orders';
-import { enqueueToSync } from '@/lib/ipc';
+import { enqueueToSync, printReceipt, openCashDrawer } from '@/lib/ipc';
+import { getIntouchConfig, processIntouchPayment, waitForPayment } from '@services/supabase/intouch';
+import type { IntouchConfig, IntouchPaymentRequest, IntouchPaymentResponse } from '@services/supabase/intouch';
 import { RoomPicker } from './RoomPicker';
 import {
   computeChange,
@@ -44,7 +46,7 @@ interface PaymentModalProps {
   tableId?: string;
 }
 
-type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes';
+type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes' | 'intouch';
 
 const SIMPLE_METHODES: PaymentMethod[] = ['cash', 'card', 'mobile_money'];
 const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', 'mobile_money'];
@@ -60,10 +62,22 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [ordreId, setOrdreId]         = useState<string | null>(null);
   const [ordre, setOrdre]             = useState<Order | null>(null);
   const [erreur, setErreur]           = useState('');
-  const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | null>(null);
+  const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | 'intouch' | null>(null);
+
+  // Intouch
+  const [intouchConfig, setIntouchConfig] = useState<IntouchConfig | null>(null);
+  const [intouchPhone, setIntouchPhone]   = useState(prefilledCustomer?.phone ?? '');
+  const [intouchProvider, setIntouchProvider] = useState<'WAVE' | 'ORANGE_MONEY' | 'FREE_MONEY'>('WAVE');
 
   // Hôtel
   const [selectedReservation, setSelectedReservation] = useState<HotelReservation | null>(null);
+
+  // Charger config Intouch
+  useEffect(() => {
+    if (business?.id) {
+      getIntouchConfig(business.id).then(setIntouchConfig).catch(() => {});
+    }
+  }, [business?.id]);
 
   // Paiement partiel (acompte)
   const [partialMethod, setPartialMethod]     = useState<Exclude<PaymentMethod, 'partial'>>('cash');
@@ -204,6 +218,45 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       notifWarning('Hors ligne — vente enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
       setStep('succes');
+    } finally {
+      setChargement(false);
+    }
+  }
+
+  // ── DB : Intouch ──────────────────────────────────────────────────────────
+  async function submitIntouch() {
+    if (!user || !business) return;
+    if (!intouchPhone.trim()) { setErreur('Numéro de téléphone requis'); return; }
+    setChargement(true);
+    setErreur('');
+    try {
+      const initRes = await processIntouchPayment({
+        business_id: business.id,
+        amount:      total,
+        currency,
+        phone:       intouchPhone.replace(/\s/g, ''),
+        provider:    intouchProvider,
+      });
+
+      if (!initRes.success) {
+        setErreur(initRes.error || 'Échec de l\'initialisation du paiement');
+        setChargement(false);
+        return;
+      }
+
+      // Attente du paiement (Polling)
+      if (initRes.status === 'PENDING' && initRes.external_reference) {
+          const finalRes = await waitForPayment(initRes.external_reference);
+          if (finalRes.status === 'SUCCESS') {
+              await submitSimple();
+          } else {
+              setErreur(finalRes.error || 'Le paiement n\'a pas été validé par le client');
+          }
+      } else if (initRes.status === 'SUCCESS') {
+          await submitSimple();
+      }
+    } catch (err: any) {
+      setErreur(err.message || 'Erreur lors du paiement');
     } finally {
       setChargement(false);
     }
@@ -411,6 +464,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             onClick={() => {
               if (methode === 'partial') setStep('partiel');
               else if (methode === 'room_charge') setStep('room');
+              else if (methode === 'mobile_money' && intouchConfig?.is_active) setStep('intouch');
               else setStep('montant');
             }}
             className="btn-primary w-full h-11"
@@ -710,6 +764,64 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         />
       )}
 
+      {/* ── Étape 2d : Intouch ────────────────────────────────────────────── */}
+      {step === 'intouch' && (
+        <div className="space-y-5">
+          <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
+            <span className="text-slate-400 text-sm">Total à payer</span>
+            <span className="text-2xl font-bold text-brand-400">{fmt(total)}</span>
+          </div>
+
+          <div className="space-y-3">
+            <p className="label">Opérateur Mobile Money</p>
+            <div className="grid grid-cols-3 gap-2">
+              {(['WAVE', 'ORANGE_MONEY', 'FREE_MONEY'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setIntouchProvider(p)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all
+                    ${intouchProvider === p
+                      ? 'border-brand-500 bg-brand-900/30 text-brand-400'
+                      : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                    }`}
+                >
+                  <span className="text-[10px] font-bold">{p.replace('_', ' ')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Numéro de téléphone (Push)</label>
+            <button
+              onClick={() => { setNumpad('intouch'); setErreur(''); }}
+              className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
+            >
+              {intouchPhone || <span className="text-slate-500">7x xxx xx xx</span>}
+            </button>
+          </div>
+
+          {erreur && (
+            <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-3 py-2">{erreur}</p>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep('methode')} className="btn-secondary flex-1 h-11">Retour</button>
+            <button
+              onClick={submitIntouch}
+              disabled={chargement || !intouchPhone}
+              className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
+            >
+              {chargement && <Loader2 className="w-4 h-4 animate-spin" />}
+              {chargement ? 'Lancement...' : 'Payer maintenant'}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-500 text-center">
+            Un message de confirmation sera envoyé sur le téléphone du client.
+          </p>
+        </div>
+      )}
+
       {/* ── Étape 3 : attente validation client ───────────────────────────── */}
       {step === 'attente' && (
         <div className="flex flex-col items-center gap-6 py-8 text-center">
@@ -769,6 +881,15 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           label="Montant reçu (espèces)"
           hint={`Acompte : ${fmt(acompteNum)}`}
           onDigit={setAcompteRecu}
+          onClose={() => setNumpad(null)}
+        />
+      )}
+      {numpad === 'intouch' && (
+        <NumpadModal
+          value={intouchPhone}
+          label="Téléphone client"
+          hint="Format: 771234567"
+          onDigit={setIntouchPhone}
           onClose={() => setNumpad(null)}
         />
       )}
