@@ -102,10 +102,6 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // Ref vers la fonction DB à appeler quand le client valide
   const submitRef = useRef<(() => Promise<void>) | null>(null);
 
-  const cart = useCartStore();
-  const { user, business } = useAuthStore();
-  const { success: notifSuccess, warning: notifWarning } = useNotificationStore();
-
   const fmt = (n: number) => formatCurrency(n, currency);
   const { subtotal, discountAmount, taxAmount, total } = computeOrderTotals(
     cart.items,
