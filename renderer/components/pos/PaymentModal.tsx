@@ -63,6 +63,10 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [erreur, setErreur]           = useState('');
   const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | 'intouch' | null>(null);
 
+  const cart = useCartStore();
+  const { user, business } = useAuthStore();
+  const { success: notifSuccess, warning: notifWarning } = useNotificationStore();
+
   // Intouch
   const [intouchConfig, setIntouchConfig] = useState<IntouchConfig | null>(null);
   const [intouchPhone, setIntouchPhone]   = useState(prefilledCustomer?.phone ?? '');
