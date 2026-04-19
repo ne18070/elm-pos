@@ -22,9 +22,8 @@ async function requireSuperadmin(req: NextRequest): Promise<string | null> {
   );
   const { data: { user }, error } = await anonClient.auth.getUser(token);
   if (error || !user) return null;
-  // Check superadmin role in profile
   const { data: profile } = await getServiceClient()
-    .from('profiles')
+    .from('users')
     .select('role')
     .eq('id', user.id)
     .single();
