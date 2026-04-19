@@ -2,18 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { Loader2, Save, Pencil, Mail, Eye, Code2 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@services/supabase/database.types';
 import { toUserError } from '@/lib/user-error';
+import { supabase } from '@services/supabase/client';
 
 type EmailTemplate = Database['public']['Tables']['email_templates']['Row'];
 
-function getAdminClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+async function adminFetch(path: string, options?: RequestInit) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  return fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {}),
+    },
+  });
 }
 
 export function EmailTemplatesTab() {
@@ -26,9 +31,9 @@ export function EmailTemplatesTab() {
   async function load() {
     setLoading(true);
     try {
-      const { data, error } = await getAdminClient().from('email_templates').select('*').order('created_at');
-      if (error) throw error;
-      setTemplates(data ?? []);
+      const res = await adminFetch('/api/admin/email-templates');
+      if (!res.ok) throw new Error((await res.json()).error);
+      setTemplates(await res.json());
     } catch (e) {
       alert(toUserError(e));
     } finally {
@@ -42,16 +47,17 @@ export function EmailTemplatesTab() {
     if (!editing) return;
     setSaving(true);
     try {
-      const { error } = await getAdminClient()
-        .from('email_templates')
-        .update({
+      const res = await adminFetch('/api/admin/email-templates', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          id:          editing.id,
           name:        editing.name,
           description: editing.description,
           html_body:   editing.html_body,
           is_active:   editing.is_active,
-        })
-        .eq('id', editing.id);
-      if (error) throw error;
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
       setEditing(null);
       await load();
     } catch (e) {

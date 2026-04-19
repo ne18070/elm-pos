@@ -3,11 +3,14 @@ import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@services/supabase/database.types';
 
+// Types that can be sent without authentication (public flows)
+const PUBLIC_EMAIL_TYPES = ['subscription_received'] as const;
+
 const FROM = 'ELM APP <contact@elm-app.click>';
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ?? '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
   return createClient<Database>(url, key, { auth: { persistSession: false } });
 }
 
@@ -55,9 +58,13 @@ function renderTemplate(html: string, vars: Record<string, string>): string {
   return html.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function buildVars(type: string, data: Record<string, unknown>): Record<string, string> {
   const str = (v: unknown) => (v != null ? String(v) : '');
-  const base = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, str(v)]));
+  const base = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, escapeHtml(str(v))]));
 
   if (type === 'subscription_approved') {
     const expiresAt = data.expires_at as string | undefined;
@@ -74,7 +81,7 @@ function buildVars(type: string, data: Record<string, unknown>): Record<string, 
     return {
       ...base,
       note_block: note
-        ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px;margin-bottom:24px;"><p style="color:#9a3412;font-size:13px;font-weight:700;margin:0 0 6px;">Motif</p><p style="color:#7c2d12;font-size:14px;margin:0;">${note}</p></div>`
+        ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px;margin-bottom:24px;"><p style="color:#9a3412;font-size:13px;font-weight:700;margin:0 0 6px;">Motif</p><p style="color:#7c2d12;font-size:14px;margin:0;">${escapeHtml(note)}</p></div>`
         : '',
     };
   }
@@ -82,11 +89,13 @@ function buildVars(type: string, data: Record<string, unknown>): Record<string, 
   if (type === 'marketing') {
     const btnLabel = data.button_label as string | undefined;
     const btnUrl = data.button_url as string | undefined;
+    // Only allow http/https URLs to prevent javascript: injection
+    const safeUrl = btnUrl && /^https?:\/\//.test(btnUrl) ? btnUrl : '';
     return {
       ...base,
       button_block:
-        btnLabel && btnUrl
-          ? `<p style="text-align:center;margin:32px 0 24px;"><a href="${btnUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;text-decoration:none;">${btnLabel}</a></p>`
+        btnLabel && safeUrl
+          ? `<p style="text-align:center;margin:32px 0 24px;"><a href="${escapeHtml(safeUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;text-decoration:none;">${escapeHtml(btnLabel)}</a></p>`
           : '',
     };
   }
@@ -101,6 +110,22 @@ export async function POST(req: NextRequest) {
 
     if (!type || !to || !subject) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Auth check: authenticated users can send any type; unauthenticated only public types
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+    if (token) {
+      const anonClient = createClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        { auth: { persistSession: false } }
+      );
+      const { error: authError } = await anonClient.auth.getUser(token);
+      if (authError) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    } else if (!(PUBLIC_EMAIL_TYPES as readonly string[]).includes(type)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabase = getServiceClient();

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
+import DOMPurify from 'dompurify';
 import {
   Loader2, CheckCircle, AlertTriangle, PenLine, RotateCcw, Send, Download,
 } from 'lucide-react';
@@ -302,7 +303,7 @@ export default function ContractSignPage() {
       <div className="px-4 py-6">
         <div
           className="text-sm text-gray-800 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: contract?.body ?? '' }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(contract?.body ?? '') }}
         />
       </div>
 
