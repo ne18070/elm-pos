@@ -340,6 +340,7 @@ export interface Refund {
 
 export type { RoomType, RoomStatus, ReservationStatus, HotelRoom, HotelGuest, HotelReservation, HotelService } from '../services/supabase/hotel';
 export type { Livreur } from '../services/supabase/livreurs';
+export type * from './workflow';
 
 // ─── UI State ─────────────────────────────────────────────────────────────────
 

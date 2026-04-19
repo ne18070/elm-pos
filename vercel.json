@@ -3,5 +3,11 @@
   "outputDirectory": "renderer/.next",
   "installCommand": "yarn install --ignore-scripts",
   "devCommand": "cd renderer && ../node_modules/.bin/next dev",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/workflow-processor",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }

@@ -1,0 +1,304 @@
+'use server';
+
+import {
+  getInstance, updateInstance, log, enqueueJob,
+  startWorkflow as dbStartWorkflow, getWorkflow,
+} from '@services/supabase/workflows';
+import {
+  getNode, getEdge, getEligibleEdges,
+  resolveConditionEdge, interpolate, applyContextUpdates,
+} from '@/lib/workflow-engine';
+import type {
+  TransitionPayload, TransitionResult, WorkflowStatus,
+  WorkflowDefinition, WorkflowInstance,
+  ActionNode, TriggerWorkflowPayload,
+} from '@pos-types';
+
+// ── Exécution des actions automatisées ────────────────────────────────────────
+async function executeActionNode(
+  node: ActionNode,
+  instance: WorkflowInstance,
+  ctx: Record<string, unknown>
+): Promise<{ ok: boolean; error?: string }> {
+  for (const action of node.actions) {
+    try {
+      switch (action.type) {
+        case 'SEND_WHATSAPP': {
+          const phone = action.to ? String(ctx[action.to] ?? '') : '';
+          const text  = interpolate(action.template ?? '', ctx);
+          await enqueueJob(instance.id, 'SEND_NOTIFICATION', {
+            channel: 'whatsapp', phone, text,
+          }, { priority: 2 });
+          break;
+        }
+        case 'SEND_EMAIL': {
+          const email   = action.to ? String(ctx[action.to] ?? '') : '';
+          const subject = interpolate(action.subject ?? '', ctx);
+          const body    = interpolate(action.template ?? '', ctx);
+          await enqueueJob(instance.id, 'SEND_NOTIFICATION', {
+            channel: 'email', email, subject, body,
+          }, { priority: 3 });
+          break;
+        }
+        case 'GENERATE_PDF': {
+          await enqueueJob(instance.id, 'GENERATE_DOC', {
+            pretention_id: action.pretention_id,
+            document_name: action.document_name,
+            context: ctx,
+          }, { priority: 4 });
+          break;
+        }
+        case 'CALL_WEBHOOK': {
+          await enqueueJob(instance.id, 'CALL_WEBHOOK', {
+            url:     action.url,
+            method:  action.method ?? 'POST',
+            headers: action.headers ?? {},
+            body:    action.body_template ? interpolate(action.body_template, ctx) : '{}',
+          }, { priority: 5 });
+          break;
+        }
+        case 'CREATE_TRACKING_LINK': {
+          await enqueueJob(instance.id, 'CREATE_TRACKING_LINK', {
+            dossier_id: instance.dossier_id,
+            phone:      ctx['client.phone'] ?? ctx['phone'],
+            email:      ctx['client.email'] ?? ctx['email'],
+          }, { priority: 3 });
+          break;
+        }
+        case 'UPDATE_CONTEXT': {
+          Object.assign(ctx, applyContextUpdates(ctx, action.updates));
+          break;
+        }
+      }
+    } catch (err) {
+      if (node.on_error === 'FAIL') return { ok: false, error: String(err) };
+      if (node.on_error === 'RETRY') {
+        await enqueueJob(instance.id, 'PROCESS_NODE', {
+          node_id: node.id, action_index: node.actions.indexOf(action),
+        }, { priority: 1 });
+      }
+      // CONTINUE : on ignore l'erreur et on passe à l'action suivante
+    }
+  }
+  return { ok: true };
+}
+
+// ── Traversée automatique des nœuds non-humains ───────────────────────────────
+async function autoTraverse(
+  def: WorkflowDefinition,
+  startNodeId: string,
+  instance: WorkflowInstance,
+  ctx: Record<string, unknown>
+): Promise<{ nodeId: string; status: WorkflowStatus; ctx: Record<string, unknown> }> {
+  let nodeId = startNodeId;
+  let hops = 0;
+
+  while (hops < 30) {
+    const node = getNode(def, nodeId);
+    if (!node) break;
+
+    if (node.type === 'CONDITION') {
+      const edge = resolveConditionEdge(def, nodeId, ctx);
+      if (!edge) break;
+      await log({
+        instance_id: instance.id, event_type: 'TRANSITION',
+        from_node_id: nodeId, to_node_id: edge.to, edge_id: edge.id,
+        message: `[AUTO CONDITION] ${edge.label}`, context_snapshot: ctx,
+      });
+      nodeId = edge.to;
+
+    } else if (node.type === 'ACTION') {
+      await log({
+        instance_id: instance.id, event_type: 'ACTION_EXEC',
+        to_node_id: nodeId, message: `Exécution: ${node.label}`, context_snapshot: ctx,
+      });
+      const result = await executeActionNode(node as ActionNode, instance, ctx);
+      if (!result.ok) {
+        return { nodeId, status: 'FAILED', ctx };
+      }
+      const edges = getEligibleEdges(def, nodeId, ctx);
+      if (edges.length === 0) break;
+      nodeId = edges[0].to;
+
+    } else if (node.type === 'DELAY') {
+      const resumeAt = new Date(Date.now() + (node.delay_hours ?? 0) * 3600000);
+      await enqueueJob(instance.id, 'RESUME_DELAY', { node_id: nodeId, next_edge: getEligibleEdges(def, nodeId, ctx)[0]?.id }, {
+        processAfter: resumeAt, priority: 8,
+      });
+      return { nodeId, status: 'PAUSED', ctx };
+
+    } else if (node.type === 'WAIT_EVENT') {
+      if (node.timeout_hours && node.timeout_edge_id) {
+        const timeoutAt = new Date(Date.now() + node.timeout_hours * 3600000);
+        await enqueueJob(instance.id, 'RESUME_DELAY', { node_id: nodeId, next_edge: node.timeout_edge_id, is_timeout: true }, {
+          processAfter: timeoutAt, priority: 8,
+        });
+      }
+      return { nodeId, status: 'WAITING', ctx };
+
+    } else if (node.type === 'USER_TASK' || node.type === 'LEGAL_CLAIM') {
+      return { nodeId, status: 'WAITING', ctx };
+
+    } else if (node.type === 'END') {
+      return { nodeId, status: 'COMPLETED', ctx };
+    } else {
+      break;
+    }
+    hops++;
+  }
+
+  return { nodeId, status: 'RUNNING', ctx };
+}
+
+// ── Server Action principale ──────────────────────────────────────────────────
+export async function transitionToNextStep(
+  payload: TransitionPayload
+): Promise<TransitionResult> {
+  const { instance_id, edge_id, form_data = {}, performed_by } = payload;
+
+  try {
+    const instance = await getInstance(instance_id);
+
+    if (instance.status === 'COMPLETED' || instance.status === 'CANCELLED') {
+      return { ok: false, error: `Instance déjà ${instance.status}` };
+    }
+
+    const def = instance.workflow_snapshot;
+    const edge = getEdge(def, edge_id);
+    if (!edge) return { ok: false, error: `Edge "${edge_id}" introuvable` };
+    if (edge.from !== instance.current_node_id) {
+      return { ok: false, error: `Edge "${edge_id}" ne part pas du nœud courant` };
+    }
+
+    const ctx: Record<string, unknown> = { ...instance.context, ...form_data };
+
+    // Vérifier l'éligibilité
+    const eligible = getEligibleEdges(def, instance.current_node_id, ctx);
+    if (!eligible.find(e => e.id === edge_id)) {
+      return { ok: false, error: `Conditions non remplies pour cet edge` };
+    }
+
+    // Log de la transition humaine
+    await log({
+      instance_id, event_type: 'TRANSITION',
+      from_node_id: instance.current_node_id,
+      to_node_id: edge.to, edge_id,
+      message: edge.label, context_snapshot: ctx,
+      performed_by: performed_by ?? null,
+    });
+
+    // Traversée automatique depuis le nœud cible
+    const result = await autoTraverse(def, edge.to, instance, ctx);
+
+    const completedAt = result.status === 'COMPLETED' ? new Date().toISOString() : null;
+    const pausedAt    = result.status === 'PAUSED'    ? new Date().toISOString() : null;
+
+    await updateInstance(instance_id, {
+      current_node_id: result.nodeId,
+      context:         result.ctx,
+      status:          result.status,
+      ...(completedAt ? { completed_at: completedAt } : {}),
+      ...(pausedAt    ? { paused_at: pausedAt }        : {}),
+      ...(result.status !== 'PAUSED' ? { paused_at: null, scheduled_resume_at: null } : {}),
+    });
+
+    return { ok: true, new_node_id: result.nodeId, new_status: result.status };
+  } catch (err) {
+    console.error('[transitionToNextStep]', err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+// ── Démarrer un workflow ──────────────────────────────────────────────────────
+export async function triggerWorkflow(
+  payload: TriggerWorkflowPayload
+): Promise<TransitionResult> {
+  try {
+    const workflow = await getWorkflow(payload.workflow_id);
+    const instance = await dbStartWorkflow(
+      payload.dossier_id, workflow,
+      payload.initial_context ?? {},
+      payload.started_by,
+      payload.triggered_by ?? 'MANUAL'
+    );
+
+    // Traversée depuis le nœud initial si c'est automatisable
+    const def = workflow.definition;
+    const ctx = payload.initial_context ?? {};
+    const result = await autoTraverse(def, workflow.definition.initial_node_id, instance, ctx);
+
+    if (result.nodeId !== workflow.definition.initial_node_id || result.status !== 'WAITING') {
+      await updateInstance(instance.id, {
+        current_node_id: result.nodeId,
+        context:         result.ctx,
+        status:          result.status,
+        ...(result.status === 'COMPLETED' ? { completed_at: new Date().toISOString() } : {}),
+      });
+    }
+
+    return { ok: true, new_node_id: result.nodeId, new_status: result.status };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+// ── Annulation ────────────────────────────────────────────────────────────────
+export async function cancelWorkflowInstance(
+  instanceId: string,
+  performedBy?: string
+): Promise<TransitionResult> {
+  try {
+    const instance = await getInstance(instanceId);
+    if (instance.status === 'COMPLETED' || instance.status === 'CANCELLED') {
+      return { ok: false, error: `Instance déjà ${instance.status}` };
+    }
+    await updateInstance(instanceId, { status: 'CANCELLED', completed_at: new Date().toISOString() });
+    await log({
+      instance_id: instanceId, event_type: 'TRANSITION', level: 'WARN',
+      from_node_id: instance.current_node_id, to_node_id: instance.current_node_id,
+      message: 'Workflow annulé', context_snapshot: instance.context,
+      performed_by: performedBy ?? null,
+    });
+    return { ok: true, new_status: 'CANCELLED' };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+// ── Résumer après WAIT_EVENT (appelé par webhook) ─────────────────────────────
+export async function resumeFromEvent(
+  instanceId: string,
+  edgeId: string,
+  eventData: Record<string, unknown> = {}
+): Promise<TransitionResult> {
+  try {
+    const instance = await getInstance(instanceId);
+    if (instance.status !== 'WAITING' && instance.status !== 'PAUSED') {
+      return { ok: false, error: `Instance non en attente (${instance.status})` };
+    }
+
+    const def = instance.workflow_snapshot;
+    const edge = getEdge(def, edgeId);
+    if (!edge || edge.from !== instance.current_node_id) {
+      return { ok: false, error: `Edge invalide pour la reprise` };
+    }
+
+    const ctx = { ...instance.context, ...eventData };
+    await log({
+      instance_id: instanceId, event_type: 'RESUME',
+      from_node_id: instance.current_node_id, to_node_id: edge.to,
+      message: `Reprise via événement externe`, context_snapshot: ctx,
+    });
+
+    const result = await autoTraverse(def, edge.to, instance, ctx);
+    await updateInstance(instanceId, {
+      current_node_id: result.nodeId, context: result.ctx, status: result.status,
+      paused_at: null, scheduled_resume_at: null,
+      ...(result.status === 'COMPLETED' ? { completed_at: new Date().toISOString() } : {}),
+    });
+
+    return { ok: true, new_node_id: result.nodeId, new_status: result.status };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
