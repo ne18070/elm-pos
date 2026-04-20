@@ -5,8 +5,9 @@ import {
   Plus, Briefcase, Search, Loader2, X, Check, Pencil, Trash2, 
   Phone, Scale, Calendar, Paperclip, Upload, ExternalLink, 
   HardDrive, AlertTriangle, GitBranch, Play, ChevronLeft, ChevronRight, 
-  ChevronDown, PauseCircle, XCircle, CheckCircle2, Clock, 
-  Activity, BookOpen, Settings2, Building2, UserCircle2, ToggleLeft, ToggleRight
+  ChevronDown, PauseCircle, XCircle, CheckCircle2, Clock, Mail,
+  Activity, BookOpen, Settings2, Building2, UserCircle2, ToggleLeft, ToggleRight,
+  ShieldCheck
 } from 'lucide-react';
 
 import { toUserError } from '@/lib/user-error';
@@ -64,7 +65,7 @@ function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }
   const s = statuts.find((x) => x.value === status);
   const cls = (s?.metadata?.cls as string) ?? 'bg-slate-800 text-slate-400 border-slate-700';
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${cls}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${cls}`}>
       {s?.label ?? status}
     </span>
   );
@@ -225,6 +226,7 @@ function DossierModal({
   });
   
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [instances, setInstances] = useState<WorkflowInstance[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [typesClient, setTypesClient] = useState<RefItem[]>([]);
   const [clientSearch, setClientSearch] = useState('');
@@ -234,8 +236,9 @@ function DossierModal({
   useEffect(() => {
     getClients(businessId).then(setAllClients);
     getReferenceData('type_client', businessId).then(setTypesClient);
-    if (!initial) {
-      getWorkflows(businessId, true).then(setWorkflows);
+    getWorkflows(businessId, true).then(setWorkflows);
+    if (initial) {
+      getInstancesByDossier(initial.id).then(setInstances);
     }
   }, [initial, businessId]);
 
@@ -315,8 +318,8 @@ function DossierModal({
               client_type:   form.client_type,
               client_id_num: form.client_id_num,
               client_rep:    form.client_rep,
-              'client.phone': saved.client_phone,
-              'client.email': saved.client_email,
+              client_phone:  saved.client_phone,
+              client_email:  saved.client_email,
             }
           });
         }
@@ -357,10 +360,10 @@ function DossierModal({
                 <input className="input pl-10" value={form.client_name || clientSearch} onChange={(e) => { set('client_name', e.target.value); setClientSearch(e.target.value); setShowClientResults(true); }} onFocus={() => setShowClientResults(true)} placeholder="Rechercher ou saisir..." />
               </div>
               {showClientResults && clientSearch.length > 0 && filteredClients.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute z-10 w-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                   {filteredClients.map(c => (
-                    <button key={c.id} onClick={() => selectClient(c)} className="w-full text-left px-4 py-3 hover:bg-surface-hover border-b border-surface-border last:border-0 flex items-center justify-between">
-                      <div><p className="text-sm text-white font-bold">{c.name}</p><p className="text-[10px] text-slate-400">{c.phone || c.email || '—'}</p></div>
+                    <button key={c.id} onClick={() => selectClient(c)} className="w-full text-left px-4 py-3 hover:bg-slate-800 border-b border-slate-800 last:border-0 flex items-center justify-between">
+                      <div><p className="text-sm text-white font-bold">{c.name}</p><p className="text-[10px] text-slate-500">{c.phone || c.email || '—'}</p></div>
                       <Plus className="w-3.5 h-3.5 text-brand-400" />
                     </button>
                   ))}
@@ -406,29 +409,42 @@ function DossierModal({
             <div><label className="label">Date d'ouverture</label><input type="date" className="input" value={form.date_ouverture} onChange={(e) => set('date_ouverture', e.target.value)} /></div>
             <div><label className="label">Prochaine audience</label><input type="date" className="input" value={form.date_audience} onChange={(e) => set('date_audience', e.target.value)} /></div>
           </div>
-          {!initial && workflows.length > 0 && (
+          
+          {initial ? (
+            <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-slate-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Processus Verrouillé (Audit)</span>
+              </div>
+              <p className="text-sm font-bold text-white italic">
+                {workflows.find(w => instances.some(i => i.workflow_id === w.id))?.name || "Processus actif"}
+              </p>
+              <p className="text-[10px] text-slate-500 leading-tight">
+                Pour garantir l'intégrité de l'audit juridique, le modèle de procédure ne peut plus être modifié une fois lancé.
+              </p>
+            </div>
+          ) : workflows.length > 0 && (
             <div className="p-4 bg-brand-500/5 border border-brand-500/20 rounded-2xl space-y-3">
               <div className="flex items-center gap-2 text-brand-400"><GitBranch className="w-4 h-4" /><span className="text-xs font-bold uppercase">Automatisation</span></div>
               <select className="input bg-slate-900" value={form.selectedWorkflow} onChange={(e) => set('selectedWorkflow', e.target.value)}>
-                <option value="">— Aucun workflow au démarrage —</option>
+                <option value="">— Aucun processus au démarrage —</option>
                 {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             </div>
           )}
+          
           <div><label className="label">Notes / Faits</label><textarea className="input resize-none" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} /></div>
         </div>
         <div className="flex justify-end gap-2 p-4 border-t border-surface-border shrink-0">
           <button onClick={onClose} className="btn-secondary text-sm px-6">Annuler</button>
-          <button onClick={handleSave} disabled={saving || !form.client_name.trim()} className="btn-primary text-sm px-8 flex items-center gap-2 font-bold"><Check className="w-4 h-4" />{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+          <button onClick={handleSave} disabled={saving || !form.client_name.trim()} className="btn-primary text-sm px-8 flex items-center gap-2 font-bold shadow-glow"><Check className="w-4 h-4" />{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Panneaux Workflows & Fichiers ───────────────────────────────────────────
-
-const INSTANCE_STATUS_PRIORITY: Record<string, number> = { WAITING: 0, RUNNING: 1, FAILED: 2, PAUSED: 3, PENDING: 4, COMPLETED: 5, CANCELLED: 6 };
+// ─── Panneaux Processus & Fichiers ───────────────────────────────────────────
 
 function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Dossier; businessId: string; userId?: string; onClose: () => void; }) {
   const [instances, setInstances] = useState<WorkflowInstance[]>([]);
@@ -441,13 +457,7 @@ function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Doss
 
   useEffect(() => {
     Promise.all([getInstancesByDossier(dossier.id), getWorkflows(businessId, true)])
-      .then(([inst, wf]) => {
-        setInstances(inst);
-        setWorkflows(wf);
-        // auto-expand most actionable instance
-        const sorted = [...inst].sort((a, b) => (INSTANCE_STATUS_PRIORITY[a.status] ?? 9) - (INSTANCE_STATUS_PRIORITY[b.status] ?? 9));
-        if (sorted.length > 0) setExpanded(sorted[0].id);
-      })
+      .then(([inst, wf]) => { setInstances(inst); setWorkflows(wf); })
       .finally(() => setLoading(false));
   }, [dossier.id, businessId]);
 
@@ -476,7 +486,13 @@ function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Doss
     try {
       const res = await triggerWorkflow({
         workflow_id: wf.id, dossier_id: dossier.id, started_by: userId,
-        initial_context: { dossier_id: dossier.id, reference: dossier.reference, client_name: dossier.client_name }
+        initial_context: { 
+          dossier_id:    dossier.id, 
+          reference:     dossier.reference, 
+          client_name:   dossier.client_name,
+          client_phone:  dossier.client_phone,
+          client_email:  dossier.client_email
+        }
       });
       if (res.ok) {
         const updated = await getInstancesByDossier(dossier.id);
@@ -489,7 +505,7 @@ function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Doss
   return (
     <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[440px] bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl animate-in slide-in-from-right duration-300">
       <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border bg-slate-900/50">
-        <p className="text-sm font-bold text-white tracking-tight">Workflows — {dossier.reference}</p>
+        <p className="text-sm font-bold text-white tracking-tight">Processus — {dossier.reference}</p>
         <div className="flex items-center gap-2">
           <button 
             onClick={handleShareTracking} 
@@ -626,9 +642,9 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
   );
 }
 
-// ─── Workflows Manager ───────────────────────────────────────────────────────
+// ─── Processus Manager ───────────────────────────────────────────────────────
 
-function WorkflowsManager({ businessId }: { businessId: string }) {
+function ProcessusManager({ businessId }: { businessId: string }) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [search, setSearch] = useState('');
@@ -647,10 +663,10 @@ function WorkflowsManager({ businessId }: { businessId: string }) {
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce workflow définitivement ?')) return;
+    if (!confirm('Supprimer ce processus définitivement ?')) return;
     try {
       await deleteWorkflow(id);
-      success('Workflow supprimé');
+      success('Processus supprimé');
       load();
     } catch (e) { notifError(String(e)); }
   };
@@ -658,7 +674,7 @@ function WorkflowsManager({ businessId }: { businessId: string }) {
   const handleToggle = async (wf: Workflow) => {
     try {
       await toggleWorkflowStatus(wf.id, !wf.is_active);
-      success(wf.is_active ? 'Workflow désactivé' : 'Workflow activé');
+      success(wf.is_active ? 'Processus désactivé' : 'Processus activé');
       load();
     } catch (e) { notifError(String(e)); }
   };
@@ -688,20 +704,20 @@ function WorkflowsManager({ businessId }: { businessId: string }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="relative flex-1 max-w-md w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input className="input pl-11 py-2.5 text-sm bg-slate-900/50" placeholder="Rechercher un workflow..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          <input className="input pl-11 py-2.5 text-sm bg-slate-900/50" placeholder="Rechercher un processus..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
         <button onClick={() => setEditingId('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
-          <Plus className="w-4 h-4" /> Nouveau Workflow
+          <Plus className="w-4 h-4" /> Nouveau Processus
         </button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>
       ) : filtered.length === 0 ? (
-        <div className="card p-12 text-center text-slate-500 italic border-dashed">Aucun workflow trouvé.</div>
+        <div className="card p-12 text-center text-slate-500 italic border-dashed">Aucun processus trouvé.</div>
       ) : (
         <div className="space-y-4">
-          <div className="card overflow-hidden bg-slate-900/20 border-slate-800">
+          <div className="card overflow-hidden bg-slate-900/20 border-slate-800 shadow-2xl">
             <table className="w-full text-sm">
               <thead className="bg-slate-900/50 border-b border-slate-800 text-slate-500 uppercase text-[9px] font-black tracking-[0.2em]">
                 <tr className="text-left">
@@ -724,7 +740,7 @@ function WorkflowsManager({ businessId }: { businessId: string }) {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="px-2 py-0.5 rounded-md bg-surface-input border border-surface-border text-slate-400 font-mono text-[10px] font-bold">v{w.version}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono text-[10px] font-bold">v{w.version}</span>
                     </td>
                     <td className="px-6 py-4">
                       <button onClick={() => handleToggle(w)} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${w.is_active ? 'text-green-500' : 'text-slate-500'}`}>
@@ -806,11 +822,11 @@ export default function DossiersPage() {
   const filtered = dossiers.filter(d => !search || d.reference.toLowerCase().includes(search.toLowerCase()) || d.client_name.toLowerCase().includes(search.toLowerCase()));
 
   const TABS = [
-    { id: 'dossiers'    as const, label: 'Dossiers',    icon: <Scale      className="w-4 h-4" /> },
-    { id: 'monitoring'  as const, label: 'Monitoring',  icon: <Activity   className="w-4 h-4" /> },
-    { id: 'workflows'   as const, label: 'Workflows',   icon: <GitBranch  className="w-4 h-4" /> },
-    { id: 'pretentions' as const, label: 'Prétentions', icon: <BookOpen   className="w-4 h-4" /> },
-    { id: 'config'      as const, label: 'Paramètres',  icon: <Settings2   className="w-4 h-4" /> },
+    { id: 'dossiers'    as const, label: 'Dossiers',          icon: <Scale      className="w-4 h-4" /> },
+    { id: 'monitoring'  as const, label: 'Suivi',             icon: <Activity   className="w-4 h-4" /> },
+    { id: 'workflows'   as const, label: 'Processus',         icon: <GitBranch  className="w-4 h-4" /> },
+    { id: 'pretentions' as const, label: 'Modèles juridiques', icon: <BookOpen   className="w-4 h-4" /> },
+    { id: 'config'      as const, label: 'Paramètres',        icon: <Settings2   className="w-4 h-4" /> },
   ];
 
   if (!business) return null;
@@ -820,7 +836,7 @@ export default function DossiersPage() {
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 shadow-glow">
               <Scale className="w-6 h-6" />
             </div>
             <div>
@@ -856,17 +872,28 @@ export default function DossiersPage() {
             ) : (
               <div className="card overflow-hidden bg-slate-900/20 border-slate-800 shadow-2xl">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-900/50 border-b border-slate-800 text-slate-500 uppercase text-[9px] font-black tracking-[0.2em]"><tr className="text-left"><th className="px-6 py-4">Référence</th><th className="px-6 py-4">Client</th><th className="px-6 py-4">Type d&apos;affaire</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
+                  <thead className="bg-slate-900/50 border-b border-slate-800 text-slate-500 uppercase text-[9px] font-black tracking-[0.2em]"><tr className="text-left"><th className="px-6 py-4">Référence</th><th className="px-6 py-4">Client</th><th className="px-6 py-4">Contact</th><th className="px-6 py-4">Type d&apos;affaire</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {filtered.map(d => (
                       <tr key={d.id} className="hover:bg-slate-900/40 transition-colors group">
                         <td className="px-6 py-4 font-mono text-purple-400 font-bold">{d.reference}</td>
-                        <td className="px-6 py-4 text-white font-bold tracking-tight">{d.client_name}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-white font-bold tracking-tight">{d.client_name}</span>
+                            <span className="text-[10px] text-slate-500 uppercase font-medium">{d.adversaire ? `vs ${d.adversaire}` : ''}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-0.5">
+                            {d.client_phone && <span className="text-slate-300 text-xs flex items-center gap-1.5"><Phone className="w-3 h-3 text-brand-400" /> {d.client_phone}</span>}
+                            {d.client_email && <span className="text-slate-500 text-[11px] flex items-center gap-1.5"><Mail className="w-3 h-3" /> {d.client_email}</span>}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 text-slate-400 font-medium">{d.type_affaire}</td>
                         <td className="px-6 py-4 text-center"><StatusBadge status={d.status} statuts={statuts} /></td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setWorkflowPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-brand-400 transition-all" title="Suivi Workflow"><GitBranch className="w-4 h-4" /></button>
+                            <button onClick={() => setWorkflowPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-brand-400 transition-all" title="Suivi Processus"><GitBranch className="w-4 h-4" /></button>
                             <button onClick={() => setFichiersPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-purple-400 transition-all" title="Pièces Jointes"><Paperclip className="w-4 h-4" /></button>
                             <button onClick={() => setModal(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Modifier Dossier"><Pencil className="w-4 h-4" /></button>
                           </div>
@@ -881,7 +908,7 @@ export default function DossiersPage() {
         )}
 
         {tab === 'monitoring' && <MonitoringDashboard businessId={business.id} />}
-        {tab === 'workflows' && <WorkflowsManager businessId={business.id} />}
+        {tab === 'workflows' && <ProcessusManager businessId={business.id} />}
         {tab === 'pretentions' && <PretentionsLibrary businessId={business.id} />}
         {tab === 'config' && <ConfigTab businessId={business.id} onRefresh={load} />}
       </div>

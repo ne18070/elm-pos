@@ -69,6 +69,14 @@ export async function createBusiness(data: {
 // ─── Gestion des membres ──────────────────────────────────────────────────────
 
 /** Liste les membres d'un établissement */
+export async function getBusiness(businessId: string): Promise<Business> {
+  const { data, error } = await supabase
+    .from('businesses').select('*').eq('id', businessId).single();
+  if (error) throw new Error(error.message);
+  return data as unknown as Business;
+}
+
+/** Liste les membres d'un établissement */
 export async function getBusinessMembers(businessId: string): Promise<BusinessMember[]> {
   const { data, error } = await supabase.rpc('get_business_members', {
     p_business_id: businessId,

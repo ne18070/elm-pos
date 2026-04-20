@@ -44,9 +44,16 @@ export async function saveWorkflow(
   if (existingId) {
     // Incrémenter la version à chaque sauvegarde
     const current = await getWorkflow(existingId);
+    const newVersion = (current.version || 0) + 1;
     const { data, error } = await supabase
       .from('workflows')
-      .update({ definition: cast(definition), name, description: description ?? null, version: current.version + 1 })
+      .update({ 
+        definition: cast(definition), 
+        name, 
+        description: description ?? null, 
+        version: newVersion,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', existingId).select().single();
     if (error) throw new Error(error.message);
     return cast<Workflow>(data);
@@ -89,7 +96,7 @@ export async function startWorkflow(
     level:            'INFO',
     event_type:       'TRIGGER',
     to_node_id:       workflow.definition.initial_node_id,
-    message:          `Workflow démarré (trigger: ${triggeredBy ?? 'MANUAL'})`,
+    message:          `Processus démarré (trigger: ${triggeredBy ?? 'MANUAL'})`,
     context_snapshot: initialContext,
     performed_by:     startedBy ?? null,
   });
@@ -115,14 +122,31 @@ export async function getInstancesByDossier(dossierId: string): Promise<Workflow
 
 export async function updateInstance(
   id: string,
-  patch: Partial<Pick<WorkflowInstance,
-    'current_node_id' | 'context' | 'status' | 'completed_at'
-    | 'retry_count' | 'last_error' | 'paused_at' | 'scheduled_resume_at'
-  >>
+  patch: Partial<WorkflowInstance>,
+  expectedVersion?: number
 ): Promise<WorkflowInstance> {
-  const { data, error } = await supabase
-    .from('workflow_instances').update(patch as any).eq('id', id).select().single();
-  if (error) throw new Error(error.message);
+  const updatePayload: any = {
+    ...patch,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (expectedVersion !== undefined) {
+    updatePayload.version = expectedVersion + 1;
+  }
+
+  let q = supabase.from('workflow_instances' as any).update(updatePayload).eq('id', id);
+
+  if (expectedVersion !== undefined) {
+    q = (q as any).eq('version', expectedVersion);
+  }
+
+  const { data, error } = await q.select().single();
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error("Conflit de modification (race condition) : l'instance a été mise à jour par un autre processus.");
+    }
+    throw new Error(error.message);
+  }
   return cast<WorkflowInstance>(data);
 }
 
@@ -186,7 +210,7 @@ export async function enqueueJob(
   return cast<WorkflowJob>(data);
 }
 
-export async function claimPendingJobs(limit = 10): Promise<WorkflowJob[]> {
+export async function claimPendingJobs(limit = 50): Promise<WorkflowJob[]> {
   const { data, error } = await supabase
     .from('workflow_jobs').select('*')
     .eq('status', 'PENDING')

@@ -205,6 +205,7 @@ export interface WorkflowInstance {
   started_by:           string | null;
   started_at:           string;
   completed_at:         string | null;
+  version:              number;
   created_at:           string;
   updated_at:           string;
 }

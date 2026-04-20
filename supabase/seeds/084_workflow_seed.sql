@@ -86,6 +86,17 @@ DECLARE
         "position": {"x": 860, "y": 80}
       },
       {
+        "id": "n_confirm_med",
+        "type": "USER_TASK",
+        "label": "Confirmer l''envoi de la mise en demeure",
+        "description": "Vérifiez les informations avant génération du document juridique.",
+        "position": {"x": 990, "y": 80},
+        "form_fields": [
+          { "key": "mode_envoi", "label": "Mode d''envoi", "type": "select",
+            "options": ["Huissier", "Recommandé AR", "Remise en main propre"], "required": true }
+        ]
+      },
+      {
         "id": "n_mise_en_demeure",
         "type": "LEGAL_CLAIM",
         "label": "Mise en demeure",
@@ -97,12 +108,20 @@ DECLARE
         "position": {"x": 1120, "y": 80}
       },
       {
-        "id": "n_fin_succes",
+        "id": "n_fin_paiement_direct",
         "type": "END",
-        "label": "Dossier clôturé — Paiement reçu",
+        "label": "Créance recouvrée — Amiable",
         "outcome": "SUCCESS",
-        "message": "Le débiteur a réglé la créance.",
-        "position": {"x": 1380, "y": 80}
+        "message": "Le débiteur a réglé la créance directement.",
+        "position": {"x": 1380, "y": 0}
+      },
+      {
+        "id": "n_fin_apres_med",
+        "type": "END",
+        "label": "Créance recouvrée — Après MED",
+        "outcome": "SUCCESS",
+        "message": "Le débiteur a réglé après mise en demeure.",
+        "position": {"x": 1380, "y": 160}
       },
       {
         "id": "n_fin_refus",
@@ -147,20 +166,26 @@ DECLARE
       {
         "id": "e_reponse_positive",
         "from": "n_attente_reponse",
-        "to": "n_fin_succes",
+        "to": "n_fin_paiement_direct",
         "label": "Paiement confirmé",
         "requires_confirmation": true
       },
       {
         "id": "e_timeout",
         "from": "n_attente_reponse",
+        "to": "n_confirm_med",
+        "label": "Aucune réponse — En attente validation"
+      },
+      {
+        "id": "e_med_validee",
+        "from": "n_confirm_med",
         "to": "n_mise_en_demeure",
-        "label": "Aucune réponse — Envoyer mise en demeure"
+        "label": "Valider et envoyer"
       },
       {
         "id": "e_med_envoyee",
         "from": "n_mise_en_demeure",
-        "to": "n_fin_succes",
+        "to": "n_fin_apres_med",
         "label": "Document envoyé — Clôturer",
         "requires_confirmation": true
       }
@@ -246,6 +271,14 @@ BEGIN
   RAISE NOTICE 'Seeding workflows pour business %', v_business_id;
 
   -- ── 1. Nettoyer les seeds précédents (idempotence) ──────────────────────────
+  -- Suppression manuelle des instances car pas de ON DELETE CASCADE sur workflow_id
+  DELETE FROM workflow_instances
+    WHERE workflow_id IN (
+      SELECT id FROM workflows 
+      WHERE business_id = v_business_id 
+        AND name IN ('Recouvrement de créance', 'Mise en demeure simple')
+    );
+
   DELETE FROM workflows
     WHERE business_id = v_business_id
       AND name IN ('Recouvrement de créance', 'Mise en demeure simple');
@@ -652,7 +685,7 @@ Maître {{avocat_nom}}
   RAISE NOTICE 'Jobs insérés';
 
   -- ── 7. Token de tracking client ─────────────────────────────────────────────
-  DELETE FROM client_tracking_tokens WHERE dossier_id = v_dossier_id;
+  DELETE FROM client_tracking_tokens WHERE token = 'seed_token_amadou_diallo_test_abc123';
 
   INSERT INTO client_tracking_tokens (token, dossier_id, instance_id, client_phone, client_email, expires_at, view_count)
   VALUES (

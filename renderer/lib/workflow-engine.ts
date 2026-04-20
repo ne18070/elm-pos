@@ -13,8 +13,11 @@ import type {
 } from '@pos-types';
 
 // ── Résolution dot-notation ───────────────────────────────────────────────────
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 export function resolvePath(ctx: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((acc, key) => {
+    if (FORBIDDEN_KEYS.has(key)) return undefined;
     if (acc !== null && typeof acc === 'object') {
       return (acc as Record<string, unknown>)[key];
     }

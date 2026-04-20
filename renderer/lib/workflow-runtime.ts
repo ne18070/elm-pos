@@ -2,6 +2,7 @@ import {
   getInstance, updateInstance, log, enqueueJob,
   startWorkflow as dbStartWorkflow, getWorkflow,
 } from '@services/supabase/workflows';
+import { getBusiness } from '@services/supabase/business';
 import {
   getNode, getEdge, getEligibleEdges,
   resolveConditionEdge, interpolate, applyContextUpdates,
@@ -10,7 +11,22 @@ import type {
   TransitionPayload, TransitionResult, WorkflowStatus,
   WorkflowDefinition, WorkflowInstance,
   ActionNode, TriggerWorkflowPayload,
+  FormField, UserTaskNode, Business,
 } from '@pos-types';
+
+// ── Validation des données de formulaire ─────────────────────────────────────
+function validateFormData(fields: FormField[], data: Record<string, unknown>): string[] {
+  return fields.flatMap(f => {
+    const value = data[f.key];
+    if (f.required && (value === undefined || value === null || value === '')) {
+      return [`Champ requis : ${f.label}`];
+    }
+    if (f.type === 'number' && value !== undefined && value !== null && value !== '') {
+      if (isNaN(Number(value))) return [`${f.label} doit être un nombre`];
+    }
+    return [];
+  });
+}
 
 // ── Exécution des actions automatisées ────────────────────────────────────────
 async function executeActionNode(
@@ -18,6 +34,12 @@ async function executeActionNode(
   instance: WorkflowInstance,
   ctx: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
+  let business: Business | null = null;
+  if (node.actions.some(a => a.type === 'CALL_WEBHOOK')) {
+    const workflow = await getWorkflow(instance.workflow_id);
+    business = await getBusiness(workflow.business_id);
+  }
+
   for (const action of node.actions) {
     try {
       switch (action.type) {
@@ -47,8 +69,15 @@ async function executeActionNode(
           break;
         }
         case 'CALL_WEBHOOK': {
+          const url = action.url ?? '';
+          if (business?.webhook_whitelist && business.webhook_whitelist.length > 0) {
+            const isAllowed = business.webhook_whitelist.some(pattern => url.startsWith(pattern));
+            if (!isAllowed) {
+              throw new Error(`URL de webhook non autorisée : ${url}`);
+            }
+          }
           await enqueueJob(instance.id, 'CALL_WEBHOOK', {
-            url:     action.url,
+            url,
             method:  action.method ?? 'POST',
             headers: action.headers ?? {},
             body:    action.body_template ? interpolate(action.body_template, ctx) : '{}',
@@ -71,9 +100,13 @@ async function executeActionNode(
     } catch (err) {
       if (node.on_error === 'FAIL') return { ok: false, error: String(err) };
       if (node.on_error === 'RETRY') {
+        const backoff = Math.min(Math.pow(2, instance.retry_count || 0) * 60, 3600); // 1min, 2min, 4min... max 1h
         await enqueueJob(instance.id, 'PROCESS_NODE', {
           node_id: node.id, action_index: node.actions.indexOf(action),
-        }, { priority: 1 });
+        }, { 
+          priority: 1,
+          processAfter: new Date(Date.now() + backoff * 1000)
+        });
       }
       // CONTINUE : on ignore l'erreur et on passe à l'action suivante
     }
@@ -97,7 +130,15 @@ async function autoTraverse(
 
     if (node.type === 'CONDITION') {
       const edge = resolveConditionEdge(def, nodeId, ctx);
-      if (!edge) break;
+      if (!edge) {
+        await log({
+          instance_id: instance.id, level: 'ERROR', event_type: 'CONDITION_DEADEND',
+          from_node_id: nodeId,
+          message: `Condition sans issue sur le nœud "${nodeId}". Vérifiez les règles ou ajoutez un edge par défaut.`,
+          context_snapshot: ctx,
+        });
+        return { nodeId, status: 'FAILED' as WorkflowStatus, ctx };
+      }
       await log({
         instance_id: instance.id, event_type: 'TRANSITION',
         from_node_id: nodeId, to_node_id: edge.to, edge_id: edge.id,
@@ -162,6 +203,14 @@ export async function transitionToNextStep(
     }
 
     const def = instance.workflow_snapshot;
+    const currentNode = getNode(def, instance.current_node_id);
+
+    // Validation des données si on est sur un USER_TASK
+    if (currentNode?.type === 'USER_TASK') {
+      const errors = validateFormData((currentNode as UserTaskNode).form_fields ?? [], form_data);
+      if (errors.length > 0) return { ok: false, error: errors.join('. ') };
+    }
+
     const edge = getEdge(def, edge_id);
     if (!edge) return { ok: false, error: `Edge "${edge_id}" introuvable` };
     if (edge.from !== instance.current_node_id) {
@@ -198,7 +247,7 @@ export async function transitionToNextStep(
       ...(completedAt ? { completed_at: completedAt } : {}),
       ...(pausedAt    ? { paused_at: pausedAt }        : {}),
       ...(result.status !== 'PAUSED' ? { paused_at: null, scheduled_resume_at: null } : {}),
-    });
+    }, instance.version);
 
     return { ok: true, new_node_id: result.nodeId, new_status: result.status };
   } catch (err) {
@@ -231,7 +280,7 @@ export async function triggerWorkflow(
         context:         result.ctx,
         status:          result.status,
         ...(result.status === 'COMPLETED' ? { completed_at: new Date().toISOString() } : {}),
-      });
+      }, instance.version);
     }
 
     return { ok: true, new_node_id: result.nodeId, new_status: result.status };
@@ -250,11 +299,11 @@ export async function cancelWorkflowInstance(
     if (instance.status === 'COMPLETED' || instance.status === 'CANCELLED') {
       return { ok: false, error: `Instance déjà ${instance.status}` };
     }
-    await updateInstance(instanceId, { status: 'CANCELLED' as WorkflowStatus, completed_at: new Date().toISOString() });
+    await updateInstance(instanceId, { status: 'CANCELLED' as WorkflowStatus, completed_at: new Date().toISOString() }, instance.version);
     await log({
       instance_id: instanceId, event_type: 'TRANSITION', level: 'WARN',
       from_node_id: instance.current_node_id, to_node_id: instance.current_node_id,
-      message: 'Workflow annulé', context_snapshot: instance.context,
+      message: 'Processus annulé', context_snapshot: instance.context,
       performed_by: performedBy ?? null,
     });
     return { ok: true, new_status: 'CANCELLED' as WorkflowStatus };
@@ -293,7 +342,7 @@ export async function resumeFromEvent(
       current_node_id: result.nodeId, context: result.ctx, status: result.status,
       paused_at: null, scheduled_resume_at: null,
       ...(result.status === 'COMPLETED' ? { completed_at: new Date().toISOString() } : {}),
-    });
+    }, instance.version);
 
     return { ok: true, new_node_id: result.nodeId, new_status: result.status };
   } catch (err) {

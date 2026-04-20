@@ -114,7 +114,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-brand-400" />
-          <h2 className="font-semibold text-white">Monitoring Workflows</h2>
+          <h2 className="font-semibold text-white">Suivi des processus</h2>
         </div>
         <div className="flex items-center gap-3">
           {lastRefresh && (

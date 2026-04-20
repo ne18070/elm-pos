@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useEffect, useTransition, useCallback, useMemo } from 'react';
 import {
   ChevronRight, CheckCircle2, XCircle, Clock, MessageCircle,
   AlertTriangle, Loader2, User, FileText, GitBranch, Zap,
@@ -290,7 +290,7 @@ function FailedPanel({ instance }: { instance: WorkflowInstance }) {
     <div className="bg-red-900/20 border border-red-800 rounded-xl px-4 py-3 space-y-2">
       <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
         <XCircle className="w-4 h-4" />
-        Erreur — workflow en échec
+        Erreur — Processus en échec
       </div>
       {instance.last_error && (
         <pre className="text-xs text-red-300 whitespace-pre-wrap font-mono bg-red-950/30 rounded p-2 max-h-32 overflow-y-auto">
@@ -299,6 +299,159 @@ function FailedPanel({ instance }: { instance: WorkflowInstance }) {
       )}
       {instance.retry_count > 0 && (
         <p className="text-xs text-slate-500">{instance.retry_count} tentative{instance.retry_count > 1 ? 's' : ''} effectuée{instance.retry_count > 1 ? 's' : ''}</p>
+      )}
+    </div>
+  );
+}
+
+// ── Panel COMPLETED ───────────────────────────────────────────────────────────
+function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; onRestart?: () => void }) {
+  const definition = instance.workflow_snapshot;
+
+  const durationLabel = useMemo(() => {
+    if (!instance.completed_at || !instance.started_at) return null;
+    const ms = new Date(instance.completed_at).getTime() - new Date(instance.started_at).getTime();
+    const mins = Math.floor(ms / 60000);
+    const hours = Math.floor(mins / 60);
+    const days  = Math.floor(hours / 24);
+    if (days  > 0) return `${days}j ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${mins % 60}min`;
+    if (mins  > 0) return `${mins} min`;
+    return 'moins d\'une minute';
+  }, [instance.completed_at, instance.started_at]);
+
+  const steps = useMemo(() => {
+    const path: typeof definition.nodes = [];
+    let nodeId = definition.initial_node_id;
+    const visited = new Set<string>();
+    while (nodeId && !visited.has(nodeId)) {
+      visited.add(nodeId);
+      const node = definition.nodes.find(n => n.id === nodeId);
+      if (!node) break;
+      if (node.type !== 'CONDITION') path.push(node);
+      if (node.type === 'END') break;
+      const eligible = getEligibleEdges(definition, nodeId, instance.context);
+      if (!eligible.length) break;
+      nodeId = eligible[0].to;
+    }
+    return path;
+  }, [definition, instance.context]);
+
+  const DEVISE_LABELS: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA', EUR: '€', USD: '$' };
+  const devise = useMemo(() => {
+    const raw = String(instance.context['devise'] ?? '');
+    return DEVISE_LABELS[raw] ?? raw;
+  }, [instance.context]);
+
+  const contextEntries = useMemo(() => {
+    const SKIP = ['__', 'workflow_id', 'instance_id', 'business_id', 'dossier_id', 'devise'];
+    const seen = new Set<string>();
+    return Object.entries(instance.context)
+      .filter(([k, v]) => {
+        if (SKIP.some(p => k.startsWith(p))) return false;
+        if (v === null || v === undefined || v === '' || v === '—') return false;
+        // dédupliquer client.phone / client_phone
+        const canonical = k.replace(/\./g, '_');
+        if (seen.has(canonical)) return false;
+        seen.add(canonical);
+        return true;
+      })
+      .map(([k, v]) => {
+        const label = k.replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        // montant → formater avec devise
+        const isAmount = /montant|amount|somme|total/i.test(k);
+        const isDate   = /^\d{4}-\d{2}-\d{2}$/.test(String(v));
+        let display = String(v);
+        if (isAmount && !isNaN(Number(v))) {
+          display = Number(v).toLocaleString('fr-FR') + (devise ? ` ${devise}` : '');
+        } else if (isDate) {
+          display = new Date(String(v)).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+        }
+        return { label, display };
+      });
+  }, [instance.context, devise]);
+
+  return (
+    <div className="space-y-4">
+      {/* Header succès */}
+      <div className="bg-gradient-to-br from-green-950/60 to-emerald-900/30 border border-green-700/50 rounded-2xl p-5 text-center space-y-2">
+        <div className="flex justify-center">
+          <div className="w-14 h-14 rounded-full bg-green-500/20 border-2 border-green-500/50 flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-green-400" />
+          </div>
+        </div>
+        <p className="text-lg font-black text-white">Processus terminé avec succès</p>
+
+        <div className="flex items-center justify-center gap-4 pt-1">
+          {instance.completed_at && (
+            <span className="text-xs text-slate-400">
+              {new Date(instance.completed_at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          {durationLabel && (
+            <span className="text-xs bg-green-900/40 border border-green-800/50 text-green-300 px-2.5 py-0.5 rounded-full font-bold">
+              ⏱ {durationLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Étapes parcourues */}
+      {steps.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Étapes complétées</p>
+          <div className="space-y-1">
+            {steps.map((node, i) => (
+              <div key={node.id} className="flex items-center gap-3 py-1.5 px-3 rounded-lg bg-slate-900/40">
+                <div className="w-5 h-5 rounded-full bg-green-900/50 border border-green-700/50 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-3 h-3 text-green-400" />
+                </div>
+                <span className="text-xs text-slate-300 font-medium">{node.label}</span>
+                <span className="ml-auto text-[9px] text-slate-600 font-mono">{i + 1}/{steps.length}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Données collectées */}
+      {contextEntries.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Données collectées</p>
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl divide-y divide-slate-800/60">
+            {contextEntries.map(({ label, display }: { label: string; display: string }) => (
+              <div key={label} className="flex items-start justify-between gap-4 px-3 py-2">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide shrink-0">{label}</span>
+                <span className="text-xs text-slate-200 text-right break-all">{display}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      {onRestart && (
+        <button
+          onClick={onRestart}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-bold transition-all"
+        >
+          <RefreshCw className="w-4 h-4" /> Relancer le processus
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Panel CANCELLED ───────────────────────────────────────────────────────────
+function CancelledPanel({ instance }: { instance: WorkflowInstance }) {
+  return (
+    <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-5 text-center space-y-2">
+      <Ban className="w-8 h-8 text-slate-500 mx-auto" />
+      <p className="font-bold text-slate-300">Processus annulé</p>
+      {instance.completed_at && (
+        <p className="text-xs text-slate-500">
+          {new Date(instance.completed_at).toLocaleString('fr-FR')}
+        </p>
       )}
     </div>
   );
@@ -313,16 +466,48 @@ export function WorkflowRunner({
   readOnly = false,
 }: WorkflowRunnerProps) {
   const [instance, setInstance]      = useState<WorkflowInstance>(initialInstance);
-  const [formData, setFormData]      = useState<Record<string, unknown>>({});
+  // Pré-remplir formData avec les valeurs du contexte si elles existent
+  const [formData, setFormData]      = useState<Record<string, unknown>>(() => {
+    const initial: Record<string, unknown> = {};
+    const definition = initialInstance.workflow_snapshot;
+    const currentNode = definition.nodes.find(n => n.id === initialInstance.current_node_id);
+    if (currentNode?.type === 'USER_TASK' && currentNode.form_fields) {
+      currentNode.form_fields.forEach(f => {
+        if (initialInstance.context[f.key] !== undefined) {
+          initial[f.key] = initialInstance.context[f.key];
+        }
+      });
+    }
+    return initial;
+  });
   const [error, setError]            = useState<string | null>(null);
   const [confirm, setConfirm]        = useState<WorkflowEdge | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // Mettre à jour formData quand l'instance change (si on change de nœud)
+  useEffect(() => {
+    const definition = instance.workflow_snapshot;
+    const currentNode = definition.nodes.find(n => n.id === instance.current_node_id);
+    if (currentNode?.type === 'USER_TASK' && currentNode.form_fields) {
+      setFormData(prev => {
+        const next = { ...prev };
+        currentNode.form_fields?.forEach(f => {
+          if (instance.context[f.key] !== undefined && next[f.key] === undefined) {
+            next[f.key] = instance.context[f.key];
+          }
+        });
+        return next;
+      });
+    }
+  }, [instance.current_node_id, instance.context]);
+
   const definition    = instance.workflow_snapshot;
-  const currentNode   = getNode(definition, instance.current_node_id);
-  const eligibleEdges = currentNode && (instance.status === 'RUNNING' || instance.status === 'WAITING')
-    ? getEligibleEdges(definition, instance.current_node_id, { ...instance.context, ...formData })
-    : [];
+  const currentNode   = useMemo(() => getNode(definition, instance.current_node_id), [definition, instance.current_node_id]);
+  const eligibleEdges = useMemo(() =>
+    currentNode && (instance.status === 'RUNNING' || instance.status === 'WAITING')
+      ? getEligibleEdges(definition, instance.current_node_id, { ...instance.context, ...formData })
+      : [],
+  [currentNode, instance.status, instance.current_node_id, instance.context, definition, formData]);
 
   const handleFieldChange = useCallback((key: string, val: unknown) => {
     setFormData(prev => ({ ...prev, [key]: val }));
@@ -367,23 +552,11 @@ export function WorkflowRunner({
   };
 
   // ── Terminaux ─────────────────────────────────────────────────────────────
-  if (instance.status === 'COMPLETED' || instance.status === 'CANCELLED') {
-    return (
-      <div className="card p-6 text-center space-y-3">
-        {instance.status === 'COMPLETED'
-          ? <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto" />
-          : <Ban className="w-12 h-12 text-red-400 mx-auto" />}
-        <p className="text-lg font-semibold text-white">
-          {instance.status === 'COMPLETED' ? 'Workflow terminé' : 'Workflow annulé'}
-        </p>
-        <StatusBadge status={instance.status} />
-        {instance.completed_at && (
-          <p className="text-xs text-slate-500">
-            {new Date(instance.completed_at).toLocaleString('fr-FR')}
-          </p>
-        )}
-      </div>
-    );
+  if (instance.status === 'COMPLETED') {
+    return <div className="card p-4"><CompletedPanel instance={instance} onRestart={onCancel ? undefined : undefined} /></div>;
+  }
+  if (instance.status === 'CANCELLED') {
+    return <div className="card p-4"><CancelledPanel instance={instance} /></div>;
   }
 
   if (!currentNode) {

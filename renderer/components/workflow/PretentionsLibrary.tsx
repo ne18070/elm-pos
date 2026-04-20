@@ -446,7 +446,7 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] whitespace-nowrap">{cat}</span>
                 <div className="h-px w-full bg-slate-800" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {items.map(p => (
                   <PretentionCard key={p.id} pretention={p} onEdit={() => setEditing(p)} />
                 ))}

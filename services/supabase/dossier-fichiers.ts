@@ -43,18 +43,18 @@ export async function getSignedUrl(storagePath: string): Promise<string> {
 }
 
 export async function getStorageInfo(businessId: string): Promise<StorageInfo> {
-  const { data, error } = await (supabase as any)
-    .from('businesses')
-    .select('storage_used_bytes, storage_quota_bytes')
-    .eq('id', businessId)
-    .single();
-  if (error) throw new Error(error.message);
-  const used  = data.storage_used_bytes  ?? 0;
-  const quota = data.storage_quota_bytes ?? 1073741824;
+  const [quotaRes, usedRes] = await Promise.all([
+    (supabase as any).from('businesses').select('storage_quota_bytes').eq('id', businessId).single(),
+    (supabase as any).from('dossier_fichiers').select('taille_bytes').eq('business_id', businessId),
+  ]);
+  if (quotaRes.error) throw new Error(quotaRes.error.message);
+  if (usedRes.error) throw new Error(usedRes.error.message);
+  const quota = quotaRes.data?.storage_quota_bytes ?? 1073741824;
+  const used  = (usedRes.data ?? []).reduce((sum: number, r: { taille_bytes: number }) => sum + (r.taille_bytes ?? 0), 0);
   return {
     used_bytes:  used,
     quota_bytes: quota,
-    used_pct:    quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0,
+    used_pct:    quota > 0 ? Math.min(100, (used / quota) * 100) : 0,
   };
 }
 
@@ -93,11 +93,14 @@ export async function uploadFichier(
   onProgress?.(80);
 
   // Enregistrer en base
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data, error } = await (supabase as any)
     .from('dossier_fichiers')
     .insert({
       dossier_id:   dossierId,
       business_id:  businessId,
+      uploaded_by:  user?.id ?? null,
       nom:          file.name,
       storage_path: path,
       mime_type:    file.type || null,

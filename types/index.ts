@@ -31,6 +31,7 @@ export interface Business {
   currency: string;
   tax_rate: number;          // percentage, e.g. 18
   tax_inclusive: boolean;    // true = prix TTC (TVA déduite), false = prix HT (TVA ajoutée)
+  webhook_whitelist?: string[]; // domains or URLs allowed for outgoing webhooks
   receipt_footer?: string;
   stock_units?: string[];    // unités de stock configurables
   types: string[];    // multi-type: e.g. ['retail', 'hotel']
