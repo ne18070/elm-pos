@@ -1,5 +1,3 @@
-'use server';
-
 import {
   getInstance, updateInstance, log, enqueueJob,
   startWorkflow as dbStartWorkflow, getWorkflow,
@@ -114,7 +112,7 @@ async function autoTraverse(
       });
       const result = await executeActionNode(node as ActionNode, instance, ctx);
       if (!result.ok) {
-        return { nodeId, status: 'FAILED', ctx };
+        return { nodeId, status: 'FAILED' as WorkflowStatus, ctx };
       }
       const edges = getEligibleEdges(def, nodeId, ctx);
       if (edges.length === 0) break;
@@ -125,7 +123,7 @@ async function autoTraverse(
       await enqueueJob(instance.id, 'RESUME_DELAY', { node_id: nodeId, next_edge: getEligibleEdges(def, nodeId, ctx)[0]?.id }, {
         processAfter: resumeAt, priority: 8,
       });
-      return { nodeId, status: 'PAUSED', ctx };
+      return { nodeId, status: 'PAUSED' as WorkflowStatus, ctx };
 
     } else if (node.type === 'WAIT_EVENT') {
       if (node.timeout_hours && node.timeout_edge_id) {
@@ -134,23 +132,23 @@ async function autoTraverse(
           processAfter: timeoutAt, priority: 8,
         });
       }
-      return { nodeId, status: 'WAITING', ctx };
+      return { nodeId, status: 'WAITING' as WorkflowStatus, ctx };
 
     } else if (node.type === 'USER_TASK' || node.type === 'LEGAL_CLAIM') {
-      return { nodeId, status: 'WAITING', ctx };
+      return { nodeId, status: 'WAITING' as WorkflowStatus, ctx };
 
     } else if (node.type === 'END') {
-      return { nodeId, status: 'COMPLETED', ctx };
+      return { nodeId, status: 'COMPLETED' as WorkflowStatus, ctx };
     } else {
       break;
     }
     hops++;
   }
 
-  return { nodeId, status: 'RUNNING', ctx };
+  return { nodeId, status: 'RUNNING' as WorkflowStatus, ctx };
 }
 
-// ── Server Action principale ──────────────────────────────────────────────────
+// ── Fonction principale ──────────────────────────────────────────────────
 export async function transitionToNextStep(
   payload: TransitionPayload
 ): Promise<TransitionResult> {
@@ -252,20 +250,20 @@ export async function cancelWorkflowInstance(
     if (instance.status === 'COMPLETED' || instance.status === 'CANCELLED') {
       return { ok: false, error: `Instance déjà ${instance.status}` };
     }
-    await updateInstance(instanceId, { status: 'CANCELLED', completed_at: new Date().toISOString() });
+    await updateInstance(instanceId, { status: 'CANCELLED' as WorkflowStatus, completed_at: new Date().toISOString() });
     await log({
       instance_id: instanceId, event_type: 'TRANSITION', level: 'WARN',
       from_node_id: instance.current_node_id, to_node_id: instance.current_node_id,
       message: 'Workflow annulé', context_snapshot: instance.context,
       performed_by: performedBy ?? null,
     });
-    return { ok: true, new_status: 'CANCELLED' };
+    return { ok: true, new_status: 'CANCELLED' as WorkflowStatus };
   } catch (err) {
     return { ok: false, error: String(err) };
   }
 }
 
-// ── Résumer après WAIT_EVENT (appelé par webhook) ─────────────────────────────
+// ── Résumer après WAIT_EVENT (reprise) ─────────────────────────────
 export async function resumeFromEvent(
   instanceId: string,
   edgeId: string,

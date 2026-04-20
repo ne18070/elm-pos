@@ -1,18 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@services/supabase/database.types';
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Types that can be sent without authentication (public flows)
-const PUBLIC_EMAIL_TYPES = ['subscription_received'] as const;
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
-const FROM = 'ELM APP <contact@elm-app.click>';
-
-function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-  return createClient<Database>(url, key, { auth: { persistSession: false } });
-}
+const FROM_EMAIL = 'ELM APP <contact@elm-app.click>';
+const PUBLIC_EMAIL_TYPES = ['subscription_received'];
 
 function baseLayout(content: string) {
   return `<!DOCTYPE html>
@@ -26,8 +21,6 @@ function baseLayout(content: string) {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 0;">
     <tr><td align="center">
       <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;">
-
-        <!-- Header -->
         <tr><td style="background:#0a0f1e;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
           <div style="display:inline-flex;align-items:center;gap:10px;">
             <div style="width:36px;height:36px;background:#2563eb;border-radius:10px;display:inline-block;vertical-align:middle;"></div>
@@ -36,8 +29,6 @@ function baseLayout(content: string) {
             </span>
           </div>
         </td></tr>
-
-        <!-- Body -->
         <tr><td style="background:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
           ${content}
           <hr style="border:none;border-top:1px solid #e2e8f0;margin:32px 0;" />
@@ -46,7 +37,6 @@ function baseLayout(content: string) {
             <a href="mailto:contact@elm-app.click" style="color:#2563eb;">contact@elm-app.click</a>
           </p>
         </td></tr>
-
       </table>
     </td></tr>
   </table>
@@ -62,12 +52,12 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function buildVars(type: string, data: Record<string, unknown>): Record<string, string> {
-  const str = (v: unknown) => (v != null ? String(v) : '');
+function buildVars(type: string, data: Record<string, any>): Record<string, string> {
+  const str = (v: any) => (v != null ? String(v) : '');
   const base = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, escapeHtml(str(v))]));
 
   if (type === 'subscription_approved') {
-    const expiresAt = data.expires_at as string | undefined;
+    const expiresAt = data.expires_at;
     return {
       ...base,
       validity_text: expiresAt
@@ -77,7 +67,7 @@ function buildVars(type: string, data: Record<string, unknown>): Record<string, 
   }
 
   if (type === 'subscription_rejected') {
-    const note = data.note as string | undefined;
+    const note = data.note;
     return {
       ...base,
       note_block: note
@@ -87,48 +77,47 @@ function buildVars(type: string, data: Record<string, unknown>): Record<string, 
   }
 
   if (type === 'marketing') {
-    const btnLabel = data.button_label as string | undefined;
-    const btnUrl = data.button_url as string | undefined;
-    // Only allow http/https URLs to prevent javascript: injection
+    const btnLabel = data.button_label;
+    const btnUrl = data.button_url;
     const safeUrl = btnUrl && /^https?:\/\//.test(btnUrl) ? btnUrl : '';
     return {
       ...base,
-      button_block:
-        btnLabel && safeUrl
-          ? `<p style="text-align:center;margin:32px 0 24px;"><a href="${escapeHtml(safeUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;text-decoration:none;">${escapeHtml(btnLabel)}</a></p>`
-          : '',
+      button_block: btnLabel && safeUrl
+        ? `<p style="text-align:center;margin:32px 0 24px;"><a href="${escapeHtml(safeUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;text-decoration:none;">${escapeHtml(btnLabel)}</a></p>`
+        : '',
     };
   }
 
   return base;
 }
 
-export async function POST(req: NextRequest) {
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' } });
+  }
+
   try {
-    const body = await req.json() as { type: string; to: string; subject: string; data: Record<string, unknown> };
-    const { type, to, subject, data } = body;
+    const { type, to, subject, data } = await req.json();
 
     if (!type || !to || !subject) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
     }
 
-    // Auth check: authenticated users can send any type; unauthenticated only public types
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-    if (token) {
-      const anonClient = createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
-        { auth: { persistSession: false } }
-      );
-      const { error: authError } = await anonClient.auth.getUser(token);
-      if (authError) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    } else if (!(PUBLIC_EMAIL_TYPES as readonly string[]).includes(type)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Auth check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader && !PUBLIC_EMAIL_TYPES.includes(type)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const supabase = getServiceClient();
+    if (authHeader) {
+      const authClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+      const { data: { user }, error: authError } = await authClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401 });
+      }
+    }
+
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const { data: tpl, error: tplError } = await supabase
       .from('email_templates')
       .select('html_body')
@@ -137,18 +126,30 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (tplError || !tpl) {
-      return NextResponse.json({ error: `Template introuvable: ${type}` }, { status: 400 });
+      return new Response(JSON.stringify({ error: `Template introuvable: ${type}` }), { status: 400 });
     }
 
     const vars = buildVars(type, data);
     const html = baseLayout(renderTemplate(tpl.html_body, vars));
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const { data: result, error } = await resend.emails.send({ from: FROM, to, subject, html });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+    });
 
-    return NextResponse.json({ id: result?.id });
+    const result = await res.json();
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: result.message }), { status: 500 });
+    }
+
+    return new Response(JSON.stringify({ id: result.id }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
   }
-}
+});

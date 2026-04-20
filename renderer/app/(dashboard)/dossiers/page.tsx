@@ -17,7 +17,7 @@ import {
   type DossierFichier, type StorageInfo,
 } from '@services/supabase/dossier-fichiers';
 import { getInstancesByDossier, getWorkflows } from '@services/supabase/workflows';
-import { triggerWorkflow } from '@/app/actions/workflow';
+import { triggerWorkflow } from '@/lib/workflow-runtime';
 import { WorkflowRunner } from '@/components/workflow/WorkflowRunner';
 import type { WorkflowInstance, Workflow, WorkflowStatus } from '@pos-types';
 

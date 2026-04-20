@@ -6,7 +6,7 @@ import {
   AlertTriangle, Loader2, User, FileText, GitBranch, Zap,
   Timer, Radio, Ban, PauseCircle, RefreshCw,
 } from 'lucide-react';
-import { transitionToNextStep, cancelWorkflowInstance } from '@/app/actions/workflow';
+import { transitionToNextStep, cancelWorkflowInstance } from '@/lib/workflow-runtime';
 import {
   getNode, getEligibleEdges, interpolate, buildWhatsAppUrl,
 } from '@/lib/workflow-engine';

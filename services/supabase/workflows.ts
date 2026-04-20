@@ -112,7 +112,7 @@ export async function updateInstance(
   >>
 ): Promise<WorkflowInstance> {
   const { data, error } = await supabase
-    .from('workflow_instances').update(cast(patch)).eq('id', id).select().single();
+    .from('workflow_instances').update(patch as any).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return cast<WorkflowInstance>(data);
 }
@@ -193,28 +193,27 @@ export async function updateJob(
   id: string,
   patch: Partial<Pick<WorkflowJob, 'status' | 'retry_count' | 'last_error' | 'processed_at'>>
 ): Promise<void> {
-  await supabase.from('workflow_jobs').update(cast(patch)).eq('id', id);
+  await supabase.from('workflow_jobs').update(patch as any).eq('id', id);
 }
 
 // ── Pretentions ───────────────────────────────────────────────────────────────
 export async function getPretentions(businessId: string, category?: string): Promise<Pretention[]> {
   let q = supabase.from('pretentions').select('*')
     .eq('business_id', businessId).eq('is_active', true);
-  if (category) q = q.eq('category', category);
+  if (category) q = q.eq('category', category as any);
   const { data, error } = await q.order('name');
   if (error) throw new Error(error.message);
   return cast<Pretention[]>(data ?? []);
 }
 
 export async function upsertPretention(
-  businessId: string,
-  pretention: Omit<Pretention, 'id' | 'business_id' | 'created_at' | 'updated_at'>,
-  id?: string
+  params: Partial<Pretention> & { business_id: string; name: string; template: string }
 ): Promise<Pretention> {
-  const payload = { ...pretention, business_id: businessId, variables: cast(pretention.variables) };
+  const { id, ...rest } = params;
+  const payload = { ...rest, variables: cast(rest.variables) };
   const { data, error } = id
-    ? await supabase.from('pretentions').update(cast(payload)).eq('id', id).select().single()
-    : await supabase.from('pretentions').insert(cast(payload)).select().single();
+    ? await supabase.from('pretentions').update(payload as any).eq('id', id).select().single()
+    : await supabase.from('pretentions').insert(payload as any).select().single();
   if (error) throw new Error(error.message);
   return cast<Pretention>(data);
 }

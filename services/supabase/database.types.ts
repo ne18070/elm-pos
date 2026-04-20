@@ -429,6 +429,202 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['business_members']['Insert']>;
         Relationships: [];
       };
+      workflows: {
+        Row: {
+          id: string;
+          business_id: string;
+          name: string;
+          description: string | null;
+          definition: Json;
+          version: number;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          name: string;
+          description?: string | null;
+          definition: Json;
+          version?: number;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['workflows']['Insert']>;
+        Relationships: [];
+      };
+      workflow_instances: {
+        Row: {
+          id: string;
+          dossier_id: string;
+          workflow_id: string;
+          workflow_version: number;
+          workflow_snapshot: Json;
+          current_node_id: string;
+          context: Json;
+          status: string;
+          retry_count: number;
+          last_error: string | null;
+          paused_at: string | null;
+          scheduled_resume_at: string | null;
+          triggered_by: string | null;
+          started_by: string | null;
+          started_at: string;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          dossier_id: string;
+          workflow_id: string;
+          workflow_version: number;
+          workflow_snapshot: Json;
+          current_node_id: string;
+          context?: Json;
+          status?: string;
+          retry_count?: number;
+          last_error?: string | null;
+          paused_at?: string | null;
+          scheduled_resume_at?: string | null;
+          triggered_by?: string | null;
+          started_by?: string | null;
+          started_at?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['workflow_instances']['Insert']>;
+        Relationships: [];
+      };
+      workflow_logs: {
+        Row: {
+          id: string;
+          instance_id: string;
+          level: string;
+          event_type: string;
+          from_node_id: string | null;
+          to_node_id: string | null;
+          edge_id: string | null;
+          message: string | null;
+          context_snapshot: Json;
+          error_details: Json | null;
+          performed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          instance_id: string;
+          level?: string;
+          event_type: string;
+          from_node_id?: string | null;
+          to_node_id?: string | null;
+          edge_id?: string | null;
+          message?: string | null;
+          context_snapshot?: Json;
+          error_details?: Json | null;
+          performed_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['workflow_logs']['Insert']>;
+        Relationships: [];
+      };
+      workflow_jobs: {
+        Row: {
+          id: string;
+          instance_id: string;
+          job_type: string;
+          payload: Json;
+          status: string;
+          priority: number;
+          retry_count: number;
+          max_retries: number;
+          last_error: string | null;
+          process_after: string;
+          created_at: string;
+          processed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          instance_id: string;
+          job_type: string;
+          payload?: Json;
+          status?: string;
+          priority?: number;
+          retry_count?: number;
+          max_retries?: number;
+          last_error?: string | null;
+          process_after?: string;
+          created_at?: string;
+          processed_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['workflow_jobs']['Insert']>;
+        Relationships: [];
+      };
+      pretentions: {
+        Row: {
+          id: string;
+          business_id: string;
+          name: string;
+          category: string | null;
+          description: string | null;
+          template: string;
+          variables: Json;
+          tags: string[];
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          name: string;
+          category?: string | null;
+          description?: string | null;
+          template: string;
+          variables?: Json;
+          tags?: string[];
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['pretentions']['Insert']>;
+        Relationships: [];
+      };
+      client_tracking_tokens: {
+        Row: {
+          id: string;
+          token: string;
+          dossier_id: string;
+          instance_id: string | null;
+          client_phone: string | null;
+          client_email: string | null;
+          expires_at: string;
+          last_viewed: string | null;
+          view_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          token?: string;
+          dossier_id: string;
+          instance_id?: string | null;
+          client_phone?: string | null;
+          client_email?: string | null;
+          expires_at?: string;
+          last_viewed?: string | null;
+          view_count?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['client_tracking_tokens']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

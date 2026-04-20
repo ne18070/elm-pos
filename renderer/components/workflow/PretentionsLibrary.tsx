@@ -65,7 +65,7 @@ function PretentionEditor({
         variables,
         tags:        tags.split(',').map(t => t.trim()).filter(Boolean),
         is_active:   true,
-      } as Parameters<typeof upsertPretention>[0]);
+      });
       onSave(saved);
     } catch (e) {
       setError(String(e));
