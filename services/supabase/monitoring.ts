@@ -19,18 +19,13 @@ export async function updateBusinessConfig(
   types:      string[],
   features:   string[],
 ): Promise<void> {
+  // types[] are UUIDs from business_types table — never write them to the legacy
+  // `type` TEXT column which has a strict CHECK constraint on legacy enum values.
   const { error } = await db
     .from('businesses')
-    .update({ type: types[0] ?? null, features })
+    .update({ types, features })
     .eq('id', businessId);
   if (error) throw new Error(error.message);
-
-  // Best-effort : sauvegarder le tableau types[] si la colonne existe
-  await db
-    .from('businesses')
-    .update({ types })
-    .eq('id', businessId)
-    .then(() => {}, () => {});
 }
 
 export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
