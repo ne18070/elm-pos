@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { activateSubscription } from '@services/supabase/subscriptions';
 import { sendEmail } from '@services/resend';
 
 // ── Auth superadmin via token Bearer ──────────────────────────────────────────
@@ -88,7 +87,13 @@ export async function POST(req: NextRequest) {
     // 5. Activer l'abonnement
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
-    await activateSubscription(businessId, planId, days, note);
+    const { error: subError } = await admin.rpc('activate_subscription', {
+      p_business_id: businessId,
+      p_plan_id:     planId,
+      p_days:        days,
+      p_note:        note ?? null,
+    });
+    if (subError) throw new Error(subError.message);
 
     // 6. Marquer la demande comme approuvée
     await admin
