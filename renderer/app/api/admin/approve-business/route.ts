@@ -84,15 +84,18 @@ export async function POST(req: NextRequest) {
     await admin.from('business_members').insert({ business_id: businessId, user_id: userId, role: 'owner' });
     await admin.from('users').update({ business_id: businessId }).eq('id', userId);
 
-    // 5. Activer l'abonnement
+    // 5. Activer l'abonnement (direct upsert — admin bypasses RLS, auth.uid() serait NULL via RPC)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
-    const { error: subError } = await admin.rpc('activate_subscription', {
-      p_business_id: businessId,
-      p_plan_id:     planId,
-      p_days:        days,
-      p_note:        note ?? null,
-    });
+    const { error: subError } = await admin.from('subscriptions').upsert({
+      business_id:  businessId,
+      owner_id:     userId,
+      plan_id:      planId,
+      status:       'active',
+      expires_at:   expiresAt.toISOString(),
+      activated_at: new Date().toISOString(),
+      payment_note: note ?? null,
+    }, { onConflict: 'owner_id' });
     if (subError) throw new Error(subError.message);
 
     // 6. Marquer la demande comme approuvée
