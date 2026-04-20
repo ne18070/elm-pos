@@ -20,6 +20,7 @@ import {
   type SubscriptionRow, type Plan, type PaymentSettings,
   type SubscriptionRequest, type PublicSubscriptionRequest,
 } from '@services/supabase/subscriptions';
+import { supabase } from '@/lib/supabase';
 import { getIntouchConfig, upsertIntouchConfig, type IntouchConfig } from '@services/supabase/intouch';
 
 type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules' | 'marketing' | 'emails';
@@ -127,14 +128,28 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
       ? (parseInt(approvePublicForm.days) || 1) * 30
       : parseInt(approvePublicForm.days) || 30;
     try {
-      const { approvePublicRequest } = await import('@services/supabase/subscriptions');
-      await approvePublicRequest(
-        approvePublicForm.req.id,
-        approvePublicForm.req,
-        approvePublicForm.planId,
-        totalDays,
-        approvePublicForm.note || undefined,
-      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/approve-business', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({
+          requestId:    approvePublicForm.req.id,
+          email:        approvePublicForm.req.email,
+          password:     approvePublicForm.req.password ?? undefined,
+          businessName: approvePublicForm.req.business_name,
+          planId:       approvePublicForm.planId,
+          days:         totalDays,
+          note:         approvePublicForm.note || undefined,
+          planLabel:    approvePublicForm.req.plan_label ?? 'Pro',
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error ?? 'Erreur serveur');
+      }
       setApprovePublicForm(null);
       await load();
     } catch (e) { alert(toUserError(e)); }
