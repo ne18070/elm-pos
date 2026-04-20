@@ -4,7 +4,7 @@ import { useState, useTransition, useCallback } from 'react';
 import {
   ChevronRight, CheckCircle2, XCircle, Clock, MessageCircle,
   AlertTriangle, Loader2, User, FileText, GitBranch, Zap,
-  Timer, Radio, Ban, PauseCircle, RefreshCw,
+  Timer, Radio, Ban, PauseCircle, RefreshCw, Send,
 } from 'lucide-react';
 import { transitionToNextStep, cancelWorkflowInstance } from '@/lib/workflow-runtime';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/lib/workflow-engine';
 import type {
   WorkflowInstance, WorkflowNode, WorkflowEdge,
-  UserTaskNode, LegalClaimNode, WaitEventNode, DelayNode,
+  UserTaskNode, LegalClaimNode, WaitEventNode, DelayNode, ActionNode,
   FormField, WorkflowStatus,
 } from '@pos-types';
 
@@ -168,18 +168,87 @@ function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Rec
   );
 }
 
+// ── Panel ACTION ─────────────────────────────────────────────────────────────
+function ActionPanel({ node, context }: { node: ActionNode; context: Record<string, unknown> }) {
+  const waActions   = node.actions?.filter(a => a.type === 'SEND_WHATSAPP') ?? [];
+  const otherCount  = (node.actions?.length ?? 0) - waActions.length;
+
+  if (waActions.length === 0) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
+        <RefreshCw className="w-4 h-4 animate-spin text-brand-400" />
+        Actions automatisées en cours…
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {node.description && <p className="text-sm text-slate-400">{node.description}</p>}
+      {waActions.map((action, i) => {
+        const rawPhone = action.to ? context[action.to] : (context['client.phone'] ?? context['phone']);
+        const phone    = String(rawPhone ?? '').replace(/\s+/g, '');
+        const message  = action.template ? interpolate(action.template, context) : '';
+        const waUrl    = phone ? buildWhatsAppUrl(phone, message) : null;
+        return (
+          <div key={i} className="space-y-3">
+            <div className="bg-green-950/30 border border-green-800/40 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-green-400 text-[10px] font-black uppercase tracking-widest mb-3">
+                <MessageCircle className="w-3.5 h-3.5" />
+                Message WhatsApp prêt
+              </div>
+              <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+                {message || <span className="italic text-slate-500">Template non défini</span>}
+              </p>
+            </div>
+            {waUrl ? (
+              <a
+                href={waUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 px-4 py-3 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/30"
+              >
+                <Send className="w-4 h-4" />
+                Ouvrir WhatsApp et envoyer
+              </a>
+            ) : (
+              <p className="text-xs text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Numéro introuvable dans le contexte ({action.to ?? 'client.phone'})
+              </p>
+            )}
+          </div>
+        );
+      })}
+      {otherCount > 0 && (
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-1">
+          <RefreshCw className="w-3 h-3 animate-spin" />
+          {otherCount} action{otherCount > 1 ? 's' : ''} automatique{otherCount > 1 ? 's' : ''} en attente
+        </div>
+      )}
+      <p className="text-[10px] text-slate-600 italic pt-1">
+        Une fois le message envoyé, confirmez ci-dessous pour continuer.
+      </p>
+    </div>
+  );
+}
+
 // ── Panel WAIT_EVENT ──────────────────────────────────────────────────────────
 function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: WorkflowInstance }) {
   const resumeAt = instance.scheduled_resume_at ? new Date(instance.scheduled_resume_at) : null;
+  const isClientReply = node.event_key?.toLowerCase().includes('reply') || node.event_key?.toLowerCase().includes('response') || node.event_key?.toLowerCase().includes('reponse');
 
   return (
     <div className="space-y-3">
       {node.description && <p className="text-sm text-slate-400">{node.description}</p>}
-      <div className="bg-purple-900/20 border border-purple-700 rounded-xl px-4 py-3 space-y-2">
-        <div className="flex items-center gap-2 text-purple-300 text-sm font-medium">
+      <div className="bg-purple-900/20 border border-purple-700/50 rounded-xl px-4 py-4 space-y-2.5">
+        <div className="flex items-center gap-2 text-purple-300 text-sm font-semibold">
           <Radio className="w-4 h-4" />
-          Attente de l'événement : <code className="text-purple-200">{node.event_key}</code>
+          {isClientReply ? 'En attente de la réponse client' : `Attente de : ${node.event_key}`}
         </div>
+        {isClientReply && (
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Quand le client répond (par WhatsApp, email ou en personne), cliquez sur le bouton ci-dessous pour enregistrer la réponse et continuer.
+          </p>
+        )}
         {resumeAt && (
           <p className="text-xs text-slate-500">
             Timeout automatique le {resumeAt.toLocaleString('fr-FR')}
@@ -368,10 +437,7 @@ export function WorkflowRunner({
             <DelayPanel node={currentNode as DelayNode} instance={instance} />
           )}
           {instance.status !== 'FAILED' && currentNode.type === 'ACTION' && (
-            <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-brand-400" />
-              Actions automatisées en cours…
-            </div>
+            <ActionPanel node={currentNode as ActionNode} context={{ ...instance.context, ...formData }} />
           )}
           {instance.status !== 'FAILED' && currentNode.type === 'CONDITION' && (
             <p className="text-sm text-slate-400 italic py-2">

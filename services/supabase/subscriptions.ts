@@ -292,6 +292,7 @@ export async function approvePublicRequest(
 ): Promise<void> {
   // Import admin client dynamically
   const { supabaseAdmin: admin } = await import('./admin');
+  if (!admin) throw new Error("Accès refusé : clé de service manquante dans cet environnement.");
 
   const password = req.password ?? Math.random().toString(36).slice(-10) + 'A1!';
   const { data: authData, error: authError } = await admin.auth.admin.createUser({

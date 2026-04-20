@@ -9,13 +9,22 @@ import type {
 const cast = <T>(v: unknown): T => v as T;
 
 // ── Workflows ─────────────────────────────────────────────────────────────────
-export async function getWorkflows(businessId: string): Promise<Workflow[]> {
-  const { data, error } = await supabase
-    .from('workflows').select('*')
-    .eq('business_id', businessId).eq('is_active', true)
-    .order('created_at', { ascending: false });
+export async function getWorkflows(businessId: string, onlyActive = false): Promise<Workflow[]> {
+  let q = supabase.from('workflows').select('*').eq('business_id', businessId);
+  if (onlyActive) q = q.eq('is_active', true);
+  const { data, error } = await q.order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return cast<Workflow[]>(data ?? []);
+}
+
+export async function deleteWorkflow(id: string): Promise<void> {
+  const { error } = await supabase.from('workflows').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function toggleWorkflowStatus(id: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from('workflows').update({ is_active: isActive }).eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export async function getWorkflow(id: string): Promise<Workflow> {

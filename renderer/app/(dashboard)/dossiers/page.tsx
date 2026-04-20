@@ -1,24 +1,35 @@
 'use client';
-import { toUserError } from '@/lib/user-error';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Briefcase, Search, Loader2, X, Check, Pencil, Trash2, Phone, Scale, Calendar, Paperclip, Upload, ExternalLink, HardDrive, AlertTriangle, GitBranch, Play, ChevronRight, ChevronDown, PauseCircle, XCircle, CheckCircle2, Clock, Activity, BookOpen } from 'lucide-react';
-import { MonitoringDashboard } from '@/components/workflow/MonitoringDashboard';
-import { WorkflowBuilder } from '@/components/workflow/WorkflowBuilder';
-import { PretentionsLibrary } from '@/components/workflow/PretentionsLibrary';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { 
+  Plus, Briefcase, Search, Loader2, X, Check, Pencil, Trash2, 
+  Phone, Scale, Calendar, Paperclip, Upload, ExternalLink, 
+  HardDrive, AlertTriangle, GitBranch, Play, ChevronLeft, ChevronRight, 
+  ChevronDown, PauseCircle, XCircle, CheckCircle2, Clock, 
+  Activity, BookOpen, Settings2, Building2, UserCircle2, ToggleLeft, ToggleRight
+} from 'lucide-react';
+
+import { toUserError } from '@/lib/user-error';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
-import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
+
+import { MonitoringDashboard } from '@/components/workflow/MonitoringDashboard';
+import { WorkflowBuilder } from '@/components/workflow/WorkflowBuilder';
+import { PretentionsLibrary } from '@/components/workflow/PretentionsLibrary';
+import { WorkflowRunner } from '@/components/workflow/WorkflowRunner';
+
+import { getReferenceData, upsertRefItem, deleteRefItem, type RefItem } from '@services/supabase/reference-data';
+import { getClients, type Client } from '@services/supabase/clients';
 import {
   getFichiers, uploadFichier, deleteFichier, getSignedUrl, getStorageInfo,
   formatBytes, getFileIcon,
   type DossierFichier, type StorageInfo,
 } from '@services/supabase/dossier-fichiers';
-import { getInstancesByDossier, getWorkflows } from '@services/supabase/workflows';
+import { getInstancesByDossier, getWorkflows, deleteWorkflow, toggleWorkflowStatus, createTrackingToken } from '@services/supabase/workflows';
 import { triggerWorkflow } from '@/lib/workflow-runtime';
-import { WorkflowRunner } from '@/components/workflow/WorkflowRunner';
+
 import type { WorkflowInstance, Workflow, WorkflowStatus } from '@pos-types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,7 +53,7 @@ interface Dossier {
 
 function fmtDate(d: string | null) {
   if (!d) return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function genRef(count: number) {
@@ -59,7 +70,125 @@ function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// ─── Onglet Configuration ───────────────────────────────────────────────────
+
+function ConfigTab({ businessId, onRefresh }: { businessId: string, onRefresh: () => void }) {
+  const [category, setCategory] = useState<'type_affaire' | 'tribunal' | 'statut_dossier' | 'type_client'>('type_affaire');
+  const [items, setItems] = useState<RefItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<RefItem> | null>(null);
+  const { error: notifError, success } = useNotificationStore();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getReferenceData(category, businessId);
+      setItems(data);
+    } catch (e) { notifError(String(e)); }
+    finally { setLoading(false); }
+  }, [category, businessId, notifError]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editing?.label || !editing?.value) return;
+    try {
+      await upsertRefItem(category, {
+        label:       editing.label!,
+        value:       editing.value!,
+        business_id: businessId,
+        is_active:   true,
+        sort_order:  editing.sort_order ?? 0,
+        color:       editing.color ?? null,
+        metadata:    editing.metadata ?? {},
+      });
+      success('Enregistré');
+      setEditing(null);
+      load();
+      onRefresh();
+    } catch (e) { notifError(String(e)); }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer cet élément ?')) return;
+    try {
+      await deleteRefItem(id);
+      success('Supprimé');
+      load();
+      onRefresh();
+    } catch (e) { notifError(String(e)); }
+  }
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex gap-1 p-1 bg-slate-900/50 border border-slate-800 rounded-xl w-fit">
+        {[
+          { id: 'type_affaire',   label: 'Types d\'affaire' },
+          { id: 'tribunal',       label: 'Tribunaux' },
+          { id: 'statut_dossier', label: 'Statuts' },
+          { id: 'type_client',    label: 'Types de client' },
+        ].map(c => (
+          <button
+            key={c.id}
+            onClick={() => setCategory(c.id as any)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${category === c.id ? 'bg-brand-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-3">
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-500" /></div>
+          ) : items.length === 0 ? (
+            <div className="card p-12 text-center text-slate-500 italic">Aucun élément configuré</div>
+          ) : (
+            <div className="grid gap-2">
+              {items.map(item => (
+                <div key={item.id} className="card p-4 flex items-center justify-between group bg-slate-900/30">
+                  <div>
+                    <p className="font-bold text-white text-sm">{item.label}</p>
+                    <p className="text-[10px] text-slate-500 font-mono mt-0.5">{item.value}</p>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setEditing(item)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card p-5 space-y-4 h-fit sticky top-6">
+          <h3 className="font-bold text-white text-sm flex items-center gap-2 border-b border-slate-800 pb-3">
+            {editing?.id ? <Pencil className="w-4 h-4 text-blue-400" /> : <Plus className="w-4 h-4 text-green-400" />}
+            {editing?.id ? 'Modifier' : 'Ajouter un élément'}
+          </h3>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label className="text-[10px] uppercase font-black text-slate-500 mb-1.5 block">Nom (Libellé)</label>
+              <input className="input text-sm bg-slate-950" value={editing?.label ?? ''} onChange={e => setEditing(p => ({ ...p, label: e.target.value }))} placeholder="Ex: Tribunal de Grande Instance" required />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-black text-slate-500 mb-1.5 block">Code (Clé unique)</label>
+              <input className="input text-sm bg-slate-950 font-mono" value={editing?.value ?? ''} onChange={e => setEditing(p => ({ ...p, value: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} placeholder="ex: tgi_dakar" required disabled={!!editing?.id} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="submit" className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-2 rounded-xl text-xs transition-all">{editing?.id ? 'Mettre à jour' : 'Ajouter à la liste'}</button>
+              {editing && <button type="button" onClick={() => setEditing(null)} className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs">Annuler</button>}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal Dossier ───────────────────────────────────────────────────────────
 
 function DossierModal({
   initial, count, businessId,
@@ -80,6 +209,9 @@ function DossierModal({
     reference:      initial?.reference      ?? genRef(count),
     type_affaire:   initial?.type_affaire   ?? (typesAffaire[0]?.value ?? ''),
     client_name:    initial?.client_name    ?? '',
+    client_type:    '', 
+    client_id_num:  '', 
+    client_rep:     '',
     client_phone:   initial?.client_phone   ?? '',
     client_email:   initial?.client_email   ?? '',
     adversaire:     initial?.adversaire     ?? '',
@@ -89,17 +221,59 @@ function DossierModal({
     description:    initial?.description    ?? '',
     date_ouverture: initial?.date_ouverture ?? new Date().toISOString().slice(0, 10),
     date_audience:  initial?.date_audience  ?? '',
+    selectedWorkflow: '',
   });
+  
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
+  const [typesClient, setTypesClient] = useState<RefItem[]>([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [showClientResults, setShowClientResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    getClients(businessId).then(setAllClients);
+    getReferenceData('type_client', businessId).then(setTypesClient);
+    if (!initial) {
+      getWorkflows(businessId, true).then(setWorkflows);
+    }
+  }, [initial, businessId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowClientResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredClients = allClients.filter(c => 
+    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    (c.phone && c.phone.includes(clientSearch))
+  ).slice(0, 5);
+
+  const selectClient = (c: any) => {
+    setForm(p => ({
+      ...p,
+      client_name: c.name,
+      client_type: c.type ?? '',
+      client_id_num: c.identification_number ?? '',
+      client_rep: c.representative_name ?? '',
+      client_phone: c.phone ?? '',
+      client_email: c.email ?? '',
+    }));
+    setClientSearch(c.name);
+    setShowClientResults(false);
+  };
+
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   async function handleSave() {
     if (!form.client_name.trim()) { notifError('Le nom du client est requis'); return; }
     if (!form.reference.trim())   { notifError('La référence est requise'); return; }
-    if (form.date_audience && form.date_audience < form.date_ouverture) {
-      notifError("La date d'audience ne peut pas être avant la date d'ouverture du dossier");
-      return;
-    }
     setSaving(true);
     try {
       const payload = {
@@ -118,278 +292,249 @@ function DossierModal({
         date_audience:  form.date_audience        || null,
         updated_at:     new Date().toISOString(),
       };
-      const db = supabase.from('dossiers' as never) as ReturnType<typeof supabase.from>;
+      
       let saved: Dossier;
       if (initial) {
-        const { data, error } = await db.update(payload as never).eq('id', initial.id).select().single();
-        if (error) throw new Error((error as { message: string }).message);
-        saved = data as Dossier;
+        const { data, error } = await supabase.from('dossiers' as any).update(payload).eq('id', initial.id).select().single();
+        if (error) throw error;
+        saved = data as unknown as Dossier;
       } else {
-        const { data, error } = await db.insert(payload as never).select().single();
-        if (error) throw new Error((error as { message: string }).message);
-        saved = data as Dossier;
+        const { data, error } = await supabase.from('dossiers' as any).insert(payload).select().single();
+        if (error) throw error;
+        saved = data as unknown as Dossier;
+
+        if (form.selectedWorkflow) {
+          await triggerWorkflow({
+            workflow_id: form.selectedWorkflow,
+            dossier_id:  saved.id,
+            triggered_by: 'AUTO_ON_CREATE',
+            initial_context: {
+              dossier_id:    saved.id,
+              reference:     saved.reference,
+              client_name:   saved.client_name,
+              client_type:   form.client_type,
+              client_id_num: form.client_id_num,
+              client_rep:    form.client_rep,
+              'client.phone': saved.client_phone,
+              'client.email': saved.client_email,
+            }
+          });
+        }
       }
-      success(initial ? 'Dossier mis à jour' : 'Dossier créé');
+      success(initial ? 'Mis à jour' : 'Créé');
       onSaved(saved);
     } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
+  const isMoral = form.client_type === 'personne_morale' || form.client_type === 'association';
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
-          <h2 className="text-white font-semibold">
-            {initial ? `Modifier — ${initial.reference}` : 'Nouveau dossier'}
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <h2 className="text-white font-bold">{initial ? `Modifier — ${initial.reference}` : 'Nouveau dossier'}</h2>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
         </div>
-
-        <div className="overflow-y-auto p-5 space-y-4">
+        <div className="overflow-y-auto p-5 space-y-5 scrollbar-thin">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Référence</label>
-              <input className="input" value={form.reference} onChange={(e) => set('reference', e.target.value)} />
+            <div><label className="label">Référence Dossier</label><input className="input" value={form.reference} onChange={(e) => set('reference', e.target.value)} /></div>
+            <div><label className="label">Type d'affaire</label><select className="input" value={form.type_affaire} onChange={(e) => set('type_affaire', e.target.value)}>
+              {typesAffaire.map((t) => <option key={t.value} value={t.value} className="bg-gray-900 text-white">{t.label}</option>)}
+            </select></div>
+          </div>
+
+          <div className="p-5 bg-slate-900/30 border border-slate-800 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2 text-brand-400 mb-1">
+              <UserCircle2 className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Entité Juridique (Client)</span>
             </div>
-            <div>
-              <label className="label">Type d&apos;affaire</label>
-              <select className="input" value={form.type_affaire} onChange={(e) => set('type_affaire', e.target.value)}>
-                {typesAffaire.map((t) => (
-                  <option key={t.value} value={t.value} className="bg-gray-900 text-white">
-                    {(t.metadata?.icon as string) ?? ''} {t.label}
-                  </option>
-                ))}
+
+            <div className="relative" ref={searchRef}>
+              <label className="label">Nom de l'entité / Client <span className="text-red-400">*</span></label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input className="input pl-10" value={form.client_name || clientSearch} onChange={(e) => { set('client_name', e.target.value); setClientSearch(e.target.value); setShowClientResults(true); }} onFocus={() => setShowClientResults(true)} placeholder="Rechercher ou saisir..." />
+              </div>
+              {showClientResults && clientSearch.length > 0 && filteredClients.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  {filteredClients.map(c => (
+                    <button key={c.id} onClick={() => selectClient(c)} className="w-full text-left px-4 py-3 hover:bg-surface-hover border-b border-surface-border last:border-0 flex items-center justify-between">
+                      <div><p className="text-sm text-white font-bold">{c.name}</p><p className="text-[10px] text-slate-400">{c.phone || c.email || '—'}</p></div>
+                      <Plus className="w-3.5 h-3.5 text-brand-400" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Type d'entité</label>
+                <select className="input" value={form.client_type} onChange={(e) => set('client_type', e.target.value)}>
+                  <option value="">— Sélectionner —</option>
+                  {typesClient.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label">{isMoral ? 'Identification (RCCM/NINEA)' : 'CNI / Passeport'}</label>
+                <input className="input" value={form.client_id_num} onChange={(e) => set('client_id_num', e.target.value)} placeholder="..." />
+              </div>
+            </div>
+
+            {isMoral && (
+              <div>
+                <label className="label">Représentant légal</label>
+                <input className="input" value={form.client_rep} onChange={(e) => set('client_rep', e.target.value)} placeholder="Prénom Nom du signataire" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="label">Téléphone</label><input className="input" value={form.client_phone} onChange={(e) => set('client_phone', e.target.value)} /></div>
+              <div><label className="label">Email</label><input className="input" value={form.client_email} onChange={(e) => set('client_email', e.target.value)} /></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Adversaire</label><input className="input" value={form.adversaire} onChange={(e) => set('adversaire', e.target.value)} /></div>
+            <div><label className="label">Tribunal / Juridiction</label><select className="input" value={form.tribunal || ''} onChange={(e) => set('tribunal', e.target.value)}>
+              <option value="">— Sélectionner —</option>
+              {tribunaux.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label">Date d'ouverture</label><input type="date" className="input" value={form.date_ouverture} onChange={(e) => set('date_ouverture', e.target.value)} /></div>
+            <div><label className="label">Prochaine audience</label><input type="date" className="input" value={form.date_audience} onChange={(e) => set('date_audience', e.target.value)} /></div>
+          </div>
+          {!initial && workflows.length > 0 && (
+            <div className="p-4 bg-brand-500/5 border border-brand-500/20 rounded-2xl space-y-3">
+              <div className="flex items-center gap-2 text-brand-400"><GitBranch className="w-4 h-4" /><span className="text-xs font-bold uppercase">Automatisation</span></div>
+              <select className="input bg-slate-900" value={form.selectedWorkflow} onChange={(e) => set('selectedWorkflow', e.target.value)}>
+                <option value="">— Aucun workflow au démarrage —</option>
+                {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="label">Nom du client / mandant <span className="text-red-400">*</span></label>
-            <input className="input" value={form.client_name} onChange={(e) => set('client_name', e.target.value)} placeholder="Ex: Mamadou Diallo" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Téléphone</label>
-              <input className="input" value={form.client_phone} onChange={(e) => set('client_phone', e.target.value)} placeholder="+221 7X XXX XX XX" />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input className="input" value={form.client_email} onChange={(e) => set('client_email', e.target.value)} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Adversaire / Partie adverse</label>
-              <input className="input" value={form.adversaire} onChange={(e) => set('adversaire', e.target.value)} />
-            </div>
-            <div>
-              <label className="label">Tribunal / Juridiction</label>
-              <select className="input" value={form.tribunal} onChange={(e) => set('tribunal', e.target.value)}>
-                <option value="" className="bg-gray-900 text-white">— Sélectionner —</option>
-                {tribunaux.map((t) => (
-                  <option key={t.value} value={t.value} className="bg-gray-900 text-white">{t.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Juge / Magistrat</label>
-              <input className="input" value={form.juge} onChange={(e) => set('juge', e.target.value)} />
-            </div>
-            <div>
-              <label className="label">Statut</label>
-              <select className="input" value={form.status} onChange={(e) => set('status', e.target.value)}>
-                {statuts.map((s) => (
-                  <option key={s.value} value={s.value} className="bg-gray-900 text-white">{s.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Date d&apos;ouverture</label>
-              <input type="date" className="input" value={form.date_ouverture} onChange={(e) => set('date_ouverture', e.target.value)} />
-            </div>
-            <div>
-              <label className="label">Prochaine audience</label>
-              <input type="date" className="input" value={form.date_audience} onChange={(e) => set('date_audience', e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-            <label className="label">Notes / Description</label>
-            <textarea className="input resize-none" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Faits, procédures, notes importantes…" />
-          </div>
+          )}
+          <div><label className="label">Notes / Faits</label><textarea className="input resize-none" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} /></div>
         </div>
-
         <div className="flex justify-end gap-2 p-4 border-t border-surface-border shrink-0">
-          <button onClick={onClose} className="btn-secondary text-sm">Annuler</button>
-          <button onClick={handleSave} disabled={saving || !form.client_name.trim()}
-            className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50">
-            <Check className="w-4 h-4" />{saving ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
+          <button onClick={onClose} className="btn-secondary text-sm px-6">Annuler</button>
+          <button onClick={handleSave} disabled={saving || !form.client_name.trim()} className="btn-primary text-sm px-8 flex items-center gap-2 font-bold"><Check className="w-4 h-4" />{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Panneau fichiers ─────────────────────────────────────────────────────────
+// ─── Panneaux Workflows & Fichiers ───────────────────────────────────────────
 
-function FichiersPanel({
-  dossier, businessId, storageInfo,
-  onClose, onStorageChange,
-}: {
-  dossier:         Dossier;
-  businessId:      string;
-  storageInfo:     StorageInfo | null;
-  onClose:         () => void;
-  onStorageChange: () => void;
-}) {
-  const { error: notifError, success } = useNotificationStore();
-  const [fichiers, setFichiers] = useState<DossierFichier[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadPct, setUploadPct] = useState(0);
+const INSTANCE_STATUS_PRIORITY: Record<string, number> = { WAITING: 0, RUNNING: 1, FAILED: 2, PAUSED: 3, PENDING: 4, COMPLETED: 5, CANCELLED: 6 };
+
+function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Dossier; businessId: string; userId?: string; onClose: () => void; }) {
+  const [instances, setInstances] = useState<WorkflowInstance[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sharing, setSharing] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const { success, error: notifError } = useNotificationStore();
 
   useEffect(() => {
-    getFichiers(dossier.id)
-      .then(setFichiers)
-      .catch(() => {})
+    Promise.all([getInstancesByDossier(dossier.id), getWorkflows(businessId, true)])
+      .then(([inst, wf]) => {
+        setInstances(inst);
+        setWorkflows(wf);
+        // auto-expand most actionable instance
+        const sorted = [...inst].sort((a, b) => (INSTANCE_STATUS_PRIORITY[a.status] ?? 9) - (INSTANCE_STATUS_PRIORITY[b.status] ?? 9));
+        if (sorted.length > 0) setExpanded(sorted[0].id);
+      })
       .finally(() => setLoading(false));
-  }, [dossier.id]);
+  }, [dossier.id, businessId]);
 
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setUploading(true);
+  const handleShareTracking = async () => {
+    setSharing(true);
     try {
-      for (const file of Array.from(files)) {
-        const f = await uploadFichier(dossier.id, businessId, file, setUploadPct);
-        setFichiers((prev) => [f, ...prev]);
-      }
-      success('Fichier(s) ajouté(s)');
-      onStorageChange();
-    } catch (e) {
-      notifError(e instanceof Error ? e.message : 'Erreur upload');
+      const instanceId = instances[0]?.id;
+      const { token } = await createTrackingToken(dossier.id, instanceId, dossier.client_phone || undefined, dossier.client_email || undefined);
+      
+      const baseUrl = window.location.origin;
+      const trackUrl = `${baseUrl}/track/${token}`;
+      const message = `Bonjour ${dossier.client_name}, voici le lien pour suivre l'avancement de votre dossier ${dossier.reference} en temps réel : ${trackUrl}`;
+      
+      const whatsappUrl = `https://wa.me/${dossier.client_phone?.replace(/\s+/g, '')}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      success('Lien de suivi généré');
+    } catch (e) { 
+      notifError("Impossible de générer le lien de suivi.");
     } finally {
-      setUploading(false);
-      setUploadPct(0);
+      setSharing(false);
     }
-  }
+  };
 
-  async function handleOpen(f: DossierFichier) {
+  const handleTrigger = async (wf: Workflow) => {
+    setShowPicker(false);
     try {
-      const url = await getSignedUrl(f.storage_path);
-      window.open(url, '_blank');
-    } catch { notifError('Impossible d\'ouvrir le fichier'); }
-  }
-
-  async function handleDelete(f: DossierFichier) {
-    if (!confirm(`Supprimer "${f.nom}" ?`)) return;
-    try {
-      await deleteFichier(f);
-      setFichiers((prev) => prev.filter((x) => x.id !== f.id));
-      success('Fichier supprimé');
-      onStorageChange();
-    } catch (e) { notifError(e instanceof Error ? e.message : 'Erreur'); }
-  }
-
-  const quotaPct = storageInfo?.used_pct ?? 0;
-  const nearLimit = quotaPct >= 80;
+      const res = await triggerWorkflow({
+        workflow_id: wf.id, dossier_id: dossier.id, started_by: userId,
+        initial_context: { dossier_id: dossier.id, reference: dossier.reference, client_name: dossier.client_name }
+      });
+      if (res.ok) {
+        const updated = await getInstancesByDossier(dossier.id);
+        setInstances(updated);
+        if (updated.length > 0) setExpanded(updated[0].id);
+      }
+    } catch (e) { console.error(e); }
+  };
 
   return (
-    <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border shrink-0">
-        <div>
-          <p className="text-sm font-semibold text-white flex items-center gap-2">
-            <Paperclip className="w-4 h-4 text-purple-400" />
-            Fichiers — {dossier.reference}
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">{fichiers.length} fichier{fichiers.length !== 1 ? 's' : ''}</p>
+    <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[440px] bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl animate-in slide-in-from-right duration-300">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border bg-slate-900/50">
+        <p className="text-sm font-bold text-white tracking-tight">Workflows — {dossier.reference}</p>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleShareTracking} 
+            disabled={sharing}
+            title="Partager le lien de suivi WhatsApp"
+            className="p-2 rounded-lg bg-green-600/10 text-green-500 hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
+          >
+            {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+          </button>
+          <button onClick={() => setShowPicker(!showPicker)} className="bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-lg hover:bg-brand-600 transition-all">Lancer</button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 transition-all"><X className="w-4 h-4" /></button>
         </div>
-        <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-surface-hover">
-          <X className="w-4 h-4" />
-        </button>
       </div>
-
-      {/* Quota bar */}
-      {storageInfo && (
-        <div className="px-4 py-3 border-b border-surface-border shrink-0 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-slate-400">
-              <HardDrive className="w-3 h-3" /> Stockage utilisé
-            </span>
-            <span className={nearLimit ? 'text-amber-400 font-medium' : 'text-slate-500'}>
-              {formatBytes(storageInfo.used_bytes)} / {formatBytes(storageInfo.quota_bytes)}
-            </span>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
+        {showPicker && (
+          <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-4 shadow-xl animate-in fade-in slide-in-from-top-2">
+            {workflows.length === 0 ? (
+              <p className="p-4 text-xs text-slate-500 italic text-center">Aucun workflow actif</p>
+            ) : (
+              workflows.map(wf => (
+                <button key={wf.id} onClick={() => handleTrigger(wf)} className="w-full text-left px-4 py-3 hover:bg-slate-900 text-sm text-white border-b border-slate-800 last:border-0 font-medium transition-colors">{wf.name}</button>
+              ))
+            )}
           </div>
-          <div className="h-1.5 bg-surface-input rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${nearLimit ? 'bg-amber-500' : 'bg-brand-500'}`}
-              style={{ width: `${quotaPct}%` }}
-            />
+        )}
+        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div> : instances.length === 0 ? (
+          <div className="py-20 text-center space-y-3">
+            <GitBranch className="w-10 h-10 text-slate-800 mx-auto" />
+            <p className="text-xs text-slate-500 italic font-medium tracking-tight">Aucun processus en cours pour ce dossier.</p>
           </div>
-          {nearLimit && (
-            <p className="text-xs text-amber-400 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" />
-              {quotaPct >= 100 ? 'Quota atteint — upgrade nécessaire' : `${100 - quotaPct}% restant`}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Upload zone */}
-      <div className="px-4 py-3 shrink-0">
-        <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors
-          ${uploading ? 'border-brand-600 bg-brand-900/10' : 'border-surface-border hover:border-brand-600 hover:bg-brand-900/10'}`}>
-          {uploading ? (
-            <>
-              <Loader2 className="w-5 h-5 text-brand-400 animate-spin" />
-              <span className="text-xs text-brand-400">Upload en cours… {uploadPct}%</span>
-            </>
-          ) : (
-            <>
-              <Upload className="w-5 h-5 text-slate-500" />
-              <span className="text-xs text-slate-400 text-center">
-                Cliquez ou glissez un fichier<br />
-                <span className="text-slate-600">Max 50 Mo par fichier</span>
-              </span>
-            </>
-          )}
-          <input type="file" className="hidden" multiple disabled={uploading}
-            onChange={(e) => handleFiles(e.target.files)} />
-        </label>
-      </div>
-
-      {/* Liste fichiers */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
-        {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-slate-500" /></div>
-        ) : fichiers.length === 0 ? (
-          <p className="text-center text-slate-600 text-sm py-8">Aucun fichier joint</p>
         ) : (
-          fichiers.map((f) => (
-            <div key={f.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-input hover:bg-surface-hover transition-colors group">
-              <span className="text-xl shrink-0">{getFileIcon(f.mime_type)}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{f.nom}</p>
-                <p className="text-xs text-slate-500">{formatBytes(f.taille_bytes)}</p>
-              </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleOpen(f)}
-                  className="p-1.5 text-slate-400 hover:text-brand-400 rounded-lg hover:bg-surface-card" title="Ouvrir">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => handleDelete(f)}
-                  className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-900/20" title="Supprimer">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          instances.map(inst => (
+            <div key={inst.id} className="card overflow-hidden bg-slate-900/50 hover:bg-slate-900 transition-colors">
+              <button onClick={() => setExpanded(expanded === inst.id ? null : inst.id)} className="w-full flex items-center justify-between px-4 py-3">
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-[10px] text-brand-400 font-black uppercase tracking-widest">{inst.status}</span>
+                  <span className="text-[9px] text-slate-500 font-mono">ID: {inst.id.slice(0,8)}</span>
+                </div>
+                {expanded === inst.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+              </button>
+              {expanded === inst.id && (
+                <div className="p-3 border-t border-slate-800 bg-slate-950/30">
+                  <WorkflowRunner instance={inst} currentUserId={userId} onTransition={() => getInstancesByDossier(dossier.id).then(setInstances)} />
+                </div>
+              )}
             </div>
           ))
         )}
@@ -398,613 +543,352 @@ function FichiersPanel({
   );
 }
 
-// ─── Gestionnaire de workflows ────────────────────────────────────────────────
-
-function WorkflowsManager({ businessId }: { businessId: string }) {
-  const [workflows, setWorkflows]   = useState<Workflow[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [editingId, setEditingId]   = useState<string | 'new' | null>(null);
+function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageChange }: { dossier: Dossier; businessId: string; storageInfo: StorageInfo | null; onClose: () => void; onStorageChange: () => void; }) {
+  const [fichiers, setFichiers] = useState<DossierFichier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { error: notifError } = useNotificationStore();
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setWorkflows(await getWorkflows(businessId)); }
-    catch (e) { console.error(e); }
+    try {
+      const data = await getFichiers(dossier.id);
+      setFichiers(data);
+    } catch (e) { notifError(String(e)); }
     finally { setLoading(false); }
-  }, [businessId]);
+  }, [dossier.id, notifError]);
 
   useEffect(() => { load(); }, [load]);
 
-  const selected = editingId === 'new' ? null : workflows.find(w => w.id === editingId) ?? null;
-
-  if (editingId !== null) {
-    return (
-      <div className="space-y-3">
-        <button
-          onClick={() => { setEditingId(null); load(); }}
-          className="text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
-        >
-          ← Retour aux workflows
-        </button>
-        <WorkflowBuilder
-          businessId={businessId}
-          workflowId={selected?.id}
-          initialName={selected?.name}
-          initialDef={selected?.definition}
-          onSaved={() => { setEditingId(null); load(); }}
-        />
-      </div>
-    );
+  async function handleFiles(files: FileList | null) {
+    if (!files) return;
+    try {
+      for (const file of Array.from(files)) {
+        await uploadFichier(dossier.id, businessId, file);
+      }
+      load();
+      onStorageChange();
+    } catch (e) { notifError(String(e)); }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{workflows.length} workflow{workflows.length !== 1 ? 's' : ''} configurés</p>
-        <button onClick={() => setEditingId('new')} className="btn-primary flex items-center gap-2 text-sm py-2 px-3">
-          <Plus className="w-4 h-4" />
-          Nouveau workflow
-        </button>
+    <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl animate-in slide-in-from-right duration-300">
+      <div className="p-4 border-b border-surface-border flex justify-between items-center bg-slate-900/50">
+        <p className="text-sm font-bold text-white tracking-tight">Fichiers — {dossier.reference}</p>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 transition-all"><X className="w-4 h-4" /></button>
       </div>
+      <div className="p-4 flex-1 overflow-y-auto space-y-4 scrollbar-thin">
+        <label className="flex flex-col items-center justify-center py-6 px-4 bg-slate-900/50 border-2 border-dashed border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-900 hover:border-brand-500/50 transition-all group">
+          <Upload className="w-6 h-6 text-slate-500 group-hover:text-brand-400 mb-2" />
+          <span className="text-xs font-bold text-slate-400 group-hover:text-white">Déposer des fichiers ici</span>
+          <input type="file" multiple onChange={e => handleFiles(e.target.files)} className="hidden" />
+        </label>
 
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-slate-500" /></div>
-      ) : workflows.length === 0 ? (
-        <div className="text-center py-14 space-y-3">
-          <GitBranch className="w-10 h-10 text-slate-700 mx-auto" />
-          <p className="text-slate-500 text-sm">Aucun workflow — créez votre premier processus automatisé</p>
-          <button onClick={() => setEditingId('new')} className="btn-primary text-sm py-2 px-4">
-            Créer un workflow
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          {workflows.map(w => (
-            <div key={w.id} className="card p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{w.name}</p>
-                  {w.description && <p className="text-xs text-slate-500 truncate mt-0.5">{w.description}</p>}
+        {loading ? <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div> : fichiers.length === 0 ? (
+          <div className="py-20 text-center opacity-30">
+            <HardDrive className="w-8 h-8 mx-auto mb-2" />
+            <p className="text-[10px] font-black uppercase tracking-widest">Aucun fichier</p>
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            {fichiers.map(f => (
+              <div key={f.id} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-800 hover:border-slate-700 transition-all group">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-lg">{getFileIcon(f.mime_type)}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-white font-medium truncate">{f.nom}</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase">{formatBytes(f.taille_bytes)}</p>
+                  </div>
                 </div>
-                <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-medium border ${w.is_active ? 'text-green-300 bg-green-900/20 border-green-800' : 'text-slate-500 bg-slate-800 border-slate-700'}`}>
-                  {w.is_active ? 'Actif' : 'Inactif'}
-                </span>
+                <button 
+                  onClick={() => getSignedUrl(f.storage_path).then(url => window.open(url, '_blank'))}
+                  className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
               </div>
-              <p className="text-xs text-slate-600">
-                {w.definition.nodes.length} nœuds · {w.definition.edges.length} transitions · v{w.version}
-              </p>
-              <button
-                onClick={() => setEditingId(w.id)}
-                className="w-full btn-secondary text-xs py-1.5 flex items-center justify-center gap-1.5"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Éditer
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+      </div>
+      {storageInfo && (
+        <div className="p-4 border-t border-surface-border bg-slate-900/30">
+          <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-500 mb-1.5 tracking-widest">
+            <span>Stockage Dossiers</span>
+            <span>{Math.round(storageInfo.used_pct)}%</span>
+          </div>
+          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-brand-500 transition-all" style={{ width: `${storageInfo.used_pct}%` }} />
+          </div>
+          <p className="text-[9px] text-slate-600 mt-2 italic">Limite : {formatBytes(storageInfo.quota_bytes)} par cabinet.</p>
         </div>
       )}
     </div>
   );
 }
 
-// ─── Badges statut workflow ────────────────────────────────────────────────────
+// ─── Workflows Manager ───────────────────────────────────────────────────────
 
-const WF_STATUS: Record<WorkflowStatus, { label: string; cls: string; icon: React.ReactNode }> = {
-  PENDING:   { label: 'En attente',  cls: 'text-slate-400 border-slate-700 bg-slate-800',        icon: <Clock       className="w-3 h-3" /> },
-  RUNNING:   { label: 'En cours',    cls: 'text-blue-300 border-blue-800 bg-blue-900/20',         icon: <Loader2     className="w-3 h-3 animate-spin" /> },
-  WAITING:   { label: 'Action req.', cls: 'text-amber-300 border-amber-800 bg-amber-900/20',      icon: <Clock       className="w-3 h-3" /> },
-  PAUSED:    { label: 'En pause',    cls: 'text-purple-300 border-purple-800 bg-purple-900/20',   icon: <PauseCircle className="w-3 h-3" /> },
-  COMPLETED: { label: 'Terminé',     cls: 'text-green-300 border-green-800 bg-green-900/20',      icon: <CheckCircle2 className="w-3 h-3" /> },
-  FAILED:    { label: 'Échoué',      cls: 'text-red-400 border-red-800 bg-red-900/20',            icon: <XCircle     className="w-3 h-3" /> },
-  CANCELLED: { label: 'Annulé',      cls: 'text-red-500 border-red-900 bg-red-950/20',            icon: <XCircle     className="w-3 h-3" /> },
-};
+function WorkflowsManager({ businessId }: { businessId: string }) {
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [editingId, setEditingId] = useState<string | 'new' | null>(null);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const { error: notifError, success } = useNotificationStore();
 
-function WfStatusBadge({ status }: { status: WorkflowStatus }) {
-  const { label, cls, icon } = WF_STATUS[status];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls}`}>
-      {icon}{label}
-    </span>
-  );
-}
-
-// ─── Panneau workflows ─────────────────────────────────────────────────────────
-
-function WorkflowPanel({
-  dossier, businessId, userId, onClose,
-}: {
-  dossier: Dossier; businessId: string; userId?: string; onClose: () => void;
-}) {
-  const [instances, setInstances]   = useState<WorkflowInstance[]>([]);
-  const [workflows, setWorkflows]   = useState<Workflow[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [expanded, setExpanded]     = useState<string | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
-  const [triggering, setTriggering] = useState<string | null>(null);
-
-  useEffect(() => {
-    Promise.all([
-      getInstancesByDossier(dossier.id),
-      getWorkflows(businessId),
-    ]).then(([inst, wf]) => {
-      setInstances(inst);
-      setWorkflows(wf.filter(w => w.is_active));
-    }).catch(console.error)
-      .finally(() => setLoading(false));
-  }, [dossier.id, businessId]);
-
-  const handleTrigger = async (wf: Workflow) => {
-    setTriggering(wf.id);
-    setShowPicker(false);
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await triggerWorkflow({
-        workflow_id:     wf.id,
-        dossier_id:      dossier.id,
-        triggered_by:    'MANUAL',
-        started_by:      userId,
-        initial_context: {
-          dossier_id:    dossier.id,
-          reference:     dossier.reference,
-          client_name:   dossier.client_name,
-          'client.phone': dossier.client_phone,
-          'client.email': dossier.client_email,
-        },
-      });
-      if (!res.ok) throw new Error(res.error);
-      // Recharger les instances
-      const updated = await getInstancesByDossier(dossier.id);
-      setInstances(updated);
-      // Ouvrir automatiquement la nouvelle instance
-      if (updated.length > 0) setExpanded(updated[0].id);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setTriggering(null);
-    }
+      const data = await getWorkflows(businessId);
+      setWorkflows(data);
+    } catch (e) { notifError(String(e)); }
+    finally { setLoading(false); }
+  }, [businessId, notifError]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer ce workflow définitivement ?')) return;
+    try {
+      await deleteWorkflow(id);
+      success('Workflow supprimé');
+      load();
+    } catch (e) { notifError(String(e)); }
   };
 
-  const handleTransition = (instanceId: string, nodeId: string, status: WorkflowStatus) => {
-    setInstances(prev =>
-      prev.map(i => i.id === instanceId ? { ...i, current_node_id: nodeId, status } : i)
+  const handleToggle = async (wf: Workflow) => {
+    try {
+      await toggleWorkflowStatus(wf.id, !wf.is_active);
+      success(wf.is_active ? 'Workflow désactivé' : 'Workflow activé');
+      load();
+    } catch (e) { notifError(String(e)); }
+  };
+
+  const filtered = workflows.filter(w => w.name.toLowerCase().includes(search.toLowerCase()));
+
+  // Pagination simple
+  const [page, setPage] = useState(1);
+  const perPage = 10;
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+
+  if (editingId !== null) {
+    const selected = workflows.find(w => w.id === editingId);
+    return (
+      <div className="space-y-4 animate-in fade-in duration-500 h-full">
+        <button onClick={() => setEditingId(null)} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors font-bold px-1">
+          <ChevronLeft className="w-4 h-4" /> Retour à la liste
+        </button>
+        <WorkflowBuilder businessId={businessId} workflowId={selected?.id} initialName={selected?.name} initialDef={selected?.definition} onSaved={() => { setEditingId(null); load(); }} />
+      </div>
     );
-  };
-
-  const activeInstances   = instances.filter(i => !['COMPLETED','CANCELLED'].includes(i.status));
-  const archiveInstances  = instances.filter(i =>  ['COMPLETED','CANCELLED'].includes(i.status));
+  }
 
   return (
-    <div
-      className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[440px] bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl"
-      onClick={() => setShowPicker(false)}
-    >
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border shrink-0">
-        <div>
-          <p className="text-sm font-semibold text-white flex items-center gap-2">
-            <GitBranch className="w-4 h-4 text-brand-400" />
-            Workflows — {dossier.reference}
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {activeInstances.length} actif{activeInstances.length !== 1 ? 's' : ''}
-            {archiveInstances.length > 0 && ` · ${archiveInstances.length} archivé${archiveInstances.length !== 1 ? 's' : ''}`}
-          </p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="relative flex-1 max-w-md w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input className="input pl-11 py-2.5 text-sm bg-slate-900/50" placeholder="Rechercher un workflow..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
-        <div className="flex items-center gap-2">
-          {/* Bouton démarrer */}
-          <div className="relative">
-            <button
-              onClick={() => setShowPicker(p => !p)}
-              disabled={!!triggering || workflows.length === 0}
-              className="flex items-center gap-1.5 text-xs btn-primary py-1.5 px-3 disabled:opacity-50"
-            >
-              {triggering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-              Démarrer
-            </button>
-            {showPicker && (
-              <div
-                className="absolute right-0 top-full mt-1 w-64 bg-surface-card border border-surface-border rounded-xl shadow-xl z-50 overflow-hidden"
-                onClick={e => e.stopPropagation()}
-              >
-                {workflows.map(wf => (
-                  <button
-                    key={wf.id}
-                    onClick={() => handleTrigger(wf)}
-                    className="w-full text-left px-4 py-3 hover:bg-surface-hover transition-colors border-b border-surface-border last:border-0"
-                  >
-                    <p className="text-sm text-white font-medium truncate">{wf.name}</p>
-                    {wf.description && <p className="text-xs text-slate-500 truncate mt-0.5">{wf.description}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-surface-hover">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <button onClick={() => setEditingId('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
+          <Plus className="w-4 h-4" /> Nouveau Workflow
+        </button>
       </div>
 
-      {/* Contenu */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
-          </div>
-        ) : instances.length === 0 ? (
-          <div className="text-center py-12 space-y-3">
-            <GitBranch className="w-8 h-8 text-slate-700 mx-auto" />
-            <p className="text-sm text-slate-500">Aucun workflow actif</p>
-            <p className="text-xs text-slate-600">
-              {workflows.length === 0
-                ? 'Aucun workflow disponible — créez-en un dans la section Workflows'
-                : 'Cliquez sur "Démarrer" pour lancer un processus'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Actifs */}
-            {activeInstances.map(inst => (
-              <div key={inst.id} className="card overflow-hidden">
-                <button
-                  onClick={() => setExpanded(e => e === inst.id ? null : inst.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-hover transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <WfStatusBadge status={inst.status} />
-                    <span className="text-xs text-slate-400 font-mono truncate">
-                      {inst.id.slice(0, 8)}…
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-500">
-                      {new Date(inst.started_at).toLocaleDateString('fr-FR')}
-                    </span>
-                    {expanded === inst.id
-                      ? <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                      : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
-                  </div>
-                </button>
-                {expanded === inst.id && (
-                  <div className="border-t border-surface-border p-3">
-                    <WorkflowRunner
-                      instance={inst}
-                      currentUserId={userId}
-                      onTransition={(nodeId, status) => handleTransition(inst.id, nodeId, status)}
-                      onCancel={() => handleTransition(inst.id, inst.current_node_id, 'CANCELLED')}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Archives */}
-            {archiveInstances.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <p className="text-xs text-slate-600 uppercase tracking-wide font-medium px-1">Archivés</p>
-                {archiveInstances.map(inst => (
-                  <div key={inst.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-surface-input">
-                    <WfStatusBadge status={inst.status} />
-                    <span className="text-xs text-slate-500 font-mono flex-1 truncate">{inst.id.slice(0, 8)}…</span>
-                    <span className="text-xs text-slate-600">
-                      {inst.completed_at
-                        ? new Date(inst.completed_at).toLocaleDateString('fr-FR')
-                        : new Date(inst.started_at).toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="card p-12 text-center text-slate-500 italic border-dashed">Aucun workflow trouvé.</div>
+      ) : (
+        <div className="space-y-4">
+          <div className="card overflow-hidden bg-slate-900/20 border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900/50 border-b border-slate-800 text-slate-500 uppercase text-[9px] font-black tracking-[0.2em]">
+                <tr className="text-left">
+                  <th className="px-6 py-4">Nom du processus</th>
+                  <th className="px-6 py-4 text-center">Version</th>
+                  <th className="px-6 py-4">Statut</th>
+                  <th className="px-6 py-4">Dernière modification</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/50">
+                {paginated.map(w => (
+                  <tr key={w.id} className="hover:bg-slate-900/40 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${w.is_active ? 'bg-brand-500/10 text-brand-400' : 'bg-slate-800 text-slate-500'}`}>
+                          <GitBranch className="w-4 h-4" />
+                        </div>
+                        <p className="font-bold text-white group-hover:text-brand-400 transition-colors">{w.name}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-2 py-0.5 rounded-md bg-surface-input border border-surface-border text-slate-400 font-mono text-[10px] font-bold">v{w.version}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button onClick={() => handleToggle(w)} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${w.is_active ? 'text-green-500' : 'text-slate-500'}`}>
+                        {w.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5 opacity-30" />}
+                        {w.is_active ? 'Actif' : 'Désactivé'}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-xs font-medium italic">
+                      {fmtDate(w.updated_at || w.created_at)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => setEditingId(w.id)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Éditer le design"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400 transition-all" title="Supprimer définitivement"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 pt-2">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Page {page} sur {totalPages}</p>
+              <div className="flex gap-2">
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white disabled:opacity-20 transition-all"><ChevronLeft className="w-4 h-4" /></button>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white disabled:opacity-20 transition-all"><ChevronRight className="w-4 h-4" /></button>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page Principale ─────────────────────────────────────────────────────────
 
 export default function DossiersPage() {
   const { business, user } = useAuthStore();
   const { error: notifError, success } = useNotificationStore();
 
-  const [dossiers, setDossiers]         = useState<Dossier[]>([]);
+  const [tab, setTab] = useState<'dossiers' | 'monitoring' | 'workflows' | 'pretentions' | 'config'>('dossiers');
+  const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [typesAffaire, setTypesAffaire] = useState<RefItem[]>([]);
-  const [tribunaux, setTribunaux]       = useState<RefItem[]>([]);
-  const [statuts, setStatuts]           = useState<RefItem[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [search, setSearch]             = useState('');
-  const [filterStatus, setFilterStatus] = useState('tous');
-  const [filterType, setFilterType]     = useState('tous');
-  const [modal, setModal]               = useState<'new' | Dossier | null>(null);
-  const [deletingId, setDeletingId]     = useState<string | null>(null);
-  const [tab, setTab]                       = useState<'dossiers' | 'monitoring' | 'workflows' | 'pretentions'>('dossiers');
-  const [fichiersPanel, setFichiersPanel]   = useState<Dossier | null>(null);
-  const [workflowPanel, setWorkflowPanel]   = useState<Dossier | null>(null);
-  const [storageInfo, setStorageInfo]       = useState<StorageInfo | null>(null);
+  const [tribunaux, setTribunaux] = useState<RefItem[]>([]);
+  const [statuts, setStatuts] = useState<RefItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState<'new' | Dossier | null>(null);
+  const [workflowPanel, setWorkflowPanel] = useState<Dossier | null>(null);
+  const [fichiersPanel, setFichiersPanel] = useState<Dossier | null>(null);
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
 
   const load = useCallback(async () => {
     if (!business) return;
     setLoading(true);
     try {
       const [d, ta, tr, st] = await Promise.all([
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).from('dossiers').select('*').eq('business_id', business.id).order('created_at', { ascending: false }),
+        supabase.from('dossiers' as any).select('*').eq('business_id', business.id).order('created_at', { ascending: false }),
         getReferenceData('type_affaire',   business.id),
         getReferenceData('tribunal',       business.id),
         getReferenceData('statut_dossier', business.id),
       ]);
-      if (d.error) throw new Error(d.error.message);
-      setDossiers(d.data ?? []);
-      setTypesAffaire(ta);
-      setTribunaux(tr);
-      setStatuts(st);
+      setDossiers((d.data as any) ?? []);
+      setTypesAffaire(ta); setTribunaux(tr); setStatuts(st);
     } catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }, [business, notifError]);
 
   const loadStorage = useCallback(async () => {
-    if (!business) return;
-    try { setStorageInfo(await getStorageInfo(business.id)); } catch { /* silencieux */ }
+    if (business) getStorageInfo(business.id).then(setStorageInfo).catch(() => {});
   }, [business]);
 
   useEffect(() => { load(); loadStorage(); }, [load, loadStorage]);
 
-  async function handleDelete(id: string) {
-    if (!confirm('Supprimer ce dossier ?')) return;
-    setDeletingId(id);
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any).from('dossiers').delete().eq('id', id);
-      if (error) throw new Error(error.message);
-      success('Dossier supprimé');
-      setDossiers((prev) => prev.filter((d) => d.id !== id));
-    } catch (e) { notifError(toUserError(e)); }
-    finally { setDeletingId(null); }
-  }
-
-  const filtered = dossiers.filter((d) => {
-    if (filterStatus !== 'tous' && d.status !== filterStatus) return false;
-    if (filterType !== 'tous'   && d.type_affaire !== filterType) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return d.reference.toLowerCase().includes(q) ||
-        d.client_name.toLowerCase().includes(q) ||
-        (d.adversaire ?? '').toLowerCase().includes(q) ||
-        (d.tribunal ?? '').toLowerCase().includes(q);
-    }
-    return true;
-  });
-
-  const today = new Date().toISOString().slice(0, 10);
-  const stats = {
-    total:    dossiers.length,
-    actifs:   dossiers.filter((d) => ['ouvert','en_cours','plaidé'].includes(d.status)).length,
-    gagnés:   dossiers.filter((d) => d.status === 'gagné').length,
-    audience: dossiers.filter((d) => d.date_audience && d.date_audience >= today).length,
-  };
+  const filtered = dossiers.filter(d => !search || d.reference.toLowerCase().includes(search.toLowerCase()) || d.client_name.toLowerCase().includes(search.toLowerCase()));
 
   const TABS = [
     { id: 'dossiers'    as const, label: 'Dossiers',    icon: <Scale      className="w-4 h-4" /> },
     { id: 'monitoring'  as const, label: 'Monitoring',  icon: <Activity   className="w-4 h-4" /> },
     { id: 'workflows'   as const, label: 'Workflows',   icon: <GitBranch  className="w-4 h-4" /> },
     { id: 'pretentions' as const, label: 'Prétentions', icon: <BookOpen   className="w-4 h-4" /> },
+    { id: 'config'      as const, label: 'Paramètres',  icon: <Settings2   className="w-4 h-4" /> },
   ];
 
-  return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
+  if (!business) return null;
 
-        {/* ── En-tête ── */}
+  return (
+    <div className="h-full overflow-y-auto bg-slate-950/20">
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <Scale className="w-5 h-5 text-purple-400" /> Dossiers & Affaires
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">Gestion des affaires judiciaires et clients</p>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+              <Scale className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight">Gestion des Dossiers</h1>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.1em] mt-0.5">Espace Juridique & Procédures</p>
+            </div>
           </div>
           {tab === 'dossiers' && (
-            <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 text-sm">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nouveau dossier</span>
+            <button onClick={() => setModal('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
+              <Plus className="w-5 h-5" /> Nouveau Dossier
             </button>
           )}
         </div>
 
-        {/* ── Onglets ── */}
-        <div className="flex gap-1 p-1 bg-surface-card rounded-xl border border-surface-border w-fit">
+        <div className="flex gap-1 p-1 bg-slate-900 border border-slate-800 rounded-2xl w-fit shadow-xl">
           {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                tab === t.id
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-surface-hover'
-              }`}
-            >
-              {t.icon}{t.label}
-            </button>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${tab === t.id ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>{t.icon}{t.label}</button>
           ))}
         </div>
 
-        {/* ── Onglet Dossiers ── */}
         {tab === 'dossiers' && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { label: 'Total',             value: stats.total,    cls: 'text-slate-300' },
-                { label: 'Actifs',            value: stats.actifs,   cls: 'text-amber-400' },
-                { label: 'Gagnés',            value: stats.gagnés,   cls: 'text-green-400' },
-                { label: 'Audiences à venir', value: stats.audience, cls: 'text-purple-400' },
-              ].map((s) => (
-                <div key={s.label} className="card p-4">
-                  <p className={`text-2xl font-bold ${s.cls}`}>{s.value}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
-                </div>
-              ))}
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="relative group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+              <input className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un dossier par référence ou client..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Référence, client, adversaire…" className="input pl-9 text-sm" />
-              </div>
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input text-sm w-auto">
-                <option value="tous" className="bg-gray-900 text-white">Tous les statuts</option>
-                {statuts.map((s) => <option key={s.value} value={s.value} className="bg-gray-900 text-white">{s.label}</option>)}
-              </select>
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="input text-sm w-auto">
-                <option value="tous" className="bg-gray-900 text-white">Tous les types</option>
-                {typesAffaire.map((t) => (
-                  <option key={t.value} value={t.value} className="bg-gray-900 text-white">
-                    {(t.metadata?.icon as string) ?? ''} {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {loading ? (
-              <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>
-            ) : filtered.length === 0 ? (
-              <div className="card p-12 text-center">
-                <Briefcase className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-                <p className="text-slate-400">Aucun dossier trouvé</p>
+            {loading ? <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> : filtered.length === 0 ? (
+              <div className="card p-24 text-center space-y-4 border-dashed bg-transparent border-slate-800">
+                <Briefcase className="w-12 h-12 text-slate-800 mx-auto" />
+                <p className="text-slate-500 font-bold tracking-tight">Aucun dossier trouvé.</p>
               </div>
             ) : (
-              <div className="card overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[900px]">
-                    <thead className="border-b border-surface-border">
-                      <tr className="text-xs text-slate-400 uppercase tracking-wider">
-                        <th className="text-left px-4 py-3">Référence</th>
-                        <th className="text-left px-4 py-3">Type</th>
-                        <th className="text-left px-4 py-3">Client</th>
-                        <th className="text-left px-4 py-3">Adversaire</th>
-                        <th className="text-left px-4 py-3">Tribunal</th>
-                        <th className="text-left px-4 py-3">Audience</th>
-                        <th className="text-left px-4 py-3">Statut</th>
-                        <th className="px-4 py-3"></th>
+              <div className="card overflow-hidden bg-slate-900/20 border-slate-800 shadow-2xl">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-900/50 border-b border-slate-800 text-slate-500 uppercase text-[9px] font-black tracking-[0.2em]"><tr className="text-left"><th className="px-6 py-4">Référence</th><th className="px-6 py-4">Client</th><th className="px-6 py-4">Type d&apos;affaire</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {filtered.map(d => (
+                      <tr key={d.id} className="hover:bg-slate-900/40 transition-colors group">
+                        <td className="px-6 py-4 font-mono text-purple-400 font-bold">{d.reference}</td>
+                        <td className="px-6 py-4 text-white font-bold tracking-tight">{d.client_name}</td>
+                        <td className="px-6 py-4 text-slate-400 font-medium">{d.type_affaire}</td>
+                        <td className="px-6 py-4 text-center"><StatusBadge status={d.status} statuts={statuts} /></td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setWorkflowPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-brand-400 transition-all" title="Suivi Workflow"><GitBranch className="w-4 h-4" /></button>
+                            <button onClick={() => setFichiersPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-purple-400 transition-all" title="Pièces Jointes"><Paperclip className="w-4 h-4" /></button>
+                            <button onClick={() => setModal(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Modifier Dossier"><Pencil className="w-4 h-4" /></button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-surface-border">
-                      {filtered.map((d) => {
-                        const typeInfo    = typesAffaire.find((t) => t.value === d.type_affaire);
-                        const tribunalLbl = tribunaux.find((t) => t.value === d.tribunal)?.label ?? d.tribunal;
-                        const audiencePassed = d.date_audience && d.date_audience < today;
-                        const audienceSoon   = d.date_audience && !audiencePassed &&
-                          (new Date(d.date_audience).getTime() - Date.now()) < 7 * 86400000;
-                        return (
-                          <tr key={d.id} className="hover:bg-surface-input/40 transition-colors">
-                            <td className="px-4 py-3 font-mono text-xs text-purple-300 font-semibold">{d.reference}</td>
-                            <td className="px-4 py-3 text-slate-300 whitespace-nowrap">
-                              {(typeInfo?.metadata?.icon as string) ?? ''} {typeInfo?.label ?? d.type_affaire}
-                            </td>
-                            <td className="px-4 py-3">
-                              <p className="text-white font-medium">{d.client_name}</p>
-                              {d.client_phone && (
-                                <p className="text-xs text-slate-500 flex items-center gap-1">
-                                  <Phone className="w-3 h-3" />{d.client_phone}
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-slate-400">{d.adversaire ?? '—'}</td>
-                            <td className="px-4 py-3 text-slate-400 text-xs max-w-[150px] truncate">{tribunalLbl ?? '—'}</td>
-                            <td className="px-4 py-3">
-                              {d.date_audience ? (
-                                <span className={`text-xs flex items-center gap-1 ${audiencePassed ? 'text-slate-600' : audienceSoon ? 'text-amber-400 font-medium' : 'text-slate-300'}`}>
-                                  <Calendar className="w-3 h-3" />{fmtDate(d.date_audience)}
-                                </span>
-                              ) : <span className="text-slate-600 text-xs">—</span>}
-                            </td>
-                            <td className="px-4 py-3"><StatusBadge status={d.status} statuts={statuts} /></td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-1 justify-end">
-                                <button onClick={() => setWorkflowPanel(d)} title="Workflows"
-                                  className="p-1.5 text-slate-500 hover:text-brand-400 rounded-lg hover:bg-surface-input transition-colors">
-                                  <GitBranch className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => setFichiersPanel(d)} title="Fichiers joints"
-                                  className="p-1.5 text-slate-500 hover:text-purple-400 rounded-lg hover:bg-surface-input transition-colors">
-                                  <Paperclip className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => setModal(d)}
-                                  className="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-surface-input transition-colors">
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                {canDelete(user?.role ?? 'staff') && (
-                                  <button onClick={() => handleDelete(d.id)} disabled={deletingId === d.id}
-                                    className="p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-900/20 transition-colors disabled:opacity-40">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-          </>
+          </div>
         )}
 
-        {/* ── Onglet Monitoring ── */}
-        {tab === 'monitoring' && business?.id && (
-          <MonitoringDashboard businessId={business.id} />
-        )}
-
-        {/* ── Onglet Workflows ── */}
-        {tab === 'workflows' && business?.id && (
-          <WorkflowsManager businessId={business.id} />
-        )}
-
-        {/* ── Onglet Prétentions ── */}
-        {tab === 'pretentions' && business?.id && (
-          <PretentionsLibrary businessId={business.id} />
-        )}
-
+        {tab === 'monitoring' && <MonitoringDashboard businessId={business.id} />}
+        {tab === 'workflows' && <WorkflowsManager businessId={business.id} />}
+        {tab === 'pretentions' && <PretentionsLibrary businessId={business.id} />}
+        {tab === 'config' && <ConfigTab businessId={business.id} onRefresh={load} />}
       </div>
 
-      {/* ── Modals & panneaux ── */}
-      {modal && (
-        <DossierModal
-          initial={modal === 'new' ? null : modal}
-          count={dossiers.length}
-          businessId={business?.id ?? ''}
-          typesAffaire={typesAffaire}
-          tribunaux={tribunaux}
-          statuts={statuts}
-          onClose={() => setModal(null)}
-          onSaved={(dossier) => {
-            setModal(null);
-            load();
-            if (!modal || modal === 'new') setFichiersPanel(dossier);
-          }}
-        />
-      )}
-
-      {fichiersPanel && (
-        <FichiersPanel
-          dossier={fichiersPanel}
-          businessId={business?.id ?? ''}
-          storageInfo={storageInfo}
-          onClose={() => setFichiersPanel(null)}
-          onStorageChange={loadStorage}
-        />
-      )}
-
-      {workflowPanel && (
-        <WorkflowPanel
-          dossier={workflowPanel}
-          businessId={business?.id ?? ''}
-          userId={user?.id}
-          onClose={() => setWorkflowPanel(null)}
-        />
-      )}
+      {modal && <DossierModal initial={modal === 'new' ? null : modal} count={dossiers.length} businessId={business.id} typesAffaire={typesAffaire} tribunaux={tribunaux} statuts={statuts} onClose={() => setModal(null)} onSaved={() => { setModal(null); load(); }} />}
+      {workflowPanel && <WorkflowPanel dossier={workflowPanel} businessId={business.id} userId={user?.id} onClose={() => setWorkflowPanel(null)} />}
+      {fichiersPanel && <FichiersPanel dossier={fichiersPanel} businessId={business.id} storageInfo={storageInfo} onClose={() => setFichiersPanel(null)} onStorageChange={loadStorage} />}
     </div>
   );
 }

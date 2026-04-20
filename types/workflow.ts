@@ -1,7 +1,7 @@
 // ─── Legal Workflow Engine v2 — Types stricts ─────────────────────────────────
 
 // ── Rôles ─────────────────────────────────────────────────────────────────────
-export type WorkflowRole = 'LAWYER' | 'MANAGER' | 'SECRETARY' | 'CLIENT';
+export type WorkflowRole = 'LAWYER' | 'MANAGER' | 'SECRETARY' | 'CLIENT' | string;
 
 // ── Types de nœuds ────────────────────────────────────────────────────────────
 export type NodeType =
@@ -29,6 +29,7 @@ export type TriggerType =
   | 'ON_STEP_CHANGE'
   | 'TIMER'
   | 'EXTERNAL_EVENT'
+  | 'AUTO_ON_CREATE'
   | 'MANUAL';
 
 // ── Moteur de règles (sans eval) ──────────────────────────────────────────────

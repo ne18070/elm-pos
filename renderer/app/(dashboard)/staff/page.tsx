@@ -374,7 +374,7 @@ export default function StaffPage() {
                   </p>
                   {!search && (
                     <button onClick={() => setStaffPanel({ item: null })}
-                      className="mt-8 btn-primary px-6 py-3 flex items-center gap-2 font-bold shadow-glow">
+                      className="mt-8 btn-primary px-6 py-3 flex items-center gap-2 font-bold">
                       <Plus className="w-5 h-5" /> Ajouter un employé
                     </button>
                   )}

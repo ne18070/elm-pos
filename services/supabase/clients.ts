@@ -8,6 +8,9 @@ export interface Client {
   id: string;
   business_id: string;
   name: string;
+  type?: string | null; // ex: personne_morale, association
+  identification_number?: string | null; // RCCM, NINEA, CNI
+  representative_name?: string | null; // Pour les personnes morales
   phone?: string | null;
   email?: string | null;
   address?: string | null;

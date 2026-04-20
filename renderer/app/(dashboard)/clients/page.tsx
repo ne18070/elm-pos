@@ -4,7 +4,8 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import {
   Plus, Search, Phone, MapPin, Mail, Pencil, Trash2,
-  Users, X, Check, Upload, Download,
+  Users, X, Check, Upload, Download, Building2, UserCircle2,
+  Loader2
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -13,13 +14,23 @@ import {
   getClients, createClient, updateClient, deleteClient,
   type Client, type ClientForm,
 } from '@services/supabase/clients';
+import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
 
-const EMPTY_FORM: ClientForm = { name: '', phone: '', email: '', address: '', notes: '' };
+const EMPTY_FORM: ClientForm = { 
+  name: '', 
+  type: '', 
+  identification_number: '', 
+  representative_name: '', 
+  phone: '', 
+  email: '', 
+  address: '', 
+  notes: '' 
+};
 
 function exportCSV(clients: Client[]) {
-  const header = 'nom,telephone,email,adresse,notes';
+  const header = 'nom,type,id_number,representant,telephone,email,adresse,notes';
   const rows = clients.map((c) =>
-    [c.name, c.phone ?? '', c.email ?? '', c.address ?? '', c.notes ?? '']
+    [c.name, c.type ?? '', c.identification_number ?? '', c.representative_name ?? '', c.phone ?? '', c.email ?? '', c.address ?? '', c.notes ?? '']
       .map((v) => `"${v.replace(/"/g, '""')}"`)
       .join(',')
   );
@@ -27,7 +38,7 @@ function exportCSV(clients: Client[]) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'clients.csv';
+  a.download = 'clients_juridiques.csv';
   a.click();
 }
 
@@ -36,6 +47,7 @@ export default function ClientsPage() {
   const { success, error: notifError } = useNotificationStore();
 
   const [clients, setClients]     = useState<Client[]>([]);
+  const [typesClient, setTypesClient] = useState<RefItem[]>([]);
   const [search, setSearch]       = useState('');
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
@@ -48,6 +60,7 @@ export default function ClientsPage() {
   useEffect(() => {
     if (!business) return;
     load();
+    getReferenceData('type_client', business.id).then(setTypesClient);
   }, [business]);
 
   async function load() {
@@ -61,7 +74,16 @@ export default function ClientsPage() {
 
   function openPanel(item: Client | null) {
     setForm(item
-      ? { name: item.name, phone: item.phone ?? '', email: item.email ?? '', address: item.address ?? '', notes: item.notes ?? '' }
+      ? { 
+          name: item.name, 
+          type: item.type ?? '', 
+          identification_number: item.identification_number ?? '',
+          representative_name: item.representative_name ?? '',
+          phone: item.phone ?? '', 
+          email: item.email ?? '', 
+          address: item.address ?? '', 
+          notes: item.notes ?? '' 
+        }
       : EMPTY_FORM
     );
     setPanel({ item });
@@ -74,11 +96,11 @@ export default function ClientsPage() {
       if (panel?.item) {
         const updated = await updateClient(panel.item.id, form);
         setClients((prev) => prev.map((c) => c.id === updated.id ? updated : c));
-        success('Client mis à jour');
+        success('Entité mise à jour');
       } else {
         const created = await createClient(business.id, form);
         setClients((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-        success('Client ajouté');
+        success('Entité ajoutée');
       }
       setPanel(null);
     } catch (e) { notifError(toUserError(e)); }
@@ -86,35 +108,37 @@ export default function ClientsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Supprimer ce client ?')) return;
+    if (!confirm('Supprimer cette entité ?')) return;
     try {
       await deleteClient(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
-      success('Client supprimé');
+      success('Entité supprimée');
     } catch (e) { notifError(toUserError(e)); }
   }
 
   const filtered = clients.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.phone ?? '').includes(search) ||
-    (c.email ?? '').toLowerCase().includes(search.toLowerCase())
+    (c.representative_name ?? '').toLowerCase().includes(search.toLowerCase())
   );
+
+  const isMoral = form.type === 'personne_morale' || form.type === 'association';
 
   return (
     <div className="h-full flex flex-col">
 
       {/* ── Header ── */}
-      <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-3 flex-wrap bg-slate-900/50">
         <div>
-          <h1 className="text-xl font-bold text-white">Clients</h1>
-          <p className="text-xs text-slate-500">{clients.length} client{clients.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-bold text-white">Entités Juridiques (Clients)</h1>
+          <p className="text-xs text-slate-500">{clients.length} entité{clients.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               className="input pl-9 h-9 text-sm w-36 sm:w-48"
-              placeholder="Nom, téléphone…"
+              placeholder="Nom, Représentant…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -146,167 +170,143 @@ export default function ClientsPage() {
       </div>
 
       {/* ── Corps ── */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-950/20">
 
-        {/* Explication — visible quand vide */}
         {!loading && clients.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
-              <Users className="w-8 h-8 text-slate-500" />
+            <div className="w-20 h-20 rounded-3xl bg-surface-input flex items-center justify-center border border-surface-border">
+              <Building2 className="w-10 h-10 text-slate-500" />
             </div>
             <div>
-              <p className="text-lg font-semibold text-white">Aucun client enregistré</p>
+              <p className="text-lg font-bold text-white">Aucun client enregistré</p>
               <p className="text-sm text-slate-400 mt-1 max-w-sm">
-                Enregistrez vos clients pour les retrouver facilement au moment du paiement, suivre leurs achats et leur proposer des offres personnalisées.
+                Gérez vos clients en tant qu&apos;entités juridiques typées (Sociétés, Associations, Particuliers).
               </p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-2">
-                <Upload className="w-4 h-4" /> Importer CSV
-              </button>
-              <button onClick={() => openPanel(null)} className="btn-primary flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Ajouter un client
-              </button>
-            </div>
-
-            {/* Explication CSV */}
-            <div className="mt-2 p-4 rounded-xl bg-surface-input border border-surface-border text-left w-full max-w-md space-y-2 text-sm">
-              <p className="font-medium text-white">Vous avez déjà une liste de clients ?</p>
-              <p className="text-xs text-slate-400">
-                Importez un fichier <strong className="text-slate-300">.csv</strong> (Excel, Google Sheets…) avec les colonnes :
-              </p>
-              <div className="font-mono text-xs bg-surface-card rounded-lg px-3 py-2 text-brand-300 border border-surface-border">
-                nom, telephone, email, adresse, notes
-              </div>
-              <p className="text-xs text-slate-500">
-                Seule la colonne <strong className="text-slate-300">nom</strong> est obligatoire. Les autres sont optionnelles.
-              </p>
-            </div>
+            <button onClick={() => openPanel(null)} className="btn-primary flex items-center gap-2 px-6">
+              <Plus className="w-5 h-5" /> Ajouter votre premier client
+            </button>
           </div>
         )}
 
-        {loading && (
-          <p className="text-center text-slate-500 py-12">Chargement…</p>
-        )}
+        {loading && <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>}
 
-        {!loading && clients.length > 0 && filtered.length === 0 && (
-          <p className="text-center text-slate-500 py-12">Aucun résultat pour « {search} »</p>
-        )}
-
-        <div className="max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((c) => (
-            <div key={c.id} className="card p-4 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-brand-400">
-                {c.name.charAt(0).toUpperCase()}
+        <div className="max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((c) => {
+            const isEntity = c.type === 'personne_morale' || c.type === 'association';
+            return (
+              <div key={c.id} className="card p-5 flex items-start gap-4 hover:border-brand-500/30 transition-all group">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isEntity ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
+                  {isEntity ? <Building2 className="w-6 h-6" /> : <UserCircle2 className="w-6 h-6" />}
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-white truncate">{c.name}</p>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-500 uppercase font-black tracking-tighter border border-slate-700">
+                      {typesClient.find(t => t.value === c.type)?.label || c.type || 'Inconnu'}
+                    </span>
+                  </div>
+                  {c.representative_name && (
+                    <p className="text-xs text-slate-300 flex items-center gap-1.5">
+                      <UserCircle2 className="w-3 h-3 text-slate-500" /> Rep: {c.representative_name}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+                    {c.phone && <p className="text-[11px] text-slate-500 flex items-center gap-1.5"><Phone className="w-3 h-3" /> {c.phone}</p>}
+                    {c.email && <p className="text-[11px] text-slate-500 flex items-center gap-1.5"><Mail className="w-3 h-3" /> {c.email}</p>}
+                    {c.identification_number && <p className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5"><Check className="w-3 h-3 text-brand-400" /> {c.identification_number}</p>}
+                  </div>
+                </div>
+                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openPanel(c)} className="p-2 rounded-xl bg-slate-900 hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => remove(c.id)} className="p-2 rounded-xl bg-slate-900 hover:text-red-400 transition-all"><Trash2 className="w-4 h-4" /></button>
+                </div>
               </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-sm font-semibold text-white truncate">{c.name}</p>
-                {c.phone && (
-                  <p className="text-xs text-slate-400 flex items-center gap-1">
-                    <Phone className="w-3 h-3 shrink-0" /> {c.phone}
-                  </p>
-                )}
-                {c.email && (
-                  <p className="text-xs text-slate-400 flex items-center gap-1 truncate">
-                    <Mail className="w-3 h-3 shrink-0" /> {c.email}
-                  </p>
-                )}
-                {c.address && (
-                  <p className="text-xs text-slate-400 flex items-center gap-1 truncate">
-                    <MapPin className="w-3 h-3 shrink-0" /> {c.address}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-1 shrink-0">
-                <button
-                  onClick={() => openPanel(c)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => remove(c.id)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Panneau latéral ── */}
+      {/* ── Panneau latéral (Formulaire Complet) ── */}
       {panel && (
-        <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-            <h3 className="font-semibold text-white">{panel.item ? 'Modifier client' : 'Nouveau client'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
-              <X className="w-4 h-4" />
-            </button>
+        <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[450px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40 animate-in slide-in-from-right duration-300">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-surface-border">
+            <h3 className="font-bold text-white text-lg">{panel.item ? 'Modifier l\'entité' : 'Nouvelle entité juridique'}</h3>
+            <button onClick={() => setPanel(null)} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <div>
-              <label className="label">Nom <span className="text-red-400">*</span></label>
-              <input
-                className="input"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Ex : Fatou Diop"
-                autoFocus
-              />
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="label">Type d&apos;entité <span className="text-red-400">*</span></label>
+                <select 
+                  className="input bg-slate-950" 
+                  value={form.type || ''} 
+                  onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
+                >
+                  <option value="">— Sélectionner le type —</option>
+                  {typesClient.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="label">Nom complet / Raison sociale <span className="text-red-400">*</span></label>
+                <input className="input" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Cabinet MBAYE ou Jean Dupont" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">{isMoral ? 'RCCM / NINEA' : 'CNI / Passeport'}</label>
+                  <input className="input font-mono" value={form.identification_number || ''} onChange={(e) => setForm(f => ({ ...f, identification_number: e.target.value }))} placeholder="ID..." />
+                </div>
+                {isMoral && (
+                  <div>
+                    <label className="label">Représentant légal</label>
+                    <input className="input" value={form.representative_name || ''} onChange={(e) => setForm(f => ({ ...f, representative_name: e.target.value }))} placeholder="Nom du gérant..." />
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="label">Téléphone</label>
-              <input
-                className="input"
-                value={form.phone ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="+221 77 000 00 00"
-              />
+
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="flex items-center gap-2 text-slate-500 mb-2">
+                <Phone className="w-3.5 h-3.5" /> <span className="text-[10px] font-black uppercase tracking-widest">Coordonnées</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Téléphone</label>
+                  <input className="input" value={form.phone || ''} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+221 ..." />
+                </div>
+                <div>
+                  <label className="label">Email</label>
+                  <input className="input" type="email" value={form.email || ''} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="client@exemple.com" />
+                </div>
+              </div>
+              <div>
+                <label className="label">Adresse</label>
+                <input className="input" value={form.address || ''} onChange={(e) => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Adresse complète..." />
+              </div>
             </div>
+
             <div>
-              <label className="label">Email</label>
-              <input
-                className="input"
-                type="email"
-                value={form.email ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="client@exemple.com"
-              />
-            </div>
-            <div>
-              <label className="label">Adresse</label>
-              <input
-                className="input"
-                value={form.address ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Ex : Quartier Liberté 5"
-              />
-            </div>
-            <div>
-              <label className="label">Notes</label>
-              <textarea
-                className="input resize-none h-20"
-                value={form.notes ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Infos utiles…"
-              />
+              <label className="label">Notes internes</label>
+              <textarea className="input resize-none h-24 text-xs" value={form.notes || ''} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Informations complémentaires sur l'entité..." />
             </div>
           </div>
-          <div className="px-5 py-4 border-t border-surface-border">
+
+          <div className="p-6 border-t border-surface-border bg-slate-900/50">
             <button
               onClick={save}
-              disabled={saving || !form.name.trim()}
-              className="btn-primary w-full h-10"
+              disabled={saving || !form.name.trim() || !form.type}
+              className="bg-brand-500 hover:bg-brand-600 text-white font-bold w-full py-3.5 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-brand-500/20 disabled:opacity-50 transition-all active:scale-95"
             >
-              {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+              {panel.item ? 'Enregistrer les modifications' : 'Ajouter l\'entité'}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Modal Import ── */}
       {showImport && business && (
         <ClientsImportModal
           businessId={business.id}
