@@ -18,8 +18,8 @@ async function requireSuperadmin(req: NextRequest): Promise<string | null> {
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data: profile } = await admin.from('users').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'superadmin') return 'Accès superadmin requis';
+  const { data: profile } = await admin.from('users').select('is_superadmin').eq('id', user.id).single();
+  if (!profile?.is_superadmin) return 'Accès superadmin requis';
 
   return null; // OK
 }
