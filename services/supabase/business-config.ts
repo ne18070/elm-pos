@@ -122,7 +122,7 @@ export async function setTypeModules(
 
   if (modules.length === 0) return;
   const { error: ins } = await supabase.from('business_type_modules').insert(
-    modules.map((m) => ({ business_type_id: typeId, module_id: m.module_id, is_default: m.is_default }))
+    modules.map((m: any) => ({ business_type_id: typeId, module_id: m.module_id, is_default: m.is_default }))
   );
   if (ins) throw new Error(ins.message);
 }

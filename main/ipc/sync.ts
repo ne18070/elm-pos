@@ -137,10 +137,13 @@ async function runSync(): Promise<{ processed: number; failed: number }> {
 
 async function processItem(item: SyncRow): Promise<void> {
   const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) throw new Error('Supabase URL or Key missing in main process');
+
+  const supabase = createClient(url, key);
 
   const payload = JSON.parse(item.payload) as Record<string, unknown>;
 

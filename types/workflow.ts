@@ -158,6 +158,7 @@ export interface WorkflowEdge {
   from:                    string;
   to:                      string;
   label:                   string;
+  color?:                  string;   // Couleur personnalisée pour le builder
   condition?:              ConditionGroup;
   requires_confirmation?:  boolean;
   allowed_roles?:          WorkflowRole[];

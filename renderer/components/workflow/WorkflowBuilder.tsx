@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useRef, useCallback, useId } from 'react';
+import { useState, useRef, useCallback, useId, useEffect } from 'react';
 import {
   Plus, Trash2, Save, Loader2, AlertTriangle, CheckCircle2,
   User, Zap, FileText, GitBranch, Clock, Timer, X, Link2,
+  ZoomIn, ZoomOut, Maximize, Expand, Shrink, GripVertical,
+  Undo2, Redo2, LocateFixed, Printer
 } from 'lucide-react';
 import { saveWorkflow } from '@services/supabase/workflows';
 import { validateDefinition } from '@/lib/workflow-engine';
@@ -12,15 +14,24 @@ import type {
   NodeType, WorkflowRole,
 } from '@pos-types';
 
-// ── Config visuelle des types de nœuds ───────────────────────────────────────
-const NODE_CONFIG: Record<NodeType, { label: string; color: string; icon: React.ReactNode; bg: string }> = {
-  USER_TASK:    { label: 'Tâche',       color: 'border-blue-500',   bg: 'bg-blue-900/20',   icon: <User      className="w-3.5 h-3.5" /> },
-  ACTION:       { label: 'Action auto', color: 'border-purple-500', bg: 'bg-purple-900/20', icon: <Zap       className="w-3.5 h-3.5" /> },
-  LEGAL_CLAIM:  { label: 'Prétention',  color: 'border-brand-500',  bg: 'bg-brand-900/20',  icon: <FileText  className="w-3.5 h-3.5" /> },
-  CONDITION:    { label: 'Condition',   color: 'border-amber-500',  bg: 'bg-amber-900/20',  icon: <GitBranch className="w-3.5 h-3.5" /> },
-  WAIT_EVENT:   { label: 'Attente',     color: 'border-cyan-500',   bg: 'bg-cyan-900/20',   icon: <Clock     className="w-3.5 h-3.5" /> },
-  DELAY:        { label: 'Délai',       color: 'border-orange-500', bg: 'bg-orange-900/20', icon: <Timer     className="w-3.5 h-3.5" /> },
-  END:          { label: 'Fin',         color: 'border-green-500',  bg: 'bg-green-900/20',  icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+// ── Configuration ───────────────────────────────────────────────────────────
+const EDGE_COLORS = [
+  { label: 'Défaut', value: '#94a3b8' }, { label: 'Succès', value: '#10b981' },
+  { label: 'Erreur', value: '#f43f5e' }, { label: 'Alerte', value: '#f59e0b' },
+  { label: 'Info',   value: '#3b82f6' }, { label: 'Violet', value: '#8b5cf6' },
+  { label: 'Cyan',   value: '#06b6d4' }, { label: 'Orange', value: '#f97316' },
+  { label: 'Rose',   value: '#ec4899' }, { label: 'Indigo', value: '#6366f1' },
+  { label: 'Teal',   value: '#14b8a6' }, { label: 'Sombre', value: '#475569' },
+];
+
+const NODE_CONFIG: Record<NodeType, { label: string; color: string; icon: React.ReactNode; bg: string; text: string }> = {
+  USER_TASK:    { label: 'Tâche',       color: 'border-blue-400',   bg: 'bg-blue-50',   text: 'text-blue-900',   icon: <User      className="w-3.5 h-3.5" /> },
+  ACTION:       { label: 'Action auto', color: 'border-purple-400', bg: 'bg-purple-50', text: 'text-purple-900', icon: <Zap       className="w-3.5 h-3.5" /> },
+  LEGAL_CLAIM:  { label: 'Prétention',  color: 'border-amber-500',  bg: 'bg-amber-50',  text: 'text-amber-900',  icon: <FileText  className="w-3.5 h-3.5" /> },
+  CONDITION:    { label: 'Condition',   color: 'border-orange-400', bg: 'bg-orange-50', text: 'text-orange-900', icon: <GitBranch className="w-3.5 h-3.5" /> },
+  WAIT_EVENT:   { label: 'Attente',     color: 'border-cyan-500',   bg: 'bg-cyan-50',   text: 'text-cyan-900',   icon: <Clock     className="w-3.5 h-3.5" /> },
+  DELAY:        { label: 'Délai',       color: 'border-rose-400',   bg: 'bg-rose-50',   text: 'text-rose-900',   icon: <Timer     className="w-3.5 h-3.5" /> },
+  END:          { label: 'Fin',         color: 'border-emerald-500',bg: 'bg-emerald-50',text: 'text-emerald-900',icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
 };
 
 const ROLES: WorkflowRole[] = ['LAWYER', 'MANAGER', 'SECRETARY', 'CLIENT'];
@@ -28,486 +39,486 @@ const ROLE_LABELS: Record<WorkflowRole, string> = {
   LAWYER: 'Avocat', MANAGER: 'Gestionnaire', SECRETARY: 'Secrétaire', CLIENT: 'Client',
 };
 
-const GRID = 160;  // taille de la grille en px
 const NODE_W = 148;
 const NODE_H = 64;
 
-// ── Génération d'ID court ─────────────────────────────────────────────────────
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
-// ── Nœud visuel sur le canvas ─────────────────────────────────────────────────
+function getBezierPath(fx: number, fy: number, tx: number, ty: number) {
+  const cy = fy + (ty - fy) / 2;
+  return `M ${fx} ${fy} C ${fx} ${cy}, ${tx} ${cy}, ${tx} ${ty}`;
+}
+
+interface Snapshot {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  initialNodeId: string;
+  name: string;
+}
+
+// ── Nœud visuel ──────────────────────────────────────────────────────────────
 function CanvasNode({
-  node, selected, onSelect, onDragStart, onStartEdge, onDelete, isInitial,
+  node, selected, onSelect, onMouseDown, onStartConnection, onDelete, isInitial, isPotentialTarget
 }: {
-  node: WorkflowNode; selected: boolean; isInitial: boolean;
-  onSelect: () => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onStartEdge: (nodeId: string) => void;
+  node: WorkflowNode; selected: boolean; isInitial: boolean; zoom: number; isPotentialTarget: boolean;
+  onSelect: (e: React.MouseEvent) => void;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onStartConnection: (nodeId: string, e: React.MouseEvent) => void;
   onDelete: () => void;
 }) {
   const cfg = NODE_CONFIG[node.type];
   const pos = node.position ?? { x: 0, y: 0 };
-
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
-      onClick={onSelect}
-      style={{
-        position: 'absolute',
-        left: pos.x, top: pos.y,
-        width: NODE_W, height: NODE_H,
-        cursor: 'grab',
-        zIndex: selected ? 10 : 1,
-      }}
-      className={`rounded-xl border-2 ${cfg.color} ${cfg.bg} flex flex-col justify-between p-2.5
-        transition-shadow select-none
-        ${selected ? 'shadow-lg shadow-black/40 ring-2 ring-white/20' : 'hover:shadow-md'}
-        ${isInitial ? 'ring-2 ring-brand-400/60' : ''}`}
+      onMouseDown={onMouseDown} onClick={onSelect}
+      style={{ position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, cursor: 'grab', zIndex: selected ? 10 : 1, userSelect: 'none', WebkitUserDrag: 'none' } as any}
+      className={`rounded-xl border-2 ${cfg.color} ${cfg.bg} flex flex-col justify-between p-2.5 transition-all group shadow-sm ${selected ? 'shadow-xl ring-2 ring-slate-400/30 brightness-[0.98]' : 'hover:shadow-md'} ${isInitial ? 'ring-2 ring-blue-500/50' : ''} ${isPotentialTarget ? 'scale-105 border-blue-600 ring-4 ring-blue-500/20' : ''}`}
     >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className="shrink-0 opacity-70">{cfg.icon}</span>
-        <span className="text-[11px] font-semibold text-white truncate">{node.label}</span>
+      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-400 z-20 group-hover:border-slate-600 transition-colors" />
+      <div className="flex items-center gap-1.5 min-w-0 pointer-events-none">
+        <span className={`shrink-0 ${cfg.text} opacity-80`}>{cfg.icon}</span>
+        <span className={`text-[11px] font-bold ${cfg.text} truncate`}>{node.label}</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-[9px] text-slate-500 uppercase">{cfg.label}</span>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={e => { e.stopPropagation(); onStartEdge(node.id); }}
-            className="p-0.5 rounded text-slate-500 hover:text-brand-400 hover:bg-brand-900/30 transition-colors"
-            title="Connecter"
-          >
-            <Link2 className="w-3 h-3" />
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); onDelete(); }}
-            className="p-0.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
+        <span className={`text-[9px] ${cfg.text} opacity-50 uppercase font-bold tracking-tight`}>{cfg.label}</span>
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3" /></button>
       </div>
+      {node.type !== 'END' && (
+        <div onMouseDown={(e) => onStartConnection(node.id, e)} className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-400 hover:border-blue-500 hover:scale-125 z-20 cursor-crosshair transition-all flex items-center justify-center shadow-sm group-hover:border-slate-600">
+          <div className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-blue-500" />
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Panneau d'édition d'un nœud ───────────────────────────────────────────────
+// ── Panneau d'édition ────────────────────────────────────────────────────────
 function NodeEditor({
-  node, isInitial, onUpdate, onSetInitial, onClose,
+  node, isInitial, outgoingEdges, onUpdate, onSetInitial, onDeleteEdge, onUpdateEdge, onClose,
 }: {
-  node: WorkflowNode; isInitial: boolean;
-  onUpdate: (patch: Partial<WorkflowNode>) => void;
-  onSetInitial: () => void;
-  onClose: () => void;
+  node: WorkflowNode; isInitial: boolean; outgoingEdges: WorkflowEdge[];
+  onUpdate: (patch: Partial<WorkflowNode>) => void; onSetInitial: () => void;
+  onDeleteEdge: (id: string) => void; onUpdateEdge: (id: string, patch: Partial<WorkflowEdge>) => void; onClose: () => void;
 }) {
   const cfg = NODE_CONFIG[node.type];
   return (
-    <div className="card p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`p-1.5 rounded-lg ${cfg.bg} border ${cfg.color}`}>{cfg.icon}</span>
-          <p className="font-semibold text-white text-sm">{cfg.label}</p>
-        </div>
-        <button onClick={onClose} className="text-slate-500 hover:text-white">
-          <X className="w-4 h-4" />
-        </button>
+    <div className="bg-white rounded-2xl p-5 space-y-6 border border-slate-200 shadow-xl animate-in slide-in-from-right-4 overflow-y-auto max-h-full scrollbar-thin">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-2.5"><span className={`p-2 rounded-xl ${cfg.bg} border ${cfg.color} ${cfg.text}`}>{cfg.icon}</span><div><p className="font-bold text-slate-900 text-sm leading-none">{cfg.label}</p><p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mt-1">Configuration</p></div></div>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-4 h-4" /></button>
       </div>
-
-      <div>
-        <label className="label text-xs">Libellé *</label>
-        <input
-          className="input text-sm"
-          value={node.label}
-          onChange={e => onUpdate({ label: e.target.value } as Partial<WorkflowNode>)}
-        />
+      <div className="space-y-4">
+        <div><label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-1.5 block">Libellé</label><input className="input text-sm text-slate-900" value={node.label} onChange={e => onUpdate({ label: e.target.value } as Partial<WorkflowNode>)} /></div>
+        {node.type !== 'END' && node.type !== 'CONDITION' && (
+          <div><label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 mb-1.5 block">Intervenant requis</label>
+            <select className="input text-sm text-slate-900" value={node.assigned_role ?? ''} onChange={e => onUpdate({ assigned_role: (e.target.value || undefined) as WorkflowRole | undefined } as Partial<WorkflowNode>)}>
+              <option value="">— Automatique —</option>{ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+            </select>
+          </div>
+        )}
       </div>
-
-      <div>
-        <label className="label text-xs">Description</label>
-        <textarea
-          className="input text-sm resize-none"
-          rows={2}
-          value={node.description ?? ''}
-          onChange={e => onUpdate({ description: e.target.value } as Partial<WorkflowNode>)}
-        />
+      {outgoingEdges.length > 0 && (
+        <div className="space-y-3 pt-4 border-t border-slate-100">
+          <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">Transitions sortantes</label>
+          {outgoingEdges.map(edge => (
+            <div key={edge.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+              <div className="flex items-center gap-2">
+                <input className="flex-1 bg-white border border-slate-200 rounded-lg text-[11px] px-2 py-1.5 outline-none focus:border-blue-400 transition-all font-bold text-slate-700" value={edge.label} onChange={e => onUpdateEdge(edge.id, { label: e.target.value })} placeholder="Nom de l'action" />
+                <button onClick={() => { if(window.confirm('Supprimer cette transition ?')) onDeleteEdge(edge.id); }} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {EDGE_COLORS.map(c => (
+                  <button key={c.value} onClick={() => onUpdateEdge(edge.id, { color: c.value })} className={`w-4.5 h-4.5 rounded-full border-2 transition-all hover:scale-110 ${edge.color === c.value || (!edge.color && c.value === '#94a3b8') ? 'border-slate-900 scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value, width: '18px', height: '18px' }} title={c.label} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="pt-4 border-t border-slate-100">
+        {!isInitial && node.type !== 'END' && (
+          <button onClick={onSetInitial} className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-2 py-1"><Maximize className="w-3 h-3" /> Définir comme point de départ</button>
+        )}
+        {isInitial && <p className="text-xs text-blue-600 font-bold flex items-center gap-1.5">⭐ Étape de lancement</p>}
       </div>
-
-      {node.type !== 'END' && node.type !== 'CONDITION' && (
-        <div>
-          <label className="label text-xs">Rôle assigné</label>
-          <select
-            className="input text-sm"
-            value={node.assigned_role ?? ''}
-            onChange={e => onUpdate({ assigned_role: (e.target.value || undefined) as WorkflowRole | undefined } as Partial<WorkflowNode>)}
-          >
-            <option value="">— Aucun —</option>
-            {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-          </select>
-        </div>
-      )}
-
-      {node.type === 'LEGAL_CLAIM' && (
-        <div>
-          <label className="label text-xs">Template juridique</label>
-          <textarea
-            className="input text-sm font-mono resize-y min-h-[80px]"
-            value={(node as Extract<WorkflowNode, { type: 'LEGAL_CLAIM' }>).template ?? ''}
-            onChange={e => onUpdate({ template: e.target.value } as Partial<WorkflowNode>)}
-            placeholder="Cher {{client.nom}}, ..."
-          />
-        </div>
-      )}
-
-      {node.type === 'DELAY' && (
-        <div>
-          <label className="label text-xs">Délai (heures)</label>
-          <input
-            type="number" min={1} className="input text-sm"
-            value={(node as Extract<WorkflowNode, { type: 'DELAY' }>).delay_hours ?? 24}
-            onChange={e => onUpdate({ delay_hours: parseInt(e.target.value) } as Partial<WorkflowNode>)}
-          />
-        </div>
-      )}
-
-      {node.type === 'WAIT_EVENT' && (
-        <div>
-          <label className="label text-xs">Clé d'événement attendu</label>
-          <input
-            className="input text-sm font-mono"
-            value={(node as Extract<WorkflowNode, { type: 'WAIT_EVENT' }>).event_key ?? ''}
-            onChange={e => onUpdate({ event_key: e.target.value } as Partial<WorkflowNode>)}
-            placeholder="whatsapp_reply"
-          />
-        </div>
-      )}
-
-      {!isInitial && node.type !== 'END' && (
-        <button onClick={onSetInitial} className="text-xs text-brand-400 hover:text-brand-300 underline">
-          Définir comme nœud initial
-        </button>
-      )}
-      {isInitial && (
-        <p className="text-xs text-brand-400 font-semibold">⭐ Nœud de départ</p>
-      )}
     </div>
   );
 }
 
 // ── Composant principal ───────────────────────────────────────────────────────
-interface WorkflowBuilderProps {
-  businessId:   string;
-  workflowId?:  string;
-  initialName?: string;
-  initialDef?:  WorkflowDefinition;
-  onSaved?:     (id: string) => void;
-}
-
 export function WorkflowBuilder({
   businessId, workflowId, initialName = 'Nouveau workflow', initialDef, onSaved,
-}: WorkflowBuilderProps) {
+}: {
+  businessId: string; workflowId?: string; initialName?: string; initialDef?: WorkflowDefinition; onSaved?: (id: string) => void;
+}) {
   const id = useId();
-
   const defaultDef: WorkflowDefinition = initialDef ?? {
-    nodes: [
-      { id: 'start', type: 'USER_TASK', label: 'Étape initiale', position: { x: 40, y: 40 } },
-      { id: 'end1',  type: 'END',       label: 'Terminé',         position: { x: 40, y: 200 } },
-    ],
-    edges: [],
-    initial_node_id: 'start',
+    nodes: [{ id: 'start', type: 'USER_TASK', label: 'Démarrage', position: { x: 120, y: 80 } }, { id: 'end1',  type: 'END', label: 'Terminé', position: { x: 120, y: 300 } }],
+    edges: [], initial_node_id: 'start',
   };
 
-  const [name, setName]           = useState(initialName);
-  const [nodes, setNodes]         = useState<WorkflowNode[]>(defaultDef.nodes);
-  const [edges, setEdges]         = useState<WorkflowEdge[]>(defaultDef.edges);
+  const [name, setName]                   = useState(initialName);
+  const [nodes, setNodes]                 = useState<WorkflowNode[]>(defaultDef.nodes);
+  const [edges, setEdges]                 = useState<WorkflowEdge[]>(defaultDef.edges);
   const [initialNodeId, setInitialNodeId] = useState(defaultDef.initial_node_id);
   const [selectedNode, setSelectedNode]   = useState<string | null>(null);
-  const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
-  const [saving, setSaving]       = useState(false);
-  const [errors, setErrors]       = useState<string[]>([]);
-  const [saved, setSaved]         = useState(false);
+  const [selectedEdge, setSelectedEdge]   = useState<string | null>(null);
+  const [saving, setSaving]               = useState(false);
+  const [errors, setErrors]               = useState<string[]>([]);
+  const [saved, setSaved]                 = useState(false);
+  const [zoom, setZoom]                   = useState(1);
+  const [isFullscreen, setIsFullscreen]   = useState(false);
 
-  const dragNodeId = useRef<string | null>(null);
-  const dragOffset = useRef({ x: 0, y: 0 });
+  // ── Gestion de l'historique (Undo/Redo) ───────────────────────────────────
+  const [history, setHistory] = useState<Snapshot[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUpdatingFromHistory = useRef(false);
+
+  const takeSnapshot = useCallback(() => {
+    if (isUpdatingFromHistory.current) return;
+    const snapshot: Snapshot = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)), initialNodeId, name };
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      return [...newHistory, snapshot].slice(-50);
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [nodes, edges, initialNodeId, name, historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex <= 0) return;
+    isUpdatingFromHistory.current = true;
+    const prev = history[historyIndex - 1];
+    setNodes(prev.nodes); setEdges(prev.edges); setInitialNodeId(prev.initialNodeId); setName(prev.name);
+    setHistoryIndex(historyIndex - 1);
+    setTimeout(() => { isUpdatingFromHistory.current = false; }, 10);
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+    isUpdatingFromHistory.current = true;
+    const next = history[historyIndex + 1];
+    setNodes(next.nodes); setEdges(next.edges); setInitialNodeId(next.initialNodeId); setName(next.name);
+    setHistoryIndex(historyIndex + 1);
+    setTimeout(() => { isUpdatingFromHistory.current = false; }, 10);
+  }, [history, historyIndex]);
+
+  const centerDiagram = useCallback(() => {
+    if (!canvasRef.current || nodes.length === 0) return;
+    const minX = Math.min(...nodes.map(n => n.position?.x ?? 0));
+    const maxX = Math.max(...nodes.map(n => (n.position?.x ?? 0) + NODE_W));
+    const minY = Math.min(...nodes.map(n => n.position?.y ?? 0));
+    const maxY = Math.max(...nodes.map(n => (n.position?.y ?? 0) + NODE_H));
+    const diagramCenterX = (minX + maxX) / 2;
+    const diagramCenterY = (minY + maxY) / 2;
+    const viewportWidth = canvasRef.current.clientWidth;
+    const viewportHeight = canvasRef.current.clientHeight;
+    canvasRef.current.scrollTo({
+      left: (diagramCenterX * zoom) - (viewportWidth / 2),
+      top:  (diagramCenterY * zoom) - (viewportHeight / 2),
+      behavior: 'smooth'
+    });
+  }, [nodes, zoom]);
+
+  useEffect(() => {
+    if (history.length === 0) {
+      const initial = { nodes: defaultDef.nodes, edges: defaultDef.edges, initialNodeId: defaultDef.initial_node_id, name: initialName };
+      setHistory([initial]); setHistoryIndex(0);
+    }
+  }, []);
+
+  const zoomIn = useCallback(() => setZoom(z => Math.min(2, z + 0.1)), []);
+  const zoomOut = useCallback(() => setZoom(z => Math.max(0.2, z - 0.1)), []);
+  const resetZoom = useCallback(() => setZoom(1), []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) { setIsFullscreen(false); return; }
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomIn(); }
+        else if (e.key === '-') { e.preventDefault(); zoomOut(); }
+        else if (e.key === '0') { e.preventDefault(); resetZoom(); }
+        else if (e.key === 'z') { e.preventDefault(); undo(); }
+        else if (e.key === 'y' || (e.shiftKey && e.key === 'Z')) { e.preventDefault(); redo(); }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [zoomIn, zoomOut, resetZoom, isFullscreen, undo, redo]);
+
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (canvasRef.current?.contains(e.target as Node)) {
+          e.preventDefault();
+          if (e.deltaY < 0) zoomIn(); else zoomOut();
+        }
+      }
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [zoomIn, zoomOut]);
+
+  // Dragging states
+  const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number; startPos: {x:number, y:number} } | null>(null);
+  const [draggingNew, setDraggingNew] = useState<{ type: NodeType; x: number; y: number } | null>(null);
+  const [activeConnection, setActiveConnection] = useState<{ fromId: string; currentX: number; currentY: number; targetId: string | null } | null>(null);
   const canvasRef  = useRef<HTMLDivElement>(null);
 
-  // ── Drag & drop des nœuds ─────────────────────────────────────────────────
-  const handleDragStart = useCallback((e: React.DragEvent, nodeId: string) => {
-    dragNodeId.current = nodeId;
-    const node = nodes.find(n => n.id === nodeId);
-    const pos  = node?.position ?? { x: 0, y: 0 };
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    e.dataTransfer.effectAllowed = 'move';
-    void pos;
-  }, [nodes]);
-
-  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    if (!dragNodeId.current || !canvasRef.current) return;
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const rawX = e.clientX - rect.left - dragOffset.current.x;
-    const rawY = e.clientY - rect.top  - dragOffset.current.y;
-    // Snap to grid
-    const x = Math.max(0, Math.round(rawX / 20) * 20);
-    const y = Math.max(0, Math.round(rawY / 20) * 20);
-
-    setNodes(prev => prev.map(n =>
-      n.id === dragNodeId.current ? { ...n, position: { x, y } } : n
-    ));
-    dragNodeId.current = null;
-  }, []);
-
-  // ── Ajout de nœud ────────────────────────────────────────────────────────
-  const addNode = useCallback((type: NodeType) => {
-    const newId = uid();
-    const defaults: Partial<WorkflowNode> = type === 'LEGAL_CLAIM'
-      ? { template: '' } as Partial<WorkflowNode>
-      : type === 'DELAY' ? { delay_hours: 24 } as Partial<WorkflowNode>
-      : type === 'WAIT_EVENT' ? { event_key: 'reply' } as Partial<WorkflowNode>
-      : {};
-
-    const newNode = {
-      id: newId, type,
-      label: NODE_CONFIG[type].label,
-      position: { x: 40 + (nodes.length % 4) * (NODE_W + 20), y: 40 + Math.floor(nodes.length / 4) * (NODE_H + 40) },
-      ...defaults,
-    } as WorkflowNode;
-
-    setNodes(prev => [...prev, newNode]);
-    setSelectedNode(newId);
-  }, [nodes.length]);
-
-  // ── Connexion de nœuds ───────────────────────────────────────────────────
-  const handleStartEdge = useCallback((nodeId: string) => {
-    setConnectingFrom(nodeId);
-  }, []);
-
-  const handleNodeClickForEdge = useCallback((nodeId: string) => {
-    if (!connectingFrom || connectingFrom === nodeId) {
-      setConnectingFrom(null);
+    const sl = canvasRef.current.scrollLeft; const st = canvasRef.current.scrollTop;
+    if (draggingNew) { setDraggingNew(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null); return; }
+    if (activeConnection) {
+      const mx = (e.clientX - rect.left + sl) / zoom; const my = (e.clientY - rect.top + st) / zoom;
+      const target = nodes.find(n => n.id !== activeConnection.fromId && mx >= n.position!.x && mx <= n.position!.x + NODE_W && my >= n.position!.y && my <= n.position!.y + NODE_H);
+      setActiveConnection(prev => prev ? { ...prev, currentX: mx, currentY: my, targetId: target?.id ?? null } : null);
       return;
     }
-    const existing = edges.find(e => e.from === connectingFrom && e.to === nodeId);
-    if (!existing) {
-      setEdges(prev => [...prev, {
-        id: uid(), from: connectingFrom, to: nodeId,
-        label: 'Valider',
-      }]);
+    if (dragging) {
+      const x = Math.max(0, Math.round(((e.clientX - rect.left + sl) / zoom - dragging.offsetX) / 20) * 20);
+      const y = Math.max(0, Math.round(((e.clientY - rect.top + st) / zoom - dragging.offsetY) / 20) * 20);
+      setNodes(prev => prev.map(n => n.id === dragging.id ? { ...n, position: { x, y } } : n));
     }
-    setConnectingFrom(null);
-  }, [connectingFrom, edges]);
+  }, [dragging, draggingNew, activeConnection, zoom, nodes]);
 
-  // ── Suppression ──────────────────────────────────────────────────────────
-  const deleteNode = useCallback((nodeId: string) => {
-    setNodes(prev => prev.filter(n => n.id !== nodeId));
-    setEdges(prev => prev.filter(e => e.from !== nodeId && e.to !== nodeId));
-    if (selectedNode === nodeId) setSelectedNode(null);
-    if (initialNodeId === nodeId) {
-      const remaining = nodes.filter(n => n.id !== nodeId);
-      if (remaining.length > 0) setInitialNodeId(remaining[0].id);
+  const handleMouseUp = useCallback((e: MouseEvent) => {
+    if (!canvasRef.current) return;
+    let changed = false;
+    if (activeConnection) {
+      if (activeConnection.targetId) {
+        setEdges(prev => [...prev, { id: uid(), from: activeConnection.fromId, to: activeConnection.targetId!, label: 'Suivant', color: '#94a3b8' }]);
+        changed = true;
+      }
+      setActiveConnection(null);
+    } else if (draggingNew) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+        const x = Math.max(0, Math.round(((e.clientX - rect.left + canvasRef.current.scrollLeft) / zoom - NODE_W / 2) / 20) * 20);
+        const y = Math.max(0, Math.round(((e.clientY - rect.top + canvasRef.current.scrollTop) / zoom - NODE_H / 2) / 20) * 20);
+        const newId = uid();
+        setNodes(prev => [...prev, { id: newId, type: draggingNew.type, label: NODE_CONFIG[draggingNew.type].label, position: { x, y } } as WorkflowNode]);
+        setSelectedNode(newId);
+        setSelectedEdge(null);
+        changed = true;
+      }
+      setDraggingNew(null);
+    } else if (dragging) {
+      const node = nodes.find(n => n.id === dragging.id);
+      if (node && (node.position!.x !== dragging.startPos.x || node.position!.y !== dragging.startPos.y)) {
+        changed = true;
+      }
+      setDragging(null);
     }
-  }, [selectedNode, initialNodeId, nodes]);
+    if (changed) setTimeout(takeSnapshot, 0);
+  }, [draggingNew, activeConnection, dragging, zoom, takeSnapshot, nodes]);
 
-  const deleteEdge = useCallback((edgeId: string) => {
-    setEdges(prev => prev.filter(e => e.id !== edgeId));
-  }, []);
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp);
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+  }, [handleMouseMove, handleMouseUp]);
 
-  // ── Sauvegarde ───────────────────────────────────────────────────────────
+  const edgePath = useCallback((from: string, to: string) => {
+    const fn = nodes.find(n => n.id === from); const tn = nodes.find(n => n.id === to);
+    if (!fn || !tn) return '';
+    return getBezierPath(fn.position!.x + NODE_W / 2, fn.position!.y + NODE_H, tn.position!.x + NODE_W / 2, tn.position!.y);
+  }, [nodes]);
+
+  const handleStartConnection = (nodeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const node = nodes.find(n => n.id === nodeId); if (!node) return;
+    setActiveConnection({ fromId: nodeId, currentX: node.position!.x + NODE_W / 2, currentY: node.position!.y + NODE_H, targetId: null });
+  };
+
+  const handleDeleteEdge = (edgeId: string) => {
+    if (window.confirm('Voulez-vous supprimer cette transition ?')) {
+      setEdges(prev => prev.filter(e => e.id !== edgeId));
+      setSelectedEdge(null);
+      setTimeout(takeSnapshot, 0);
+    }
+  };
+
   const handleSave = async () => {
     const def: WorkflowDefinition = { nodes, edges, initial_node_id: initialNodeId };
     const errs = validateDefinition(def);
-    if (errs.length > 0) {
-      setErrors(errs.map(e => e.message));
-      return;
-    }
-    setErrors([]);
+    if (errs.length > 0) { setErrors(errs.map(e => e.message)); return; }
     setSaving(true);
     try {
       const wf = await saveWorkflow(businessId, def, name, undefined, workflowId);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setSaved(true); setTimeout(() => setSaved(false), 3000);
       onSaved?.(wf.id);
-    } catch (e) {
-      setErrors([String(e)]);
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) { setErrors([String(e)]); } finally { setSaving(false); }
   };
 
-  const selectedNodeObj = nodes.find(n => n.id === selectedNode);
-
-  // ── SVG edges ────────────────────────────────────────────────────────────
-  const canvasW = Math.max(800, ...nodes.map(n => (n.position?.x ?? 0) + NODE_W + 40));
-  const canvasH = Math.max(500, ...nodes.map(n => (n.position?.y ?? 0) + NODE_H + 60));
-
-  function edgePath(from: string, to: string) {
-    const fn = nodes.find(n => n.id === from);
-    const tn = nodes.find(n => n.id === to);
-    if (!fn || !tn) return '';
-    const fx = (fn.position?.x ?? 0) + NODE_W / 2;
-    const fy = (fn.position?.y ?? 0) + NODE_H;
-    const tx = (tn.position?.x ?? 0) + NODE_W / 2;
-    const ty = tn.position?.y ?? 0;
-    const cy = fy + (ty - fy) / 2;
-    return `M ${fx} ${fy} C ${fx} ${cy}, ${tx} ${cy}, ${tx} ${ty}`;
-  }
-
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className={`flex flex-col gap-4 transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 bg-[#faf9f6] p-8' : ''}`} style={{ height: isFullscreen ? '100vh' : 'calc(100vh - 160px)' }}>
+      {/* Barre d'outils */}
+      <div className="flex items-center gap-4 flex-wrap shrink-0">
+        <div className="flex-1 min-w-48"><input className="w-full bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" value={name} onChange={e => { setName(e.target.value); }} onBlur={takeSnapshot} placeholder="Nom du workflow..." /></div>
+        
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+          <button onClick={() => window.print()} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Imprimer le workflow"><Printer className="w-4 h-4" /></button>
+          <div className="w-px h-4 bg-slate-100 mx-1" />
+          <button onClick={undo} disabled={historyIndex <= 0} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 disabled:opacity-20 transition-all" title="Annuler (Ctrl+Z)"><Undo2 className="w-4 h-4" /></button>
+          <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 disabled:opacity-20 transition-all border-r border-slate-100 mr-1" title="Rétablir (Ctrl+Y)"><Redo2 className="w-4 h-4" /></button>
+          <div className="flex items-center border-r border-slate-100 pr-1 mr-1">
+            <button onClick={zoomOut} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom -"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-xs font-bold w-12 text-center text-slate-600 tracking-tighter">{Math.round(zoom * 100)}%</span>
+            <button onClick={zoomIn} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom +"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={centerDiagram} className="p-2 ml-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Centrer le diagramme"><LocateFixed className="w-4 h-4" /></button>
+          </div>
+          <button onClick={() => setIsFullscreen(!isFullscreen)} className={`p-2 rounded-lg transition-all ${isFullscreen ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`} title="Plein écran">
+            {isFullscreen ? <Shrink className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
+          </button>
+        </div>
 
-      {/* ── Toolbar ── */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <input
-          className="input flex-1 min-w-48 text-sm font-semibold"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Nom du workflow"
-        />
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto max-w-full">
+          <span className="text-[9px] font-black text-slate-300 uppercase px-1 mr-1 tracking-[0.2em]">Outils</span>
           {(Object.keys(NODE_CONFIG) as NodeType[]).map(type => (
-            <button
-              key={type}
-              onClick={() => addNode(type)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors
-                ${NODE_CONFIG[type].color} ${NODE_CONFIG[type].bg} text-white hover:opacity-80`}
-              title={`Ajouter ${NODE_CONFIG[type].label}`}
-            >
-              <Plus className="w-3 h-3" />
-              {NODE_CONFIG[type].label}
-            </button>
+            <button key={type} onMouseDown={(e) => setDraggingNew({ type, x: e.clientX, y: e.clientY })} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-grab active:cursor-grabbing transition-all ${NODE_CONFIG[type].bg} ${NODE_CONFIG[type].color} ${NODE_CONFIG[type].text} hover:shadow-md active:scale-95 whitespace-nowrap`}><GripVertical className="w-3 h-3 opacity-30" /> {NODE_CONFIG[type].label}</button>
           ))}
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary flex items-center gap-2 px-4 py-1.5 text-sm"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saved ? 'Sauvegardé !' : 'Sauvegarder'}
-        </button>
+
+        <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center gap-2 px-6 py-2.5 text-sm font-bold shadow-lg shadow-blue-200 transition-all disabled:opacity-50 ml-auto">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}{saved ? 'Enregistré' : 'Enregistrer'}</button>
       </div>
 
-      {/* ── Erreurs de validation ── */}
-      {errors.length > 0 && (
-        <div className="flex items-start gap-2 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-4 py-3">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <ul className="space-y-0.5">
-            {errors.map((e, i) => <li key={i}>{e}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {/* ── Info mode connexion ── */}
-      {connectingFrom && (
-        <div className="text-sm text-cyan-400 bg-cyan-900/20 border border-cyan-700 rounded-xl px-4 py-2">
-          Cliquez sur un nœud de destination pour créer la connexion, ou sur le même nœud pour annuler.
-        </div>
-      )}
-
-      <div className="flex gap-4 flex-1 min-h-0">
-
-        {/* ── Canvas ── */}
-        <div className="flex-1 overflow-auto rounded-xl border border-surface-border bg-[#0a0f1e] relative">
-          <div
-            ref={canvasRef}
-            style={{ width: canvasW, height: canvasH, position: 'relative' }}
-            onDragOver={e => e.preventDefault()}
-            onDrop={handleCanvasDrop}
+      <div className="flex gap-6 flex-1 min-h-0 min-w-0">
+        <div ref={canvasRef} className="flex-1 overflow-auto rounded-3xl border border-slate-200 bg-[#fdfaf6] relative scrollbar-thin scrollbar-thumb-slate-200 shadow-inner">
+          <div 
+            style={{ width: 5000, height: 4000, transform: `scale(${zoom})`, transformOrigin: '0 0', backgroundImage: 'radial-gradient(circle, #e5e2da 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', position: 'relative' }}
+            onClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
           >
-            {/* SVG edges */}
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
               <defs>
-                <marker id={`${id}-arrow`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" fill="#475569" />
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.1"/></filter>
+                {EDGE_COLORS.map(c => (
+                  <marker 
+                    key={`arrow-${c.value}`} 
+                    id={`arrow-${c.value.replace('#', '')}`} 
+                    markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"
+                  >
+                    <path d="M0,0 L0,6 L6,3 z" fill={c.value} />
+                  </marker>
+                ))}
+                <marker id="arrow-active" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L6,3 z" fill="#3b82f6" />
                 </marker>
-              </defs>
-              {edges.map(edge => (
-                <g key={edge.id}>
-                  <path
-                    d={edgePath(edge.from, edge.to)}
-                    fill="none" stroke="#475569" strokeWidth="1.5"
-                    markerEnd={`url(#${id}-arrow)`}
-                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                    onClick={() => deleteEdge(edge.id)}
-                  />
-                  {/* Label centré */}
-                  {(() => {
-                    const fn = nodes.find(n => n.id === edge.from);
-                    const tn = nodes.find(n => n.id === edge.to);
-                    if (!fn || !tn) return null;
-                    const cx = ((fn.position?.x ?? 0) + (tn.position?.x ?? 0)) / 2 + NODE_W / 2;
-                    const cy = ((fn.position?.y ?? 0) + NODE_H + (tn.position?.y ?? 0)) / 2;
-                    return (
-                      <text x={cx} y={cy} textAnchor="middle" fontSize="10" fill="#64748b"
-                        dominantBaseline="middle"
-                        style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                        {edge.label}
-                      </text>
-                    );
-                  })()}
-                </g>
-              ))}
-            </svg>
 
-            {/* Nœuds */}
+              </defs>
+              
+              {edges.map(edge => {
+                const isSelected = selectedEdge === edge.id;
+                const color = isSelected ? '#3b82f6' : (edge.color || '#94a3b8'); 
+                const markerId = `arrow-${color.replace('#', '')}`;
+                const fn = nodes.find(n => n.id === edge.from); const tn = nodes.find(n => n.id === edge.to);
+                if (!fn || !tn) return null;
+                const midX = ((fn.position?.x ?? 0) + (tn.position?.x ?? 0)) / 2 + NODE_W / 2;
+                const midY = ((fn.position?.y ?? 0) + (tn.position?.y ?? 0) + NODE_H) / 2;
+                
+                return (
+                  <g key={edge.id} style={{ pointerEvents: 'all' }}>
+                    {/* Trait invisible plus large pour faciliter le clic */}
+                    <path 
+                      d={edgePath(edge.from, edge.to)} 
+                      fill="none" stroke="transparent" strokeWidth={15 / zoom} 
+                      className="cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setSelectedEdge(edge.id); setSelectedNode(null); }}
+                    />
+                    
+                    <path 
+                      d={edgePath(edge.from, edge.to)} 
+                      fill="none" 
+                      stroke={color} 
+                      strokeWidth={(isSelected ? 4 : 2.5) / zoom} 
+                      markerEnd={`url(#${markerId})`} 
+                      style={{ pointerEvents: 'none', color: color }} 
+                      className="transition-all" 
+                    />
+
+                    {edge.label && (
+                      <foreignObject 
+                        x={midX - (isSelected ? 75 : 60) / zoom} y={midY - 20 / zoom} 
+                        width={(isSelected ? 150 : 120) / zoom} height={80 / zoom}
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        <div className="flex justify-center items-center h-full w-full p-1">
+                          <div className="relative group">
+                            <div 
+                              onClick={(e) => { e.stopPropagation(); setSelectedEdge(edge.id); setSelectedNode(null); }}
+                              style={{ 
+                                backgroundColor: 'white', 
+                                borderColor: color, 
+                                borderWidth: (isSelected ? 2 : 1) / zoom,
+                                fontSize: 9 / zoom,
+                                color: color,
+                                boxShadow: isSelected ? '0 4px 12px rgba(59, 130, 246, 0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
+                                maxWidth: '100%',
+                                wordBreak: 'break-word',
+                                pointerEvents: 'all',
+                                cursor: 'pointer'
+                              }}
+                              className={`px-2 py-1 rounded-lg font-bold text-center leading-tight transition-all`}
+                            >
+                              {edge.label}
+                            </div>
+                            
+                            {/* Bouton Delete (uniquement si sélectionné) */}
+                            {isSelected && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteEdge(edge.id); }}
+                                style={{ 
+                                  position: 'absolute', 
+                                  top: -12 / zoom, 
+                                  right: -12 / zoom,
+                                  width: 24 / zoom,
+                                  height: 24 / zoom,
+                                  pointerEvents: 'all'
+                                }}
+                                className="bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+                                title="Supprimer la transition"
+                              >
+                                <Trash2 style={{ width: 12 / zoom, height: 12 / zoom }} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </foreignObject>
+                    )}
+                  </g>
+                );
+              })}
+              {activeConnection && (<path d={getBezierPath(nodes.find(n => n.id === activeConnection.fromId)!.position!.x + NODE_W / 2, nodes.find(n => n.id === activeConnection.fromId)!.position!.y + NODE_H, activeConnection.targetId ? nodes.find(n => n.id === activeConnection.targetId)!.position!.x + NODE_W / 2 : activeConnection.currentX, activeConnection.targetId ? nodes.find(n => n.id === activeConnection.targetId)!.position!.y : activeConnection.currentY)} fill="none" stroke="#3b82f6" strokeWidth="3" strokeDasharray="6,4" markerEnd="url(#arrow-active)" className="animate-[dash_10s_linear_infinite]" />)}
+            </svg>
+            
             {nodes.map(node => (
-              <CanvasNode
-                key={node.id}
-                node={node}
-                selected={selectedNode === node.id}
-                isInitial={node.id === initialNodeId}
-                onSelect={() => {
-                  if (connectingFrom) {
-                    handleNodeClickForEdge(node.id);
-                  } else {
-                    setSelectedNode(node.id === selectedNode ? null : node.id);
-                  }
-                }}
-                onDragStart={e => handleDragStart(e, node.id)}
-                onStartEdge={handleStartEdge}
-                onDelete={() => deleteNode(node.id)}
-              />
+              <CanvasNode key={node.id} node={node} zoom={zoom} selected={selectedNode === node.id} isInitial={node.id === initialNodeId} isPotentialTarget={activeConnection?.targetId === node.id} onSelect={(e) => { setSelectedNode(node.id === selectedNode ? null : node.id); setSelectedEdge(null); e.stopPropagation(); }} onMouseDown={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setDragging({ id: node.id, offsetX: (e.clientX - r.left) / zoom, offsetY: (e.clientY - r.top) / zoom, startPos: {x: node.position!.x, y: node.position!.y} }); e.preventDefault(); e.stopPropagation(); }} onStartConnection={handleStartConnection} onDelete={() => { if(window.confirm('Supprimer ce nœud et toutes ses connexions ?')) { setNodes(prev => prev.filter(n => n.id !== node.id)); setEdges(prev => prev.filter(e => e.from !== node.id && e.to !== node.id)); setTimeout(takeSnapshot, 0); } }} />
             ))}
           </div>
         </div>
-
-        {/* ── Panneau d'édition ── */}
-        {selectedNodeObj && (
-          <div className="w-72 shrink-0">
-            <NodeEditor
-              node={selectedNodeObj}
-              isInitial={selectedNodeObj.id === initialNodeId}
-              onUpdate={patch => setNodes(prev => prev.map(n =>
-                n.id === selectedNodeObj.id ? { ...n, ...patch } as WorkflowNode : n
-              ))}
-              onSetInitial={() => setInitialNodeId(selectedNodeObj.id)}
-              onClose={() => setSelectedNode(null)}
-            />
-            {/* Édition des edges sortants */}
-            {edges.filter(e => e.from === selectedNodeObj.id).length > 0 && (
-              <div className="card p-3 mt-3 space-y-2">
-                <p className="text-xs font-semibold text-slate-400 uppercase">Transitions sortantes</p>
-                {edges.filter(e => e.from === selectedNodeObj.id).map(edge => (
-                  <div key={edge.id} className="flex items-center gap-2">
-                    <input
-                      className="input flex-1 text-xs py-1"
-                      value={edge.label}
-                      onChange={ev => setEdges(prev => prev.map(e =>
-                        e.id === edge.id ? { ...e, label: ev.target.value } : e
-                      ))}
-                      placeholder="Libellé du bouton"
-                    />
-                    <button onClick={() => deleteEdge(edge.id)} className="text-slate-500 hover:text-red-400">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {selectedNode && (
+          <div className="w-80 shrink-0"><NodeEditor node={nodes.find(n => n.id === selectedNode)!} isInitial={selectedNode === initialNodeId} outgoingEdges={edges.filter(e => e.from === selectedNode)} onUpdate={patch => { setNodes(prev => prev.map(n => n.id === selectedNode ? { ...n, ...patch } as WorkflowNode : n)); setTimeout(takeSnapshot, 0); }} onSetInitial={() => { setInitialNodeId(selectedNode); setTimeout(takeSnapshot, 0); }} onDeleteEdge={id => handleDeleteEdge(id)} onUpdateEdge={(id, patch) => { setEdges(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e)); setTimeout(takeSnapshot, 0); }} onClose={() => setSelectedNode(null)} /></div>
         )}
       </div>
+      {draggingNew && (<div style={{ position: 'fixed', left: draggingNew.x - (NODE_W/2)*zoom, top: draggingNew.y - (NODE_H/2)*zoom, width: NODE_W*zoom, height: NODE_H*zoom, pointerEvents: 'none', zIndex: 100 } as any} className={`rounded-xl border-2 shadow-2xl ${NODE_CONFIG[draggingNew.type].color} ${NODE_CONFIG[draggingNew.type].bg} opacity-70 flex items-center justify-center`}>{NODE_CONFIG[draggingNew.type].icon}</div>)}
+      <style jsx global>{`
+        @keyframes dash {
+          to { stroke-dashoffset: -100; }
+        }
+        @media print {
+          body * { visibility: hidden; }
+          .flex-1.overflow-auto, .flex-1.overflow-auto * { visibility: visible; }
+          .flex-1.overflow-auto {
+            position: absolute;
+            left: 0; top: 0;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            border: none !important;
+            background: white !important;
+          }
+          nav, aside, header, .shrink-0, .w-80 { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

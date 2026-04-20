@@ -35,8 +35,6 @@ export interface PaymentSettings {
 const db = supabase as any;
 
 export async function getSubscription(_userId?: string, _businessId?: string | null): Promise<Subscription | null> {
-  // La RPC résout correctement pour owner ET staff/caissier
-  // en remontant via business_members → owner → subscription
   const { data, error } = await (supabase as any).rpc('get_my_subscription');
   if (!error && data && (data as Subscription[]).length > 0) {
     return (data as Subscription[])[0];
@@ -93,7 +91,7 @@ export interface SubscriptionRow {
   owner_name:    string | null;
   business_id:   string;
   business_name: string;
-  businesses:    { id: string; name: string }[];  // tous les établissements du compte
+  businesses:    { id: string; name: string }[];
   plan_label:    string | null;
   status:        string;
   trial_ends_at: string | null;
@@ -103,7 +101,6 @@ export interface SubscriptionRow {
 }
 
 export async function getAllSubscriptions(): Promise<SubscriptionRow[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc('get_all_subscriptions');
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -115,7 +112,6 @@ export async function activateSubscription(
   days:       number,
   note?:      string
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).rpc('activate_subscription', {
     p_business_id: businessId,
     p_plan_id:     planId,
@@ -236,7 +232,7 @@ export async function rejectSubscriptionRequest(requestId: string, note?: string
   if (error) throw new Error(error.message);
 }
 
-// ── Demandes publiques (prospects sans compte) ────────────────────────────────
+// ── Demandes publiques ────────────────────────────────────────────────────────
 
 export interface PublicSubscriptionRequest {
   id:            string;
@@ -276,7 +272,6 @@ export async function rejectPublicRequest(requestId: string, note?: string, req?
     .eq('id', requestId);
   if (error) throw new Error(error.message);
 
-  // Send rejection email (non-blocking)
   if (req?.email) {
     const { sendEmail } = await import('../resend');
     sendEmail({
@@ -284,7 +279,7 @@ export async function rejectPublicRequest(requestId: string, note?: string, req?
       to:      req.email,
       subject: 'Votre demande ELM APP',
       data: { business_name: req.business_name, note },
-    }).catch(() => { /* non bloquant */ });
+    }).catch(() => {});
   }
 }
 
@@ -295,12 +290,11 @@ export async function approvePublicRequest(
   days:       number,
   note?:      string,
 ): Promise<void> {
-  // Import admin client dynamically to avoid loading service role key unnecessarily
-  const { supabaseAdmin } = await import('./admin');
+  // Import admin client dynamically
+  const { supabaseAdmin: admin } = await import('./admin');
 
-  // 1. Create auth user with email + password
   const password = req.password ?? Math.random().toString(36).slice(-10) + 'A1!';
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email:          req.email,
     password,
     email_confirm:  true,
@@ -308,8 +302,7 @@ export async function approvePublicRequest(
   if (authError) throw new Error(authError.message);
   const userId = authData.user!.id;
 
-  // 2. Ensure public.users row exists (trigger may not fire for admin-created users)
-  const { error: userErr } = await supabaseAdmin.from('users').upsert({
+  const { error: userErr } = await admin.from('users').upsert({
     id:        userId,
     email:     req.email,
     full_name: req.business_name,
@@ -317,8 +310,7 @@ export async function approvePublicRequest(
   }, { onConflict: 'id' });
   if (userErr) throw new Error(userErr.message);
 
-  // 3. Create business
-  const { data: bizData, error: bizError } = await supabaseAdmin
+  const { data: bizData, error: bizError } = await admin
     .from('businesses')
     .insert({
       name:     req.business_name,
@@ -330,32 +322,27 @@ export async function approvePublicRequest(
   if (bizError) throw new Error(bizError.message);
   const businessId = bizData.id;
 
-  // 4. Add owner as member
-  await supabaseAdmin.from('business_members').insert({
+  await admin.from('business_members').insert({
     business_id: businessId,
     user_id:     userId,
     role:        'owner',
   });
 
-  // 5. Set business_id on user profile
-  await supabaseAdmin
+  await admin
     .from('users')
     .update({ business_id: businessId })
     .eq('id', userId);
 
-  // 6. Activate subscription
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + days);
   await activateSubscription(businessId, planId, days, note);
 
-  // 7. Mark request as approved
   const { error: reqError } = await db
     .from('public_subscription_requests')
     .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
     .eq('id', requestId);
   if (reqError) throw new Error(reqError.message);
 
-  // 8. Send approval email with credentials (non-blocking)
   const { sendEmail } = await import('../resend');
   sendEmail({
     type:    'subscription_approved',
@@ -368,13 +355,13 @@ export async function approvePublicRequest(
       plan_label:    req.plan_label ?? 'Pro',
       expires_at:    expiresAt.toISOString(),
     },
-  }).catch(() => { /* non bloquant */ });
+  }).catch(() => {});
 }
 
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {
-  const BUCKET = 'product-images'; // réutilise le bucket existant
+  const BUCKET = 'product-images';
   const ext    = file.name.split('.').pop() ?? 'png';
-  const path   = `backoffice/qr-${type}-${Date.now()}.${ext}`; // nom unique → toujours un INSERT
+  const path   = `backoffice/qr-${type}-${Date.now()}.${ext}`;
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, file);
   if (error) throw new Error(error.message);

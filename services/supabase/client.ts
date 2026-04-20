@@ -1,17 +1,29 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from './database.types';
 
-const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL     ?? 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder';
+// On essaie de lire les deux variantes pour être sûr
+const supabaseUrl = 
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 
+  process.env.SUPABASE_URL;
 
-// createBrowserClient stores the session in cookies (accessible to middleware)
-// while keeping localStorage persistence for backwards compatibility.
-export const supabase = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
+const supabaseAnonKey = 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+  process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey || supabaseAnonKey === 'placeholder') {
+  console.error('ERREUR : Supabase URL ou Anon Key manquante ! Vérifiez votre fichier .env et redémarrez.');
+}
+
+export const supabase = createBrowserClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder', 
+  {
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
     },
-  },
-});
+  }
+);
 
 export type SupabaseClient = typeof supabase;

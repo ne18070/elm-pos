@@ -1,5 +1,4 @@
 import { supabase as _supabase } from './client';
-import { q } from './q';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = _supabase as any;
@@ -39,7 +38,6 @@ export interface IntouchPaymentResponse {
 
 /**
  * Fetch public config for Intouch. 
- * Note: uses the public view that excludes the api_key for security.
  */
 export async function getIntouchConfig(businessId: string): Promise<IntouchConfig | null> {
   const { data } = await supabase
@@ -52,7 +50,6 @@ export async function getIntouchConfig(businessId: string): Promise<IntouchConfi
 
 /**
  * Upsert Intouch configuration.
- * Only works if the user has permission to write to 'intouch_configs' table.
  */
 export async function upsertIntouchConfig(
   businessId: string,
@@ -73,18 +70,11 @@ export async function upsertIntouchConfig(
 
 // ─── Payment Execution (Secure & Robust) ────────────────────────────────────
 
-/**
- * 1. Create a local transaction record for auditing/reliability
- * 2. Invoke a Supabase Edge Function to securely call Intouch API
- * 3. Return the intent status
- */
 export async function processIntouchPayment(
   req: IntouchPaymentRequest
 ): Promise<IntouchPaymentResponse> {
-  // 1. Generate Unique Internal Reference
   const externalRef = `PAY-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
-  // 2. Initial Audit Log (PENDING)
   const { error: logErr } = await supabase.from('payment_transactions').insert({
     business_id:        req.business_id,
     external_reference: externalRef,
@@ -99,9 +89,6 @@ export async function processIntouchPayment(
   if (logErr) throw new Error('Échec de la création de la transaction locale');
 
   try {
-    // 3. SECURE API CALL via Edge Function
-    // This function on Supabase will retrieve the api_key from the private table
-    // and make the actual HTTP call to Intouch/TouchPay.
     const { data, error } = await (supabase.functions as any).invoke('process-intouch-payment', {
       body: { 
         ...req,
@@ -119,7 +106,6 @@ export async function processIntouchPayment(
       error:      data.error
     };
   } catch (err: any) {
-    // Log error locally
     await supabase.rpc('update_payment_transaction_status', {
       p_external_ref: externalRef,
       p_status:       'FAILED',
@@ -134,11 +120,6 @@ export async function processIntouchPayment(
   }
 }
 
-/** 
- * Polling / Status Check (Reliability)
- * Checks the status of a transaction in the database.
- * The DB record is updated by either the Edge Function or an Intouch Callback.
- */
 export async function checkPaymentStatus(externalRef: string): Promise<IntouchPaymentResponse> {
   const { data, error } = await supabase
     .from('payment_transactions')
@@ -157,10 +138,6 @@ export async function checkPaymentStatus(externalRef: string): Promise<IntouchPa
   };
 }
 
-/** 
- * Wait for Payment (Robust UI helper)
- * Polls until the status changes from PENDING or timeout.
- */
 export async function waitForPayment(
   externalRef: string, 
   timeoutMs: number = 60000, 

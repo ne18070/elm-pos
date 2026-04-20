@@ -1,5 +1,8 @@
-import { supabaseAdmin } from './admin';
+import { supabase } from './client';
 import { getAllSubscriptions, type SubscriptionRow } from './subscriptions';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
 
 export interface BusinessMonitorRow extends SubscriptionRow {
   orders_30d:     number;
@@ -16,16 +19,14 @@ export async function updateBusinessConfig(
   types:      string[],
   features:   string[],
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabaseAdmin as any)
+  const { error } = await db
     .from('businesses')
     .update({ type: types[0] ?? null, features })
     .eq('id', businessId);
   if (error) throw new Error(error.message);
 
   // Best-effort : sauvegarder le tableau types[] si la colonne existe
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabaseAdmin as any)
+  await db
     .from('businesses')
     .update({ types })
     .eq('id', businessId)
@@ -35,30 +36,14 @@ export async function updateBusinessConfig(
 export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
+  // On utilise le client standard. Les permissions sont gérées par RLS (is_superadmin check)
   const [subs, ordersRaw, membersRaw, productsRaw, ordersTotalRaw, bizRaw] = await Promise.all([
     getAllSubscriptions(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabaseAdmin as any)
-      .from('orders')
-      .select('business_id, created_at')
-      .gte('created_at', since30d),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabaseAdmin as any)
-      .from('business_members')
-      .select('business_id'),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabaseAdmin as any)
-      .from('products')
-      .select('business_id')
-      .eq('is_active', true),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabaseAdmin as any)
-      .from('orders')
-      .select('business_id'),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabaseAdmin as any)
-      .from('businesses')
-      .select('id, features, type, types'),
+    db.from('orders').select('business_id, created_at').gte('created_at', since30d),
+    db.from('business_members').select('business_id'),
+    db.from('products').select('business_id').eq('is_active', true),
+    db.from('orders').select('business_id'),
+    db.from('businesses').select('id, features, type, types'),
   ]);
 
   // Aggregate orders per business
@@ -97,10 +82,8 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
   }
 
   // Étendre : une ligne par établissement (pas par abonnement)
-  // Un owner peut avoir plusieurs businesses — sub.businesses[] les liste tous
   const rows: BusinessMonitorRow[] = [];
   for (const sub of subs) {
-    // Tous les établissements de cet owner (au moins sub.business_id si businesses[] vide)
     const bizList = sub.businesses?.length
       ? sub.businesses
       : [{ id: sub.business_id, name: sub.business_name }];
