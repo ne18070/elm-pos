@@ -74,6 +74,25 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
     );
   };
 
+  // Watch permission changes — auto-clear denied state when user unblocks in browser settings
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    let permStatus: PermissionStatus | null = null;
+
+    navigator.permissions.query({ name: 'geolocation' }).then((perm) => {
+      permStatus = perm;
+      perm.addEventListener('change', () => {
+        if (perm.state === 'granted' || perm.state === 'prompt') {
+          setPermissionDenied(false);
+        }
+      });
+    });
+
+    return () => {
+      permStatus?.removeEventListener('change', () => {});
+    };
+  }, []);
+
   // Auto-restart tracking after a page refresh if it was active before
   useEffect(() => {
     if (sessionStorage.getItem(STORAGE_KEY) === '1') {
@@ -139,9 +158,15 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
     {permissionDenied && !collapsed && (
       <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-red-950/40 border border-red-800/30 text-[10px] text-red-400 leading-relaxed">
         <p className="font-semibold mb-0.5">Accès refusé</p>
-        <p className="text-red-400/80">
-          Autorisez la localisation dans les paramètres de votre navigateur (icône 🔒 dans la barre d&apos;adresse), puis réessayez.
+        <p className="text-red-400/80 mb-1.5">
+          Cliquez sur l&apos;icône ℹ️ à gauche de la barre d&apos;adresse → <strong>Localisation → Autoriser</strong>, puis :
         </p>
+        <button
+          onClick={() => startTracking()}
+          className="text-[10px] font-semibold text-red-300 hover:text-red-100 underline underline-offset-2"
+        >
+          Réessayer
+        </button>
       </div>
     )}
     </div>
