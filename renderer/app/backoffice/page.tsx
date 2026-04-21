@@ -24,7 +24,11 @@ import {
 } from '@pos-types';
 import { supabase } from '@/lib/supabase';
 import { getIntouchConfig, upsertIntouchConfig, type IntouchConfig } from '@services/supabase/intouch';
-import { getAllOrganizations, createOrganization, updateBusiness, switchBusiness } from '@services/supabase/business';
+import {
+  getAllOrganizationsAdmin, getUnassignedBusinesses,
+  createOrganizationAdmin, updateOrganization, updateBusiness, switchBusiness,
+  type OrganizationWithBusinesses,
+} from '@services/supabase/business';
 import { createBusinessAdmin } from '@services/supabase/users';
 
 type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules' | 'marketing' | 'emails' | 'structures';
@@ -974,51 +978,24 @@ function PlansTab() {
 
 // ── Onglet Structures (Organisations) ─────────────────────────────────────────
 
-type StructureGroup = {
-  owner_id: string;
-  owner_name: string | null;
-  owner_email: string | null;
-  primary_biz: any;        // business record principal de cette structure
-  biz_count: number;       // nb total d'établissements
-};
-
 function StructuresTab() {
-  const [structures, setStructures] = useState<StructureGroup[]>([]);
+  const [orgs, setOrgs]             = useState<OrganizationWithBusinesses[]>([]);
   const [unassigned, setUnassigned] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<'new' | any | null>(null);
+  const [loading, setLoading]       = useState(true);
+  const [orgModal, setOrgModal]     = useState<'new' | OrganizationWithBusinesses | null>(null);
   const [adminModal, setAdminModal] = useState<any | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [switching, setSwitching] = useState<string | null>(null);
+  const [saving, setSaving]         = useState(false);
+  const [switching, setSwitching]   = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [subs, allBiz] = await Promise.all([
-        getAllSubscriptions(),
-        getAllOrganizations(),
+      const [orgsData, unassignedData] = await Promise.all([
+        getAllOrganizationsAdmin(),
+        getUnassignedBusinesses(),
       ]);
-
-      const bizById = new Map<string, any>(allBiz.map((b: any) => [b.id, b]));
-      const seenOwners = new Map<string, StructureGroup>();
-      const seenBizIds = new Set<string>();
-
-      for (const row of subs) {
-        if (!row.owner_id) continue;
-        if (seenOwners.has(row.owner_id)) continue;
-        const ownerBizList: { id: string }[] = Array.isArray(row.businesses) ? row.businesses : [];
-        ownerBizList.forEach((b) => seenBizIds.add(b.id));
-        seenOwners.set(row.owner_id, {
-          owner_id: row.owner_id,
-          owner_name: row.owner_name,
-          owner_email: row.owner_email,
-          primary_biz: bizById.get(row.business_id) ?? null,
-          biz_count: ownerBizList.length,
-        });
-      }
-
-      setStructures(Array.from(seenOwners.values()));
-      setUnassigned(allBiz.filter((b: any) => !seenBizIds.has(b.id)));
+      setOrgs(orgsData);
+      setUnassigned(unassignedData);
     } catch (e) {
       alert(toUserError(e));
     } finally {
@@ -1027,59 +1004,53 @@ function StructuresTab() {
   };
   useEffect(() => { load(); }, []);
 
-  const handleSwitch = async (id: string) => {
-    setSwitching(id);
+  const handleSwitch = async (bizId: string) => {
+    setSwitching(bizId);
     try {
-      await switchBusiness(id);
-      window.location.href = '/dashboard';
+      await switchBusiness(bizId);
+      window.location.href = '/';
     } catch (e) { alert(toUserError(e)); setSwitching(null); }
   };
 
   const getTypeBadge = (type: string) => {
-    switch(type) {
-      case 'hotel': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    switch (type) {
+      case 'hotel':      return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'restaurant': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-      case 'retail': return 'bg-green-500/10 text-green-400 border-green-500/20';
-      case 'service': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+      case 'retail':     return 'bg-green-500/10 text-green-400 border-green-500/20';
+      case 'service':    return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      default:           return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
     }
   };
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
     const fd = new FormData(e.currentTarget);
     try {
-      await createOrganization({
-        name: fd.get('name') as string,
-        type: (fd.get('type') as any) || 'retail',
-        denomination: fd.get('denomination') as string,
-        rib: fd.get('rib') as string,
-        address: fd.get('address') as string,
-        phone: fd.get('phone') as string,
-        email: fd.get('email') as string,
-      } as any);
-      setModal(null);
+      await createOrganizationAdmin({
+        legal_name:   fd.get('legal_name') as string,
+        denomination: fd.get('denomination') as string || undefined,
+        rib:          fd.get('rib') as string || undefined,
+        currency:     (fd.get('currency') as string) || 'XOF',
+      });
+      setOrgModal(null);
       await load();
     } catch (e) { alert(toUserError(e)); }
     finally { setSaving(false); }
   };
 
-  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!orgModal || orgModal === 'new') return;
     setSaving(true);
     const fd = new FormData(e.currentTarget);
     try {
-      await updateBusiness(modal.id, {
-        name: fd.get('name') as string,
-        type: fd.get('type') as any,
-        denomination: fd.get('denomination') as string,
-        rib: fd.get('rib') as string,
-        address: fd.get('address') as string,
-        phone: fd.get('phone') as string,
-        email: fd.get('email') as string,
+      await updateOrganization(orgModal.id, {
+        legal_name:   fd.get('legal_name') as string,
+        denomination: fd.get('denomination') as string || undefined,
+        rib:          fd.get('rib') as string || undefined,
       });
-      setModal(null);
+      setOrgModal(null);
       await load();
     } catch (e) { alert(toUserError(e)); }
     finally { setSaving(false); }
@@ -1092,10 +1063,10 @@ function StructuresTab() {
     try {
       await createBusinessAdmin({
         business_id: adminModal.id,
-        email:     fd.get('email') as string,
-        password:  fd.get('password') as string,
-        full_name: fd.get('full_name') as string,
-        role:      'owner',
+        email:       fd.get('email') as string,
+        password:    fd.get('password') as string,
+        full_name:   fd.get('full_name') as string,
+        role:        'owner',
       });
       setAdminModal(null);
       await load();
@@ -1108,145 +1079,101 @@ function StructuresTab() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><Layers className="w-5 h-5 text-brand-400" /> Gestion des Structures</h2>
-        <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 px-6"><Plus className="w-4 h-4" /> Nouvelle Structure</button>
+        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <Layers className="w-5 h-5 text-brand-400" /> Organisations
+        </h2>
+        <button onClick={() => setOrgModal('new')} className="btn-primary flex items-center gap-2 px-6">
+          <Plus className="w-4 h-4" /> Nouvelle Organisation
+        </button>
       </div>
 
-      {/* Structures (une carte = une organisation / compte propriétaire) */}
-      {structures.length > 0 && (
+      {/* ── Organisations ── */}
+      {orgs.length > 0 && (
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Structures · {structures.length}</p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {structures.map((structure) => {
-              const biz = structure.primary_biz;
-              return (
-                <div key={structure.owner_id} className="card p-0 border-surface-border hover:border-brand-500/50 transition-all group relative overflow-hidden flex flex-col">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
-                    <Layers className="w-24 h-24" />
-                  </div>
-
-                  <div className="p-6 flex-1 space-y-6">
-                    <div className="flex items-start justify-between relative z-10">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-black text-white tracking-tight">{structure.owner_name ?? biz?.name ?? '—'}</h3>
-                        <p className="text-xs text-slate-500">{structure.owner_email ?? '—'}</p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {biz && <button onClick={() => setModal(biz)} className="p-2 rounded-lg hover:bg-surface-input text-slate-400 hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>}
-                        {biz && (
-                          <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-brand-400 hover:text-brand-300 transition-all" title="Accéder">
-                            {switching === biz.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 py-4 border-y border-surface-border/50">
-                      {structure.owner_email && (
-                        <div className="flex justify-between items-center group/info">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><MailIcon className="w-2.5 h-2.5" /> Email</span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-slate-300 truncate max-w-[150px]">{structure.owner_email}</span>
-                            <CopyButton text={structure.owner_email} className="opacity-0 group-hover/info:opacity-100 scale-75" />
-                          </div>
-                        </div>
-                      )}
-                      {biz?.phone && (
-                        <div className="flex justify-between items-center group/info">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><PhoneIcon className="w-2.5 h-2.5" /> Tél</span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-slate-300">{biz.phone}</span>
-                            <CopyButton text={biz.phone} className="opacity-0 group-hover/info:opacity-100 scale-75" />
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dénomination</span>
-                        <span className="text-sm text-slate-300 font-medium truncate max-w-[150px] text-right">{biz?.denomination || '—'}</span>
-                      </div>
-                      {biz?.address && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Adresse</span>
-                          <span className="text-xs text-slate-400 truncate max-w-[150px] text-right">{biz.address}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">RIB</span>
-                        <span className="text-[10px] font-mono text-slate-400 bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">{biz?.rib || 'Non renseigné'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="px-6 py-4 bg-surface-hover/50 border-t border-surface-border flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Établissements</span>
-                      <span className="text-sm font-bold text-white">{structure.biz_count}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Propriétaire</span>
-                      <span className="text-xs text-green-400 font-bold">✅ Assigné</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Établissements sans propriétaire */}
-      {unassigned.length > 0 && (
-        <div className="space-y-4">
-          <p className="text-[10px] font-black text-amber-500/80 uppercase tracking-[0.2em] flex items-center gap-2">
-            Sans propriétaire
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">{unassigned.length}</span>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+            Organisations · {orgs.length}
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {unassigned.map((org: any) => (
-              <div key={org.id} className="card p-0 border-amber-500/20 hover:border-amber-500/40 transition-all group relative overflow-hidden flex flex-col">
-                <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><Layers className="w-24 h-24" /></div>
-                <div className="p-6 flex-1 space-y-6">
-                  <div className="flex items-start justify-between relative z-10">
-                    <div className="space-y-1">
-                      <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(org.type)}`}>{org.type}</span>
-                      <h3 className="text-lg font-black text-white tracking-tight mt-2">{org.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setModal(org)} className="p-2 rounded-lg hover:bg-surface-input text-slate-400 hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleSwitch(org.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-brand-400 hover:text-brand-300 transition-all" title="Accéder à l'établissement">
-                        {switching === org.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-3 py-4 border-y border-surface-border/50">
-                    {org.email && (
-                      <div className="flex justify-between items-center group/info">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><MailIcon className="w-2.5 h-2.5" /> Email</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-slate-300 truncate max-w-[150px]">{org.email}</span>
-                          <CopyButton text={org.email} className="opacity-0 group-hover/info:opacity-100 scale-75" />
-                        </div>
-                      </div>
-                    )}
-                    {org.phone && (
-                      <div className="flex justify-between items-center group/info">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><PhoneIcon className="w-2.5 h-2.5" /> Tel</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-slate-300">{org.phone}</span>
-                          <CopyButton text={org.phone} className="opacity-0 group-hover/info:opacity-100 scale-75" />
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dénomination</span><span className="text-sm text-slate-300 font-medium truncate max-w-[150px] text-right">{org.denomination || '—'}</span></div>
-                    <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">RIB</span><span className="text-[10px] font-mono text-slate-400 bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">{org.rib || 'Non renseigné'}</span></div>
-                  </div>
+            {orgs.map((org) => (
+              <div key={org.id} className="card p-0 border-surface-border hover:border-brand-500/50 transition-all group relative overflow-hidden flex flex-col">
+                <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                  <Layers className="w-24 h-24" />
                 </div>
-                <div className="px-6 py-4 bg-amber-500/5 border-t border-amber-500/20 flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Propriétaire</span>
-                    <span className="text-xs text-amber-400 font-bold">⚠️ Non assigné</span>
+
+                {/* En-tête org */}
+                <div className="p-6 flex-1 space-y-4">
+                  <div className="flex items-start justify-between relative z-10">
+                    <div className="space-y-0.5 min-w-0">
+                      <p className="text-[10px] font-black text-brand-400 uppercase tracking-[0.15em]">Organisation</p>
+                      <h3 className="text-lg font-black text-white tracking-tight truncate">{org.legal_name}</h3>
+                      {org.denomination && org.denomination !== org.legal_name && (
+                        <p className="text-xs text-slate-400 italic truncate">{org.denomination}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setOrgModal(org)}
+                      className="p-2 rounded-lg hover:bg-surface-input text-slate-400 hover:text-white transition-all shrink-0"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button onClick={() => setAdminModal(org)} className="text-[10px] font-black uppercase tracking-widest text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10"><Plus className="w-3 h-3" /> Créer Admin</button>
+
+                  {/* Infos propriétaire */}
+                  <div className="space-y-2 py-3 border-y border-surface-border/50">
+                    {org.owner_email && (
+                      <div className="flex justify-between items-center group/info">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                          <MailIcon className="w-2.5 h-2.5" /> Propriétaire
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-slate-300 truncate max-w-[150px]">{org.owner_name ?? org.owner_email}</span>
+                          <CopyButton text={org.owner_email} className="opacity-0 group-hover/info:opacity-100 scale-75" />
+                        </div>
+                      </div>
+                    )}
+                    {org.rib && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">RIB</span>
+                        <span className="text-[10px] font-mono text-slate-400 bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">
+                          {org.rib}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Liste établissements */}
+                  {org.businesses.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Établissements · {org.businesses.length}
+                      </p>
+                      {org.businesses.map((biz) => (
+                        <div key={biz.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface-input border border-surface-border">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{biz.name}</p>
+                            <span className={`text-[10px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded border ${getTypeBadge(biz.type)}`}>
+                              {biz.type}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleSwitch(biz.id)}
+                            disabled={!!switching}
+                            className="p-1.5 rounded-lg hover:bg-brand-500/10 text-brand-400 hover:text-brand-300 transition-all shrink-0"
+                            title="Accéder"
+                          >
+                            {switching === biz.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-6 py-3 bg-surface-hover/50 border-t border-surface-border flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    {org.businesses.length} établissement{org.businesses.length !== 1 ? 's' : ''}
+                  </span>
+                  <span className="text-xs text-green-400 font-bold">✅ {org.owner_name ? 'Assignée' : 'Sans owner'}</span>
                 </div>
               </div>
             ))}
@@ -1254,54 +1181,86 @@ function StructuresTab() {
         </div>
       )}
 
-      {structures.length === 0 && unassigned.length === 0 && (
-        <div className="text-center py-20 text-slate-500">
-          <Layers className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="font-medium">Aucune structure</p>
+      {/* ── Établissements sans organisation ── */}
+      {unassigned.length > 0 && (
+        <div className="space-y-4">
+          <p className="text-[10px] font-black text-amber-500/80 uppercase tracking-[0.2em] flex items-center gap-2">
+            Établissements non rattachés
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">{unassigned.length}</span>
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {unassigned.map((biz: any) => (
+              <div key={biz.id} className="card p-0 border-amber-500/20 hover:border-amber-500/40 transition-all group relative overflow-hidden flex flex-col">
+                <div className="p-6 flex-1 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
+                      <h3 className="text-lg font-black text-white tracking-tight mt-1">{biz.name}</h3>
+                      {biz.denomination && <p className="text-xs text-slate-400 italic">{biz.denomination}</p>}
+                    </div>
+                    <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-brand-400 hover:text-brand-300 transition-all" title="Accéder">
+                      {switching === biz.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="px-6 py-4 bg-amber-500/5 border-t border-amber-500/20 flex items-center justify-between">
+                  <span className="text-xs text-amber-400 font-bold">⚠️ Sans organisation</span>
+                  <button onClick={() => setAdminModal(biz)} className="text-[10px] font-black uppercase tracking-widest text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10">
+                    <Plus className="w-3 h-3" /> Créer Admin
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {(modal === 'new' || (modal && typeof modal === 'object')) && (
+      {orgs.length === 0 && unassigned.length === 0 && (
+        <div className="text-center py-20 text-slate-500">
+          <Layers className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <p className="font-medium">Aucune organisation</p>
+        </div>
+      )}
+
+      {/* ── Modal Organisation (créer / modifier) ── */}
+      {orgModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-300">
-          <div className="card w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+          <div className="card w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover shrink-0">
-              <h3 className="text-xl font-black text-white tracking-tight">{modal === 'new' ? 'NOUVELLE STRUCTURE' : 'MODIFIER STRUCTURE'}</h3>
-              <button onClick={() => setModal(null)} className="p-2 hover:bg-surface-input rounded-xl text-slate-500 transition-colors"><X className="w-6 h-6" /></button>
+              <h3 className="text-xl font-black text-white tracking-tight">
+                {orgModal === 'new' ? 'NOUVELLE ORGANISATION' : 'MODIFIER ORGANISATION'}
+              </h3>
+              <button onClick={() => setOrgModal(null)} className="p-2 hover:bg-surface-input rounded-xl text-slate-500 transition-colors">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <form onSubmit={modal === 'new' ? handleCreate : handleUpdate} className="p-8 space-y-6 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">Informations Générales</h4>
-                  <div><label className="label text-[10px] uppercase font-bold tracking-widest">Nom commercial</label><input name="name" defaultValue={modal?.name} required className="input h-11" placeholder="Ex: Restaurant Le Gourmet" /></div>
-                  <div><label className="label text-[10px] uppercase font-bold tracking-widest">Dénomination sociale</label><input name="denomination" defaultValue={modal?.denomination} className="input h-11" placeholder="Ex: SARL Le Gourmet Afrique" /></div>
-                  <div>
-                    <label className="label text-[10px] uppercase font-bold tracking-widest">Type d'activité</label>
-                    <select name="type" defaultValue={modal?.type || 'retail'} className="input h-11">
-                      <option value="retail">Commerce de détail</option>
-                      <option value="restaurant">Restaurant</option>
-                      <option value="hotel">Hôtel</option>
-                      <option value="service">Services</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">Contact & Localisation</h4>
-                  <div><label className="label text-[10px] uppercase font-bold tracking-widest">Email contact</label><input name="email" type="email" defaultValue={modal?.email} className="input h-11" placeholder="contact@etablissement.com" /></div>
-                  <div><label className="label text-[10px] uppercase font-bold tracking-widest">Téléphone</label><input name="phone" defaultValue={modal?.phone} className="input h-11" placeholder="+221 ..." /></div>
-                  <div><label className="label text-[10px] uppercase font-bold tracking-widest">Adresse physique</label><input name="address" defaultValue={modal?.address} className="input h-11" placeholder="Rue, Quartier, Ville" /></div>
-                </div>
-
-                <div className="col-span-1 md:col-span-2 space-y-4">
-                  <h4 className="text-[10px] font-black text-brand-400 uppercase tracking-[0.2em]">Informations Bancaires</h4>
-                  <div><label className="label text-[10px] uppercase font-bold tracking-widest">RIB / Coordonnées</label><textarea name="rib" defaultValue={modal?.rib} className="input min-h-[80px] py-3 text-xs font-mono" placeholder="Saisir le RIB complet..." /></div>
-                </div>
+            <form onSubmit={orgModal === 'new' ? handleCreateOrg : handleUpdateOrg} className="p-8 space-y-5 overflow-y-auto">
+              <div>
+                <label className="label text-[10px] uppercase font-bold tracking-widest">Raison sociale *</label>
+                <input name="legal_name" defaultValue={orgModal !== 'new' ? orgModal.legal_name : ''} required className="input h-11" placeholder="Ex: SARL Le Gourmet Afrique" />
               </div>
-              
-              <div className="flex gap-4 pt-4 shrink-0">
-                <button type="button" onClick={() => setModal(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
+              <div>
+                <label className="label text-[10px] uppercase font-bold tracking-widest">Dénomination commerciale (si différente)</label>
+                <input name="denomination" defaultValue={orgModal !== 'new' ? orgModal.denomination : ''} className="input h-11" placeholder="Ex: Restaurant Le Gourmet" />
+              </div>
+              <div>
+                <label className="label text-[10px] uppercase font-bold tracking-widest">Devise</label>
+                <select name="currency" defaultValue={orgModal !== 'new' ? orgModal.currency : 'XOF'} className="input h-11">
+                  <option value="XOF">XOF — Franc CFA</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="USD">USD — Dollar US</option>
+                  <option value="MAD">MAD — Dirham marocain</option>
+                </select>
+              </div>
+              <div>
+                <label className="label text-[10px] uppercase font-bold tracking-widest">RIB / Coordonnées bancaires</label>
+                <textarea name="rib" defaultValue={orgModal !== 'new' ? orgModal.rib : ''} className="input min-h-[80px] py-3 text-xs font-mono" placeholder="Saisir le RIB complet..." />
+              </div>
+              <div className="flex gap-4 pt-2">
+                <button type="button" onClick={() => setOrgModal(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2">
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />} {modal === 'new' ? 'Créer la structure' : 'Enregistrer'}
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {orgModal === 'new' ? 'Créer' : 'Enregistrer'}
                 </button>
               </div>
             </form>
@@ -1309,6 +1268,7 @@ function StructuresTab() {
         </div>
       )}
 
+      {/* ── Modal Créer Admin ── */}
       {adminModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-300">
           <div className="card w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
@@ -1320,7 +1280,7 @@ function StructuresTab() {
               <div className="p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10 flex items-center gap-4">
                 <Layers className="w-10 h-10 text-brand-400 opacity-50" />
                 <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rattachement à</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Établissement</p>
                   <p className="text-sm font-bold text-white">{adminModal.name}</p>
                 </div>
               </div>

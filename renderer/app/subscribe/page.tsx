@@ -177,7 +177,7 @@ export default function SubscribePage() {
                     className="input" placeholder="Ex : Restaurant Le Soleil" />
                 </div>
                 <div>
-                  <label className="label">Dénomination sociale (si différente)</label>
+                  <label className="label">Raison sociale légale <span className="text-slate-500 font-normal">(SARL, SA… si différente)</span></label>
                   <input type="text" value={denomination} onChange={(e) => setDenomination(e.target.value)}
                     className="input" placeholder="Ex : SARL Le Soleil Afrique" />
                 </div>

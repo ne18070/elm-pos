@@ -76,25 +76,40 @@ export async function POST(req: NextRequest) {
     }, { onConflict: 'id' });
     if (userErr) throw new Error(userErr.message);
 
-    // 3. Créer le business
+    // 3. Créer l'organization (entité légale)
+    const { data: orgData, error: orgError } = await admin
+      .from('organizations')
+      .insert({
+        legal_name:   denomination?.trim() || businessName,
+        denomination: denomination?.trim() || null,
+        owner_id:     userId,
+        currency:     'XOF',
+      })
+      .select('id')
+      .single();
+    if (orgError) throw new Error(orgError.message);
+    const organizationId = orgData.id;
+
+    // 4. Créer le business (établissement) lié à l'org
     const { data: bizData, error: bizError } = await admin
       .from('businesses')
-      .insert({ 
-        name: businessName, 
-        denomination: denomination || null,
-        owner_id: userId, 
-        type: 'retail' 
+      .insert({
+        name:            businessName,
+        denomination:    denomination || null,
+        owner_id:        userId,
+        type:            'retail',
+        organization_id: organizationId,
       })
       .select('id')
       .single();
     if (bizError) throw new Error(bizError.message);
     const businessId = bizData.id;
 
-    // 4. Ajouter membre
+    // 5. Ajouter membre
     await admin.from('business_members').insert({ business_id: businessId, user_id: userId, role: 'owner' });
     await admin.from('users').update({ business_id: businessId }).eq('id', userId);
 
-    // 5. Activer l'abonnement (direct upsert — admin bypasses RLS, auth.uid() serait NULL via RPC)
+    // 6. Activer l'abonnement (direct upsert — admin bypasses RLS, auth.uid() serait NULL via RPC)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
     const { error: subError } = await admin.from('subscriptions').upsert({
@@ -108,13 +123,13 @@ export async function POST(req: NextRequest) {
     }, { onConflict: 'owner_id' });
     if (subError) throw new Error(subError.message);
 
-    // 6. Marquer la demande comme approuvée
+    // 7. Marquer la demande comme approuvée
     await admin
       .from('public_subscription_requests')
       .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
       .eq('id', requestId);
 
-    // 7. Email de confirmation
+    // 8. Email de confirmation
     sendEmail({
       type:    'subscription_approved',
       to:      email,

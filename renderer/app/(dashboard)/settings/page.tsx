@@ -14,6 +14,8 @@ import { supabase } from '@/lib/supabase';
 import { canManageSettings, hasRole } from '@/lib/permissions';
 import { getWhatsAppConfig, upsertWhatsAppConfig, regenerateVerifyToken, type WhatsAppConfig, type WhatsAppConfigForm } from '@services/supabase/whatsapp';
 import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
+import { updateOrganization } from '@services/supabase/business';
+import type { Organization } from '@pos-types';
 import * as LucideIcons from 'lucide-react';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
@@ -48,6 +50,50 @@ export default function SettingsPage() {
   const [savingUnits, setSavingUnits] = useState(false);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  // Organisation (entité légale) — owner uniquement
+  const isOwner = hasRole(user?.role, 'owner');
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [orgForm, setOrgForm] = useState({ legal_name: '', denomination: '', rib: '' });
+  const [savingOrg, setSavingOrg] = useState(false);
+
+  useEffect(() => {
+    if (!business?.organization_id) return;
+    (supabase as any)
+      .from('organizations')
+      .select('*')
+      .eq('id', business.organization_id)
+      .single()
+      .then(({ data }: { data: Organization | null }) => {
+        if (data) {
+          setOrg(data);
+          setOrgForm({
+            legal_name:   data.legal_name  ?? '',
+            denomination: data.denomination ?? '',
+            rib:          data.rib          ?? '',
+          });
+        }
+      });
+  }, [business?.organization_id]);
+
+  async function handleSaveOrg() {
+    if (!org) return;
+    setSavingOrg(true);
+    try {
+      await updateOrganization(org.id, {
+        legal_name:   orgForm.legal_name,
+        denomination: orgForm.denomination || undefined,
+        rib:          orgForm.rib || undefined,
+      });
+      setOrg({ ...org, ...orgForm });
+      setBusiness({ ...business!, organization_name: orgForm.legal_name });
+      success('Organisation enregistrée');
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setSavingOrg(false);
+    }
+  }
 
   // Types d'établissement dynamiques
   const [allTypes, setAllTypes] = useState<BusinessTypeRow[]>([]);
@@ -347,6 +393,59 @@ export default function SettingsPage() {
           );
         })()}
 
+        {/* Organisation — owner uniquement */}
+        {isOwner && org && (
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-surface-border flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-white">Organisation / Entité légale</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Raison sociale partagée par tous vos établissements</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Raison sociale *</label>
+                  <input
+                    type="text"
+                    value={orgForm.legal_name}
+                    onChange={(e) => setOrgForm({ ...orgForm, legal_name: e.target.value })}
+                    className="input"
+                    placeholder="Ex : SARL Le Soleil Afrique"
+                  />
+                </div>
+                <div>
+                  <label className="label">Dénomination commerciale <span className="text-slate-500 font-normal">(si différente)</span></label>
+                  <input
+                    type="text"
+                    value={orgForm.denomination}
+                    onChange={(e) => setOrgForm({ ...orgForm, denomination: e.target.value })}
+                    className="input"
+                    placeholder="Ex : Restaurant Le Soleil"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">RIB / Coordonnées bancaires</label>
+                <textarea
+                  value={orgForm.rib}
+                  onChange={(e) => setOrgForm({ ...orgForm, rib: e.target.value })}
+                  className="input min-h-[70px] py-3 font-mono text-xs"
+                  placeholder="Saisir le RIB complet…"
+                />
+              </div>
+              <button
+                onClick={handleSaveOrg}
+                disabled={savingOrg || !orgForm.legal_name.trim()}
+                className="btn-primary flex items-center gap-2"
+              >
+                {savingOrg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {savingOrg ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Informations établissement — manager+ seulement */}
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
@@ -369,13 +468,13 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="label">Dénomination sociale</label>
+              <label className="label">Nom sur les reçus <span className="text-slate-500 font-normal">(si différent)</span></label>
               <input
                 type="text"
                 value={bizForm.denomination}
                 onChange={(e) => setBizForm({ ...bizForm, denomination: e.target.value })}
                 className="input"
-                placeholder="Ex: SARL Le Gourmet"
+                placeholder="Affiché sur les reçus et factures"
               />
             </div>
           </div>

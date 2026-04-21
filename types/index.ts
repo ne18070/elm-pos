@@ -16,13 +16,26 @@ export interface User {
   created_at: string;
 }
 
+// ─── Organization ─────────────────────────────────────────────────────────────
+
+export interface Organization {
+  id: string;
+  legal_name: string;        // Raison sociale
+  denomination?: string;     // Dénomination commerciale (si différente)
+  rib?: string;
+  owner_id?: string;
+  currency: string;
+  country?: string;
+  created_at: string;
+}
+
 // ─── Business ─────────────────────────────────────────────────────────────────
 
 export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique';
 
 export interface Business {
   id: string;
-  name: string;
+  name: string;              // Nom de l'établissement
   type: BusinessType;
   denomination?: string;
   rib?: string;
@@ -32,14 +45,16 @@ export interface Business {
   email?: string;
   logo_url?: string;
   currency: string;
-  tax_rate: number;          // percentage, e.g. 18
-  tax_inclusive: boolean;    // true = prix TTC (TVA déduite), false = prix HT (TVA ajoutée)
-  webhook_whitelist?: string[]; // domains or URLs allowed for outgoing webhooks
+  tax_rate: number;
+  tax_inclusive: boolean;
+  webhook_whitelist?: string[];
   receipt_footer?: string;
-  stock_units?: string[];    // unités de stock configurables
-  types: string[];    // multi-type: e.g. ['retail', 'hotel']
-  features: string[]; // modules activés pour ce store (géré par l'admin via backoffice)
+  stock_units?: string[];
+  types: string[];
+  features: string[];
   owner_id?: string;
+  organization_id?: string;
+  organization_name?: string; // jointure depuis organizations.legal_name
   created_at: string;
 }
 

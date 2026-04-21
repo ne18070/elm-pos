@@ -165,6 +165,11 @@ export function BusinessSwitcher({
               <p className="text-sm font-semibold text-white truncate leading-tight">
                 {business?.name ?? 'Mon établissement'}
               </p>
+              {business?.organization_name && business.organization_name !== business.name && (
+                <p className="text-[10px] text-brand-400/70 truncate leading-tight font-medium">
+                  {business.organization_name}
+                </p>
+              )}
               <p className="text-xs text-slate-500 truncate leading-tight">
                 {getRoleLabel(user?.role)}
               </p>
@@ -219,19 +224,14 @@ export function BusinessSwitcher({
                         ${isActive ? 'text-brand-400' : 'text-white'}`}>
                         {biz.name}
                       </p>
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight shrink-0">
-                          {getRoleLabel(role as UserRole)}
-                        </span>
-                        {biz.denomination && biz.denomination !== biz.name && (
-                          <>
-                            <span className="text-slate-700 text-[10px]">•</span>
-                            <span className="text-[10px] text-slate-500 truncate italic">
-                              {biz.denomination}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                      {biz.organization_name && biz.organization_name !== biz.name && (
+                        <p className="text-[10px] text-brand-400/60 truncate font-medium">
+                          {biz.organization_name}
+                        </p>
+                      )}
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+                        {getRoleLabel(role as UserRole)}
+                      </span>
                     </div>
 
                     {isActive && !isLoading && (

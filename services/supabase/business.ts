@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { Business, UserRole, BusinessType } from '../../types';
+import type { Business, Organization, UserRole, BusinessType } from '../../types';
 
 export interface BusinessMembership {
   business: Business;
@@ -15,49 +15,88 @@ export interface BusinessMember {
   joined_at: string;
 }
 
-// ─── Multi-établissements ─────────────────────────────────────────────────────
+export interface OrganizationWithBusinesses extends Organization {
+  owner_name?: string;
+  owner_email?: string;
+  businesses: Business[];
+}
 
-/** Lister toutes les structures (réservé aux superadmins) */
-export async function getAllOrganizations(): Promise<Business[]> {
-  const { data, error } = await supabase
+// ─── Organizations ────────────────────────────────────────────────────────────
+
+/** Toutes les organizations (superadmin) avec leurs établissements */
+export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusinesses[]> {
+  const { data, error } = await (supabase as any)
+    .from('organizations')
+    .select(`
+      *,
+      owner:users!owner_id ( full_name, email ),
+      businesses ( * )
+    `)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  return (data as any[]).map((row) => ({
+    id:           row.id,
+    legal_name:   row.legal_name,
+    denomination: row.denomination,
+    rib:          row.rib,
+    owner_id:     row.owner_id,
+    owner_name:   row.owner?.full_name ?? null,
+    owner_email:  row.owner?.email ?? null,
+    currency:     row.currency,
+    country:      row.country,
+    created_at:   row.created_at,
+    businesses:   (row.businesses ?? []) as Business[],
+  }));
+}
+
+/** Établissements sans organization (superadmin) */
+export async function getUnassignedBusinesses(): Promise<Business[]> {
+  const { data, error } = await (supabase as any)
     .from('businesses')
     .select('*')
+    .is('organization_id', null)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data as Business[];
 }
 
-/** Tous les établissements auxquels l'utilisateur connecté appartient */
-export async function getMyBusinesses(): Promise<BusinessMembership[]> {
-  const { data, error } = await supabase.rpc('get_my_businesses');
+/** Créer une organization depuis le backoffice superadmin */
+export async function createOrganizationAdmin(data: {
+  legal_name: string;
+  denomination?: string;
+  rib?: string;
+  currency?: string;
+  country?: string;
+}): Promise<Organization> {
+  const { data: result, error } = await (supabase as any)
+    .from('organizations')
+    .insert({
+      legal_name:   data.legal_name,
+      denomination: data.denomination || null,
+      rib:          data.rib || null,
+      currency:     data.currency || 'XOF',
+      country:      data.country || null,
+    })
+    .select()
+    .single();
   if (error) throw new Error(error.message);
-
-  return (data as unknown as any[]).map((row) => ({
-    business: {
-      id:             row.id,
-      name:           row.name,
-      type:           row.type,
-      denomination:   row.denomination,
-      rib:            row.rib,
-      brand_config:   row.brand_config,
-      types:    row.types    ?? [],
-      features: row.features ?? [],
-      address:        row.address,
-      phone:          row.phone,
-      email:          row.email,
-      logo_url:       row.logo_url,
-      currency:       row.currency,
-      tax_rate:       row.tax_rate,
-      receipt_footer: row.receipt_footer,
-      stock_units:    row.stock_units,
-      owner_id:       row.owner_id,
-      created_at:     row.created_at,
-    } as Business,
-    role: row.member_role,
-  }));
+  return result as Organization;
 }
 
-/** Créer une structure (organisation) indépendamment d'un utilisateur (réservé aux superadmins) */
+/** Mettre à jour une organization */
+export async function updateOrganization(
+  orgId: string,
+  patch: Partial<Organization>
+): Promise<void> {
+  const { error } = await (supabase as any)
+    .from('organizations')
+    .update(patch)
+    .eq('id', orgId);
+  if (error) throw new Error(error.message);
+}
+
+/** Créer un business standalone depuis le backoffice et l'associer à une org */
 export async function createOrganization(data: {
   name: string;
   type: BusinessType;
@@ -69,11 +108,10 @@ export async function createOrganization(data: {
   phone?: string;
   email?: string;
 }): Promise<Business> {
-  // Initialisation des modules par défaut selon le type pour la création manuelle superadmin
   let features: string[] = [];
-  if (data.type === 'retail') features = ['retail', 'stock', 'expenses'];
+  if (data.type === 'retail')      features = ['retail', 'stock', 'expenses'];
   else if (data.type === 'restaurant') features = ['restaurant', 'retail', 'stock', 'expenses'];
-  else if (data.type === 'hotel') features = ['hotel', 'retail', 'expenses'];
+  else if (data.type === 'hotel')  features = ['hotel', 'retail', 'expenses'];
   else if (data.type === 'service') features = ['legal', 'expenses'];
 
   const { data: result, error } = await (supabase as any)
@@ -83,7 +121,7 @@ export async function createOrganization(data: {
       currency: data.currency || 'XOF',
       tax_rate: data.tax_rate || 0,
       features,
-      types: [data.type]
+      types: [data.type],
     })
     .select()
     .single();
@@ -92,7 +130,43 @@ export async function createOrganization(data: {
   return result as Business;
 }
 
-/** Mettre à jour les informations d'une structure */
+// ─── Multi-établissements ─────────────────────────────────────────────────────
+
+/** Tous les établissements auxquels l'utilisateur connecté appartient */
+export async function getMyBusinesses(): Promise<BusinessMembership[]> {
+  const { data, error } = await supabase.rpc('get_my_businesses');
+  if (error) throw new Error(error.message);
+
+  return (data as unknown as any[]).map((row) => ({
+    business: {
+      id:                row.id,
+      name:              row.name,
+      type:              row.type,
+      denomination:      row.denomination,
+      rib:               row.rib,
+      brand_config:      row.brand_config,
+      types:             row.types    ?? [],
+      features:          row.features ?? [],
+      address:           row.address,
+      phone:             row.phone,
+      email:             row.email,
+      logo_url:          row.logo_url,
+      currency:          row.currency,
+      tax_rate:          row.tax_rate,
+      tax_inclusive:     row.tax_inclusive ?? false,
+      receipt_footer:    row.receipt_footer,
+      stock_units:       row.stock_units,
+      webhook_whitelist: row.webhook_whitelist,
+      owner_id:          row.owner_id,
+      organization_id:   row.organization_id   ?? null,
+      organization_name: row.organization_name ?? null,
+      created_at:        row.created_at,
+    } as Business,
+    role: row.member_role,
+  }));
+}
+
+/** Mettre à jour les informations d'un établissement */
 export async function updateBusiness(
   businessId: string,
   patch: Partial<Business>
@@ -112,7 +186,7 @@ export async function switchBusiness(businessId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Créer un nouvel établissement et y basculer automatiquement */
+/** Créer un nouvel établissement rattaché à l'org du propriétaire */
 export async function createBusiness(data: {
   name: string;
   denomination?: string;
@@ -129,7 +203,6 @@ export async function createBusiness(data: {
 
 // ─── Gestion des membres ──────────────────────────────────────────────────────
 
-/** Liste les membres d'un établissement */
 export async function getBusiness(businessId: string): Promise<Business> {
   const { data, error } = await supabase
     .from('businesses').select('*').eq('id', businessId).single();
@@ -137,7 +210,6 @@ export async function getBusiness(businessId: string): Promise<Business> {
   return data as unknown as Business;
 }
 
-/** Liste les membres d'un établissement */
 export async function getBusinessMembers(businessId: string): Promise<BusinessMember[]> {
   const { data, error } = await supabase.rpc('get_business_members', {
     p_business_id: businessId,
@@ -146,7 +218,6 @@ export async function getBusinessMembers(businessId: string): Promise<BusinessMe
   return data as unknown as BusinessMember[];
 }
 
-/** Changer le rôle d'un membre */
 export async function setMemberRole(
   businessId: string,
   userId: string,
@@ -160,7 +231,6 @@ export async function setMemberRole(
   if (error) throw new Error(error.message);
 }
 
-/** Retirer un membre de l'établissement */
 export async function removeBusinessMember(
   businessId: string,
   userId: string
@@ -170,4 +240,14 @@ export async function removeBusinessMember(
     p_user_id:     userId,
   });
   if (error) throw new Error(error.message);
+}
+
+/** @deprecated — utiliser getAllOrganizationsAdmin() pour le backoffice */
+export async function getAllOrganizations(): Promise<Business[]> {
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data as Business[];
 }
