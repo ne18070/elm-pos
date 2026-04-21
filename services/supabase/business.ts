@@ -65,6 +65,9 @@ export async function createOrganization(data: {
   rib?: string;
   currency?: string;
   tax_rate?: number;
+  address?: string;
+  phone?: string;
+  email?: string;
 }): Promise<Business> {
   // Initialisation des modules par défaut selon le type pour la création manuelle superadmin
   let features: string[] = [];
