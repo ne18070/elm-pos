@@ -26,21 +26,12 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
     setIsAcquiring(false);
   };
 
-  const startTracking = async () => {
+  const startTracking = () => {
     if (!navigator.geolocation) {
       error("La géolocalisation n'est pas supportée par votre navigateur");
       return;
     }
     if (watchId.current !== null) return;
-
-    // Check existing permission state before attempting — avoids silent instant-deny
-    if (navigator.permissions) {
-      const perm = await navigator.permissions.query({ name: 'geolocation' });
-      if (perm.state === 'denied') {
-        setPermissionDenied(true);
-        return;
-      }
-    }
 
     setPermissionDenied(false);
     sessionStorage.setItem(STORAGE_KEY, '1');
