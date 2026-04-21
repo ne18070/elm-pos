@@ -27,13 +27,20 @@ export interface OrganizationWithBusinesses extends Organization {
 export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusinesses[]> {
   const { data, error } = await (supabase as any)
     .from('organizations')
-    .select(`
-      *,
-      owner:users!owner_id ( full_name, email ),
-      businesses ( * )
-    `)
+    .select('*, businesses(*)')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
+
+  const ownerIds: string[] = [...new Set((data as any[]).map((r) => r.owner_id).filter(Boolean))];
+  let ownerMap: Record<string, { full_name?: string; email?: string }> = {};
+
+  if (ownerIds.length > 0) {
+    const { data: users } = await (supabase as any)
+      .from('users')
+      .select('id, full_name, email')
+      .in('id', ownerIds);
+    for (const u of users ?? []) ownerMap[u.id] = u;
+  }
 
   return (data as any[]).map((row) => ({
     id:           row.id,
@@ -41,8 +48,8 @@ export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusine
     denomination: row.denomination,
     rib:          row.rib,
     owner_id:     row.owner_id,
-    owner_name:   row.owner?.full_name ?? null,
-    owner_email:  row.owner?.email ?? null,
+    owner_name:   ownerMap[row.owner_id]?.full_name ?? undefined,
+    owner_email:  ownerMap[row.owner_id]?.email ?? undefined,
     currency:     row.currency,
     country:      row.country,
     created_at:   row.created_at,

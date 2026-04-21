@@ -47,6 +47,10 @@ WHERE o.owner_id = b.owner_id
 
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "org_select" ON organizations;
+DROP POLICY IF EXISTS "org_update" ON organizations;
+DROP POLICY IF EXISTS "org_insert" ON organizations;
+
 CREATE POLICY "org_select" ON organizations FOR SELECT
   USING (
     owner_id = auth.uid()
@@ -111,14 +115,14 @@ BEGIN
   SELECT
     b.id, b.name, b.type, b.denomination, b.rib,
     b.brand_config,
-    COALESCE(b.types, '[]'::jsonb),
-    COALESCE(b.features, '[]'::jsonb),
+    to_jsonb(COALESCE(b.types,            '{}'::text[])),
+    to_jsonb(COALESCE(b.features,         '{}'::text[])),
     b.address, b.phone, b.email, b.logo_url,
     b.currency, b.tax_rate,
     COALESCE(b.tax_inclusive, false),
     b.receipt_footer,
-    COALESCE(b.stock_units, '[]'::jsonb),
-    COALESCE(b.webhook_whitelist, '[]'::jsonb),
+    COALESCE(b.stock_units,               '[]'::jsonb),
+    to_jsonb(COALESCE(b.webhook_whitelist,'{}'::text[])),
     b.owner_id, b.created_at,
     bm.role AS member_role,
     o.id   AS organization_id,
