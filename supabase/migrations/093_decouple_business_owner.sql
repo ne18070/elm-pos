@@ -54,26 +54,46 @@ CREATE POLICY "superadmin_all_businesses" ON businesses
     EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true)
   );
 
--- 5. Mettre à jour create_business pour accepter la dénomination
+-- 5. Mettre à jour create_business pour accepter la dénomination et initialiser les modules par défaut
 CREATE OR REPLACE FUNCTION create_business(business_data JSONB)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_biz businesses;
+  v_type TEXT;
+  v_features TEXT[];
 BEGIN
+  v_type := business_data->>'type';
+  
+  -- Initialisation des modules par défaut selon le type
+  v_features := ARRAY[]::TEXT[];
+  IF v_type = 'retail' THEN
+    v_features := ARRAY['retail', 'stock', 'expenses'];
+  ELSIF v_type = 'restaurant' THEN
+    v_features := ARRAY['restaurant', 'retail', 'stock', 'expenses'];
+  ELSIF v_type = 'hotel' THEN
+    v_features := ARRAY['hotel', 'retail', 'expenses'];
+  ELSIF v_type = 'service' THEN
+    v_features := ARRAY['legal', 'expenses'];
+  END IF;
+
   INSERT INTO businesses (
     name, 
     denomination,
     type, 
     currency, 
     tax_rate, 
-    owner_id
+    owner_id,
+    features,
+    types
   ) VALUES (
     business_data->>'name',
     COALESCE(business_data->>'denomination', business_data->>'name'),
-    business_data->>'type',
+    v_type,
     COALESCE(business_data->>'currency', 'XOF'),
     (COALESCE(business_data->>'tax_rate', '0'))::NUMERIC,
-    auth.uid()
+    auth.uid(),
+    v_features,
+    ARRAY[v_type]
   ) RETURNING * INTO v_biz;
 
   INSERT INTO business_members (business_id, user_id, role)

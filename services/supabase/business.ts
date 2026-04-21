@@ -66,12 +66,21 @@ export async function createOrganization(data: {
   currency?: string;
   tax_rate?: number;
 }): Promise<Business> {
-  const { data: result, error } = await supabase
+  // Initialisation des modules par défaut selon le type pour la création manuelle superadmin
+  let features: string[] = [];
+  if (data.type === 'retail') features = ['retail', 'stock', 'expenses'];
+  else if (data.type === 'restaurant') features = ['restaurant', 'retail', 'stock', 'expenses'];
+  else if (data.type === 'hotel') features = ['hotel', 'retail', 'expenses'];
+  else if (data.type === 'service') features = ['legal', 'expenses'];
+
+  const { data: result, error } = await (supabase as any)
     .from('businesses')
     .insert({
       ...data,
       currency: data.currency || 'XOF',
       tax_rate: data.tax_rate || 0,
+      features,
+      types: [data.type]
     })
     .select()
     .single();

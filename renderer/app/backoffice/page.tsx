@@ -18,8 +18,10 @@ import {
   uploadQrCode, getSubscriptionRequests, approveSubscriptionRequest, rejectSubscriptionRequest,
   getPublicSubscriptionRequests, rejectPublicRequest,
   type SubscriptionRow, type Plan, type PaymentSettings,
-  type SubscriptionRequest, type PublicSubscriptionRequest,
 } from '@services/supabase/subscriptions';
+import {
+  type SubscriptionRequest, type PublicSubscriptionRequest,
+} from '@pos-types';
 import { supabase } from '@/lib/supabase';
 import { getIntouchConfig, upsertIntouchConfig, type IntouchConfig } from '@services/supabase/intouch';
 import { getAllOrganizations, createOrganization, updateBusiness } from '@services/supabase/business';
@@ -89,7 +91,7 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
     days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
   const [approvePublicForm, setApprovePublicForm] = useState<{
-    req: PublicSubscriptionRequest; planId: string;
+    req: any; planId: string;
     days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
 
@@ -140,10 +142,10 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
         body: JSON.stringify({
           requestId:    approvePublicForm.req.id,
           email:        approvePublicForm.req.email,
-          fullName:     approvePublicForm.req.full_name,
+          fullName:     (approvePublicForm.req as any).full_name,
           password:     approvePublicForm.req.password ?? undefined,
           businessName: approvePublicForm.req.business_name,
-          denomination: approvePublicForm.req.denomination,
+          denomination: (approvePublicForm.req as any).denomination,
           planId:       approvePublicForm.planId,
           days:         totalDays,
           note:         approvePublicForm.note || undefined,
@@ -229,15 +231,19 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
                     <tr key={req.id} className={`hover:bg-surface-hover transition-colors ${req.status !== 'pending' ? 'opacity-50' : ''}`}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-white">{req.business_name}</p>
+                        {'denomination' in req && (req as PublicSubscriptionRequest).denomination && (req as PublicSubscriptionRequest).denomination !== req.business_name && (
+                          <p className="text-[10px] text-slate-500 font-medium italic">{(req as PublicSubscriptionRequest).denomination}</p>
+                        )}
                         {req.note && <p className="text-xs text-slate-500 italic mt-0.5">&ldquo;{req.note}&rdquo;</p>}
                       </td>
                       <td className="px-4 py-3 text-slate-300">
                         {'email' in req ? (
                           <>
-                            <p>{(req as PublicSubscriptionRequest).email}</p>
-                            {(req as PublicSubscriptionRequest).phone && <p className="text-xs text-slate-500">{(req as PublicSubscriptionRequest).phone}</p>}
+                            <p className="font-bold text-slate-200">{(req as PublicSubscriptionRequest).full_name || '—'}</p>
+                            <p className="text-xs">{(req as PublicSubscriptionRequest).email}</p>
+                            {(req as PublicSubscriptionRequest).phone && <p className="text-[10px] text-slate-500">{(req as PublicSubscriptionRequest).phone}</p>}
                             {(req as PublicSubscriptionRequest).password && (
-                              <p className="text-xs text-green-400">MDP fourni</p>
+                              <p className="text-[10px] text-green-500/80 font-bold mt-0.5">MDP fourni</p>
                             )}
                           </>
                         ) : '—'}

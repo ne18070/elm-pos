@@ -13,6 +13,8 @@ import { flushSyncQueue } from '@/lib/ipc';
 import { supabase } from '@/lib/supabase';
 import { canManageSettings, hasRole } from '@/lib/permissions';
 import { getWhatsAppConfig, upsertWhatsAppConfig, regenerateVerifyToken, type WhatsAppConfig, type WhatsAppConfigForm } from '@services/supabase/whatsapp';
+import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
+import * as LucideIcons from 'lucide-react';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
@@ -46,6 +48,17 @@ export default function SettingsPage() {
   const [savingUnits, setSavingUnits] = useState(false);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  // Types d'établissement dynamiques
+  const [allTypes, setAllTypes] = useState<BusinessTypeRow[]>([]);
+  useEffect(() => {
+    getBusinessTypes().then(setAllTypes).catch(() => {});
+  }, []);
+
+  function getIcon(name: string): React.ComponentType<{ className?: string }> {
+    return (LucideIcons as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }>
+      ?? LucideIcons.Package;
+  }
 
   // WhatsApp Business
   const isAdmin = hasRole(user?.role, 'admin');
@@ -299,32 +312,37 @@ export default function SettingsPage() {
 
         {/* Type d'activité — manager+ seulement */}
         {isManagerOrAbove && (() => {
-          const TYPE_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
-            retail:     { label: 'Commerce / Boutique',    icon: ShoppingBag },
-            restaurant: { label: 'Restaurant / Café',      icon: Utensils    },
-            service:    { label: 'Prestation de service',  icon: Briefcase   },
-            hotel:      { label: 'Hôtel / Hébergement',    icon: BedDouble   },
-          };
-          const t = business?.type ? TYPE_LABELS[business.type] : null;
-          const Icon = t?.icon;
+          const businessTypes: string[] = business?.types?.length
+            ? business.types
+            : business?.type ? [business.type as string] : [];
+          
+          const selectedTypes = allTypes.filter((t) => businessTypes.includes(t.id));
+
           return (
-            <div className="card p-5 flex items-center gap-4">
-              {Icon && (
-                <div className="w-10 h-10 rounded-xl bg-brand-900/40 flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5 text-brand-400" />
+            <div className="card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Type d&apos;établissement</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedTypes.length > 0 ? selectedTypes.map(t => {
+                      const Icon = getIcon(t.icon);
+                      return (
+                        <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-900/30 border border-brand-800/50">
+                          <Icon className="w-3.5 h-3.5 text-brand-400" />
+                          <span className="text-sm font-semibold text-white">{t.label}</span>
+                        </div>
+                      );
+                    }) : <p className="text-sm text-slate-400 font-medium italic">Aucun type défini</p>}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-3">Détermine les fonctionnalités disponibles dans votre espace de travail.</p>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-500 uppercase tracking-wide">Type d&apos;établissement</p>
-                <p className="font-semibold text-white">{t?.label ?? '—'}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Détermine les fonctionnalités affichées dans le menu</p>
+                <Link
+                  href="/configure"
+                  className="btn-secondary h-9 px-4 text-sm flex items-center gap-1.5 shrink-0"
+                >
+                  Configurer <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-              <Link
-                href="/configure"
-                className="btn-secondary h-9 px-4 text-sm flex items-center gap-1.5 shrink-0"
-              >
-                Modifier <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
             </div>
           );
         })()}

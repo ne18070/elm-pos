@@ -2,7 +2,8 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Receipt, Search, Loader2, X, Check, Pencil, Trash2, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Receipt, Search, Loader2, X, Check, Pencil, Trash2, TrendingUp, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { supabase } from '@/lib/supabase';
@@ -256,6 +257,7 @@ function HonorairesModal({
 export default function HonorairesPage() {
   const { business, user } = useAuthStore();
   const { error: notifError, success } = useNotificationStore();
+  const router = useRouter();
   const currency = business?.currency ?? 'XOF';
 
   const [lines, setLines]                   = useState<HonoraireLine[]>([]);
@@ -407,9 +409,20 @@ export default function HonorairesPage() {
                         <td className="px-4 py-3 text-slate-400 text-xs">{fmtDate(l.date_facture)}</td>
                         <td className="px-4 py-3 text-white font-medium">{l.client_name}</td>
                         <td className="px-4 py-3">
-                          {l.dossier?.reference
-                            ? <span className="text-xs font-mono text-purple-300">{l.dossier.reference}</span>
-                            : <span className="text-slate-600 text-xs">—</span>}
+                          {l.dossier?.reference ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono text-purple-300">{l.dossier.reference}</span>
+                              <button 
+                                onClick={() => router.push(`/dossiers?ref=${l.dossier!.reference}`)}
+                                className="p-1 text-slate-500 hover:text-purple-400 transition-all"
+                                title="Voir le dossier"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-slate-300 text-xs">{typeLabel}</td>
                         <td className="px-4 py-3 text-right text-white font-medium">{fmtMoney(l.montant, currency)}</td>

@@ -32,46 +32,56 @@ export const NAV_SECTIONS: {
   items: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | null; bizTypes: string[] | null }[] 
 }[] = [
   {
-    label: 'Ventes',
+    label: 'Ventes & Caisse',
     items: [
-      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             permission: 'view_pos',               feature: 'caisse',            bizTypes: null           },
-      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: 'caisse',            bizTypes: null           },
-      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: null,                bizTypes: null           },
-      { href: '/livraison',         icon: Truck,         label: 'Livraisons',         permission: 'view_livraisons',        feature: 'livraison',         bizTypes: null           },
-      { href: '/livreurs',          icon: UserCheck,     label: 'Livreurs',           permission: 'view_livreurs',          feature: 'livraison',         bizTypes: null           },
+      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: 'retail',            bizTypes: null           },
+      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: 'retail',            bizTypes: null           },
+      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: 'retail',            bizTypes: null           },
       { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
     ]
   },
   {
-    label: 'Gestion & Catalogue',
+    label: 'Livraison & Terrain',
     items: [
-      { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: 'stock',             bizTypes: null           },
-      { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: 'stock',             bizTypes: null           },
-      { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: 'approvisionnement', bizTypes: null           },
-      { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: 'revendeurs',        bizTypes: null           },
+      { href: '/livraison',         icon: Truck,         label: 'Suivi Livraisons',   permission: 'view_livraisons',        feature: 'delivery',          bizTypes: null           },
+      { href: '/livreurs',          icon: UserCheck,     label: 'Gestion Livreurs',   permission: 'view_livreurs',          feature: 'delivery',          bizTypes: null           },
+      { href: '/team-tracking',     icon: MapPin,        label: 'Tracking Terrain',   permission: 'view_team_tracking',     feature: 'tracking',          bizTypes: null           },
+    ]
+  },
+  {
+    label: 'Catalogue & Stock',
+    items: [
+      { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: 'retail',            bizTypes: null           },
+      { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: 'retail',            bizTypes: null           },
+      { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: 'stock',             bizTypes: null           },
+      { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: 'retail',            bizTypes: null           },
       { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              permission: 'view_hotel',             feature: 'hotel',             bizTypes: null           },
     ]
   },
   {
-    label: 'Clients & Marketing',
+    label: 'Espace Juridique',
     items: [
-      { href: '/clients',           icon: Users,         label: 'Clients',            permission: 'view_clients',           feature: null,                bizTypes: null           },
-      { href: '/coupons',           icon: Tag,           label: 'Coupons',            permission: 'view_coupons',           feature: 'coupons',           bizTypes: null           },
-      { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           permission: 'view_whatsapp',          feature: 'whatsapp',          bizTypes: null           },
+      { href: '/dossiers',          icon: Scale,         label: 'Gestion Dossiers',   permission: 'view_dossiers',          feature: 'dossiers',          bizTypes: null           },
+      { href: '/honoraires',        icon: Receipt,       label: 'Facturation Honoraires', permission: 'view_honoraires',     feature: 'honoraires',        bizTypes: null           },
+      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',          bizTypes: null           },
     ]
   },
   {
-    label: 'Finance & Admin',
+    label: 'Finance & Comptabilité',
     items: [
-      { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       permission: 'view_analytics',         feature: null,                bizTypes: null           },
-      { href: '/depenses',          icon: TrendingDown,  label: 'Dépenses',           permission: 'view_depenses',          feature: null,                bizTypes: null           },
-      { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       permission: 'view_comptabilite',      feature: 'comptabilite',      bizTypes: null           },
-      { href: '/activity',          icon: ScrollText,    label: 'Journal',            permission: 'view_activity',          feature: null,                bizTypes: null           },
-      { href: '/dossiers',          icon: Scale,         label: 'Dossiers',           permission: 'view_dossiers',          feature: 'dossiers',          bizTypes: null           },
-      { href: '/honoraires',        icon: Receipt,       label: 'Honoraires',         permission: 'view_honoraires',        feature: 'honoraires',        bizTypes: null           },
-      { href: '/contrats',          icon: FileSignature, label: 'Contrats',           permission: 'view_contrats',          feature: 'contrats',          bizTypes: null           },
-      { href: '/staff',             icon: UsersRound,    label: 'Personnel',          permission: 'view_staff',             feature: 'staff',             bizTypes: null           },
-      { href: '/team-tracking',     icon: MapPin,        label: 'Tracking',           permission: 'view_team_tracking',     feature: 'tracking',          bizTypes: null           },
+      { href: '/analytics',         icon: BarChart2,     label: 'Tableau de bord',    permission: 'view_analytics',         feature: null,                bizTypes: null           },
+      { href: '/depenses',          icon: TrendingDown,  label: 'Suivi Dépenses',     permission: 'view_depenses',          feature: null,                bizTypes: null           },
+      { href: '/comptabilite',      icon: BookOpen,      label: 'États Comptables',   permission: 'view_comptabilite',      feature: 'comptabilite',      bizTypes: null           },
+    ]
+  },
+  {
+    label: 'Administration',
+    items: [
+      { href: '/clients',           icon: Users,         label: 'Base Clients',       permission: 'view_clients',           feature: null,                bizTypes: null           },
+      { href: '/coupons',           icon: Tag,           label: 'Coupons & Remises',  permission: 'view_coupons',           feature: 'retail',            bizTypes: null           },
+      { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp Business',  permission: 'view_whatsapp',          feature: 'whatsapp',          bizTypes: null           },
+      { href: '/staff',             icon: UsersRound,    label: 'Équipe & Paie',      permission: 'view_staff',             feature: 'staff',             bizTypes: null           },
+      { href: '/activity',          icon: ScrollText,    label: 'Journal Audit',      permission: 'view_activity',          feature: null,                bizTypes: null           },
       { href: '/settings',          icon: Settings,      label: 'Paramètres',         permission: 'view_settings',          feature: null,                bizTypes: null           },
     ]
   }

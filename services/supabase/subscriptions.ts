@@ -237,7 +237,9 @@ export async function rejectSubscriptionRequest(requestId: string, note?: string
 export interface PublicSubscriptionRequest {
   id:            string;
   business_name: string;
+  denomination:  string | null;
   email:         string;
+  full_name:     string | null;
   phone:         string | null;
   plan_id:       string | null;
   plan_label:    string | null;
@@ -299,6 +301,9 @@ export async function approvePublicRequest(
     email:          req.email,
     password,
     email_confirm:  true,
+    user_metadata: {
+      full_name: req.full_name || req.business_name,
+    }
   });
   if (authError) throw new Error(authError.message);
   const userId = authData.user!.id;
@@ -306,7 +311,7 @@ export async function approvePublicRequest(
   const { error: userErr } = await admin.from('users').upsert({
     id:        userId,
     email:     req.email,
-    full_name: req.business_name,
+    full_name: req.full_name || req.business_name,
     role:      'owner',
   }, { onConflict: 'id' });
   if (userErr) throw new Error(userErr.message);
@@ -314,9 +319,10 @@ export async function approvePublicRequest(
   const { data: bizData, error: bizError } = await admin
     .from('businesses')
     .insert({
-      name:     req.business_name,
-      owner_id: userId,
-      type:     'retail',
+      name:         req.business_name,
+      denomination: req.denomination || req.business_name,
+      owner_id:     userId,
+      type:         'retail',
     })
     .select('id')
     .single();

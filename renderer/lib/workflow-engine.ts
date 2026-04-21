@@ -58,15 +58,17 @@ export function evaluateConditionGroup(
   group: ConditionGroup,
   ctx: Record<string, unknown>
 ): boolean {
+  if (!group || typeof group !== 'object') return true;
+
   const isRule = (item: ConditionRule | ConditionGroup): item is ConditionRule =>
-    'fact' in item && 'operator' in item;
+    item !== null && typeof item === 'object' && 'fact' in item && 'operator' in item;
 
   const eval_ = (item: ConditionRule | ConditionGroup): boolean =>
     isRule(item) ? evalRule(item, ctx) : evaluateConditionGroup(item, ctx);
 
-  if (group.all  && group.all.length  > 0) return group.all.every(eval_);
-  if (group.any  && group.any.length  > 0) return group.any.some(eval_);
-  if (group.none && group.none.length > 0) return !group.none.some(eval_);
+  if (group.all  && Array.isArray(group.all)  && group.all.length  > 0) return group.all.every(eval_);
+  if (group.any  && Array.isArray(group.any)  && group.any.length  > 0) return group.any.some(eval_);
+  if (group.none && Array.isArray(group.none) && group.none.length > 0) return !group.none.some(eval_);
   return true; // groupe vide = toujours vrai
 }
 
@@ -113,6 +115,7 @@ export function getOutgoingEdges(def: WorkflowDefinition, nodeId: string): Workf
 // Remplace {{variable}} et {{nested.key}} par les valeurs du contexte.
 // Les valeurs manquantes restent sous forme {{key}} pour débogage.
 export function interpolate(template: string, ctx: Record<string, unknown>): string {
+  if (!template) return '';
   return template.replace(/\{\{([\w.]+)\}\}/g, (_, path: string) => {
     const v = resolvePath(ctx, path);
     return v !== undefined && v !== null ? String(v) : `{{${path}}}`;

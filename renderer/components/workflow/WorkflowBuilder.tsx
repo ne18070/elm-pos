@@ -6,14 +6,14 @@ import {
   User, Zap, FileText, GitBranch, Clock, Timer, X, Link2,
   ZoomIn, ZoomOut, Maximize, Expand, Shrink, GripVertical,
   Undo2, Redo2, LocateFixed, Printer, UserCircle, Globe, Cpu,
-  MousePointer2, ShieldCheck
+  MousePointer2, ShieldCheck, Receipt
 } from 'lucide-react';
 import { saveWorkflow } from '@services/supabase/workflows';
 import { getStaff, type Staff } from '@services/supabase/staff';
 import { validateDefinition } from '@/lib/workflow-engine';
 import type {
   WorkflowDefinition, WorkflowNode, WorkflowEdge,
-  NodeType, WorkflowRole, EndNode
+  NodeType, WorkflowRole, EndNode, FeeRequestNode, DelayNode as WorkflowDelayNode
 } from '@pos-types';
 
 // ── Configuration ───────────────────────────────────────────────────────────
@@ -33,6 +33,7 @@ const NODE_CONFIG: Record<NodeType, { label: string; color: string; icon: React.
   CONDITION:    { label: 'Condition',   color: 'border-orange-400', bg: 'bg-orange-50', text: 'text-orange-900', icon: <GitBranch className="w-3.5 h-3.5" /> },
   WAIT_EVENT:   { label: 'Attente',     color: 'border-cyan-500',   bg: 'bg-cyan-50',   text: 'text-cyan-900',   icon: <Clock     className="w-3.5 h-3.5" /> },
   DELAY:        { label: 'Délai',       color: 'border-rose-400',   bg: 'bg-rose-50',   text: 'text-rose-900',   icon: <Timer     className="w-3.5 h-3.5" /> },
+  FEE_REQUEST:  { label: 'Facturation', color: 'border-emerald-400',bg: 'bg-emerald-50',text: 'text-emerald-900',icon: <Receipt    className="w-3.5 h-3.5" /> },
   END:          { label: 'Fin',         color: 'border-emerald-500',bg: 'bg-emerald-50',text: 'text-emerald-900',icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
 };
 
@@ -122,8 +123,17 @@ function NodeEditor({
       </div>
       
       <div className="space-y-4">
-        <div><label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5 block">Libellé de l&apos;étape</label><input className={inputStyle} value={node.label} onChange={e => onUpdate({ label: e.target.value } as Partial<WorkflowNode>)} /></div>
-        
+       <div><label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5 block">Libellé de l&apos;étape</label><input className={inputStyle} value={node.label} onChange={e => onUpdate({ label: e.target.value } as Partial<WorkflowNode>)} /></div>
+
+       <div>
+         <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5 block">Instructions détaillées (pour l&apos;agent)</label>
+         <textarea 
+           className={`${inputStyle} min-h-[80px] py-3 text-xs leading-relaxed`} 
+           value={node.instructions ?? ''} 
+           onChange={e => onUpdate({ instructions: e.target.value } as Partial<WorkflowNode>)} 
+           placeholder="Décrivez précisément ce que le collaborateur doit faire à cette étape..."
+         />
+       </div>
         {node.type !== 'END' && node.type !== 'CONDITION' && (
           <div className="p-4 bg-white border border-slate-200 rounded-2xl space-y-4 shadow-sm">
             <div className="flex items-center gap-2 text-blue-600 mb-1">
@@ -179,6 +189,51 @@ function NodeEditor({
           </div>
         )}
 
+        {node.type === 'DELAY' && (
+          <div className={sectionStyle}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">Paramètres du Délai</p>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className={labelStyle}>Durée</label>
+                  <input 
+                    type="number" 
+                    className={inputStyle} 
+                    value={(node as WorkflowDelayNode).delay_hours ?? ''} 
+                    onChange={e => onUpdate({ delay_hours: parseFloat(e.target.value) || undefined } as Partial<WorkflowNode>)} 
+                    placeholder="0" 
+                  />
+                </div>
+                <div className="w-28">
+                  <label className={labelStyle}>Unité</label>
+                  <select 
+                    className={inputStyle}
+                    value={(node as WorkflowDelayNode).delay_unit ?? 'HOURS'}
+                    onChange={e => onUpdate({ delay_unit: e.target.value as any } as Partial<WorkflowNode>)}
+                  >
+                    <option value="HOURS">Heures</option>
+                    <option value="DAYS">Jours</option>
+                    <option value="WEEKS">Semaines</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <label className={labelStyle}>Ou attendre jusqu&apos;à (Date du dossier)</label>
+                <input 
+                  className={inputStyle} 
+                  value={(node as WorkflowDelayNode).date_field ?? ''} 
+                  onChange={e => onUpdate({ date_field: e.target.value } as Partial<WorkflowNode>)} 
+                  placeholder="ex: date_audience" 
+                />
+                <p className="text-[9px] text-slate-400 mt-1.5 leading-relaxed">
+                  Si renseigné, le processus attendra que cette date soit passée.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {node.type === 'END' && (
           <div className={sectionStyle}>
             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Résultat final</p>
@@ -194,6 +249,46 @@ function NodeEditor({
                 <option value="FAILURE">Échec</option>
                 <option value="CANCELLED">Annulé</option>
               </select>
+            </div>
+          </div>
+        )}
+
+        {node.type === 'FEE_REQUEST' && (
+          <div className={sectionStyle}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Détails Facturation</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelStyle}>Montant fixe</label>
+                <input 
+                  type="number" 
+                  className={inputStyle} 
+                  value={(node as FeeRequestNode).amount ?? ''} 
+                  onChange={e => onUpdate({ amount: parseFloat(e.target.value) || undefined } as Partial<WorkflowNode>)} 
+                  placeholder="0" 
+                />
+              </div>
+              <div>
+                <label className={labelStyle}>Montant dynamique (Variable)</label>
+                <input 
+                  className={inputStyle} 
+                  value={(node as FeeRequestNode).amount_template ?? ''} 
+                  onChange={e => onUpdate({ amount_template: e.target.value } as Partial<WorkflowNode>)} 
+                  placeholder="ex: {{litige.montant * 0.1}}" 
+                />
+              </div>
+              <div>
+                <label className={labelStyle}>Type de prestation</label>
+                <select 
+                  className={inputStyle} 
+                  value={(node as FeeRequestNode).prestation_type ?? 'provision'} 
+                  onChange={e => onUpdate({ prestation_type: e.target.value } as Partial<WorkflowNode>)}
+                >
+                  <option value="provision">Provision</option>
+                  <option value="honoraire">Honoraire</option>
+                  <option value="consultation">Consultation</option>
+                  <option value="frais">Frais / Débours</option>
+                </select>
+              </div>
             </div>
           </div>
         )}

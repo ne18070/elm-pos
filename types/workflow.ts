@@ -11,6 +11,7 @@ export type NodeType =
   | 'CONDITION'     // Branchement conditionnel
   | 'WAIT_EVENT'    // Pause jusqu'à un événement externe
   | 'DELAY'         // Délai temporel avant la suite
+  | 'FEE_REQUEST'   // Génération automatique d'honoraires
   | 'END';          // Nœud terminal
 
 // ── Statuts d'instance ────────────────────────────────────────────────────────
@@ -93,11 +94,12 @@ export interface FormField {
 }
 
 // ── Nœuds ─────────────────────────────────────────────────────────────────────
-interface BaseNode {
+export interface BaseNode {
   id:             string;
   type:           NodeType;
   label:          string;
   description?:   string;
+  instructions?:  string; // Ce qu'il faut faire exactement à cette étape
   assigned_role?: WorkflowRole;
   // Position pour le builder visuel
   position?:      { x: number; y: number };
@@ -139,8 +141,10 @@ export interface WaitEventNode extends BaseNode {
 
 export interface DelayNode extends BaseNode {
   type:        'DELAY';
-  delay_hours: number;
-  delay_label?: string;  // ex: "48h de délai légal"
+  delay_hours?: number;
+  delay_unit?:  'HOURS' | 'DAYS' | 'WEEKS';
+  date_field?:  string; // Nom du champ dans le contexte (ex: "date_audience")
+  delay_label?: string; // ex: "48h de délai légal"
 }
 
 export interface EndNode extends BaseNode {
@@ -149,9 +153,16 @@ export interface EndNode extends BaseNode {
   message?: string;
 }
 
+export interface FeeRequestNode extends BaseNode {
+  type:            'FEE_REQUEST';
+  amount?:         number;
+  amount_template?: string; // ex: "{{litige.montant * 0.1}}"
+  prestation_type:  string; // provision, honoraire, consultation, frais
+}
+
 export type WorkflowNode =
   | UserTaskNode | ActionNode | LegalClaimNode
-  | ConditionNode | WaitEventNode | DelayNode | EndNode;
+  | ConditionNode | WaitEventNode | DelayNode | EndNode | FeeRequestNode;
 
 // ── Transitions ───────────────────────────────────────────────────────────────
 export interface WorkflowEdge {

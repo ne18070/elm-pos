@@ -4,17 +4,20 @@ import { useState, useEffect, useTransition, useCallback, useMemo } from 'react'
 import {
   ChevronRight, CheckCircle2, XCircle, Clock, MessageCircle,
   AlertTriangle, Loader2, User, FileText, GitBranch, Zap,
-  Timer, Radio, Ban, PauseCircle, RefreshCw, Send,
+  Timer, Radio, Ban, PauseCircle, RefreshCw, Send, Receipt, Info
 } from 'lucide-react';
-import { transitionToNextStep, cancelWorkflowInstance } from '@/lib/workflow-runtime';
+
+import { transitionToNextStep, cancelWorkflowInstance, retryCurrentStep } from '@/lib/workflow-runtime';
 import {
   getNode, getEligibleEdges, interpolate, buildWhatsAppUrl,
 } from '@/lib/workflow-engine';
 import type {
   WorkflowInstance, WorkflowNode, WorkflowEdge,
-  UserTaskNode, LegalClaimNode, WaitEventNode, DelayNode, ActionNode,
+  UserTaskNode, LegalClaimNode, WaitEventNode, DelayNode as WorkflowDelayNode, ActionNode,
   FormField, WorkflowStatus,
 } from '@pos-types';
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -55,6 +58,7 @@ function NodeIcon({ type }: { type: WorkflowNode['type'] }) {
     case 'CONDITION':   return <GitBranch className={cls} />;
     case 'ACTION':      return <Zap className={cls} />;
     case 'DELAY':       return <Timer className={cls} />;
+    case 'FEE_REQUEST': return <Receipt className={cls} />;
     case 'WAIT_EVENT':  return <Radio className={cls} />;
     case 'END':         return <CheckCircle2 className={cls} />;
   }
@@ -260,15 +264,16 @@ function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: Wor
 }
 
 // ── Panel DELAY ───────────────────────────────────────────────────────────────
-function DelayPanel({ node, instance }: { node: DelayNode; instance: WorkflowInstance }) {
+function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; instance: WorkflowInstance; onResume: () => void }) {
   const resumeAt = instance.scheduled_resume_at ? new Date(instance.scheduled_resume_at) : null;
+  const hours = node.delay_hours ?? 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="bg-purple-900/20 border border-purple-700 rounded-xl px-4 py-3 space-y-2">
         <div className="flex items-center gap-2 text-purple-300 text-sm font-medium">
           <Timer className="w-4 h-4" />
-          {node.delay_label ?? `Délai de ${node.delay_hours}h`}
+          {node.delay_label ?? (hours > 0 ? `Délai de ${hours}h` : 'Délai non configuré')}
         </div>
         {resumeAt ? (
           <p className="text-xs text-slate-500">
@@ -276,21 +281,67 @@ function DelayPanel({ node, instance }: { node: DelayNode; instance: WorkflowIns
           </p>
         ) : (
           <p className="text-xs text-slate-500">
-            Durée : {node.delay_hours} heure{node.delay_hours > 1 ? 's' : ''}
+            Durée : {hours} heure{hours > 1 ? 's' : ''}
           </p>
         )}
       </div>
+      
+      <button 
+        onClick={onResume}
+        className="w-full py-2.5 rounded-xl border border-purple-600 bg-purple-900/10 hover:bg-purple-900/30 text-purple-300 text-xs font-bold transition-all flex items-center justify-center gap-2"
+      >
+        <RefreshCw className="w-3.5 h-3.5" />
+        Reprendre manuellement maintenant
+      </button>
+    </div>
+  );
+}
+
+// ── Panel FEE_REQUEST ────────────────────────────────────────────────────────
+function FeeRequestPanel({ node, context }: { node: any; context: Record<string, unknown> }) {
+  let amount = node.amount ?? 0;
+  if (node.amount_template) {
+    const interpolated = interpolate(node.amount_template, context);
+    amount = parseFloat(interpolated) || 0;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-xl px-4 py-4 space-y-2.5">
+        <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold">
+          <Receipt className="w-4 h-4" />
+          Génération d&apos;honoraire automatique
+        </div>
+        <div className="space-y-1">
+          <p className="text-2xl font-black text-white">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-slate-400">XOF</span></p>
+          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{node.prestation_type || 'Provision'}</p>
+        </div>
+        <p className="text-xs text-slate-400 leading-relaxed italic border-t border-emerald-800/30 pt-2">
+          {node.description || node.label}
+        </p>
+      </div>
+      <p className="text-[10px] text-slate-600 italic">
+        Cet honoraire a été enregistré en base de données. Cliquez sur Suivant pour continuer la procédure.
+      </p>
     </div>
   );
 }
 
 // ── Panel FAILED ──────────────────────────────────────────────────────────────
-function FailedPanel({ instance }: { instance: WorkflowInstance }) {
+function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetry: () => void }) {
   return (
-    <div className="bg-red-900/20 border border-red-800 rounded-xl px-4 py-3 space-y-2">
-      <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
-        <XCircle className="w-4 h-4" />
-        Erreur — Processus en échec
+    <div className="bg-red-900/20 border border-red-800 rounded-xl px-4 py-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
+          <XCircle className="w-4 h-4" />
+          Erreur — Processus en échec
+        </div>
+        <button 
+          onClick={onRetry}
+          className="text-[10px] font-black uppercase tracking-widest bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-all"
+        >
+          Réessayer
+        </button>
       </div>
       {instance.last_error && (
         <pre className="text-xs text-red-300 whitespace-pre-wrap font-mono bg-red-950/30 rounded p-2 max-h-32 overflow-y-auto">
@@ -551,6 +602,27 @@ export function WorkflowRunner({
     });
   };
 
+  const handleRetry = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await retryCurrentStep(instance.id, currentUserId);
+      if (!result.ok) { setError(result.error ?? 'Erreur de relance'); return; }
+      
+      setInstance(prev => ({
+        ...prev,
+        current_node_id: result.new_node_id ?? prev.current_node_id,
+        status:          result.new_status  ?? prev.status,
+      }));
+      onTransition?.(result.new_node_id!, result.new_status!);
+    });
+  };
+
+  const handleManualResume = () => {
+    if (eligibleEdges.length > 0) {
+      handleTransition(eligibleEdges[0]);
+    }
+  };
+
   // ── Terminaux ─────────────────────────────────────────────────────────────
   if (instance.status === 'COMPLETED') {
     return <div className="card p-4"><CompletedPanel instance={instance} onRestart={onCancel ? undefined : undefined} /></div>;
@@ -581,7 +653,19 @@ export function WorkflowRunner({
             <p className="font-semibold text-white">{currentNode.label}</p>
           </div>
         </div>
-        <StatusBadge status={instance.status} />
+        <div className="flex items-center gap-2">
+          {!readOnly && (instance.status === 'RUNNING' || instance.status === 'WAITING') && (
+            <button 
+              onClick={handleRetry}
+              disabled={isPending}
+              title="Relancer cette étape"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-900/20 transition-all"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isPending ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          <StatusBadge status={instance.status} />
+        </div>
       </div>
 
       {/* ── Spinner pendant traitement ── */}
@@ -594,8 +678,21 @@ export function WorkflowRunner({
 
       {/* ── Contenu du nœud ── */}
       {!isPending && (
-        <div>
-          {instance.status === 'FAILED' && <FailedPanel instance={instance} />}
+        <div className="space-y-5">
+          {/* Instructions détaillées */}
+          {currentNode.instructions && (
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-1">
+              <Info className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">Consignes de l&apos;étape</p>
+                <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  {currentNode.instructions}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {instance.status === 'FAILED' && <FailedPanel instance={instance} onRetry={handleRetry} />}
 
           {instance.status !== 'FAILED' && currentNode.type === 'USER_TASK' && (
             <UserTaskPanel node={currentNode} formData={formData} onFieldChange={handleFieldChange} />
@@ -607,10 +704,13 @@ export function WorkflowRunner({
             <WaitEventPanel node={currentNode as WaitEventNode} instance={instance} />
           )}
           {instance.status !== 'FAILED' && currentNode.type === 'DELAY' && (
-            <DelayPanel node={currentNode as DelayNode} instance={instance} />
+            <DelayPanel node={currentNode as WorkflowDelayNode} instance={instance} onResume={handleManualResume} />
           )}
           {instance.status !== 'FAILED' && currentNode.type === 'ACTION' && (
             <ActionPanel node={currentNode as ActionNode} context={{ ...instance.context, ...formData }} />
+          )}
+          {instance.status !== 'FAILED' && currentNode.type === 'FEE_REQUEST' && (
+            <FeeRequestPanel node={currentNode} context={{ ...instance.context, ...formData }} />
           )}
           {instance.status !== 'FAILED' && currentNode.type === 'CONDITION' && (
             <p className="text-sm text-slate-400 italic py-2">

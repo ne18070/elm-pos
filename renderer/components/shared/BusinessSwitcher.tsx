@@ -61,7 +61,7 @@ export function BusinessSwitcher({
 
   // Le plan Pro autorise les multi-établissements (feature contenant "multi")
   const currentPlan   = plans.find(p => p.id === subscription?.plan_id);
-  const canMultiBiz   = currentPlan?.features.some(f => /multi/i.test(f)) ?? false;
+  const canMultiBiz   = currentPlan?.features?.some(f => /multi/i.test(f)) ?? false;
   const canCreateBiz  = isOwner && (canMultiBiz || businesses.length === 0);
 
   async function handleSwitch(businessId: string) {

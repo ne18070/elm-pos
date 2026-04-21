@@ -346,6 +346,42 @@ export type { RoomType, RoomStatus, ReservationStatus, HotelRoom, HotelGuest, Ho
 export type { Livreur } from '../services/supabase/livreurs';
 export type * from './workflow';
 
+// ─── Subscriptions ────────────────────────────────────────────────────────────
+
+export interface SubscriptionRequest {
+  id:           string;
+  business_id:  string;
+  business_name: string;
+  plan_id:      string | null;
+  plan_label:   string | null;
+  plan_price:   number | null;
+  plan_currency: string | null;
+  receipt_url:  string;
+  status:       'pending' | 'approved' | 'rejected';
+  note:         string | null;
+  created_at:   string;
+  processed_at: string | null;
+}
+
+export interface PublicSubscriptionRequest {
+  id:            string;
+  business_name: string;
+  denomination:  string | null;
+  email:         string;
+  full_name:     string | null;
+  phone:         string | null;
+  plan_id:       string | null;
+  plan_label:    string | null;
+  plan_price:    number | null;
+  plan_currency: string | null;
+  receipt_url:   string | null;
+  password:      string | null;
+  status:        'pending' | 'approved' | 'rejected';
+  note:          string | null;
+  created_at:    string;
+  processed_at:  string | null;
+}
+
 // ─── UI State ─────────────────────────────────────────────────────────────────
 
 export interface Notification {

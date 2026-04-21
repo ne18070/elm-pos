@@ -17,12 +17,12 @@ import { updateUserRole, removeUserFromBusiness, updateOwnProfile, toggleUserBlo
 import { useSubscriptionStore } from '@/store/subscription';
 import { getEffectiveStatus, getTrialDaysRemaining } from '@services/supabase/subscriptions';
 import { uploadProductImage } from '@services/supabase/storage';
-import { getMyBusinesses } from '@services/supabase/business';
+import { getMyBusinesses, type BusinessMembership } from '@services/supabase/business';
+import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
 import { supabase } from '@/lib/supabase';
 import type { User as UserType, UserRole } from '@pos-types';
 import { canManageTeam, hasRole } from '@/lib/permissions';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
-import type { BusinessMembership } from '@services/supabase/business';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   owner:   { label: 'Propriétaire',   color: 'text-indigo-900 bg-indigo-100 border-indigo-200 dark:text-indigo-400 dark:bg-indigo-900/20 dark:border-indigo-800' },
@@ -31,7 +31,84 @@ const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   staff:   { label: 'Caissier',       color: 'text-slate-900 bg-slate-100 border-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700' },
 };
 
+const ROLE_LEGENDS: Record<string, Record<UserRole, string>> = {
+  restaurant: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Gestion complète : menu, stocks, personnel, remises et statistiques financières.",
+    manager: "Responsable de salle/cuisine : gestion des tables, stocks et clôture de caisse.",
+    staff:   "Serveur / Caissier : prise de commande, encaissement et livraisons.",
+  },
+  retail: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Gestion complète : catalogue produits, prix, fournisseurs et statistiques.",
+    manager: "Responsable magasin : approvisionnements, inventaires et clôture de caisse.",
+    staff:   "Vendeur / Caissier : ventes, recherche produits et historique client.",
+  },
+  hotel: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Gestion complète : configuration des chambres, tarifs, équipe et rapports.",
+    manager: "Réceptionniste principal : réservations, check-in/out, facturation et maintenance.",
+    staff:   "Employé réception / Étage : vue des chambres, réservations simples et services.",
+  },
+  juridique: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Associé / Administrateur : gestion des dossiers, honoraires, équipe et comptabilité.",
+    manager: "Clerc de notaire / Juriste : suivi des procédures, processus et pièces jointes.",
+    staff:   "Secrétaire : consultation des dossiers, saisie simple et accueil.",
+  },
+};
+
 type Tab = 'profil' | 'equipe' | 'permissions' | 'etablissements' | 'facturation';
+
+// ─── Aide Rôles Dynamique ──────────────────────────────────────────────────
+
+function RoleLegend({ businessType, allTypes }: { businessType?: string; allTypes: BusinessTypeRow[] }) {
+  const type = businessType || 'retail';
+  const legend = ROLE_LEGENDS[type] || ROLE_LEGENDS.retail;
+  const typeLabel = allTypes.find(t => t.id === type)?.label || (type.charAt(0).toUpperCase() + type.slice(1));
+
+  return (
+    <div className="card p-5 space-y-4 mt-6 bg-brand-500/5 border-brand-500/20">
+      <div className="flex items-center gap-2 text-brand-400">
+        <Shield className="w-4 h-4" />
+        <p className="text-xs font-black uppercase tracking-[0.2em]">Guide des rôles — {typeLabel}</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {(Object.entries(legend) as [UserRole, string][]).map(([role, text]) => {
+          const { label, color } = ROLE_LABELS[role];
+          const customLabel = getCustomRoleLabel(role, type);
+          return (
+            <div key={role} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${color}`}>
+                  {customLabel}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed italic">{text}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function getCustomRoleLabel(role: UserRole, type: string): string {
+  if (type === 'juridique') {
+    if (role === 'manager') return 'Clerc / Juriste';
+    if (role === 'staff') return 'Secrétaire';
+  }
+  if (type === 'restaurant') {
+    if (role === 'manager') return 'Maître d\'hôtel';
+    if (role === 'staff') return 'Serveur';
+  }
+  if (type === 'hotel') {
+    if (role === 'manager') return 'Gouvernant';
+    if (role === 'staff') return 'Réceptionniste';
+  }
+  return ROLE_LABELS[role].label;
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -40,6 +117,12 @@ export default function AdminPage() {
   const { members, loading: loadingTeam, refetch } = useTeam(business?.id ?? '');
   const [tab, setTab] = useState<Tab>('profil');
   const [showInvite, setShowInvite] = useState(false);
+
+  // Types d'établissement dynamiques pour la légende
+  const [allTypes, setAllTypes] = useState<BusinessTypeRow[]>([]);
+  useEffect(() => {
+    getBusinessTypes().then(setAllTypes).catch(() => {});
+  }, []);
 
   // Liste locale avec fallback : store OU business actif
   const [bizList, setBizList] = useState<BusinessMembership[]>(() =>
@@ -435,12 +518,13 @@ export default function AdminPage() {
                   const count = members.filter((m) => m.role === role).length;
                   if (count === 0 && role !== 'staff') return null;
                   const label = ROLE_LABELS[role];
+                  const customLabel = getCustomRoleLabel(role, business?.type || 'retail');
                   return (
                     <div
                       key={role}
                       className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 ${label.color}`}
                     >
-                      <span>{label.label}s</span>
+                      <span>{customLabel}s</span>
                       <span className="bg-black/20 px-1.5 py-0.5 rounded-lg min-w-[20px] text-center">{count}</span>
                     </div>
                   );
@@ -453,10 +537,11 @@ export default function AdminPage() {
             ) : (
               <div className="space-y-2">
                 {members.map((member) => {
-                  const badge = ROLE_LABELS[member.role];
+                  const badge = ROLE_LABELS[member.role] || ROLE_LABELS.staff;
                   const isSelf    = member.id === user?.id;
                   const canManage = isOwnerOrAdmin && !isSelf && member.role !== 'owner';
                   const canOwnerAct = isOwner && !isSelf && member.role !== 'owner';
+                  const customLabel = getCustomRoleLabel(member.role, business?.type || 'retail');
 
                   return (
                     <div key={member.id} className="card p-4 flex items-center gap-3">
@@ -490,15 +575,15 @@ export default function AdminPage() {
                             className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer ${badge.color}`}
                             style={{ background: '#111827', colorScheme: 'dark' }}
                           >
-                            <option value="staff"   style={{ background: '#111827', color: '#fff' }}>Caissier</option>
-                            <option value="manager" style={{ background: '#111827', color: '#fff' }}>Manager</option>
+                            <option value="staff"   style={{ background: '#111827', color: '#fff' }}>{getCustomRoleLabel('staff', business?.type || 'retail')}</option>
+                            <option value="manager" style={{ background: '#111827', color: '#fff' }}>{getCustomRoleLabel('manager', business?.type || 'retail')}</option>
                             <option value="admin"   style={{ background: '#111827', color: '#fff' }}>Administrateur</option>
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
                         </div>
                       ) : (
                         <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
-                          {badge.label}
+                          {customLabel}
                         </span>
                       )}
 
@@ -543,15 +628,11 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Légende rôles */}
-            <div className="card p-4 space-y-2 mt-4">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rôles</p>
-              <div className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <p><span className="text-indigo-700 dark:text-indigo-400 font-bold">Propriétaire</span> — Accès total, gestion des établissements et de l'équipe</p>
-                <p><span className="text-brand-700 dark:text-brand-400 font-bold">Administrateur</span> — Produits, commandes, coupons, statistiques</p>
-                <p><span className="text-slate-700 dark:text-slate-300 font-bold">Caissier</span> — Caisse et historique de ses commandes uniquement</p>
-              </div>
-            </div>
+            {/* Légende Rôles */}
+            {(() => {
+              const businessType = business?.types?.[0] || business?.type || 'retail';
+              return <RoleLegend businessType={businessType} allTypes={allTypes} />;
+            })()}
           </div>
         )}
 

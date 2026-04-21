@@ -1,4 +1,4 @@
-import type { UserRole } from '@pos-types';
+import type { UserRole, Business } from '@pos-types';
 
 // ─── Hiérarchie des rôles ─────────────────────────────────────────────────────
 // Plus le rang est élevé, plus le rôle a de permissions.
@@ -12,16 +12,33 @@ const ROLE_RANK: Record<UserRole, number> = {
 
 /**
  * Retourne true si le rôle de l'utilisateur est >= au rôle minimum requis.
- *
- * @example
- * hasRole(user?.role, 'manager') // true pour manager, admin, owner
- * hasRole(user?.role, 'admin')   // true pour admin et owner seulement
  */
 export function hasRole(
   userRole: UserRole | undefined | null,
   minRole: UserRole,
 ): boolean {
   return (ROLE_RANK[userRole ?? 'staff'] ?? 0) >= ROLE_RANK[minRole];
+}
+
+/**
+ * Retourne true si l'établissement possède le module/feature spécifié.
+ */
+export function hasFeature(business: Business | null | undefined, feature: string): boolean {
+  if (!business) return false;
+
+  const types = business.types ?? [];
+  const features = business.features ?? [];
+
+  // Un business peut avoir plusieurs types (ex: restaurant + retail)
+  if (types.includes(feature)) return true;
+
+  // Implis par type
+  if (types.includes('juridique') && (feature === 'dossiers' || feature === 'honoraires')) return true;
+  if (types.includes('restaurant') && (feature === 'restaurant' || feature === 'retail')) return true;
+  if (types.includes('hotel') && (feature === 'hotel' || feature === 'retail')) return true;
+
+  // Ou des modules activés explicitement
+  return features.includes(feature);
 }
 
 // ─── Labels lisibles ──────────────────────────────────────────────────────────
@@ -38,7 +55,6 @@ export function getRoleLabel(role: UserRole | undefined | null): string {
 }
 
 // ─── Permissions nommées ──────────────────────────────────────────────────────
-// Utiliser ces fonctions dans les composants pour une meilleure lisibilité.
 
 /** Peut voir les données financières (balance, états financiers, caisse) */
 export const canViewFinancials    = (r: UserRole | null | undefined) => hasRole(r, 'admin');
@@ -47,13 +63,16 @@ export const canViewFinancials    = (r: UserRole | null | undefined) => hasRole(
 export const canManageSettings    = (r: UserRole | null | undefined) => hasRole(r, 'manager');
 
 /** Peut annuler des commandes / réservations */
-export const canCancelOrders      = (r: UserRole | null | undefined) => hasRole(r, 'manager');
+export const canCancelOrders      = (r: UserRole | null | undefined, b?: Business | null) => 
+  hasRole(r, 'manager') && (!b || hasFeature(b, 'retail'));
 
 /** Peut créer / modifier / supprimer des chambres */
-export const canManageRooms       = (r: UserRole | null | undefined) => hasRole(r, 'manager');
+export const canManageRooms       = (r: UserRole | null | undefined, b?: Business | null) => 
+  hasRole(r, 'manager') && (!b || hasFeature(b, 'hotel'));
 
 /** Peut voir et enregistrer des dépenses */
-export const canManageExpenses    = (r: UserRole | null | undefined) => hasRole(r, 'manager');
+export const canManageExpenses    = (r: UserRole | null | undefined, b?: Business | null) => 
+  hasRole(r, 'manager') && (!b || hasFeature(b, 'expenses'));
 
 /** Peut gérer l'équipe (invitations, rôles) */
 export const canManageTeam        = (r: UserRole | null | undefined) => hasRole(r, 'admin');
@@ -67,29 +86,35 @@ import type { PermissionKey } from './permissions-map';
 import { PERMISSIONS, IMMUTABLE_OWNER_PERMISSIONS } from './permissions-map';
 
 /**
- * Resolves a single permission given a role and optional per-member overrides.
- * Override map keys are permission keys, values are granted (true) or denied (false).
- * Owner always has IMMUTABLE_OWNER_PERMISSIONS regardless of overrides.
+ * Resolves a single permission given a role, an optional business and optional per-member overrides.
  */
 export function checkPermission(
   role:       UserRole | null | undefined,
   permission: PermissionKey,
   overrides:  Record<string, boolean> = {},
+  business?:  Business | null
 ): boolean {
   const r = role ?? 'staff';
-
-  // Owners cannot have critical permissions denied
-  if (r === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(permission)) {
-    return true;
-  }
-
-  // Explicit override wins over role default
-  if (permission in overrides) {
-    return overrides[permission];
-  }
 
   // Fall back to role default
   const meta = PERMISSIONS[permission];
   if (!meta) return false;
+
+  // 1. Check feature requirement first
+  if (meta.feature && business && !hasFeature(business, meta.feature)) {
+    return false;
+  }
+
+  // 2. Owners cannot have critical permissions denied
+  if (r === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(permission)) {
+    return true;
+  }
+
+  // 3. Explicit override wins over role default
+  if (permission in overrides) {
+    return overrides[permission];
+  }
+
+  // 4. Role default check
   return (meta.defaultRoles as readonly string[]).includes(r);
 }

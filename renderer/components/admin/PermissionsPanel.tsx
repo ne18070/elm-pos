@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Loader2, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldCheck, Loader2, RotateCcw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth';
 import {
   PERMISSIONS, PERMISSION_GROUPS, IMMUTABLE_OWNER_PERMISSIONS,
   type PermissionKey, type PermissionGroup,
 } from '@/lib/permissions-map';
-import { checkPermission } from '@/lib/permissions';
+import { checkPermission, hasFeature } from '@/lib/permissions';
 import type { UserRole } from '@pos-types';
 
 interface Member {
@@ -27,6 +28,7 @@ type OverrideMap = Record<string, boolean>;
 const GROUP_ORDER: PermissionGroup[] = ['navigation', 'gestion', 'finance', 'admin'];
 
 export function PermissionsPanel({ businessId, members }: Props) {
+  const { business } = useAuthStore();
   const [selectedUserId, setSelectedUserId] = useState<string>(members[0]?.user_id ?? '');
   const [overrides, setOverrides]           = useState<OverrideMap>({});
   const [loading, setLoading]               = useState(false);
@@ -60,7 +62,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
     // Cannot override immutable owner permissions
     if (role === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(permission)) return;
 
-    const roleDefault = checkPermission(role, permission, {});
+    const roleDefault = checkPermission(role, permission, {}, business);
     setSaving(permission);
 
     try {
@@ -104,8 +106,13 @@ export function PermissionsPanel({ businessId, members }: Props) {
     group,
     label: PERMISSION_GROUPS[group],
     items: (Object.entries(PERMISSIONS) as [PermissionKey, typeof PERMISSIONS[PermissionKey]][])
-      .filter(([, meta]) => meta.group === group),
-  }));
+      .filter(([, meta]) => {
+        if (meta.group !== group) return false;
+        // Si la permission requiert une feature que l'établissement n'a pas, on la cache
+        if (meta.feature && !hasFeature(business, meta.feature)) return false;
+        return true;
+      }),
+  })).filter(g => g.items.length > 0);
 
   const overrideCount = Object.keys(overrides).length;
 
@@ -164,7 +171,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                   {items.map(([key, meta]) => {
                     const isImmutable = selectedMember.role === 'owner' &&
                       (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(key);
-                    const effective   = checkPermission(selectedMember.role, key, overrides);
+                    const effective   = checkPermission(selectedMember.role, key, overrides, business);
                     const hasOverride = key in overrides;
                     const isSavingThis = saving === key;
 
@@ -180,7 +187,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                           <p className="text-sm font-medium text-white">{meta.label}</p>
                           {hasOverride && !isImmutable && (
                             <p className="text-xs text-amber-400 mt-0.5">
-                              Remplacé (défaut rôle: {checkPermission(selectedMember.role, key, {}) ? 'Oui' : 'Non'})
+                              Remplacé (défaut rôle: {checkPermission(selectedMember.role, key, {}, business) ? 'Oui' : 'Non'})
                             </p>
                           )}
                         </div>

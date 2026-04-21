@@ -7,14 +7,16 @@ import {
   HardDrive, AlertTriangle, GitBranch, Play, ChevronLeft, ChevronRight, 
   ChevronDown, PauseCircle, XCircle, CheckCircle2, Clock, Mail,
   Activity, BookOpen, Settings2, Building2, UserCircle2, ToggleLeft, ToggleRight,
-  ShieldCheck
+  ShieldCheck, Receipt, TrendingUp, AlertCircle, Archive, ArchiveRestore
 } from 'lucide-react';
 
 import { toUserError } from '@/lib/user-error';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
+import { displayCurrency } from '@/lib/utils';
 
 import { MonitoringDashboard } from '@/components/workflow/MonitoringDashboard';
 import { WorkflowBuilder } from '@/components/workflow/WorkflowBuilder';
@@ -189,6 +191,124 @@ function ConfigTab({ businessId, onRefresh }: { businessId: string, onRefresh: (
   );
 }
 
+// ─── Modaux ──────────────────────────────────────────────────────────────────
+
+function QuickClientModal({ businessId, onClose, onCreated }: { businessId: string; onClose: () => void; onCreated: (c: any) => void; }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', type: 'personne_physique', identification_number: '' });
+  const [saving, setSaving] = useState(false);
+  const { error: notifError, success } = useNotificationStore();
+
+  async function handleSave() {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      const { data, error } = await (supabase as any).from('clients').insert({
+        business_id: businessId,
+        name: form.name.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        type: form.type,
+        identification_number: form.identification_number.trim() || null,
+      }).select().single();
+      if (error) throw error;
+      success('Client créé');
+      onCreated(data);
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setSaving(false); }
+  }
+
+  const isMoral = form.type === 'personne_morale';
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4 backdrop-blur-md">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/30">
+          <h3 className="text-lg font-black text-white tracking-tight uppercase">Nouveau Client</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl text-slate-500 transition-colors"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label-sm">Type</label>
+              <select className="input h-11" value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
+                <option value="personne_physique">Particulier</option>
+                <option value="personne_morale">Entreprise</option>
+              </select>
+            </div>
+            <div><label className="label-sm">{isMoral ? 'RCCM / NINEA' : 'CNI / Passeport'}</label><input className="input h-11 font-mono" value={form.identification_number} onChange={e => setForm({...form, identification_number: e.target.value})} placeholder="ID..." /></div>
+          </div>
+
+          <div><label className="label-sm">Nom complet / Raison sociale</label><input autoFocus className="input h-11" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ex: Jean Dupont" /></div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="label-sm">Téléphone</label><input className="input h-11" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="+221..." /></div>
+            <div><label className="label-sm">Email</label><input className="input h-11" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="client@exemple.com" /></div>
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button onClick={onClose} className="btn-secondary flex-1 h-11 font-black uppercase text-[10px] tracking-widest">Annuler</button>
+            <button onClick={handleSave} disabled={saving || !form.name.trim()} className="btn-primary flex-1 h-11 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Créer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickRefModal({ 
+  businessId, category, label, onClose, onCreated 
+}: { 
+  businessId: string; category: string; label: string; onClose: () => void; onCreated: (item: RefItem) => void; 
+}) {
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { error: notifError, success } = useNotificationStore();
+
+  async function handleSave() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const value = name.trim().toLowerCase().replace(/\s+/g, '_');
+      const item = await upsertRefItem(category as any, {
+        business_id: businessId,
+        label: name.trim(),
+        value,
+        is_active: true,
+        sort_order: 0,
+        color: null,
+        metadata: {},
+      });
+      success(`${label} ajouté`);
+      onCreated(item as unknown as RefItem);
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4 backdrop-blur-md">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-800/30">
+          <h3 className="text-sm font-black text-white tracking-tight uppercase">Ajouter : {label}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl text-slate-500"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="text-[10px] font-black uppercase text-slate-500 mb-1.5 block">Nom / Libellé</label>
+            <input autoFocus className="input h-12" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: TGI de Dakar" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button onClick={onClose} className="btn-secondary flex-1 h-11 text-[10px] font-black uppercase tracking-widest">Annuler</button>
+            <button onClick={handleSave} disabled={saving || !name.trim()} className="btn-primary flex-1 h-11 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Créer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Modal Dossier ───────────────────────────────────────────────────────────
 
 function DossierModal({
@@ -206,6 +326,12 @@ function DossierModal({
   onSaved:      (dossier: Dossier) => void;
 }) {
   const { error: notifError, success } = useNotificationStore();
+  const can = useCan();
+  const [showQuickClient, setShowQuickClient] = useState(false);
+  const [quickRef, setQuickRef] = useState<{ category: string; label: string } | null>(null);
+  const [localTypesAffaire, setLocalTypesAffaire] = useState(typesAffaire);
+  const [localTribunaux, setLocalTribunaux] = useState(tribunaux);
+
   const [form, setForm] = useState({
     reference:      initial?.reference      ?? genRef(count),
     type_affaire:   initial?.type_affaire   ?? (typesAffaire[0]?.value ?? ''),
@@ -232,13 +358,20 @@ function DossierModal({
   const [clientSearch, setClientSearch] = useState('');
   const [showClientResults, setShowClientResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const refreshRefData = useCallback(async (cat: string) => {
+    const data = await getReferenceData(cat as any, businessId);
+    if (cat === 'type_affaire') setLocalTypesAffaire(data);
+    if (cat === 'tribunal') setLocalTribunaux(data);
+    if (cat === 'type_client') setTypesClient(data);
+  }, [businessId]);
   
   useEffect(() => {
-    getClients(businessId).then(setAllClients);
-    getReferenceData('type_client', businessId).then(setTypesClient);
-    getWorkflows(businessId, true).then(setWorkflows);
+    getClients(businessId).then(setAllClients).catch(() => {});
+    getReferenceData('type_client', businessId).then(setTypesClient).catch(() => {});
+    getWorkflows(businessId, true).then(setWorkflows).catch(() => {});
     if (initial) {
-      getInstancesByDossier(initial.id).then(setInstances);
+      getInstancesByDossier(initial.id).then(setInstances).catch(() => {});
     }
   }, [initial, businessId]);
 
@@ -306,7 +439,7 @@ function DossierModal({
         if (error) throw error;
         saved = data as unknown as Dossier;
 
-        if (form.selectedWorkflow) {
+        if (form.selectedWorkflow && can('launch_workflow')) {
           await triggerWorkflow({
             workflow_id: form.selectedWorkflow,
             dossier_id:  saved.id,
@@ -342,9 +475,15 @@ function DossierModal({
         <div className="overflow-y-auto p-5 space-y-5 scrollbar-thin">
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Référence Dossier</label><input className="input" value={form.reference} onChange={(e) => set('reference', e.target.value)} /></div>
-            <div><label className="label">Type d'affaire</label><select className="input" value={form.type_affaire} onChange={(e) => set('type_affaire', e.target.value)}>
-              {typesAffaire.map((t) => <option key={t.value} value={t.value} className="bg-gray-900 text-white">{t.label}</option>)}
-            </select></div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="label mb-0">Type d'affaire</label>
+                <button type="button" onClick={() => setQuickRef({ category: 'type_affaire', label: 'Type d\'affaire' })} className="text-[9px] font-black uppercase text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
+              </div>
+              <select className="input" value={form.type_affaire} onChange={(e) => set('type_affaire', e.target.value)}>
+                {localTypesAffaire.map((t) => <option key={t.value} value={t.value} className="bg-gray-900 text-white">{t.label}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="p-5 bg-slate-900/30 border border-slate-800 rounded-2xl space-y-4">
@@ -354,10 +493,19 @@ function DossierModal({
             </div>
 
             <div className="relative" ref={searchRef}>
-              <label className="label">Nom de l'entité / Client <span className="text-red-400">*</span></label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="label mb-0">Nom de l'entité / Client <span className="text-red-400">*</span></label>
+                <button 
+                  type="button" 
+                  onClick={() => setShowQuickClient(true)}
+                  className="text-[10px] font-black uppercase tracking-widest text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-all"
+                >
+                  <Plus className="w-3 h-3" /> Nouveau Client
+                </button>
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input className="input pl-10" value={form.client_name || clientSearch} onChange={(e) => { set('client_name', e.target.value); setClientSearch(e.target.value); setShowClientResults(true); }} onFocus={() => setShowClientResults(true)} placeholder="Rechercher ou saisir..." />
+                <input className="input pl-10 h-11" value={form.client_name || clientSearch} onChange={(e) => { set('client_name', e.target.value); setClientSearch(e.target.value); setShowClientResults(true); }} onFocus={() => setShowClientResults(true)} placeholder="Rechercher ou saisir..." />
               </div>
               {showClientResults && clientSearch.length > 0 && filteredClients.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -371,9 +519,13 @@ function DossierModal({
               )}
             </div>
 
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Type d'entité</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="label mb-0">Type d'entité</label>
+                  <button type="button" onClick={() => setQuickRef({ category: 'type_client', label: 'Type d\'entité' })} className="text-[9px] font-black uppercase text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
+                </div>
                 <select className="input" value={form.client_type} onChange={(e) => set('client_type', e.target.value)}>
                   <option value="">— Sélectionner —</option>
                   {typesClient.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -400,10 +552,16 @@ function DossierModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Adversaire</label><input className="input" value={form.adversaire} onChange={(e) => set('adversaire', e.target.value)} /></div>
-            <div><label className="label">Tribunal / Juridiction</label><select className="input" value={form.tribunal || ''} onChange={(e) => set('tribunal', e.target.value)}>
-              <option value="">— Sélectionner —</option>
-              {tribunaux.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select></div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="label mb-0">Tribunal / Juridiction</label>
+                <button type="button" onClick={() => setQuickRef({ category: 'tribunal', label: 'Tribunal' })} className="text-[9px] font-black uppercase text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
+              </div>
+              <select className="input" value={form.tribunal || ''} onChange={(e) => set('tribunal', e.target.value)}>
+                <option value="">— Sélectionner —</option>
+                {localTribunaux.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Date d'ouverture</label><input type="date" className="input" value={form.date_ouverture} onChange={(e) => set('date_ouverture', e.target.value)} /></div>
@@ -417,7 +575,7 @@ function DossierModal({
                 <span className="text-[10px] font-black uppercase tracking-widest">Processus Verrouillé (Audit)</span>
               </div>
               <p className="text-sm font-bold text-white italic">
-                {workflows.find(w => instances.some(i => i.workflow_id === w.id))?.name || "Processus actif"}
+                {workflows.find(w => (instances ?? []).some(i => i.workflow_id === w.id))?.name || "Processus actif"}
               </p>
               <p className="text-[10px] text-slate-500 leading-tight">
                 Pour garantir l'intégrité de l'audit juridique, le modèle de procédure ne peut plus être modifié une fois lancé.
@@ -440,13 +598,196 @@ function DossierModal({
           <button onClick={handleSave} disabled={saving || !form.client_name.trim()} className="btn-primary text-sm px-8 flex items-center gap-2 font-bold shadow-glow"><Check className="w-4 h-4" />{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
         </div>
       </div>
+
+      {showQuickClient && (
+        <QuickClientModal 
+          businessId={businessId} 
+          onClose={() => setShowQuickClient(false)} 
+          onCreated={(newClient) => {
+            setShowQuickClient(false);
+            getClients(businessId).then(setAllClients);
+            selectClient(newClient);
+          }}
+        />
+      )}
+
+      {quickRef && (
+        <QuickRefModal
+          businessId={businessId}
+          category={quickRef.category}
+          label={quickRef.label}
+          onClose={() => setQuickRef(null)}
+          onCreated={(newItem) => {
+            setQuickRef(null);
+            refreshRefData(quickRef.category);
+            set(quickRef.category === 'type_affaire' ? 'type_affaire' : quickRef.category === 'tribunal' ? 'tribunal' : 'client_type', newItem.value);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ─── Panneaux Processus & Fichiers ───────────────────────────────────────────
 
-function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Dossier; businessId: string; userId?: string; onClose: () => void; }) {
+// ─── Panneaux Processus & Fichiers & Finances ────────────────────────────────
+
+interface HonoraireLine {
+  id:              string;
+  dossier_id:      string | null;
+  client_name:     string;
+  type_prestation: string;
+  description:     string | null;
+  montant:         number;
+  montant_paye:    number;
+  status:          string;
+  date_facture:    string;
+}
+
+function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dossier; businessId: string; onClose: () => void; canEdit: boolean; }) {
+  const [lines, setLines] = useState<HonoraireLine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { success, error: notifError } = useNotificationStore();
+
+  const [form, setForm] = useState({
+    type_prestation: 'provision',
+    montant: '',
+    description: '',
+    date_facture: new Date().toISOString().slice(0, 10),
+  });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase as any).from('honoraires_cabinet')
+        .select('*')
+        .eq('dossier_id', dossier.id)
+        .order('date_facture', { ascending: false });
+      if (error) throw error;
+      setLines(data || []);
+    } catch (e) { notifError(String(e)); }
+    finally { setLoading(false); }
+  }, [dossier.id, notifError]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleAdd(e: React.FormEvent) {
+    if (!canEdit) return;
+    e.preventDefault();
+    const m = parseFloat(form.montant) || 0;
+    if (m <= 0) return;
+    setSaving(true);
+    try {
+      const payload = {
+        business_id: businessId,
+        dossier_id: dossier.id,
+        client_name: dossier.client_name,
+        type_prestation: form.type_prestation,
+        description: form.description || null,
+        montant: m,
+        montant_paye: 0,
+        status: 'impayé',
+        date_facture: form.date_facture,
+      };
+      const { error } = await (supabase as any).from('honoraires_cabinet').insert(payload);
+      if (error) throw error;
+      success('Honoraire ajouté');
+      setShowAdd(false);
+      setForm({ ...form, montant: '', description: '' });
+      load();
+    } catch (e) { notifError(String(e)); }
+    finally { setSaving(false); }
+  }
+
+  const total = lines.reduce((s, l) => s + l.montant, 0);
+  const paye = lines.reduce((s, l) => s + l.montant_paye, 0);
+
+  return (
+    <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[440px] bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl animate-in slide-in-from-right duration-300">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border bg-slate-900/50">
+        <p className="text-sm font-bold text-white tracking-tight">Honoraires — {dossier.reference}</p>
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <button onClick={() => setShowAdd(!showAdd)} className="bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-lg hover:bg-brand-600 transition-all">
+              {showAdd ? 'Fermer' : 'Ajouter'}
+            </button>
+          )}
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 transition-all"><X className="w-4 h-4" /></button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+        {showAdd && (
+          <form onSubmit={handleAdd} className="p-4 bg-slate-900 border border-brand-500/30 rounded-2xl space-y-3 animate-in zoom-in-95 duration-200">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[9px] uppercase font-black text-slate-500 block mb-1">Montant</label>
+                <input type="number" className="input text-sm h-9" value={form.montant} onChange={e => setForm({...form, montant: e.target.value})} placeholder="0" required />
+              </div>
+              <div>
+                <label className="text-[9px] uppercase font-black text-slate-500 block mb-1">Type</label>
+                <select className="input text-sm h-9" value={form.type_prestation} onChange={e => setForm({...form, type_prestation: e.target.value})}>
+                  <option value="provision">Provision</option>
+                  <option value="honoraire">Honoraire</option>
+                  <option value="consultation">Consultation</option>
+                  <option value="frais">Frais / Débours</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[9px] uppercase font-black text-slate-500 block mb-1">Libellé / Note</label>
+              <input className="input text-sm h-9" value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="Détail de la prestation..." />
+            </div>
+            <button type="submit" disabled={saving} className="w-full bg-brand-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-2">
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Enregistrer l'honoraire
+            </button>
+          </form>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card p-3 bg-slate-900/30 border-slate-800">
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Facturé</p>
+            <p className="text-sm font-bold text-white">{new Intl.NumberFormat('fr-FR').format(total)} XOF</p>
+          </div>
+          <div className="card p-3 bg-slate-900/30 border-slate-800">
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Reste à payer</p>
+            <p className="text-sm font-bold text-red-400">{new Intl.NumberFormat('fr-FR').format(total - paye)} XOF</p>
+          </div>
+        </div>
+
+        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div> : lines.length === 0 ? (
+          <div className="py-20 text-center opacity-30">
+            <Receipt className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+            <p className="text-[10px] font-black uppercase tracking-widest">Aucune facture liée</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {lines.map(l => (
+              <div key={l.id} className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-slate-700 transition-all group">
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <p className="text-xs font-bold text-white">{new Intl.NumberFormat('fr-FR').format(l.montant)} XOF</p>
+                    <p className="text-[10px] text-slate-500 font-medium capitalize">{l.type_prestation}</p>
+                  </div>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
+                    l.status === 'payé' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                  }`}>{l.status}</span>
+                </div>
+                {l.description && <p className="text-[10px] text-slate-400 italic mt-1 border-t border-slate-800 pt-1">{l.description}</p>}
+                <p className="text-[9px] text-slate-600 mt-1">{new Date(l.date_facture).toLocaleDateString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch }: { dossier: Dossier; businessId: string; userId?: string; onClose: () => void; canLaunch: boolean; }) {
   const [instances, setInstances] = useState<WorkflowInstance[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -644,7 +985,7 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
 
 // ─── Processus Manager ───────────────────────────────────────────────────────
 
-function ProcessusManager({ businessId }: { businessId: string }) {
+function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; isOwnerOrAdmin: boolean }) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [search, setSearch] = useState('');
@@ -663,6 +1004,7 @@ function ProcessusManager({ businessId }: { businessId: string }) {
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
+    if (!isOwnerOrAdmin) return;
     if (!confirm('Supprimer ce processus définitivement ?')) return;
     try {
       await deleteWorkflow(id);
@@ -672,6 +1014,7 @@ function ProcessusManager({ businessId }: { businessId: string }) {
   };
 
   const handleToggle = async (wf: Workflow) => {
+    if (!isOwnerOrAdmin) return;
     try {
       await toggleWorkflowStatus(wf.id, !wf.is_active);
       success(wf.is_active ? 'Processus désactivé' : 'Processus activé');
@@ -706,9 +1049,11 @@ function ProcessusManager({ businessId }: { businessId: string }) {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input className="input pl-11 py-2.5 text-sm bg-slate-900/50" placeholder="Rechercher un processus..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
-        <button onClick={() => setEditingId('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
-          <Plus className="w-4 h-4" /> Nouveau Processus
-        </button>
+        {isOwnerOrAdmin && (
+          <button onClick={() => setEditingId('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
+            <Plus className="w-4 h-4" /> Nouveau Processus
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -743,7 +1088,11 @@ function ProcessusManager({ businessId }: { businessId: string }) {
                       <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono text-[10px] font-bold">v{w.version}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <button onClick={() => handleToggle(w)} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${w.is_active ? 'text-green-500' : 'text-slate-500'}`}>
+                      <button 
+                        onClick={() => handleToggle(w)} 
+                        disabled={!isOwnerOrAdmin}
+                        className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${w.is_active ? 'text-green-500' : 'text-slate-500'} ${!isOwnerOrAdmin ? 'cursor-default' : ''}`}
+                      >
                         {w.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5 opacity-30" />}
                         {w.is_active ? 'Actif' : 'Désactivé'}
                       </button>
@@ -753,8 +1102,13 @@ function ProcessusManager({ businessId }: { businessId: string }) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setEditingId(w.id)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Éditer le design"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400 transition-all" title="Supprimer définitivement"><Trash2 className="w-4 h-4" /></button>
+                        {isOwnerOrAdmin && (
+                          <>
+                            <button onClick={() => setEditingId(w.id)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Éditer le design"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400 transition-all" title="Supprimer définitivement"><Trash2 className="w-4 h-4" /></button>
+                          </>
+                        )}
+                        {!isOwnerOrAdmin && <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest px-2">Lecture seule</span>}
                       </div>
                     </td>
                   </tr>
@@ -784,6 +1138,7 @@ function ProcessusManager({ businessId }: { businessId: string }) {
 export default function DossiersPage() {
   const { business, user } = useAuthStore();
   const { error: notifError, success } = useNotificationStore();
+  const can = useCan();
 
   const [tab, setTab] = useState<'dossiers' | 'monitoring' | 'workflows' | 'pretentions' | 'config'>('dossiers');
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
@@ -795,7 +1150,9 @@ export default function DossiersPage() {
   const [modal, setModal] = useState<'new' | Dossier | null>(null);
   const [workflowPanel, setWorkflowPanel] = useState<Dossier | null>(null);
   const [fichiersPanel, setFichiersPanel] = useState<Dossier | null>(null);
+  const [financesPanel, setFinancesPanel] = useState<Dossier | null>(null);
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     if (!business) return;
@@ -813,20 +1170,46 @@ export default function DossiersPage() {
     finally { setLoading(false); }
   }, [business, notifError]);
 
+  const handleArchive = async (dossier: Dossier, archive: boolean) => {
+    try {
+      const { error } = await supabase.from('dossiers' as any)
+        .update({ status: archive ? 'archivé' : 'ouvert' })
+        .eq('id', dossier.id);
+      if (error) throw error;
+      success(archive ? 'Dossier archivé' : 'Dossier désarchivé');
+      load();
+    } catch (e) { notifError(toUserError(e)); }
+  };
+
   const loadStorage = useCallback(async () => {
     if (business) getStorageInfo(business.id).then(setStorageInfo).catch(() => {});
   }, [business]);
 
   useEffect(() => { load(); loadStorage(); }, [load, loadStorage]);
 
-  const filtered = dossiers.filter(d => !search || d.reference.toLowerCase().includes(search.toLowerCase()) || d.client_name.toLowerCase().includes(search.toLowerCase()));
+  // Gestion du paramètre de recherche 'ref' (provenant des honoraires)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref && dossiers.length > 0) {
+      setSearch(ref);
+      const found = dossiers.find(d => d.reference === ref);
+      if (found) setFinancesPanel(found);
+    }
+  }, [dossiers]);
+
+  const filtered = dossiers.filter(d => {
+    const matchesSearch = !search || d.reference.toLowerCase().includes(search.toLowerCase()) || d.client_name.toLowerCase().includes(search.toLowerCase());
+    const isArchived = d.status === 'archivé';
+    return matchesSearch && (isArchived === showArchived);
+  });
 
   const TABS = [
     { id: 'dossiers'    as const, label: 'Dossiers',          icon: <Scale      className="w-4 h-4" /> },
     { id: 'monitoring'  as const, label: 'Suivi',             icon: <Activity   className="w-4 h-4" /> },
     { id: 'workflows'   as const, label: 'Processus',         icon: <GitBranch  className="w-4 h-4" /> },
     { id: 'pretentions' as const, label: 'Modèles juridiques', icon: <BookOpen   className="w-4 h-4" /> },
-    { id: 'config'      as const, label: 'Paramètres',        icon: <Settings2   className="w-4 h-4" /> },
+    ...(can('manage_legal_config') ? [{ id: 'config' as const, label: 'Paramètres', icon: <Settings2 className="w-4 h-4" /> }] : []),
   ];
 
   if (!business) return null;
@@ -844,7 +1227,7 @@ export default function DossiersPage() {
               <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.1em] mt-0.5">Espace Juridique & Procédures</p>
             </div>
           </div>
-          {tab === 'dossiers' && (
+          {tab === 'dossiers' && can('create_dossier') && (
             <button onClick={() => setModal('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
               <Plus className="w-5 h-5" /> Nouveau Dossier
             </button>
@@ -859,9 +1242,18 @@ export default function DossiersPage() {
 
         {tab === 'dossiers' && (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="relative group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
-              <input className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un dossier par référence ou client..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+              <div className="relative group flex-1">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+                <input className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un dossier par référence ou client..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <button 
+                onClick={() => setShowArchived(!showArchived)}
+                className={`flex items-center gap-2 px-6 py-4 rounded-2xl border font-bold text-xs uppercase tracking-widest transition-all ${showArchived ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'}`}
+              >
+                {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                {showArchived ? 'Voir Dossiers Actifs' : 'Voir l\'Archive'}
+              </button>
             </div>
 
             {loading ? <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> : filtered.length === 0 ? (
@@ -893,9 +1285,21 @@ export default function DossiersPage() {
                         <td className="px-6 py-4 text-center"><StatusBadge status={d.status} statuts={statuts} /></td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setFinancesPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Honoraires & Finances"><Receipt className="w-4 h-4" /></button>
                             <button onClick={() => setWorkflowPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-brand-400 transition-all" title="Suivi Processus"><GitBranch className="w-4 h-4" /></button>
                             <button onClick={() => setFichiersPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-purple-400 transition-all" title="Pièces Jointes"><Paperclip className="w-4 h-4" /></button>
-                            <button onClick={() => setModal(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Modifier Dossier"><Pencil className="w-4 h-4" /></button>
+                            {can('edit_dossier') && (
+                              <button onClick={() => setModal(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Modifier Dossier"><Pencil className="w-4 h-4" /></button>
+                            )}
+                            {can('archive_dossier') && (
+                              <button 
+                                onClick={() => handleArchive(d, !showArchived)} 
+                                className={`p-2.5 rounded-xl hover:bg-slate-800 transition-all ${showArchived ? 'text-amber-500 hover:text-amber-400' : 'text-slate-400 hover:text-amber-400'}`}
+                                title={showArchived ? 'Désarchiver' : 'Archiver'}
+                              >
+                                {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -908,14 +1312,15 @@ export default function DossiersPage() {
         )}
 
         {tab === 'monitoring' && <MonitoringDashboard businessId={business.id} />}
-        {tab === 'workflows' && <ProcessusManager businessId={business.id} />}
+        {tab === 'workflows' && <ProcessusManager businessId={business.id} isOwnerOrAdmin={can('manage_workflows')} />}
         {tab === 'pretentions' && <PretentionsLibrary businessId={business.id} />}
         {tab === 'config' && <ConfigTab businessId={business.id} onRefresh={load} />}
       </div>
 
       {modal && <DossierModal initial={modal === 'new' ? null : modal} count={dossiers.length} businessId={business.id} typesAffaire={typesAffaire} tribunaux={tribunaux} statuts={statuts} onClose={() => setModal(null)} onSaved={() => { setModal(null); load(); }} />}
-      {workflowPanel && <WorkflowPanel dossier={workflowPanel} businessId={business.id} userId={user?.id} onClose={() => setWorkflowPanel(null)} />}
+      {workflowPanel && <WorkflowPanel dossier={workflowPanel} businessId={business.id} userId={user?.id} canLaunch={can('launch_workflow')} onClose={() => setWorkflowPanel(null)} />}
       {fichiersPanel && <FichiersPanel dossier={fichiersPanel} businessId={business.id} storageInfo={storageInfo} onClose={() => setFichiersPanel(null)} onStorageChange={loadStorage} />}
+      {financesPanel && <FinancesPanel dossier={financesPanel} businessId={business.id} canEdit={can('add_fee')} onClose={() => setFinancesPanel(null)} />}
     </div>
   );
 }

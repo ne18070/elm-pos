@@ -387,8 +387,8 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
   };
 
   const filtered = pretentions.filter(p =>
-    !search || [p.name, p.category ?? '', p.description ?? '', ...p.tags]
-      .some(s => s.toLowerCase().includes(search.toLowerCase()))
+    !search || [p.name, p.category ?? '', p.description ?? '', ...(p.tags ?? [])]
+      .some(s => s && String(s).toLowerCase().includes(search.toLowerCase()))
   );
 
   const grouped = filtered.reduce<Record<string, Pretention[]>>((acc, p) => {
