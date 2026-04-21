@@ -251,6 +251,11 @@ export async function upsertPretention(
   return cast<Pretention>(data);
 }
 
+export async function deletePretention(id: string): Promise<void> {
+  const { error } = await supabase.from('pretentions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ── Client tracking ───────────────────────────────────────────────────────────
 export async function createTrackingToken(
   dossierId: string,

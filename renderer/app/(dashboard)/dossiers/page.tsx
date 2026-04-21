@@ -1085,7 +1085,7 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono text-[10px] font-bold">v{w.version}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-[10px] font-bold">v{w.version}</span>
                     </td>
                     <td className="px-6 py-4">
                       <button 

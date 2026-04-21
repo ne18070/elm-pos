@@ -129,3 +129,57 @@ export function Modal({ title, onClose, children, size = 'md', footer, guard = f
     </div>
   );
 }
+
+interface ConfirmModalProps {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  type?: 'primary' | 'danger';
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmModal({ 
+  title, message, confirmLabel = 'Confirmer', cancelLabel = 'Annuler', 
+  type = 'primary', onConfirm, onCancel 
+}: ConfirmModalProps) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-surface-card border border-surface-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 space-y-5">
+        <div className="flex items-start gap-4">
+          <div className={cn(
+            "p-3 rounded-xl shrink-0",
+            type === 'danger' ? "bg-red-500/10 text-red-500" : "bg-brand-500/10 text-brand-500"
+          )}>
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white">{title}</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">{message}</p>
+          </div>
+        </div>
+        
+        <div className="flex gap-3 pt-2">
+          <button 
+            onClick={onCancel}
+            className="btn-secondary flex-1 h-11 text-xs font-bold uppercase tracking-widest"
+          >
+            {cancelLabel}
+          </button>
+          <button 
+            onClick={onConfirm}
+            className={cn(
+              "flex-1 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all",
+              type === 'danger' 
+                ? "bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/20" 
+                : "bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-900/20"
+            )}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

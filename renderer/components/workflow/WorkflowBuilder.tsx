@@ -8,6 +8,7 @@ import {
   Undo2, Redo2, LocateFixed, Printer, UserCircle, Globe, Cpu,
   MousePointer2, ShieldCheck, Receipt
 } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/Modal';
 import { saveWorkflow } from '@services/supabase/workflows';
 import { getStaff, type Staff } from '@services/supabase/staff';
 import { validateDefinition } from '@/lib/workflow-engine';
@@ -26,19 +27,42 @@ const EDGE_COLORS = [
   { label: 'Teal',   value: '#14b8a6' }, { label: 'Sombre', value: '#475569' },
 ];
 
-const NODE_CONFIG: Record<NodeType, { label: string; color: string; icon: React.ReactNode; bg: string; text: string }> = {
-  USER_TASK:    { label: 'Tâche',       color: 'border-blue-400',   bg: 'bg-blue-50',   text: 'text-blue-900',   icon: <User      className="w-3.5 h-3.5" /> },
-  ACTION:       { label: 'Action auto', color: 'border-purple-400', bg: 'bg-purple-50', text: 'text-purple-900', icon: <Zap       className="w-3.5 h-3.5" /> },
-  LEGAL_CLAIM:  { label: 'Prétention',  color: 'border-amber-500',  bg: 'bg-amber-50',  text: 'text-amber-900',  icon: <FileText  className="w-3.5 h-3.5" /> },
-  CONDITION:    { label: 'Condition',   color: 'border-orange-400', bg: 'bg-orange-50', text: 'text-orange-900', icon: <GitBranch className="w-3.5 h-3.5" /> },
-  WAIT_EVENT:   { label: 'Attente',     color: 'border-cyan-500',   bg: 'bg-cyan-50',   text: 'text-cyan-900',   icon: <Clock     className="w-3.5 h-3.5" /> },
-  DELAY:        { label: 'Délai',       color: 'border-rose-400',   bg: 'bg-rose-50',   text: 'text-rose-900',   icon: <Timer     className="w-3.5 h-3.5" /> },
-  FEE_REQUEST:  { label: 'Facturation', color: 'border-emerald-400',bg: 'bg-emerald-50',text: 'text-emerald-900',icon: <Receipt    className="w-3.5 h-3.5" /> },
-  END:          { label: 'Fin',         color: 'border-emerald-500',bg: 'bg-emerald-50',text: 'text-emerald-900',icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+// Mapping des classes Tailwind vers les couleurs hexadécimales pour le SVG
+const THEME_MAP: Record<string, string> = {
+  'bg-blue-50':    '#eff6ff', 'border-blue-400':   '#60a5fa', 'text-blue-900':   '#1e3a8a',
+  'bg-purple-50':  '#f5f3ff', 'border-purple-400': '#a78bfa', 'text-purple-900': '#4c1d95',
+  'bg-amber-50':   '#fffbeb', 'border-amber-500':  '#f59e0b', 'text-amber-900':  '#78350f',
+  'bg-orange-50':  '#fff7ed', 'border-orange-400': '#fb923c', 'text-orange-900': '#7c2d12',
+  'bg-cyan-50':    '#ecfeff', 'border-cyan-500':   '#06b6d4', 'text-cyan-900':   '#164e63',
+  'bg-rose-50':    '#fff1f2', 'border-rose-400':   '#fb7185', 'text-rose-900':   '#881337',
+  'bg-emerald-50': '#ecfdf5', 'border-emerald-400':'#34d399', 'text-emerald-900':'#064e3b',
+  'bg-emerald-100':'#d1fae5', 'border-emerald-500':'#10b981', 
+};
+
+const NODE_CONFIG: Record<NodeType, { label: string; color: string; icon: React.ReactNode; bg: string; text: string; shape?: string }> = {
+  USER_TASK:    { label: 'Tâche',       color: 'border-blue-400',   bg: 'bg-blue-50',   text: 'text-blue-900',   icon: <User      className="w-3.5 h-3.5" />, shape: 'MANUAL_INPUT' },
+  ACTION:       { label: 'Action auto', color: 'border-purple-400', bg: 'bg-purple-50', text: 'text-purple-900', icon: <Zap       className="w-3.5 h-3.5" />, shape: 'PREPARATION'  },
+  LEGAL_CLAIM:  { label: 'Prétention',  color: 'border-amber-500',  bg: 'bg-amber-50',  text: 'text-amber-900',  icon: <FileText  className="w-3.5 h-3.5" />, shape: 'DOCUMENT'     },
+  CONDITION:    { label: 'Condition',   color: 'border-orange-400', bg: 'bg-orange-50', text: 'text-orange-900', icon: <GitBranch className="w-3.5 h-3.5" />, shape: 'DECISION'     },
+  WAIT_EVENT:   { label: 'Attente',     color: 'border-cyan-500',   bg: 'bg-cyan-50',   text: 'text-cyan-900',   icon: <Clock     className="w-3.5 h-3.5" />, shape: 'DELAY'        },
+  DELAY:        { label: 'Délai',       color: 'border-rose-400',   bg: 'bg-rose-50',   text: 'text-rose-900',   icon: <Timer     className="w-3.5 h-3.5" />, shape: 'DELAY'        },
+  FEE_REQUEST:  { label: 'Facturation', color: 'border-emerald-400',bg: 'bg-emerald-50',text: 'text-emerald-900',icon: <Receipt    className="w-3.5 h-3.5" />, shape: 'DATA'         },
+  END:          { label: 'Fin',         color: 'border-emerald-500',bg: 'bg-emerald-100',text: 'text-emerald-900',icon: <CheckCircle2 className="w-3.5 h-3.5" />, shape: 'TERMINATOR'   },
 };
 
 const NODE_W = 148;
 const NODE_H = 64;
+
+// ── Helpers Formes SVG ───────────────────────────────────────────────────────
+const SHAPE_PATHS: Record<string, string> = {
+  DECISION:     `M ${NODE_W/2} 2 L ${NODE_W-2} ${NODE_H/2} L ${NODE_W/2} ${NODE_H-2} L 2 ${NODE_H/2} Z`,
+  TERMINATOR:   `M 24 2 H ${NODE_W-24} A 22 22 0 0 1 ${NODE_W-24} ${NODE_H-2} H 24 A 22 22 0 0 1 24 2 Z`,
+  DOCUMENT:     `M 2 2 H ${NODE_W-2} V ${NODE_H-10} C ${NODE_W*0.75} ${NODE_H-16}, ${NODE_W*0.25} ${NODE_H+4}, 2 ${NODE_H-4} Z`,
+  MANUAL_INPUT: `M 2 12 L ${NODE_W-2} 2 V ${NODE_H-2} H 2 Z`,
+  DATA:         `M 22 2 H ${NODE_W-2} L ${NODE_W-22} ${NODE_H-2} H 2 Z`,
+  PREPARATION:  `M 15 2 H ${NODE_W-15} L ${NODE_W-2} ${NODE_H/2} L ${NODE_W-15} ${NODE_H-2} H 15 L 2 ${NODE_H/2} Z`,
+  DELAY:        `M 2 2 H ${NODE_W-32} A 30 30 0 0 1 ${NODE_W-32} ${NODE_H-2} H 2 Z`,
+};
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
@@ -71,25 +95,57 @@ function CanvasNode({
 }) {
   const cfg = NODE_CONFIG[node.type];
   const pos = node.position ?? { x: 0, y: 0 };
+  const shapePath = cfg.shape ? SHAPE_PATHS[cfg.shape] : null;
+
+  // Récupération des couleurs réelles via le mapping (SVG ne supporte pas les classes bg-xxx pour fill)
+  const strokeColor = THEME_MAP[cfg.color] || '#cbd5e1';
+  const fillColor   = THEME_MAP[cfg.bg]    || '#f8fafc';
+  const textColor   = cfg.text;
+
   return (
     <div
       onMouseDown={onMouseDown} onClick={onSelect}
-      style={{ position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, cursor: isDragging ? 'grabbing' : 'grab', zIndex: selected ? 10 : 1, userSelect: 'none', WebkitUserDrag: 'none' } as any}
-      className={`rounded-xl border-2 ${cfg.color} ${cfg.bg} flex flex-col justify-between p-2.5 group shadow-sm ${isDragging ? '' : 'transition-all'} ${selected ? 'shadow-xl ring-2 ring-slate-400/30 brightness-[0.98]' : 'hover:shadow-md'} ${isInitial ? 'ring-2 ring-blue-500/50' : ''} ${isPotentialTarget ? 'scale-105 border-blue-600 ring-4 ring-blue-500/20' : ''}`}
+      style={{ 
+        position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, 
+        cursor: isDragging ? 'grabbing' : 'grab', zIndex: selected ? 10 : 1, 
+        userSelect: 'none', WebkitUserDrag: 'none'
+      } as any}
+      className={`group ${isDragging ? '' : 'transition-all'} ${isPotentialTarget ? 'scale-105' : ''}`}
     >
-      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-400 z-20 group-hover:border-slate-600 transition-colors" />
-      <div className="flex items-center gap-1.5 min-w-0 pointer-events-none">
-        <span className={`shrink-0 ${cfg.text} opacity-80`}>{cfg.icon}</span>
-        <span className={`text-[11px] font-bold ${cfg.text} truncate`}>{node.label}</span>
+      {/* Forme SVG du nœud */}
+      <svg width={NODE_W} height={NODE_H} className="absolute inset-0 drop-shadow-sm overflow-visible">
+        {shapePath && (
+          <path 
+            d={shapePath}
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={selected ? 3 : 2}
+            className="transition-all"
+          />
+        )}
+      </svg>
+
+      {/* Contenu textuel */}
+      <div className="relative w-full h-full flex flex-col justify-center items-center p-4 z-10 pointer-events-none text-center">
+        <span className={`shrink-0 ${textColor} opacity-80 mb-1`}>{cfg.icon}</span>
+        <span className={`text-[10px] font-black leading-tight ${textColor} uppercase tracking-tight line-clamp-2`}>
+          {node.label}
+        </span>
       </div>
-      <div className="flex items-center justify-between">
-        <span className={`text-[9px] ${cfg.text} opacity-50 uppercase font-bold tracking-tight`}>{cfg.label}</span>
-        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3" /></button>
-      </div>
+
+      {/* Éléments de structure (Points de connexion et Bouton Suppr) */}
+      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-400 z-20 group-hover:border-slate-600 transition-colors" />
+
       {node.type !== 'END' && (
         <div onMouseDown={(e) => onStartConnection(node.id, e)} className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-400 hover:border-blue-500 hover:scale-125 z-20 cursor-crosshair transition-all flex items-center justify-center shadow-sm group-hover:border-slate-600">
           <div className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-blue-500" />
         </div>
+      )}
+
+      {selected && (
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="absolute -top-2.5 -right-2.5 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-all z-30 scale-90 hover:scale-100">
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       )}
     </div>
   );
@@ -104,6 +160,7 @@ function NodeEditor({
   onDeleteEdge: (id: string) => void; onUpdateEdge: (id: string, patch: Partial<WorkflowEdge>) => void; onClose: () => void;
 }) {
   const cfg = NODE_CONFIG[node.type];
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // ID de l'edge à supprimer
   
   // Déterminer le type d'intervenant actuel
   const getActorType = () => {
@@ -301,7 +358,7 @@ function NodeEditor({
             <div key={edge.id} className="p-3 bg-slate-100/50 rounded-xl border border-slate-200 space-y-3">
               <div className="flex items-center gap-2">
                 <input className="flex-1 bg-white border border-slate-200 rounded-lg text-[11px] px-2 py-1.5 outline-none focus:border-blue-400 transition-all font-bold text-black" value={edge.label} onChange={e => onUpdateEdge(edge.id, { label: e.target.value })} placeholder="Nom de l'action" />
-                <button onClick={() => { if(window.confirm('Supprimer cette transition ?')) onDeleteEdge(edge.id); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setConfirmDelete(edge.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {EDGE_COLORS.map(c => (
@@ -318,6 +375,17 @@ function NodeEditor({
         )}
         {isInitial && <p className="text-xs text-blue-600 font-bold flex items-center gap-1.5">⭐ Étape de lancement</p>}
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal 
+          title="Supprimer la transition ?"
+          message="Cette action est irréversible. Voulez-vous continuer ?"
+          confirmLabel="Supprimer"
+          type="danger"
+          onConfirm={() => { onDeleteEdge(confirmDelete); setConfirmDelete(null); }}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }
@@ -346,6 +414,7 @@ export function WorkflowBuilder({
   const [zoom, setZoom]                   = useState(1);
   const [isFullscreen, setIsFullscreen]   = useState(false);
   const [staffList, setStaffList]         = useState<Staff[]>([]);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; type: 'primary' | 'danger'; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     getStaff(businessId).then(setStaffList).catch(console.error);
@@ -515,20 +584,32 @@ export function WorkflowBuilder({
   };
 
   const handleDeleteEdge = (edgeId: string) => {
-    if (window.confirm('Voulez-vous supprimer cette transition ?')) {
-      setEdges(prev => prev.filter(e => e.id !== edgeId));
-      setSelectedEdge(null);
-      setTimeout(takeSnapshot, 0);
-    }
+    setConfirm({
+      title: "Supprimer la transition ?",
+      message: "Voulez-vous vraiment supprimer cette transition ? Cette action est irréversible.",
+      type: "danger",
+      onConfirm: () => {
+        setEdges(prev => prev.filter(e => e.id !== edgeId));
+        setSelectedEdge(null);
+        setTimeout(takeSnapshot, 0);
+        setConfirm(null);
+      }
+    });
   };
 
   const deleteNode = (nodeId: string) => {
-    if(window.confirm('Supprimer ce nœud et toutes ses connexions ?')) {
-      setNodes(prev => prev.filter(n => n.id !== nodeId));
-      setEdges(prev => prev.filter(e => e.from !== nodeId && e.to !== nodeId));
-      setSelectedNode(null);
-      setTimeout(takeSnapshot, 0);
-    }
+    setConfirm({
+      title: "Supprimer le nœud ?",
+      message: "Cela supprimera également toutes les transitions liées à ce nœud. Continuer ?",
+      type: "danger",
+      onConfirm: () => {
+        setNodes(prev => prev.filter(n => n.id !== nodeId));
+        setEdges(prev => prev.filter(e => e.from !== nodeId && e.to !== nodeId));
+        setSelectedNode(null);
+        setTimeout(takeSnapshot, 0);
+        setConfirm(null);
+      }
+    });
   };
 
   const handleSave = async () => {
@@ -727,6 +808,16 @@ export function WorkflowBuilder({
           nav, aside, header, .shrink-0, .w-80 { display: none !important; }
         }
       `}</style>
+
+      {confirm && (
+        <ConfirmModal 
+          title={confirm.title}
+          message={confirm.message}
+          type={confirm.type}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
     </div>
   );
 }

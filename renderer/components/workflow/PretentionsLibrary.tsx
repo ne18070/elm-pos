@@ -3,14 +3,41 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BookOpen, Plus, Search, Edit2, Trash2, Tag,
-  ChevronDown, ChevronUp, Loader2, Save, X, FileText, Sparkles, Check, Settings2
+  ChevronDown, ChevronUp, Loader2, Save, X, FileText, Sparkles, Check, Settings2,
+  Type, Bold, Italic, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, HelpCircle, Copy, ArrowLeft
 } from 'lucide-react';
-import { getPretentions, upsertPretention } from '@services/supabase/workflows';
+import { getPretentions, upsertPretention, deletePretention } from '@services/supabase/workflows';
+import { ConfirmModal } from '@/components/ui/Modal';
+import { useNotificationStore } from '@/store/notifications';
+import { toUserError } from '@/lib/user-error';
 import type { Pretention, PretentionVariable } from '@pos-types';
 
 interface PretentionsLibraryProps {
   businessId: string;
 }
+
+// ── Variables Système (Guide) ────────────────────────────────────────────────
+const SYSTEM_VARIABLES = [
+  { group: 'Dossier', vars: [
+    { key: 'reference', label: 'Référence Dossier', hint: 'DOS-2024-001' },
+    { key: 'type_affaire', label: 'Type d\'affaire', hint: 'Civil, Commercial...' },
+    { key: 'date_ouverture', label: 'Date d\'ouverture', hint: 'JJ/MM/AAAA' },
+    { key: 'date_audience', label: 'Prochaine audience', hint: 'Date prévue' },
+    { key: 'tribunal', label: 'Tribunal / Juridiction', hint: 'Ex: TGI Dakar' },
+    { key: 'juge', label: 'Juge en charge', hint: 'Nom du magistrat' },
+  ]},
+  { group: 'Client', vars: [
+    { key: 'client_name', label: 'Nom du Client', hint: 'Jean Dupont' },
+    { key: 'client_type', label: 'Type de client', hint: 'Physique/Morale' },
+    { key: 'client_id_num', label: 'RCCM / CNI', hint: 'Identifiant légal' },
+    { key: 'client_rep', label: 'Représentant', hint: 'Si entreprise' },
+    { key: 'client_phone', label: 'Téléphone', hint: '+221...' },
+    { key: 'client_email', label: 'Email', hint: 'contact@...' },
+  ]},
+  { group: 'Adversaire', vars: [
+    { key: 'adversaire', label: 'Nom de l\'adversaire', hint: 'Partie adverse' },
+  ]},
+];
 
 // ── Helpers de conversion ───────────────────────────────────────────────────
 
@@ -90,7 +117,78 @@ function FieldConfigModal({
   );
 }
 
-// ── Éditeur "Smart Paper" V2 ──────────────────────────────────────────────────
+// ── Barre d'outils de formatage ─────────────────────────────────────────────
+function FormattingToolbar() {
+  const exec = (cmd: string, val?: string) => {
+    document.execCommand(cmd, false, val);
+  };
+
+  const btnCls = "p-2 rounded-lg hover:bg-slate-200 text-slate-600 transition-all active:scale-95";
+
+  return (
+    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm shrink-0">
+      <button onClick={() => exec('bold')} className={btnCls} title="Gras"><Bold className="w-4 h-4" /></button>
+      <button onClick={() => exec('italic')} className={btnCls} title="Italique"><Italic className="w-4 h-4" /></button>
+      <div className="w-px h-4 bg-slate-200 mx-1" />
+      <button onClick={() => exec('insertUnorderedList')} className={btnCls} title="Liste à puces"><List className="w-4 h-4" /></button>
+      <button onClick={() => exec('insertOrderedList')} className={btnCls} title="Liste numérotée"><ListOrdered className="w-4 h-4" /></button>
+      <div className="w-px h-4 bg-slate-200 mx-1" />
+      <button onClick={() => exec('justifyLeft')} className={btnCls} title="Aligner à gauche"><AlignLeft className="w-4 h-4" /></button>
+      <button onClick={() => exec('justifyCenter')} className={btnCls} title="Centrer"><AlignCenter className="w-4 h-4" /></button>
+      <button onClick={() => exec('justifyRight')} className={btnCls} title="Aligner à droite"><AlignRight className="w-4 h-4" /></button>
+    </div>
+  );
+}
+
+// ── Sidebar de Guide des Variables ──────────────────────────────────────────
+function VariableSidebar({ onInsert }: { onInsert: (key: string, label: string) => void }) {
+  return (
+    <div className="w-72 bg-slate-100 border-r border-slate-300 flex flex-col h-full overflow-hidden">
+      <div className="p-6 border-b border-slate-300 bg-white">
+        <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-blue-700" /> Guide Variables
+        </h3>
+        <p className="text-[11px] font-bold text-slate-700 mt-2 leading-relaxed">
+          Cliquez sur une variable pour l&apos;insérer dans votre document.
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin">
+        {SYSTEM_VARIABLES.map(group => (
+          <div key={group.group} className="space-y-3">
+            <p className="text-[10px] font-black text-slate-700 uppercase tracking-[0.2em] px-1">{group.group}</p>
+            <div className="space-y-1.5">
+              {group.vars.map(v => (
+                <button
+                  key={v.key}
+                  onClick={() => onInsert(v.key, v.label)}
+                  className="w-full text-left p-3.5 rounded-xl border-2 border-slate-200 hover:border-blue-600 hover:bg-white hover:shadow-md transition-all group bg-white/60"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-900 group-hover:text-blue-900">{v.label}</span>
+                    <Plus className="w-3.5 h-3.5 text-blue-700 opacity-0 group-hover:opacity-100 transition-all" />
+                  </div>
+                  <p className="text-[10px] font-black text-blue-800 mt-0.5 font-mono">{`{{${v.key}}}`}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div className="pt-4 border-t border-slate-200">
+          <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] px-1 mb-2">Variables personnalisées</p>
+          <button 
+            onClick={() => onInsert('', '')}
+            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-brand-600 hover:border-brand-500 transition-all text-[10px] font-black uppercase tracking-widest"
+          >
+            <Plus className="w-3.5 h-3.5" /> Créer un champ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Éditeur "Smart Paper" V3 ──────────────────────────────────────────────────
 function PretentionEditor({
   initial,
   businessId,
@@ -103,11 +201,11 @@ function PretentionEditor({
   onCancel: () => void;
 }) {
   const [name, setName]             = useState(initial?.name ?? '');
+  const [category, setCategory]     = useState(initial?.category ?? 'Général');
   const editorRef                   = useRef<HTMLDivElement>(null);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
-  // État pour le modal de config
   const [configModal, setConfigModal] = useState<{ mode: 'create' | 'edit', initial: string, target?: HTMLElement } | null>(null);
   const [savedRange, setSavedRange]   = useState<Range | null>(null);
 
@@ -117,13 +215,37 @@ function PretentionEditor({
     }
   }, [initial]);
 
-  // Capturer la position du curseur avant d'ouvrir le modal
-  const openInsertModal = () => {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      setSavedRange(selection.getRangeAt(0).cloneRange());
+  const insertVariable = (key: string, label: string) => {
+    if (!key) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        setSavedRange(selection.getRangeAt(0).cloneRange());
+      }
+      setConfigModal({ mode: 'create', initial: '' });
+      return;
     }
-    setConfigModal({ mode: 'create', initial: '' });
+
+    const badge = document.createElement('span');
+    badge.className = 'var-badge';
+    badge.setAttribute('data-variable', key);
+    badge.setAttribute('contenteditable', 'false');
+    badge.innerText = label;
+
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    if (savedRange) {
+      selection?.addRange(savedRange);
+      savedRange.deleteContents();
+      savedRange.insertNode(badge);
+      savedRange.collapse(false);
+    } else if (editorRef.current) {
+      editorRef.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      selection?.addRange(range);
+      range.insertNode(badge);
+    }
   };
 
   const handleEditorClick = (e: React.MouseEvent) => {
@@ -131,7 +253,7 @@ function PretentionEditor({
     if (target.classList.contains('var-badge')) {
       setConfigModal({ 
         mode: 'edit', 
-        initial: target.innerText.replace(/[\[\]]/g, ''), 
+        initial: target.innerText, 
         target 
       });
     }
@@ -143,22 +265,7 @@ function PretentionEditor({
     const label = displayName.trim();
 
     if (configModal?.mode === 'create') {
-      const badge = document.createElement('span');
-      badge.className = 'var-badge';
-      badge.setAttribute('data-variable', key);
-      badge.setAttribute('contenteditable', 'false');
-      badge.innerText = label;
-
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      if (savedRange) {
-        selection?.addRange(savedRange);
-        savedRange.deleteContents();
-        savedRange.insertNode(badge);
-        savedRange.collapse(false);
-      } else if (editorRef.current) {
-        editorRef.current.appendChild(badge);
-      }
+      insertVariable(key, label);
     } else if (configModal?.mode === 'edit' && configModal.target) {
       configModal.target.setAttribute('data-variable', key);
       configModal.target.innerText = label;
@@ -189,7 +296,7 @@ function PretentionEditor({
         ...(initial?.id ? { id: initial.id } : {}),
         business_id: businessId,
         name:        name.trim(),
-        category:    initial?.category || null,
+        category:    category.trim() || null,
         description: null,
         template:    template,
         variables:   autoVariables,
@@ -205,47 +312,71 @@ function PretentionEditor({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col animate-in fade-in duration-300">
       
-      {/* ── Barre d'actions ── */}
-      <div className="flex items-center justify-between sticky top-4 z-50 bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-2xl">
-        <input 
-          className="bg-transparent border-none text-lg font-bold text-white focus:ring-0 w-full placeholder-slate-600"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Titre du document (ex: Mise en demeure)"
-        />
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={openInsertModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all font-bold text-sm shadow-lg shadow-blue-500/20"
-          >
-            <Plus className="w-4 h-4" /> Ajouter un champ
+      {/* ── Header ── */}
+      <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between shadow-sm z-20">
+        <div className="flex items-center gap-4 flex-1 mr-8">
+          <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-500" />
           </button>
-          <div className="w-px h-6 bg-slate-700 mx-1" />
-          <button onClick={onCancel} className="px-3 py-2 text-slate-400 hover:text-white font-bold text-sm transition-colors">Annuler</button>
-          <button onClick={handleSave} disabled={saving} className="bg-brand-500 hover:bg-brand-600 text-white font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-500/20 disabled:opacity-50 transition-all active:scale-95">
+          <div className="flex-1 max-w-md">
+            <input 
+              className="bg-white border border-slate-300 rounded-lg text-lg font-black !text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full px-3 py-1.5 transition-all placeholder-slate-400"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Nom du modèle (ex: Mise en demeure)"
+            />
+            <div className="flex items-center gap-2 mt-1.5 px-1">
+              <Tag className="w-3 h-3 text-slate-500" />
+              <input 
+                className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest !text-slate-600 focus:ring-0 p-0 w-full placeholder-slate-400"
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                placeholder="Catégorie (ex: Civil)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={onCancel} className="px-4 py-2 text-slate-500 hover:text-slate-800 font-bold text-sm transition-colors uppercase tracking-widest text-[10px]">Annuler</button>
+          <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white font-black py-2.5 px-8 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-200 transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-widest">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Enregistrer
+            Enregistrer le modèle
           </button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-slate-500 px-2 bg-slate-900/30 py-2 rounded-xl border border-slate-800/50">
-          <Sparkles className="w-4 h-4 text-brand-400" />
-          <p className="text-xs font-medium italic">Astuce : Double-cliquez pour insérer, cliquez sur un champ bleu pour le modifier.</p>
-        </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* ── Sidebar Gauche (Variables) ── */}
+        <VariableSidebar onInsert={insertVariable} />
 
-        <div className="relative group">
-          <div 
-            ref={editorRef}
-            contentEditable
-            onClick={handleEditorClick}
-            onDoubleClick={(e) => { if (e.target === editorRef.current) openInsertModal(); }}
-            className="bg-white rounded-3xl p-16 shadow-2xl min-h-[800px] font-serif text-xl leading-relaxed text-slate-800 border border-slate-200 outline-none focus:ring-8 focus:ring-blue-500/5 transition-all prose prose-slate max-w-none shadow-black/20"
-            style={{ whiteSpace: 'pre-wrap' }}
-          />
+        {/* ── Zone Centrale (Papier) ── */}
+        <div className="flex-1 bg-slate-200/50 overflow-y-auto p-12 flex flex-col items-center gap-8 scrollbar-thin">
+          
+          <FormattingToolbar />
+
+          <div className="relative group max-w-[800px] w-full">
+            <div className="absolute -left-8 top-0 bottom-0 w-px bg-slate-300 border-dashed" />
+            <div className="absolute -right-8 top-0 bottom-0 w-px bg-slate-300 border-dashed" />
+            
+            <div 
+              ref={editorRef}
+              contentEditable
+              onInput={() => {
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0) setSavedRange(sel.getRangeAt(0).cloneRange());
+              }}
+              onClick={handleEditorClick}
+              className="bg-white rounded-sm shadow-[0_0_50px_rgba(0,0,0,0.1)] p-20 min-h-[1100px] font-serif text-lg leading-relaxed text-slate-800 border border-white outline-none focus:ring-0 transition-all prose prose-slate max-w-none"
+              style={{ whiteSpace: 'pre-wrap', minWidth: '800px' }}
+            />
+
+            <div className="mt-8 text-center opacity-30 pb-20">
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Fin du document</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -258,36 +389,55 @@ function PretentionEditor({
         />
       )}
 
-      {error && <p className="text-sm text-red-400 bg-red-900/20 border border-red-900/30 rounded-2xl px-5 py-4 flex items-center gap-3 animate-shake"><X className="w-5 h-5 shrink-0" /> {error}</p>}
+      {error && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in slide-in-from-right-4 duration-300">
+          <p className="text-sm text-white bg-red-600 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-3 font-bold border border-red-500">
+            <X className="w-5 h-5 shrink-0" /> {error}
+          </p>
+        </div>
+      )}
 
       <style jsx global>{`
         .var-badge {
           display: inline-flex;
           align-items: center;
-          background: #eff6ff;
-          color: #2563eb;
-          border: 1px solid #bfdbfe;
-          border-radius: 6px;
+          background: #1e3a8a;
+          color: white;
+          border: 1px solid #172554;
+          border-radius: 4px;
           padding: 0 8px;
-          margin: 0 2px;
+          margin: 0 1px;
           font-family: system-ui, sans-serif;
-          font-size: 14px;
-          font-weight: 800;
+          font-size: 0.85em;
+          font-weight: 900;
           cursor: pointer;
           user-select: none;
           vertical-align: baseline;
           transition: all 0.2s;
-          box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          text-transform: none;
         }
         .var-badge:hover {
-          background: #2563eb;
-          color: white;
-          border-color: #2563eb;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+          background: #1e40af;
+          transform: translateY(-1.5px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
-        .var-badge::before { content: '['; opacity: 0.5; margin-right: 2px; }
-        .var-badge::after { content: ']'; opacity: 0.5; margin-left: 2px; }
+        .var-badge::before { content: '{{'; opacity: 1; margin-right: 2px; color: #93c5fd; }
+        .var-badge::after { content: '}}'; opacity: 1; margin-left: 2px; color: #93c5fd; }
+        
+        [contenteditable] {
+          caret-color: #3b82f6;
+        }
+        [contenteditable]:focus {
+          outline: none;
+        }
+        .prose ul, .prose ol {
+          padding-left: 1.5em;
+          margin-bottom: 1em;
+        }
+        .prose li {
+          margin-bottom: 0.25em;
+        }
       `}</style>
     </div>
   );
@@ -297,9 +447,13 @@ function PretentionEditor({
 function PretentionCard({
   pretention,
   onEdit,
+  onDuplicate,
+  onDelete,
 }: {
   pretention: Pretention;
   onEdit: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -320,8 +474,26 @@ function PretentionCard({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={onEdit} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-white hover:border-brand-500/50 transition-all active:scale-90 shadow-sm">
+            <button 
+              onClick={onDuplicate} 
+              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-emerald-400 hover:border-emerald-500/50 transition-all active:scale-90 shadow-sm"
+              title="Dupliquer ce modèle"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={onEdit} 
+              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-white hover:border-brand-500/50 transition-all active:scale-90 shadow-sm"
+              title="Modifier"
+            >
               <Edit2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={onDelete} 
+              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-red-400 hover:border-red-500/50 transition-all active:scale-90 shadow-sm"
+              title="Supprimer"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
             <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -337,20 +509,6 @@ function PretentionCard({
           </div>
         )}
       </div>
-      <style jsx global>{`
-        .var-badge {
-          display: inline-flex;
-          background: #eff6ff;
-          color: #2563eb;
-          border: 1px solid #bfdbfe;
-          border-radius: 4px;
-          padding: 0 4px;
-          margin: 0 2px;
-          font-family: sans-serif;
-          font-size: 0.85em;
-          font-weight: 700;
-        }
-      `}</style>
     </div>
   );
 }
@@ -359,11 +517,9 @@ function PretentionCard({
 export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
   const [pretentions, setPretentions]   = useState<Pretention[]>([]);
   const [loading, setLoading]           = useState(true);
-  const [search, setSearch]             = useState('');
-  const [editing, setEditing]           = useState<Partial<Pretention> | null>(null);
-  const [showNew, setShowNew]           = useState(false);
 
   const load = useCallback(async () => {
+    if (!businessId) return;
     setLoading(true);
     try {
       const data = await getPretentions(businessId);
@@ -375,7 +531,16 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
     }
   }, [businessId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const [search, setSearch]             = useState('');
+  const [editing, setEditing]           = useState<Partial<Pretention> | null>(null);
+  const [showNew, setShowNew]           = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Pretention | null>(null);
+
+  const { success, error: notifError } = useNotificationStore();
 
   const handleSave = (saved: Pretention) => {
     setPretentions(prev => {
@@ -384,6 +549,24 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
     });
     setEditing(null);
     setShowNew(false);
+  };
+
+  const handleDuplicate = (p: Pretention) => {
+    const copy = { ...p, id: undefined, name: `${p.name} (Copie)` };
+    setEditing(copy);
+  };
+
+  const onDeleteConfirm = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deletePretention(confirmDelete.id);
+      setPretentions(prev => prev.filter(p => p.id !== confirmDelete.id));
+      success('Modèle supprimé');
+    } catch (e) {
+      notifError(String(e));
+    } finally {
+      setConfirmDelete(null);
+    }
   };
 
   const filtered = pretentions.filter(p =>
@@ -409,7 +592,7 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black text-white tracking-tight">Bibliothèque de Modèles</h2>
@@ -439,7 +622,7 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
           </div>
         </div>
       ) : (
-        <div className="space-y-12 pb-20">
+        <div className="space-y-12">
           {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
             <div key={cat} className="space-y-6">
               <div className="flex items-center gap-4">
@@ -448,12 +631,29 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {items.map(p => (
-                  <PretentionCard key={p.id} pretention={p} onEdit={() => setEditing(p)} />
+                  <PretentionCard 
+                    key={p.id} 
+                    pretention={p} 
+                    onEdit={() => setEditing(p)} 
+                    onDuplicate={() => handleDuplicate(p)}
+                    onDelete={() => setConfirmDelete(p)}
+                  />
                 ))}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal 
+          title="Supprimer ce modèle ?"
+          message={`Voulez-vous vraiment supprimer "${confirmDelete.name}" ? Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          type="danger"
+          onConfirm={onDeleteConfirm}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   );
