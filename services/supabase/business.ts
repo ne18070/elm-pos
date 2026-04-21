@@ -26,28 +26,17 @@ export interface OrganizationWithBusinesses extends Organization {
 /** Toutes les organizations (superadmin) avec leurs établissements */
 export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusinesses[]> {
   const { data, error } = await (supabase as any)
-    .from('organizations')
-    .select('*, businesses(*)')
-    .order('created_at', { ascending: false });
+    .rpc('get_all_organizations_admin');
   if (error) throw new Error(error.message);
 
-  const ownerIds: string[] = [...new Set((data as any[]).map((r) => r.owner_id).filter(Boolean))];
-  let ownerMap: Record<string, { full_name?: string; email?: string }> = {};
-
-  if (ownerIds.length > 0) {
-    const { data: users } = await (supabase as any)
-      .rpc('get_users_info', { user_ids: ownerIds });
-    for (const u of users ?? []) ownerMap[u.id] = u;
-  }
-
-  return (data as any[]).map((row) => ({
+  return ((data as any[]) ?? []).map((row: any) => ({
     id:           row.id,
     legal_name:   row.legal_name,
     denomination: row.denomination,
     rib:          row.rib,
     owner_id:     row.owner_id,
-    owner_name:   ownerMap[row.owner_id]?.full_name ?? undefined,
-    owner_email:  ownerMap[row.owner_id]?.email ?? undefined,
+    owner_name:   row.owner_name ?? undefined,
+    owner_email:  row.owner_email ?? undefined,
     currency:     row.currency,
     country:      row.country,
     created_at:   row.created_at,
