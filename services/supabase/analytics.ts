@@ -385,3 +385,77 @@ export async function getHotelAnalytics(
 
   return { total_revenue, total_room_revenue, total_services_revenue, total_checkouts, avg_stay_value, avg_nights, outstanding_balance, room_stats };
 }
+
+// ─── Juridique analytics ──────────────────────────────────────────────────────
+
+export interface JuridiqueAnalyticsSummary {
+  total_fees:          number;
+  total_paid:          number;
+  total_pending:       number;
+  total_dossiers:      number;
+  active_dossiers:     number;
+  upcoming_audiences:  number;
+  fees_by_type:        Array<{ type: string; amount: number; count: number }>;
+  dossiers_by_status:  Array<{ status: string; count: number }>;
+}
+
+export async function getJuridiqueAnalytics(
+  businessId: string,
+  days = 30
+): Promise<JuridiqueAnalyticsSummary> {
+  const { format: fmt2, subDays: sub2 } = await import('date-fns');
+  const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+
+  const [dossiersRes, feesRes] = await Promise.all([
+    (supabase as any)
+      .from('dossiers')
+      .select('*')
+      .eq('business_id', businessId)
+      .gte('created_at', `${startDate}T00:00:00Z`),
+    (supabase as any)
+      .from('honoraires_cabinet')
+      .select('*')
+      .eq('business_id', businessId)
+      .gte('date_facture', startDate),
+  ]);
+
+  if (dossiersRes.error) throw new Error(dossiersRes.error.message);
+  if (feesRes.error) throw new Error(feesRes.error.message);
+
+  const dossiers = dossiersRes.data ?? [];
+  const fees     = feesRes.data ?? [];
+
+  const total_fees    = fees.reduce((s: number, f: any) => s + Number(f.montant), 0);
+  const total_paid    = fees.reduce((s: number, f: any) => s + Number(f.montant_paye), 0);
+  const total_pending = total_fees - total_paid;
+
+  const total_dossiers   = dossiers.length;
+  const active_dossiers  = dossiers.filter((d: any) => !['clôturé', 'archivé'].includes(d.status)).length;
+  const today = new Date().toISOString().split('T')[0];
+  const upcoming_audiences = dossiers.filter((d: any) => d.date_audience && d.date_audience >= today).length;
+
+  // Status breakdown
+  const statusMap = new Map<string, number>();
+  for (const d of (dossiers as any[])) {
+    statusMap.set(d.status, (statusMap.get(d.status) ?? 0) + 1);
+  }
+  const dossiers_by_status = Array.from(statusMap.entries()).map(([status, count]) => ({ status, count }));
+
+  // Fees by type breakdown
+  const typeMap = new Map<string, { amount: number; count: number }>();
+  for (const f of (fees as any[])) {
+    const existing = typeMap.get(f.type_prestation) ?? { amount: 0, count: 0 };
+    existing.amount += Number(f.montant);
+    existing.count  += 1;
+    typeMap.set(f.type_prestation, existing);
+  }
+  const fees_by_type = Array.from(typeMap.entries())
+    .map(([type, stats]) => ({ type, ...stats }))
+    .sort((a, b) => b.amount - a.amount);
+
+  return {
+    total_fees, total_paid, total_pending,
+    total_dossiers, active_dossiers, upcoming_audiences,
+    fees_by_type, dossiers_by_status,
+  };
+}

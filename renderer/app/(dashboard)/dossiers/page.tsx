@@ -32,6 +32,7 @@ import {
 } from '@services/supabase/dossier-fichiers';
 import { getInstancesByDossier, getWorkflows, deleteWorkflow, toggleWorkflowStatus, createTrackingToken } from '@services/supabase/workflows';
 import { triggerWorkflow } from '@/lib/workflow-runtime';
+import { logAction } from '@services/supabase/logger';
 
 import type { WorkflowInstance, Workflow, WorkflowStatus } from '@pos-types';
 
@@ -434,10 +435,12 @@ function DossierModal({
         const { data, error } = await supabase.from('dossiers' as any).update(payload).eq('id', initial.id).select().single();
         if (error) throw error;
         saved = data as unknown as Dossier;
+        logAction({ business_id: businessId, action: 'dossier.updated', entity_type: 'dossier', entity_id: saved.id, metadata: { reference: saved.reference, client_name: saved.client_name } });
       } else {
         const { data, error } = await supabase.from('dossiers' as any).insert(payload).select().single();
         if (error) throw error;
         saved = data as unknown as Dossier;
+        logAction({ business_id: businessId, action: 'dossier.created', entity_type: 'dossier', entity_id: saved.id, metadata: { reference: saved.reference, client_name: saved.client_name } });
 
         if (form.selectedWorkflow && can('launch_workflow')) {
           await triggerWorkflow({
@@ -693,6 +696,7 @@ function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dos
       };
       const { error } = await (supabase as any).from('honoraires_cabinet').insert(payload);
       if (error) throw error;
+      logAction({ business_id: businessId, action: 'honoraire.added', entity_type: 'dossier', entity_id: dossier.id, metadata: { reference: dossier.reference, montant: m, type_prestation: form.type_prestation } });
       success('Honoraire ajouté');
       setShowAdd(false);
       setForm({ ...form, montant: '', description: '' });
@@ -1176,6 +1180,7 @@ export default function DossiersPage() {
         .update({ status: archive ? 'archivé' : 'ouvert' })
         .eq('id', dossier.id);
       if (error) throw error;
+      logAction({ business_id: business!.id, action: archive ? 'dossier.archived' : 'dossier.unarchived', entity_type: 'dossier', entity_id: dossier.id, metadata: { reference: dossier.reference } });
       success(archive ? 'Dossier archivé' : 'Dossier désarchivé');
       load();
     } catch (e) { notifError(toUserError(e)); }

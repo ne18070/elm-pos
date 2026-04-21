@@ -9,13 +9,15 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import {
-  getAnalyticsSummary, getDailySales, getCouponStats, getHotelAnalytics,
+  getAnalyticsSummary, getDailySales, getCouponStats, getHotelAnalytics, getJuridiqueAnalytics,
 } from '@services/supabase/analytics';
+import { supabase } from '@services/supabase/client';
 import type { AnalyticsSummary } from '@pos-types';
-import type { CouponStat, HotelAnalyticsSummary } from '@services/supabase/analytics';
+import type { CouponStat, HotelAnalyticsSummary, JuridiqueAnalyticsSummary } from '@services/supabase/analytics';
 import { GrossisteTab } from '@/components/analytics/GrossisteTab';
-import { format } from 'date-fns';
+import { format, isFuture, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Briefcase, Gavel, Scale, Receipt } from 'lucide-react';
 
 const PERIODS = [
   { label: "Aujourd'hui", value: 0  },
@@ -24,7 +26,7 @@ const PERIODS = [
   { label: '90 jours',    value: 90 },
 ];
 
-type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel';
+type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique';
 
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
@@ -38,23 +40,45 @@ export default function AnalyticsPage() {
   const [today, setToday]     = useState<{ total: number; count: number } | null>(null);
   const [coupons, setCoupons] = useState<CouponStat[]>([]);
   const [hotelData, setHotelData] = useState<HotelAnalyticsSummary | null>(null);
-  const isHotel = business?.type === 'hotel';
+  const [juridiqueData, setJuridiqueData] = useState<JuridiqueAnalyticsSummary | null>(null);
+
+  const isHotel     = business?.type === 'hotel' || business?.features?.includes('hotel');
+  const isJuridique = business?.type === 'juridique' || 
+                      business?.features?.includes('dossiers') || 
+                      business?.features?.includes('honoraires');
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const days = period === 0 ? 1 : period;
 
+  const [audiences, setAudiences] = useState<any[]>([]);
+
   const loadAll = useCallback(async (silent = false) => {
     if (!business) return;
     if (!silent) setLoading(true); else setRefreshing(true);
     try {
-      const [summary, todayData, couponData, hotelStats] = await Promise.all([
+      const [summary, todayData, couponData, hotelStats, juridiqueStats] = await Promise.all([
         getAnalyticsSummary(business.id, days),
         getDailySales(business.id, todayStr),
         getCouponStats(business.id, days),
         business.type === 'hotel' ? getHotelAnalytics(business.id, days) : Promise.resolve(null),
+        business.type === 'juridique' ? getJuridiqueAnalytics(business.id, days) : Promise.resolve(null),
       ]);
+      
       setHotelData(hotelStats);
+      setJuridiqueData(juridiqueStats);
+
+      if (business.type === 'juridique') {
+        const { data: audData } = await (supabase as any)
+          .from('dossiers')
+          .select('id, reference, client_name, date_audience, tribunal')
+          .eq('business_id', business.id)
+          .gte('date_audience', todayStr)
+          .order('date_audience', { ascending: true })
+          .limit(5);
+        setAudiences(audData ?? []);
+      }
+
       if (period === 0) {
         const todayStat = summary.daily_stats.find((d) => d.date === todayStr);
         setData({
@@ -79,29 +103,62 @@ export default function AnalyticsPage() {
 
   useEffect(() => { loadAll(); }, [business, period]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const kpis = [
-    {
-      label: period === 0 ? "Ventes aujourd'hui" : 'Chiffre d\'affaires',
-      value: data ? fmt(data.total_sales) : '—',
-      icon: DollarSign, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800',
-    },
-    {
-      label: period === 0 ? "Commandes aujourd'hui" : 'Commandes',
-      value: data ? String(data.order_count) : '—',
-      icon: ShoppingBag, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800',
-    },
-    {
-      label: 'Panier moyen',
-      value: data ? fmt(data.avg_order_value) : '—',
-      icon: BarChart, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800',
-    },
-    {
-      label: 'Ventes du jour (live)',
-      value: today ? fmt(today.total) : '—',
-      sub: today ? `${today.count} commande${today.count !== 1 ? 's' : ''}` : undefined,
-      icon: Sun, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800',
-    },
-  ];
+  // ── KPIs Adaptatifs ──
+  const getKPIs = () => {
+    if (isJuridique) {
+      return [
+        {
+          label: 'Total Honoraires',
+          value: juridiqueData ? fmt(juridiqueData.total_fees) : '...',
+          icon: DollarSign, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800',
+        },
+        {
+          label: 'Honoraires Encaissés',
+          value: juridiqueData ? fmt(juridiqueData.total_paid) : '...',
+          sub: juridiqueData ? `${fmt(juridiqueData.total_pending)} en attente` : 'Chargement...',
+          icon: Banknote, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800',
+        },
+        {
+          label: 'Dossiers Actifs',
+          value: juridiqueData ? String(juridiqueData.active_dossiers) : '...',
+          sub: juridiqueData ? `${juridiqueData.total_dossiers} total` : undefined,
+          icon: Briefcase, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800',
+        },
+        {
+          label: 'Audiences',
+          value: juridiqueData ? String(juridiqueData.upcoming_audiences) : '...',
+          sub: 'À venir',
+          icon: Gavel, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800',
+        },
+      ];
+    }
+
+    return [
+      {
+        label: period === 0 ? "Ventes aujourd'hui" : 'Chiffre d\'affaires',
+        value: data ? fmt(data.total_sales) : '—',
+        icon: DollarSign, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800',
+      },
+      {
+        label: period === 0 ? "Commandes aujourd'hui" : 'Commandes',
+        value: data ? String(data.order_count) : '—',
+        icon: ShoppingBag, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800',
+      },
+      {
+        label: 'Panier moyen',
+        value: data ? fmt(data.avg_order_value) : '—',
+        icon: BarChart, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800',
+      },
+      {
+        label: 'Ventes du jour (live)',
+        value: today ? fmt(today.total) : '—',
+        sub: today ? `${today.count} commande${today.count !== 1 ? 's' : ''}` : undefined,
+        icon: Sun, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800',
+      },
+    ];
+  };
+
+  const kpis = getKPIs();
 
   function exportCSV() {
     if (!data) return;
@@ -124,19 +181,30 @@ export default function AnalyticsPage() {
     URL.revokeObjectURL(url);
   }
 
-  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  const TABS = ([
     { id: 'general',   label: 'Général',   icon: TrendingUp },
-    { id: 'produits',  label: 'Produits',  icon: BarChart   },
-    { id: 'grossiste', label: 'Grossiste', icon: Store      },
-    { id: 'promos',    label: 'Promos',    icon: Tag        },
-    ...(isHotel ? [{ id: 'hotel' as Tab, label: 'Hôtel', icon: BedDouble }] : []),
-  ];
+    { id: 'produits',  label: 'Produits',  icon: BarChart,   feature: 'retail' },
+    { id: 'grossiste', label: 'Grossiste', icon: Store,      feature: 'retail' },
+    { id: 'promos',    label: 'Promos',    icon: Tag,        feature: 'retail' },
+    { id: 'juridique', label: 'Dossiers',  icon: Briefcase,  feature: 'dossiers' },
+    { id: 'hotel',     label: 'Hôtel',     icon: BedDouble,  feature: 'hotel' },
+  ] as any[]).filter(t => {
+    const hasFeat = !t.feature || business?.features?.includes(t.feature);
+    if (!hasFeat) return false;
+
+    // Force strict view for Law Firms
+    if (isJuridique) {
+      return ['general', 'juridique'].includes(t.id);
+    }
+    
+    return true;
+  });
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-surface-border flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <h1 className="text-lg font-bold text-white">Statistiques</h1>
+        <h1 className="text-lg font-bold text-white">Statistiques {isJuridique ? 'Juridiques' : ''}</h1>
         <div className="flex items-center gap-2">
           <button onClick={exportCSV} disabled={!data} className="btn-secondary p-2" title="Exporter CSV">
             <Download className="w-4 h-4" />
@@ -195,9 +263,50 @@ export default function AnalyticsPage() {
               ))}
             </div>
 
+            {isJuridique && juridiqueData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="card p-5">
+                    <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                      <Receipt className="w-4 h-4 text-emerald-400" /> Répartition Honoraires
+                    </h2>
+                    <div className="space-y-4">
+                      {juridiqueData.fees_by_type.map(f => {
+                        const max = juridiqueData.fees_by_type[0].amount;
+                        const pct = (f.amount / max) * 100;
+                        return (
+                          <div key={f.type}>
+                            <div className="flex justify-between text-xs mb-1.5">
+                              <span className="text-slate-300 font-bold capitalize">{f.type.replace(/_/g, ' ')}</span>
+                              <span className="text-white font-black">{fmt(f.amount)}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                 </div>
+
+                 <div className="card p-5">
+                    <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-brand-400" /> État des Dossiers
+                    </h2>
+                    <div className="grid grid-cols-2 gap-3">
+                      {juridiqueData.dossiers_by_status.map(s => (
+                        <div key={s.status} className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-tight mb-1 capitalize">{s.status}</p>
+                          <p className="text-xl font-black text-white">{s.count}</p>
+                        </div>
+                      ))}
+                    </div>
+                 </div>
+              </div>
+            )}
+
             {data && data.daily_stats.length > 0 && (
               <div className="card p-4">
-                <h2 className="text-sm font-semibold text-slate-300 mb-4">Ventes journalières</h2>
+                <h2 className="text-sm font-semibold text-slate-300 mb-4">{isJuridique ? 'Volume activité journalière' : 'Ventes journalières'}</h2>
                 <div className="flex items-end gap-1 h-36">
                   {data.daily_stats.map((day) => {
                     const maxVal = Math.max(...data.daily_stats.map((d) => d.total_sales), 1);
@@ -209,7 +318,7 @@ export default function AnalyticsPage() {
                         title={`${format(new Date(day.date), 'd MMM', { locale: fr })} — ${fmt(day.total_sales)}`}
                       >
                         <div
-                          className="w-full bg-brand-600 rounded-t hover:bg-brand-500 transition-colors"
+                          className={`w-full ${isJuridique ? 'bg-purple-600 hover:bg-purple-500' : 'bg-brand-600 hover:bg-brand-500'} rounded-t transition-colors`}
                           style={{ height: `${height}%` }}
                         />
                       </div>
@@ -219,6 +328,76 @@ export default function AnalyticsPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ── Juridique (Détails) ── */}
+        {tab === 'juridique' && isJuridique && juridiqueData && (
+          <div className="space-y-5">
+            <div className="card p-6">
+              <h2 className="text-lg font-black text-white mb-6 flex items-center gap-3">
+                <Scale className="w-5 h-5 text-brand-500" /> Performance du Cabinet
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                 <div className="space-y-1">
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center">Taux de Recouvrement</p>
+                    <p className="text-3xl font-black text-emerald-400 text-center">
+                      {juridiqueData.total_fees > 0 
+                        ? Math.round((juridiqueData.total_paid / juridiqueData.total_fees) * 100) 
+                        : 0}%
+                    </p>
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center">Efficacité Clôture</p>
+                    <p className="text-3xl font-black text-brand-400 text-center">
+                      {juridiqueData.total_dossiers > 0 
+                        ? Math.round(((juridiqueData.total_dossiers - juridiqueData.active_dossiers) / juridiqueData.total_dossiers) * 100) 
+                        : 0}%
+                    </p>
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center">Moyenne / Dossier</p>
+                    <p className="text-3xl font-black text-purple-400 text-center">
+                      {fmt(juridiqueData.total_dossiers > 0 ? juridiqueData.total_fees / juridiqueData.total_dossiers : 0)}
+                    </p>
+                 </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+               <div className="card p-5">
+                  <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Gavel className="w-4 h-4 text-yellow-400" /> Prochaines Audiences
+                  </h2>
+                  {audiences.length === 0 ? (
+                    <p className="text-sm text-slate-500 text-center py-8">Aucune audience prévue</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {audiences.map(aud => (
+                        <div key={aud.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-slate-800/50">
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-brand-400 uppercase">{aud.reference}</p>
+                            <p className="text-sm text-white font-bold truncate">{aud.client_name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium truncate">{aud.tribunal}</p>
+                          </div>
+                          <div className="text-right shrink-0 ml-4">
+                            <p className="text-xs font-black text-white">{format(new Date(aud.date_audience), 'dd MMM yyyy', { locale: fr })}</p>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mt-1">À {format(new Date(aud.date_audience), 'HH:mm') === '00:00' ? 'Heure à confirmer' : format(new Date(aud.date_audience), 'HH:mm')}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+               </div>
+
+               <div className="card p-5">
+                  <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" /> Croissance Honoraires
+                  </h2>
+                  {/* On pourrait mettre ici un mini graphique de CA sur les derniers mois */}
+                  <p className="text-sm text-slate-500 text-center py-8 italic">Graphique de croissance en cours d&apos;implémentation...</p>
+               </div>
+            </div>
+          </div>
         )}
 
         {/* ── Produits ── */}

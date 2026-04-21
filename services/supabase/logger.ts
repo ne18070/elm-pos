@@ -20,6 +20,12 @@ export type LogAction =
   | 'settings.updated'
   | 'coupon.created'
   | 'coupon.deleted'
+  | 'dossier.created'
+  | 'dossier.updated'
+  | 'dossier.archived'
+  | 'dossier.unarchived'
+  | 'honoraire.added'
+  | 'honoraire.paid'
   | (string & {});  // permet les actions custom sans perdre l'autocomplétion
 
 export interface LogInput {

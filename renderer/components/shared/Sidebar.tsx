@@ -146,8 +146,15 @@ function SidebarContent({
       const canAccess = !permission || can(permission);
       const features = business?.features ?? [];
       const bizType  = business?.type ?? '';
+      const isJuridique = bizType === 'juridique' || features.includes('dossiers') || features.includes('honoraires');
+      
       const hasFeature = !feature || features.includes(feature);
       const hasBizType = !bizTypes || !bizType || bizTypes.includes(bizType);
+      
+      // Sécurité : Si on est un cabinet juridique, on cache le retail par défaut
+      if (isJuridique && feature === 'retail') return false;
+      if (isJuridique && feature === 'stock') return false;
+
       return canAccess && hasFeature && hasBizType;
     })
   })).filter(section => section.items.length > 0);

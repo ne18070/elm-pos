@@ -18,7 +18,7 @@ export interface User {
 
 // ─── Business ─────────────────────────────────────────────────────────────────
 
-export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel';
+export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique';
 
 export interface Business {
   id: string;

@@ -9,6 +9,7 @@ import {
   Package, Pencil, Trash2, Warehouse, UserCog, UserMinus,
   UserPlus, LogIn, Settings, Tag, RefreshCw, Search, Filter,
   ShieldAlert, History, BedDouble, LogOut, CalendarX,
+  Briefcase, Receipt, Archive, ArchiveRestore,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -55,11 +56,17 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'subscription.activated':  { label: 'Abonnement activé',    Icon: ShieldAlert,  color: 'text-green-400' },
   'snapshot.created':              { label: 'Snapshot créé',          Icon: History,    color: 'text-brand-400' },
   'snapshot.restored':             { label: 'Restauration effectuée', Icon: RotateCcw,  color: 'text-amber-400' },
-  'hotel.reservation.created':     { label: 'Réservation hôtel',      Icon: BedDouble,  color: 'text-teal-400' },
-  'hotel.reservation.cancelled':   { label: 'Réservation annulée',    Icon: CalendarX,  color: 'text-red-400' },
-  'hotel.checkin':                 { label: 'Check-in',               Icon: LogIn,      color: 'text-green-400' },
-  'hotel.checkout':                { label: 'Check-out',              Icon: LogOut,     color: 'text-teal-400' },
-  'hotel.payment':                 { label: 'Acompte / Paiement',     Icon: CreditCard, color: 'text-teal-400' },
+  'hotel.reservation.created':     { label: 'Réservation hôtel',      Icon: BedDouble,       color: 'text-teal-400' },
+  'hotel.reservation.cancelled':   { label: 'Réservation annulée',    Icon: CalendarX,       color: 'text-red-400' },
+  'hotel.checkin':                 { label: 'Check-in',               Icon: LogIn,           color: 'text-green-400' },
+  'hotel.checkout':                { label: 'Check-out',              Icon: LogOut,          color: 'text-teal-400' },
+  'hotel.payment':                 { label: 'Acompte / Paiement',     Icon: CreditCard,      color: 'text-teal-400' },
+  'dossier.created':               { label: 'Dossier créé',           Icon: Briefcase,       color: 'text-purple-400' },
+  'dossier.updated':               { label: 'Dossier modifié',        Icon: Pencil,          color: 'text-amber-400' },
+  'dossier.archived':              { label: 'Dossier archivé',        Icon: Archive,         color: 'text-slate-400' },
+  'dossier.unarchived':            { label: 'Dossier désarchivé',     Icon: ArchiveRestore,  color: 'text-green-400' },
+  'honoraire.added':               { label: 'Honoraire ajouté',       Icon: Receipt,         color: 'text-emerald-400' },
+  'honoraire.paid':                { label: 'Honoraire encaissé',     Icon: CreditCard,      color: 'text-emerald-400' },
 };
 
 function getActionConfig(action: string) {
@@ -97,6 +104,11 @@ const ACTION_FILTERS = [
   { value: 'cash_session.closed',     label: 'Clôtures de caisse' },
   { value: 'user.blocked',            label: 'Blocages utilisateur' },
   { value: 'subscription.activated',  label: 'Activations abonnement' },
+  { value: 'dossier.created',         label: 'Dossiers créés' },
+  { value: 'dossier.updated',         label: 'Dossiers modifiés' },
+  { value: 'dossier.archived',        label: 'Dossiers archivés' },
+  { value: 'honoraire.added',         label: 'Honoraires ajoutés' },
+  { value: 'honoraire.paid',          label: 'Honoraires encaissés' },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

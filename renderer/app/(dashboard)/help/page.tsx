@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import {
   HelpCircle, ChevronDown, ShoppingCart, Package, ClipboardList,
-  Truck, Tag, BarChart2, Settings, Warehouse, LayoutGrid,
-  Users, Monitor, CreditCard, Search,
-  AlertCircle, CheckCircle, Info, MapPin, Vault,
-  Store, BedDouble, BookOpen, History,
+  Tag, Settings, LayoutGrid,
+  Users, CreditCard, Search,
+  AlertCircle, CheckCircle, Info, MapPin,
+  Store, BedDouble, BookOpen, Scale, Briefcase, Receipt, GitBranch, Gavel, FileText, Sparkles, Copy, ArrowLeft
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
+
+type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique';
 
 interface Section {
   id: string;
@@ -17,6 +19,8 @@ interface Section {
   title: string;
   color: string;
   roles?: ('owner' | 'admin' | 'staff')[];
+  excludeFor?: BusinessType[];
+  onlyFor?: BusinessType[];
   topics: Topic[];
 }
 
@@ -114,6 +118,7 @@ const SECTIONS: Section[] = [
     icon: ShoppingCart,
     title: 'Caisse (POS)',
     color: 'text-brand-400',
+    excludeFor: ['juridique'],
     topics: [
       {
         question: 'Comment effectuer une vente ?',
@@ -237,6 +242,7 @@ const SECTIONS: Section[] = [
     title: 'Vente en gros & Revendeurs',
     color: 'text-teal-400',
     roles: ['owner', 'admin'],
+    excludeFor: ['juridique', 'hotel'],
     topics: [
       {
         question: 'Comment appliquer un tarif revendeur ?',
@@ -254,6 +260,7 @@ const SECTIONS: Section[] = [
     icon: BedDouble,
     title: 'Hébergement (Hôtel)',
     color: 'text-sky-400',
+    onlyFor: ['hotel'],
     topics: [
       {
         question: 'Comment gérer les chambres ?',
@@ -271,6 +278,7 @@ const SECTIONS: Section[] = [
     icon: ClipboardList,
     title: 'Commandes',
     color: 'text-blue-400',
+    excludeFor: ['juridique'],
     topics: [
       {
         question: 'Comment voir toutes les commandes ?',
@@ -298,6 +306,7 @@ const SECTIONS: Section[] = [
     title: 'Produits & Stock',
     color: 'text-green-400',
     roles: ['owner', 'admin'],
+    excludeFor: ['juridique'],
     topics: [
       {
         question: 'Comment ajouter un produit ?',
@@ -330,6 +339,7 @@ const SECTIONS: Section[] = [
     title: 'Comptabilité',
     color: 'text-indigo-400',
     roles: ['owner', 'admin'],
+    excludeFor: ['juridique'],
     topics: [
       {
         question: 'Comment consulter le journal des ventes ?',
@@ -337,6 +347,139 @@ const SECTIONS: Section[] = [
           <p className="text-slate-300">
             Allez dans <strong className="text-white">Comptabilité</strong> pour voir le journal détaillé de toutes les transactions,
             les flux de trésorerie et exporter des rapports pour votre comptable.
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'dossiers',
+    icon: Briefcase,
+    title: 'Gestion des Dossiers',
+    color: 'text-purple-400',
+    onlyFor: ['juridique'],
+    topics: [
+      {
+        question: 'Comment créer un nouveau dossier ?',
+        answer: (
+          <ol className="list-decimal list-inside space-y-2 text-slate-300">
+            <li>Allez dans <strong className="text-white">Dossiers</strong> depuis le menu.</li>
+            <li>Cliquez sur <strong className="text-white">Nouveau Dossier</strong>.</li>
+            <li>Renseignez la référence, le type d&apos;affaire, le client et le tribunal.</li>
+            <li>Sélectionnez un processus automatique à lancer au démarrage si nécessaire.</li>
+            <li>Enregistrez pour créer le dossier.</li>
+          </ol>
+        ),
+      },
+      {
+        question: 'Comment suivre l\'avancement d\'un dossier ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Depuis la liste des dossiers, cliquez sur l&apos;icône <strong className="text-white">Processus</strong> <GitBranch className="w-3.5 h-3.5 inline text-brand-400" /> pour voir les étapes en cours.</p>
+            <p>Vous pouvez lancer un workflow manuellement depuis ce panneau et voir chaque transition de statut.</p>
+            <p>Pour partager le suivi avec le client, cliquez sur l&apos;icône téléphone — un lien WhatsApp est généré automatiquement.</p>
+          </div>
+        ),
+      },
+      {
+        question: 'Comment archiver un dossier ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Sur la ligne du dossier, cliquez sur l&apos;icône <strong className="text-white">Archive</strong>. Le dossier passe en mode archivé et disparaît de la vue principale.</p>
+            <p>Pour voir les dossiers archivés, activez le bouton <strong className="text-white">Voir l&apos;Archive</strong> en haut de la liste.</p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'honoraires',
+    icon: Receipt,
+    title: 'Honoraires & Finances',
+    color: 'text-emerald-400',
+    onlyFor: ['juridique'],
+    roles: ['owner', 'admin'],
+    topics: [
+      {
+        question: 'Comment enregistrer un honoraire ?',
+        answer: (
+          <ol className="list-decimal list-inside space-y-2 text-slate-300">
+            <li>Sur la ligne du dossier, cliquez sur l&apos;icône <strong className="text-white">Finances</strong> <Receipt className="w-3.5 h-3.5 inline text-emerald-400" />.</li>
+            <li>Cliquez sur <strong className="text-white">Ajouter</strong> dans le panneau.</li>
+            <li>Renseignez le montant, le type (Provision, Honoraire, Consultation, Frais) et une note optionnelle.</li>
+            <li>Enregistrez — la ligne apparaît avec le statut <em>Impayé</em>.</li>
+          </ol>
+        ),
+      },
+      {
+        question: 'Comment consulter les statistiques du cabinet ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Allez dans <strong className="text-white">Statistiques</strong>. Les KPIs affichent le total des honoraires, les montants encaissés, les dossiers actifs et les prochaines audiences.</p>
+            <p>L&apos;onglet <strong className="text-white">Dossiers</strong> donne le taux de recouvrement, l&apos;efficacité de clôture et la moyenne par dossier.</p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'audiences',
+    icon: Gavel,
+    title: 'Audiences & Processus',
+    color: 'text-yellow-400',
+    onlyFor: ['juridique'],
+    topics: [
+      {
+        question: 'Comment configurer les types d\'affaire et tribunaux ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Dans <strong className="text-white">Dossiers → Paramètres</strong>, vous pouvez gérer les listes de référence : types d&apos;affaire, tribunaux, statuts et types de client.</p>
+            <p>Ces listes alimentent les menus déroulants de la création de dossier.</p>
+          </div>
+        ),
+      },
+      {
+        question: 'Comment créer un processus automatique (workflow) ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Allez dans <strong className="text-white">Dossiers → Processus</strong>. Cliquez sur <strong className="text-white">Nouveau Processus</strong> pour ouvrir le constructeur visuel.</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li><strong className="text-brand-400">Losanges</strong> : Points de décision (conditions).</li>
+              <li><strong className="text-blue-400">Haut incliné</strong> : Tâches manuelles utilisateur.</li>
+              <li><strong className="text-purple-400">Hexagones</strong> : Actions automatiques du système.</li>
+              <li><strong className="text-amber-400">Documents</strong> : Génération d&apos;actes juridiques.</li>
+            </ul>
+            <p className="text-sm mt-2 font-medium">Vous pouvez lier les étapes par des flèches pour définir l&apos;ordre d&apos;exécution.</p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'studio',
+    icon: FileText,
+    title: 'Studio de Rédaction',
+    color: 'text-brand-500',
+    onlyFor: ['juridique'],
+    topics: [
+      {
+        question: 'Comment créer un modèle d\'acte automatisé ?',
+        answer: (
+          <div className="space-y-2 text-slate-300">
+            <p>Allez dans <strong className="text-white">Dossiers → Modèles</strong>. Utilisez l&apos;éditeur "Smart Paper" pour rédiger vos lettres types.</p>
+            <p>Le <strong className="text-blue-400 font-bold">Guide des Variables</strong> à gauche vous permet d&apos;insérer en un clic des données dynamiques (Nom du client, Référence, etc.) qui seront remplies automatiquement lors de la génération.</p>
+            <div className="flex gap-2 p-3 bg-blue-900/10 border border-blue-800 rounded-lg mt-2">
+              <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-xs">Utilisez la barre d&apos;outils flottante pour mettre en forme votre texte (Gras, Listes, Alignement) pour un rendu professionnel.</p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        question: 'Comment dupliquer un modèle existant ?',
+        answer: (
+          <p className="text-slate-300">
+            Sur chaque carte de modèle dans la bibliothèque, utilisez l&apos;icône <Copy className="w-3.5 h-3.5 inline" /> pour créer instantanément une copie. C&apos;est idéal pour créer des variantes d&apos;un même acte sans tout réécrire.
           </p>
         ),
       },
@@ -385,9 +528,7 @@ function SectionCard({ section, userRole }: { section: Section; userRole: string
   const [open, setOpen] = useState(false);
   const Icon = section.icon;
 
-  if (section.roles && !section.roles.includes(userRole as 'owner' | 'admin' | 'staff')) {
-    return null;
-  }
+  if (section.roles && !section.roles.includes(userRole as 'owner' | 'admin' | 'staff')) return null;
 
   return (
     <div className="card overflow-hidden">
@@ -419,20 +560,39 @@ function SectionCard({ section, userRole }: { section: Section; userRole: string
 }
 
 export default function HelpPage() {
-  const { user } = useAuthStore();
+  const { user, business } = useAuthStore();
   const role = user?.role ?? 'staff';
+  const businessType = (business?.type ?? 'retail') as BusinessType;
+  const features = business?.features ?? [];
+  const isHotel = businessType === 'hotel' || features.includes('hotel');
+  const isJuridique = businessType === 'juridique' || features.includes('dossiers') || features.includes('honoraires');
   const [search, setSearch] = useState('');
 
   const filtered = SECTIONS.map((s) => ({
     ...s,
     topics: search
-      ? s.topics.filter(
-          (t) =>
-            t.question.toLowerCase().includes(search.toLowerCase())
-        )
+      ? s.topics.filter((t) => t.question.toLowerCase().includes(search.toLowerCase()))
       : s.topics,
   })).filter((s) => {
+    // 1. Rôles
     if (s.roles && !s.roles.includes(role as 'owner' | 'admin' | 'staff')) return false;
+
+    // 2. Filtrage par type d'établissement (Strict)
+    if (s.onlyFor) {
+      const allowedForHotel = s.onlyFor.includes('hotel');
+      const allowedForJuridique = s.onlyFor.includes('juridique');
+
+      if (allowedForHotel && !isHotel) return false;
+      if (allowedForJuridique && !isJuridique) return false;
+      
+      // Cas général pour onlyFor
+      if (!allowedForHotel && !allowedForJuridique && !s.onlyFor.includes(businessType)) return false;
+    }
+
+    // 3. Exclusions explicites
+    if (s.excludeFor && s.excludeFor.includes(businessType)) return false;
+    if (isJuridique && s.excludeFor?.includes('juridique')) return false;
+    
     return !search || s.topics.length > 0;
   });
 
@@ -472,12 +632,21 @@ export default function HelpPage() {
               <CheckCircle className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-white mb-2">Démarrage rapide</p>
-                <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
-                  <li>Configurez votre établissement dans <strong className="text-white">Paramètres</strong></li>
-                  <li>Créez vos <strong className="text-white">Catégories</strong> de produits</li>
-                  <li>Ajoutez vos <strong className="text-white">Produits</strong> (ou importez-les en CSV)</li>
-                  <li>Effectuez votre première vente depuis la <strong className="text-white">Caisse</strong></li>
-                </ol>
+                {isJuridique ? (
+                  <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
+                    <li>Configurez votre cabinet dans <strong className="text-white">Paramètres</strong></li>
+                    <li>Ajoutez vos <strong className="text-white">Types d&apos;affaire</strong> et <strong className="text-white">Tribunaux</strong> dans Dossiers → Paramètres</li>
+                    <li>Créez votre premier <strong className="text-white">Dossier</strong> client</li>
+                    <li>Enregistrez vos <strong className="text-white">Honoraires</strong> et suivez les audiences dans les Statistiques</li>
+                  </ol>
+                ) : (
+                  <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
+                    <li>Configurez votre établissement dans <strong className="text-white">Paramètres</strong></li>
+                    <li>Créez vos <strong className="text-white">Catégories</strong> de produits</li>
+                    <li>Ajoutez vos <strong className="text-white">Produits</strong> (ou importez-les en CSV)</li>
+                    <li>Effectuez votre première vente depuis la <strong className="text-white">Caisse</strong></li>
+                  </ol>
+                )}
               </div>
             </div>
           </div>
