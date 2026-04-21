@@ -249,8 +249,8 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
         <div class="biz-info">
           <img src="${business.logo_url || '/logo.png'}" class="logo">
           <div>
-            <div class="biz-name">${business.denomination || business.name}</div>
-            ${business.denomination && business.denomination !== business.name ? `<div class="biz-detail" style="font-weight:700;color:#1a202c">${business.name}</div>` : ''}
+            <div class="biz-name">${business.organization_name || business.denomination || business.name}</div>
+            ${(business.organization_name || business.denomination) !== business.name ? `<div class="biz-detail" style="font-weight:700;color:#1a202c">${business.denomination || business.name}</div>` : ''}
             ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
             ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
             ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}

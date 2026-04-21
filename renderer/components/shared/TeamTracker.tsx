@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils';
 export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
   const { isTracking, setTracking, setLocation } = useRealtimeStore();
   const { warning, error } = useNotificationStore();
-  const watchId        = useRef<number | null>(null);
-  const [isAcquiring, setIsAcquiring] = useState(false);
+  const watchId            = useRef<number | null>(null);
+  const [isAcquiring, setIsAcquiring]           = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const STORAGE_KEY = 'elm-pos-tracking-active';
 
@@ -25,14 +26,23 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
     setIsAcquiring(false);
   };
 
-  const startTracking = () => {
+  const startTracking = async () => {
     if (!navigator.geolocation) {
       error("La géolocalisation n'est pas supportée par votre navigateur");
       return;
     }
-    // Guard against double-start (e.g. rapid clicks or auto-restart race)
     if (watchId.current !== null) return;
 
+    // Check existing permission state before attempting — avoids silent instant-deny
+    if (navigator.permissions) {
+      const perm = await navigator.permissions.query({ name: 'geolocation' });
+      if (perm.state === 'denied') {
+        setPermissionDenied(true);
+        return;
+      }
+    }
+
+    setPermissionDenied(false);
     sessionStorage.setItem(STORAGE_KEY, '1');
     setTracking(true);
     setIsAcquiring(true);
@@ -49,7 +59,7 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
       (err) => {
         setIsAcquiring(false);
         if (err.code === 1 /* PERMISSION_DENIED */) {
-          error("Permission de géolocalisation refusée. Vérifiez les paramètres de votre navigateur.");
+          setPermissionDenied(true);
           stopTracking();
         } else {
           // TIMEOUT (3) or POSITION_UNAVAILABLE (2) — transient, keep watching
@@ -126,6 +136,14 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
           <div className="w-1.5 h-1.5 rounded-full bg-brand-500" />
         )}
       </button>
+    {permissionDenied && !collapsed && (
+      <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-red-950/40 border border-red-800/30 text-[10px] text-red-400 leading-relaxed">
+        <p className="font-semibold mb-0.5">Accès refusé</p>
+        <p className="text-red-400/80">
+          Autorisez la localisation dans les paramètres de votre navigateur (icône 🔒 dans la barre d&apos;adresse), puis réessayez.
+        </p>
+      </div>
+    )}
     </div>
   );
 }

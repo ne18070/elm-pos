@@ -685,6 +685,11 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
+                      {biz.organization_name && biz.organization_name !== biz.name && (
+                        <p className="text-[10px] text-brand-400/70 font-medium truncate">
+                          {biz.organization_name}
+                        </p>
+                      )}
                       <p className="text-xs text-slate-500">
                         {displayCurrency(biz.currency ?? 'XOF')} · {biz.type}
                         {biz.address ? ` · ${biz.address}` : ''}
