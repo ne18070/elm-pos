@@ -219,9 +219,19 @@ export function BusinessSwitcher({
                         ${isActive ? 'text-brand-400' : 'text-white'}`}>
                         {biz.name}
                       </p>
-                      <p className="text-xs text-slate-500">
-                        {getRoleLabel(role as UserRole)}
-                      </p>
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight shrink-0">
+                          {getRoleLabel(role as UserRole)}
+                        </span>
+                        {biz.denomination && biz.denomination !== biz.name && (
+                          <>
+                            <span className="text-slate-700 text-[10px]">•</span>
+                            <span className="text-[10px] text-slate-500 truncate italic">
+                              {biz.denomination}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {isActive && !isLoading && (

@@ -42,8 +42,9 @@ const NODE_H = 64;
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
 function getBezierPath(fx: number, fy: number, tx: number, ty: number) {
-  const cy = fy + (ty - fy) / 2;
-  return `M ${fx} ${fy} C ${fx} ${cy}, ${tx} ${cy}, ${tx} ${ty}`;
+  const dy = Math.abs(ty - fy);
+  const offset = Math.max(dy / 2, 40);
+  return `M ${fx} ${fy} C ${fx} ${fy + offset}, ${tx} ${ty - offset}, ${tx} ${ty}`;
 }
 
 interface Snapshot {
@@ -59,9 +60,9 @@ const sectionStyle = "p-4 bg-white border border-slate-200 rounded-2xl space-y-3
 
 // ── Nœud visuel ──────────────────────────────────────────────────────────────
 function CanvasNode({
-  node, selected, onSelect, onMouseDown, onStartConnection, onDelete, isInitial, isPotentialTarget
+  node, selected, onSelect, onMouseDown, onStartConnection, onDelete, isInitial, isPotentialTarget, isDragging
 }: {
-  node: WorkflowNode; selected: boolean; isInitial: boolean; zoom: number; isPotentialTarget: boolean;
+  node: WorkflowNode; selected: boolean; isInitial: boolean; zoom: number; isPotentialTarget: boolean; isDragging: boolean;
   onSelect: (e: React.MouseEvent) => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onStartConnection: (nodeId: string, e: React.MouseEvent) => void;
@@ -72,8 +73,8 @@ function CanvasNode({
   return (
     <div
       onMouseDown={onMouseDown} onClick={onSelect}
-      style={{ position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, cursor: 'grab', zIndex: selected ? 10 : 1, userSelect: 'none', WebkitUserDrag: 'none' } as any}
-      className={`rounded-xl border-2 ${cfg.color} ${cfg.bg} flex flex-col justify-between p-2.5 transition-all group shadow-sm ${selected ? 'shadow-xl ring-2 ring-slate-400/30 brightness-[0.98]' : 'hover:shadow-md'} ${isInitial ? 'ring-2 ring-blue-500/50' : ''} ${isPotentialTarget ? 'scale-105 border-blue-600 ring-4 ring-blue-500/20' : ''}`}
+      style={{ position: 'absolute', left: pos.x, top: pos.y, width: NODE_W, height: NODE_H, cursor: isDragging ? 'grabbing' : 'grab', zIndex: selected ? 10 : 1, userSelect: 'none', WebkitUserDrag: 'none' } as any}
+      className={`rounded-xl border-2 ${cfg.color} ${cfg.bg} flex flex-col justify-between p-2.5 group shadow-sm ${isDragging ? '' : 'transition-all'} ${selected ? 'shadow-xl ring-2 ring-slate-400/30 brightness-[0.98]' : 'hover:shadow-md'} ${isInitial ? 'ring-2 ring-blue-500/50' : ''} ${isPotentialTarget ? 'scale-105 border-blue-600 ring-4 ring-blue-500/20' : ''}`}
     >
       <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-400 z-20 group-hover:border-slate-600 transition-colors" />
       <div className="flex items-center gap-1.5 min-w-0 pointer-events-none">
@@ -541,7 +542,6 @@ export function WorkflowBuilder({
                       strokeWidth={(isSelected ? 4 : 2.5) / zoom} 
                       markerEnd={`url(#${markerId})`} 
                       style={{ pointerEvents: 'none', color: color }} 
-                      className="transition-all" 
                     />
                     {edge.label && (
                       <foreignObject 
@@ -565,7 +565,7 @@ export function WorkflowBuilder({
                                 pointerEvents: 'all',
                                 cursor: 'pointer'
                               }}
-                              className={`px-2 py-1 rounded-lg font-bold text-center leading-tight transition-all`}
+                              className={`px-2 py-1 rounded-lg font-bold text-center leading-tight`}
                             >
                               {edge.label}
                             </div>
@@ -590,7 +590,19 @@ export function WorkflowBuilder({
             </svg>
             
             {nodes.map(node => (
-              <CanvasNode key={node.id} node={node} zoom={zoom} selected={selectedNode === node.id} isInitial={node.id === initialNodeId} isPotentialTarget={activeConnection?.targetId === node.id} onSelect={(e) => { setSelectedNode(node.id === selectedNode ? null : node.id); setSelectedEdge(null); e.stopPropagation(); }} onMouseDown={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setDragging({ id: node.id, offsetX: (r.left - e.clientX) / zoom, offsetY: (r.top - e.clientY) / zoom, startPos: {x: node.position!.x, y: node.position!.y} }); e.preventDefault(); e.stopPropagation(); }} onStartConnection={handleStartConnection} onDelete={() => deleteNode(node.id)} />
+              <CanvasNode key={node.id} node={node} zoom={zoom} selected={selectedNode === node.id} isInitial={node.id === initialNodeId} isPotentialTarget={activeConnection?.targetId === node.id} isDragging={dragging?.id === node.id} onSelect={(e) => { setSelectedNode(node.id === selectedNode ? null : node.id); setSelectedEdge(null); e.stopPropagation(); }} onMouseDown={(e) => { 
+                const canvasRect = canvasRef.current!.getBoundingClientRect();
+                const mx = (e.clientX - canvasRect.left + canvasRef.current!.scrollLeft) / zoom;
+                const my = (e.clientY - canvasRect.top + canvasRef.current!.scrollTop) / zoom;
+                setDragging({ 
+                  id: node.id, 
+                  offsetX: mx - node.position!.x, 
+                  offsetY: my - node.position!.y, 
+                  startPos: {x: node.position!.x, y: node.position!.y} 
+                }); 
+                e.preventDefault(); 
+                e.stopPropagation(); 
+              }} onStartConnection={handleStartConnection} onDelete={() => deleteNode(node.id)} />
             ))}
           </div>
         </div>

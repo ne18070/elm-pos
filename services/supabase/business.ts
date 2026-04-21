@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { Business, UserRole } from '../../types';
+import type { Business, UserRole, BusinessType } from '../../types';
 
 export interface BusinessMembership {
   business: Business;
@@ -17,18 +17,31 @@ export interface BusinessMember {
 
 // ─── Multi-établissements ─────────────────────────────────────────────────────
 
+/** Lister toutes les structures (réservé aux superadmins) */
+export async function getAllOrganizations(): Promise<Business[]> {
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data as Business[];
+}
+
 /** Tous les établissements auxquels l'utilisateur connecté appartient */
 export async function getMyBusinesses(): Promise<BusinessMembership[]> {
   const { data, error } = await supabase.rpc('get_my_businesses');
   if (error) throw new Error(error.message);
 
-  return (data as unknown as Array<Business & { member_role: UserRole }>).map((row) => ({
+  return (data as unknown as any[]).map((row) => ({
     business: {
       id:             row.id,
       name:           row.name,
       type:           row.type,
-      types:    (row as any).types    ?? [],
-      features: (row as any).features ?? [],
+      denomination:   row.denomination,
+      rib:            row.rib,
+      brand_config:   row.brand_config,
+      types:    row.types    ?? [],
+      features: row.features ?? [],
       address:        row.address,
       phone:          row.phone,
       email:          row.email,
@@ -44,6 +57,41 @@ export async function getMyBusinesses(): Promise<BusinessMembership[]> {
   }));
 }
 
+/** Créer une structure (organisation) indépendamment d'un utilisateur (réservé aux superadmins) */
+export async function createOrganization(data: {
+  name: string;
+  type: BusinessType;
+  denomination?: string;
+  rib?: string;
+  currency?: string;
+  tax_rate?: number;
+}): Promise<Business> {
+  const { data: result, error } = await supabase
+    .from('businesses')
+    .insert({
+      ...data,
+      currency: data.currency || 'XOF',
+      tax_rate: data.tax_rate || 0,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return result as Business;
+}
+
+/** Mettre à jour les informations d'une structure */
+export async function updateBusiness(
+  businessId: string,
+  patch: Partial<Business>
+): Promise<void> {
+  const { error } = await supabase
+    .from('businesses')
+    .update(patch)
+    .eq('id', businessId);
+  if (error) throw new Error(error.message);
+}
+
 /** Basculer vers un autre établissement (met à jour le contexte RLS) */
 export async function switchBusiness(businessId: string): Promise<void> {
   const { error } = await supabase.rpc('switch_business', {
@@ -55,6 +103,7 @@ export async function switchBusiness(businessId: string): Promise<void> {
 /** Créer un nouvel établissement et y basculer automatiquement */
 export async function createBusiness(data: {
   name: string;
+  denomination?: string;
   type: string;
   currency: string;
   tax_rate: number;

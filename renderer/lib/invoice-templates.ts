@@ -157,6 +157,7 @@ export function generateThermalReceipt(order: Order, business: Business): string
   <div class="center" style="margin-bottom:8px">
     <img src="${business.logo_url || '/logo.png'}" style="max-width:60px;max-height:40px;margin-bottom:4px"><br>
     <div class="bold big">${business.name}</div>
+    ${business.denomination && business.denomination !== business.name ? `<div class="small bold" style="margin-top:2px">${business.denomination}</div>` : ''}
     ${business.address ? `<div class="small">${business.address}</div>` : ''}
     ${business.phone   ? `<div class="small">Tél : ${business.phone}</div>` : ''}
     ${business.email   ? `<div class="small">${business.email}</div>` : ''}
@@ -248,7 +249,8 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
         <div class="biz-info">
           <img src="${business.logo_url || '/logo.png'}" class="logo">
           <div>
-            <div class="biz-name">${business.name}</div>
+            <div class="biz-name">${business.denomination || business.name}</div>
+            ${business.denomination && business.denomination !== business.name ? `<div class="biz-detail" style="font-weight:700;color:#1a202c">${business.name}</div>` : ''}
             ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
             ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
             ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}
@@ -304,8 +306,17 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
         </table>
       </div>
 
-      ${order.coupon_notes ? `<div class="coupon-note">${order.coupon_notes}</div>` : ''}
-      ${order.notes ? `<div class="order-note">Note : ${order.notes}</div>` : ''}
+      <div style="display:flex;gap:10px;margin-top:5px">
+        <div style="flex:1">
+          ${order.coupon_notes ? `<div class="coupon-note">${order.coupon_notes}</div>` : ''}
+          ${order.notes ? `<div class="order-note">Note : ${order.notes}</div>` : ''}
+          ${business.rib ? `
+          <div style="margin-top:8px;padding:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px">
+            <div style="font-size:8px;text-transform:uppercase;color:#64748b;font-weight:800;margin-bottom:2px">Informations bancaires (RIB)</div>
+            <div style="font-family:monospace;font-size:9px;color:#1e293b;white-space:pre-wrap">${business.rib}</div>
+          </div>` : ''}
+        </div>
+      </div>
 
       <!-- ═══ SIGNATURES ═══ -->
       <div class="signatures">

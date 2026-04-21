@@ -24,6 +24,9 @@ export interface Business {
   id: string;
   name: string;
   type: BusinessType;
+  denomination?: string;
+  rib?: string;
+  brand_config?: Record<string, any>;
   address?: string;
   phone?: string;
   email?: string;
@@ -36,7 +39,7 @@ export interface Business {
   stock_units?: string[];    // unités de stock configurables
   types: string[];    // multi-type: e.g. ['retail', 'hotel']
   features: string[]; // modules activés pour ce store (géré par l'admin via backoffice)
-  owner_id: string;
+  owner_id?: string;
   created_at: string;
 }
 

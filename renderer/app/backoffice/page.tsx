@@ -22,8 +22,10 @@ import {
 } from '@services/supabase/subscriptions';
 import { supabase } from '@/lib/supabase';
 import { getIntouchConfig, upsertIntouchConfig, type IntouchConfig } from '@services/supabase/intouch';
+import { getAllOrganizations, createOrganization, updateBusiness } from '@services/supabase/business';
+import { createBusinessAdmin } from '@services/supabase/users';
 
-type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules' | 'marketing' | 'emails';
+type Tab = 'monitoring' | 'demandes' | 'abonnements' | 'plans' | 'paiement' | 'modules' | 'marketing' | 'emails' | 'structures';
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   active:  { label: 'Actif',   color: 'text-green-400 bg-green-900/20 border-green-800',  icon: CheckCircle },
@@ -138,8 +140,10 @@ function RequestsTab({ plans }: { plans: Plan[] }) {
         body: JSON.stringify({
           requestId:    approvePublicForm.req.id,
           email:        approvePublicForm.req.email,
+          fullName:     approvePublicForm.req.full_name,
           password:     approvePublicForm.req.password ?? undefined,
           businessName: approvePublicForm.req.business_name,
+          denomination: approvePublicForm.req.denomination,
           planId:       approvePublicForm.planId,
           days:         totalDays,
           note:         approvePublicForm.note || undefined,
@@ -916,6 +920,189 @@ function PlansTab() {
   );
 }
 
+// ── Onglet Structures (Organisations) ─────────────────────────────────────────
+
+function StructuresTab() {
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<'new' | any | null>(null);
+  const [adminModal, setAdminModal] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try { setOrgs(await getAllOrganizations()); }
+    catch (e) { alert(toUserError(e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSaving(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      await createOrganization({
+        name: fd.get('name') as string,
+        type: (fd.get('type') as any) || 'retail',
+        denomination: fd.get('denomination') as string,
+        rib: fd.get('rib') as string,
+      });
+      setModal(null);
+      await load();
+    } catch (e) { alert(toUserError(e)); }
+    finally { setSaving(false); }
+  };
+
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSaving(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      await updateBusiness(modal.id, {
+        name: fd.get('name') as string,
+        denomination: fd.get('denomination') as string,
+        rib: fd.get('rib') as string,
+      });
+      setModal(null);
+      await load();
+    } catch (e) { alert(toUserError(e)); }
+    finally { setSaving(false); }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSaving(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      await createBusinessAdmin({
+        business_id: adminModal.id,
+        email:     fd.get('email') as string,
+        password:  fd.get('password') as string,
+        full_name: fd.get('full_name') as string,
+        role:      'owner',
+      });
+      setAdminModal(null);
+      await load();
+    } catch (e) { alert(toUserError(e)); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-400" /></div>;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><Layers className="w-5 h-5 text-brand-400" /> Gestion des Structures</h2>
+        <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 px-6"><Plus className="w-4 h-4" /> Nouvelle Structure</button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {orgs.map(org => (
+          <div key={org.id} className="card p-6 border-surface-border hover:border-brand-500/50 transition-all group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
+              <Layers className="w-20 h-20" />
+            </div>
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-3 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setModal(org)} className="p-2 rounded-lg hover:bg-surface-input text-slate-400 hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>
+              </div>
+            </div>
+            <div className="space-y-1 mb-6">
+              <h3 className="text-lg font-black text-white tracking-tight">{org.name}</h3>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{org.type}</p>
+            </div>
+            <div className="space-y-3 py-4 border-t border-surface-border">
+              <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dénomination</span><span className="text-sm text-slate-300 font-medium truncate max-w-[150px] text-right">{org.denomination || '—'}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">RIB</span><span className="text-[10px] font-mono text-slate-400 bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">{org.rib || 'Non renseigné'}</span></div>
+            </div>
+            <div className="pt-4 border-t border-surface-border flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Propriétaire</span>
+                <span className="text-xs text-white font-bold">{org.owner_id ? '✅ Assigné' : '⚠️ Non assigné'}</span>
+              </div>
+              {!org.owner_id && (
+                <button onClick={() => setAdminModal(org)} className="text-[10px] font-black uppercase tracking-widest text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10"><Plus className="w-3 h-3" /> Créer Admin</button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {(modal === 'new' || (modal && typeof modal === 'object')) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-300">
+          <div className="card w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover">
+              <h3 className="text-xl font-black text-white tracking-tight">{modal === 'new' ? 'NOUVELLE STRUCTURE' : 'MODIFIER STRUCTURE'}</h3>
+              <button onClick={() => setModal(null)} className="p-2 hover:bg-surface-input rounded-xl text-slate-500 transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+            <form onSubmit={modal === 'new' ? handleCreate : handleUpdate} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div><label className="label">Nom commercial</label><input name="name" defaultValue={modal?.name} required className="input h-12" placeholder="Ex: Restaurant Le Gourmet" /></div>
+                <div><label className="label">Dénomination sociale</label><input name="denomination" defaultValue={modal?.denomination} className="input h-12" placeholder="Ex: SARL Le Gourmet Afrique" /></div>
+                <div><label className="label">RIB / Coordonnées bancaires</label><textarea name="rib" defaultValue={modal?.rib} className="input min-h-[100px] py-3" placeholder="Saisir le RIB complet..." /></div>
+                {modal === 'new' && (
+                  <div>
+                    <label className="label">Type d'activité</label>
+                    <select name="type" className="input h-12">
+                      <option value="retail">Commerce de détail</option>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="hotel">Hôtel</option>
+                      <option value="service">Services</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setModal(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />} {modal === 'new' ? 'Créer la structure' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {adminModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-in fade-in duration-300">
+          <div className="card w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover">
+              <h3 className="text-xl font-black text-white tracking-tight uppercase">CRÉER PROFIL ADMIN</h3>
+              <button onClick={() => setAdminModal(null)} className="p-2 hover:bg-surface-input rounded-xl text-slate-500 transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+            <div className="px-8 pt-6 pb-2">
+              <div className="p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10 flex items-center gap-4">
+                <Layers className="w-10 h-10 text-brand-400 opacity-50" />
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rattachement à</p>
+                  <p className="text-sm font-bold text-white">{adminModal.name}</p>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleCreateAdmin} className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div><label className="label">Nom complet</label><input name="full_name" required className="input h-12" placeholder="Prénom et Nom" /></div>
+                <div><label className="label">Email</label><input name="email" type="email" required className="input h-12" placeholder="admin@exemple.com" /></div>
+                <div><label className="label">Mot de passe provisoire</label><input name="password" type="password" required className="input h-12" placeholder="••••••••" minLength={8} /></div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setAdminModal(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />} Créer le profil
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Onglet Paramètres paiement ────────────────────────────────────────────────
 
 function PaymentTab() {
@@ -980,7 +1167,7 @@ function PaymentTab() {
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function BackofficePage() {
-  const [tab, setTab]     = useState<Tab>('monitoring');
+  const [tab, setTab]     = useState<Tab>('structures');
   const [plans, setPlans] = useState<Plan[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -998,6 +1185,7 @@ export default function BackofficePage() {
   }, []);
 
   const TABS: { id: Tab; label: string; badge?: number; icon?: typeof BarChart2 }[] = [
+    { id: 'structures',  label: 'Structures',          icon: Layers                   },
     { id: 'monitoring',  label: 'Monitoring',          icon: BarChart2                },
     { id: 'demandes',    label: 'Demandes',            badge: pendingCount            },
     { id: 'abonnements', label: 'Abonnements'                                         },
@@ -1029,6 +1217,7 @@ export default function BackofficePage() {
         ))}
       </div>
 
+      {tab === 'structures'  && <StructuresTab />}
       {tab === 'monitoring'  && <MonitoringTab />}
       {tab === 'demandes'    && <RequestsTab plans={plans} />}
       {tab === 'abonnements' && <SubscriptionsTab plans={plans} />}

@@ -118,17 +118,72 @@ export async function toggleUserBlock(
 }
 
 export async function adminResetUserPassword(
-  businessId: string,
-  userId: string,
+  business_id: string,
+  user_id: string,
   newPassword: string
 ): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).rpc('admin_reset_user_password', {
-    p_business_id:  businessId,
-    p_user_id:      userId,
+    p_business_id:  business_id,
+    p_user_id:      user_id,
     p_new_password: newPassword,
   });
   if (error) throw new Error(error.message);
+}
+
+/** Créer un utilisateur et l'attacher à un établissement (réservé aux superadmins) */
+export async function createBusinessAdmin(data: {
+  email:     string;
+  password:  string;
+  full_name: string;
+  business_id: string;
+  role?:     UserRole;
+}): Promise<string> {
+  const { supabaseAdmin } = await import('./admin');
+  if (!supabaseAdmin) throw new Error("Accès refusé : clé de service manquante.");
+
+  // 1. Créer l'utilisateur Auth
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email:          data.email,
+    password:       data.password,
+    email_confirm:  true,
+    user_metadata: {
+      full_name:   data.full_name,
+      role:        data.role || 'owner',
+      business_id: data.business_id,
+    }
+  });
+  if (authError) throw new Error(authError.message);
+  const userId = authData.user!.id;
+
+  // 2. Créer/Mettre à jour le profil public (le trigger handle_new_user s'en occupe normalement)
+  const { error: profileError } = await supabaseAdmin.from('users').upsert({
+    id:          userId,
+    email:       data.email,
+    full_name:   data.full_name,
+    role:        data.role || 'owner',
+    business_id: data.business_id,
+  });
+  if (profileError) throw new Error(profileError.message);
+
+  // 3. Ajouter aux membres du business
+  const { error: memberError } = await supabaseAdmin.from('business_members').upsert({
+    business_id: data.business_id,
+    user_id:     userId,
+    role:        data.role || 'owner',
+  });
+  if (memberError) throw new Error(memberError.message);
+
+  // 4. Si c'est un owner, on met à jour le business.owner_id
+  if ((data.role || 'owner') === 'owner') {
+    const { error: bizError } = await supabaseAdmin
+      .from('businesses')
+      .update({ owner_id: userId })
+      .eq('id', data.business_id);
+    if (bizError) throw new Error(bizError.message);
+  }
+
+  return userId;
 }
 
 // ─── Création de compte membre ────────────────────────────────────────────────

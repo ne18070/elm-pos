@@ -36,10 +36,11 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
   const { error: notifError } = useNotificationStore();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    name:     '',
-    type:     'retail',
-    currency: 'XOF',
-    tax_rate: '0',
+    name:         '',
+    denomination: '',
+    type:         'retail',
+    currency:     'XOF',
+    tax_rate:     '0',
   });
 
   const isValid = form.name.trim().length > 0;
@@ -49,10 +50,11 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
     setSaving(true);
     try {
       const biz = await createBusiness({
-        name:     form.name.trim(),
-        type:     form.type,
-        currency: form.currency,
-        tax_rate: parseFloat(form.tax_rate) || 0,
+        name:         form.name.trim(),
+        denomination: form.denomination.trim() || undefined,
+        type:         form.type,
+        currency:     form.currency,
+        tax_rate:     parseFloat(form.tax_rate) || 0,
       });
       onCreated(biz);
       // Rediriger vers l'écran de configuration au premier lancement
@@ -95,6 +97,17 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
             placeholder="Ex : Boutique Centre-Ville"
             className="input"
             autoFocus
+          />
+        </div>
+
+        <div>
+          <label className="label">Dénomination sociale (si différente)</label>
+          <input
+            type="text"
+            value={form.denomination}
+            onChange={(e) => setForm({ ...form, denomination: e.target.value })}
+            placeholder="Ex : SARL Boutique Centre-Ville"
+            className="input"
           />
         </div>
 

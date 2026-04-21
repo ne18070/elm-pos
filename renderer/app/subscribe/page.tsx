@@ -31,8 +31,10 @@ export default function SubscribePage() {
 
   // Formulaire client
   const [businessName, setBusinessName] = useState('');
-  const [email, setEmail]         = useState('');
-  const [phone, setPhone]         = useState('');
+  const [denomination, setDenomination] = useState('');
+  const [fullName, setFullName]         = useState('');
+  const [email, setEmail]               = useState('');
+  const [phone, setPhone]               = useState('');
 
   // Mot de passe
   const [password, setPassword]           = useState('');
@@ -81,6 +83,8 @@ export default function SubscribePage() {
     try {
       const { error } = await db.from('public_subscription_requests').insert({
         business_name: businessName.trim(),
+        denomination:  denomination.trim() || null,
+        full_name:     fullName.trim(),
         email:         email.trim().toLowerCase(),
         phone:         phone.trim(),
         plan_id:       selectedPlan.id,
@@ -166,49 +170,70 @@ export default function SubscribePage() {
             <div className="card p-6 space-y-4">
               <h2 className="font-bold text-white text-lg">Vos informations</h2>
 
-              <div>
-                <label className="label">Nom de votre établissement *</label>
-                <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)}
-                  className="input" placeholder="Ex : Restaurant Le Soleil" />
-              </div>
-              <div>
-                <label className="label">Email *</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="input" placeholder="vous@exemple.com" />
-              </div>
-              <div>
-                <label className="label">Téléphone</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                  className="input" placeholder="+221 77 000 00 00" />
-              </div>
-              <div>
-                <label className="label">Mot de passe *</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
-                    className="input pr-10"
-                    placeholder="Min. 8 caractères"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Nom de l'établissement *</label>
+                  <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)}
+                    className="input" placeholder="Ex : Restaurant Le Soleil" />
+                </div>
+                <div>
+                  <label className="label">Dénomination sociale (si différente)</label>
+                  <input type="text" value={denomination} onChange={(e) => setDenomination(e.target.value)}
+                    className="input" placeholder="Ex : SARL Le Soleil Afrique" />
                 </div>
               </div>
-              <div>
-                <label className="label">Confirmer le mot de passe *</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
-                  className="input"
-                  placeholder="Répétez votre mot de passe"
-                />
+
+              <div className="pt-4 border-t border-surface-border">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Administrateur du compte</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="label">Votre nom complet *</label>
+                    <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                      className="input" placeholder="Prénom et Nom" />
+                  </div>
+                  <div>
+                    <label className="label">Email *</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                      className="input" placeholder="vous@exemple.com" />
+                  </div>
+                  <div>
+                    <label className="label">Téléphone</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                      className="input" placeholder="+221 77 000 00 00" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-surface-border space-y-4">
+                <div>
+                  <label className="label">Mot de passe *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+                      className="input pr-10"
+                      placeholder="Min. 8 caractères"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Confirmer le mot de passe *</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                    className="input"
+                    placeholder="Répétez votre mot de passe"
+                  />
+                </div>
               </div>
               {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
             </div>

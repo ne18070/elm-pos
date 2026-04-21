@@ -35,8 +35,10 @@ export async function POST(req: NextRequest) {
   let body: {
     requestId: string;
     email:     string;
+    fullName?: string;
     password?: string;
     businessName: string;
+    denomination?: string;
     planId:    string;
     days:      number;
     note?:     string;
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
   }
 
-  const { requestId, email, businessName, planId, days, note, planLabel } = body;
+  const { requestId, email, fullName, businessName, denomination, planId, days, note, planLabel } = body;
   if (!requestId || !email || !businessName || !planId || !days) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 });
   }
@@ -61,20 +63,28 @@ export async function POST(req: NextRequest) {
       email,
       password,
       email_confirm: true,
+      user_metadata: {
+        full_name: fullName || businessName,
+      }
     });
     if (authError) throw new Error(authError.message);
     const userId = authData.user!.id;
 
     // 2. Créer le profil utilisateur
     const { error: userErr } = await admin.from('users').upsert({
-      id: userId, email, full_name: businessName, role: 'owner',
+      id: userId, email, full_name: fullName || businessName, role: 'owner',
     }, { onConflict: 'id' });
     if (userErr) throw new Error(userErr.message);
 
     // 3. Créer le business
     const { data: bizData, error: bizError } = await admin
       .from('businesses')
-      .insert({ name: businessName, owner_id: userId, type: 'retail' })
+      .insert({ 
+        name: businessName, 
+        denomination: denomination || null,
+        owner_id: userId, 
+        type: 'retail' 
+      })
       .select('id')
       .single();
     if (bizError) throw new Error(bizError.message);

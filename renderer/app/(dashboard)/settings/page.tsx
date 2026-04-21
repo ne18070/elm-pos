@@ -28,6 +28,8 @@ export default function SettingsPage() {
 
   const [bizForm, setBizForm] = useState({
     name:           business?.name ?? '',
+    denomination:   business?.denomination ?? '',
+    rib:            business?.rib ?? '',
     address:        business?.address ?? '',
     phone:          business?.phone ?? '',
     tax_rate:       String(business?.tax_rate ?? '0'),
@@ -160,6 +162,8 @@ export default function SettingsPage() {
         .from('businesses')
         .update({
           name:           bizForm.name,
+          denomination:   bizForm.denomination,
+          rib:            bizForm.rib,
           address:        bizForm.address,
           phone:          bizForm.phone,
           tax_rate:       parseFloat(bizForm.tax_rate) || 0,
@@ -173,6 +177,8 @@ export default function SettingsPage() {
       setBusiness({
         ...business,
         name:           bizForm.name,
+        denomination:   bizForm.denomination,
+        rib:            bizForm.rib,
         address:        bizForm.address,
         phone:          bizForm.phone,
         tax_rate:       parseFloat(bizForm.tax_rate) || 0,
@@ -334,13 +340,35 @@ export default function SettingsPage() {
           </button>
           {openSections.etablissement && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Nom commercial</label>
+              <input
+                type="text"
+                value={bizForm.name}
+                onChange={(e) => setBizForm({ ...bizForm, name: e.target.value })}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label">Dénomination sociale</label>
+              <input
+                type="text"
+                value={bizForm.denomination}
+                onChange={(e) => setBizForm({ ...bizForm, denomination: e.target.value })}
+                className="input"
+                placeholder="Ex: SARL Le Gourmet"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="label">Nom</label>
-            <input
-              type="text"
-              value={bizForm.name}
-              onChange={(e) => setBizForm({ ...bizForm, name: e.target.value })}
-              className="input"
+            <label className="label">RIB / Coordonnées bancaires</label>
+            <textarea
+              value={bizForm.rib}
+              onChange={(e) => setBizForm({ ...bizForm, rib: e.target.value })}
+              className="input min-h-[80px] py-3"
+              placeholder="Saisir votre RIB..."
             />
           </div>
 
