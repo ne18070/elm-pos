@@ -147,17 +147,31 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
         )}
       </button>
     {permissionDenied && !collapsed && (
-      <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-red-950/40 border border-red-800/30 text-[10px] text-red-400 leading-relaxed">
-        <p className="font-semibold mb-0.5">Accès refusé</p>
-        <p className="text-red-400/80 mb-1.5">
-          Cliquez sur l&apos;icône ℹ️ à gauche de la barre d&apos;adresse → <strong>Localisation → Autoriser</strong>, puis :
-        </p>
-        <button
-          onClick={() => startTracking()}
-          className="text-[10px] font-semibold text-red-300 hover:text-red-100 underline underline-offset-2"
-        >
-          Réessayer
-        </button>
+      <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-red-950/40 border border-red-800/30 text-[10px] text-red-400 leading-relaxed space-y-1.5">
+        <p className="font-semibold">Localisation bloquée</p>
+        <ol className="text-red-400/80 space-y-1 list-decimal list-inside">
+          <li>
+            <strong>Windows</strong> → Paramètres → Confidentialité → Localisation → Activer
+          </li>
+          <li>
+            Icône ℹ️ dans Chrome → <strong>Localisation → Autoriser</strong>
+          </li>
+          <li>Rechargez la page</li>
+        </ol>
+        <div className="flex gap-3 pt-0.5">
+          <button
+            onClick={() => window.location.reload()}
+            className="text-[10px] font-semibold text-red-300 hover:text-red-100 underline underline-offset-2"
+          >
+            Recharger
+          </button>
+          <button
+            onClick={() => startTracking()}
+            className="text-[10px] font-semibold text-red-400/60 hover:text-red-200 underline underline-offset-2"
+          >
+            Réessayer sans recharger
+          </button>
+        </div>
       </div>
     )}
     </div>

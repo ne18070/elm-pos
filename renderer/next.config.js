@@ -19,7 +19,7 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()',
+    value: 'camera=(), microphone=(), geolocation=(self)',
   },
   {
     // unsafe-inline and unsafe-eval are required by Next.js App Router.
