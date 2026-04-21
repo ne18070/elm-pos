@@ -36,9 +36,7 @@ export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusine
 
   if (ownerIds.length > 0) {
     const { data: users } = await (supabase as any)
-      .from('users')
-      .select('id, full_name, email')
-      .in('id', ownerIds);
+      .rpc('get_users_info', { user_ids: ownerIds });
     for (const u of users ?? []) ownerMap[u.id] = u;
   }
 

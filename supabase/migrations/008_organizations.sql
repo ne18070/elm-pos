@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   legal_name    TEXT NOT NULL,         -- Raison sociale
   denomination  TEXT,                  -- Dénomination commerciale (si différente)
   rib           TEXT,
-  owner_id      UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  owner_id      UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
   currency      TEXT NOT NULL DEFAULT 'XOF',
   country       TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -34,7 +34,8 @@ SELECT DISTINCT ON (b.owner_id)
   b.created_at
 FROM businesses b
 WHERE b.owner_id IS NOT NULL
-ORDER BY b.owner_id, b.created_at ASC;
+ORDER BY b.owner_id, b.created_at ASC
+ON CONFLICT (owner_id) DO NOTHING;
 
 -- Rattacher chaque business à son org (via owner_id)
 UPDATE businesses b
