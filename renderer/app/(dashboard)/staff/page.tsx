@@ -6,7 +6,8 @@ import {
   Clock, CheckCircle, AlertCircle, CalendarDays, Banknote, UserMinus,
   UserCheck, Coffee, Plane, Star, Phone, Mail, Building2, Save,
   TrendingUp, DollarSign, Link2, Unlink, RefreshCw, Copy, Check, LogIn,
-  Printer, FileText, LayoutList, Calendar, Wallet, Search as SearchIcon, History
+  Printer, FileText, LayoutList, Calendar, Wallet, Search as SearchIcon, History,
+  LayoutGrid, List, Map as MapIcon, Briefcase
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -27,10 +28,12 @@ import {
 import { getTeamMembers, inviteUser } from '@services/supabase/users';
 import type { User as SystemUser } from '@pos-types';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { StaffOffices } from '@/components/admin/StaffOffices';
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 
 type Tab = 'employes' | 'presences' | 'paie';
+type StaffView = 'list' | 'offices';
 
 const ATTENDANCE_CFG: Record<AttendanceStatus, { label: string; short: string; color: string; bg: string }> = {
   present:  { label: 'Présent',       short: 'P',  color: 'text-green-300',  bg: 'bg-green-900/60 border-green-700'  },
@@ -64,6 +67,7 @@ export default function StaffPage() {
   const cur = business?.currency ?? 'XOF';
 
   const [tab, setTab]           = useState<Tab>('employes');
+  const [staffView, setStaffView] = useState<StaffView>('list');
   const [loading, setLoading]   = useState(true);
   const [staffList, setStaff]   = useState<Staff[]>([]);
   const [attendance, setAttendance] = useState<StaffAttendance[]>([]);
@@ -334,14 +338,14 @@ export default function StaffPage() {
           {tab === 'employes' && (
             <div className="p-4 max-w-7xl mx-auto space-y-4">
               {/* Search + filter bar */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
+              <div className="flex flex-col sm:flex-row gap-3 items-center">
+                <div className="relative flex-1 w-full">
                   <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Rechercher (nom, poste, dépt)..."
-                    className="input pl-10 text-sm h-11 bg-surface-input/50 focus:bg-surface-input"
+                    className="input pl-10 text-sm h-11 bg-surface-input/50 focus:bg-surface-input w-full"
                   />
                   {search && (
                     <button 
@@ -352,14 +356,39 @@ export default function StaffPage() {
                     </button>
                   )}
                 </div>
-                <div className="flex items-center justify-between px-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                    {filteredStaff.length} Résultat{filteredStaff.length > 1 ? 's' : ''}
-                  </span>
-                  <div className="sm:hidden h-8 w-px bg-surface-border mx-4" />
-                  <div className="text-xs text-slate-500">
-                    <span className="text-green-500 font-bold">{activeStaff.length}</span> actifs
-                  </div>
+
+                {/* View Toggle */}
+                <div className="flex bg-surface-input p-1 rounded-xl border border-surface-border self-stretch sm:self-center">
+                  <button
+                    onClick={() => setStaffView('list')}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all",
+                      staffView === 'list' ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    Liste
+                  </button>
+                  <button
+                    onClick={() => setStaffView('offices')}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all",
+                      staffView === 'offices' ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    <MapIcon className="w-3.5 h-3.5" />
+                    Espaces
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between px-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  {filteredStaff.length} Résultat{filteredStaff.length > 1 ? 's' : ''}
+                </span>
+                <div className="sm:hidden h-8 w-px bg-surface-border mx-4" />
+                <div className="text-xs text-slate-500">
+                  <span className="text-green-500 font-bold">{activeStaff.length}</span> actifs
                 </div>
               </div>
 
@@ -379,6 +408,15 @@ export default function StaffPage() {
                     </button>
                   )}
                 </div>
+              ) : staffView === 'offices' ? (
+                <StaffOffices 
+                  staffList={filteredStaff} 
+                  onUpdateStaff={async (id, form) => {
+                    const saved = await updateStaff(id, form);
+                    setStaff((prev) => prev.map((x) => x.id === saved.id ? saved : x));
+                    notifSuccess('Emplacement mis à jour');
+                  }}
+                />
               ) : (
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-20 sm:pb-4">
                   {filteredStaff.map((s) => (
