@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-async function requireSuperadmin(req: NextRequest): Promise<{ error: string } | { adminClient: ReturnType<typeof createClient> }> {
+async function requireSuperadmin(req: NextRequest): Promise<{ error: string } | { adminClient: any }> {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return { error: 'Token manquant' };
 
