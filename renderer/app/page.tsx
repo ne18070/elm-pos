@@ -101,9 +101,29 @@ function Hero() {
           </h1>
 
           <p className="text-lg text-slate-400 leading-relaxed max-w-xl mb-10">
-            Caisse, stock, comptabilité, livraisons - tout dans une seule application.
+            Caisse, stock, comptabilité, livraisons — tout dans une seule application.
             Conçu pour les PME africaines.
           </p>
+
+          {/* AJOUT : Tags de fonctionnalités */}
+          <div className="flex flex-wrap gap-2 mb-12 max-w-2xl">
+            {[
+              { label: 'Caisse tactile', icon: ShoppingCart },
+              { label: 'Gestion des stocks', icon: Package },
+              { label: 'Comptabilité OHADA', icon: Receipt },
+              { label: 'Livraisons', icon: Truck },
+              { label: 'WhatsApp', icon: MessageCircle },
+              { label: 'Mode hors-ligne', icon: WifiOff },
+              { label: 'Multi-établissements', icon: Globe },
+              { label: 'Hôtellerie', icon: BedDouble },
+              { label: 'Dossiers juridiques', icon: Scale },
+            ].map((tag) => (
+              <span key={tag.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 whitespace-nowrap hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-brand-400 transition-all cursor-default">
+                <tag.icon className="w-3 h-3" />
+                {tag.label}
+              </span>
+            ))}
+          </div>
 
           <div className="flex flex-col sm:flex-row items-start gap-3">
             {user ? (
@@ -143,14 +163,15 @@ function Hero() {
 // ─── Features ─────────────────────────────────────────────────────────────────
 
 const FEATURES = [
-  { icon: ShoppingCart,  title: 'Caisse rapide',        desc: 'Espèces, Wave, Orange Money, carte. Reçus WhatsApp en un tap.', img: '/screenshots/02-pos-main.png' },
-  { icon: Package,       title: 'Stock en temps réel',  desc: 'Alertes de rupture, approvisionnements, variantes synchronisées.', img: '/screenshots/10-products-list.png' },
-  { icon: BarChart2,     title: 'Statistiques',          desc: 'Chiffre d\'affaires, top produits, heures de pointe — lisibles.', img: '/screenshots/17-analytics.png' },
-  { icon: Truck,         title: 'Livraisons',            desc: 'Assignez un livreur, suivez chaque commande jusqu\'à la remise.', img: '/screenshots/07-livraison.png' },
-  { icon: MessageCircle, title: 'WhatsApp natif',        desc: 'Menu du jour, promos, réponses clients sans quitter l\'app.', img: '/screenshots/22-whatsapp-integration.png' },
-  { icon: Receipt,       title: 'Comptabilité OHADA',   desc: 'Journal, bilan, résultat. Conforme aux normes comptables africaines.', img: '/screenshots/19-comptabilite.png' },
-  { icon: Users,         title: 'Gestion d\'équipe',    desc: 'Rôles par employé, accès séparés, traçabilité des actions.', img: '/screenshots/23-staff-management.png' },
-  { icon: WifiOff,       title: 'Hors-ligne',           desc: 'Continuez à encaisser sans connexion. Sync automatique au retour.', img: '/screenshots/02-pos-main.png' },
+  { icon: ShoppingCart,  title: 'Caisse tactile',       desc: 'Interface ultra-rapide optimisée pour le scan et le tactile. Reçus WhatsApp instantanés.' },
+  { icon: Package,       title: 'Gestion des stocks',   desc: 'Suivi en temps réel, alertes de rupture, gestion des variantes et prix de gros.' },
+  { icon: Receipt,       title: 'Comptabilité OHADA',   desc: 'Génération automatique des journaux, bilans et résultats aux normes africaines.' },
+  { icon: Truck,         title: 'Livraisons',            desc: 'Suivi des livreurs sur le terrain et vérification des colis par scan.' },
+  { icon: MessageCircle, title: 'WhatsApp',             desc: 'Envoi automatique des factures PDF et communication directe avec vos clients.' },
+  { icon: WifiOff,       title: 'Mode hors-ligne',      desc: 'Encaissez même sans connexion internet. Synchronisation automatique au retour.' },
+  { icon: Globe,         title: 'Multi-établissements', desc: 'Gérez plusieurs boutiques ou points de vente depuis un seul compte centralisé.' },
+  { icon: BedDouble,    title: 'Hôtellerie',           desc: 'Gestion des chambres, des réservations et facturation unifiée (PMS intégré).' },
+  { icon: Scale,        title: 'Dossiers juridiques',  desc: 'Suivi des procédures, gestion documentaire et facturation d\'honoraires.' },
 ];
 
 function Features() {
@@ -158,19 +179,19 @@ function Features() {
     <section id="features" className="py-24 px-5 bg-[#080c18]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
-          <p className="text-xs font-semibold text-slate-500 tracking-widest uppercase mb-3">Fonctionnalités</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce dont vous avez besoin</h2>
+          <p className="text-xs font-semibold text-slate-500 tracking-widest uppercase mb-3">Expertise</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white">Une solution complète</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.04] rounded-2xl overflow-hidden border border-white/[0.04]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.04] rounded-2xl overflow-hidden border border-white/[0.04]">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="group bg-[#080c18] p-6 space-y-4 hover:bg-white/[0.02] transition-colors">
-              <div className="w-8 h-8 rounded-lg bg-brand-900/60 flex items-center justify-center">
-                <Icon className="w-4 h-4 text-brand-400" />
+            <div key={title} className="group bg-[#080c18] p-8 space-y-4 hover:bg-white/[0.02] transition-colors border-r border-b border-white/[0.02]">
+              <div className="w-10 h-10 rounded-xl bg-brand-900/40 flex items-center justify-center mb-2">
+                <Icon className="w-5 h-5 text-brand-400" />
               </div>
               <div>
-                <p className="text-white font-medium text-sm mb-1.5">{title}</p>
-                <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
+                <h3 className="text-white font-bold text-base mb-2">{title}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
               </div>
             </div>
           ))}
