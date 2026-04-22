@@ -133,3 +133,22 @@ export async function deletePressureDay(id: string): Promise<void> {
   const { error } = await supabase.from('pressure_days').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+// ─── Attachments ─────────────────────────────────────────────────────────────
+
+export async function uploadLeaveAttachment(file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `leave-docs/${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  
+  const { data, error } = await supabase.storage
+    .from('product-images') // On utilise le bucket existant ou on pourrait en créer un 'hr-docs'
+    .upload(fileName, file);
+
+  if (error) throw new Error(error.message);
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(fileName);
+
+  return publicUrl;
+}

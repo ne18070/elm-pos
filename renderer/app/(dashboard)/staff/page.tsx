@@ -33,10 +33,11 @@ import { StaffOffices } from '@/components/admin/StaffOffices';
 import { 
   getLeaveRequests, updateLeaveRequestStatus, getLeaveTypes, 
   getPressureDays, createLeaveRequest, upsertLeaveType, deletePressureDay, addPressureDay,
+  uploadLeaveAttachment,
   type LeaveRequest, type LeaveType, 
   type PressureDay, type LeaveStatus 
 } from '@services/supabase/leave';
-import { Palmtree } from 'lucide-react';
+import { Palmtree, Paperclip, FileIcon, ExternalLink } from 'lucide-react';
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 

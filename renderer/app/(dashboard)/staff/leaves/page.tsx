@@ -12,7 +12,7 @@ import {
   getLeaveRequests, updateLeaveRequestStatus, getLeaveTypes, 
   getPressureDays, type LeaveRequest, type LeaveType, 
   type PressureDay, type LeaveStatus 
-} from '@/services/supabase/leave';
+} from '@services/supabase/leave';
 import { toUserError } from '@/lib/user-error';
 import { cn } from '@/lib/utils';
 
