@@ -10,9 +10,9 @@ import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
   getAllSubscriptions, activateSubscription, getPlans, 
-  getIntouchConfig, upsertIntouchConfig,
   type SubscriptionRow, type Plan 
 } from '@services/supabase/subscriptions';
+import { getIntouchConfig, upsertIntouchConfig } from '@services/supabase/intouch';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 
 const PAGE_SIZE = 25;

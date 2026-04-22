@@ -114,7 +114,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
             <div className="space-y-6">
               {results.orgs.length > 0 && (
                 <Section title="Organisations" icon={Layers} items={results.orgs} 
-                  renderItem={(item) => (
+                  renderItem={(item: any) => (
                     <Item 
                       key={item.id}
                       title={item.legal_name}
@@ -126,7 +126,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
               )}
               {results.subs.length > 0 && (
                 <Section title="Abonnements Clients" icon={CreditCard} items={results.subs} 
-                  renderItem={(item) => (
+                  renderItem={(item: any) => (
                     <Item 
                       key={item.id || item.business_id}
                       title={item.owner_name || item.business_name}
@@ -139,7 +139,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
               )}
               {results.demandes.length > 0 && (
                 <Section title="Demandes & Prospects" icon={Users} items={results.demandes} 
-                  renderItem={(item) => (
+                  renderItem={(item: any) => (
                     <Item 
                       key={item.id}
                       title={item.business_name}
