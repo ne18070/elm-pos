@@ -149,9 +149,9 @@ export function BusinessSwitcher({
         >
           {/* Icône établissement - Fixed width to keep it centered when collapsed */}
           <div className="w-10 h-10 flex items-center justify-center shrink-0 transition-all duration-300">
-            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-sm overflow-hidden">
+            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-sm overflow-hidden p-1">
               {business?.logo_url
-                ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
+                ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" />
                 : <Building2 className="w-4 h-4 text-white" />}
             </div>
           </div>
@@ -210,12 +210,12 @@ export function BusinessSwitcher({
                       ${isActive ? 'bg-brand-900/30' : 'hover:bg-surface-hover'}`}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden
-                                    text-sm font-bold
+                                    text-sm font-bold p-1
                       ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-slate-300'}`}>
                       {isLoading
                         ? <Loader2 className="w-4 h-4 animate-spin" />
                         : biz.logo_url
-                          ? <img src={biz.logo_url} alt={biz.name} className="w-full h-full object-cover" />
+                          ? <img src={biz.logo_url} alt={biz.name} className="w-full h-full object-contain" />
                           : biz.name.charAt(0).toUpperCase()}
                     </div>
 

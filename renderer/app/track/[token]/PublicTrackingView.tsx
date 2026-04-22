@@ -207,7 +207,7 @@ export default function PublicTrackingView() {
             Ce lien est personnel et confidentiel. Ne le partagez pas avec des tiers.
           </p>
           <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Géré par ELM POS & Workflow</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Géré par ELM APP & Workflow</p>
         </footer>
       </main>
     </div>

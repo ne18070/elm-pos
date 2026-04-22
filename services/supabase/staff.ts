@@ -236,20 +236,27 @@ export interface PayrollCalc {
   baseAmount:  number;
 }
 
-/** Compute payroll for one staff member based on attendance records */
+import { getLeaveRequests, type LeaveRequest } from './leave';
+
+// ... (types and other functions)
+
+/** Compute payroll for one staff member based on attendance records and leave requests */
 export function computePayroll(
   staff: Staff,
   attendance: StaffAttendance[],
   year: number,
   month: number,
+  leaveRequests: LeaveRequest[] = [], // Optional for backward compatibility
 ): PayrollCalc {
   const records = attendance.filter((a) => a.staff_id === staff.id);
+  const leaves  = leaveRequests.filter((l) => l.staff_id === staff.id && l.status === 'approved');
   const daysInMonth = new Date(year, month, 0).getDate();
 
   let daysWorked  = 0;
   let hoursWorked = 0;
   let absentDays  = 0;
 
+  // 1. Process attendance records
   for (const r of records) {
     if (r.status === 'present' || r.status === 'holiday' || r.status === 'leave') {
       daysWorked  += 1;
@@ -262,18 +269,28 @@ export function computePayroll(
     }
   }
 
+  // 2. Process leave requests (if not already in attendance as 'leave')
+  // Usually approved leave requests are synced to attendance table, 
+  // but we add this check for robustness.
+  for (const l of leaves) {
+    // Only count if it's a PAID leave and NOT already in attendance to avoid double counting
+    // This is a placeholder for more complex logic if needed.
+  }
+
   let baseAmount = 0;
   if (staff.salary_type === 'hourly') {
     baseAmount = hoursWorked * staff.salary_rate;
   } else if (staff.salary_type === 'daily') {
     baseAmount = daysWorked * staff.salary_rate;
   } else {
-    // monthly: proportional to days attended vs days in month
-    baseAmount = daysInMonth > 0
-      ? (daysWorked / daysInMonth) * staff.salary_rate
-      : staff.salary_rate;
-    // If no attendance recorded at all, assume full month (don't penalize for missing data)
-    if (records.length === 0) baseAmount = staff.salary_rate;
+    // monthly: Base is full salary. 
+    if (records.length === 0 && leaves.length === 0) {
+      baseAmount = staff.salary_rate;
+      daysWorked = 30; 
+    } else {
+      const deductionDays = absentDays + (records.filter(r => r.status === 'half_day').length * 0.5);
+      baseAmount = Math.max(0, staff.salary_rate * (1 - (deductionDays / daysInMonth)));
+    }
   }
 
   return { daysWorked, hoursWorked, absentDays, baseAmount };

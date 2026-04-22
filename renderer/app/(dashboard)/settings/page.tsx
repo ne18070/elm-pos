@@ -573,36 +573,40 @@ export default function SettingsPage() {
             <label className="label flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" />Logo de l&apos;établissement</label>
             <div className="flex items-center gap-4">
               {logoUrl ? (
-                <img src={logoUrl} alt="logo" className="w-16 h-16 rounded-xl object-cover border border-surface-border" />
+                <div className="w-20 h-20 rounded-2xl bg-surface-input border border-surface-border flex items-center justify-center overflow-hidden p-2">
+                  <img src={logoUrl} alt="logo" className="max-w-full max-h-full object-contain" />
+                </div>
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-surface-input border border-surface-border flex items-center justify-center">
-                  <ImageIcon className="w-6 h-6 text-slate-500" />
+                <div className="w-20 h-20 rounded-2xl bg-surface-input border border-surface-border flex items-center justify-center">
+                  <ImageIcon className="w-8 h-8 text-slate-500" />
                 </div>
               )}
-              <label className="btn-secondary h-9 px-4 text-sm flex items-center gap-2 cursor-pointer">
-                {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {uploadingLogo ? 'Chargement…' : 'Choisir un fichier'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadLogo(f); }}
-                />
-              </label>
-              {logoUrl && (
-                <button
-                  onClick={async () => {
-                    if (!business) return;
-                    await (supabase as any).from('businesses').update({ logo_url: null }).eq('id', business.id);
-                    setLogoUrl('');
-                    success('Logo supprimé');
-                  }}
-                  className="text-xs text-red-400 hover:text-red-300"
-                >
-                  Supprimer
-                </button>
-              )}
+              <div className="flex flex-col gap-2">
+                <label className="btn-secondary h-9 px-4 text-sm flex items-center gap-2 cursor-pointer">
+                  {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploadingLogo ? 'Chargement…' : 'Choisir un fichier'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    disabled={uploadingLogo}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadLogo(f); }}
+                  />
+                </label>
+                {logoUrl && (
+                  <button
+                    onClick={async () => {
+                      if (!business) return;
+                      await (supabase as any).from('businesses').update({ logo_url: null }).eq('id', business.id);
+                      setLogoUrl('');
+                      success('Logo supprimé');
+                    }}
+                    className="text-xs text-red-400 hover:text-red-400/80 font-medium flex items-center gap-1 px-1"
+                  >
+                    <X className="w-3 h-3" /> Supprimer le logo
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
