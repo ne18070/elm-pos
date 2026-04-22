@@ -28,6 +28,7 @@ interface ActivityLog {
   entity_id: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
+  users?: { full_name: string } | null;
 }
 
 // ─── Config des actions ───────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ export default function ActivityPage() {
     try {
       let query = (supabase as any)
         .from('activity_logs')
-        .select('*')
+        .select('*, users(full_name)')
         .eq('business_id', business.id)
         .order('created_at', { ascending: false })
         .limit(500);
@@ -164,8 +165,9 @@ export default function ActivityPage() {
   const filtered = logs.filter((log) => {
     if (!search) return true;
     const q = search.toLowerCase();
+    const displayName = (log.user_name ?? log.users?.full_name ?? '').toLowerCase();
     return (
-      log.user_name?.toLowerCase().includes(q) ||
+      displayName.includes(q) ||
       log.action.toLowerCase().includes(q) ||
       log.entity_id?.toLowerCase().includes(q) ||
       JSON.stringify(log.metadata ?? {}).toLowerCase().includes(q)
@@ -269,7 +271,7 @@ export default function ActivityPage() {
 
                     {/* Utilisateur */}
                     <td className="px-4 py-3">
-                      <p className="text-sm text-white">{log.user_name ?? '—'}</p>
+                      <p className="text-sm text-white">{log.user_name ?? log.users?.full_name ?? '—'}</p>
                       {log.user_id && (
                         <p className="text-xs text-slate-500 font-mono">{log.user_id.slice(0, 8)}</p>
                       )}

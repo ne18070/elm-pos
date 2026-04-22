@@ -34,12 +34,22 @@ export async function getWorkflow(id: string): Promise<Workflow> {
   return cast<Workflow>(data);
 }
 
+export interface WorkflowVersion {
+  id:          string;
+  workflow_id: string;
+  version:     number;
+  definition:  WorkflowDefinition;
+  created_at:  string;
+  created_by:  string | null;
+}
+
 export async function saveWorkflow(
   businessId: string,
   definition: WorkflowDefinition,
   name: string,
   description?: string,
-  existingId?: string
+  existingId?: string,
+  userId?: string
 ): Promise<Workflow> {
   if (existingId) {
     // Incrémenter la version à chaque sauvegarde
@@ -52,6 +62,7 @@ export async function saveWorkflow(
         name, 
         description: description ?? null, 
         version: newVersion,
+        created_by: userId ?? null,
         updated_at: new Date().toISOString()
       })
       .eq('id', existingId).select().single();
@@ -60,10 +71,26 @@ export async function saveWorkflow(
   }
   const { data, error } = await supabase
     .from('workflows')
-    .insert({ business_id: businessId, name, description: description ?? null, definition: cast(definition) })
+    .insert({ 
+      business_id: businessId, 
+      name, 
+      description: description ?? null, 
+      definition: cast(definition),
+      created_by: userId ?? null 
+    })
     .select().single();
   if (error) throw new Error(error.message);
   return cast<Workflow>(data);
+}
+
+export async function getWorkflowVersions(workflowId: string): Promise<WorkflowVersion[]> {
+  const { data, error } = await supabase
+    .from('workflow_versions')
+    .select('*')
+    .eq('workflow_id', workflowId)
+    .order('version', { ascending: false });
+  if (error) throw new Error(error.message);
+  return cast<WorkflowVersion[]>(data ?? []);
 }
 
 // ── Instances ─────────────────────────────────────────────────────────────────

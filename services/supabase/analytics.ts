@@ -397,16 +397,19 @@ export interface JuridiqueAnalyticsSummary {
   upcoming_audiences:  number;
   fees_by_type:        Array<{ type: string; amount: number; count: number }>;
   dossiers_by_status:  Array<{ status: string; count: number }>;
+  daily_fees:          Array<{ date: string; amount: number }>;
+  monthly_fees:        Array<{ month: string; amount: number }>;
 }
 
 export async function getJuridiqueAnalytics(
   businessId: string,
   days = 30
 ): Promise<JuridiqueAnalyticsSummary> {
-  const { format: fmt2, subDays: sub2 } = await import('date-fns');
+  const { format: fmt2, subDays: sub2, startOfMonth, endOfMonth } = await import('date-fns');
   const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+  const sixMonthsAgo = fmt2(sub2(new Date(), 180), 'yyyy-MM-01');
 
-  const [dossiersRes, feesRes] = await Promise.all([
+  const [dossiersRes, feesRes, allDossiersRes, historyRes] = await Promise.all([
     (supabase as any)
       .from('dossiers')
       .select('*')
@@ -417,45 +420,81 @@ export async function getJuridiqueAnalytics(
       .select('*')
       .eq('business_id', businessId)
       .gte('date_facture', startDate),
+    (supabase as any)
+      .from('dossiers')
+      .select('status')
+      .eq('business_id', businessId),
+    (supabase as any)
+      .from('honoraires_cabinet')
+      .select('montant, date_facture')
+      .eq('business_id', businessId)
+      .gte('date_facture', sixMonthsAgo),
   ]);
 
   if (dossiersRes.error) throw new Error(dossiersRes.error.message);
   if (feesRes.error) throw new Error(feesRes.error.message);
+  if (allDossiersRes.error) throw new Error(allDossiersRes.error.message);
+  if (historyRes.error) throw new Error(historyRes.error.message);
 
   const dossiers = dossiersRes.data ?? [];
   const fees     = feesRes.data ?? [];
+  const allDossiers = allDossiersRes.data ?? [];
+  const history = historyRes.data ?? [];
 
   const total_fees    = fees.reduce((s: number, f: any) => s + Number(f.montant), 0);
   const total_paid    = fees.reduce((s: number, f: any) => s + Number(f.montant_paye), 0);
   const total_pending = total_fees - total_paid;
 
-  const total_dossiers   = dossiers.length;
-  const active_dossiers  = dossiers.filter((d: any) => !['clôturé', 'archivé'].includes(d.status)).length;
-  const today = new Date().toISOString().split('T')[0];
-  const upcoming_audiences = dossiers.filter((d: any) => d.date_audience && d.date_audience >= today).length;
+  const total_dossiers   = allDossiers.length;
+  const active_dossiers  = allDossiers.filter((d: any) => !['clôturé', 'archivé'].includes(d.status)).length;
+  const todayStr = new Date().toISOString().split('T')[0];
+  
+  const { data: upcomingRes } = await (supabase as any)
+    .from('dossiers')
+    .select('id')
+    .eq('business_id', businessId)
+    .gte('date_audience', todayStr);
+  const upcoming_audiences = upcomingRes?.length ?? 0;
 
-  // Status breakdown
   const statusMap = new Map<string, number>();
-  for (const d of (dossiers as any[])) {
+  for (const d of (allDossiers as any[])) {
     statusMap.set(d.status, (statusMap.get(d.status) ?? 0) + 1);
   }
   const dossiers_by_status = Array.from(statusMap.entries()).map(([status, count]) => ({ status, count }));
 
-  // Fees by type breakdown
   const typeMap = new Map<string, { amount: number; count: number }>();
+  const dayMap = new Map<string, number>();
   for (const f of (fees as any[])) {
     const existing = typeMap.get(f.type_prestation) ?? { amount: 0, count: 0 };
     existing.amount += Number(f.montant);
     existing.count  += 1;
     typeMap.set(f.type_prestation, existing);
+
+    const d = f.date_facture;
+    dayMap.set(d, (dayMap.get(d) ?? 0) + Number(f.montant));
   }
+
   const fees_by_type = Array.from(typeMap.entries())
     .map(([type, stats]) => ({ type, ...stats }))
     .sort((a, b) => b.amount - a.amount);
 
+  const daily_fees = Array.from(dayMap.entries())
+    .map(([date, amount]) => ({ date, amount }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Monthly breakdown for growth
+  const monthMap = new Map<string, number>();
+  for (const f of (history as any[])) {
+    const m = f.date_facture.slice(0, 7); // YYYY-MM
+    monthMap.set(m, (monthMap.get(m) ?? 0) + Number(f.montant));
+  }
+  const monthly_fees = Array.from(monthMap.entries())
+    .map(([month, amount]) => ({ month, amount }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+
   return {
     total_fees, total_paid, total_pending,
     total_dossiers, active_dossiers, upcoming_audiences,
-    fees_by_type, dossiers_by_status,
+    fees_by_type, dossiers_by_status, daily_fees, monthly_fees,
   };
 }

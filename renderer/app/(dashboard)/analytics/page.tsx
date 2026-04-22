@@ -46,6 +46,8 @@ export default function AnalyticsPage() {
   const isJuridique = business?.type === 'juridique' || 
                       business?.features?.includes('dossiers') || 
                       business?.features?.includes('honoraires');
+  const isStandard  = business?.type === 'retail' || business?.type === 'restaurant' || business?.type === 'service' ||
+                      business?.features?.includes('retail') || business?.features?.includes('restaurant');
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -61,14 +63,14 @@ export default function AnalyticsPage() {
         getAnalyticsSummary(business.id, days),
         getDailySales(business.id, todayStr),
         getCouponStats(business.id, days),
-        business.type === 'hotel' ? getHotelAnalytics(business.id, days) : Promise.resolve(null),
-        business.type === 'juridique' ? getJuridiqueAnalytics(business.id, days) : Promise.resolve(null),
+        isHotel ? getHotelAnalytics(business.id, days) : Promise.resolve(null),
+        isJuridique ? getJuridiqueAnalytics(business.id, days) : Promise.resolve(null),
       ]);
       
       setHotelData(hotelStats);
       setJuridiqueData(juridiqueStats);
 
-      if (business.type === 'juridique') {
+      if (isJuridique) {
         const { data: audData } = await (supabase as any)
           .from('dossiers')
           .select('id, reference, client_name, date_audience, tribunal')
@@ -99,63 +101,77 @@ export default function AnalyticsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [business, days, period, todayStr]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [business, days, period, todayStr, isHotel, isJuridique]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { loadAll(); }, [business, period]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [business, period, loadAll]);
 
-  // ── KPIs Adaptatifs ──
+  // ── KPIs Consolidés pour Multi-Métiers ──
   const getKPIs = () => {
-    if (isJuridique) {
+    const totalSales = data?.total_sales ?? 0;
+    const totalFees  = juridiqueData?.total_fees ?? 0;
+    const totalHotel = hotelData?.total_revenue ?? 0;
+    const globalCA   = totalSales + totalFees + totalHotel;
+
+    const totalPaidFees  = juridiqueData?.total_paid ?? 0;
+    const totalHotelPaid = (hotelData?.total_revenue ?? 0) - (hotelData?.outstanding_balance ?? 0);
+    const globalPaid     = totalSales + totalPaidFees + totalHotelPaid;
+
+    // Si l'établissement est purement Juridique, on garde la vue spécialisée
+    if (isJuridique && !isHotel && !isStandard) {
       return [
-        {
-          label: 'Total Honoraires',
-          value: juridiqueData ? fmt(juridiqueData.total_fees) : '...',
-          icon: DollarSign, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800',
-        },
-        {
-          label: 'Honoraires Encaissés',
-          value: juridiqueData ? fmt(juridiqueData.total_paid) : '...',
-          sub: juridiqueData ? `${fmt(juridiqueData.total_pending)} en attente` : 'Chargement...',
-          icon: Banknote, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800',
-        },
-        {
-          label: 'Dossiers Actifs',
-          value: juridiqueData ? String(juridiqueData.active_dossiers) : '...',
-          sub: juridiqueData ? `${juridiqueData.total_dossiers} total` : undefined,
-          icon: Briefcase, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800',
-        },
-        {
-          label: 'Audiences',
-          value: juridiqueData ? String(juridiqueData.upcoming_audiences) : '...',
-          sub: 'À venir',
-          icon: Gavel, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800',
-        },
+        { label: 'Total Honoraires', value: fmt(totalFees), icon: DollarSign, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800' },
+        { label: 'Encaissé', value: fmt(totalPaidFees), sub: `${fmt(juridiqueData?.total_pending ?? 0)} en attente`, icon: Banknote, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800' },
+        { label: 'Dossiers Actifs', value: String(juridiqueData?.active_dossiers ?? 0), icon: Briefcase, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800' },
+        { label: 'Audiences', value: String(juridiqueData?.upcoming_audiences ?? 0), icon: Gavel, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800' },
       ];
     }
 
-    return [
+    // Vue Consolidée Dynamique
+    const items = [
       {
-        label: period === 0 ? "Ventes aujourd'hui" : 'Chiffre d\'affaires',
-        value: data ? fmt(data.total_sales) : '—',
-        icon: DollarSign, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800',
+        label: 'C.A Global',
+        value: fmt(globalCA),
+        sub: totalSales > 0 ? `Dont ${Math.round((totalSales/globalCA)*100 || 0)}% ventes` : 'Toutes activités',
+        icon: TrendingUp, color: 'text-brand-400', bg: 'bg-brand-900/20 border-brand-800',
       },
       {
-        label: period === 0 ? "Commandes aujourd'hui" : 'Commandes',
-        value: data ? String(data.order_count) : '—',
-        icon: ShoppingBag, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800',
-      },
-      {
-        label: 'Panier moyen',
-        value: data ? fmt(data.avg_order_value) : '—',
-        icon: BarChart, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800',
-      },
-      {
-        label: 'Ventes du jour (live)',
-        value: today ? fmt(today.total) : '—',
-        sub: today ? `${today.count} commande${today.count !== 1 ? 's' : ''}` : undefined,
-        icon: Sun, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800',
-      },
+        label: 'Total Encaissé',
+        value: fmt(globalPaid),
+        sub: `Reste: ${fmt(globalCA - globalPaid)}`,
+        icon: Banknote, color: 'text-green-400', bg: 'bg-green-900/20 border-green-800',
+      }
     ];
+
+    // On n'ajoute les cartes spécifiques que si le module est actif
+    if (isJuridique) {
+      items.push({
+        label: 'Dossiers Actifs',
+        value: String(juridiqueData?.active_dossiers ?? 0),
+        sub: 'Espace Juridique',
+        icon: Briefcase, color: 'text-purple-400', bg: 'bg-purple-900/20 border-purple-800',
+      });
+    }
+
+    if (isStandard) {
+      items.push({
+        label: 'Commandes',
+        value: String(data?.order_count ?? 0),
+        sub: 'Ventes & Boutique',
+        icon: ShoppingBag, color: 'text-yellow-400', bg: 'bg-yellow-900/20 border-yellow-800',
+      });
+    }
+
+    // Si on a encore de la place (ex: pas de ventes), on peut mettre l'occupation hôtel
+    if (isHotel && items.length < 4) {
+      items.push({
+        label: 'Occupation Hôtel',
+        value: `${hotelData?.occupancy_rate ?? 0}%`,
+        sub: `${hotelData?.occupied_rooms ?? 0} chambres occupées`,
+        icon: BedDouble, color: 'text-blue-400', bg: 'bg-blue-900/20 border-blue-800',
+      });
+    }
+
+    return items;
   };
 
   const kpis = getKPIs();
@@ -189,15 +205,7 @@ export default function AnalyticsPage() {
     { id: 'juridique', label: 'Dossiers',  icon: Briefcase,  feature: 'dossiers' },
     { id: 'hotel',     label: 'Hôtel',     icon: BedDouble,  feature: 'hotel' },
   ] as any[]).filter(t => {
-    const hasFeat = !t.feature || business?.features?.includes(t.feature);
-    if (!hasFeat) return false;
-
-    // Force strict view for Law Firms
-    if (isJuridique) {
-      return ['general', 'juridique'].includes(t.id);
-    }
-    
-    return true;
+    return !t.feature || business?.features?.includes(t.feature);
   });
 
   return (
@@ -304,18 +312,23 @@ export default function AnalyticsPage() {
               </div>
             )}
 
-            {data && data.daily_stats.length > 0 && (
+            {/* Chart section */}
+            {((isJuridique && juridiqueData && juridiqueData.daily_fees.length > 0) || (data && data.daily_stats.length > 0)) && (
               <div className="card p-4">
-                <h2 className="text-sm font-semibold text-slate-300 mb-4">{isJuridique ? 'Volume activité journalière' : 'Ventes journalières'}</h2>
+                <h2 className="text-sm font-semibold text-slate-300 mb-4">
+                  {isJuridique ? 'Volume Honoraires (par jour)' : 'Ventes journalières'}
+                </h2>
                 <div className="flex items-end gap-1 h-36">
-                  {data.daily_stats.map((day) => {
-                    const maxVal = Math.max(...data.daily_stats.map((d) => d.total_sales), 1);
-                    const height = (day.total_sales / maxVal) * 100;
+                  {(isJuridique ? juridiqueData!.daily_fees : data!.daily_stats).map((day: any) => {
+                    const stats = isJuridique ? juridiqueData!.daily_fees : data!.daily_stats;
+                    const val = isJuridique ? day.amount : day.total_sales;
+                    const maxVal = Math.max(...stats.map((d: any) => isJuridique ? d.amount : d.total_sales), 1);
+                    const height = (val / maxVal) * 100;
                     return (
                       <div
                         key={day.date}
                         className="group flex-1 flex flex-col items-center gap-1"
-                        title={`${format(new Date(day.date), 'd MMM', { locale: fr })} — ${fmt(day.total_sales)}`}
+                        title={`${format(new Date(day.date), 'd MMM', { locale: fr })} — ${fmt(val)}`}
                       >
                         <div
                           className={`w-full ${isJuridique ? 'bg-purple-600 hover:bg-purple-500' : 'bg-brand-600 hover:bg-brand-500'} rounded-t transition-colors`}
@@ -393,8 +406,63 @@ export default function AnalyticsPage() {
                   <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-emerald-400" /> Croissance Honoraires
                   </h2>
-                  {/* On pourrait mettre ici un mini graphique de CA sur les derniers mois */}
-                  <p className="text-sm text-slate-500 text-center py-8 italic">Graphique de croissance en cours d&apos;implémentation...</p>
+                  
+                  {juridiqueData.monthly_fees.length < 2 ? (
+                    <p className="text-sm text-slate-500 text-center py-8 italic">Pas assez de données historiques pour calculer la croissance</p>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Tendance (6 mois)</p>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-white">
+                              {fmt(juridiqueData.monthly_fees[juridiqueData.monthly_fees.length - 1].amount)}
+                            </span>
+                            {(() => {
+                              const last = juridiqueData.monthly_fees[juridiqueData.monthly_fees.length - 1].amount;
+                              const prev = juridiqueData.monthly_fees[juridiqueData.monthly_fees.length - 2].amount;
+                              if (prev === 0) return null;
+                              const growth = ((last - prev) / prev) * 100;
+                              return (
+                                <span className={`text-xs font-black flex items-center gap-0.5 ${growth >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {growth >= 0 ? '↑' : '↓'} {Math.abs(Math.round(growth))}%
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Mois en cours</p>
+                           <p className="text-xs font-bold text-slate-300 capitalize">
+                             {format(parseISO(juridiqueData.monthly_fees[juridiqueData.monthly_fees.length - 1].month + '-01'), 'MMMM yyyy', { locale: fr })}
+                           </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-end gap-2 h-24">
+                        {juridiqueData.monthly_fees.map((m) => {
+                          const max = Math.max(...juridiqueData!.monthly_fees.map(x => x.amount), 1);
+                          const height = (m.amount / max) * 100;
+                          return (
+                            <div key={m.month} className="group relative flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                              <div 
+                                className="w-full bg-emerald-500/20 hover:bg-emerald-500/40 border-t-2 border-emerald-500/50 rounded-t-sm transition-all cursor-help"
+                                style={{ height: `${height}%` }}
+                              />
+                              <span className="text-[8px] font-black text-slate-600 uppercase group-hover:text-slate-400 transition-colors">
+                                {format(parseISO(m.month + '-01'), 'MMM', { locale: fr })}
+                              </span>
+                              
+                              {/* Tooltip */}
+                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-xl border border-slate-700">
+                                {fmt(m.amount)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                </div>
             </div>
           </div>

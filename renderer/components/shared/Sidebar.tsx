@@ -29,32 +29,33 @@ import type { PermissionKey } from '@/lib/permissions-map';
 
 export const NAV_SECTIONS: { 
   label: string; 
-  items: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | null; bizTypes: string[] | null }[] 
+  items: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | string[] | null; bizTypes: string[] | null }[] 
 }[] = [
   {
-    label: 'Ventes & Caisse',
+    label: 'Ventes & Services',
     items: [
-      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: 'retail',            bizTypes: null           },
-      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: 'retail',            bizTypes: null           },
-      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: 'retail',            bizTypes: null           },
+      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: ['pos', 'retail'],   bizTypes: null           },
+      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'], bizTypes: null           },
+      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: ['pos', 'retail'],   bizTypes: null           },
+      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',          bizTypes: ['service']    },
       { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
     ]
   },
   {
     label: 'Livraison & Terrain',
     items: [
-      { href: '/livraison',         icon: Truck,         label: 'Suivi Livraisons',   permission: 'view_livraisons',        feature: 'delivery',          bizTypes: null           },
-      { href: '/livreurs',          icon: UserCheck,     label: 'Gestion Livreurs',   permission: 'view_livreurs',          feature: 'delivery',          bizTypes: null           },
+      { href: '/livraison',         icon: Truck,         label: 'Suivi Livraisons',   permission: 'view_livraisons',        feature: ['livraison', 'delivery'], bizTypes: null           },
+      { href: '/livreurs',          icon: UserCheck,     label: 'Gestion Livreurs',   permission: 'view_livreurs',          feature: ['livraison', 'delivery'], bizTypes: null           },
       { href: '/team-tracking',     icon: MapPin,        label: 'Tracking Terrain',   permission: 'view_team_tracking',     feature: 'tracking',          bizTypes: null           },
     ]
   },
   {
     label: 'Catalogue & Stock',
     items: [
-      { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: 'retail',            bizTypes: null           },
-      { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: 'retail',            bizTypes: null           },
-      { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: 'stock',             bizTypes: null           },
-      { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: 'retail',            bizTypes: null           },
+      { href: '/products',          icon: Package,       label: 'Produits',           permission: 'view_products',          feature: ['stock', 'retail'], bizTypes: null           },
+      { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         permission: 'view_categories',        feature: ['stock', 'retail'], bizTypes: null           },
+      { href: '/approvisionnement', icon: Warehouse,     label: 'Approvisionnement',  permission: 'view_approvisionnement', feature: ['approvisionnement', 'stock'], bizTypes: null           },
+      { href: '/revendeurs',        icon: Store,         label: 'Revendeurs',         permission: 'view_revendeurs',        feature: ['revendeurs', 'retail'], bizTypes: null           },
       { href: '/hotel',             icon: BedDouble,     label: 'Hôtel',              permission: 'view_hotel',             feature: 'hotel',             bizTypes: null           },
     ]
   },
@@ -63,14 +64,13 @@ export const NAV_SECTIONS: {
     items: [
       { href: '/dossiers',          icon: Scale,         label: 'Gestion Dossiers',   permission: 'view_dossiers',          feature: 'dossiers',          bizTypes: null           },
       { href: '/honoraires',        icon: Receipt,       label: 'Facturation Honoraires', permission: 'view_honoraires',     feature: 'honoraires',        bizTypes: null           },
-      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',          bizTypes: null           },
     ]
   },
   {
     label: 'Finance & Comptabilité',
     items: [
       { href: '/analytics',         icon: BarChart2,     label: 'Tableau de bord',    permission: 'view_analytics',         feature: null,                bizTypes: null           },
-      { href: '/depenses',          icon: TrendingDown,  label: 'Suivi Dépenses',     permission: 'view_depenses',          feature: null,                bizTypes: null           },
+      { href: '/depenses',          icon: TrendingDown,  label: 'Suivi Dépenses',     permission: 'view_depenses',          feature: ['expenses', 'comptabilite'], bizTypes: null           },
       { href: '/comptabilite',      icon: BookOpen,      label: 'États Comptables',   permission: 'view_comptabilite',      feature: 'comptabilite',      bizTypes: null           },
     ]
   },
@@ -78,7 +78,7 @@ export const NAV_SECTIONS: {
     label: 'Administration',
     items: [
       { href: '/clients',           icon: Users,         label: 'Base Clients',       permission: 'view_clients',           feature: null,                bizTypes: null           },
-      { href: '/coupons',           icon: Tag,           label: 'Coupons & Remises',  permission: 'view_coupons',           feature: 'retail',            bizTypes: null           },
+      { href: '/coupons',           icon: Tag,           label: 'Coupons & Remises',  permission: 'view_coupons',           feature: ['coupons', 'retail'], bizTypes: null           },
       { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp Business',  permission: 'view_whatsapp',          feature: 'whatsapp',          bizTypes: null           },
       { href: '/staff',             icon: UsersRound,    label: 'Équipe & Paie',      permission: 'view_staff',             feature: 'staff',             bizTypes: null           },
       { href: '/activity',          icon: ScrollText,    label: 'Journal Audit',      permission: 'view_activity',          feature: null,                bizTypes: null           },
@@ -142,18 +142,29 @@ function SidebarContent({
 
   const visibleSections = NAV_SECTIONS.map(section => ({
     ...section,
-    items: section.items.filter(({ permission, feature, bizTypes }) => {
+    items: section.items.filter(({ href, permission, feature, bizTypes }) => {
       const canAccess = !permission || can(permission);
       const features = business?.features ?? [];
-      const bizType  = business?.type ?? '';
-      const isJuridique = bizType === 'juridique' || features.includes('dossiers') || features.includes('honoraires');
+      const bizTypesArray = (business as any)?.types ?? [];
+      const primaryType = business?.type ?? '';
       
-      const hasFeature = !feature || features.includes(feature);
-      const hasBizType = !bizTypes || !bizType || bizTypes.includes(bizType);
+      // Détection stricte du métier juridique via le tableau 'types'
+      const isJuridiqueBiz = bizTypesArray.includes('juridique') || primaryType === 'juridique';
       
-      // Sécurité : Si on est un cabinet juridique, on cache le retail par défaut
-      if (isJuridique && feature === 'retail') return false;
-      if (isJuridique && feature === 'stock') return false;
+      // Filtrage des fonctionnalités (supporte les listes de clés)
+      const hasFeature = !feature || (
+        Array.isArray(feature) 
+          ? feature.some(f => features.includes(f)) 
+          : features.includes(feature)
+      );
+
+      // Filtrage par type d'établissement (supporte le tableau 'types')
+      const hasBizType = !bizTypes || 
+                         bizTypesArray.some((t: string) => bizTypes.includes(t)) || 
+                         bizTypes.includes(primaryType);
+      
+      // Sécurité : On cache l'Espace Juridique si l'établissement n'est pas de type juridique
+      if (section.label === 'Espace Juridique' && !isJuridiqueBiz) return false;
 
       return canAccess && hasFeature && hasBizType;
     })

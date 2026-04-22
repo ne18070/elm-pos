@@ -7,7 +7,8 @@ import {
   HardDrive, AlertTriangle, GitBranch, Play, ChevronLeft, ChevronRight, 
   ChevronDown, PauseCircle, XCircle, CheckCircle2, Clock, Mail,
   Activity, BookOpen, Settings2, Building2, UserCircle2, ToggleLeft, ToggleRight,
-  ShieldCheck, Receipt, TrendingUp, AlertCircle, Archive, ArchiveRestore
+  ShieldCheck, Receipt, TrendingUp, AlertCircle, Archive, ArchiveRestore,
+  Download, History
 } from 'lucide-react';
 
 import { toUserError } from '@/lib/user-error';
@@ -30,7 +31,10 @@ import {
   formatBytes, getFileIcon,
   type DossierFichier, type StorageInfo,
 } from '@services/supabase/dossier-fichiers';
-import { getInstancesByDossier, getWorkflows, deleteWorkflow, toggleWorkflowStatus, createTrackingToken } from '@services/supabase/workflows';
+import { 
+  getInstancesByDossier, getWorkflows, deleteWorkflow, toggleWorkflowStatus, 
+  createTrackingToken, saveWorkflow, getWorkflowVersions, type WorkflowVersion 
+} from '@services/supabase/workflows';
 import { triggerWorkflow } from '@/lib/workflow-runtime';
 import { logAction } from '@services/supabase/logger';
 
@@ -989,12 +993,16 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
 
 // ─── Processus Manager ───────────────────────────────────────────────────────
 
-function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; isOwnerOrAdmin: boolean }) {
+function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: string; isOwnerOrAdmin: boolean; userId?: string }) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
+  const [historyWf, setHistoryWf] = useState<Workflow | null>(null);
+  const [versions, setVersions] = useState<WorkflowVersion[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const { error: notifError, success } = useNotificationStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1006,6 +1014,43 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
   }, [businessId, notifError]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadVersions = async (wf: Workflow) => {
+    setHistoryWf(wf);
+    setLoadingVersions(true);
+    try {
+      const data = await getWorkflowVersions(wf.id);
+      setVersions(data);
+    } catch (e) { notifError(String(e)); }
+    finally { setLoadingVersions(false); }
+  };
+
+  const handleExportVersion = (v: WorkflowVersion) => {
+    const data = {
+      name: `${historyWf?.name} (v${v.version})`,
+      description: historyWf?.description,
+      definition: v.definition,
+      version: v.version,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workflow_${historyWf?.name.toLowerCase().replace(/\s+/g, '_')}_v${v.version}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    success('Version exportée');
+  };
+
+  const handleRestore = async (v: WorkflowVersion) => {
+    if (!confirm(`Restaurer la version ${v.version} ? Cela créera une nouvelle version (v${(historyWf?.version || 0) + 1}) basée sur celle-ci.`)) return;
+    try {
+      await saveWorkflow(businessId, v.definition, historyWf!.name, historyWf!.description ?? undefined, historyWf!.id, userId);
+      success('Version restaurée');
+      setHistoryWf(null);
+      load();
+    } catch (e) { notifError(String(e)); }
+  };
 
   const handleDelete = async (id: string) => {
     if (!isOwnerOrAdmin) return;
@@ -1024,6 +1069,48 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
       success(wf.is_active ? 'Processus désactivé' : 'Processus activé');
       load();
     } catch (e) { notifError(String(e)); }
+  };
+
+  const handleExport = (wf: Workflow) => {
+    const data = {
+      name: wf.name,
+      description: wf.description,
+      definition: wf.definition,
+      version: wf.version,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workflow_${wf.name.toLowerCase().replace(/\s+/g, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    success('Processus exporté');
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const content = ev.target?.result as string;
+        const data = JSON.parse(content);
+
+        if (!data.name || !data.definition) {
+          throw new Error("Le fichier JSON ne semble pas être un processus valide (nom ou définition manquante).");
+        }
+
+        await saveWorkflow(businessId, data.definition, `${data.name} (Importé)`, data.description);
+        success('Processus importé avec succès');
+        load();
+      } catch (err) {
+        notifError(toUserError(err));
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const filtered = workflows.filter(w => w.name.toLowerCase().includes(search.toLowerCase()));
@@ -1053,11 +1140,22 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input className="input pl-11 py-2.5 text-sm bg-slate-900/50" placeholder="Rechercher un processus..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         </div>
-        {isOwnerOrAdmin && (
-          <button onClick={() => setEditingId('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
-            <Plus className="w-4 h-4" /> Nouveau Processus
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isOwnerOrAdmin && (
+            <>
+              <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" className="hidden" />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-slate-800 hover:bg-slate-700 text-white font-black py-2.5 px-4 rounded-2xl flex items-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest border border-slate-700"
+              >
+                <Upload className="w-4 h-4" /> Import
+              </button>
+              <button onClick={() => setEditingId('new')} className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
+                <Plus className="w-4 h-4" /> Nouveau Processus
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -1081,12 +1179,16 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
                 {paginated.map(w => (
                   <tr key={w.id} className="hover:bg-slate-900/40 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${w.is_active ? 'bg-brand-500/10 text-brand-400' : 'bg-slate-800 text-slate-500'}`}>
+                      <button 
+                        onClick={() => setEditingId(w.id)}
+                        className="flex items-center gap-3 text-left group/name"
+                        title="Éditer le design"
+                      >
+                        <div className={`p-2 rounded-lg transition-colors ${w.is_active ? 'bg-brand-500/10 text-brand-400 group-hover/name:bg-brand-500/20' : 'bg-slate-800 text-slate-500 group-hover/name:bg-slate-700'}`}>
                           <GitBranch className="w-4 h-4" />
                         </div>
-                        <p className="font-bold text-white group-hover:text-brand-400 transition-colors">{w.name}</p>
-                      </div>
+                        <p className="font-bold text-white group-hover/name:text-brand-400 transition-colors">{w.name}</p>
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="px-2 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-[10px] font-bold">v{w.version}</span>
@@ -1108,6 +1210,8 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
                       <div className="flex items-center justify-end gap-1">
                         {isOwnerOrAdmin && (
                           <>
+                            <button onClick={() => loadVersions(w)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-blue-400 transition-all" title="Historique des versions"><History className="w-4 h-4" /></button>
+                            <button onClick={() => handleExport(w)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exporter en JSON"><Download className="w-4 h-4" /></button>
                             <button onClick={() => setEditingId(w.id)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Éditer le design"><Pencil className="w-4 h-4" /></button>
                             <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400 transition-all" title="Supprimer définitivement"><Trash2 className="w-4 h-4" /></button>
                           </>
@@ -1131,6 +1235,57 @@ function ProcessusManager({ businessId, isOwnerOrAdmin }: { businessId: string; 
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Panel Historique */}
+      {historyWf && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-surface-card border border-surface-border rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-surface-border">
+              <div>
+                <h2 className="text-white font-bold">Historique : {historyWf.name}</h2>
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">Versions précédentes archivées</p>
+              </div>
+              <button onClick={() => setHistoryWf(null)} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-3 scrollbar-thin">
+              {loadingVersions ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div>
+              ) : versions.length === 0 ? (
+                <p className="text-center text-slate-500 py-12 italic text-sm">Aucune version antérieure enregistrée.</p>
+              ) : (
+                versions.map(v => (
+                  <div key={v.id} className="card p-4 bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-all group">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold">v{v.version}</span>
+                          <p className="text-xs text-slate-400 italic">{new Date(v.created_at).toLocaleString()}</p>
+                        </div>
+                        <p className="text-[10px] text-slate-500">{v.definition.nodes.length} étapes • {v.definition.edges.length} transitions</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleExportVersion(v)}
+                          className="opacity-0 group-hover:opacity-100 bg-slate-800 text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg transition-all"
+                          title="Exporter cette version"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleRestore(v)}
+                          className="opacity-0 group-hover:opacity-100 bg-brand-500/10 text-brand-400 hover:bg-brand-500 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                        >
+                          Restaurer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1317,7 +1472,7 @@ export default function DossiersPage() {
         )}
 
         {tab === 'monitoring' && <MonitoringDashboard businessId={business.id} />}
-        {tab === 'workflows' && <ProcessusManager businessId={business.id} isOwnerOrAdmin={can('manage_workflows')} />}
+        {tab === 'workflows' && <ProcessusManager businessId={business.id} isOwnerOrAdmin={can('manage_workflows')} userId={user?.id} />}
         {tab === 'pretentions' && <PretentionsLibrary businessId={business.id} />}
         {tab === 'config' && <ConfigTab businessId={business.id} onRefresh={load} />}
       </div>

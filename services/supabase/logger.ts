@@ -45,17 +45,22 @@ export function logAction(input: LogInput): void {
 
 async function _insert(input: LogInput): Promise<void> {
   try {
-    // Récupère le user_id depuis la session si non fourni
     let uid = input.user_id;
-    if (!uid) {
+    let uname = input.user_name;
+
+    // Si on n'a ni ID ni nom, on récupère de la session
+    if (!uid || !uname) {
       const { data } = await supabase.auth.getUser();
-      uid = data.user?.id;
+      if (data.user) {
+        if (!uid) uid = data.user.id;
+        if (!uname) uname = data.user.user_metadata?.full_name;
+      }
     }
 
     await (supabase as any).from('activity_logs').insert({
       business_id: input.business_id,
       user_id:     uid ?? null,
-      user_name:   input.user_name ?? null,
+      user_name:   uname ?? null,
       action:      input.action,
       entity_type: input.entity_type ?? null,
       entity_id:   input.entity_id   ?? null,
