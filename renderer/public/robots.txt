@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Allow: /subscribe
+Allow: /privacy
+
+Disallow: /api/
+Disallow: /backoffice/
+Disallow: /dashboard/
+Disallow: /pos/
+Disallow: /orders/
+Disallow: /products/
+Disallow: /stock/
+Disallow: /staff/
+Disallow: /analytics/
+Disallow: /settings/
+Disallow: /billing/
+Disallow: /reset-password
+Disallow: /c/
+Disallow: /display/
+Disallow: /track/
+
+Sitemap: https://www.elm-app.click/sitemap.xml
