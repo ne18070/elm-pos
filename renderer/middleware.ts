@@ -10,8 +10,9 @@ function isPublic(pathname: string): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Always allow public paths, Next.js internals and API routes
-  if (isPublic(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+  // Always allow public paths, Next.js internals, API routes and SEO files
+  if (isPublic(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api') ||
+      pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/opengraph-image') {
     return NextResponse.next();
   }
 

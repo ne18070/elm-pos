@@ -14,13 +14,41 @@ export const metadata: Metadata = {
     template: '%s | ELM APP',
   },
   description:
-    'Gérez votre business avec ELM APP : caisse tactile, stocks, comptabilité, livraisons et CRM. Conçu pour les commerces du Sénégal et d\'Afrique. Essai gratuit 7 jours.',
+    'ELM APP : caisse tactile, gestion des stocks, comptabilité OHADA, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels, cabinets juridiques et prestataires de services au Sénégal et en Afrique. Essai gratuit 7 jours.',
   applicationName: 'ELM APP',
   keywords: [
-    'logiciel caisse', 'point de vente', 'POS', 'gestion stock',
-    'comptabilité OHADA', 'restaurant', 'commerce retail', 'hôtel',
-    'logiciel gestion PME', 'Sénégal', 'Afrique', 'ELM APP',
-    'caisse enregistreuse', 'facturation', 'livraison',
+    // Fonctionnalités core
+    'logiciel caisse', 'caisse tactile', 'point de vente', 'POS Sénégal',
+    'caisse enregistreuse Sénégal', 'logiciel caisse restaurant',
+    // Stock & ventes
+    'gestion des stocks', 'gestion stock temps réel', 'alertes rupture stock',
+    'approvisionnement', 'codes-barres', 'variantes produits',
+    // Comptabilité
+    'comptabilité OHADA', 'logiciel comptabilité Sénégal', 'journal comptable',
+    'bilan OHADA', 'facturation', 'devis factures',
+    // Paiements
+    'Wave paiement', 'Orange Money', 'paiement mobile Sénégal',
+    // Livraisons
+    'gestion livraisons', 'suivi livreur', 'tracking commandes',
+    // Communication
+    'WhatsApp business', 'menu du jour WhatsApp', 'reçu WhatsApp',
+    // Hors-ligne
+    'mode hors-ligne', 'caisse sans internet',
+    // Multi-établissements
+    'multi-établissements', 'gestion plusieurs boutiques',
+    // Équipe
+    'gestion équipe', 'rôles employés', 'accès employés',
+    // Secteurs
+    'logiciel restaurant Sénégal', 'logiciel boutique retail',
+    'logiciel hôtellerie Afrique', 'gestion hôtel Sénégal',
+    'logiciel cabinet juridique', 'dossiers juridiques OHADA',
+    'logiciel prestation service', 'honoraires',
+    'commerce distribution', 'revendeurs grossistes',
+    // Géo
+    'logiciel gestion PME Sénégal', 'logiciel gestion PME Afrique',
+    'ELM APP', 'application gestion business Dakar',
+    // Statistiques
+    'statistiques ventes', 'chiffre affaires', 'rapports business',
   ],
 
   authors: [{ name: 'ELM APP', url: BASE_URL }],
@@ -42,24 +70,24 @@ export const metadata: Metadata = {
     locale: 'fr_SN',
     url: BASE_URL,
     siteName: 'ELM APP',
-    title: 'ELM APP — Logiciel de caisse et gestion pour les PME',
+    title: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · Livraisons · WhatsApp',
     description:
-      'Caisse tactile, stocks, comptabilité, livraisons. Tout-en-un pour votre business. Essai gratuit 7 jours.',
+      'Tout-en-un : caisse tactile, stocks temps réel, comptabilité OHADA, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels et cabinets au Sénégal. Essai 7 jours gratuit.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'ELM APP — Logiciel de gestion pour PME africaines',
+        alt: 'ELM APP — Logiciel de gestion tout-en-un pour PME africaines',
       },
     ],
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'ELM APP — Logiciel de caisse et gestion pour les PME',
+    title: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · WhatsApp · Livraisons',
     description:
-      'Caisse, stocks, comptabilité OHADA, livraisons. Conçu pour le Sénégal et l\'Afrique.',
+      'Caisse tactile, stocks, comptabilité OHADA, livraisons, WhatsApp natif, hors-ligne, multi-établissements. Pour restaurants, boutiques, hôtels & cabinets au Sénégal.',
     images: ['/og-image.png'],
     creator: '@elmapp',
   },
@@ -109,7 +137,7 @@ const jsonLd = {
       operatingSystem: 'Web, Windows',
       url: BASE_URL,
       description:
-        'Logiciel de caisse et gestion tout-en-un pour les PME : point de vente, stocks, comptabilité OHADA, livraisons, CRM.',
+        'ELM APP est un logiciel de gestion tout-en-un pour les PME africaines : caisse tactile, stocks en temps réel, comptabilité OHADA, livraisons avec suivi, WhatsApp natif, mode hors-ligne, multi-établissements, gestion hôtelière, dossiers juridiques, et gestion d\'équipe. Conçu pour les restaurants, boutiques, hôtels, cabinets juridiques et prestataires de services au Sénégal et en Afrique.',
       offers: {
         '@type': 'Offer',
         price: '0',
@@ -117,7 +145,27 @@ const jsonLd = {
         description: 'Essai gratuit 7 jours',
       },
       provider: { '@id': `${BASE_URL}/#organization` },
-      featureList: ['Caisse tactile', 'Gestion des stocks', 'Comptabilité OHADA', 'Gestion des livraisons', 'CRM Clients', 'Multi-établissements'],
+      featureList: [
+        'Caisse tactile (espèces, Wave, Orange Money, carte)',
+        'Reçus WhatsApp instantanés',
+        'Gestion des stocks en temps réel',
+        'Alertes de rupture de stock',
+        'Approvisionnements et variantes',
+        'Comptabilité OHADA (journal, bilan, résultat)',
+        'Facturation et devis',
+        'Gestion des livraisons et suivi livreurs',
+        'WhatsApp natif (menu du jour, promos, réponses clients)',
+        'Mode hors-ligne (encaissement sans internet)',
+        'Multi-établissements (plusieurs boutiques, un seul compte)',
+        'Gestion d\'équipe et rôles employés',
+        'Statistiques et rapports de ventes',
+        'Gestion hôtelière (réservations, check-in/out)',
+        'Dossiers juridiques et honoraires',
+        'CRM Clients',
+        'Codes-barres et variantes produits',
+        'Promotions et coupons',
+        'Gestion des revendeurs et grossistes',
+      ],
     },
   ],
 };
