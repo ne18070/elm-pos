@@ -89,25 +89,19 @@ function Hero() {
           backgroundSize: '64px 64px',
         }} />
 
-      {/* Accent light — top right */}
-      <div className="absolute top-0 right-0 w-[500px] h-[400px] bg-brand-700/15 rounded-full blur-[140px] pointer-events-none" />
-
-      <div className="relative z-10 max-w-6xl mx-auto w-full pt-28 pb-20">
+      <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
-
-          {/* Label */}
           <p className="text-xs font-semibold text-brand-400 tracking-widest uppercase mb-6">
             Logiciel de caisse · Sénégal &amp; Afrique
           </p>
 
-          {/* Headline */}
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-white leading-[1.1] tracking-tight mb-6">
             Gérez votre activité<br />
             <span className="text-slate-400">sans vous compliquer la vie.</span>
           </h1>
 
           <p className="text-lg text-slate-400 leading-relaxed max-w-xl mb-10">
-            Caisse, stock, comptabilité, livraisons — tout dans une seule application.
+            Caisse, stock, comptabilité, livraisons - tout dans une seule application.
             Conçu pour les PME africaines.
           </p>
 
@@ -130,28 +124,16 @@ function Hero() {
               </>
             )}
           </div>
-
-          <p className="text-xs text-slate-600 mt-4">7 jours d&apos;essai · Aucune carte requise</p>
         </div>
 
-        {/* Module pills */}
-        <div className="mt-16 flex flex-wrap gap-2">
-          {[
-            'Caisse tactile',
-            'Gestion des stocks',
-            'Comptabilité OHADA',
-            'Livraisons',
-            'WhatsApp',
-            'Mode hors-ligne',
-            'Multi-établissements',
-            'Hôtellerie',
-            'Dossiers juridiques',
-          ].map((tag) => (
-            <span key={tag}
-              className="text-xs text-slate-500 border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 rounded-full">
-              {tag}
-            </span>
-          ))}
+        {/* AJOUT : Visual Showcase du logiciel */}
+        <div className="mt-16 relative">
+          <div className="absolute -inset-4 bg-brand-500/10 blur-3xl rounded-[40px]" />
+          <img 
+            src="/screenshots/02-pos-main.png" 
+            alt="Interface ELM POS" 
+            className="relative rounded-2xl border border-white/10 shadow-2xl w-full max-w-5xl mx-auto" 
+          />
         </div>
       </div>
     </section>
@@ -161,14 +143,14 @@ function Hero() {
 // ─── Features ─────────────────────────────────────────────────────────────────
 
 const FEATURES = [
-  { icon: ShoppingCart,  title: 'Caisse rapide',        desc: 'Espèces, Wave, Orange Money, carte. Reçus WhatsApp en un tap.' },
-  { icon: Package,       title: 'Stock en temps réel',  desc: 'Alertes de rupture, approvisionnements, variantes synchronisées.' },
-  { icon: BarChart2,     title: 'Statistiques',          desc: 'Chiffre d\'affaires, top produits, heures de pointe — lisibles.' },
-  { icon: Truck,         title: 'Livraisons',            desc: 'Assignez un livreur, suivez chaque commande jusqu\'à la remise.' },
-  { icon: MessageCircle, title: 'WhatsApp natif',        desc: 'Menu du jour, promos, réponses clients sans quitter l\'app.' },
-  { icon: Receipt,       title: 'Comptabilité OHADA',   desc: 'Journal, bilan, résultat. Conforme aux normes comptables africaines.' },
-  { icon: Users,         title: 'Gestion d\'équipe',    desc: 'Rôles par employé, accès séparés, traçabilité des actions.' },
-  { icon: WifiOff,       title: 'Hors-ligne',           desc: 'Continuez à encaisser sans connexion. Sync automatique au retour.' },
+  { icon: ShoppingCart,  title: 'Caisse rapide',        desc: 'Espèces, Wave, Orange Money, carte. Reçus WhatsApp en un tap.', img: '/screenshots/02-pos-main.png' },
+  { icon: Package,       title: 'Stock en temps réel',  desc: 'Alertes de rupture, approvisionnements, variantes synchronisées.', img: '/screenshots/10-products-list.png' },
+  { icon: BarChart2,     title: 'Statistiques',          desc: 'Chiffre d\'affaires, top produits, heures de pointe — lisibles.', img: '/screenshots/17-analytics.png' },
+  { icon: Truck,         title: 'Livraisons',            desc: 'Assignez un livreur, suivez chaque commande jusqu\'à la remise.', img: '/screenshots/07-livraison.png' },
+  { icon: MessageCircle, title: 'WhatsApp natif',        desc: 'Menu du jour, promos, réponses clients sans quitter l\'app.', img: '/screenshots/22-whatsapp-integration.png' },
+  { icon: Receipt,       title: 'Comptabilité OHADA',   desc: 'Journal, bilan, résultat. Conforme aux normes comptables africaines.', img: '/screenshots/19-comptabilite.png' },
+  { icon: Users,         title: 'Gestion d\'équipe',    desc: 'Rôles par employé, accès séparés, traçabilité des actions.', img: '/screenshots/23-staff-management.png' },
+  { icon: WifiOff,       title: 'Hors-ligne',           desc: 'Continuez à encaisser sans connexion. Sync automatique au retour.', img: '/screenshots/02-pos-main.png' },
 ];
 
 function Features() {
@@ -182,7 +164,7 @@ function Features() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.04] rounded-2xl overflow-hidden border border-white/[0.04]">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-[#080c18] p-6 space-y-4 hover:bg-white/[0.02] transition-colors">
+            <div key={title} className="group bg-[#080c18] p-6 space-y-4 hover:bg-white/[0.02] transition-colors">
               <div className="w-8 h-8 rounded-lg bg-brand-900/60 flex items-center justify-center">
                 <Icon className="w-4 h-4 text-brand-400" />
               </div>
@@ -192,6 +174,20 @@ function Features() {
               </div>
             </div>
           ))}
+        </div>
+        
+        {/* AJOUT : Showcase Section Image pour les features */}
+        <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-10">
+           <div className="space-y-4">
+              <h3 className="text-xl font-bold text-white">Suivi des stocks et inventaire</h3>
+              <p className="text-sm text-slate-400">Gérez vos variantes et vos prix de gros en quelques clics.</p>
+              <img src="/screenshots/10-products-list.png" className="rounded-xl border border-white/5 shadow-xl" loading="lazy" />
+           </div>
+           <div className="space-y-4">
+              <h3 className="text-xl font-bold text-white">Analytique et rapports</h3>
+              <p className="text-sm text-slate-400">Visualisez votre CA et vos marges en temps réel.</p>
+              <img src="/screenshots/17-analytics.png" className="rounded-xl border border-white/5 shadow-xl" loading="lazy" />
+           </div>
         </div>
       </div>
     </section>
@@ -306,7 +302,7 @@ function MultiEtablissements() {
 
 // ─── Tarifs ───────────────────────────────────────────────────────────────────
 
-function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
+function PlanCard({ plan, isPrimary, period }: { plan: Plan; isPrimary: boolean; period: string }) {
   const isFree   = plan.price === 0;
   const isAnnual = plan.duration_days >= 300;
   const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
@@ -441,6 +437,7 @@ function Tarifs() {
               <PlanCard
                 key={plan.id}
                 plan={plan}
+                period={period}
                 isPrimary={plan.price === maxPrice && plan.price > 0}
               />
             ))}
@@ -507,14 +504,117 @@ function Footer() {
   );
 }
 
+// ─── Modules Showcase ─────────────────────────────────────────────────────────
+
+function ModuleFeature({ title, subtitle, desc, img, reverse = false }: { title: string, subtitle: string, desc: string, img: string, reverse?: boolean }) {
+  return (
+    <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12 lg:gap-20`}>
+      <div className="flex-1 space-y-6">
+        <div className="inline-block px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[10px] font-bold tracking-widest uppercase">
+          {subtitle}
+        </div>
+        <h3 className="text-3xl font-bold text-white tracking-tight">{title}</h3>
+        <p className="text-slate-400 leading-relaxed text-lg">{desc}</p>
+      </div>
+      <div className="flex-1 w-full relative group">
+        <div className="absolute -inset-4 bg-brand-500/5 blur-2xl rounded-[30px] transition-opacity group-hover:opacity-100 opacity-50" />
+        <img 
+          src={img} 
+          alt={title} 
+          className="relative rounded-2xl border border-white/5 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]" 
+          loading="lazy" 
+        />
+      </div>
+    </div>
+  );
+}
+
+function ModulesShowcase() {
+  return (
+    <section id="solutions" className="py-32 px-5 bg-[#080c18]">
+      <div className="max-w-6xl mx-auto space-y-40">
+        
+        <ModuleFeature 
+          subtitle="Communication client"
+          title="Factures PDF sur WhatsApp"
+          desc="Modernisez votre relation client. Plus besoin d'imprimer systématiquement : envoyez les reçus professionnels directement sur le téléphone de vos clients en un clic."
+          img="/screenshots/22-whatsapp-integration.png"
+        />
+
+        <ModuleFeature 
+          subtitle="Pilotage stratégique"
+          title="Tableaux de bord en temps réel"
+          desc="Prenez des décisions basées sur des chiffres réels. Suivez votre chiffre d'affaires, vos marges nettes et vos produits les plus vendus grâce à des graphiques dynamiques et précis."
+          img="/screenshots/17-analytics.png"
+          reverse
+        />
+
+        <ModuleFeature 
+          subtitle="Logistique & Terrain"
+          title="Suivez vos livraisons en temps réel"
+          desc="Préparez les colis avec vérification par scan pour éviter les erreurs. Assignez des livreurs et suivez l'état de chaque commande jusqu'à la remise au client."
+          img="/screenshots/07-livraison.png"
+        />
+
+        <ModuleFeature 
+          subtitle="Réseau de vente"
+          title="Module Grossiste & Revendeurs"
+          desc="Gérez vos ventes en volume en toute simplicité. Configurez des grilles de prix spécifiques pour vos revendeurs et suivez leurs performances et commissions."
+          img="/screenshots/13-revendeurs.png"
+          reverse
+        />
+
+        <ModuleFeature 
+          subtitle="Transparence & Sécurité"
+          title="Un journal d'audit pour tout contrôler"
+          desc="Gardez l'esprit tranquille. Chaque annulation de vente, chaque modification de prix ou ouverture de tiroir est consignée. La fin des pertes inexpliquées en caisse."
+          img="/screenshots/24-activity-logs.png"
+        />
+
+        <ModuleFeature 
+          subtitle="Confiance Client"
+          title="Écran Client Interactif"
+          desc="Améliorez l'expérience en caisse. Affichez le panier et le total sur un second écran pour vos clients, réduisant les erreurs et renforçant la confiance lors du paiement."
+          img="/screenshots/27-customer-display.png"
+          reverse
+        />
+
+        <ModuleFeature 
+          subtitle="Rigueur Financière"
+          title="Comptabilité OHADA automatisée"
+          desc="Générez vos journaux comptables, bilans et comptes de résultat sans effort. Toutes vos transactions sont déjà pré-classées selon les normes OHADA en vigueur."
+          img="/screenshots/19-comptabilite.png"
+        />
+
+        <ModuleFeature 
+          subtitle="Services Juridiques"
+          title="Suivi de dossiers et honoraires"
+          desc="Spécialement conçu pour les cabinets d'avocats et notaires au Sénégal. Gérez l'ouverture des dossiers, le suivi des procédures OHADA et la facturation précise des honoraires."
+          img="/screenshots/15-dossiers-clients.png"
+          reverse
+        />
+
+        <ModuleFeature 
+          subtitle="Spécialisation métier"
+          title="Gestion hôtelière intégrée"
+          desc="Activez le module PMS pour gérer vos chambres, vos réservations et vos consommations bar/restaurant sur une seule facture client. Une solution vraiment tout-en-un."
+          img="/screenshots/14-hotel-management.png"
+        />
+
+      </div>
+    </section>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   return (
-    <div className="dark-section min-h-screen overflow-y-auto overflow-x-hidden" style={{ height: '100dvh', backgroundColor: '#080c18' }}>
+    <div className="dark-section min-h-screen" style={{ backgroundColor: '#080c18' }}>
       <Nav />
       <Hero />
       <Features />
+      <ModulesShowcase />
       <Secteurs />
       <MultiEtablissements />
       <Tarifs />

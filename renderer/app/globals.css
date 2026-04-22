@@ -7,11 +7,15 @@
     box-sizing: border-box;
   }
 
-  html, body {
+  html {
     @apply bg-surface text-slate-100 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
-    height: 100dvh;
-    overflow: hidden;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 
   /* Safe area pour les appareils avec notch / barre navigateur */
