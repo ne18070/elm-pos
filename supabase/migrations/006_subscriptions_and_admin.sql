@@ -750,6 +750,8 @@ RETURNS TABLE (
   business_name text,
   businesses    jsonb,    -- [{id, name}] tous les établissements du compte
   plan_label    text,
+  plan_price    numeric,
+  plan_currency text,
   status        text,
   trial_ends_at timestamptz,
   expires_at    timestamptz,
@@ -777,6 +779,8 @@ BEGIN
       WHERE bm2.user_id = s.owner_id
     ), '[]'::jsonb)     AS businesses,
     p.label             AS plan_label,
+    p.price             AS plan_price,
+    p.currency          AS plan_currency,
     s.status,
     s.trial_ends_at,
     s.expires_at,

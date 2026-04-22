@@ -1,4 +1,7 @@
-import { supabase } from './client';
+import { supabase as _supabase } from './client';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = _supabase as any;
+
 import type {
   Workflow, WorkflowInstance, WorkflowLog, WorkflowJob,
   WorkflowDefinition, WorkflowStatus, Pretention,
@@ -313,7 +316,7 @@ export async function getTrackingToken(token: string): Promise<ClientTrackingTok
 export async function getMonitoringStats(businessId: string): Promise<WorkflowMonitoringStats> {
   const workflowIds = await supabase
     .from('workflows').select('id').eq('business_id', businessId)
-    .then(r => (r.data ?? []).map((w: { id: string }) => w.id));
+    .then((r: any) => (r.data ?? []).map((w: { id: string }) => w.id));
 
   if (workflowIds.length === 0) {
     return {

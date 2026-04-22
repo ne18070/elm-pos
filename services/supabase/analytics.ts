@@ -339,6 +339,8 @@ export interface HotelAnalyticsSummary {
   avg_stay_value:         number;
   avg_nights:             number;
   outstanding_balance:    number;
+  occupancy_rate:         number;
+  occupied_rooms:         number;
   room_stats:             HotelRoomStat[];
 }
 
@@ -349,21 +351,33 @@ export async function getHotelAnalytics(
   const { format: fmt2, subDays: sub2 } = await import('date-fns');
   const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
 
-  const { data, error } = await (supabase as any)
-    .from('hotel_reservations')
-    .select('*, room:hotel_rooms(number, type)')
-    .eq('business_id', businessId)
-    .eq('status', 'checked_out')
-    .gte('actual_check_out', `${startDate}T00:00:00Z`);
+  const [resResult, roomsResult] = await Promise.all([
+    (supabase as any)
+      .from('hotel_reservations')
+      .select('*, room:hotel_rooms(number, type)')
+      .eq('business_id', businessId)
+      .eq('status', 'checked_out')
+      .gte('actual_check_out', `${startDate}T00:00:00Z`),
+    (supabase as any)
+      .from('hotel_rooms')
+      .select('status')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+  ]);
 
-  if (error) throw new Error(error.message);
+  if (resResult.error) throw new Error(resResult.error.message);
+  if (roomsResult.error) throw new Error(roomsResult.error.message);
 
-  const reservations = (data ?? []) as Array<{
+  const reservations = (resResult.data ?? []) as Array<{
     id: string; room_id: string;
     total: number; total_room: number; total_services: number; paid_amount: number;
     check_in: string; check_out: string;
     room: { number: string; type: string } | null;
   }>;
+
+  const rooms = (roomsResult.data ?? []) as Array<{ status: string }>;
+  const occupied_rooms = rooms.filter(r => r.status === 'occupied').length;
+  const occupancy_rate = rooms.length > 0 ? Math.round((occupied_rooms / rooms.length) * 100) : 0;
 
   const total_revenue          = reservations.reduce((s, r) => s + Number(r.total), 0);
   const total_room_revenue     = reservations.reduce((s, r) => s + Number(r.total_room), 0);
@@ -383,7 +397,11 @@ export async function getHotelAnalytics(
   }
   const room_stats = Array.from(roomMap.values()).sort((a, b) => b.revenue - a.revenue);
 
-  return { total_revenue, total_room_revenue, total_services_revenue, total_checkouts, avg_stay_value, avg_nights, outstanding_balance, room_stats };
+  return { 
+    total_revenue, total_room_revenue, total_services_revenue, total_checkouts, 
+    avg_stay_value, avg_nights, outstanding_balance, room_stats,
+    occupancy_rate, occupied_rooms
+  };
 }
 
 // ─── Juridique analytics ──────────────────────────────────────────────────────

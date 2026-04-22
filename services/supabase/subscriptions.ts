@@ -93,6 +93,8 @@ export interface SubscriptionRow {
   business_name: string;
   businesses:    { id: string; name: string }[];
   plan_label:    string | null;
+  plan_price:    number | null;
+  plan_currency: string | null;
   status:        string;
   trial_ends_at: string | null;
   expires_at:    string | null;
