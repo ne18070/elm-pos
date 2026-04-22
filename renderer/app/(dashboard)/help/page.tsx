@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   HelpCircle, ChevronDown, ShoppingCart, Package, ClipboardList,
   Tag, Settings, LayoutGrid,
   Users, CreditCard, Search,
   AlertCircle, CheckCircle, Info, MapPin,
-  Store, BedDouble, BookOpen, Scale, Briefcase, Receipt, GitBranch, Gavel, FileText, Sparkles, Copy, ArrowLeft
+  Store, BedDouble, BookOpen, Scale, Briefcase, Receipt, GitBranch, Gavel, FileText, Sparkles, Copy, ArrowLeft,
+  MessageSquare, Bug, Lightbulb, Clock, XCircle, CheckCircle2, ChevronRight, Paperclip, ExternalLink, RefreshCw, Activity, Loader2
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
+import { getMyTickets, type SupportTicket, type TicketStatus } from '@services/supabase/support';
+import { useNotificationStore } from '@/store/notifications';
 
+type Tab = 'faq' | 'tickets';
 type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique';
 
 interface Section {
@@ -504,6 +508,13 @@ const SECTIONS: Section[] = [
   },
 ];
 
+const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: any }> = {
+  open:        { label: 'Ouvert',      color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', icon: Clock },
+  in_progress: { label: 'En cours',   color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', icon: RefreshCw },
+  resolved:    { label: 'Résolu',      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
+  closed:      { label: 'Fermé',      color: 'text-slate-500 bg-slate-500/10 border-slate-500/20', icon: XCircle },
+};
+
 function TopicItem({ topic }: { topic: Topic }) {
   const [open, setOpen] = useState(false);
   return (
@@ -559,8 +570,46 @@ function SectionCard({ section, userRole }: { section: Section; userRole: string
   );
 }
 
+function TicketRow({ ticket, onClick }: { ticket: SupportTicket; onClick: () => void }) {
+  const statusCfg = STATUS_CONFIG[ticket.status];
+  return (
+    <button 
+      onClick={onClick}
+      className="w-full card p-4 border-surface-border hover:border-brand-500/50 transition-all group flex items-center gap-4 text-left"
+    >
+      <div className={cn("p-2 rounded-xl bg-surface-input", 
+        ticket.type === 'bug' ? 'text-red-400' : 
+        ticket.type === 'suggestion' ? 'text-amber-400' : 
+        ticket.type === 'question' ? 'text-blue-400' : 'text-emerald-400'
+      )}>
+        {ticket.type === 'bug' ? <Bug size={18} /> : 
+         ticket.type === 'suggestion' ? <Lightbulb size={18} /> : 
+         ticket.type === 'question' ? <HelpCircle size={18} /> : <MessageSquare size={18} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-[10px] font-bold text-slate-500 uppercase">{new Date(ticket.created_at).toLocaleDateString()}</span>
+          <span className="text-slate-700">•</span>
+          <span className={cn("text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border", statusCfg.color)}>
+            {statusCfg.label}
+          </span>
+        </div>
+        <h4 className="text-sm font-bold text-white truncate">{ticket.subject}</h4>
+      </div>
+      <ChevronRight className="text-slate-700 group-hover:text-brand-400 transition-colors" size={16} />
+    </button>
+  );
+}
+
 export default function HelpPage() {
   const { user, business } = useAuthStore();
+  const { error: notifError } = useNotificationStore();
+  
+  const [activeTab, setActiveTab] = useState<Tab>('faq');
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  
   const role = user?.role ?? 'staff';
   const businessType = (business?.type ?? 'retail') as BusinessType;
   const features = business?.features ?? [];
@@ -568,101 +617,207 @@ export default function HelpPage() {
   const isJuridique = businessType === 'juridique' || features.includes('dossiers') || features.includes('honoraires');
   const [search, setSearch] = useState('');
 
+  const loadTickets = useCallback(async () => {
+    if (!business) return;
+    setLoadingTickets(true);
+    try {
+      const data = await getMyTickets(business.id);
+      setTickets(data);
+    } catch (err) {
+      notifError("Impossible de charger vos tickets");
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, [business, notifError]);
+
+  useEffect(() => {
+    if (activeTab === 'tickets') loadTickets();
+  }, [activeTab, loadTickets]);
+
   const filtered = SECTIONS.map((s) => ({
     ...s,
     topics: search
       ? s.topics.filter((t) => t.question.toLowerCase().includes(search.toLowerCase()))
       : s.topics,
   })).filter((s) => {
-    // 1. Rôles
     if (s.roles && !s.roles.includes(role as 'owner' | 'admin' | 'staff')) return false;
-
-    // 2. Filtrage par type d'établissement (Strict)
     if (s.onlyFor) {
       const allowedForHotel = s.onlyFor.includes('hotel');
       const allowedForJuridique = s.onlyFor.includes('juridique');
-
       if (allowedForHotel && !isHotel) return false;
       if (allowedForJuridique && !isJuridique) return false;
-      
-      // Cas général pour onlyFor
       if (!allowedForHotel && !allowedForJuridique && !s.onlyFor.includes(businessType)) return false;
     }
-
-    // 3. Exclusions explicites
     if (s.excludeFor && s.excludeFor.includes(businessType)) return false;
-    if (isJuridique && s.excludeFor?.includes('juridique')) return false;
-    
     return !search || s.topics.length > 0;
   });
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-surface">
       {/* Header */}
-      <div className="p-6 border-b border-surface-border">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-xl bg-brand-600/20 text-brand-400">
-            <HelpCircle className="w-6 h-6" />
+      <div className="p-6 border-b border-surface-border bg-surface-card/30">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-brand-600/20 text-brand-400">
+              <HelpCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white uppercase tracking-tight">Support & Aide</h1>
+              <p className="text-xs text-slate-500 mt-0.5">Guides et suivi de vos demandes</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Centre d&apos;aide</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Guides d&apos;utilisation de l&apos;application</p>
+          
+          <div className="flex bg-surface-input p-1 rounded-xl border border-surface-border">
+            <button 
+              onClick={() => setActiveTab('faq')}
+              className={cn("px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all", activeTab === 'faq' ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+            >
+              Guide & FAQ
+            </button>
+            <button 
+              onClick={() => setActiveTab('tickets')}
+              className={cn("px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all", activeTab === 'tickets' ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+            >
+              Mes Tickets
+            </button>
           </div>
         </div>
 
-        {/* Barre de recherche */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Rechercher dans l&apos;aide…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input pl-10"
-          />
-        </div>
+        {activeTab === 'faq' && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Rechercher dans l&apos;aide…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-10 h-11"
+            />
+          </div>
+        )}
       </div>
 
       {/* Contenu */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-3">
-        {/* Démarrage rapide */}
-        {!search && (
-          <div className="card p-5 bg-brand-600/10 border-brand-700/40">
-            <div className="flex gap-3">
-              <CheckCircle className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-white mb-2">Démarrage rapide</p>
-                {isJuridique ? (
-                  <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
-                    <li>Configurez votre cabinet dans <strong className="text-white">Paramètres</strong></li>
-                    <li>Ajoutez vos <strong className="text-white">Types d&apos;affaire</strong> et <strong className="text-white">Tribunaux</strong> dans Dossiers → Paramètres</li>
-                    <li>Créez votre premier <strong className="text-white">Dossier</strong> client</li>
-                    <li>Enregistrez vos <strong className="text-white">Honoraires</strong> et suivez les audiences dans les Statistiques</li>
-                  </ol>
-                ) : (
-                  <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
-                    <li>Configurez votre établissement dans <strong className="text-white">Paramètres</strong></li>
-                    <li>Créez vos <strong className="text-white">Catégories</strong> de produits</li>
-                    <li>Ajoutez vos <strong className="text-white">Produits</strong> (ou importez-les en CSV)</li>
-                    <li>Effectuez votre première vente depuis la <strong className="text-white">Caisse</strong></li>
-                  </ol>
-                )}
+      <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
+        {activeTab === 'faq' ? (
+          <div className="space-y-3 max-w-4xl mx-auto">
+            {!search && (
+              <div className="card p-5 bg-brand-600/10 border-brand-700/40 mb-6">
+                <div className="flex gap-3">
+                  <CheckCircle className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-white mb-2">Démarrage rapide</p>
+                    {isJuridique ? (
+                      <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
+                        <li>Configurez votre cabinet dans <strong className="text-white">Paramètres</strong></li>
+                        <li>Ajoutez vos <strong className="text-white">Types d&apos;affaire</strong> et <strong className="text-white">Tribunaux</strong> dans Dossiers → Paramètres</li>
+                        <li>Créez votre premier <strong className="text-white">Dossier</strong> client</li>
+                        <li>Enregistrez vos <strong className="text-white">Honoraires</strong> et suivez les audiences</li>
+                      </ol>
+                    ) : (
+                      <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-300">
+                        <li>Configurez votre établissement dans <strong className="text-white">Paramètres</strong></li>
+                        <li>Créez vos <strong className="text-white">Catégories</strong> de produits</li>
+                        <li>Ajoutez vos <strong className="text-white">Produits</strong></li>
+                        <li>Effectuez votre première vente depuis la <strong className="text-white">Caisse</strong></li>
+                      </ol>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-            <HelpCircle className="w-12 h-12 mb-3 opacity-30" />
-            <p className="font-medium">Aucun résultat pour &quot;{search}&quot;</p>
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                <HelpCircle className="w-12 h-12 mb-3 opacity-30" />
+                <p className="font-medium">Aucun résultat pour &quot;{search}&quot;</p>
+              </div>
+            ) : (
+              filtered.map((section) => (
+                <SectionCard key={section.id} section={section} userRole={role} />
+              ))
+            )}
           </div>
         ) : (
-          filtered.map((section) => (
-            <SectionCard key={section.id} section={section} userRole={role} />
-          ))
+          <div className="max-w-3xl mx-auto space-y-4">
+            <div className="flex items-center justify-between mb-2 px-1">
+               <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Historique des signalements</h2>
+               <button onClick={loadTickets} className="text-brand-400 hover:text-brand-300 transition-colors">
+                  <RefreshCw size={14} className={loadingTickets ? 'animate-spin' : ''} />
+               </button>
+            </div>
+            
+            {loadingTickets ? (
+              <div className="flex justify-center py-20"><Loader2 className="animate-spin text-brand-500" /></div>
+            ) : tickets.length === 0 ? (
+              <div className="card p-12 text-center border-dashed">
+                <MessageSquare className="mx-auto text-slate-800 mb-4" size={40} />
+                <p className="text-slate-500 italic text-sm">Vous n'avez pas encore envoyé de ticket de support.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {tickets.map(t => (
+                  <TicketRow key={t.id} ticket={t} onClick={() => setSelectedTicket(t)} />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Modal Détail Ticket */}
+      {selectedTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+           <div className="bg-surface-card border border-surface-border w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover">
+                 <div>
+                    <span className={cn("px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border mb-1 inline-block", STATUS_CONFIG[selectedTicket.status].color)}>
+                       {STATUS_CONFIG[selectedTicket.status].label}
+                    </span>
+                    <h3 className="text-lg font-black text-white leading-tight uppercase tracking-tight">{selectedTicket.subject}</h3>
+                 </div>
+                 <button onClick={() => setSelectedTicket(null)} className="p-2 hover:bg-surface-input rounded-xl text-slate-500"><XCircle size={24} /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                 <div className="space-y-2">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Votre message</p>
+                    <div className="p-5 rounded-2xl bg-surface-input/50 border border-surface-border text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                       {selectedTicket.message}
+                    </div>
+                 </div>
+                 
+                 {selectedTicket.attachments.length > 0 && (
+                   <div className="space-y-2">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Fichiers joints</p>
+                      <div className="flex flex-wrap gap-2">
+                         {selectedTicket.attachments.map((url, i) => (
+                           <a key={i} href={url} target="_blank" rel="noreferrer" className="w-20 h-20 rounded-xl border border-surface-border overflow-hidden hover:ring-2 hover:ring-brand-500 transition-all">
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                           </a>
+                         ))}
+                      </div>
+                   </div>
+                 )}
+
+                 <div className="p-5 rounded-2xl bg-brand-500/5 border border-brand-500/10 space-y-2">
+                    <div className="flex items-center gap-2 text-brand-400">
+                       <Info size={16} />
+                       <p className="text-xs font-bold uppercase tracking-widest">Suivi technique</p>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed italic">
+                       {selectedTicket.status === 'open' ? "Votre demande est en attente de prise en charge par notre équipe." : 
+                        selectedTicket.status === 'in_progress' ? "Un technicien travaille actuellement sur votre cas." :
+                        selectedTicket.status === 'resolved' ? "Ce cas a été marqué comme résolu. Si le problème persiste, n'hésitez pas à nous recontacter." :
+                        "Ce ticket est clôturé."}
+                    </p>
+                 </div>
+              </div>
+              <div className="p-6 bg-surface-hover border-t border-surface-border">
+                 <button onClick={() => setSelectedTicket(null)} className="btn-secondary w-full h-11 font-black uppercase tracking-widest text-xs">Fermer</button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -73,7 +73,7 @@ export function SideDrawer({
 
         {/* Footer */}
         {footer && (
-          <div className="p-6 bg-surface-hover border-t border-surface-border shrink-0">
+          <div className="p-6 pb-10 bg-surface-hover border-t border-surface-border shrink-0">
             {footer}
           </div>
         )}

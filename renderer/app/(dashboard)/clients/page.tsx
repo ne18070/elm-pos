@@ -38,7 +38,7 @@ function exportCSV(clients: Client[]) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'clients_juridiques.csv';
+  a.download = 'clients.csv';
   a.click();
 }
 
@@ -96,11 +96,11 @@ export default function ClientsPage() {
       if (panel?.item) {
         const updated = await updateClient(panel.item.id, form);
         setClients((prev) => prev.map((c) => c.id === updated.id ? updated : c));
-        success('Entité mise à jour');
+        success('Client mis à jour');
       } else {
         const created = await createClient(business.id, form);
         setClients((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-        success('Entité ajoutée');
+        success('Client ajouté');
       }
       setPanel(null);
     } catch (e) { notifError(toUserError(e)); }
@@ -108,7 +108,7 @@ export default function ClientsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Supprimer cette entité ?')) return;
+    if (!confirm('Supprimer ce client ?')) return;
     try {
       await deleteClient(id);
       setClients((prev) => prev.filter((c) => c.id !== id));
@@ -130,8 +130,8 @@ export default function ClientsPage() {
       {/* ── Header ── */}
       <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-3 flex-wrap bg-slate-900/50">
         <div>
-          <h1 className="text-xl font-bold text-white">Entités Juridiques (Clients)</h1>
-          <p className="text-xs text-slate-500">{clients.length} entité{clients.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-bold text-white">Clients</h1>
+          <p className="text-xs text-slate-500">{clients.length} client{clients.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
@@ -180,7 +180,7 @@ export default function ClientsPage() {
             <div>
               <p className="text-lg font-bold text-white">Aucun client enregistré</p>
               <p className="text-sm text-slate-400 mt-1 max-w-sm">
-                Gérez vos clients en tant qu&apos;entités juridiques typées (Sociétés, Associations, Particuliers).
+                Ajoutez vos clients, partenaires et contacts (sociétés, associations, particuliers).
               </p>
             </div>
             <button onClick={() => openPanel(null)} className="btn-primary flex items-center gap-2 px-6">
@@ -231,14 +231,14 @@ export default function ClientsPage() {
       {panel && (
         <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[450px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40 animate-in slide-in-from-right duration-300">
           <div className="flex items-center justify-between px-6 py-5 border-b border-surface-border">
-            <h3 className="font-bold text-white text-lg">{panel.item ? 'Modifier l\'entité' : 'Nouvelle entité juridique'}</h3>
+            <h3 className="font-bold text-white text-lg">{panel.item ? 'Modifier le client' : 'Nouveau client'}</h3>
             <button onClick={() => setPanel(null)} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <div className="space-y-4">
               <div>
-                <label className="label">Type d&apos;entité <span className="text-red-400">*</span></label>
+                <label className="label">Type de client <span className="text-red-400">*</span></label>
                 <select 
                   className="input bg-slate-950" 
                   value={form.type || ''} 
@@ -290,7 +290,7 @@ export default function ClientsPage() {
 
             <div>
               <label className="label">Notes internes</label>
-              <textarea className="input resize-none h-24 text-xs" value={form.notes || ''} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Informations complémentaires sur l'entité..." />
+              <textarea className="input resize-none h-24 text-xs" value={form.notes || ''} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Informations complémentaires..." />
             </div>
           </div>
 
@@ -301,7 +301,7 @@ export default function ClientsPage() {
               className="bg-brand-500 hover:bg-brand-600 text-white font-bold w-full py-3.5 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-brand-500/20 disabled:opacity-50 transition-all active:scale-95"
             >
               {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-              {panel.item ? 'Enregistrer les modifications' : 'Ajouter l\'entité'}
+              {panel.item ? 'Enregistrer les modifications' : 'Ajouter le client'}
             </button>
           </div>
         </div>

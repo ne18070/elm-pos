@@ -7,11 +7,12 @@ import {
   LayoutDashboard, Layers, Users, CreditCard, 
   Settings, Megaphone, Mail, LogOut, ChevronLeft,
   ChevronRight, Search, Bell, BarChart2, Smartphone,
-  Command, Package, Grid3X3
+  Command, Package, Grid3X3, HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { getSubscriptionRequests, getPublicSubscriptionRequests } from '@services/supabase/subscriptions';
+import { getAllTicketsAdmin } from '@services/supabase/support';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 
 interface NavItem {
@@ -27,6 +28,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
   const { user, business } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [supportCount, setSupportCount] = useState(0);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -51,11 +53,13 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
     Promise.all([
       getSubscriptionRequests().catch(() => []),
       getPublicSubscriptionRequests().catch(() => []),
-    ]).then(([reqs, pub]) => {
+      getAllTicketsAdmin().catch(() => []),
+    ]).then(([reqs, pub, tickets]) => {
       setPendingCount(
         reqs.filter((r) => r.status === 'pending').length +
         pub.filter((r) => r.status === 'pending').length
       );
+      setSupportCount(tickets.filter(t => t.status === 'open').length);
     });
   }, []);
 
@@ -65,6 +69,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
     { label: 'Demandes', href: '/backoffice/demandes', icon: Users, badge: pendingCount },
     { label: 'Abonnements', href: '/backoffice/abonnements', icon: CreditCard },
     { label: 'Plans & Tarifs', href: '/backoffice/plans', icon: BarChart2 },
+    { label: 'Support Client', href: '/backoffice/support', icon: HelpCircle, badge: supportCount },
     { label: 'Marketing', href: '/backoffice/marketing', icon: Megaphone },
     { label: 'Paramètres', href: '/backoffice/settings', icon: Settings },
   ];

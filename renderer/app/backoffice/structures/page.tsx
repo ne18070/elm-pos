@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   Loader2, Plus, Pencil, Layers, Search, 
   Mail, LogIn, X, Save, Copy, Check as CheckIcon,
-  Phone as PhoneIcon, Mail as MailIcon, ChevronLeft, ChevronRight
+  Phone as PhoneIcon, Mail as MailIcon, ChevronLeft, ChevronRight,
+  Building2
 } from 'lucide-react';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
@@ -201,6 +202,32 @@ export default function StructuresPage() {
             <Plus className="w-5 h-5" />
             <span>Nouvelle Org</span>
           </button>
+        </div>
+      </div>
+
+      {/* Architecture Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-5 rounded-3xl bg-brand-500/5 border border-brand-500/10 flex gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center shrink-0">
+            <Layers className="text-brand-400" size={24} />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-black text-white uppercase tracking-widest">Organisations</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Représente l'<b>entité légale</b> (Raison sociale). C'est ici qu'est rattaché l'<b>abonnement unique</b> et les informations de facturation (RIB).
+            </p>
+          </div>
+        </div>
+        <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/10 flex gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
+            <Building2 size={24} className="text-blue-400" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-black text-white uppercase tracking-widest">Établissements</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Unités physiques rattachées (Restaurant, Boutique, Hôtel). Chaque site possède ses propres coordonnées, stocks et terminaux de vente.
+            </p>
+          </div>
         </div>
       </div>
 

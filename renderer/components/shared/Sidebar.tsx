@@ -6,7 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, CalendarDays, UserCheck,
-  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin,
+  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin, MessageSquareShare
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -19,6 +19,7 @@ import { BusinessSwitcher } from './BusinessSwitcher';
 import { NotificationBell } from './NotificationBell';
 import { TeamTracker } from './TeamTracker';
 import { TerminalStatus } from './TerminalStatus';
+import { SupportPanel } from './SupportPanel';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
 import { useState, useEffect } from 'react';
@@ -120,6 +121,8 @@ function SidebarContent({
   const isAdmin = hasRole(role, 'admin');
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
   const expanded = !collapsed;
+
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   function handleOpenDisplay() {
     if (window.electronAPI?.display?.open) {
@@ -317,6 +320,26 @@ function SidebarContent({
               <span className="text-sm font-medium">Centre d'aide</span>
             </div>
           </Link>
+
+          <button
+            onClick={() => setIsSupportOpen(true)}
+            title="Signaler un problème"
+            className={cn(
+              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-white/5 group p-1',
+            )}
+          >
+            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+              <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform text-amber-500" />
+            </div>
+            <div className={cn(
+              "transition-all duration-300 truncate",
+              expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
+            )}>
+              <span className="text-sm font-medium">Signaler un problème</span>
+            </div>
+          </button>
+
+          <SupportPanel isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
 
           <button
             onClick={handleOpenDisplay}
