@@ -1106,10 +1106,67 @@ export default function StaffPage() {
 
           {/* ─── Tab: Paie ────────────────────────────────────── */}
           {tab === 'paie' && (
-             // ... existing paie content ...
-             <div className="p-4 max-w-7xl mx-auto space-y-6">
-               {/* (rest of paie code is already there, I'm just showing position) */}
-             </div>
+            <div className="p-4 max-w-7xl mx-auto space-y-6 pb-20 sm:pb-4">
+              <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
+                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="text-center font-bold text-white">
+                  {MONTH_NAMES[month - 1]} {year}
+                </div>
+                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid gap-4">
+                {payrollData.map(({ staff, calc, paid }) => (
+                  <div key={staff.id} className="bg-surface-card border border-surface-border rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-surface-input flex items-center justify-center font-bold text-slate-400 shrink-0">
+                        {initials(staff.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-white truncate">{staff.name}</h3>
+                        <p className="text-xs text-slate-500">{staff.position} · {SALARY_TYPE_LABELS[staff.salary_type]}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:flex items-center gap-8 text-center sm:text-right shrink-0">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Présence</p>
+                        <p className="text-sm font-bold text-slate-200">{calc.daysWorked}j {staff.salary_type === 'hourly' && ` / ${calc.hoursWorked}h`}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Salaire Base</p>
+                        <p className="text-sm font-bold text-slate-200">{fmtMoney(calc.baseAmount, cur)}</p>
+                      </div>
+                    </div>
+
+                    <div className="w-full sm:w-auto flex items-center gap-3 shrink-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-surface-border/50">
+                      {paid ? (
+                        <div className="flex-1 sm:flex-none flex items-center justify-between sm:justify-end gap-4 bg-green-900/10 border border-green-800/30 px-4 py-2.5 rounded-xl">
+                          <div className="text-right">
+                            <p className="text-[9px] font-black text-green-500 uppercase tracking-tighter">Payé le {new Date(paid.payment_date).toLocaleDateString()}</p>
+                            <p className="text-sm font-bold text-green-400">{fmtMoney(paid.net_amount, cur)}</p>
+                          </div>
+                          <button onClick={() => handlePrintPayslip(staff, paid)} className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-all">
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setPayModal({ staff })} className="flex-1 sm:flex-none btn-primary px-6 py-3 text-sm font-bold shadow-lg shadow-brand-500/10">
+                          Enregistrer Paiement
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {payrollData.length === 0 && (
+                  <div className="py-20 text-center text-slate-500 italic">Aucun employé actif ce mois-ci.</div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* ─── Tab: Congés ──────────────────────────────────── */}
