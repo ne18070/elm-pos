@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { type?: string; record?: Record<string, unknown> };
+  let body: { type?: string; table?: string; record?: Record<string, unknown> };
   try {
     body = await req.json();
   } catch {
@@ -32,12 +32,21 @@ export async function POST(req: NextRequest) {
   }
 
   const businessId = record.business_id as string;
-  const isHotel    = 'confirmation_token' in record && !!record.confirmation_token;
+  const table      = body.table ?? '';
 
-  const title = isHotel ? '🏨 Nouvelle réservation' : '🛍️ Nouvelle commande';
-  const bodyText = isHotel
-    ? `Chambre réservée du ${record.check_in} au ${record.check_out}`
-    : `Commande de ${(record.customer_name as string) || 'un client'}`;
+  let title: string;
+  let bodyText: string;
+
+  if (table === 'hotel_reservations' || 'confirmation_token' in record) {
+    title    = '🏨 Nouvelle réservation hôtel';
+    bodyText = `Chambre réservée du ${record.check_in} au ${record.check_out}`;
+  } else if (table === 'contracts' || ('token' in record && 'client_name' in record)) {
+    title    = '🚗 Nouvelle demande de location';
+    bodyText = `Demande de ${(record.client_name as string) || 'un client'} · ${record.start_date} → ${record.end_date}`;
+  } else {
+    title    = '🛍️ Nouvelle commande boutique';
+    bodyText = `Commande de ${(record.customer_name as string) || 'un client'}`;
+  }
 
   const { data: subscriptions } = await supabaseAdmin
     .from('push_subscriptions')

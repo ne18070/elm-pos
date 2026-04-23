@@ -8,7 +8,7 @@ import {
   Send, Archive, Share2, CheckCircle, Clock, FileSignature,
   ChevronLeft, Eye, Download, Copy, Check, Bold, Italic,
   List, Heading2, Minus, Type, Banknote, AlertCircle, RefreshCw,
-  PenLine, RotateCcw,
+  PenLine, RotateCcw, ExternalLink,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -146,6 +146,7 @@ export default function ContratsPage() {
   const [editContract, setEditContract]   = useState<Contract | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [showShare, setShowShare] = useState(false);
 
   // Payment
   const [paymentForm, setPaymentForm] = useState<{
@@ -767,6 +768,16 @@ export default function ContratsPage() {
       <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
         <FileSignature className="w-5 h-5 text-brand-400 shrink-0" />
         <h1 className="font-semibold text-white flex-1">Contrats & Location</h1>
+        {business?.id && (
+          <button
+            onClick={() => setShowShare(true)}
+            className="btn-secondary flex items-center gap-2 text-sm h-9 px-3"
+            title="Partager le catalogue véhicules"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Partager</span>
+          </button>
+        )}
         <button
           onClick={() => {
             if (tab === 'vehicules') { setEditVehicle(null); setShowVehiclePanel(true); }
@@ -1005,6 +1016,55 @@ export default function ContratsPage() {
           notifError={notifError}
           notifSuccess={notifSuccess}
         />
+      )}
+
+      {/* Share modal */}
+      {showShare && business?.id && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowShare(false)} />
+          <div className="relative bg-surface-card border border-surface-border rounded-2xl p-5 w-full max-w-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-white">Partager votre catalogue</h3>
+              <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-400">
+              Partagez ce lien avec vos clients pour qu'ils puissent voir vos véhicules disponibles et faire une demande de location.
+            </p>
+            <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2.5">
+              <p className="flex-1 text-xs text-slate-300 truncate font-mono">
+                {getAppUrl()}/location/{business.id}
+              </p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${getAppUrl()}/location/${business.id}`);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="shrink-0 text-slate-400 hover:text-white transition-colors"
+              >
+                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href={`${getAppUrl()}/location/${business.id}`}
+                target="_blank" rel="noopener noreferrer"
+                className="btn-secondary flex items-center justify-center gap-2 text-sm h-10"
+              >
+                <ExternalLink className="w-4 h-4" /> Aperçu
+              </a>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Réservez votre véhicule en ligne : ${getAppUrl()}/location/${business.id}`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="btn-primary flex items-center justify-center gap-2 text-sm h-10"
+              >
+                <Share2 className="w-4 h-4" /> WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
