@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,29 +24,30 @@ export function SideDrawer({
   footer,
   maxWidth = "max-w-xl"
 }: SideDrawerProps) {
-  
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className={cn(
           "fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
       />
-      
+
       {/* Drawer */}
-      <div 
+      <div
         className={cn(
           "fixed top-0 right-0 h-full w-full bg-surface-card border-l border-surface-border z-[101] shadow-2xl transition-transform duration-500 transform flex flex-col",
           maxWidth,
@@ -58,7 +60,7 @@ export function SideDrawer({
             <h3 className="text-base sm:text-xl font-black text-white tracking-tight uppercase truncate">{title}</h3>
             {subtitle && <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5 truncate">{subtitle}</p>}
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-3 bg-surface-input/50 sm:bg-transparent hover:bg-surface-input rounded-xl text-slate-400 hover:text-white transition-all shrink-0"
             aria-label="Fermer"
@@ -79,6 +81,7 @@ export function SideDrawer({
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body
   );
 }
