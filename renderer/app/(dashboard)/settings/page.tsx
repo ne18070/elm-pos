@@ -217,7 +217,8 @@ export default function SettingsPage() {
     if (!business) return;
     setSaving(true);
     try {
-      const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
         .from('businesses')
         .update({
           name:           bizForm.name,
