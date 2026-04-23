@@ -101,8 +101,8 @@ BEGIN
       * (v_item->>'quantity')::INTEGER;
   END LOOP;
 
-  v_order_id      := uuid_generate_v4();
-  v_token         := uuid_generate_v4();
+  v_order_id      := gen_random_uuid();
+  v_token         := gen_random_uuid();
   v_payment_method := COALESCE(order_data->>'payment_method', 'cash');
 
   -- Insérer la commande
@@ -138,7 +138,7 @@ BEGIN
       id, order_id, product_id, variant_id,
       name, price, quantity, discount_amount, total
     ) VALUES (
-      uuid_generate_v4(),
+      gen_random_uuid(),
       v_order_id,
       (v_item->>'product_id')::UUID,
       NULLIF(v_item->>'variant_id', ''),

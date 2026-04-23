@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NAV_ITEMS } from '@/components/shared/Sidebar';
 import { checkPermission } from '@/lib/permissions';
+import { NotificationBanner } from '@/components/shared/NotificationBanner';
 
 function MobileLayout({ children }: { children: React.ReactNode }) {
   const openSidebar = useOpenSidebar();
@@ -23,6 +24,7 @@ function MobileLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <MobileTopBar onMenuOpen={openSidebar} />
+        <NotificationBanner />
         <TrialBanner />
         <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {children}

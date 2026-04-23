@@ -115,7 +115,7 @@ BEGIN
   -- On crée toujours un nouveau profil pour chaque réservation publique
   INSERT INTO hotel_guests (id, business_id, full_name, phone, email, notes)
   VALUES (
-    uuid_generate_v4(),
+    gen_random_uuid(),
     v_business.id,
     p_data->>'guest_name',
     NULLIF(p_data->>'guest_phone', ''),
@@ -128,8 +128,8 @@ BEGIN
   v_nights     := GREATEST(1, (v_check_out - v_check_in)::INTEGER);
   v_total_room := v_nights * v_room.price_per_night;
 
-  v_res_id := uuid_generate_v4();
-  v_token  := uuid_generate_v4();
+  v_res_id := gen_random_uuid();
+  v_token  := gen_random_uuid();
 
   -- Créer la réservation
   INSERT INTO hotel_reservations (
