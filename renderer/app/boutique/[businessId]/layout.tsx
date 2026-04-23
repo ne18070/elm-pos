@@ -13,7 +13,3 @@ export default function BoutiqueLayout({ children }: { children: React.ReactNode
   );
 }
 
-// Required for Next.js static export (Electron build) — boutique is web-only
-export function generateStaticParams() {
-  return [];
-}

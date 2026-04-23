@@ -267,6 +267,3 @@ export default function ConfirmationPage() {
   );
 }
 
-export function generateStaticParams() {
-  return [];
-}

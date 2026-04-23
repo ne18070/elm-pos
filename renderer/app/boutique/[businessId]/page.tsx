@@ -740,7 +740,3 @@ export default function BoutiquePage() {
   );
 }
 
-// Requis pour le build statique Electron (boutique = web uniquement)
-export function generateStaticParams() {
-  return [];
-}
