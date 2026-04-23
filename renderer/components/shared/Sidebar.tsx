@@ -28,6 +28,8 @@ import { useSidebarStore } from '@/store/sidebar';
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions-map';
 
+import { autoRecordDeparture, updateStaffHeartbeat } from '@services/supabase/staff';
+
 export const NAV_SECTIONS: { 
   label: string; 
   items: { href: string; icon: any; label: string; permission: PermissionKey | null; feature: string | string[] | null; bizTypes: string[] | null }[] 
@@ -35,10 +37,10 @@ export const NAV_SECTIONS: {
   {
     label: 'Ventes & Services',
     items: [
-      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: ['pos', 'retail'],   bizTypes: null           },
-      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'], bizTypes: null           },
-      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: ['pos', 'retail'],   bizTypes: null           },
-      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',          bizTypes: ['service']    },
+      { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
+      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'],           bizTypes: null           },
+      { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
+      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',                    bizTypes: ['service']    },
       { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
     ]
   },
@@ -124,6 +126,20 @@ function SidebarContent({
 
   const [isSupportOpen, setIsSupportOpen] = useState(false);
 
+  // Heartbeat pour le pointage staff (toutes les 10 minutes)
+  useEffect(() => {
+    if (!business?.id || !user?.id) return;
+    
+    // Premier appel immédiat
+    updateStaffHeartbeat(business.id, user.id);
+
+    const interval = setInterval(() => {
+      updateStaffHeartbeat(business.id, user.id);
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(interval);
+  }, [business?.id, user?.id]);
+
   function handleOpenDisplay() {
     if (window.electronAPI?.display?.open) {
       window.electronAPI.display.open();
@@ -133,6 +149,11 @@ function SidebarContent({
   }
 
   async function handleLogout() {
+    // Pointage de départ automatique
+    if (business?.id && user?.id) {
+      await autoRecordDeparture(business.id, user.id).catch(() => {});
+    }
+
     await supabase.auth.signOut();
     clear();
     setSubscription(null);
@@ -473,7 +494,7 @@ export function MobileBottomNav() {
 
   const visible = BOTTOM_NAV.filter(({ href }) => {
     const features = business?.features ?? [];
-    if (href === '/pos' && !features.includes('caisse')) return false;
+    if (href === '/pos' && !features.includes('caisse') && !features.includes('pos') && !features.includes('retail')) return false;
     if (href === '/products') {
       if (!features.includes('stock')) return false;
       if (!['owner','admin','manager'].includes(role)) return false;

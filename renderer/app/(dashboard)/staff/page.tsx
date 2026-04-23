@@ -7,7 +7,7 @@ import {
   UserCheck, Coffee, Plane, Star, Phone, Mail, Building2, Save,
   TrendingUp, DollarSign, Link2, Unlink, RefreshCw, Copy, Check, LogIn,
   Printer, FileText, LayoutList, Calendar, Wallet, Search as SearchIcon, History,
-  LayoutGrid, List, Map as MapIcon, Briefcase, Settings, AlertTriangle
+  LayoutGrid, List, Map as MapIcon, Briefcase, Settings, AlertTriangle, Zap
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -970,6 +970,21 @@ export default function StaffPage() {
           {/* ─── Tab: Présences ───────────────────────────────── */}
           {tab === 'presences' && (
             <div className="p-4 max-w-7xl mx-auto space-y-6">
+              {/* Bannière explicative sur l'automatisation */}
+              <div className="bg-brand-500/5 border border-brand-500/20 rounded-2xl p-4 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
+                  <Zap className="w-5 h-5 text-brand-400" />
+                </div>
+                <div className="space-y-1 text-left">
+                  <h3 className="text-sm font-bold text-brand-300">Pointage Automatique Activé</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Les présences sont gérées par le système : l'arrivée est enregistrée à la <strong>connexion</strong>, 
+                    l'activité est suivie en temps réel, et le départ est validé à la <strong>déconnexion</strong>. 
+                    En cas de fermeture brutale, le système retient l'heure de la dernière action.
+                  </p>
+                </div>
+              </div>
+
               {/* Month nav - Clean & Functional */}
               <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
                 <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">

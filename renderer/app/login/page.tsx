@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { getMyBusinesses } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
+import { autoRecordPresence } from '@services/supabase/staff';
 import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
@@ -39,11 +40,13 @@ export default function LoginPage() {
 
       if (authError) {
         setErreur(authError.message);
+        setChargement(false); // Réinitialiser ici car erreur
         return;
       }
 
       if (!data.user) {
         setErreur("Échec de l'authentification");
+        setChargement(false); // Réinitialiser ici car erreur
         return;
       }
 
@@ -55,12 +58,14 @@ export default function LoginPage() {
 
       if (profileError || !profile) {
         setErreur('Impossible de charger le profil utilisateur');
+        setChargement(false); // Réinitialiser ici car erreur
         return;
       }
 
       if ((profile as { is_blocked?: boolean }).is_blocked) {
         await supabase.auth.signOut();
         setErreur('Votre compte a été bloqué. Contactez votre administrateur.');
+        setChargement(false); // Réinitialiser ici car erreur
         return;
       }
 
@@ -68,6 +73,7 @@ export default function LoginPage() {
         setUser(profile as never);
         setLoaded(true);
         router.replace('/backoffice');
+        // On ne met pas setChargement(false) ici car on redirige
         return;
       }
 
@@ -90,7 +96,6 @@ export default function LoginPage() {
       try {
         const memberships = await getMyBusinesses();
         setBusinesses(memberships);
-        // Utiliser les features du membership actif si disponibles
         if (!activeBusiness && memberships.length > 0) {
           activeBusiness = memberships[0].business;
         }
@@ -115,11 +120,17 @@ export default function LoginPage() {
       setLoaded(true);
       setCashLoaded(true);
 
+      // Pointage automatique si l'utilisateur est lié à un compte staff
+      if (activeBizId) {
+        autoRecordPresence(activeBizId, data.user.id).catch(() => {});
+      }
+
       router.replace(getDefaultRoute(activeBusiness?.features ?? []));
+      // Note: On laisse l'état 'chargement' à true ici car le routeur Next.js
+      // est en train de charger la nouvelle page.
     } catch {
       setErreur("Une erreur inattendue s'est produite");
-    } finally {
-      setChargement(false);
+      setChargement(false); // Réinitialiser ici car erreur
     }
   }
 

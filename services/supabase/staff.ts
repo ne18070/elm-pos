@@ -315,3 +315,162 @@ export async function unlinkStaffUser(staffId: string): Promise<void> {
     .eq('id', staffId);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Enregistre automatiquement la présence pour l'utilisateur connecté
+ * S'il est lié à une fiche staff active dans ce business.
+ */
+export async function autoRecordPresence(businessId: string, userId: string): Promise<boolean> {
+  try {
+    // 1. Trouver l'employé actif lié à cet utilisateur
+    const { data: staff, error: staffErr } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (staffErr || !staff) return false;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // 2. Vérifier s'il a déjà pointé aujourd'hui
+    const { data: existing } = await supabase
+      .from('staff_attendance')
+      .select('id')
+      .eq('staff_id', staff.id)
+      .eq('date', today)
+      .maybeSingle();
+
+    if (existing) return true; // Déjà pointé
+
+    // 3. Pointer automatiquement (Présent + Heure actuelle)
+    const now = new Date();
+    const clockIn = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    await upsertAttendance({
+      business_id:  businessId,
+      staff_id:     staff.id,
+      date:         today,
+      status:       'present',
+      clock_in:     clockIn,
+      hours_worked: 8, // Par défaut une journée complète
+      notes:        'Pointage automatique au login',
+    });
+
+    return true;
+  } catch (e) {
+    console.error('[autoRecordPresence]', e);
+    return false;
+  }
+}
+
+/**
+ * Enregistre automatiquement le départ pour l'utilisateur connecté
+ */
+export async function autoRecordDeparture(businessId: string, userId: string): Promise<boolean> {
+  try {
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!staff) return false;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Trouver le pointage d'aujourd'hui
+    const { data: existing } = await supabase
+      .from('staff_attendance')
+      .select('*')
+      .eq('staff_id', staff.id)
+      .eq('date', today)
+      .maybeSingle();
+
+    if (!existing) return false; // Pas d'entrée aujourd'hui
+
+    const now = new Date();
+    const clockOut = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    // Calculer les heures travaillées (optionnel, basé sur clock_in)
+    let hours = existing.hours_worked;
+    if (existing.clock_in) {
+      const [hIn, mIn] = existing.clock_in.split(':').map(Number);
+      const startTime = new Date();
+      startTime.setHours(hIn, mIn, 0);
+      const diffMs = now.getTime() - startTime.getTime();
+      hours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10; // Arrondi à 1 décimale
+    }
+
+    await upsertAttendance({
+      ...existing,
+      clock_out: clockOut,
+      hours_worked: hours > 0 ? hours : 8,
+      notes: (existing.notes ? existing.notes + ' | ' : '') + 'Départ auto à la déconnexion',
+    });
+
+    return true;
+  } catch (e) {
+    console.error('[autoRecordDeparture]', e);
+    return false;
+  }
+}
+
+/**
+ * Met à jour silencieusement l'heure de dernière activité (heartbeat)
+ */
+export async function updateStaffHeartbeat(businessId: string, userId: string): Promise<void> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!staff) return;
+
+    const { data: existing } = await supabase
+      .from('staff_attendance')
+      .select('*')
+      .eq('staff_id', staff.id)
+      .eq('date', today)
+      .maybeSingle();
+
+    if (!existing) {
+      // Si par hasard il n'a pas pointé au login, on le fait maintenant
+      await autoRecordPresence(businessId, userId);
+      return;
+    }
+
+    const now = new Date();
+    const clockOut = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    // Calcul des heures
+    let hours = 8;
+    if (existing.clock_in) {
+      const [hIn, mIn] = existing.clock_in.split(':').map(Number);
+      const startTime = new Date();
+      startTime.setHours(hIn, mIn, 0);
+      const diffMs = now.getTime() - startTime.getTime();
+      hours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+    }
+
+    await supabase
+      .from('staff_attendance')
+      .update({ 
+        clock_out: clockOut, 
+        hours_worked: hours > 0 ? hours : 8 
+      })
+      .eq('id', existing.id);
+
+  } catch (e) {
+    // Silencieux pour ne pas gêner l'utilisateur
+  }
+}
