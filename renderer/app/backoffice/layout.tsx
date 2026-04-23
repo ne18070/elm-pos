@@ -25,11 +25,17 @@ interface NavItem {
 export default function BackofficeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, business } = useAuthStore();
+  const { user, business, clear } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [supportCount, setSupportCount] = useState(0);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    clear();
+    router.push('/login');
+  }
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -130,13 +136,13 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
         </nav>
 
         <div className="p-4 border-t border-surface-border">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-surface-input transition-all group"
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
           >
-            <LogOut className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
-            {isSidebarOpen && <span className="text-sm font-bold">Quitter</span>}
-          </Link>
+            <LogOut className="w-5 h-5 text-slate-500 group-hover:text-red-400" />
+            {isSidebarOpen && <span className="text-sm font-bold">Déconnexion</span>}
+          </button>
         </div>
       </aside>
 

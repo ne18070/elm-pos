@@ -39,7 +39,17 @@
       "Bash(ELECTRON_BUILD=1 ../node_modules/.bin/next build)",
       "Bash(xargs grep *)",
       "Bash(grep -E \"\\\\.\\(ts|tsx|js\\)$\")",
-      "Bash(grep -E \"\\\\.\\(txt|xml|ts|js\\)$\")"
+      "Bash(grep -E \"\\\\.\\(txt|xml|ts|js\\)$\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Hotel public reservation — share link, booking pages, auth bypass *)",
+      "Bash(git push *)",
+      "Bash(npx web-push *)",
+      "Bash(node -e \"const webpush = require\\('web-push'\\); const keys = webpush.generateVAPIDKeys\\(\\); console.log\\('PUBLIC:', keys.publicKey\\); console.log\\('PRIVATE:', keys.privateKey\\);\")",
+      "Bash(sed -i 's/uuid_generate_v4\\(\\)/gen_random_uuid\\(\\)/g' \"c:\\\\Users\\\\pourq\\\\OneDrive\\\\Documents\\\\BUILD\\\\elm-pos\\\\supabase\\\\migrations\\\\013_boutique_publique.sql\")",
+      "Bash(sed -i 's/uuid_generate_v4\\(\\)/gen_random_uuid\\(\\)/g' \"c:\\\\Users\\\\pourq\\\\OneDrive\\\\Documents\\\\BUILD\\\\elm-pos\\\\supabase\\\\migrations\\\\015_push_subscriptions.sql\")",
+      "Bash(git commit -m 'Web Push notifications for boutique/hotel public orders *)",
+      "Bash(git commit -m 'Add web-push dependency for push notifications *)",
+      "Bash(git commit -m 'Public vehicle rental + push notification fixes *)"
     ]
   }
 }

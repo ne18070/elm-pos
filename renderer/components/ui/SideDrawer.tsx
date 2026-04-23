@@ -53,16 +53,17 @@ export function SideDrawer({
         )}
       >
         {/* Header */}
-        <div className="p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover shrink-0">
-          <div>
-            <h3 className="text-xl font-black text-white tracking-tight uppercase">{title}</h3>
-            {subtitle && <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5">{subtitle}</p>}
+        <div className="p-4 sm:p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover shrink-0 sticky top-0 z-20">
+          <div className="min-w-0 flex-1 pr-4">
+            <h3 className="text-base sm:text-xl font-black text-white tracking-tight uppercase truncate">{title}</h3>
+            {subtitle && <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5 truncate">{subtitle}</p>}
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-surface-input rounded-xl text-slate-500 transition-colors"
+            className="p-3 bg-surface-input/50 sm:bg-transparent hover:bg-surface-input rounded-xl text-slate-400 hover:text-white transition-all shrink-0"
+            aria-label="Fermer"
           >
-            <X size={24} />
+            <X size={20} className="sm:w-6 sm:h-6" />
           </button>
         </div>
 
