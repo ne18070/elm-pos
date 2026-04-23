@@ -1,4 +1,6 @@
-import { supabase } from './client';
+import { supabase as _supabase } from './client';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = _supabase as any;
 import { logAction } from './logger';
 import { q } from './q';
 import { calculateDiscount } from '../pricing';
