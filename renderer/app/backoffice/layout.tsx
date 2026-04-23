@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
+import { supabase } from '@/lib/supabase';
 import { getSubscriptionRequests, getPublicSubscriptionRequests } from '@services/supabase/subscriptions';
 import { getAllTicketsAdmin } from '@services/supabase/support';
 import { CommandPalette } from '@/components/ui/CommandPalette';
