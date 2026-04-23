@@ -1147,7 +1147,9 @@ export default function StaffPage() {
                       {paid ? (
                         <div className="flex-1 sm:flex-none flex items-center justify-between sm:justify-end gap-4 bg-green-900/10 border border-green-800/30 px-4 py-2.5 rounded-xl">
                           <div className="text-right">
-                            <p className="text-[9px] font-black text-green-500 uppercase tracking-tighter">Payé le {new Date(paid.payment_date).toLocaleDateString()}</p>
+                            <p className="text-[9px] font-black text-green-500 uppercase tracking-tighter">
+                              Payé le {paid.payment_date ? new Date(paid.payment_date).toLocaleDateString() : 'N/A'}
+                            </p>
                             <p className="text-sm font-bold text-green-400">{fmtMoney(paid.net_amount, cur)}</p>
                           </div>
                           <button onClick={() => handlePrintPayslip(staff, paid)} className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-all">
