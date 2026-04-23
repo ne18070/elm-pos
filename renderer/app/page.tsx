@@ -631,7 +631,7 @@ function ModulesShowcase() {
 
 export default function LandingPage() {
   return (
-    <div className="dark-section min-h-screen" style={{ backgroundColor: '#080c18' }}>
+    <div className="theme-dark min-h-screen" style={{ backgroundColor: '#080c18' }}>
       <Nav />
       <Hero />
       <Features />

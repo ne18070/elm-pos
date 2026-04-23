@@ -560,7 +560,7 @@ export function Sidebar() {
         onMouseEnter={() => collapsed && setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
         className={cn(
-          'hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-300 ease-in-out z-30 shadow-xl',
+          'theme-dark hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-300 ease-in-out z-30 shadow-xl',
           effectiveCollapsed ? 'w-16' : 'w-64',
         )}
       >
@@ -580,7 +580,7 @@ export function Sidebar() {
 
       {/* ── Mobile drawer ── */}
       <aside className={cn(
-        'md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-card border-r border-surface-border flex flex-col',
+        'theme-dark md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-card border-r border-surface-border flex flex-col',
         'transition-transform duration-250',
         drawerOpen ? 'translate-x-0' : '-translate-x-full',
       )}>

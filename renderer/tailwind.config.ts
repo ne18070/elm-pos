@@ -24,11 +24,18 @@ const config: Config = {
           900: '#0c4a6e',
         },
         surface: {
-          DEFAULT: '#0f172a',
-          card:    '#1e293b',
-          input:   '#334155',
-          border:  '#475569',
-          hover:   '#1e293b',
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          card:    'rgb(var(--surface-card) / <alpha-value>)',
+          input:   'rgb(var(--surface-input) / <alpha-value>)',
+          border:  'rgb(var(--surface-border) / <alpha-value>)',
+          hover:   'rgb(var(--surface-hover) / <alpha-value>)',
+        },
+        // Tokens texte sémantiques — s'adaptent automatiquement au thème.
+        // Utilisation : text-content-primary, text-content-secondary, bg-content-primary…
+        content: {
+          primary:   'rgb(var(--text-base) / <alpha-value>)',
+          secondary: 'rgb(var(--text-secondary) / <alpha-value>)',
+          muted:     'rgb(var(--text-placeholder) / <alpha-value>)',
         },
       },
       fontFamily: {
