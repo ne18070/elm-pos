@@ -317,7 +317,7 @@ function SidebarContent({
       {/* Footer actions */}
       <div className="px-2 py-4 border-t border-surface-border/50 space-y-1">
         <div className="space-y-0.5 mb-4">
-          {(business?.features ?? []).includes('tracking') && (
+          {(business?.features ?? []).includes('tracking') && role !== 'owner' && (
             <TeamTracker collapsed={collapsed} />
           )}
           <NotificationBell collapsed={collapsed} />

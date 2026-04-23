@@ -5,6 +5,7 @@ export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected';
 export interface TerminalInfo {
   terminal_id: string;
   user_name:   string;
+  role:        string;
   pathname:    string;
   joined_at:   string;
   is_tracking?: boolean;

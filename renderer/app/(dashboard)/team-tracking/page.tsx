@@ -1,6 +1,7 @@
 'use client';
 
 import { useRealtimeStore } from '@/store/realtime';
+import { useAuthStore } from '@/store/auth';
 import { MapPin, Navigation, Clock, User, Globe, WifiOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -22,14 +23,40 @@ function accuracyColor(accuracy: number | undefined): string {
 }
 
 export default function TeamTrackingPage() {
-  const { terminals, status } = useRealtimeStore();
+  const { terminals, status, terminalId } = useRealtimeStore();
+  const { user } = useAuthStore();
 
-  const trackedMembers = terminals.filter(t => t.is_tracking && t.location);
-  const otherMembers   = terminals.filter(t => !t.is_tracking || !t.location);
+  // Filtrage strict pour exclure le propriétaire et soi-même
+  const trackedMembers = terminals.filter(t => 
+    t.is_tracking && 
+    t.location && 
+    t.terminal_id !== terminalId &&
+    t.role !== 'owner' &&
+    t.user_name !== user?.full_name // <--- EXCLUSION PAR NOM (SÉCURITÉ SUPPLÉMENTAIRE)
+  );
+  
+  const otherMembers = terminals.filter(t => 
+    t.terminal_id !== terminalId && 
+    (!t.is_tracking || !t.location) &&
+    t.role !== 'owner' &&
+    t.user_name !== user?.full_name // <--- EXCLUSION PAR NOM (SÉCURITÉ SUPPLÉMENTAIRE)
+  );
+
+  const isOwner = user?.role === 'owner';
 
   return (
-    <div className="flex-1 overflow-y-auto bg-surface p-6">
+    <div className="flex-1 overflow-y-auto bg-surface p-6 pb-24 sm:pb-6">
       <div className="max-w-5xl mx-auto space-y-8">
+
+        {/* Info banner for Admin/Owner */}
+        {isOwner && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-brand-500/10 border border-brand-500/30 rounded-xl text-brand-400 text-sm">
+            <User className="w-4 h-4 shrink-0" />
+            <span>
+              <strong>Mode Observateur :</strong> Vous visualisez la position de votre équipe. Votre propre position n'est jamais partagée.
+            </span>
+          </div>
+        )}
 
         {/* Disconnected banner */}
         {status !== 'connected' && (

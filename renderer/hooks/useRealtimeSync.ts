@@ -166,20 +166,23 @@ export function useRealtimeSync() {
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<{
         user_name:   string;
+        role:        string;
         pathname:    string;
         joined_at:   string;
         is_tracking?: boolean;
         location?:    { lat: number; lng: number; accuracy?: number };
       }>();
 
-      const terminals = Object.entries(state).map(([termId, presences]) => ({
-        terminal_id: termId,
-        user_name:   presences[0]?.user_name  ?? 'Inconnu',
-        pathname:    presences[0]?.pathname   ?? '/',
-        joined_at:   presences[0]?.joined_at  ?? new Date().toISOString(),
-        is_tracking: presences[0]?.is_tracking,
-        location:    presences[0]?.location,
-      }));
+      const terminals = Object.entries(state)
+        .map(([termId, presences]) => ({
+          terminal_id: termId,
+          user_name:   presences[0]?.user_name  ?? 'Inconnu',
+          role:        presences[0]?.role       ?? 'staff', // Fallback par sécurité
+          pathname:    presences[0]?.pathname   ?? '/',
+          joined_at:   presences[0]?.joined_at  ?? new Date().toISOString(),
+          is_tracking: presences[0]?.is_tracking,
+          location:    presences[0]?.location,
+        }));
 
       setTerminals(terminals);
     });
@@ -196,6 +199,7 @@ export function useRealtimeSync() {
           const { isTracking, location } = useRealtimeStore.getState();
           await channel.track({
             user_name:   user.full_name,
+            role:        user.role,
             pathname,
             joined_at:   joinedAtRef.current,
             is_tracking: isTracking,
@@ -222,6 +226,11 @@ export function useRealtimeSync() {
   useEffect(() => {
     if (!channelRef.current || !user || status !== 'connected') return;
 
+    // Le propriétaire n'est jamais tracké (protection vie privée / logique métier)
+    const isOwner = user.role === 'owner';
+    const effectiveIsTracking = isOwner ? false : isTracking;
+    const effectiveLocation   = isOwner ? undefined : (location ?? undefined);
+
     const isTrackingChanged = isTracking !== prevIsTrackingRef.current;
     const pathnameChanged   = pathname   !== prevPathnameRef.current;
     prevIsTrackingRef.current = isTracking;
@@ -230,10 +239,6 @@ export function useRealtimeSync() {
     const locKey          = location ? `${location.lat.toFixed(4)},${location.lng.toFixed(4)}` : '';
     const locationChanged = locKey !== lastLocationRef.current;
 
-    // Throttle pure location updates to at most once every 10 s.
-    // isTracking and pathname changes always bypass the throttle — without this
-    // guard a simultaneous isTracking+location change would silently drop the
-    // isTracking update until the next un-throttled location tick.
     if (locationChanged && location !== null && !isTrackingChanged && !pathnameChanged) {
       const now = Date.now();
       if (now - lastLocTrackRef.current < 10_000) return;
@@ -246,11 +251,12 @@ export function useRealtimeSync() {
 
     channelRef.current.track({
       user_name:   user.full_name,
+      role:        user.role,
       pathname,
       joined_at:   joinedAtRef.current,
-      is_tracking: isTracking,
-      location:    location ?? undefined,
+      is_tracking: effectiveIsTracking,
+      location:    effectiveLocation,
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, user?.id, isTracking, location, status]);
+  }, [pathname, user?.id, user?.role, isTracking, location, status]);
 }
