@@ -131,13 +131,13 @@ export default function RequestsPage() {
           requestId:    approvePublicForm.req.id,
           email:        approvePublicForm.req.email,
           fullName:     (approvePublicForm.req as any).full_name,
-          password:     approvePublicForm.req.password ?? undefined,
           businessName: approvePublicForm.req.business_name,
           denomination: (approvePublicForm.req as any).denomination,
           planId:       approvePublicForm.planId,
           days:         totalDays,
           note:         approvePublicForm.note || undefined,
           planLabel:    approvePublicForm.req.plan_label ?? 'Pro',
+          // Note: Le mot de passe n'est plus envoyé, l'API doit déclencher une invitation
         }),
       });
       if (!res.ok) {

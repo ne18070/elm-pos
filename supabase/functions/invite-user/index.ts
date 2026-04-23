@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
           role,
           business_id,
         },
-        redirectTo: `${Deno.env.get('APP_URL') ?? 'http://localhost:3000'}/login`,
+        redirectTo: `${Deno.env.get('APP_URL') ?? 'https://www.elm-app.click'}/login`,
       }
     );
 

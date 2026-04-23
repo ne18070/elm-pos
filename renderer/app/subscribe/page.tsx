@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   ShoppingCart, QrCode, CheckCircle, Loader2,
-  Send, X, FileImage, Eye, EyeOff,
+  Send, X, FileImage,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { displayCurrency } from '@/lib/utils';
@@ -36,12 +36,6 @@ export default function SubscribePage() {
   const [email, setEmail]               = useState('');
   const [phone, setPhone]               = useState('');
 
-  // Mot de passe
-  const [password, setPassword]           = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword]   = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-
   // Reçu
   const [receiptFile, setReceiptFile]     = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
@@ -62,22 +56,8 @@ export default function SubscribePage() {
     setReceiptPreview(URL.createObjectURL(file));
   }
 
-  function validatePassword(): boolean {
-    if (password.length < 8) {
-      setPasswordError('Le mot de passe doit comporter au moins 8 caractères.');
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setPasswordError('Les mots de passe ne correspondent pas.');
-      return false;
-    }
-    setPasswordError('');
-    return true;
-  }
-
   async function handleSubmit() {
     if (!selectedPlan) return;
-    if (!validatePassword()) return;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -89,7 +69,7 @@ export default function SubscribePage() {
         phone:         phone.trim(),
         plan_id:       selectedPlan.id,
         receipt_url:   null,
-        password,
+        // Password retiré ici
       });
       if (error) throw new Error(error.message);
       sendEmail({
@@ -203,39 +183,6 @@ export default function SubscribePage() {
                   </div>
                 </div>
               </div>
-
-              <div className="pt-4 border-t border-surface-border space-y-4">
-                <div>
-                  <label className="label">Mot de passe *</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
-                      className="input pr-10"
-                      placeholder="Min. 8 caractères"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="label">Confirmer le mot de passe *</label>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
-                    className="input"
-                    placeholder="Répétez votre mot de passe"
-                  />
-                </div>
-              </div>
-              {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
             </div>
 
             {/* Choix plan */}
@@ -322,7 +269,7 @@ export default function SubscribePage() {
 
             <button
               onClick={handleSubmit}
-              disabled={!businessName.trim() || !email.trim() || !selectedPlan || !password || !confirmPassword || submitting}
+              disabled={!businessName.trim() || !email.trim() || !selectedPlan || submitting}
               className="btn-primary w-full h-12 text-base flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

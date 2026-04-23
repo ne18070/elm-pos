@@ -13,16 +13,21 @@ export default function ResetPasswordPage() {
   const [chargement, setChargement] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isActivation, setIsActivation] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Supabase handles the recovery token in the URL fragment automatically
-    // when we call updatePassword. But we can check if we have a session.
+    // Vérifier si c'est une activation de compte (invitation) via l'URL
+    const hash = window.location.hash;
+    const searchParams = new URLSearchParams(window.location.search);
+    if (hash.includes('type=invite') || hash.includes('type=signup') || searchParams.get('type') === 'invite') {
+      setIsActivation(true);
+    }
+
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        // If no session, the link might be expired or invalid
-        // However, some flows might not have a session yet depending on how the URL is handled.
+        // En cas d'invitation Supabase, la session est souvent déjà injectée
       }
     };
     checkSession();
@@ -32,8 +37,8 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setErreur('');
 
-    if (password.length < 6) {
-      setErreur('Le mot de passe doit contenir au moins 6 caractères');
+    if (password.length < 8) {
+      setErreur('Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
 
@@ -80,7 +85,9 @@ export default function ResetPasswordPage() {
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tighter">ELM APP</h1>
-          <p className="text-slate-400 text-sm mt-1">Réinitialisation du mot de passe</p>
+          <p className="text-slate-400 text-sm mt-1">
+            {isActivation ? 'Activation de votre compte' : 'Réinitialisation du mot de passe'}
+          </p>
         </div>
 
         {/* Carte */}
@@ -90,25 +97,33 @@ export default function ResetPasswordPage() {
               <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-6 h-6 text-green-400" />
               </div>
-              <h2 className="text-white font-bold mb-2">Mot de passe mis à jour</h2>
+              <h2 className="text-white font-bold mb-2">
+                {isActivation ? 'Compte activé !' : 'Mot de passe mis à jour'}
+              </h2>
               <p className="text-slate-400 text-sm mb-6">
-                Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.
+                {isActivation 
+                  ? 'Votre compte est prêt. Vous pouvez maintenant vous connecter à votre interface.'
+                  : 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.'}
               </p>
               <button
                 onClick={() => router.push('/login')}
                 className="btn-primary w-full"
               >
-                Retour à la connexion
+                Aller à la connexion
               </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <p className="text-slate-400 text-sm mb-4">
-                Veuillez saisir votre nouveau mot de passe ci-dessous.
+                {isActivation 
+                  ? 'Veuillez choisir un mot de passe pour sécuriser votre accès.'
+                  : 'Veuillez saisir votre nouveau mot de passe ci-dessous.'}
               </p>
 
               <div>
-                <label htmlFor="password" className="label">Nouveau mot de passe</label>
+                <label htmlFor="password" className="label">
+                  {isActivation ? 'Choisissez un mot de passe' : 'Nouveau mot de passe'}
+                </label>
                 <div className="relative">
                   <input
                     id="password"
@@ -155,7 +170,7 @@ export default function ResetPasswordPage() {
                 className={cn('btn-primary w-full flex items-center justify-center gap-2 h-11')}
               >
                 {chargement && <Loader2 className="w-4 h-4 animate-spin" />}
-                {chargement ? 'Mise à jour...' : 'Réinitialiser le mot de passe'}
+                {chargement ? 'Traitement...' : isActivation ? 'Activer mon compte' : 'Réinitialiser le mot de passe'}
               </button>
             </form>
           )}

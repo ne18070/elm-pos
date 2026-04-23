@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
     requestId: string;
     email:     string;
     fullName?: string;
-    password?: string;
     businessName: string;
     denomination?: string;
     planId:    string;
@@ -57,16 +56,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Créer l'utilisateur Auth
-    const password = body.password ?? Math.random().toString(36).slice(-10) + 'A1!';
-    const { data: authData, error: authError } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
+    // 1. Inviter l'utilisateur (Ceci crée l'utilisateur dans auth.users et envoie l'email d'invitation)
+    // L'email contiendra un lien vers /reset-password avec un access_token
+    const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click'}/reset-password`,
+      data: {
         full_name: fullName || businessName,
       }
     });
+    
     if (authError) throw new Error(authError.message);
     const userId = authData.user!.id;
 
@@ -109,7 +107,7 @@ export async function POST(req: NextRequest) {
     await admin.from('business_members').insert({ business_id: businessId, user_id: userId, role: 'owner' });
     await admin.from('users').update({ business_id: businessId }).eq('id', userId);
 
-    // 6. Activer l'abonnement (direct upsert — admin bypasses RLS, auth.uid() serait NULL via RPC)
+    // 6. Activer l'abonnement
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
     const { error: subError } = await admin.from('subscriptions').upsert({
@@ -128,20 +126,6 @@ export async function POST(req: NextRequest) {
       .from('public_subscription_requests')
       .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
       .eq('id', requestId);
-
-    // 8. Email de confirmation
-    sendEmail({
-      type:    'subscription_approved',
-      to:      email,
-      subject: '✅ Votre accès ELM APP est activé',
-      data: {
-        business_name: businessName,
-        email,
-        password,
-        plan_label:    planLabel ?? 'Pro',
-        expires_at:    expiresAt.toISOString(),
-      },
-    }).catch(() => {});
 
     return NextResponse.json({ ok: true, businessId, userId });
   } catch (err) {
