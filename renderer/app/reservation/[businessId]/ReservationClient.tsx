@@ -283,7 +283,7 @@ export default function ReservationPage() {
             Vos dates de séjour
           </h2>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold text-content-muted mb-1.5">Arrivée</label>
               <input

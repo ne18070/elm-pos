@@ -239,7 +239,7 @@ export function LocationPageClient() {
             <Calendar className="w-4 h-4 text-brand-500" />
             Période de location
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs text-content-secondary font-medium block mb-1">Départ</label>
               <input
