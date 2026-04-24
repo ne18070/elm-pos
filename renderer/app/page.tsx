@@ -421,7 +421,7 @@ function MultiEtablissements() {
               key={name}
               className={`flex items-center gap-3.5 p-4 rounded-xl border transition-colors ${
                 active
-                  ? 'bg-badge-info border-brand-500/30'
+                  ? 'bg-surface-card border-brand-500/40 shadow-lg shadow-brand-500/10'
                   : 'bg-surface-card border-surface-border'
               }`}
             >
@@ -433,8 +433,8 @@ function MultiEtablissements() {
                 {name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${active ? 'text-content-primary' : 'text-content-secondary'}`}>{name}</p>
-                <p className="text-xs text-content-muted">{type}</p>
+                <p className={`text-sm font-medium truncate ${active ? 'text-brand-300' : 'text-content-secondary'}`}>{name}</p>
+                <p className={`text-xs ${active ? 'text-content-secondary' : 'text-content-muted'}`}>{type}</p>
               </div>
               {active && <div className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />}
             </div>
@@ -709,7 +709,7 @@ function ModuleFeature({
   return (
     <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12 lg:gap-20`}>
       <div className="flex-1 space-y-6">
-        <div className="inline-block px-3 py-1 rounded-full bg-badge-info border border-brand-500/20 text-brand-300 text-[10px] font-bold tracking-widest uppercase">
+        <div className="inline-block px-3 py-1 rounded-full bg-surface-card border border-brand-500/30 text-status-info text-[10px] font-bold tracking-widest uppercase">
           {subtitle}
         </div>
         <h3 className="text-3xl font-bold text-content-primary tracking-tight">{title}</h3>
