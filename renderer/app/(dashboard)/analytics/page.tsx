@@ -3,17 +3,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   TrendingUp, ShoppingBag, BarChart, DollarSign, Sun,
-  RefreshCw, Store, Tag, BedDouble, LogIn, LogOut, Banknote, Wrench, Download,
+  RefreshCw, Store, Tag, BedDouble, LogIn, LogOut, Banknote, Wrench, Download, Car,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import {
-  getAnalyticsSummary, getDailySales, getCouponStats, getHotelAnalytics, getJuridiqueAnalytics,
+  getAnalyticsSummary, getDailySales, getCouponStats, getHotelAnalytics, getJuridiqueAnalytics, getVoituresAnalytics,
 } from '@services/supabase/analytics';
 import { supabase } from '@services/supabase/client';
 import type { AnalyticsSummary } from '@pos-types';
-import type { CouponStat, HotelAnalyticsSummary, JuridiqueAnalyticsSummary } from '@services/supabase/analytics';
+import type { CouponStat, HotelAnalyticsSummary, JuridiqueAnalyticsSummary, VoituresAnalyticsSummary } from '@services/supabase/analytics';
 import { GrossisteTab } from '@/components/analytics/GrossisteTab';
 import { format, isFuture, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -26,7 +26,7 @@ const PERIODS = [
   { label: '90 jours',    value: 90 },
 ];
 
-type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique';
+type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique' | 'voitures';
 
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
@@ -41,13 +41,15 @@ export default function AnalyticsPage() {
   const [coupons, setCoupons] = useState<CouponStat[]>([]);
   const [hotelData, setHotelData] = useState<HotelAnalyticsSummary | null>(null);
   const [juridiqueData, setJuridiqueData] = useState<JuridiqueAnalyticsSummary | null>(null);
+  const [voituresData, setVoituresData] = useState<VoituresAnalyticsSummary | null>(null);
 
   const isHotel     = business?.type === 'hotel' || business?.features?.includes('hotel');
-  const isJuridique = business?.type === 'juridique' || 
-                      business?.features?.includes('dossiers') || 
+  const isJuridique = business?.type === 'juridique' ||
+                      business?.features?.includes('dossiers') ||
                       business?.features?.includes('honoraires');
   const isStandard  = business?.type === 'retail' || business?.type === 'restaurant' || business?.type === 'service' ||
                       business?.features?.includes('retail') || business?.features?.includes('restaurant');
+  const isVoitures  = business?.features?.includes('voitures');
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -59,16 +61,18 @@ export default function AnalyticsPage() {
     if (!business) return;
     if (!silent) setLoading(true); else setRefreshing(true);
     try {
-      const [summary, todayData, couponData, hotelStats, juridiqueStats] = await Promise.all([
+      const [summary, todayData, couponData, hotelStats, juridiqueStats, voituresStats] = await Promise.all([
         getAnalyticsSummary(business.id, days),
         getDailySales(business.id, todayStr),
         getCouponStats(business.id, days),
         isHotel ? getHotelAnalytics(business.id, days) : Promise.resolve(null),
         isJuridique ? getJuridiqueAnalytics(business.id, days) : Promise.resolve(null),
+        isVoitures ? getVoituresAnalytics(business.id, days) : Promise.resolve(null),
       ]);
-      
+
       setHotelData(hotelStats);
       setJuridiqueData(juridiqueStats);
+      setVoituresData(voituresStats);
 
       if (isJuridique) {
         const { data: audData } = await (supabase as any)
@@ -101,7 +105,7 @@ export default function AnalyticsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [business, days, period, todayStr, isHotel, isJuridique]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [business, days, period, todayStr, isHotel, isJuridique, isVoitures]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadAll(); }, [business, period, loadAll]);
 
@@ -204,6 +208,7 @@ export default function AnalyticsPage() {
     { id: 'promos',    label: 'Promos',    icon: Tag,        feature: 'retail' },
     { id: 'juridique', label: 'Dossiers',  icon: Briefcase,  feature: 'dossiers' },
     { id: 'hotel',     label: 'Hôtel',     icon: BedDouble,  feature: 'hotel' },
+    { id: 'voitures',  label: 'Voitures',  icon: Car,        feature: 'voitures' },
   ] as any[]).filter(t => {
     return !t.feature || business?.features?.includes(t.feature);
   });
@@ -627,6 +632,79 @@ export default function AnalyticsPage() {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Voitures ── */}
+        {tab === 'voitures' && (
+          <div className="space-y-5">
+            {loading ? (
+              <p className="text-sm text-content-muted">Chargement…</p>
+            ) : !voituresData ? (
+              <p className="text-sm text-content-muted text-center py-6">Aucune donnée sur la période</p>
+            ) : (
+              <>
+                {/* KPIs */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'CA Véhicules',    value: fmt(voituresData.ca_voitures),             icon: DollarSign, color: 'text-content-brand',   bg: 'bg-badge-brand border-status-brand' },
+                    { label: 'Vendus',           value: String(voituresData.vendus_count),          icon: Car,        color: 'text-status-success',  bg: 'bg-badge-success border-status-success' },
+                    { label: 'Leads',            value: String(voituresData.leads_total),           icon: TrendingUp, color: 'text-status-info',     bg: 'bg-badge-info border-status-info' },
+                    { label: 'Parc disponible',  value: String(voituresData.parc_disponible),       icon: BarChart,   color: 'text-status-warning',  bg: 'bg-badge-warning border-status-warning' },
+                  ].map(({ label, value, icon: Icon, color, bg }) => (
+                    <div key={label} className={`p-4 rounded-xl border ${bg}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-content-secondary">{label}</p>
+                        <Icon className={`w-4 h-4 ${color}`} />
+                      </div>
+                      <p className="text-xl font-bold text-content-primary">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pipeline leads */}
+                <div className="card p-4 space-y-3">
+                  <h2 className="text-sm font-semibold text-content-secondary">Pipeline contacts</h2>
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Nouveaux',  value: voituresData.leads_nouveaux,  color: 'bg-blue-500' },
+                      { label: 'Convertis', value: voituresData.leads_convertis, color: 'bg-green-500' },
+                    ].map(({ label, value, color }) => {
+                      const pct = voituresData.leads_total > 0 ? (value / voituresData.leads_total) * 100 : 0;
+                      return (
+                        <div key={label}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-content-secondary">{label}</span>
+                            <span className="text-content-primary font-bold">{value} <span className="text-content-muted">({Math.round(pct)}%)</span></span>
+                          </div>
+                          <div className="h-1.5 bg-surface-input rounded-full overflow-hidden">
+                            <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Ventes récentes */}
+                {voituresData.recent_ventes.length > 0 && (
+                  <div className="card p-4">
+                    <h2 className="text-sm font-semibold text-content-secondary mb-3">Ventes récentes</h2>
+                    <div className="space-y-2">
+                      {voituresData.recent_ventes.map((v) => (
+                        <div key={v.id} className="flex items-center justify-between py-2 border-b border-surface-border last:border-0">
+                          <div>
+                            <p className="text-sm font-bold text-content-primary">{v.marque} {v.modele} {v.annee ? `(${v.annee})` : ''}</p>
+                            <p className="text-[10px] text-content-muted">{new Date(v.updated_at).toLocaleDateString('fr-FR')}</p>
+                          </div>
+                          <p className="text-sm font-black text-status-success">{fmt(v.prix)}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

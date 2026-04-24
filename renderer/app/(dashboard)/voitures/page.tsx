@@ -12,8 +12,10 @@ import { useNotificationStore } from '@/store/notifications';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { cn } from '@/lib/utils';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { logAction } from '@services/supabase/logger';
 import {
   getVoitures, createVoiture, updateVoiture, deleteVoiture, uploadVoitureImage,
+  recordVoitureVente,
   getLeads, updateLeadStatut, deleteLead,
   CARBURANT_LABELS, TRANSMISSION_LABELS, STATUT_CFG, LEAD_STATUT_CFG,
   type Voiture, type VoitureLead, type VoitureStatut, type LeadStatut,
@@ -156,11 +158,24 @@ export default function VoituresPage() {
         image_principale: form.image_principale || null,
         statut:           form.statut,
       };
+      const becomesVendu = form.statut === 'vendu' && editing?.statut !== 'vendu';
+      const label = `${payload.marque} ${payload.modele}`;
+
       if (editing) {
         await updateVoiture(editing.id, payload);
+        logAction({ business_id: business.id, action: 'voiture.updated', entity_type: 'voiture', entity_id: editing.id, metadata: { label, statut: payload.statut } });
+        if (becomesVendu) {
+          await recordVoitureVente(business.id, { id: editing.id, marque: payload.marque, modele: payload.modele, annee: payload.annee, prix: payload.prix });
+          logAction({ business_id: business.id, action: 'voiture.vendu', entity_type: 'voiture', entity_id: editing.id, metadata: { label, prix: payload.prix } });
+        }
         success('Véhicule mis à jour');
       } else {
-        await createVoiture(business.id, payload);
+        const created = await createVoiture(business.id, payload);
+        logAction({ business_id: business.id, action: 'voiture.created', entity_type: 'voiture', entity_id: created.id, metadata: { label, statut: payload.statut } });
+        if (becomesVendu) {
+          await recordVoitureVente(business.id, { id: created.id, marque: payload.marque, modele: payload.modele, annee: payload.annee, prix: payload.prix });
+          logAction({ business_id: business.id, action: 'voiture.vendu', entity_type: 'voiture', entity_id: created.id, metadata: { label, prix: payload.prix } });
+        }
         success('Véhicule ajouté');
       }
       setDrawerOpen(false);
@@ -175,7 +190,11 @@ export default function VoituresPage() {
   async function handleDelete(id: string) {
     setDeletingId(id);
     try {
+      const v = voitures.find(x => x.id === id);
       await deleteVoiture(id);
+      if (v && business?.id) {
+        logAction({ business_id: business.id, action: 'voiture.deleted', entity_type: 'voiture', entity_id: id, metadata: { label: `${v.marque} ${v.modele}` } });
+      }
       success('Véhicule supprimé');
       loadAll();
     } catch (err) {

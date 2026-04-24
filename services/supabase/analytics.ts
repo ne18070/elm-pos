@@ -516,3 +516,53 @@ export async function getJuridiqueAnalytics(
     fees_by_type, dossiers_by_status, daily_fees, monthly_fees,
   };
 }
+
+// --- Voitures analytics -------------------------------------------------------
+
+export interface VoituresAnalyticsSummary {
+  ca_voitures:       number;
+  vendus_count:      number;
+  leads_total:       number;
+  leads_nouveaux:    number;
+  leads_convertis:   number;
+  parc_total:        number;
+  parc_disponible:   number;
+  recent_ventes:     Array<{ id: string; marque: string; modele: string; annee: number | null; prix: number; updated_at: string }>;
+}
+
+export async function getVoituresAnalytics(
+  businessId: string,
+  days = 30,
+): Promise<VoituresAnalyticsSummary> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const db = (supabase as any);
+
+  const [parcResult, venteResult, leadsResult] = await Promise.all([
+    db.from('voitures').select('statut').eq('business_id', businessId),
+    db.from('voitures')
+      .select('id, marque, modele, annee, prix, updated_at')
+      .eq('business_id', businessId)
+      .eq('statut', 'vendu')
+      .gte('updated_at', `${startDate}T00:00:00Z`)
+      .order('updated_at', { ascending: false }),
+    db.from('voiture_leads')
+      .select('statut')
+      .eq('business_id', businessId)
+      .gte('created_at', `${startDate}T00:00:00Z`),
+  ]);
+
+  const parc        = (parcResult.data ?? []) as Array<{ statut: string }>;
+  const ventes      = (venteResult.data ?? []) as Array<{ id: string; marque: string; modele: string; annee: number | null; prix: number; updated_at: string }>;
+  const leads       = (leadsResult.data ?? []) as Array<{ statut: string }>;
+
+  return {
+    ca_voitures:     ventes.reduce((s, v) => s + v.prix, 0),
+    vendus_count:    ventes.length,
+    leads_total:     leads.length,
+    leads_nouveaux:  leads.filter(l => l.statut === 'nouveau').length,
+    leads_convertis: leads.filter(l => l.statut === 'converti').length,
+    parc_total:      parc.length,
+    parc_disponible: parc.filter(v => v.statut === 'disponible').length,
+    recent_ventes:   ventes.slice(0, 10),
+  };
+}

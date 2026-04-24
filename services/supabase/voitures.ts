@@ -182,3 +182,33 @@ export async function createLead(
     .insert({ ...lead, business_id: businessId, statut: 'nouveau' });
   if (error) throw new Error(error.message);
 }
+
+// ─── Comptabilité — écriture de vente ────────────────────────────────────────
+
+export async function recordVoitureVente(
+  businessId: string,
+  voiture: Pick<Voiture, 'id' | 'marque' | 'modele' | 'annee' | 'prix'>,
+): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+  const label = `${voiture.marque} ${voiture.modele}${voiture.annee ? ` (${voiture.annee})` : ''}`;
+
+  const { data: entry, error: entryErr } = await supabase
+    .from('journal_entries')
+    .insert({
+      business_id: businessId,
+      entry_date:  today,
+      reference:   `VOI-${voiture.id.slice(0, 8).toUpperCase()}`,
+      description: `Vente véhicule : ${label}`,
+      source:      'voiture',
+      source_id:   voiture.id,
+    })
+    .select('id')
+    .single();
+  if (entryErr) throw new Error(entryErr.message);
+
+  const { error: linesErr } = await supabase.from('journal_lines').insert([
+    { entry_id: entry.id, account_code: '411', account_name: 'Clients',              debit: voiture.prix, credit: 0 },
+    { entry_id: entry.id, account_code: '701', account_name: 'Ventes de véhicules',  debit: 0, credit: voiture.prix },
+  ]);
+  if (linesErr) throw new Error(linesErr.message);
+}
