@@ -8,7 +8,7 @@ import { supabase } from './client';
 const db  = _db(supabase);
 const rpc = _rpc(supabase);
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 export interface Account {
   id: string;
@@ -60,7 +60,7 @@ export interface CreateEntryInput {
   lines: { account_code: string; account_name: string; debit: number; credit: number }[];
 }
 
-// ─── Comptes ──────────────────────────────────────────────────────────────────
+// --- Comptes ------------------------------------------------------------------
 
 export async function getAccounts(businessId: string): Promise<Account[]> {
   const { data, error } = await db('accounts')
@@ -72,7 +72,7 @@ export async function getAccounts(businessId: string): Promise<Account[]> {
   return (data ?? []) as Account[];
 }
 
-// ─── Journal ──────────────────────────────────────────────────────────────────
+// --- Journal ------------------------------------------------------------------
 
 export async function getJournalEntries(
   businessId: string,
@@ -129,7 +129,7 @@ export async function deleteManualEntry(entryId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-// ─── Synchronisation depuis les ventes/achats ────────────────────────────────
+// --- Synchronisation depuis les ventes/achats --------------------------------
 
 export async function syncAccounting(businessId: string): Promise<number> {
   const { data, error } = await rpc('sync_accounting', { p_business_id: businessId });
@@ -137,7 +137,7 @@ export async function syncAccounting(businessId: string): Promise<number> {
   return (data as number) ?? 0;
 }
 
-// ─── Balance des comptes ──────────────────────────────────────────────────────
+// --- Balance des comptes ------------------------------------------------------
 
 export async function getTrialBalance(
   businessId: string,
@@ -153,7 +153,7 @@ export async function getTrialBalance(
   return (data ?? []) as TrialBalanceLine[];
 }
 
-// ─── États financiers (calculés côté client depuis la balance) ───────────────
+// --- États financiers (calculés côté client depuis la balance) ---------------
 
 export interface IncomeStatement {
   ventesGross:       number; // 701
@@ -190,7 +190,7 @@ export interface BalanceSheet {
   totalPassif:     number;
 }
 
-// ─── Synchronisation hôtel ───────────────────────────────────────────────────
+// --- Synchronisation hôtel ---------------------------------------------------
 //
 // Crée une écriture journal pour chaque réservation check-out non encore
 // synchronisée.  Écriture :
@@ -208,8 +208,8 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
 
   let count = 0;
 
-  // ─── 1. Sync hotel_payments (acomptes + paiements au check-out) ──────────
-  // source = 'hotel', source_id = payment UUID — distinct des réservations car UUIDs différents
+  // --- 1. Sync hotel_payments (acomptes + paiements au check-out) ----------
+  // source = 'hotel', source_id = payment UUID - distinct des réservations car UUIDs différents
   // Chaque paiement reçu génère : Débit 571/521 · Crédit 706
   const syncedPayments = syncedSet; // même ensemble : source='hotel', source_id=uuid
 
@@ -243,7 +243,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
       : { code: '571', name: p.method === 'mobile_money' ? 'Caisse / Mobile' : 'Caisse' };
 
     const info    = resInfoMap[p.reservation_id] ?? { room: '', guest: 'Client' };
-    const desc    = `Paiement hôtel${info.room ? ` — Ch.${info.room}` : ''} — ${info.guest}`;
+    const desc    = `Paiement hôtel${info.room ? ` - Ch.${info.room}` : ''} - ${info.guest}`;
 
     const { data: entry, error: entryErr } = await db('journal_entries')
       .insert({ business_id: businessId, entry_date: entryDate, description: desc, source: 'hotel', source_id: p.id })
@@ -259,7 +259,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
     count++;
   }
 
-  // ─── 2. Sync réservations clôturées SANS hotel_payments ──────────────────
+  // --- 2. Sync réservations clôturées SANS hotel_payments ------------------
   // (rétrocompatibilité + séjours sans paiement enregistré)
   const { data: reservations, error: resErr } = await (supabase as any)
     .from('hotel_reservations')
@@ -286,7 +286,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
     const entryDate   = (res.actual_check_out ?? res.check_out).slice(0, 10);
     const roomLabel   = res.room?.number ? `Ch.${res.room.number}` : '';
     const guestLabel  = res.guest?.full_name ?? 'Client';
-    const description = `Séjour hôtel${roomLabel ? ` — ${roomLabel}` : ''} — ${guestLabel}`;
+    const description = `Séjour hôtel${roomLabel ? ` - ${roomLabel}` : ''} - ${guestLabel}`;
     const total       = Number(res.total);
     const paid        = Number(res.paid_amount);
     const outstanding = Math.max(0, total - paid);

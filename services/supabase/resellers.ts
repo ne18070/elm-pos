@@ -1,11 +1,11 @@
 import { supabase as _supabase } from './client';
 import { q } from './q';
 
-// Tables ajoutées par migration 021 — pas encore dans database.types.ts
+// Tables ajoutées par migration 021 - pas encore dans database.types.ts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = _supabase as any;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 export interface Reseller {
   id: string;
@@ -42,7 +42,7 @@ export interface ResellerOffer {
   created_at: string;
 }
 
-// ─── Revendeurs ───────────────────────────────────────────────────────────────
+// --- Revendeurs ---------------------------------------------------------------
 
 export async function getResellers(businessId: string): Promise<Reseller[]> {
   const rows = await q<Reseller[]>(
@@ -71,7 +71,7 @@ export async function deleteReseller(id: string): Promise<void> {
   await q(supabase.from('resellers').delete().eq('id', id));
 }
 
-// ─── Clients revendeurs ───────────────────────────────────────────────────────
+// --- Clients revendeurs -------------------------------------------------------
 
 export async function getResellerClients(resellerId: string): Promise<ResellerClient[]> {
   const rows = await q<ResellerClient[]>(
@@ -107,7 +107,7 @@ export async function deleteResellerClient(id: string): Promise<void> {
   await q(supabase.from('reseller_clients').delete().eq('id', id));
 }
 
-// ─── Offres volume ────────────────────────────────────────────────────────────
+// --- Offres volume ------------------------------------------------------------
 
 export async function getResellerOffers(businessId: string): Promise<ResellerOffer[]> {
   const data = await q<(ResellerOffer & { products?: { name: string } })[]>(

@@ -83,7 +83,7 @@ export async function getAnalyticsSummary(
   return { total_sales, order_count, avg_order_value, top_products, daily_stats };
 }
 
-// ─── Reseller stats ──────────────────────────────────────────────────────────
+// --- Reseller stats ----------------------------------------------------------
 
 export interface ResellerStat {
   reseller_id: string;
@@ -171,7 +171,7 @@ export async function getResellerClientStats(
     const existing = map.get(row.reseller_client_id) ?? {
       client_id: row.reseller_client_id,
       name: row.client.name,
-      reseller_name: row.reseller?.name ?? '—',
+      reseller_name: row.reseller?.name ?? '-',
       revenue: 0,
       order_count: 0,
     };
@@ -183,7 +183,7 @@ export async function getResellerClientStats(
   return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
 }
 
-// ─── Coupon / promo stats ─────────────────────────────────────────────────────
+// --- Coupon / promo stats -----------------------------------------------------
 
 export interface CouponStat {
   coupon_code: string;
@@ -229,7 +229,7 @@ export async function getCouponStats(
   return Array.from(map.values()).sort((a, b) => b.usage_count - a.usage_count);
 }
 
-// ─── Wholesale detail (per order-item) ───────────────────────────────────────
+// --- Wholesale detail (per order-item) ---------------------------------------
 
 export interface WholesaleOrderItem {
   order_id: string;
@@ -298,7 +298,7 @@ export async function getResellerDetailStats(
   return result;
 }
 
-// ─── Daily sales ──────────────────────────────────────────────────────────────
+// --- Daily sales --------------------------------------------------------------
 
 export async function getDailySales(
   businessId: string,
@@ -320,7 +320,7 @@ export async function getDailySales(
   };
 }
 
-// ─── Hotel analytics ──────────────────────────────────────────────────────────
+// --- Hotel analytics ----------------------------------------------------------
 
 export interface HotelRoomStat {
   room_id:     string;
@@ -404,7 +404,7 @@ export async function getHotelAnalytics(
   };
 }
 
-// ─── Juridique analytics ──────────────────────────────────────────────────────
+// --- Juridique analytics ------------------------------------------------------
 
 export interface JuridiqueAnalyticsSummary {
   total_fees:          number;

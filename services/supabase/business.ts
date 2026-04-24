@@ -23,7 +23,7 @@ export interface OrganizationWithBusinesses extends Organization {
   businesses: Business[];
 }
 
-// ─── Organizations ────────────────────────────────────────────────────────────
+// --- Organizations ------------------------------------------------------------
 
 /** Toutes les organizations (superadmin) avec leurs établissements */
 export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusinesses[]> {
@@ -126,7 +126,7 @@ export async function createOrganization(data: {
   return result as Business;
 }
 
-// ─── Multi-établissements ─────────────────────────────────────────────────────
+// --- Multi-établissements -----------------------------------------------------
 
 /** Tous les établissements auxquels l'utilisateur connecté appartient */
 export async function getMyBusinesses(): Promise<BusinessMembership[]> {
@@ -197,7 +197,7 @@ export async function createBusiness(data: {
   return result as unknown as Business;
 }
 
-// ─── Gestion des membres ──────────────────────────────────────────────────────
+// --- Gestion des membres ------------------------------------------------------
 
 export async function getBusiness(businessId: string): Promise<Business> {
   const { data, error } = await supabase
@@ -238,7 +238,7 @@ export async function removeBusinessMember(
   if (error) throw new Error(error.message);
 }
 
-/** @deprecated — utiliser getAllOrganizationsAdmin() pour le backoffice */
+/** @deprecated - utiliser getAllOrganizationsAdmin() pour le backoffice */
 export async function getAllOrganizations(): Promise<Business[]> {
   const { data, error } = await supabase
     .from('businesses')

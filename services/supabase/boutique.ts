@@ -88,11 +88,12 @@ export interface BoutiqueOrderDetail {
 // ─── Fonctions publiques ──────────────────────────────────────────────────────
 
 export async function getBoutiqueInfo(businessId: string): Promise<BoutiqueInfo | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('businesses')
     .select('id, name, logo_url, currency, phone, address')
     .eq('id', businessId)
-    .single();
+    .maybeSingle();
+  if (error) throw new Error(error.message);
   return data ?? null;
 }
 

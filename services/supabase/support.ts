@@ -32,7 +32,7 @@ export interface TicketForm {
   metadata?:    any;
 }
 
-// ─── Client Actions ──────────────────────────────────────────────────────────
+// --- Client Actions ----------------------------------------------------------
 
 /**
  * Submit a new support ticket.
@@ -86,7 +86,7 @@ export async function getMyTickets(businessId: string): Promise<SupportTicket[]>
   return data as SupportTicket[];
 }
 
-// ─── Admin Actions ───────────────────────────────────────────────────────────
+// --- Admin Actions -----------------------------------------------------------
 
 /**
  * Get all tickets (Superadmin).

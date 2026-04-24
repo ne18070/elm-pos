@@ -1,5 +1,5 @@
 /**
- * Journal d'activité — fire-and-forget.
+ * Journal d'activité - fire-and-forget.
  * Cette fonction ne throw jamais et ne bloque jamais l'appelant.
  */
 import { supabase } from './client';

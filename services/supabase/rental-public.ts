@@ -84,11 +84,12 @@ export interface PublicRentalDetail {
 // ─── Fonctions publiques ──────────────────────────────────────────────────────
 
 export async function getPublicAgencyInfo(businessId: string): Promise<PublicAgencyInfo | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('businesses')
     .select('id, name, logo_url, currency, phone, address')
     .eq('id', businessId)
-    .single();
+    .maybeSingle();
+  if (error) throw new Error(error.message);
   return data ?? null;
 }
 

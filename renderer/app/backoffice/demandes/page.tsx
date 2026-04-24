@@ -228,7 +228,7 @@ export default function RequestsPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
       ) : (
-        <div className="card overflow-hidden shadow-2xl">
+        <div className="card overflow-hidden shadow-2xl bg-surface-card border border-surface-border">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface-hover/50 border-b border-surface-border text-content-muted uppercase text-[10px] font-black tracking-widest">
@@ -246,7 +246,13 @@ export default function RequestsPage() {
                 {pageRows.map((req) => {
                   const badge = REQ_STATUS[req.status] ?? REQ_STATUS.pending;
                   return (
-                    <tr key={req.id} className={cn("hover:bg-surface-hover/30 transition-colors", req.status !== 'pending' && "opacity-50")}>
+                    <tr
+                      key={req.id}
+                      className={cn(
+                        "hover:bg-surface-hover transition-colors",
+                        req.status !== 'pending' && "bg-surface-hover/30"
+                      )}
+                    >
                       <td className="px-6 py-4">
                         <p className="font-black text-content-primary leading-tight">{req.business_name}</p>
                         {'denomination' in req && (req as PublicSubscriptionRequest).denomination && (
@@ -272,8 +278,8 @@ export default function RequestsPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-content-secondary whitespace-nowrap">
-                        <p className="text-xs font-bold text-content-primary/80">{new Date(req.created_at).toLocaleDateString('fr-FR')}</p>
-                        <p className="text-[10px] font-medium">{new Date(req.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-xs font-bold text-content-primary">{new Date(req.created_at).toLocaleDateString('fr-FR')}</p>
+                        <p className="text-[10px] font-medium text-content-secondary">{new Date(req.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
                       </td>
                       <td className="px-6 py-4">
                         {req.isPublic 
@@ -319,7 +325,7 @@ export default function RequestsPage() {
         </div>
       )}
 
-      {/* 髫ｨ貂可髫ｨ貂可 SideDrawers 髫ｨ貂可髫ｨ貂可 */}
+      {/* SideDrawers */}
       
       {/* Approbation Compte Existant */}
       <SideDrawer

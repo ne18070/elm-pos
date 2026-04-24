@@ -247,22 +247,27 @@ export default function ReservationPage() {
     <div className="min-h-screen bg-slate-50 pb-16">
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-100 shadow-sm">
+      <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          {info?.logo_url ? (
-            <img src={info.logo_url} alt={info?.name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
-              <Hotel className="w-5 h-5 text-content-primary" />
-            </div>
-          )}
+          <div className="w-10 h-10 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
+            {info?.logo_url ? (
+              <img src={info.logo_url} alt={info?.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-brand-600 flex items-center justify-center">
+                <Hotel className="w-5 h-5 text-content-primary" />
+              </div>
+            )}
+          </div>
           <div className="min-w-0">
-            <h1 className="font-bold text-slate-900 text-base truncate">{info?.name}</h1>
+            <h1 className="font-bold text-content-primary text-base truncate">{info?.name}</h1>
             {info?.address && (
               <p className="text-xs text-content-secondary truncate flex items-center gap-1">
                 <MapPin className="w-3 h-3 shrink-0" />{info.address}
               </p>
             )}
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
+            <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />
           </div>
         </div>
       </header>

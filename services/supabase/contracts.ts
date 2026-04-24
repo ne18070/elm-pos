@@ -1,10 +1,10 @@
 import { supabase as _supabase } from './client';
 
-// Tables nouvelles — pas encore dans database.types.ts
+// Tables nouvelles - pas encore dans database.types.ts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = _supabase as any;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 export type ContractStatus = 'draft' | 'sent' | 'signed' | 'archived';
 
@@ -89,7 +89,7 @@ export interface RecordPaymentInput {
   payment_method: PaymentMethod;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 function generateToken(): string {
   const bytes = new Uint8Array(32);
@@ -102,7 +102,7 @@ export function fillTemplate(body: string, vars: Record<string, string>): string
   return body.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
 }
 
-// ─── Véhicules ────────────────────────────────────────────────────────────────
+// --- Véhicules ----------------------------------------------------------------
 
 export async function getVehicles(businessId: string): Promise<RentalVehicle[]> {
   const { data, error } = await supabase
@@ -154,7 +154,7 @@ export async function toggleVehicleAvailability(id: string, is_available: boolea
   if (error) throw new Error(error.message);
 }
 
-// ─── Modèles de contrat ───────────────────────────────────────────────────────
+// --- Modèles de contrat -------------------------------------------------------
 
 export async function getTemplates(businessId: string): Promise<ContractTemplate[]> {
   const { data, error } = await supabase
@@ -196,7 +196,7 @@ export async function deleteTemplate(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-// ─── Contrats ─────────────────────────────────────────────────────────────────
+// --- Contrats -----------------------------------------------------------------
 
 export async function getContracts(businessId: string): Promise<Contract[]> {
   const { data, error } = await supabase
@@ -360,7 +360,7 @@ export async function updateContractPdf(id: string, pdf_url: string): Promise<vo
   if (error) throw new Error(error.message);
 }
 
-// ─── Page publique (sans auth) ────────────────────────────────────────────────
+// --- Page publique (sans auth) ------------------------------------------------
 
 export async function getContractByToken(token: string): Promise<Contract | null> {
   const { data, error } = await supabase
@@ -413,7 +413,7 @@ export async function savePdfUrl(token: string, pdf_url: string): Promise<void> 
   if (error) throw new Error(error.message);
 }
 
-// ─── Signature loueur ─────────────────────────────────────────────────────────
+// --- Signature loueur ---------------------------------------------------------
 
 export async function uploadLessorSignature(contractId: string, blob: Blob): Promise<string> {
   const path = `lessor-signatures/${contractId}.png`;
@@ -433,7 +433,7 @@ export async function saveLessorSignature(contractId: string, imageUrl: string):
   if (error) throw new Error(error.message);
 }
 
-// ─── Upload image véhicule ────────────────────────────────────────────────────
+// --- Upload image véhicule ----------------------------------------------------
 
 export async function uploadVehicleImage(businessId: string, file: File): Promise<string> {
   const ext  = file.name.split('.').pop() ?? 'jpg';
@@ -446,7 +446,7 @@ export async function uploadVehicleImage(businessId: string, file: File): Promis
   return data.publicUrl;
 }
 
-// ─── Upload PDF ───────────────────────────────────────────────────────────────
+// --- Upload PDF ---------------------------------------------------------------
 
 export async function uploadContractPdf(token: string, blob: Blob): Promise<string> {
   const path = `pdfs/${token}.pdf`;
@@ -458,7 +458,7 @@ export async function uploadContractPdf(token: string, blob: Blob): Promise<stri
   return data.publicUrl;
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
+// --- Utils --------------------------------------------------------------------
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, b64] = dataUrl.split(',');
@@ -483,7 +483,7 @@ export function daysCount(start: string, end: string): number {
   return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 86400000));
 }
 
-// ─── Paiement location + écriture comptable ───────────────────────────────────
+// --- Paiement location + écriture comptable -----------------------------------
 
 export async function recordPayment(
   contractId: string,
@@ -529,7 +529,7 @@ export async function recordPayment(
     .insert({
       business_id: businessId,
       entry_date:  input.payment_date,
-      description: `Location — ${contract.client_name}`,
+      description: `Location - ${contract.client_name}`,
       source:      'rental',
       source_id:   contractId,
     })

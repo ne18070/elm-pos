@@ -19,7 +19,7 @@ export async function updateBusinessConfig(
   types:      string[],
   features:   string[],
 ): Promise<void> {
-  // types[] are UUIDs from business_types table — never write them to the legacy
+  // types[] are UUIDs from business_types table - never write them to the legacy
   // `type` TEXT column which has a strict CHECK constraint on legacy enum values.
   const { error } = await db
     .from('businesses')

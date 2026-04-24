@@ -99,16 +99,16 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
           {query.length < 2 ? (
             <div className="py-12 text-center space-y-3">
               <Command className="mx-auto text-slate-700" size={40} />
-              <p className="text-content-primary text-sm font-medium">Saisissez au moins 2 caractﾃｨres pour rechercher.</p>
+              <p className="text-content-primary text-sm font-medium">Saisissez au moins 2 caractères pour rechercher.</p>
               <div className="flex flex-wrap justify-center gap-2 mt-4">
-                 {['Nestlﾃｩ', 'Dakar', 'Standard', 'Pro'].map(t => (
+                 {['Nestlé', 'Dakar', 'Standard', 'Pro'].map(t => (
                    <button key={t} onClick={() => setQuery(t)} className="px-3 py-1.5 rounded-full bg-surface-input border border-surface-border text-[10px] font-black text-content-secondary hover:text-content-primary transition-all">"{t}"</button>
                  ))}
               </div>
             </div>
           ) : (results.orgs.length === 0 && results.demandes.length === 0 && results.subs.length === 0) ? (
             <div className="py-12 text-center">
-              <p className="text-content-primary text-sm italic">Aucun rﾃｩsultat pour "{query}"</p>
+              <p className="text-content-primary text-sm italic">Aucun résultat pour "{query}"</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -118,7 +118,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
                     <Item 
                       key={item.id}
                       title={item.legal_name}
-                      subtitle={item.denomination || 'Entitﾃｩ lﾃｩgale'}
+                      subtitle={item.denomination || 'Entité légale'}
                       onClick={() => { router.push('/backoffice/structures'); onClose(); }}
                     />
                   )} 

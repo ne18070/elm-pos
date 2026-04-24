@@ -1,10 +1,10 @@
 import { supabase as _supabase } from './client';
 
-// Tables ajoutées par migration 036 — pas encore dans database.types.ts
+// Tables ajoutées par migration 036 - pas encore dans database.types.ts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = _supabase as any;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 export type RoomType   = 'simple' | 'double' | 'twin' | 'suite' | 'familiale';
 export type RoomStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
@@ -74,7 +74,7 @@ export interface HotelService {
   created_at: string;
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
+// --- Utils --------------------------------------------------------------------
 
 export function nightsBetween(from: string, to: string): number {
   const d1 = new Date(from);
@@ -82,7 +82,7 @@ export function nightsBetween(from: string, to: string): number {
   return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86_400_000));
 }
 
-// ─── Chambres ─────────────────────────────────────────────────────────────────
+// --- Chambres -----------------------------------------------------------------
 
 export async function getRooms(businessId: string): Promise<HotelRoom[]> {
   const { data, error } = await supabase
@@ -128,7 +128,7 @@ export async function deleteRoom(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-// ─── Clients hôtel ────────────────────────────────────────────────────────────
+// --- Clients hôtel ------------------------------------------------------------
 
 export async function getGuests(businessId: string): Promise<HotelGuest[]> {
   const { data, error } = await supabase
@@ -172,7 +172,7 @@ export async function deleteGuest(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-// ─── Disponibilité ────────────────────────────────────────────────────────────
+// --- Disponibilité ------------------------------------------------------------
 
 export interface RoomConflict {
   id: string;
@@ -202,7 +202,7 @@ export async function getRoomConflicts(
   return (data ?? []) as RoomConflict[];
 }
 
-// ─── Réservations ─────────────────────────────────────────────────────────────
+// --- Réservations -------------------------------------------------------------
 
 export async function getReservations(businessId: string): Promise<HotelReservation[]> {
   const { data, error } = await supabase
@@ -328,7 +328,7 @@ export async function cancelReservation(reservationId: string): Promise<HotelRes
   return data;
 }
 
-// ─── Prestations ──────────────────────────────────────────────────────────────
+// --- Prestations --------------------------------------------------------------
 
 export async function getServices(reservationId: string): Promise<HotelService[]> {
   const { data, error } = await supabase
@@ -362,7 +362,7 @@ export async function deleteService(id: string, reservationId: string): Promise<
   await _recalcServiceTotal(reservationId);
 }
 
-// ─── Paiements hôtel ──────────────────────────────────────────────────────────
+// --- Paiements hôtel ----------------------------------------------------------
 
 export async function addHotelPayment(
   businessId: string,

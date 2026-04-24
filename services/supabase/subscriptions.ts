@@ -29,7 +29,7 @@ export interface PaymentSettings {
   whatsapp_number: string;
 }
 
-// ── Lecture ───────────────────────────────────────────────────────────────────
+// -- Lecture -------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -60,7 +60,7 @@ export async function getPaymentSettings(): Promise<PaymentSettings | null> {
   return data as PaymentSettings | null;
 }
 
-// ── Calculs côté client ───────────────────────────────────────────────────────
+// -- Calculs côté client -------------------------------------------------------
 
 export type EffectiveStatus = 'trial' | 'active' | 'expired' | 'none';
 
@@ -83,7 +83,7 @@ export function getTrialDaysRemaining(sub: Subscription | null): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-// ── Back office ───────────────────────────────────────────────────────────────
+// -- Back office ---------------------------------------------------------------
 
 export interface SubscriptionRow {
   owner_id:      string | null;
@@ -141,7 +141,7 @@ export async function upsertPlan(plan: Partial<Plan> & { id?: string }): Promise
   }
 }
 
-// ── Demandes d'abonnement ─────────────────────────────────────────────────────
+// -- Demandes d'abonnement -----------------------------------------------------
 
 export interface SubscriptionRequest {
   id:           string;
@@ -187,8 +187,8 @@ export async function getSubscriptionRequests(): Promise<SubscriptionRequest[]> 
   if (error) throw new Error(error.message);
   return (data ?? []).map((r: Record<string, any>) => ({
     ...r,
-    business_name: r.businesses?.name ?? '—',
-    plan_label:    r.plans?.label    ?? '—',
+    business_name: r.businesses?.name ?? '-',
+    plan_label:    r.plans?.label    ?? '-',
     plan_price:    r.plans?.price    ?? null,
     plan_currency: r.plans?.currency ?? null,
   }));
@@ -205,7 +205,7 @@ export async function getMySubscriptionRequests(businessId: string): Promise<Sub
   return (data ?? []).map((r: Record<string, any>) => ({
     ...r,
     business_name: '',
-    plan_label:    r.plans?.label    ?? '—',
+    plan_label:    r.plans?.label    ?? '-',
     plan_price:    r.plans?.price    ?? null,
     plan_currency: r.plans?.currency ?? null,
   }));
@@ -234,7 +234,7 @@ export async function rejectSubscriptionRequest(requestId: string, note?: string
   if (error) throw new Error(error.message);
 }
 
-// ── Demandes publiques ────────────────────────────────────────────────────────
+// -- Demandes publiques --------------------------------------------------------
 
 export interface PublicSubscriptionRequest {
   id:            string;
@@ -263,7 +263,7 @@ export async function getPublicSubscriptionRequests(): Promise<PublicSubscriptio
   if (error) throw new Error(error.message);
   return (data ?? []).map((r: Record<string, any>) => ({
     ...r,
-    plan_label:    r.plans?.label    ?? '—',
+    plan_label:    r.plans?.label    ?? '-',
     plan_price:    r.plans?.price    ?? null,
     plan_currency: r.plans?.currency ?? null,
   }));

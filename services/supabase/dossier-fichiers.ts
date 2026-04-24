@@ -16,13 +16,13 @@ export interface DossierFichier {
 export interface StorageInfo {
   used_bytes:  number;
   quota_bytes: number;
-  used_pct:    number;     // 0–100
+  used_pct:    number;     // 0-100
 }
 
 const BUCKET = 'dossier-files';
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB par fichier
 
-// ── Lecture ───────────────────────────────────────────────────────────────────
+// --- Lecture ------------------------------------------------------------------
 
 export async function getFichiers(dossierId: string): Promise<DossierFichier[]> {
   const { data, error } = await (supabase as any)
@@ -58,7 +58,7 @@ export async function getStorageInfo(businessId: string): Promise<StorageInfo> {
   };
 }
 
-// ── Upload ────────────────────────────────────────────────────────────────────
+// --- Upload -------------------------------------------------------------------
 
 export async function uploadFichier(
   dossierId:  string,
@@ -75,7 +75,7 @@ export async function uploadFichier(
   if (info.used_bytes + file.size > info.quota_bytes) {
     const restant = info.quota_bytes - info.used_bytes;
     throw new Error(
-      `Quota de stockage dépassé — il reste ${formatBytes(restant)} disponible sur ${formatBytes(info.quota_bytes)}.`
+      `Quota de stockage dépassé - il reste ${formatBytes(restant)} disponible sur ${formatBytes(info.quota_bytes)}.`
     );
   }
 
@@ -119,7 +119,7 @@ export async function uploadFichier(
   return data as DossierFichier;
 }
 
-// ── Suppression ───────────────────────────────────────────────────────────────
+// --- Suppression --------------------------------------------------------------
 
 export async function deleteFichier(fichier: DossierFichier): Promise<void> {
   // Supprimer du storage d'abord
@@ -132,7 +132,7 @@ export async function deleteFichier(fichier: DossierFichier): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 o';

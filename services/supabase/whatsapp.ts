@@ -4,7 +4,7 @@ import { q } from './q';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = _supabase as any;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 export interface WhatsAppConfig {
   id:              string;
@@ -70,7 +70,7 @@ export interface ConversationPage {
   hasMore: boolean;
 }
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// --- Config -------------------------------------------------------------------
 
 export async function getWhatsAppConfig(businessId: string): Promise<WhatsAppConfig | null> {
   const { data } = await supabase
@@ -104,14 +104,14 @@ export async function regenerateVerifyToken(configId: string): Promise<string> {
   return (data as { verify_token: string }).verify_token;
 }
 
-// ─── Phone normalization ──────────────────────────────────────────────────────
+// --- Phone normalization ------------------------------------------------------
 
 function normalizePhone(phone: string): string {
   if (!phone) return phone;
   return phone.startsWith('+') ? phone : `+${phone}`;
 }
 
-// ─── Messages ─────────────────────────────────────────────────────────────────
+// --- Messages -----------------------------------------------------------------
 
 export async function getConversations(
   businessId: string,
@@ -165,7 +165,7 @@ export async function markMessagesRead(businessId: string, fromPhone: string): P
     .eq('status', 'received');
 }
 
-// ─── Broadcast menu du jour ───────────────────────────────────────────────────
+// --- Broadcast menu du jour ---------------------------------------------------
 
 export interface BroadcastResult {
   sent:    number;
@@ -225,7 +225,7 @@ export async function broadcastDailyMenu(
     }
 
     try {
-      // Si image — envoyer image avec caption
+      // Si image - envoyer image avec caption
       const payload = imageUrl
         ? {
             messaging_product: 'whatsapp',
@@ -291,7 +291,7 @@ export async function broadcastDailyMenu(
   return result;
 }
 
-// ─── Envoi de message (reply depuis l'app) ────────────────────────────────────
+// --- Envoi de message (reply depuis l'app) ------------------------------------
 
 export async function sendWhatsAppReply(
   config: WhatsAppConfig,
