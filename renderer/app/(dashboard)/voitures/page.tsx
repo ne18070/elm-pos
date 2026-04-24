@@ -334,6 +334,7 @@ export default function VoituresPage() {
         onClose={() => setDrawerOpen(false)}
         title={editing ? 'Modifier le véhicule' : 'Nouveau véhicule'}
         subtitle={editing ? `${editing.marque} ${editing.modele}` : undefined}
+        closeOnBackdrop={false}
         footer={
           <div className="flex gap-3">
             <button

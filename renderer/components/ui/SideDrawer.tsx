@@ -14,6 +14,7 @@ interface SideDrawerProps {
   footer?: React.ReactNode;
   headerActions?: React.ReactNode;
   maxWidth?: string;
+  closeOnBackdrop?: boolean;
 }
 
 export function SideDrawer({
@@ -24,7 +25,8 @@ export function SideDrawer({
   children,
   footer,
   headerActions,
-  maxWidth = "max-w-xl"
+  maxWidth = "max-w-xl",
+  closeOnBackdrop = true,
 }: SideDrawerProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -45,7 +47,7 @@ export function SideDrawer({
           "fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={onClose}
+        onClick={closeOnBackdrop ? onClose : undefined}
       />
 
       {/* Drawer */}
