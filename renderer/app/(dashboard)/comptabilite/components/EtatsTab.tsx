@@ -11,14 +11,14 @@ interface Props {
 
 export function EtatsTab({ is, bs, currency }: Props) {
   const plRows: { label: string; val: number; indent: number; style: string; separator?: boolean }[] = [
-    { label: 'Ventes & Prestations (70x)',   val: is.ventesGross,         indent: 0, style: 'text-slate-300' },
+    { label: 'Ventes & Prestations (70x)',   val: is.ventesGross,         indent: 0, style: 'text-content-primary' },
     { label: 'RRR accordés (7091)',           val: -is.rrrAccordes,        indent: 1, style: 'text-status-error' },
-    { label: "CHIFFRE D'AFFAIRES NET",        val: is.caNet,               indent: 0, style: 'font-bold text-white', separator: true },
+    { label: "CHIFFRE D'AFFAIRES NET",        val: is.caNet,               indent: 0, style: 'font-bold text-content-primary', separator: true },
     { label: 'Achats de marchandises (601)',  val: -is.achatsMarchandises, indent: 1, style: 'text-status-error' },
     { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: `font-semibold ${is.margeBrute >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
     { label: 'Autres charges (6xx)',          val: -is.autresCharges,      indent: 1, style: 'text-status-error' },
     { label: "RÉSULTAT D'EXPLOITATION",       val: is.resultatExpl,        indent: 0, style: `font-semibold ${is.resultatExpl >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
-    { label: 'Produits financiers',           val: is.produitsFinanciers,  indent: 1, style: 'text-slate-300' },
+    { label: 'Produits financiers',           val: is.produitsFinanciers,  indent: 1, style: 'text-content-primary' },
     { label: 'Charges financières (661)',     val: -is.chargesFinancieres, indent: 1, style: 'text-status-error' },
     { label: "RÉSULTAT AVANT IMPÔT",          val: is.resultatAvantImpot,  indent: 0, style: `font-semibold ${is.resultatAvantImpot >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
     { label: 'Impôts sur résultat (691)',     val: -is.impots,             indent: 1, style: 'text-status-error' },
@@ -48,8 +48,8 @@ export function EtatsTab({ is, bs, currency }: Props) {
       {/* Compte de résultat */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-surface-border bg-surface-card">
-          <h2 className="font-bold text-white">Compte de résultat</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Activités ordinaires – SYSCOHADA</p>
+          <h2 className="font-bold text-content-primary">Compte de résultat</h2>
+          <p className="text-xs text-content-primary mt-0.5">Activités ordinaires —SYSCOHADA</p>
         </div>
         <div className="p-5 space-y-1">
           {plRows.map((row, i) => (
@@ -69,8 +69,8 @@ export function EtatsTab({ is, bs, currency }: Props) {
       {/* Bilan simplifié */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-surface-border bg-surface-card">
-          <h2 className="font-bold text-white">Bilan simplifié</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Situation patrimoniale</p>
+          <h2 className="font-bold text-content-primary">Bilan simplifié</h2>
+          <p className="text-xs text-content-primary mt-0.5">Situation patrimoniale</p>
         </div>
         <div className="p-5 grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -78,11 +78,11 @@ export function EtatsTab({ is, bs, currency }: Props) {
             {actifRows.map((row, i) => (
               <div key={i} className="flex justify-between">
                 <span className="text-xs text-content-secondary">{row.label}</span>
-                <span className="text-xs font-mono text-white">{formatCurrency(row.val, currency)}</span>
+                <span className="text-xs font-mono text-content-primary">{formatCurrency(row.val, currency)}</span>
               </div>
             ))}
             <div className="border-t border-surface-border pt-2 flex justify-between">
-              <span className="text-sm font-bold text-white">TOTAL ACTIF</span>
+              <span className="text-sm font-bold text-content-primary">TOTAL ACTIF</span>
               <span className="text-sm font-bold font-mono text-content-brand">{formatCurrency(bs.totalActif, currency)}</span>
             </div>
           </div>
@@ -92,11 +92,11 @@ export function EtatsTab({ is, bs, currency }: Props) {
             {passifRows.map((row, i) => (
               <div key={i} className="flex justify-between">
                 <span className="text-xs text-content-secondary">{row.label}</span>
-                <span className="text-xs font-mono text-white">{formatCurrency(row.val, currency)}</span>
+                <span className="text-xs font-mono text-content-primary">{formatCurrency(row.val, currency)}</span>
               </div>
             ))}
             <div className="border-t border-surface-border pt-2 flex justify-between">
-              <span className="text-sm font-bold text-white">TOTAL PASSIF</span>
+              <span className="text-sm font-bold text-content-primary">TOTAL PASSIF</span>
               <span className="text-sm font-bold font-mono text-content-brand">{formatCurrency(bs.totalPassif, currency)}</span>
             </div>
           </div>
@@ -105,3 +105,5 @@ export function EtatsTab({ is, bs, currency }: Props) {
     </div>
   );
 }
+
+

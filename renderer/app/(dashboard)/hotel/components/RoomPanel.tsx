@@ -32,8 +32,8 @@ export function RoomPanel({ item, form, saving, onChange, onToggleAmenity, onSav
   return (
     <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-        <h3 className="font-semibold text-white">{item ? 'Modifier chambre' : 'Nouvelle chambre'}</h3>
-        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+        <h3 className="font-semibold text-content-primary">{item ? 'Modifier chambre' : 'Nouvelle chambre'}</h3>
+        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -103,7 +103,7 @@ export function RoomPanel({ item, form, saving, onChange, onToggleAmenity, onSav
           >
             <span className={cn('block w-4 h-4 bg-white rounded-full shadow mt-1 transition-transform', form.is_active ? 'translate-x-5' : 'translate-x-1')} />
           </div>
-          <span className="text-sm text-slate-300">Active</span>
+          <span className="text-sm text-content-primary">Active</span>
         </label>
       </div>
       <div className="flex gap-2 px-5 py-4 border-t border-surface-border">
@@ -123,3 +123,4 @@ export function RoomPanel({ item, form, saving, onChange, onToggleAmenity, onSav
     </div>
   );
 }
+

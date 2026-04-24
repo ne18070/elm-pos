@@ -20,14 +20,14 @@ export function TrialBanner() {
   // Aucun abonnement trouvé → alerte discrète
   if (status === 'none') {
     return (
-      <div className="flex items-center justify-between px-4 py-2 text-xs font-medium bg-slate-800/60 border-b border-slate-700 text-content-secondary">
+      <div className="flex items-center justify-between px-4 py-2 text-xs font-medium bg-surface-card/60 border-b border-surface-border text-content-secondary">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
           Aucun abonnement actif
         </div>
         <button
           onClick={() => router.push('/billing')}
-          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-surface-input hover:bg-slate-600 text-content-primary transition-colors"
         >
           <Zap className="w-3 h-3" />
           S'abonner
@@ -61,8 +61,8 @@ export function TrialBanner() {
         onClick={() => router.push('/billing')}
         className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold transition-colors
           ${urgent
-            ? 'bg-red-700 hover:bg-red-600 text-white'
-            : 'bg-amber-700 hover:bg-amber-600 text-white'}`}
+            ? 'bg-red-700 hover:bg-red-600 text-content-primary'
+            : 'bg-amber-700 hover:bg-amber-600 text-content-primary'}`}
       >
         <Zap className="w-3 h-3" />
         {isFirst ? 'Voir les plans' : 'S\'abonner'}

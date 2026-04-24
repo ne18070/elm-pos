@@ -29,8 +29,8 @@ export function GuestPanel({ item, form, saving, onChange, onSave, onDelete, onC
   return (
     <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-        <h3 className="font-semibold text-white">{item ? 'Modifier client' : 'Nouveau client'}</h3>
-        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+        <h3 className="font-semibold text-content-primary">{item ? 'Modifier client' : 'Nouveau client'}</h3>
+        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -57,7 +57,7 @@ export function GuestPanel({ item, form, saving, onChange, onSave, onDelete, onC
           <div>
             <label className="label">Pièce d&apos;identité</label>
             <select className="input" value={form.id_type} onChange={(e) => onChange({ ...form, id_type: e.target.value })}>
-              <option value="">— Choisir —</option>
+              <option value="">—Choisir —</option>
               {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -92,3 +92,4 @@ export function GuestPanel({ item, form, saving, onChange, onSave, onDelete, onC
     </div>
   );
 }
+

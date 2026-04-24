@@ -113,7 +113,7 @@ export default function SubscribePage() {
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <p className="text-content-secondary text-sm mt-1">Abonnement</p>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-content-muted mt-2">
             Déjà un compte ?{' '}
             <a href="/login" className="text-content-brand hover:text-content-brand transition-colors">
               Se connecter
@@ -127,20 +127,20 @@ export default function SubscribePage() {
               <CheckCircle className="w-10 h-10 text-status-success" />
             </div>
             <div>
-              <p className="text-xl font-bold text-white">Demande envoyée !</p>
+              <p className="text-xl font-bold text-content-primary">Demande envoyée !</p>
               {isFree(selectedPlan) ? (
                 <p className="text-sm text-content-secondary mt-2 max-w-sm">
                   Votre inscription au plan gratuit a bien été reçue.
-                  Votre accès sera activé sous <strong className="text-white">24h</strong>.
+                  Votre accès sera activé sous <strong className="text-content-primary">24h</strong>.
                 </p>
               ) : (
                 <p className="text-sm text-content-secondary mt-2 max-w-sm">
                   Nous avons bien reçu votre demande et votre reçu de paiement.
-                  Votre accès sera activé sous <strong className="text-white">24h</strong>.
+                  Votre accès sera activé sous <strong className="text-content-primary">24h</strong>.
                 </p>
               )}
-              <p className="text-xs text-slate-500 mt-3">
-                Un email de confirmation sera envoyé à <span className="text-slate-300">{email}</span>
+              <p className="text-xs text-content-muted mt-3">
+                Un email de confirmation sera envoyé à <span className="text-content-primary">{email}</span>
               </p>
             </div>
           </div>
@@ -148,7 +148,7 @@ export default function SubscribePage() {
           /* ── Étape 1 : Informations ── */
           <div className="space-y-6">
             <div className="card p-6 space-y-4">
-              <h2 className="font-bold text-white text-lg">Vos informations</h2>
+              <h2 className="font-bold text-content-primary text-lg">Vos informations</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -157,14 +157,14 @@ export default function SubscribePage() {
                     className="input" placeholder="Ex : Restaurant Le Soleil" />
                 </div>
                 <div>
-                  <label className="label">Raison sociale légale <span className="text-slate-500 font-normal">(SARL, SA… si différente)</span></label>
+                  <label className="label">Raison sociale légale <span className="text-content-muted font-normal">(SARL, SA… si différente)</span></label>
                   <input type="text" value={denomination} onChange={(e) => setDenomination(e.target.value)}
                     className="input" placeholder="Ex : SARL Le Soleil Afrique" />
                 </div>
               </div>
 
               <div className="pt-4 border-t border-surface-border">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Administrateur du compte</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-content-muted mb-4">Administrateur du compte</p>
                 <div className="space-y-4">
                   <div>
                     <label className="label">Votre nom complet *</label>
@@ -198,7 +198,7 @@ export default function SubscribePage() {
               return (
                 <div>
                   <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-                    <h2 className="font-bold text-white text-lg">Choisissez votre plan</h2>
+                    <h2 className="font-bold text-content-primary text-lg">Choisissez votre plan</h2>
                     {hasAnnual && hasMonthly && (
                       <div className="flex items-center bg-surface-input border border-surface-border rounded-lg p-1 shrink-0">
                         {(['monthly', 'annual'] as const).map((p) => (
@@ -207,7 +207,7 @@ export default function SubscribePage() {
                             type="button"
                             onClick={() => { setPeriod(p); setSelectedPlan(null); }}
                             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
-                              ${period === p ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
+                              ${period === p ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
                             {p === 'monthly' ? 'Mensuel' : (
                               <span className="flex items-center gap-1">Annuel <span className="text-status-success">−10%</span></span>
                             )}
@@ -229,7 +229,7 @@ export default function SubscribePage() {
                               1 mois offert
                             </span>
                           )}
-                          <p className="font-bold text-white text-base">{plan.label}</p>
+                          <p className="font-bold text-content-primary text-base">{plan.label}</p>
                           <p className="text-2xl font-bold text-content-brand mt-1">
                             {plan.price === 0 ? 'Gratuit' : plan.price.toLocaleString('fr-FR')}
                             {plan.price > 0 && (
@@ -239,13 +239,13 @@ export default function SubscribePage() {
                             )}
                           </p>
                           {monthlyEquiv && (
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-content-muted mt-0.5">
                               soit {monthlyEquiv.toLocaleString('fr-FR')} {displayCurrency(plan.currency)}/mois
                             </p>
                           )}
                           <ul className="mt-3 space-y-1">
                             {plan.features.map((f: string) => (
-                              <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
+                              <li key={f} className="flex items-center gap-2 text-xs text-content-primary">
                                 <CheckCircle className="w-3.5 h-3.5 text-status-success shrink-0" /> {f}
                               </li>
                             ))}
@@ -281,16 +281,16 @@ export default function SubscribePage() {
         {false && step === 'payment' && (
           /* ── Étape 2 : Paiement + reçu — désactivé temporairement ── */
           <div className="space-y-6">
-            <button onClick={() => setStep('info')} className="text-sm text-content-secondary hover:text-white transition-colors">
+            <button onClick={() => setStep('info')} className="text-sm text-content-secondary hover:text-content-primary transition-colors">
               ← Retour
             </button>
 
             <div className="card p-6 space-y-5">
-              <h2 className="font-bold text-white text-lg">Paiement</h2>
+              <h2 className="font-bold text-content-primary text-lg">Paiement</h2>
 
               {/* Récap */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
-                <span className="text-sm text-slate-300">{selectedPlan?.label}</span>
+                <span className="text-sm text-content-primary">{selectedPlan?.label}</span>
                 <span className="font-bold text-content-brand">
                   {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
                 </span>
@@ -304,8 +304,8 @@ export default function SubscribePage() {
                   { n: 4, text: 'Joignez le reçu et envoyez votre demande' },
                 ].map(({ n, text }) => (
                   <li key={n} className="flex items-start gap-3">
-                    <span className="w-6 h-6 rounded-full bg-brand-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
-                    <span className="text-sm text-slate-300">{text}</span>
+                    <span className="w-6 h-6 rounded-full bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
+                    <span className="text-sm text-content-primary">{text}</span>
                   </li>
                 ))}
               </ol>
@@ -319,32 +319,32 @@ export default function SubscribePage() {
                   <button key={key} onClick={() => url && setShowQr(key)} disabled={!url}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                       ${url ? `${color} hover:opacity-90 cursor-pointer` : 'border-surface-border opacity-30'}`}>
-                    <QrCode className="w-8 h-8 text-white" />
-                    <span className="text-sm font-medium text-white">{label}</span>
-                    {!url && <span className="text-xs text-slate-500">Bientôt disponible</span>}
+                    <QrCode className="w-8 h-8 text-content-primary" />
+                    <span className="text-sm font-medium text-content-primary">{label}</span>
+                    {!url && <span className="text-xs text-content-muted">Bientôt disponible</span>}
                   </button>
                 ))}
               </div>
 
               {/* Upload reçu */}
               <div className="space-y-3 pt-2 border-t border-surface-border">
-                <p className="text-sm font-semibold text-white">Joindre votre reçu</p>
+                <p className="text-sm font-semibold text-content-primary">Joindre votre reçu</p>
 
                 {receiptPreview ? (
                   <div className="relative w-fit">
                     <img src={receiptPreview ?? undefined} alt="reçu" className="h-36 w-auto rounded-xl border border-surface-border object-cover" />
                     <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
-                      <X className="w-3.5 h-3.5 text-white" />
+                      <X className="w-3.5 h-3.5 text-content-primary" />
                     </button>
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center gap-2 w-full h-32
                                     border-2 border-dashed border-surface-border rounded-xl
                                     cursor-pointer hover:border-brand-500 transition-colors">
-                    <FileImage className="w-8 h-8 text-slate-500" />
+                    <FileImage className="w-8 h-8 text-content-muted" />
                     <span className="text-sm text-content-secondary">Cliquez pour choisir une image</span>
-                    <span className="text-xs text-slate-600">PNG, JPG, PDF</span>
+                    <span className="text-xs text-content-muted">PNG, JPG, PDF</span>
                     <input type="file" accept="image/*,.pdf" className="hidden"
                       onChange={(e) => e.target.files?.[0] && handleReceiptChange(e.target.files[0])} />
                   </label>
@@ -357,7 +357,7 @@ export default function SubscribePage() {
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {submitting ? 'Envoi en cours…' : 'Envoyer ma demande'}
                 </button>
-                <p className="text-xs text-slate-500 text-center">Traitement sous 24h après réception.</p>
+                <p className="text-xs text-content-muted text-center">Traitement sous 24h après réception.</p>
               </div>
             </div>
           </div>
@@ -365,9 +365,9 @@ export default function SubscribePage() {
       </div>
 
       {/* Pied de page */}
-      <p className="relative text-center text-xs text-slate-600 mt-8">
+      <p className="relative text-center text-xs text-content-muted mt-8">
         En vous abonnant, vous acceptez notre{' '}
-        <a href="/privacy" className="text-content-secondary hover:text-slate-300 underline underline-offset-2 transition-colors">
+        <a href="/privacy" className="text-content-secondary hover:text-content-primary underline underline-offset-2 transition-colors">
           Politique de confidentialité
         </a>
       </p>

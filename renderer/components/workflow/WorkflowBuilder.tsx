@@ -79,9 +79,9 @@ interface Snapshot {
   name: string;
 }
 
-const inputStyle = "w-full bg-slate-100 border border-slate-200 rounded-xl text-sm text-black px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all";
-const labelStyle = "text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5 block";
-const sectionStyle = "p-4 bg-white border border-slate-200 rounded-2xl space-y-3 shadow-sm";
+const inputStyle = "w-full bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500/20 transition-all";
+const labelStyle = "text-[10px] uppercase font-bold tracking-widest text-content-muted mb-1.5 block";
+const sectionStyle = "p-4 bg-surface-card border border-surface-border rounded-2xl space-y-3 shadow-sm";
 
 // ── Nœud visuel ──────────────────────────────────────────────────────────────
 function CanvasNode({
@@ -143,7 +143,7 @@ function CanvasNode({
       )}
 
       {selected && (
-        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="absolute -top-2.5 -right-2.5 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-all z-30 scale-90 hover:scale-100">
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="absolute -top-2.5 -right-2.5 bg-red-500 text-content-primary rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-all z-30 scale-90 hover:scale-100">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       )}
@@ -173,17 +173,17 @@ function NodeEditor({
   const actorType = getActorType();
 
   return (
-    <div className="bg-slate-50 rounded-2xl p-5 space-y-6 border border-slate-200 shadow-xl animate-in slide-in-from-right-4 overflow-y-auto max-h-full scrollbar-thin">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div className="flex items-center gap-2.5"><span className={`p-2 rounded-xl ${cfg.bg} border ${cfg.color} ${cfg.text}`}>{cfg.icon}</span><div><p className="font-bold text-black text-sm leading-none">{cfg.label}</p><p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mt-1">Configuration</p></div></div>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-200 text-content-secondary hover:text-black transition-colors"><X className="w-4 h-4" /></button>
+    <div className="bg-surface rounded-2xl p-5 space-y-6 border border-surface-border shadow-xl animate-in slide-in-from-right-4 overflow-y-auto max-h-full scrollbar-thin">
+      <div className="flex items-center justify-between border-b border-surface-border pb-4">
+        <div className="flex items-center gap-2.5"><span className={`p-2 rounded-xl ${cfg.bg} border ${cfg.color} ${cfg.text}`}>{cfg.icon}</span><div><p className="font-bold text-content-primary text-sm leading-none">{cfg.label}</p><p className="text-[10px] text-content-muted uppercase tracking-wider font-semibold mt-1">Configuration</p></div></div>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary hover:text-content-primary transition-colors"><X className="w-4 h-4" /></button>
       </div>
       
       <div className="space-y-4">
-       <div><label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5 block">Libellé de l&apos;étape</label><input className={inputStyle} value={node.label} onChange={e => onUpdate({ label: e.target.value } as Partial<WorkflowNode>)} /></div>
+       <div><label className="text-[10px] uppercase font-bold tracking-widest text-content-muted mb-1.5 block">Libellé de l&apos;étape</label><input className={inputStyle} value={node.label} onChange={e => onUpdate({ label: e.target.value } as Partial<WorkflowNode>)} /></div>
 
        <div>
-         <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mb-1.5 block">Instructions détaillées (pour l&apos;agent)</label>
+         <label className="text-[10px] uppercase font-bold tracking-widest text-content-muted mb-1.5 block">Instructions détaillées (pour l&apos;agent)</label>
          <textarea 
            className={`${inputStyle} min-h-[80px] py-3 text-xs leading-relaxed`} 
            value={node.instructions ?? ''} 
@@ -192,8 +192,8 @@ function NodeEditor({
          />
        </div>
         {node.type !== 'END' && node.type !== 'CONDITION' && (
-          <div className="p-4 bg-white border border-slate-200 rounded-2xl space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-blue-600 mb-1">
+          <div className="p-4 bg-surface-card border border-surface-border rounded-2xl space-y-4 shadow-sm">
+            <div className="flex items-center gap-2 text-brand-600 mb-1">
               <UserCircle className="w-4 h-4" />
               <span className="text-[10px] font-black uppercase tracking-widest">Intervenant Requis</span>
             </div>
@@ -211,7 +211,7 @@ function NodeEditor({
                     <button
                       key={t.id}
                       onClick={() => onUpdate({ assigned_role: t.id === 'STAFF' ? (staffList[0]?.id || 'STAFF') : t.id } as Partial<WorkflowNode>)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[10px] font-bold transition-all ${actorType === t.id ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[10px] font-bold transition-all ${actorType === t.id ? 'bg-brand-600 border-brand-600 text-content-primary shadow-md' : 'bg-surface-input border-surface-border text-content-muted hover:border-surface-border'}`}
                     >
                       {t.icon} {t.label}
                     </button>
@@ -352,28 +352,28 @@ function NodeEditor({
       </div>
 
       {outgoingEdges.length > 0 && (
-        <div className="space-y-3 pt-4 border-t border-slate-200">
-          <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">Transitions sortantes</label>
+        <div className="space-y-3 pt-4 border-t border-surface-border">
+          <label className="text-[10px] uppercase font-bold tracking-widest text-content-muted block">Transitions sortantes</label>
           {outgoingEdges.map(edge => (
-            <div key={edge.id} className="p-3 bg-slate-100/50 rounded-xl border border-slate-200 space-y-3">
+            <div key={edge.id} className="p-3 bg-surface-input/50 rounded-xl border border-surface-border space-y-3">
               <div className="flex items-center gap-2">
-                <input className="flex-1 bg-white border border-slate-200 rounded-lg text-[11px] px-2 py-1.5 outline-none focus:border-blue-400 transition-all font-bold text-black" value={edge.label} onChange={e => onUpdateEdge(edge.id, { label: e.target.value })} placeholder="Nom de l'action" />
+                <input className="flex-1 bg-surface-input border border-surface-border rounded-lg text-[11px] px-2 py-1.5 outline-none focus:border-brand-400 transition-all font-bold text-content-primary" value={edge.label} onChange={e => onUpdateEdge(edge.id, { label: e.target.value })} placeholder="Nom de l'action" />
                 <button onClick={() => setConfirmDelete(edge.id)} className="p-1.5 text-content-secondary hover:text-status-error transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {EDGE_COLORS.map(c => (
-                  <button key={c.value} onClick={() => onUpdateEdge(edge.id, { color: c.value })} className={`w-4.5 h-4.5 rounded-full border-2 transition-all hover:scale-110 ${edge.color === c.value || (!edge.color && c.value === '#94a3b8') ? 'border-black scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value, width: '18px', height: '18px' }} title={c.label} />
+                  <button key={c.value} onClick={() => onUpdateEdge(edge.id, { color: c.value })} className={`w-4.5 h-4.5 rounded-full border-2 transition-all hover:scale-110 ${edge.color === c.value || (!edge.color && c.value === '#94a3b8') ? 'border-content-primary scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value, width: '18px', height: '18px' }} title={c.label} />
                 ))}
               </div>
             </div>
           ))}
         </div>
       )}
-      <div className="pt-4 border-t border-slate-100">
+      <div className="pt-4 border-t border-surface-border">
         {!isInitial && node.type !== 'END' && (
-          <button onClick={onSetInitial} className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-2 py-1"><Maximize className="w-3 h-3" /> Définir comme point de départ</button>
+          <button onClick={onSetInitial} className="text-xs text-brand-600 hover:text-brand-700 font-bold flex items-center gap-2 py-1"><Maximize className="w-3 h-3" /> Définir comme point de départ</button>
         )}
-        {isInitial && <p className="text-xs text-blue-600 font-bold flex items-center gap-1.5">⭐ Étape de lancement</p>}
+        {isInitial && <p className="text-xs text-brand-600 font-bold flex items-center gap-1.5">⭐ Étape de lancement</p>}
       </div>
 
       {confirmDelete && (
@@ -625,35 +625,35 @@ export function WorkflowBuilder({
   };
 
   return (
-    <div className={`flex flex-col gap-4 transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 bg-[#faf9f6] p-8' : ''}`} style={{ height: isFullscreen ? '100vh' : 'calc(100vh - 160px)' }}>
+    <div className={`flex flex-col gap-4 transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 bg-surface p-8' : ''}`} style={{ height: isFullscreen ? '100vh' : 'calc(100vh - 160px)' }}>
       {/* Barre d'outils */}
       <div className="flex items-center gap-4 flex-wrap shrink-0">
-        <div className="flex-1 min-w-48"><input className="w-full bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" value={name} onChange={e => { setName(e.target.value); }} onBlur={takeSnapshot} placeholder="Nom du workflow..." /></div>
+        <div className="flex-1 min-w-48"><input className="w-full bg-surface-card border border-surface-border rounded-xl text-sm font-bold text-content-primary px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" value={name} onChange={e => { setName(e.target.value); }} onBlur={takeSnapshot} placeholder="Nom du workflow..." /></div>
         
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-          <button onClick={() => window.print()} className="p-2 rounded-lg text-content-secondary hover:text-slate-600 hover:bg-slate-50 transition-all" title="Imprimer le workflow"><Printer className="w-4 h-4" /></button>
-          <div className="w-px h-4 bg-slate-100 mx-1" />
-          <button onClick={undo} disabled={historyIndex <= 0} className="p-2 rounded-lg text-black hover:text-slate-600 hover:bg-slate-50 disabled:opacity-20 transition-all" title="Annuler (Ctrl+Z)"><Undo2 className="w-4 h-4" /></button>
-          <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 rounded-lg text-slate-600 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-20 transition-all border-r border-slate-100 mr-1" title="Rétablir (Ctrl+Y)"><Redo2 className="w-4 h-4" /></button>
-          <div className="flex items-center border-r border-slate-100 pr-1 mr-1">
-            <button onClick={zoomOut} className="p-2 rounded-lg text-content-secondary hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom -"><ZoomOut className="w-4 h-4" /></button>
-            <span className="text-xs font-bold w-12 text-center text-slate-600 tracking-tighter">{Math.round(zoom * 100)}%</span>
-            <button onClick={zoomIn} className="p-2 rounded-lg text-content-secondary hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom +"><ZoomIn className="w-4 h-4" /></button>
-            <button onClick={centerDiagram} className="p-2 ml-1 rounded-lg text-content-secondary hover:text-blue-600 hover:bg-blue-50 transition-all" title="Centrer le diagramme"><LocateFixed className="w-4 h-4" /></button>
+        <div className="flex items-center gap-1 bg-surface-card border border-surface-border rounded-xl p-1 shadow-sm">
+          <button onClick={() => window.print()} className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-all" title="Imprimer le workflow"><Printer className="w-4 h-4" /></button>
+          <div className="w-px h-4 bg-surface-border mx-1" />
+          <button onClick={undo} disabled={historyIndex <= 0} className="p-2 rounded-lg text-content-primary hover:text-content-secondary hover:bg-surface-hover disabled:opacity-20 transition-all" title="Annuler (Ctrl+Z)"><Undo2 className="w-4 h-4" /></button>
+          <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover disabled:opacity-20 transition-all border-r border-surface-border mr-1" title="Rétablir (Ctrl+Y)"><Redo2 className="w-4 h-4" /></button>
+          <div className="flex items-center border-r border-surface-border pr-1 mr-1">
+            <button onClick={zoomOut} className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-all" title="Zoom -"><ZoomOut className="w-4 h-4" /></button>
+            <span className="text-xs font-bold w-12 text-center text-content-secondary tracking-tighter">{Math.round(zoom * 100)}%</span>
+            <button onClick={zoomIn} className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-all" title="Zoom +"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={centerDiagram} className="p-2 ml-1 rounded-lg text-content-secondary hover:text-brand-600 hover:bg-badge-brand transition-all" title="Centrer le diagramme"><LocateFixed className="w-4 h-4" /></button>
           </div>
-          <button onClick={() => setIsFullscreen(!isFullscreen)} className={`p-2 rounded-lg transition-all ${isFullscreen ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-content-secondary hover:text-slate-600 hover:bg-slate-50'}`} title="Plein écran">
+          <button onClick={() => setIsFullscreen(!isFullscreen)} className={`p-2 rounded-lg transition-all ${isFullscreen ? 'bg-brand-600 text-content-primary shadow-lg shadow-brand-200' : 'text-content-secondary hover:text-content-primary hover:bg-surface-hover'}`} title="Plein écran">
             {isFullscreen ? <Shrink className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto max-w-full">
-          <span className="text-[9px] font-black text-black uppercase px-1 mr-1 tracking-[0.2em] shrink-0 flex items-center gap-1"><MousePointer2 className="w-3 h-3" /> Glisser</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card border border-surface-border rounded-xl shadow-sm overflow-x-auto max-w-full">
+          <span className="text-[9px] font-black text-content-primary uppercase px-1 mr-1 tracking-[0.2em] shrink-0 flex items-center gap-1"><MousePointer2 className="w-3 h-3" /> Glisser</span>
           {(Object.keys(NODE_CONFIG) as NodeType[]).map(type => (
             <button key={type} onMouseDown={(e) => setDraggingNew({ type, x: e.clientX, y: e.clientY })} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-grab active:cursor-grabbing transition-all ${NODE_CONFIG[type].bg} ${NODE_CONFIG[type].color} ${NODE_CONFIG[type].text} hover:shadow-md active:scale-95 whitespace-nowrap`}><GripVertical className="w-3 h-3 opacity-30" /> {NODE_CONFIG[type].label}</button>
           ))}
         </div>
 
-        <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center gap-2 px-6 py-2.5 text-sm font-bold shadow-lg shadow-blue-200 transition-all disabled:opacity-50 ml-auto">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}{saved ? 'Enregistré' : 'Enregistrer'}</button>
+        <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-content-primary rounded-xl flex items-center gap-2 px-6 py-2.5 text-sm font-bold shadow-lg shadow-brand-200 transition-all disabled:opacity-50 ml-auto">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}{saved ? 'Enregistré' : 'Enregistrer'}</button>
       </div>
 
       {/* ── Bandeau d'information juridique ── */}
@@ -730,7 +730,7 @@ export function WorkflowBuilder({
                             <div 
                               onClick={(e) => { e.stopPropagation(); setSelectedEdge(edge.id); setSelectedNode(null); }}
                               style={{ 
-                                backgroundColor: 'white', 
+                                backgroundColor: 'var(--surface-card)', 
                                 borderColor: color, 
                                 borderWidth: (isSelected ? 2 : 1) / zoom,
                                 fontSize: 9 / zoom,
@@ -749,7 +749,7 @@ export function WorkflowBuilder({
                               <button 
                                 onClick={(e) => { e.stopPropagation(); handleDeleteEdge(edge.id); }}
                                 style={{ position: 'absolute', top: -12 / zoom, right: -12 / zoom, width: 24 / zoom, height: 24 / zoom, pointerEvents: 'all' }}
-                                className="bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+                                className="bg-red-500 hover:bg-red-600 text-content-primary rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
                                 title="Supprimer la transition"
                               >
                                 <Trash2 style={{ width: 12 / zoom, height: 12 / zoom }} />

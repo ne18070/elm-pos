@@ -72,10 +72,10 @@ export function Modal({ title, onClose, children, size = 'md', footer, guard = f
       >
         {/* En-tête */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border shrink-0">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 className="text-lg font-semibold text-content-primary">{title}</h2>
           <button
             onClick={requestClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -100,7 +100,7 @@ export function Modal({ title, onClose, children, size = 'md', footer, guard = f
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-white">Annuler la saisie ?</p>
+                  <p className="font-semibold text-content-primary">Annuler la saisie ?</p>
                   <p className="text-sm text-content-secondary mt-1">
                     Les informations saisies seront perdues.
                   </p>
@@ -155,7 +155,7 @@ export function ConfirmModal({
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-bold text-white">{title}</h3>
+            <h3 className="text-lg font-bold text-content-primary">{title}</h3>
             <p className="text-sm text-content-secondary leading-relaxed">{message}</p>
           </div>
         </div>

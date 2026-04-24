@@ -120,11 +120,11 @@ export function InvoiceModal({
                 <Printer className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Imprimer la facture</h2>
-                <p className="text-xs text-slate-500">Choisissez un modèle</p>
+                <h2 className="text-base font-bold text-content-primary">Imprimer la facture</h2>
+                <p className="text-xs text-content-muted">Choisissez un modèle</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -143,10 +143,10 @@ export function InvoiceModal({
                   }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${selectedId === t.id ? 'text-white' : 'text-slate-300'}`}>
+                    <p className={`text-sm font-semibold truncate ${selectedId === t.id ? 'text-content-primary' : 'text-content-primary'}`}>
                       {t.name}
                     </p>
-                    <span className="text-xs text-slate-500">{FORMAT_BADGE[t.format]}{t.copies === 2 ? ' · Duplicata' : ''}</span>
+                    <span className="text-xs text-content-muted">{FORMAT_BADGE[t.format]}{t.copies === 2 ? ' · Duplicata' : ''}</span>
                   </div>
                   {selectedId === t.id && (
                     <span className="text-xs text-content-brand font-medium shrink-0">Sélectionné</span>

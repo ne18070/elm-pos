@@ -92,8 +92,8 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
         </div>
         <div className="card p-4 text-center">
           <p className="text-xs text-content-secondary mb-1">Revendeurs</p>
-          <p className="text-lg font-bold text-white">{loading ? '…' : resellerGroups.length}</p>
-          <p className="text-xs text-slate-500">{loading ? '' : `${totalOrders} cmd`}</p>
+          <p className="text-lg font-bold text-content-primary">{loading ? '…' : resellerGroups.length}</p>
+          <p className="text-xs text-content-primary">{loading ? '' : `${totalOrders} cmd`}</p>
         </div>
         <div className="card p-4 text-center">
           <p className="text-xs text-content-secondary mb-1">Clients</p>
@@ -113,7 +113,7 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
             className="input pl-9"
           />
           {resellerSearch && (
-            <button onClick={() => setResellerSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white">
+            <button onClick={() => setResellerSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-content-primary">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -146,7 +146,7 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
               className="input pl-9"
             />
             {productSearch && (
-              <button onClick={() => setProductSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white">
+              <button onClick={() => setProductSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-content-primary">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -181,8 +181,8 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
         </div>
       ) : resellerGroups.length === 0 ? (
         <div className="card p-8 text-center">
-          <Store className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">
+          <Store className="w-8 h-8 text-content-muted mx-auto mb-2" />
+          <p className="text-sm text-content-primary">
             {hasFilter ? 'Aucun résultat pour ces filtres' : 'Aucune vente grossiste sur la période'}
           </p>
         </div>
@@ -201,13 +201,13 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
                   onClick={() => setExpanded(isExpanded ? null : r.reseller_id)}
                   className="w-full p-4 flex items-center gap-3 text-left hover:bg-surface-hover transition-colors"
                 >
-                  <span className="text-xs font-mono text-slate-500 w-5 shrink-0">{i + 1}</span>
+                  <span className="text-xs font-mono text-content-primary w-5 shrink-0">{i + 1}</span>
                   <div className="w-9 h-9 rounded-xl bg-badge-warning border border-status-warning/50 flex items-center justify-center text-sm font-bold text-status-warning shrink-0">
                     {r.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{r.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-semibold text-content-primary truncate">{r.name}</p>
+                    <p className="text-xs text-content-primary">
                       {r.order_ids.size} cmd
                       {r.clients.size > 0 && ` · ${r.clients.size} client${r.clients.size > 1 ? 's' : ''}`}
                       {` · ${r.products.size} produit${r.products.size > 1 ? 's' : ''}`}
@@ -266,7 +266,7 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
                                   <div className="h-full bg-amber-700 rounded-full" style={{ width: `${pct}%` }} />
                                 </div>
                               </div>
-                              <span className="text-xs text-slate-500 w-16 text-right shrink-0">
+                              <span className="text-xs text-content-primary w-16 text-right shrink-0">
                                 {p.quantity} unités
                               </span>
                             </div>
@@ -285,3 +285,5 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
     </>
   );
 }
+
+

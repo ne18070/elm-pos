@@ -103,7 +103,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     setTimeout(() => barcodeInputRef.current?.focus(), 50);
   }
 
-  // Quand le champ barcode reçoit Enter (scanner) → désactiver le mode scan
+  // Quand le champ barcode reçoit Enter (scanner) —désactiver le mode scan
   function handleBarcodeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -178,7 +178,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
               ) : form.image_url ? (
                 <img src={form.image_url} alt="Aperçu" className="w-full h-full object-cover" />
               ) : (
-                <Upload className="w-6 h-6 text-slate-600" />
+                <Upload className="w-6 h-6 text-content-muted" />
               )}
             </div>
 
@@ -201,7 +201,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                   <X className="w-3 h-3" /> Supprimer
                 </button>
               )}
-              <p className="text-xs text-slate-500">JPG, PNG, WEBP · max 5 Mo</p>
+              <p className="text-xs text-content-primary">JPG, PNG, WEBP · max 5 Mo</p>
             </div>
           </div>
           <input
@@ -260,7 +260,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
               onChange={(e) => update('category_id', e.target.value)}
               className="input"
             >
-              <option value="">— Sans catégorie —</option>
+              <option value="">—Sans catégorie —</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -332,7 +332,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             onChange={(e) => update('track_stock', e.target.checked)}
             className="w-4 h-4 rounded"
           />
-          <label htmlFor="track_stock" className="text-sm text-slate-300 cursor-pointer flex-1">
+          <label htmlFor="track_stock" className="text-sm text-content-primary cursor-pointer flex-1">
             Gérer le stock
           </label>
           {form.track_stock && (
@@ -357,13 +357,13 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
               onChange={(e) => update('unit', e.target.value)}
               className="input"
             >
-              <option value="">— Choisir une unité —</option>
+              <option value="">—Choisir une unité —</option>
               {stockUnits.map((u) => (
                 <option key={u} value={u}>{u}</option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 mt-1">
-              Gérez la liste dans Paramètres → Unités de stock
+            <p className="text-xs text-content-primary mt-1">
+              Gérez la liste dans Paramètres —Unités de stock
             </p>
           </div>
         )}
@@ -383,7 +383,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
           </div>
 
           {variants.length === 0 ? (
-            <p className="text-xs text-slate-500 italic">Aucune variante — le produit est vendu tel quel.</p>
+            <p className="text-xs text-content-primary italic">Aucune variante —le produit est vendu tel quel.</p>
           ) : (
             <div className="space-y-2">
               {variants.map((vr) => (
@@ -411,7 +411,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                       step="0.01"
                       min="0"
                     />
-                    <span className="text-[10px] text-slate-500 pl-1">prix de vente</span>
+                    <span className="text-[10px] text-content-primary pl-1">prix de vente</span>
                   </div>
                   {/* Consommation stock */}
                   {form.track_stock && (
@@ -425,7 +425,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                         step="0.001"
                         min="0.001"
                       />
-                      <span className="text-[10px] text-slate-500 pl-1">
+                      <span className="text-[10px] text-content-primary pl-1">
                         {form.unit ? form.unit : 'unité'}/vente
                       </span>
                     </div>
@@ -434,7 +434,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                   <button
                     type="button"
                     onClick={() => removeVariant(vr.id)}
-                    className="text-slate-500 hover:text-status-error transition-colors shrink-0"
+                    className="text-content-primary hover:text-status-error transition-colors shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -453,7 +453,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             onChange={(e) => update('is_active', e.target.checked)}
             className="w-4 h-4 rounded"
           />
-          <label htmlFor="is_active" className="text-sm text-slate-300 cursor-pointer">
+          <label htmlFor="is_active" className="text-sm text-content-primary cursor-pointer">
             Produit actif (visible en caisse)
           </label>
         </div>
@@ -461,3 +461,4 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     </Modal>
   );
 }
+

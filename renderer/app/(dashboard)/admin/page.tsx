@@ -25,10 +25,10 @@ import { canManageTeam, hasRole } from '@/lib/permissions';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
-  owner:   { label: 'Propriétaire',   color: 'text-indigo-900 bg-indigo-100 border-indigo-200 dark:text-indigo-400 dark:bg-indigo-900/20 dark:border-indigo-800' },
-  admin:   { label: 'Administrateur', color: 'text-brand-900 bg-brand-100 border-brand-200 dark:text-content-brand dark:bg-badge-brand dark:border-brand-800' },
-  manager: { label: 'Manager',        color: 'text-purple-900 bg-purple-100 border-purple-200 dark:text-status-purple dark:bg-badge-purple dark:border-purple-800' },
-  staff:   { label: 'Caissier',       color: 'text-slate-900 bg-slate-100 border-slate-200 dark:text-slate-300 dark:bg-surface-card dark:border-slate-700' },
+  owner:   { label: 'Propriétaire',   color: 'text-status-orange bg-badge-orange border-status-orange/40' },
+  admin:   { label: 'Administrateur', color: 'text-content-brand bg-badge-brand border-status-brand/40' },
+  manager: { label: 'Manager',        color: 'text-status-teal bg-badge-teal border-status-teal/40' },
+  staff:   { label: 'Caissier',       color: 'text-content-secondary bg-surface-card border-surface-border' },
 };
 
 const ROLE_LEGENDS: Record<string, Record<UserRole, string>> = {
@@ -71,7 +71,7 @@ function RoleLegend({ businessType, allTypes }: { businessType?: string; allType
     <div className="card p-5 space-y-4 mt-6 bg-brand-500/5 border-brand-500/20">
       <div className="flex items-center gap-2 text-content-brand">
         <Shield className="w-4 h-4" />
-        <p className="text-xs font-black uppercase tracking-[0.2em]">Guide des rôles — {typeLabel}</p>
+        <p className="text-xs font-black uppercase tracking-[0.2em]">Guide des rôles —{typeLabel}</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,7 +143,7 @@ export default function AdminPage() {
         );
       })
       .catch(() => {
-        // RPC indisponible — garder le fallback
+        // RPC indisponible —garder le fallback
         if (bizList.length === 0 && business) {
           setBizList([{ business, role: user?.role ?? 'staff' } as BusinessMembership]);
         }
@@ -307,9 +307,9 @@ export default function AdminPage() {
       <div className="p-6 border-b border-surface-border">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-white">Administration</h1>
+            <h1 className="text-xl font-bold text-content-primary">Administration</h1>
             {business && (
-              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+              <p className="text-xs text-content-muted mt-0.5 flex items-center gap-1">
                 <Building2 className="w-3 h-3" />
                 {business.name}
               </p>
@@ -324,7 +324,7 @@ export default function AdminPage() {
               key={id}
               onClick={() => navigate ? router.push(navigate) : setTab(id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
+                ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}
             >
               <Icon className="w-4 h-4" />
               {label}
@@ -355,7 +355,7 @@ export default function AdminPage() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white truncate">{user?.full_name}</p>
+                <p className="font-semibold text-content-primary truncate">{user?.full_name}</p>
                 <p className="text-sm text-content-secondary truncate">{user?.email}</p>
                 <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border
                   ${ROLE_LABELS[user?.role ?? 'staff'].color}`}>
@@ -371,7 +371,7 @@ export default function AdminPage() {
             </div>
 
             <div className="card p-5 space-y-4">
-              <h2 className="font-semibold text-white">Informations personnelles</h2>
+              <h2 className="font-semibold text-content-primary">Informations personnelles</h2>
               <div>
                 <label className="label">Nom complet</label>
                 <input
@@ -384,7 +384,7 @@ export default function AdminPage() {
               <div>
                 <label className="label">E-mail</label>
                 <input type="email" value={user?.email ?? ''} className="input opacity-50" disabled />
-                <p className="text-xs text-slate-500 mt-1">L'e-mail ne peut pas être modifié ici.</p>
+                <p className="text-xs text-content-muted mt-1">L'e-mail ne peut pas être modifié ici.</p>
               </div>
               <button
                 onClick={handleSaveProfile}
@@ -397,7 +397,7 @@ export default function AdminPage() {
             </div>
 
             <div className="card p-5 space-y-4">
-              <h2 className="font-semibold text-white">Changer le mot de passe</h2>
+              <h2 className="font-semibold text-content-primary">Changer le mot de passe</h2>
               <div>
                 <label className="label">Nouveau mot de passe</label>
                 <input
@@ -432,13 +432,13 @@ export default function AdminPage() {
 
             {/* ── Abonnement ─────────────────────────────────────────────────── */}
             <div className={`card p-5 space-y-3 border-l-4
-              ${subStatus === 'active'  ? 'border-l-green-500'
-              : subStatus === 'trial'   ? 'border-l-amber-500'
-              : subStatus === 'expired' ? 'border-l-red-500'
-              : 'border-l-slate-600'}`}
+              ${subStatus === 'active'  ? 'border-l-status-success'
+              : subStatus === 'trial'   ? 'border-l-status-warning'
+              : subStatus === 'expired' ? 'border-l-status-error'
+              : 'border-l-surface-border'}`}
             >
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-white flex items-center gap-2">
+                <h2 className="font-semibold text-content-primary flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-content-secondary" />
                   Abonnement
                 </h2>
@@ -461,10 +461,10 @@ export default function AdminPage() {
                   {subStatus === 'active' && (
                     <>
                       <p className="text-sm font-medium text-status-success">
-                        Actif {activePlan ? `— ${activePlan.label}` : ''}
+                        Actif {activePlan ? `—${activePlan.label}` : ''}
                       </p>
                       {subscription?.expires_at && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-content-muted">
                           Valide jusqu'au {new Date(subscription.expires_at).toLocaleDateString('fr-FR')}
                         </p>
                       )}
@@ -473,7 +473,7 @@ export default function AdminPage() {
                   {subStatus === 'trial' && (
                     <>
                       <p className="text-sm font-medium text-status-warning">Période d'essai gratuite</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-content-muted">
                         {trialDays === 0 ? 'Expire aujourd\'hui' : `${trialDays} jour${trialDays > 1 ? 's' : ''} restant${trialDays > 1 ? 's' : ''}`}
                       </p>
                     </>
@@ -495,10 +495,10 @@ export default function AdminPage() {
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white font-medium">
+                <p className="text-sm text-content-primary font-medium">
                   {members.length} agent{members.length !== 1 ? 's' : ''}
                 </p>
-                <p className="text-xs text-slate-500">{business?.name}</p>
+                <p className="text-xs text-content-muted">{business?.name}</p>
               </div>
               {isOwnerOrAdmin && (
                 <button
@@ -554,17 +554,17 @@ export default function AdminPage() {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
-                          <p className={`font-medium text-sm truncate ${member.is_blocked ? 'text-slate-500 line-through' : 'text-white'}`}>
+                          <p className={`font-medium text-sm truncate ${member.is_blocked ? 'text-content-muted line-through' : 'text-content-primary'}`}>
                             {member.full_name}
                           </p>
-                          {isSelf && <span className="text-xs text-slate-500 shrink-0">(vous)</span>}
+                          {isSelf && <span className="text-xs text-content-muted shrink-0">(vous)</span>}
                           {member.is_blocked && (
                             <span className="shrink-0 text-xs text-status-error bg-badge-error border border-status-error px-1.5 py-0.5 rounded-full">
                               Bloqué
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 truncate">{member.email}</p>
+                        <p className="text-xs text-content-muted truncate">{member.email}</p>
                       </div>
 
                       {canManage ? (
@@ -573,11 +573,11 @@ export default function AdminPage() {
                             value={member.role}
                             onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
                             className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer ${badge.color}`}
-                            style={{ background: '#111827', colorScheme: 'dark' }}
+                            style={{ background: 'rgb(var(--surface-card))', color: 'rgb(var(--text-base))' }}
                           >
-                            <option value="staff"   style={{ background: '#111827', color: '#fff' }}>{getCustomRoleLabel('staff', business?.type || 'retail')}</option>
-                            <option value="manager" style={{ background: '#111827', color: '#fff' }}>{getCustomRoleLabel('manager', business?.type || 'retail')}</option>
-                            <option value="admin"   style={{ background: '#111827', color: '#fff' }}>Administrateur</option>
+                            <option value="staff">{getCustomRoleLabel('staff', business?.type || 'retail')}</option>
+                            <option value="manager">{getCustomRoleLabel('manager', business?.type || 'retail')}</option>
+                            <option value="admin">Administrateur</option>
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
                         </div>
@@ -590,7 +590,7 @@ export default function AdminPage() {
                       {canOwnerAct && (
                         <button
                           onClick={() => openReset(member)}
-                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-content-brand hover:bg-badge-brand transition-colors"
+                          className="shrink-0 p-1.5 rounded-lg text-content-muted hover:text-content-brand hover:bg-badge-brand transition-colors"
                           title="Réinitialiser le mot de passe"
                         >
                           <Lock className="w-4 h-4" />
@@ -604,7 +604,7 @@ export default function AdminPage() {
                           className={`shrink-0 p-1.5 rounded-lg transition-colors
                             ${member.is_blocked
                               ? 'text-status-error bg-badge-error hover:bg-badge-error'
-                              : 'text-slate-500 hover:text-status-error hover:bg-badge-error'}`}
+                              : 'text-content-muted hover:text-status-error hover:bg-badge-error'}`}
                           title={member.is_blocked ? 'Débloquer' : 'Bloquer'}
                         >
                           {blockingId === member.id
@@ -616,7 +616,7 @@ export default function AdminPage() {
                       {canManage && (
                         <button
                           onClick={() => handleRemove(member)}
-                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-status-error hover:bg-badge-error transition-colors"
+                          className="shrink-0 p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
                           title="Retirer de l'équipe"
                         >
                           <UserX className="w-4 h-4" />
@@ -655,10 +655,10 @@ export default function AdminPage() {
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white font-medium">
+                <p className="text-sm text-content-primary font-medium">
                   {bizList.length} établissement{bizList.length !== 1 ? 's' : ''}
                 </p>
-                <p className="text-xs text-slate-500">Vous êtes propriétaire ou membre</p>
+                <p className="text-xs text-content-muted">Vous êtes propriétaire ou membre</p>
               </div>
             </div>
 
@@ -678,7 +678,7 @@ export default function AdminPage() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-white text-sm truncate">{biz.name}</p>
+                        <p className="font-medium text-content-primary text-sm truncate">{biz.name}</p>
                         {isActive && (
                           <span className="shrink-0 flex items-center gap-1 text-xs text-content-brand">
                             <Check className="w-3 h-3" /> Actif
@@ -690,7 +690,7 @@ export default function AdminPage() {
                           {biz.organization_name}
                         </p>
                       )}
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-content-muted">
                         {displayCurrency(biz.currency ?? 'XOF')} · {biz.type}
                         {biz.address ? ` · ${biz.address}` : ''}
                       </p>
@@ -705,7 +705,7 @@ export default function AdminPage() {
               })}
 
               {bizList.length === 0 && (
-                <div className="text-center py-12 text-slate-500">
+                <div className="text-center py-12 text-content-muted">
                   <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p>Aucun établissement trouvé</p>
                   <p className="text-xs mt-1">Utilisez le sélecteur dans la barre latérale pour en créer un.</p>
@@ -719,9 +719,9 @@ export default function AdminPage() {
       {resetTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="card p-6 w-full max-w-sm space-y-4">
-            <h2 className="font-semibold text-white">Réinitialiser le mot de passe</h2>
+            <h2 className="font-semibold text-content-primary">Réinitialiser le mot de passe</h2>
             <p className="text-sm text-content-secondary">
-              Nouveau mot de passe pour <span className="text-white font-medium">{resetTarget.full_name}</span>
+              Nouveau mot de passe pour <span className="text-content-primary font-medium">{resetTarget.full_name}</span>
             </p>
             <div>
               <label className="label">Nouveau mot de passe</label>
@@ -772,3 +772,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

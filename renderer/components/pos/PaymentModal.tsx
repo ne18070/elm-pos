@@ -89,7 +89,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [acompteConfirme, setAcompteConfirme] = useState(0);
   const [totalConfirme, setTotalConfirme]     = useState(0);
 
-  // Informations client (acompte) — pré-rempli si un client est sélectionné dans le panier
+  // Informations client (acompte) —pré-rempli si un client est sélectionné dans le panier
   const [customerName, setCustomerName]         = useState(prefilledCustomer?.name ?? '');
   const [customerPhone, setCustomerPhone]       = useState(prefilledCustomer?.phone ?? '');
   const [customerSuggestions, setCustomerSuggestions] = useState<SavedCustomer[]>([]);
@@ -190,7 +190,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         reseller_name:        wholesaleCtx?.reseller.name,
         reseller_client_name: wholesaleCtx?.client?.name,
         reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
-      }).catch(() => notifWarning('Reçu non imprimé — imprimante indisponible'));
+      }).catch(() => notifWarning('Reçu non imprimé —imprimante indisponible'));
       // Ouvre le tiroir-caisse uniquement pour les paiements en espèces
       if (methode === 'cash') openCashDrawer().catch(() => {});
       notifSuccess('Paiement enregistré avec succès');
@@ -214,7 +214,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         (dbPayload as any).hotel_reservation_id = selectedReservation.id;
       }
       await enqueueToSync('create_order', dbPayload);
-      notifWarning('Hors ligne — vente enregistrée, synchronisation automatique à la reconnexion');
+      notifWarning('Hors ligne —vente enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
       setStep('succes');
     } finally {
@@ -305,7 +305,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       (dbPayload as Record<string, unknown>).customer_phone = customerPhone.trim() || null;
       await enqueueToSync('create_order', dbPayload);
       saveCustomer(customerName, customerPhone);
-      notifWarning('Hors ligne — acompte enregistré, synchronisation automatique à la reconnexion');
+      notifWarning('Hors ligne —acompte enregistré, synchronisation automatique à la reconnexion');
       cart.clear();
       setStep('succes');
     } finally {
@@ -423,7 +423,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${methode === m
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
                     }`}
                 >
                   {m === 'cash'         && <Banknote className="w-6 h-6" />}
@@ -438,7 +438,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${methode === 'room_charge'
                       ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
                     }`}
                 >
                   <BedDouble className="w-6 h-6" />
@@ -450,7 +450,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                   ${'partial' === methode
                     ? 'border-amber-500 bg-badge-warning text-status-warning'
-                    : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
+                    : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
                   }`}
               >
                 <SplitSquareHorizontal className="w-6 h-6" />
@@ -490,7 +490,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 <span>TVA</span><span>{fmt(taxAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-white pt-1 border-t border-surface-border">
+            <div className="flex justify-between font-bold text-content-primary pt-1 border-t border-surface-border">
               <span>Total</span><span className="text-content-brand">{fmt(total)}</span>
             </div>
           </div>
@@ -502,7 +502,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 onClick={() => { setNumpad('montant'); setErreur(''); }}
                 className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
               >
-                {montantRecu || <span className="text-slate-500">Appuyer pour saisir</span>}
+                {montantRecu || <span className="text-content-primary">Appuyer pour saisir</span>}
               </button>
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {suggestions.map((v) => (
@@ -600,7 +600,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                         <User className="w-3.5 h-3.5 text-content-brand" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm text-white font-medium truncate">{c.name}</p>
+                        <p className="text-sm text-content-primary font-medium truncate">{c.name}</p>
                         {c.phone && <p className="text-xs text-content-secondary">{c.phone}</p>}
                       </div>
                     </button>
@@ -654,7 +654,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                         <User className="w-3.5 h-3.5 text-content-brand" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm text-white font-medium truncate">{c.name}</p>
+                        <p className="text-sm text-content-primary font-medium truncate">{c.name}</p>
                         {c.phone && <p className="text-xs text-content-secondary">{c.phone}</p>}
                       </div>
                     </button>
@@ -674,7 +674,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs transition-all
                     ${partialMethod === m
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
                     }`}
                 >
                   {m === 'cash'         && <Banknote className="w-5 h-5" />}
@@ -692,7 +692,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               onClick={() => { setNumpad('acompte'); setErreur(''); }}
               className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
             >
-              {acompte || <span className="text-slate-500">Appuyer pour saisir</span>}
+              {acompte || <span className="text-content-primary">Appuyer pour saisir</span>}
             </button>
           </div>
 
@@ -703,7 +703,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 onClick={() => setNumpad('acompteRecu')}
                 className="input text-xl font-bold text-center py-2.5 w-full cursor-pointer hover:border-brand-500 transition-colors"
               >
-                {acompteRecu || <span className="text-slate-500">{fmt(acompteNum)}</span>}
+                {acompteRecu || <span className="text-content-primary">{fmt(acompteNum)}</span>}
               </button>
             </div>
           )}
@@ -712,7 +712,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             <div className="bg-slate-800/50 rounded-xl p-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-content-secondary">Acompte versé</span>
-                <span className="text-white font-semibold">{fmt(acompteNum)}</span>
+                <span className="text-content-primary font-semibold">{fmt(acompteNum)}</span>
               </div>
               <div className="flex justify-between items-center border-t border-slate-700 pt-3">
                 <span className="text-status-warning font-medium">Reste à régler</span>
@@ -781,7 +781,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all
                     ${intouchProvider === p
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
                     }`}
                 >
                   <span className="text-[10px] font-bold">{p.replace('_', ' ')}</span>
@@ -796,7 +796,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               onClick={() => { setNumpad('intouch'); setErreur(''); }}
               className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
             >
-              {intouchPhone || <span className="text-slate-500">7x xxx xx xx</span>}
+              {intouchPhone || <span className="text-content-primary">7x xxx xx xx</span>}
             </button>
           </div>
 
@@ -815,7 +815,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               {chargement ? 'Lancement...' : 'Payer maintenant'}
             </button>
           </div>
-          <p className="text-[10px] text-slate-500 text-center">
+          <p className="text-[10px] text-content-primary text-center">
             Un message de confirmation sera envoyé sur le téléphone du client.
           </p>
         </div>
@@ -830,7 +830,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           </div>
 
           <div>
-            <h3 className="text-xl font-semibold text-white">En attente du client</h3>
+            <h3 className="text-xl font-semibold text-content-primary">En attente du client</h3>
             <p className="text-sm text-content-secondary mt-1">
               Le client vérifie sa facture et appuie sur <strong className="text-content-brand">OK</strong> pour valider
             </p>
@@ -905,12 +905,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           <div className="w-full space-y-3">
             {methode === 'partial' ? (
               <>
-                <h3 className="text-xl font-bold text-white">Acompte enregistré !</h3>
+                <h3 className="text-xl font-bold text-content-primary">Acompte enregistré !</h3>
                 {ordreId && <p className="text-sm text-content-secondary">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
                 <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-content-secondary">Total commande</span>
-                    <span className="text-white font-medium">{fmt(totalConfirme)}</span>
+                    <span className="text-content-primary font-medium">{fmt(totalConfirme)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-content-secondary">Acompte reçu</span>
@@ -930,7 +930,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               </>
             ) : (
               <>
-                <h3 className="text-xl font-bold text-white">Paiement accepté !</h3>
+                <h3 className="text-xl font-bold text-content-primary">Paiement accepté !</h3>
                 {ordreId && <p className="text-sm text-content-secondary">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
                 {methode === 'cash' && rendu > 0 && (
                   <div className="p-3 rounded-xl bg-badge-success border border-status-success">
@@ -944,7 +944,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
           {/* Partage facture */}
           <div className="w-full space-y-2">
-            <p className="text-xs text-slate-500 text-center">Partager la facture</p>
+            <p className="text-xs text-content-primary text-center">Partager la facture</p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => ordre && printReceipt({
@@ -988,3 +988,5 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     </Modal>
   );
 }
+
+

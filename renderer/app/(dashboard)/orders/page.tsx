@@ -95,7 +95,7 @@ export default function OrdersPage() {
         {/* Header */}
         <div className="px-4 py-3 sm:p-6 border-b border-surface-border space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg sm:text-xl font-bold text-white">Commandes</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-content-primary">Commandes</h1>
             <div className="flex items-center gap-2">
               <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <Upload className="w-4 h-4" />
@@ -129,16 +129,16 @@ export default function OrdersPage() {
                 className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   tab === t
                     ? t === 'acompte'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-brand-600 text-white'
-                    : 'text-content-secondary hover:text-white'
+                      ? 'bg-amber-600 text-content-primary'
+                      : 'bg-brand-600 text-content-primary'
+                    : 'text-content-secondary hover:text-content-primary'
                 }`}
               >
                 {TAB_LABELS[t]}
                 {/* Badge compteur acomptes */}
                 {t === 'acompte' && acompteCount > 0 && (
                   <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold ${
-                    tab === 'acompte' ? 'bg-white/20 text-white' : 'bg-amber-600 text-white'
+                    tab === 'acompte' ? 'bg-white/20 text-content-primary' : 'bg-amber-600 text-content-primary'
                   }`}>
                     {acompteCount}
                   </span>
@@ -185,7 +185,7 @@ export default function OrdersPage() {
                         ${selectedOrder?.id === order.id ? 'bg-surface-hover' : ''}
                         ${partial ? 'border-l-2 border-l-amber-600' : ''}`}
                     >
-                      <td className="px-4 py-3 font-mono text-xs text-slate-300 whitespace-nowrap">
+                      <td className="px-4 py-3 font-mono text-xs text-content-primary whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {(order as { source?: string }).source === 'whatsapp' && (
                             <span title="Commande WhatsApp">
@@ -208,18 +208,18 @@ export default function OrdersPage() {
                               <div className="w-4 h-4 rounded-full bg-badge-warning border border-status-warning flex items-center justify-center shrink-0">
                                 <User className="w-2 h-2 text-status-warning" />
                               </div>
-                              <p className="text-sm font-semibold text-white truncate">{order.customer_name}</p>
+                              <p className="text-sm font-semibold text-content-primary truncate">{order.customer_name}</p>
                             </div>
                             {order.customer_phone && (
                               <p className="text-xs text-status-warning pl-5 truncate">{order.customer_phone}</p>
                             )}
                             {(order as { source?: string }).source === 'whatsapp'
                               ? <p className="text-xs text-status-success pl-5 flex items-center gap-1"><MessageCircle className="w-3 h-3" />WhatsApp</p>
-                              : <p className="text-xs text-slate-500 pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
+                              : <p className="text-xs text-content-muted pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
                             }
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-300 truncate">{order.cashier?.full_name ?? '—'}</p>
+                          <p className="text-sm text-content-primary truncate">{order.cashier?.full_name ?? '—'}</p>
                         )}
                       </td>
 
@@ -227,7 +227,7 @@ export default function OrdersPage() {
                         {qty} article{qty !== 1 ? 's' : ''}
                       </td>
 
-                      <td className="px-4 py-3 text-sm font-semibold text-white whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm font-semibold text-content-primary whitespace-nowrap">
                         {fmt(order.total)}
                       </td>
 
@@ -236,16 +236,16 @@ export default function OrdersPage() {
                         {partial ? (
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1 text-content-brand">
-                              <span className="text-xs text-slate-500">versé</span>
+                              <span className="text-xs text-content-muted">versé</span>
                               <span className="font-medium">{fmt(paidAmt)}</span>
                             </div>
                             <div className="flex items-center gap-1 text-status-warning font-semibold">
-                              <span className="text-xs text-slate-500">reste</span>
+                              <span className="text-xs text-content-muted">reste</span>
                               <span>{fmt(remaining)}</span>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-500">—</span>
+                          <span className="text-content-muted">—</span>
                         )}
                       </td>
 

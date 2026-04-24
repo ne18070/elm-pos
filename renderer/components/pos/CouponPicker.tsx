@@ -59,7 +59,7 @@ export function CouponPicker({
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-xl border border-surface-border
-                   text-content-secondary hover:border-slate-500 hover:text-white transition-colors text-xs font-medium"
+                   text-content-secondary hover:border-slate-500 hover:text-content-primary transition-colors text-xs font-medium"
       >
         <Tag className="w-3.5 h-3.5 shrink-0" />
         <span className="flex-1 text-left">
@@ -73,7 +73,7 @@ export function CouponPicker({
       {open && (
         <div className="mt-2 rounded-xl border border-surface-border bg-surface-card overflow-hidden">
           {loading ? (
-            <p className="text-xs text-slate-500 text-center py-3">Chargement…</p>
+            <p className="text-xs text-content-primary text-center py-3">Chargement…</p>
           ) : (
             <div className="max-h-48 overflow-y-auto divide-y divide-surface-border">
               {active.map((coupon) => {
@@ -103,10 +103,10 @@ export function CouponPicker({
 
                     {/* Infos */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-semibold truncate ${selected ? 'text-status-success' : 'text-white'}`}>
+                      <p className={`text-xs font-semibold truncate ${selected ? 'text-status-success' : 'text-content-primary'}`}>
                         {coupon.code}
                       </p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-xs text-content-primary truncate">
                         {couponLabel(coupon, currency)}
                         {coupon.min_order_amount != null && ` · min ${formatCurrency(coupon.min_order_amount, currency)}`}
                         {coupon.min_quantity != null && ` · min ${coupon.min_quantity} articles`}
@@ -125,3 +125,5 @@ export function CouponPicker({
     </div>
   );
 }
+
+

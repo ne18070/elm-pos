@@ -52,7 +52,7 @@ export function DetailPanel({
           <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', resStatusStyle(res.status))}>
             {resStatusLabel(res.status)}
           </span>
-          <h3 className="font-semibold text-white">Chambre {res.room?.number}</h3>
+          <h3 className="font-semibold text-content-primary">Chambre {res.room?.number}</h3>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -62,11 +62,11 @@ export function DetailPanel({
               const html = generateHotelInvoice(res, services, business);
               printHtml(html);
             }}
-            className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover"
+            className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
           >
             <Printer className="w-4 h-4" />
           </button>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -79,11 +79,11 @@ export function DetailPanel({
             {res.guest?.full_name.charAt(0).toUpperCase() ?? '?'}
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">{res.guest?.full_name}</p>
+            <p className="text-sm font-semibold text-content-primary">{res.guest?.full_name}</p>
             {res.guest?.phone && <p className="text-xs text-content-secondary flex items-center gap-1"><Phone className="w-3 h-3" />{res.guest.phone}</p>}
-            {res.guest?.nationality && <p className="text-xs text-slate-500">{res.guest.nationality}</p>}
+            {res.guest?.nationality && <p className="text-xs text-content-primary">{res.guest.nationality}</p>}
             {res.guest?.id_number && (
-              <p className="text-xs text-slate-500 flex items-center gap-1"><BadgeCheck className="w-3 h-3" />{res.guest.id_type} {res.guest.id_number}</p>
+              <p className="text-xs text-content-primary flex items-center gap-1"><BadgeCheck className="w-3 h-3" />{res.guest.id_type} {res.guest.id_number}</p>
             )}
           </div>
         </div>
@@ -92,32 +92,32 @@ export function DetailPanel({
         <div className="card p-4 space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-content-secondary flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />Arrivée</span>
-            <span className="font-medium text-white">{fmt(res.check_in)}</span>
+            <span className="font-medium text-content-primary">{fmt(res.check_in)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-content-secondary flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />Départ</span>
-            <span className="font-medium text-white">{fmt(res.check_out)}</span>
+            <span className="font-medium text-content-primary">{fmt(res.check_out)}</span>
           </div>
           <div className="flex items-center justify-between text-sm border-t border-surface-border pt-2">
-            <span className="text-content-secondary">{nights} nuit{nights > 1 ? 's' : ''} × {fmtMoney(res.price_per_night, currency)}</span>
-            <span className="font-semibold text-white">{fmtMoney(res.total_room, currency)}</span>
+            <span className="text-content-secondary">{nights} nuit{nights > 1 ? 's' : ''} —{fmtMoney(res.price_per_night, currency)}</span>
+            <span className="font-semibold text-content-primary">{fmtMoney(res.total_room, currency)}</span>
           </div>
         </div>
 
         {/* Prestations */}
         <div>
           <p className="text-xs font-semibold text-content-secondary uppercase tracking-wide mb-2">Prestations</p>
-          {services.length === 0 && <p className="text-xs text-slate-500 py-2">Aucune prestation</p>}
+          {services.length === 0 && <p className="text-xs text-content-primary py-2">Aucune prestation</p>}
           {services.map((svc) => (
             <div key={svc.id} className="flex items-center justify-between py-1.5 border-b border-surface-border last:border-0">
               <div>
-                <p className="text-sm text-white">{svc.label}</p>
-                <p className="text-xs text-slate-500">{fmt(svc.service_date)}</p>
+                <p className="text-sm text-content-primary">{svc.label}</p>
+                <p className="text-xs text-content-primary">{fmt(svc.service_date)}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-white">{fmtMoney(svc.amount, currency)}</span>
+                <span className="text-sm font-medium text-content-primary">{fmtMoney(svc.amount, currency)}</span>
                 {(res.status === 'confirmed' || res.status === 'checked_in') && (
-                  <button onClick={() => onDeleteService(svc, res.id)} className="p-1 text-slate-500 hover:text-status-error">
+                  <button onClick={() => onDeleteService(svc, res.id)} className="p-1 text-content-primary hover:text-status-error">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -160,7 +160,7 @@ export function DetailPanel({
               <span>Prestations</span><span>{fmtMoney(res.total_services, currency)}</span>
             </div>
           )}
-          <div className="flex justify-between text-base font-bold text-white border-t border-surface-border pt-2">
+          <div className="flex justify-between text-base font-bold text-content-primary border-t border-surface-border pt-2">
             <span>Total</span><span>{fmtMoney(res.total, currency)}</span>
           </div>
           {res.paid_amount > 0 && (
@@ -231,7 +231,7 @@ export function DetailPanel({
         {res.status === 'confirmed' && (
           <button
             onClick={() => onCheckIn(res)}
-            className="w-full h-10 rounded-xl bg-green-700 hover:bg-green-600 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            className="w-full h-10 rounded-xl bg-green-700 hover:bg-green-600 text-content-primary text-sm font-medium flex items-center justify-center gap-2 transition-colors"
           >
             <LogIn className="w-4 h-4" /> Check-in
           </button>
@@ -239,7 +239,7 @@ export function DetailPanel({
         {res.status === 'checked_in' && (
           <button
             onClick={() => onCheckOut(res)}
-            className="w-full h-10 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+            className="w-full h-10 rounded-xl bg-brand-600 hover:bg-brand-500 text-content-primary text-sm font-medium flex items-center justify-center gap-2 transition-colors"
           >
             <LogOut className="w-4 h-4" /> Check-out &amp; encaisser
           </button>
@@ -256,3 +256,5 @@ export function DetailPanel({
     </div>
   );
 }
+
+

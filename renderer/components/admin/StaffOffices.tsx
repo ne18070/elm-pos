@@ -94,11 +94,11 @@ export function StaffOffices({ staffList, onUpdateStaff }: StaffOfficesProps) {
     <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold text-content-primary flex items-center gap-2">
             <MapIcon className="w-5 h-5 text-content-brand" />
             Espaces & Localisations
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Organisez votre équipe par pays, régions ou bureaux</p>
+          <p className="text-sm text-content-muted mt-1">Organisez votre équipe par pays, régions ou bureaux</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ export function StaffOffices({ staffList, onUpdateStaff }: StaffOfficesProps) {
                 onChange={(e) => setNewOfficeName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addOffice()}
                 placeholder="Nom (ex: France, Étage 1...)"
-                className="bg-transparent border-none focus:ring-0 text-sm px-2 w-48 text-white"
+                className="bg-transparent border-none focus:ring-0 text-sm px-2 w-48 text-content-primary"
               />
               <button onClick={addOffice} className="p-1.5 hover:bg-brand-500/10 text-content-brand rounded-md transition-colors">
                 <Plus className="w-4 h-4" />
@@ -122,7 +122,7 @@ export function StaffOffices({ staffList, onUpdateStaff }: StaffOfficesProps) {
           ) : (
             <button
               onClick={() => setIsAddingOffice(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-surface-card border border-surface-border hover:border-brand-500/50 text-slate-300 hover:text-content-brand rounded-xl transition-all text-sm font-semibold shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-surface-card border border-surface-border hover:border-brand-500/50 text-content-primary hover:text-content-brand rounded-xl transition-all text-sm font-semibold shadow-sm"
             >
               <Plus className="w-4 h-4" />
               Ajouter un espace
@@ -157,7 +157,7 @@ export function StaffOffices({ staffList, onUpdateStaff }: StaffOfficesProps) {
       </div>
 
       {offices.length === 0 && staffByOffice['unassigned'].length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-500 opacity-50">
+        <div className="flex flex-col items-center justify-center py-20 text-content-muted opacity-50">
           <MapIcon className="w-16 h-16 mb-4" />
           <p>Aucun membre du personnel à organiser</p>
         </div>
@@ -191,8 +191,8 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
         isOver 
           ? "border-brand-500 bg-badge-brand ring-4 ring-brand-500/20 scale-[1.02]" 
           : isUnassigned
-            ? "border-slate-800/50 bg-slate-900/20 border-dashed"
-            : "border-surface-border bg-surface-card/50 hover:border-slate-700 hover:bg-surface-card"
+            ? "border-surface-border/50 bg-surface/20 border-dashed"
+            : "border-surface-border bg-surface-card/50 hover:border-surface-border hover:bg-surface-card"
       )}
     >
       {/* Header */}
@@ -200,18 +200,18 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
         <div className="flex items-center gap-3">
           <div className={cn(
             "p-2 rounded-lg",
-            isUnassigned ? "bg-surface-card text-slate-500" : "bg-badge-brand text-content-brand"
+            isUnassigned ? "bg-surface-card text-content-muted" : "bg-badge-brand text-content-brand"
           )}>
             <Icon className="w-4 h-4" />
           </div>
-          <h3 className="font-bold text-white text-sm truncate max-w-[150px]">{name}</h3>
+          <h3 className="font-bold text-content-primary text-sm truncate max-w-[150px]">{name}</h3>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-input text-content-secondary">
             {staff.length}
           </span>
           {onRemove && (
-            <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-status-error transition-all">
+            <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1 text-content-muted hover:text-status-error transition-all">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
@@ -221,7 +221,7 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
       {/* Staff List */}
       <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-[400px] no-scrollbar">
         {staff.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center py-10 text-slate-600 text-[11px] font-medium italic">
+          <div className="h-full flex flex-col items-center justify-center py-10 text-content-muted text-[11px] font-medium italic">
             <ArrowRightLeft className="w-8 h-8 mb-2 opacity-20" />
             Déposez ici
           </div>
@@ -233,15 +233,15 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
               onDragStart={() => onDragStart(s.id)}
               className="flex items-center gap-3 p-2.5 bg-surface-card border border-surface-border rounded-xl cursor-grab active:cursor-grabbing hover:border-brand-500/30 hover:shadow-lg transition-all group/item"
             >
-              <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover/item:text-brand-500 transition-colors" />
+              <GripVertical className="w-3.5 h-3.5 text-content-muted group-hover/item:text-brand-500 transition-colors" />
               <div className="w-8 h-8 rounded-lg bg-surface-hover flex items-center justify-center shrink-0 border border-surface-border">
                 <span className="text-[10px] font-bold text-brand-600 dark:text-content-brand">
                   {s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate leading-tight">{s.name}</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter truncate">{s.position || 'Employé'}</p>
+                <p className="text-xs font-bold text-content-primary truncate leading-tight">{s.name}</p>
+                <p className="text-[9px] text-content-muted font-bold uppercase tracking-tighter truncate">{s.position || 'Employé'}</p>
               </div>
             </div>
           ))

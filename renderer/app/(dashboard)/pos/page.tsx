@@ -137,7 +137,7 @@ export default function PosPage() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-500 hover:text-white hover:bg-surface-hover transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-content-muted hover:text-content-primary hover:bg-surface-hover transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -150,26 +150,26 @@ export default function PosPage() {
                   <button 
                     onClick={() => setLayout('catalog')} 
                     title="Catalogue"
-                    className={`p-2 rounded-lg transition-colors ${layout === 'catalog' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
+                    className={`p-2 rounded-lg transition-colors ${layout === 'catalog' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
                   >
                     <Utensils className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => setLayout('map')} 
                     title="Plan de salle"
-                    className={`p-2 rounded-lg transition-colors ${layout === 'map' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
+                    className={`p-2 rounded-lg transition-colors ${layout === 'map' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
                   >
                     <MapIcon className="w-4 h-4" />
                   </button>
-                  <div className="w-px h-4 bg-slate-700 mx-1" />
+                  <div className="w-px h-4 bg-surface-input mx-1" />
                 </>
               )}
               <button onClick={() => setView('grid')} title="Vue grille"
-                className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
+                className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button onClick={() => setView('list')} title="Vue liste"
-                className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
+                className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
                 <List className="w-4 h-4" />
               </button>
             </div>
@@ -224,11 +224,11 @@ export default function PosPage() {
             />
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
               <button onClick={() => setView('grid')}
-                className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-content-secondary'}`}>
+                className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button onClick={() => setView('list')}
-                className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-content-secondary'}`}>
+                className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary'}`}>
                 <List className="w-4 h-4" />
               </button>
             </div>
@@ -240,7 +240,7 @@ export default function PosPage() {
           {/* FAB panier */}
           <button
             onClick={() => setMobileTab('cart')}
-            className="absolute bottom-4 right-4 h-14 px-5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl shadow-lg flex items-center gap-2.5 transition-colors"
+            className="absolute bottom-4 right-4 h-14 px-5 bg-brand-600 hover:bg-brand-500 text-content-primary rounded-2xl shadow-lg flex items-center gap-2.5 transition-colors"
           >
             <ShoppingCart className="w-5 h-5" />
             <span className="font-semibold">Panier</span>
@@ -258,7 +258,7 @@ export default function PosPage() {
           <div className="px-3 py-2 border-b border-surface-border flex items-center gap-2">
             <button
               onClick={() => setMobileTab('catalog')}
-              className="flex items-center gap-1.5 text-sm text-content-secondary hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-sm text-content-secondary hover:text-content-primary transition-colors"
             >
               <ShoppingCart className="w-4 h-4" />
               ← Retour au catalogue

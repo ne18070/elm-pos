@@ -16,7 +16,7 @@ const TABLE_LABELS: Record<string, string> = {
 
 const EVENT_COLORS: Record<string, string> = {
   INSERT: 'text-status-success',
-  UPDATE: 'text-blue-400',
+  UPDATE: 'text-status-info',
   DELETE: 'text-status-error',
 };
 
@@ -92,7 +92,7 @@ export function TerminalStatus() {
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-surface-border">
             <ArrowUpDown className="w-4 h-4 text-content-brand" />
-            <span className="font-medium text-sm text-white">Synchronisation temps réel</span>
+            <span className="font-medium text-sm text-content-primary">Synchronisation temps réel</span>
             <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${
               status === 'connected'
                 ? 'bg-green-500/10 text-status-success'
@@ -107,7 +107,7 @@ export function TerminalStatus() {
           {/* Active terminals */}
           {terminals.length > 0 && (
             <div className="px-4 py-3 border-b border-surface-border space-y-2">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">
+              <p className="text-xs text-content-muted font-medium uppercase tracking-wide">
                 Terminaux actifs ({terminals.length})
               </p>
               {terminals.map((t) => (
@@ -118,11 +118,11 @@ export function TerminalStatus() {
 
           {/* Recent sync events */}
           <div className="px-4 py-3 space-y-1.5 max-h-48 overflow-y-auto">
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">
+            <p className="text-xs text-content-muted font-medium uppercase tracking-wide mb-2">
               Événements récents
             </p>
             {lastEvents.length === 0 ? (
-              <p className="text-xs text-slate-600 italic">Aucun événement</p>
+              <p className="text-xs text-content-muted italic">Aucun événement</p>
             ) : (
               lastEvents.slice(0, 10).map((e, i) => (
                 <EventRow key={i} event={e} />
@@ -142,8 +142,8 @@ function TerminalRow({ terminal }: { terminal: TerminalInfo }) {
         <Monitor className="w-3 h-3 text-content-brand" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-white truncate">{terminal.user_name}</p>
-        <p className="text-xs text-slate-500 truncate">
+        <p className="text-xs text-content-primary truncate">{terminal.user_name}</p>
+        <p className="text-xs text-content-muted truncate">
           <PageLabel pathname={terminal.pathname} />
         </p>
       </div>
@@ -160,8 +160,8 @@ function EventRow({ event }: { event: RealtimeEvent }) {
           : event.eventType === 'UPDATE' ? '~màj'
           : '-suppr'}
       </span>
-      <span className="text-slate-300">{TABLE_LABELS[event.table] ?? event.table}</span>
-      <span className="ml-auto text-slate-600 shrink-0">
+      <span className="text-content-primary">{TABLE_LABELS[event.table] ?? event.table}</span>
+      <span className="ml-auto text-content-muted shrink-0">
         {formatDistanceToNow(event.at, { addSuffix: true, locale: fr })}
       </span>
     </div>

@@ -25,17 +25,17 @@
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --brand-600-rgb: 2, 132, 199;
 
-    /* Surface tokens — dark par défaut (valeurs RGB espace pour Tailwind opacity) */
-    --surface:        15 23 42;
-    --surface-card:   30 41 59;
-    --surface-input:  51 65 85;
-    --surface-border: 71 85 105;
+    /* Surface tokens — dark par défaut */
+    --surface:        15 23 42;    /* slate-900 */
+    --surface-card:   21 32 54;    /* slate-800/900 mix plus profond */
+    --surface-input:  30 41 59;    /* slate-800 */
+    --surface-border: 51 65 85;    /* slate-700 */
     --surface-hover:  30 41 59;
 
-    /* Text tokens — pour les classes composants et la cascade */
-    --text-base:        241 245 249;  /* slate-100 */
+    /* Text tokens */
+    --text-base:        248 250 252;  /* slate-50 */
     --text-secondary:   148 163 184;  /* slate-400 */
-    --text-placeholder: 100 116 139;  /* slate-500 */
+    --text-placeholder: 71 85 105;   /* slate-600 */
 
     /* Status tokens — texte & icônes (dark : couleurs vives) */
     --color-success:  74 222 128;   /* green-400 */
@@ -43,29 +43,29 @@
     --color-error:    248 113 113;  /* red-400 */
     --color-info:     56 189 248;   /* sky-400 */
 
-    /* Badge tokens — fonds de pastilles statut (dark : teintes sombres à 100%) */
-    --badge-success:  27 52 35;
-    --badge-warning:  64 36 12;
-    --badge-error:    57 17 17;
-    --badge-info:     11 42 65;
+    /* Badge tokens — fonds (dark : teintes sombres vibrantes) */
+    --badge-success:  13 45 30;
+    --badge-warning:  55 35 10;
+    --badge-error:    55 15 20;
+    --badge-info:     15 40 70;
 
-    /* Surface overlay (fond le plus profond, ex-bg-slate-950) */
+    /* Surface overlay */
     --surface-overlay: 2 6 23;
 
     /* Texte de marque adaptatif */
     --text-brand: 56 189 248;       /* brand-400 */
 
     /* Status étendu */
-    --color-brand:  56 189 248;     /* brand-400 */
-    --color-teal:   45 212 191;     /* teal-400 */
-    --color-purple: 192 132 252;    /* purple-400 */
-    --color-orange: 251 146 60;     /* orange-400 */
+    --color-brand:  56 189 248;
+    --color-teal:   45 212 191;
+    --color-purple: 192 132 252;
+    --color-orange: 251 146 60;
 
     /* Badge étendu */
-    --badge-brand:  12 74 110;      /* sky-900 */
-    --badge-teal:   19 78 74;       /* teal-900 */
-    --badge-purple: 88 28 135;      /* purple-900 */
-    --badge-orange: 124 45 18;      /* orange-900 */
+    --badge-brand:  12 45 70;
+    --badge-teal:   15 50 50;
+    --badge-purple: 45 20 65;
+    --badge-orange: 60 25 10;
   }
 
 
@@ -81,7 +81,7 @@
     @apply bg-surface-border rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: #94a3b8;
+    background-color: #64748b;
   }
 
   /* Focus ring */
@@ -92,29 +92,33 @@
 
 @layer components {
   .card {
-    @apply bg-surface-card rounded-xl shadow-card;
+    @apply bg-surface-card rounded-xl shadow-card border border-surface-border/30;
   }
 
   .btn-primary {
     @apply bg-brand-600 hover:bg-brand-500 active:bg-brand-700
-           text-white font-semibold rounded-xl
-           px-4 py-2.5 transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           text-white font-bold rounded-xl
+           px-4 py-2.5 transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-lg shadow-brand-500/10 active:scale-95;
   }
 
   .btn-secondary {
     @apply bg-surface-input hover:bg-surface-border active:bg-surface-card
-           font-medium rounded-xl
-           px-4 py-2.5 transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           font-bold rounded-xl
+           px-4 py-2.5 transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed
+           border border-surface-border/50
+           active:scale-95;
     color: rgb(var(--text-base));
   }
 
   .btn-danger {
     @apply bg-red-600 hover:bg-red-500 active:bg-red-700
-           text-white font-semibold rounded-xl
-           px-4 py-2.5 transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           text-white font-bold rounded-xl
+           px-4 py-2.5 transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-lg shadow-red-500/10 active:scale-95;
   }
 
   .input {
@@ -129,272 +133,106 @@
   }
 
   .label {
-    @apply block text-sm font-medium mb-1.5;
-    color: rgb(var(--text-secondary));
+    @apply block text-[10px] font-black uppercase tracking-widest mb-1.5;
+    color: rgb(var(--text-placeholder));
   }
 }
 
-/* ─── MODE CLAIR ────────────────────────────────────────────────────────────
-   Overrides hors @layer + !important pour battre les classes Tailwind compilées.
-   Les zones .theme-dark (sidebar, landing page…) conservent toujours le thème
-   sombre via leurs propres variables CSS — aucun override aside .* nécessaire.
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ─── MODE CLAIR ──────────────────────────────────────────────────────────── */
 
-/* Tokens light — les bg-surface* et border-surface-border s'adaptent automatiquement */
 [data-theme="light"] {
-  --surface:        248 250 252;
+  --surface:        248 250 252;  /* slate-50 */
   --surface-card:   255 255 255;
   --surface-input:  255 255 255;
-  --surface-border: 226 232 240;
+  --surface-border: 226 232 240;  /* slate-200 */
   --surface-hover:  241 245 249;
 
-  --text-base:        30 41 59;     /* slate-800 */
+  --text-base:        15 23 42;     /* slate-900 */
   --text-secondary:   71 85 105;    /* slate-600 */
   --text-placeholder: 148 163 184;  /* slate-400 */
 
-  /* Status — versions plus sombres lisibles sur fond blanc */
-  --color-success:  22 163 74;    /* green-600 */
-  --color-warning:  180 83 9;     /* amber-700 */
-  --color-error:    220 38 38;    /* red-600 */
-  --color-info:     2 132 199;    /* sky-600 */
+  /* Status — versions foncées lisibles sur fond blanc/pastel */
+  --color-success:  21 128 61;    /* green-700 */
+  --color-warning:  161 98 7;     /* amber-700 */
+  --color-error:    185 28 28;    /* red-700 */
+  --color-info:     3 105 161;    /* sky-700 */
 
-  /* Badge — pastels lisibles sur fond blanc */
+  /* Badge — pastels très doux */
   --badge-success:  220 252 231;  /* green-100 */
   --badge-warning:  254 243 199;  /* amber-100 */
   --badge-error:    254 226 226;  /* red-100 */
   --badge-info:     224 242 254;  /* sky-100 */
 
-  --surface-overlay: 248 250 252;  /* slate-50 */
+  --surface-overlay: 241 245 249;  /* slate-100 */
   --text-brand:      3 105 161;    /* brand-700 */
   --color-brand:     3 105 161;
   --color-teal:      15 118 110;   /* teal-700 */
   --color-purple:    126 34 206;   /* purple-700 */
   --color-orange:    194 65 12;    /* orange-700 */
-  --badge-brand:     224 242 254;  /* sky-100 */
-  --badge-teal:      204 251 241;  /* teal-100 */
-  --badge-purple:    233 213 255;  /* purple-100 */
-  --badge-orange:    255 237 213;  /* orange-100 */
+  
+  --badge-brand:     224 242 254;
+  --badge-teal:      204 251 241;
+  --badge-purple:    243 232 255;
+  --badge-orange:    255 237 213;
 }
-
-/* ── Texte slate (global, sauf sidebar) ─────────────────────────────────── */
-[data-theme="light"] .text-white     { color: #0f172a !important; }
-[data-theme="light"] .text-slate-100 { color: #1e293b !important; }
-[data-theme="light"] .text-slate-200 { color: #334155 !important; }
-[data-theme="light"] .text-slate-300 { color: #475569 !important; }
-[data-theme="light"] .text-slate-500 { color: #475569 !important; }
-[data-theme="light"] .text-slate-600 { color: #334155 !important; }
-[data-theme="light"] .text-slate-700 { color: #1e293b !important; }
-
-/* ── hover:text-white sur fond clair → sombre (sauf zone .theme-dark) ──── */
-[data-theme="light"] .hover\:text-white:hover { color: #0f172a !important; }
 
 /* ── Inputs, labels, boutons ─────────────────────────────────────────────── */
-/* Select natif : le navigateur ignore parfois background/color sans cet override */
 [data-theme="light"] select.input,
 [data-theme="light"] select.input option {
-  background-color: #f8fafc !important;
+  background-color: #ffffff !important;
   color: #0f172a !important;
 }
-[data-theme="light"] select.input option:checked {
-  background-color: #0284c7 !important;
-  color: #ffffff !important;
-}
-/* ── Boutons : texte blanc forcé (bg-brand/@apply ne génère pas la classe text-white) */
 [data-theme="light"] .btn-primary,
 [data-theme="light"] .btn-danger  { color: #ffffff !important; }
 
-/* ── Fonds colorés saturés : text-white reste blanc ─────────────────────── */
+/* ── Fonds saturés : text-white reste blanc ─────────────────────── */
 [data-theme="light"] .bg-brand-500,
 [data-theme="light"] .bg-brand-600,
 [data-theme="light"] .bg-brand-700,
 [data-theme="light"] .bg-green-600,
-[data-theme="light"] .bg-green-700,
-[data-theme="light"] .bg-red-500,
 [data-theme="light"] .bg-red-600,
-[data-theme="light"] .bg-red-700,
 [data-theme="light"] .bg-amber-600,
-[data-theme="light"] .bg-amber-700,
 [data-theme="light"] .bg-teal-600,
-[data-theme="light"] .bg-teal-700,
-[data-theme="light"] .bg-purple-600,
-[data-theme="light"] .bg-purple-700,
-[data-theme="light"] .bg-slate-700,
-[data-theme="light"] .bg-slate-800 { color: #ffffff !important; }
+[data-theme="light"] .bg-purple-600 { color: #ffffff !important; }
 
-/* ── Enfants de containers sombres : restaurer les couleurs claires ──────
-   Le sélecteur enfant (.bg-X .text-Y) est plus spécifique que (.text-Y seul)
-   donc il écrase les overrides globaux ci-dessus.                          */
+/* ── Enfants de containers sombres : restaurer les couleurs claires ────── */
 [data-theme="light"] .bg-brand-500 .text-white,
 [data-theme="light"] .bg-brand-600 .text-white,
-[data-theme="light"] .bg-brand-600\/80 .text-white,
-[data-theme="light"] .bg-brand-700 .text-white,
 [data-theme="light"] .bg-green-600 .text-white,
-[data-theme="light"] .bg-green-700 .text-white,
-[data-theme="light"] .bg-green-800 .text-white,
-[data-theme="light"] .bg-red-500   .text-white,
 [data-theme="light"] .bg-red-600   .text-white,
-[data-theme="light"] .bg-red-700   .text-white,
-[data-theme="light"] .bg-red-800   .text-white,
 [data-theme="light"] .bg-amber-600 .text-white,
-[data-theme="light"] .bg-amber-700 .text-white,
 [data-theme="light"] .bg-teal-600  .text-white,
-[data-theme="light"] .bg-teal-700  .text-white,
 [data-theme="light"] .bg-purple-600 .text-white,
-[data-theme="light"] .bg-purple-700 .text-white,
 [data-theme="light"] .bg-slate-700 .text-white,
 [data-theme="light"] .bg-slate-800 .text-white,
 [data-theme="light"] .bg-slate-900 .text-white { color: #ffffff !important; }
 
-[data-theme="light"] .bg-brand-500 .text-slate-100,
-[data-theme="light"] .bg-brand-600 .text-slate-100,
-[data-theme="light"] .bg-slate-700 .text-slate-100,
-[data-theme="light"] .bg-slate-800 .text-slate-100,
-[data-theme="light"] .bg-slate-900 .text-slate-100 { color: #f1f5f9 !important; }
-
-[data-theme="light"] .bg-brand-600 .text-slate-300,
-[data-theme="light"] .bg-slate-700 .text-slate-300,
-[data-theme="light"] .bg-slate-800 .text-slate-300,
-[data-theme="light"] .bg-slate-900 .text-slate-300 { color: #cbd5e1 !important; }
-
-/* ── Couleurs vives non-sémantiques encore utilisées ────────────────────── */
-[data-theme="light"] .text-brand-400   { color: #0369a1 !important; }
-[data-theme="light"] .text-brand-300   { color: #0284c7 !important; }
-[data-theme="light"] .text-teal-300    { color: #0d9488 !important; }
-[data-theme="light"] .text-teal-400    { color: #0f766e !important; }
-[data-theme="light"] .text-blue-300    { color: #1d4ed8 !important; }
-[data-theme="light"] .text-blue-400    { color: #1d4ed8 !important; }
-[data-theme="light"] .text-cyan-400    { color: #0e7490 !important; }
-[data-theme="light"] .text-orange-400  { color: #c2410c !important; }
-[data-theme="light"] .text-purple-300  { color: #7e22ce !important; }
-[data-theme="light"] .text-purple-400  { color: #6b21a8 !important; }
-[data-theme="light"] .text-pink-400    { color: #be185d !important; }
-
-/* ── Fonds sombres avec opacité (dark tints → pastels clairs) ────────────
-   Les classes Tailwind /opacity génèrent des sélecteurs avec backslash.   */
-[data-theme="light"] .bg-brand-900\/40  { background-color: #dbeafe !important; }
-[data-theme="light"] .bg-brand-900\/30  { background-color: #dbeafe !important; }
-[data-theme="light"] .bg-brand-900\/20  { background-color: #eff6ff !important; }
-[data-theme="light"] .bg-brand-900\/50  { background-color: #bfdbfe !important; }
-[data-theme="light"] .bg-brand-600\/80  { background-color: #0284c7 !important; color: #ffffff !important; }
-[data-theme="light"] .bg-amber-600\/60  { background-color: #f59e0b !important; color: #ffffff !important; }
-[data-theme="light"] .bg-orange-900\/20 { background-color: #fff7ed !important; }
-[data-theme="light"] .bg-orange-900\/40 { background-color: #fed7aa !important; }
-[data-theme="light"] .bg-orange-900\/10 { background-color: #fff7ed !important; }
-[data-theme="light"] .bg-purple-900\/20 { background-color: #faf5ff !important; }
-[data-theme="light"] .bg-purple-900\/40 { background-color: #e9d5ff !important; }
-[data-theme="light"] .bg-teal-900\/20   { background-color: #f0fdfa !important; }
-[data-theme="light"] .bg-teal-900\/40   { background-color: #ccfbf1 !important; }
-[data-theme="light"] .bg-slate-800\/60  { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-slate-800\/40  { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-slate-900\/50  { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-black\/20      { background-color: #f8fafc !important; }
-
-/* ── Bordures colorées non-sémantiques sur fond clair ───────────────────── */
-[data-theme="light"] .border-blue-700   { border-color: #1d4ed8 !important; }
-[data-theme="light"] .border-blue-800   { border-color: #1e40af !important; }
-[data-theme="light"] .border-orange-700 { border-color: #c2410c !important; }
-
-[data-theme="light"] .border-brand-500       { border-color: #0284c7 !important; }
-[data-theme="light"] .border-brand-700,
-[data-theme="light"] .border-brand-700\/50   { border-color: #0369a1 !important; }
-[data-theme="light"] .border-brand-800,
-[data-theme="light"] .border-brand-800\/50   { border-color: #bae6fd !important; }
-[data-theme="light"] .border-emerald-700\/40 { border-color: #10b981 !important; }
-[data-theme="light"] .border-slate-600,
-[data-theme="light"] .border-slate-700       { border-color: #94a3b8 !important; }
-[data-theme="light"] .border-slate-800       { border-color: #cbd5e1 !important; }
-[data-theme="light"] .border-green-900\/50   { border-color: #86efac !important; }
-[data-theme="light"] .hover\:border-slate-500:hover { border-color: #64748b !important; }
-
-/* ── Subscribe page : fond grille ───────────────────────────────────────── */
+/* ── Subscribe page ── */
 [data-theme="light"] .subscribe-grid-bg { display: none; }
 
-/* ── Fonds haute opacité (cellules présences) ───────────────────────────── */
-[data-theme="light"] .bg-slate-900\/20   { background-color: #f8fafc !important; }
-
-/* ── Fonds slate directs (non-sémantiques) ───────────────────────────────── */
-[data-theme="light"] .bg-slate-950      { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-slate-950\/20  { background-color: #f8fafc !important; }
-[data-theme="light"] .bg-slate-950\/30  { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-slate-950\/50  { background-color: #e2e8f0 !important; }
-[data-theme="light"] .bg-slate-900      { background-color: #f8fafc !important; }
-[data-theme="light"] .bg-slate-900\/30  { background-color: #f8fafc !important; }
-[data-theme="light"] .bg-slate-900\/40  { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-slate-800      { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-slate-800\/50  { background-color: #f1f5f9 !important; }
-
-/* ── Hover fonds directs ─────────────────────────────────────────────────── */
-[data-theme="light"] .hover\:bg-slate-950:hover     { background-color: #e2e8f0 !important; }
-[data-theme="light"] .hover\:bg-slate-900:hover     { background-color: #f1f5f9 !important; }
-[data-theme="light"] .hover\:bg-slate-900\/40:hover { background-color: #e8edf3 !important; }
-[data-theme="light"] .hover\:bg-slate-800:hover     { background-color: #e2e8f0 !important; }
-
-
-/* ── Séparateurs de tableau ──────────────────────────────────────────────── */
-[data-theme="light"] .divide-slate-800\/50 > * + * { border-color: #e2e8f0 !important; }
-
-/* ── Ombre carte adaptée au fond clair ───────────────────────────────────── */
+/* ── Ombre & UI ── */
 [data-theme="light"] .shadow-card {
-  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06) !important;
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.02), 0 4px 12px -2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.04) !important;
 }
-
-/* ── Suppression du glow sur fond clair (boutons, cartes) ───────────────── */
 [data-theme="light"] .shadow-glow { box-shadow: none !important; }
-
-/* ── Placeholders lisibles sur fond clair ───────────────────────────────── */
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder { color: #94a3b8 !important; }
 
-/* ─── ZONE TOUJOURS SOMBRE (sidebar, landing page, modales dark) ─────────── */
-/* Ajouter .theme-dark sur tout élément qui doit rester dark en mode clair.    */
-/* Remplace les anciens patterns : dark-section, aside .text-*, aside .bg-*   */
+/* ─── ZONE TOUJOURS SOMBRE ─── */
 .theme-dark {
   --surface:        15 23 42;
-  --surface-card:   30 41 59;
-  --surface-input:  51 65 85;
-  --surface-border: 71 85 105;
+  --surface-card:   21 32 54;
+  --surface-input:  30 41 59;
+  --surface-border: 51 65 85;
   --surface-hover:  30 41 59;
   --text-base:        241 245 249;
   --text-secondary:   148 163 184;
-  --text-placeholder: 100 116 139;
+  --text-placeholder: 71 85 105;
   color-scheme: dark;
 }
 
-/* En mode clair, restaure tous les tokens texte/couleur dans .theme-dark */
 [data-theme="light"] .theme-dark .text-white            { color: #ffffff !important; }
-[data-theme="light"] .theme-dark .text-slate-100        { color: #f1f5f9 !important; }
-[data-theme="light"] .theme-dark .text-slate-200        { color: #e2e8f0 !important; }
-[data-theme="light"] .theme-dark .text-slate-300        { color: #cbd5e1 !important; }
-[data-theme="light"] .theme-dark .text-slate-400        { color: #94a3b8 !important; }
-[data-theme="light"] .theme-dark .text-slate-500        { color: #64748b !important; }
-[data-theme="light"] .theme-dark .text-slate-600        { color: #475569 !important; }
-[data-theme="light"] .theme-dark .text-slate-700        { color: #334155 !important; }
 [data-theme="light"] .theme-dark .hover\:text-white:hover { color: #ffffff !important; }
-[data-theme="light"] .theme-dark .text-brand-400        { color: #38bdf8 !important; }
-[data-theme="light"] .theme-dark .text-brand-300        { color: #7dd3fc !important; }
-[data-theme="light"] .theme-dark .text-orange-400       { color: #fb923c !important; }
-[data-theme="light"] .theme-dark .text-teal-400         { color: #2dd4bf !important; }
-[data-theme="light"] .theme-dark .text-purple-400       { color: #c084fc !important; }
-[data-theme="light"] .theme-dark .text-cyan-400         { color: #22d3ee !important; }
-
-/* Fonds slate directs : maintenir les valeurs sombres dans .theme-dark */
-[data-theme="light"] .theme-dark .bg-slate-950          { background-color: #020617 !important; }
-[data-theme="light"] .theme-dark .bg-slate-900          { background-color: #0f172a !important; }
-[data-theme="light"] .theme-dark .bg-slate-800          { background-color: #1e293b !important; }
-[data-theme="light"] .theme-dark .hover\:bg-slate-900:hover { background-color: #1e293b !important; }
-[data-theme="light"] .theme-dark .hover\:bg-slate-800:hover { background-color: #1e293b !important; }
-
-/* Fonds sombres avec opacité : maintenir les teintes sombres dans .theme-dark */
-[data-theme="light"] .theme-dark .bg-brand-900\/50      { background-color: rgba(30,58,138,0.5) !important; }
-[data-theme="light"] .theme-dark .bg-brand-900\/30      { background-color: rgba(30,58,138,0.3) !important; }
-[data-theme="light"] .theme-dark .bg-brand-900\/20      { background-color: rgba(30,58,138,0.2) !important; }
-[data-theme="light"] .theme-dark .bg-brand-900\/10      { background-color: rgba(30,58,138,0.1) !important; }
-[data-theme="light"] .theme-dark .bg-black\/20          { background-color: rgba(0,0,0,0.2) !important; }
-[data-theme="light"] .theme-dark .bg-slate-800\/60      { background-color: rgba(30,41,59,0.6) !important; }
-[data-theme="light"] .theme-dark .bg-slate-900\/50      { background-color: rgba(15,23,42,0.5) !important; }
-[data-theme="light"] .theme-dark .bg-orange-900\/40     { background-color: rgba(124,45,18,0.4) !important; }
-[data-theme="light"] .theme-dark .bg-teal-900\/40       { background-color: rgba(19,78,74,0.4) !important; }
-[data-theme="light"] .theme-dark .bg-purple-900\/40     { background-color: rgba(88,28,135,0.4) !important; }
 
 /* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
 

@@ -48,13 +48,13 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
         <button onClick={prevMonth} className="p-1.5 rounded-lg btn-secondary shrink-0">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <h2 className="font-semibold text-white capitalize flex-1 text-center min-w-32">{monthLabel}</h2>
+        <h2 className="font-semibold text-content-primary capitalize flex-1 text-center min-w-32">{monthLabel}</h2>
         <button onClick={nextMonth} className="p-1.5 rounded-lg btn-secondary shrink-0">
           <ChevronRight className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-44">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-primary pointer-events-none" />
             <input
               type="date"
               className="input pl-8 h-9 text-sm w-full"
@@ -77,7 +77,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
         </div>
       </div>
 
-      {loading && <p className="text-center text-slate-500 py-16">Chargement…</p>}
+      {loading && <p className="text-center text-content-primary py-16">Chargement…</p>}
 
       {!loading && (
         <div className="overflow-x-auto">
@@ -89,7 +89,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
                   const ds = dayStr(d);
                   const isToday = ds === todayFull;
                   return (
-                    <th key={d} className={cn('text-center w-9 py-2 font-medium', isToday ? 'text-content-brand' : 'text-slate-500')}>
+                    <th key={d} className={cn('text-center w-9 py-2 font-medium', isToday ? 'text-content-brand' : 'text-content-primary')}>
                       {d}
                     </th>
                   );
@@ -106,7 +106,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
                 );
                 return (
                   <tr key={room.id} className="border-t border-surface-border">
-                    <td className="py-1 pr-3 text-slate-300 font-semibold sticky left-0 bg-surface z-10">
+                    <td className="py-1 pr-3 text-content-primary font-semibold sticky left-0 bg-surface z-10">
                       {room.number}
                     </td>
                     {days.map((d) => {
@@ -129,7 +129,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
                               isStart ? 'rounded-l-md ml-1' : ''
                             )}>
                               {isStart && (
-                                <span className="absolute inset-0 flex items-center px-1 truncate text-white font-medium" style={{ fontSize: 10 }}>
+                                <span className="absolute inset-0 flex items-center px-1 truncate text-content-primary font-medium" style={{ fontSize: 10 }}>
                                   {activeR.guest?.full_name.split(' ')[0]}
                                 </span>
                               )}
@@ -153,3 +153,5 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
     </div>
   );
 }
+
+

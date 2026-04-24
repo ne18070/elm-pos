@@ -33,16 +33,16 @@ function Pagination({ total, page, onChange }: { total: number; page: number; on
   const pages = Math.ceil(total / PAGE_SIZE);
   if (pages <= 1) return null;
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-t border-surface-border text-sm text-slate-500 font-bold uppercase tracking-widest">
+    <div className="flex items-center justify-between px-6 py-4 border-t border-surface-border text-sm text-content-muted font-bold uppercase tracking-widest">
       <span>{total} abonnements</span>
       <div className="flex items-center gap-2">
         <button onClick={() => onChange(page - 1)} disabled={page === 1}
-          className="p-2 rounded-xl bg-surface-card border border-surface-border disabled:opacity-20 transition-all hover:text-white">
+          className="p-2 rounded-xl bg-surface-card border border-surface-border disabled:opacity-20 transition-all hover:text-content-primary">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-white px-4">Page {page} / {pages}</span>
+        <span className="text-content-primary px-4">Page {page} / {pages}</span>
         <button onClick={() => onChange(page + 1)} disabled={page === pages}
-          className="p-2 rounded-xl bg-surface-card border border-surface-border disabled:opacity-20 transition-all hover:text-white">
+          className="p-2 rounded-xl bg-surface-card border border-surface-border disabled:opacity-20 transition-all hover:text-content-primary">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -151,12 +151,12 @@ export default function SubscriptionsPage() {
     <div className="p-8 space-y-8 pb-32">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Clients & Abonnements</h1>
-          <p className="text-slate-500 text-sm mt-1">Gérez le cycle de vie de vos clients SaaS.</p>
+          <h1 className="text-2xl font-black text-content-primary tracking-tight uppercase">Clients & Abonnements</h1>
+          <p className="text-content-muted text-sm mt-1">Gérez le cycle de vie de vos clients SaaS.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
             <input 
               type="text" 
               placeholder="Rechercher un client..."
@@ -178,7 +178,7 @@ export default function SubscriptionsPage() {
         <div className="card overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-surface-hover/50 border-b border-surface-border text-slate-500 uppercase text-[10px] font-black tracking-widest">
+              <thead className="bg-surface-hover/50 border-b border-surface-border text-content-muted uppercase text-[10px] font-black tracking-widest">
                 <tr>
                   <th className="text-left px-6 py-4 font-black">Propriétaire</th>
                   <th className="text-left px-6 py-4 font-black">Établissements</th>
@@ -197,28 +197,28 @@ export default function SubscriptionsPage() {
                   return (
                     <tr key={row.owner_id ?? row.business_id} className="hover:bg-surface-hover/30 transition-colors group">
                       <td className="px-6 py-4">
-                        <p className="font-black text-white">{row.owner_name ?? '—'}</p>
-                        <p className="text-xs text-slate-500">{row.owner_email ?? ''}</p>
+                        <p className="font-black text-content-primary">{row.owner_name ?? '—'}</p>
+                        <p className="text-xs text-content-muted">{row.owner_email ?? ''}</p>
                       </td>
                       <td className="px-6 py-4">
                         {bizList.length === 0 ? (
-                          <p className="text-sm text-slate-500">{row.business_name ?? '—'}</p>
+                          <p className="text-sm text-content-muted">{row.business_name ?? '—'}</p>
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {bizList.map((b) => (
-                              <span key={b.id} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-card text-content-secondary border border-slate-700">{b.name}</span>
+                              <span key={b.id} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-card text-content-secondary border border-surface-border">{b.name}</span>
                             ))}
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-slate-300 font-bold">{row.plan_label ?? '—'}</td>
+                      <td className="px-6 py-4 text-content-primary font-bold">{row.plan_label ?? '—'}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1 items-start">
                           <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border", badge.color)}>
                             <Icon className="w-3 h-3" /> {badge.label}
                           </span>
                           {intouchConfigs[row.business_id] && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border border-brand-800/50 bg-badge-brand text-content-brand">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border border-status-brand/30 bg-badge-brand text-content-brand">
                               <Smartphone className="w-2.5 h-2.5" /> Mobile-Pay
                             </span>
                           )}
@@ -235,7 +235,7 @@ export default function SubscriptionsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openIntouch(row.business_id)}
-                            className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-content-brand transition-all border border-slate-700 shadow-sm"
+                            className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-content-brand transition-all border border-surface-border shadow-sm"
                             title="Configurer Paiements"
                           >
                             <Settings2 className="w-4 h-4" />
@@ -280,20 +280,20 @@ export default function SubscriptionsPage() {
             Ces paramètres écrasent les configurations globales de passerelle pour cet établissement uniquement.
           </div>
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Partner ID</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Partner ID</label>
             <input className="input h-12" value={intouchForm?.partner_id} onChange={e => setIntouchForm({...intouchForm!, partner_id: e.target.value})} placeholder="MY_PARTNER_ID" />
           </div>
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">API Key</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">API Key</label>
             <input type="password" className="input h-12" value={intouchForm?.api_key} onChange={e => setIntouchForm({...intouchForm!, api_key: e.target.value})} placeholder="••••••••••••" />
           </div>
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Merchant ID</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Merchant ID</label>
             <input className="input h-12" value={intouchForm?.merchant_id} onChange={e => setIntouchForm({...intouchForm!, merchant_id: e.target.value})} placeholder="MY_MERCHANT_ID" />
           </div>
           <label className="flex items-center gap-3 p-4 rounded-2xl bg-surface-input border border-surface-border cursor-pointer group">
             <input type="checkbox" checked={intouchForm?.is_active} onChange={e => setIntouchForm({...intouchForm!, is_active: e.target.checked})} className="w-5 h-5 accent-brand-500" />
-            <span className="text-xs font-black text-white uppercase tracking-widest">Activer Intouch pour ce client</span>
+            <span className="text-xs font-black text-content-primary uppercase tracking-widest">Activer Intouch pour ce client</span>
           </label>
         </div>
       </SideDrawer>
@@ -315,7 +315,7 @@ export default function SubscriptionsPage() {
       >
         <div className="space-y-6">
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Choisir un Plan</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Choisir un Plan</label>
             <select value={form?.planId} onChange={(e) => setForm((f: any) => ({ ...f, planId: e.target.value }))} className="input h-12">
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString()} {displayCurrency(p.currency)}</option>
@@ -324,20 +324,20 @@ export default function SubscriptionsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Durée</label>
+              <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Durée</label>
               <input type="number" value={form?.days} onChange={(e) => setForm((f: any) => ({ ...f, days: e.target.value }))} className="input h-12" min={1} />
             </div>
             <div>
-               <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Unité</label>
+               <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Unité</label>
                <div className="flex bg-surface-input rounded-xl p-1 h-12">
                   {(['jours', 'mois'] as const).map(m => (
-                    <button key={m} onClick={() => setForm((f: any) => ({ ...f, mode: m }))} className={cn("flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", form?.mode === m ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}>{m}</button>
+                    <button key={m} onClick={() => setForm((f: any) => ({ ...f, mode: m }))} className={cn("flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all", form?.mode === m ? "bg-brand-600 text-content-primary shadow-lg" : "text-content-muted hover:text-content-primary")}>{m}</button>
                   ))}
                </div>
             </div>
           </div>
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Notes (Paiement, Réf...)</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Notes (Paiement, Réf...)</label>
             <textarea value={form?.note} onChange={(e) => setForm((f: any) => ({ ...f, note: e.target.value }))} className="input min-h-[100px] py-4" placeholder="Optionnel..." />
           </div>
         </div>

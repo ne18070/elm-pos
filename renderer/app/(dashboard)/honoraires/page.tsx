@@ -81,7 +81,7 @@ async function syncHonorairesEntry(
 
 function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }) {
   const s = statuts.find((x) => x.value === status);
-  const cls = (s?.metadata?.cls as string) ?? 'bg-surface-card text-content-secondary border-slate-700';
+  const cls = (s?.metadata?.cls as string) ?? 'bg-surface-card text-content-secondary border-surface-border';
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${cls}`}>
       {s?.label ?? status}
@@ -176,19 +176,19 @@ function HonorairesModal({
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
-          <h2 className="text-white font-semibold">
+          <h2 className="text-content-primary font-semibold">
             {initial ? 'Modifier les honoraires' : 'Nouveaux honoraires'}
           </h2>
-          <button onClick={onClose} className="text-content-secondary hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="overflow-y-auto p-5 space-y-4">
           <div>
             <label className="label">Dossier lié (optionnel)</label>
             <select className="input" value={form.dossier_id} onChange={(e) => handleDossierChange(e.target.value)}>
-              <option value="" className="bg-gray-900 text-white">— Sans dossier —</option>
+              <option value="" className="bg-gray-900 text-content-primary">— Sans dossier —</option>
               {dossiers.map((d) => (
-                <option key={d.id} value={d.id} className="bg-gray-900 text-white">
+                <option key={d.id} value={d.id} className="bg-gray-900 text-content-primary">
                   {d.reference} — {d.client_name}
                 </option>
               ))}
@@ -205,7 +205,7 @@ function HonorairesModal({
               <label className="label">Type de prestation</label>
               <select className="input" value={form.type_prestation} onChange={(e) => set('type_prestation', e.target.value)}>
                 {typesPrestation.map((t) => (
-                  <option key={t.value} value={t.value} className="bg-gray-900 text-white">{t.label}</option>
+                  <option key={t.value} value={t.value} className="bg-gray-900 text-content-primary">{t.label}</option>
                 ))}
               </select>
             </div>
@@ -330,7 +330,7 @@ export default function HonorairesPage() {
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-xl font-bold text-content-primary flex items-center gap-2">
               <Receipt className="w-5 h-5 text-status-purple" /> Honoraires & Facturation
             </h1>
             <p className="text-xs text-content-secondary mt-0.5">Suivi des prestations et paiements</p>
@@ -358,18 +358,18 @@ export default function HonorairesPage() {
 
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Client, dossier…" className="input pl-9 text-sm" />
           </div>
           <div className="flex gap-1 bg-surface-input rounded-lg p-1">
             <button onClick={() => setFilterStatus('tous')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === 'tous' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === 'tous' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
               Tous
             </button>
             {statutsPaiement.map((s) => (
               <button key={s.value} onClick={() => setFilterStatus(s.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === s.value ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === s.value ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
                 {s.label}
               </button>
             ))}
@@ -407,39 +407,39 @@ export default function HonorairesPage() {
                     return (
                       <tr key={l.id} className="hover:bg-surface-input/40 transition-colors">
                         <td className="px-4 py-3 text-content-secondary text-xs">{fmtDate(l.date_facture)}</td>
-                        <td className="px-4 py-3 text-white font-medium">{l.client_name}</td>
+                        <td className="px-4 py-3 text-content-primary font-medium">{l.client_name}</td>
                         <td className="px-4 py-3">
                           {l.dossier?.reference ? (
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-mono text-status-purple">{l.dossier.reference}</span>
                               <button 
                                 onClick={() => router.push(`/dossiers?ref=${l.dossier!.reference}`)}
-                                className="p-1 text-slate-500 hover:text-status-purple transition-all"
+                                className="p-1 text-content-muted hover:text-status-purple transition-all"
                                 title="Voir le dossier"
                               >
                                 <ExternalLink className="w-3 h-3" />
                               </button>
                             </div>
                           ) : (
-                            <span className="text-slate-600 text-xs">—</span>
+                            <span className="text-content-muted text-xs">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-300 text-xs">{typeLabel}</td>
-                        <td className="px-4 py-3 text-right text-white font-medium">{fmtMoney(l.montant, currency)}</td>
+                        <td className="px-4 py-3 text-content-primary text-xs">{typeLabel}</td>
+                        <td className="px-4 py-3 text-right text-content-primary font-medium">{fmtMoney(l.montant, currency)}</td>
                         <td className="px-4 py-3 text-right text-status-success">{fmtMoney(l.montant_paye, currency)}</td>
                         <td className="px-4 py-3 text-right">
                           {reste > 0 ? <span className="text-status-error">{fmtMoney(reste, currency)}</span>
-                                     : <span className="text-slate-600">—</span>}
+                                     : <span className="text-content-muted">—</span>}
                         </td>
                         <td className="px-4 py-3"><StatusBadge status={l.status} statuts={statutsPaiement} /></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 justify-end">
-                            <button onClick={() => setModal(l)} className="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-surface-input transition-colors">
+                            <button onClick={() => setModal(l)} className="p-1.5 text-content-muted hover:text-content-primary rounded-lg hover:bg-surface-input transition-colors">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             {canDelete(user?.role ?? 'staff') && (
                               <button onClick={() => handleDelete(l.id)} disabled={deletingId === l.id}
-                                className="p-1.5 text-slate-500 hover:text-status-error rounded-lg hover:bg-badge-error transition-colors disabled:opacity-40">
+                                className="p-1.5 text-content-muted hover:text-status-error rounded-lg hover:bg-badge-error transition-colors disabled:opacity-40">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}

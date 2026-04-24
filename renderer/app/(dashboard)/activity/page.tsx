@@ -41,7 +41,7 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'product.created':         { label: 'Produit ajouté',       Icon: Package,      color: 'text-status-success' },
   'product.updated':         { label: 'Produit modifié',      Icon: Pencil,       color: 'text-status-warning' },
   'product.deleted':         { label: 'Produit supprimé',     Icon: Trash2,       color: 'text-status-error' },
-  'stock.entry':             { label: 'Approvisionnement',    Icon: Warehouse,    color: 'text-blue-400' },
+  'stock.entry':             { label: 'Approvisionnement',    Icon: Warehouse,    color: 'text-status-info' },
   'user.role_changed':       { label: 'Rôle modifié',         Icon: UserCog,      color: 'text-status-warning' },
   'user.removed':            { label: 'Membre retiré',        Icon: UserMinus,    color: 'text-status-error' },
   'user.invited':            { label: 'Invitation envoyée',   Icon: UserPlus,     color: 'text-status-success' },
@@ -180,8 +180,8 @@ export default function ActivityPage() {
       <div className="p-6 border-b border-surface-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">Journal d&apos;activité</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Toutes les actions enregistrées sur cet établissement</p>
+            <h1 className="text-xl font-bold text-content-primary">Journal d&apos;activité</h1>
+            <p className="text-xs text-content-muted mt-0.5">Toutes les actions enregistrées sur cet établissement</p>
           </div>
           <button onClick={fetchLogs} className="btn-secondary flex items-center gap-2">
             <RefreshCw className="w-4 h-4" />
@@ -266,14 +266,14 @@ export default function ActivityPage() {
                     {/* Date */}
                     <td className="px-4 py-3 text-xs text-content-secondary whitespace-nowrap">
                       <p>{format(new Date(log.created_at), 'dd MMM yyyy', { locale: fr })}</p>
-                      <p className="text-slate-500">{format(new Date(log.created_at), 'HH:mm:ss')}</p>
+                      <p className="text-content-muted">{format(new Date(log.created_at), 'HH:mm:ss')}</p>
                     </td>
 
                     {/* Utilisateur */}
                     <td className="px-4 py-3">
-                      <p className="text-sm text-white">{log.user_name ?? log.users?.full_name ?? '—'}</p>
+                      <p className="text-sm text-content-primary">{log.user_name ?? log.users?.full_name ?? '—'}</p>
                       {log.user_id && (
-                        <p className="text-xs text-slate-500 font-mono">{log.user_id.slice(0, 8)}</p>
+                        <p className="text-xs text-content-muted font-mono">{log.user_id.slice(0, 8)}</p>
                       )}
                     </td>
 
@@ -293,7 +293,7 @@ export default function ActivityPage() {
                         </span>
                       )}
                       {log.entity_id && (
-                        <p className="text-slate-500 font-mono mt-0.5">{log.entity_id.slice(0, 8)}</p>
+                        <p className="text-content-muted font-mono mt-0.5">{log.entity_id.slice(0, 8)}</p>
                       )}
                     </td>
 
@@ -311,7 +311,7 @@ export default function ActivityPage() {
 
       {/* Footer compteur */}
       {!loading && (
-        <div className="px-6 py-2 border-t border-surface-border text-xs text-slate-500">
+        <div className="px-6 py-2 border-t border-surface-border text-xs text-content-muted">
           {filtered.length} événement{filtered.length !== 1 ? 's' : ''} affiché{filtered.length !== 1 ? 's' : ''}
           {logs.length >= 500 && ' (limité à 500 — affiner les filtres pour voir plus)'}
         </div>

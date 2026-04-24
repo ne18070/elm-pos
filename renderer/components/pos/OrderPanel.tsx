@@ -153,7 +153,7 @@ export function OrderPanel({
     return (
       <div className="flex flex-col h-full">
         <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between">
-          <h2 className="font-semibold text-white text-sm">Nouvelle vente</h2>
+          <h2 className="font-semibold text-content-primary text-sm">Nouvelle vente</h2>
           {heldOrders.length > 0 && (
             <button
               onClick={onShowHeld}
@@ -163,13 +163,13 @@ export function OrderPanel({
             >
               <Clock className="w-3.5 h-3.5" />
               En attente
-              <span className="bg-brand-600 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="bg-brand-600 text-content-primary text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {heldOrders.length}
               </span>
             </button>
           )}
         </div>
-        <div className="flex flex-col items-center justify-center flex-1 text-slate-500 gap-3 px-4">
+        <div className="flex flex-col items-center justify-center flex-1 text-content-primary gap-3 px-4">
           <ShoppingCart className="w-12 h-12 opacity-30" />
           <p className="text-sm text-center">Sélectionnez des produits pour démarrer une vente</p>
         </div>
@@ -186,7 +186,7 @@ export function OrderPanel({
       <div className="flex flex-col h-full">
         {/* En-tête */}
         <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-2">
-          <h2 className="font-semibold text-white shrink-0">
+          <h2 className="font-semibold text-content-primary shrink-0">
             Commande{' '}
             <span className="text-content-brand">({itemCount()} article{itemCount() > 1 ? 's' : ''})</span>
           </h2>
@@ -211,7 +211,7 @@ export function OrderPanel({
                            hover:bg-badge-brand transition-colors text-xs font-medium shrink-0"
               >
                 <Clock className="w-3.5 h-3.5" />
-                <span className="bg-brand-600 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="bg-brand-600 text-content-primary text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {heldOrders.length}
                 </span>
               </button>
@@ -219,7 +219,7 @@ export function OrderPanel({
             <button
               onClick={() => setShowHoldModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-surface-border
-                         text-content-secondary hover:border-slate-500 hover:text-white transition-colors text-xs font-medium shrink-0"
+                         text-content-secondary hover:border-slate-500 hover:text-content-primary transition-colors text-xs font-medium shrink-0"
             >
               <Clock className="w-3.5 h-3.5" />
               Attente
@@ -261,12 +261,12 @@ export function OrderPanel({
               >
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                    <p className="text-sm font-medium text-content-primary truncate">{item.name}</p>
                     <p className="text-xs text-content-secondary mt-0.5">{fmt(item.price)} / unité</p>
                   </div>
                   <button
                     onClick={() => removeItem(item.product_id, item.variant_id)}
-                    className="text-slate-500 hover:text-status-error transition-colors shrink-0"
+                    className="text-content-primary hover:text-status-error transition-colors shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -277,11 +277,11 @@ export function OrderPanel({
                     <button
                       onClick={() => handleQtyDecrease(item)}
                       className="w-7 h-7 rounded-lg bg-surface-card flex items-center justify-center
-                                 text-content-secondary hover:text-white hover:bg-brand-600 transition-colors"
+                                 text-content-secondary hover:text-content-primary hover:bg-brand-600 transition-colors"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className={`font-semibold w-6 text-center ${over ? 'text-status-error' : 'text-white'}`}>
+                    <span className={`font-semibold w-6 text-center ${over ? 'text-status-error' : 'text-content-primary'}`}>
                       {item.quantity}
                     </span>
                     <button
@@ -289,8 +289,8 @@ export function OrderPanel({
                       disabled={limited}
                       className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors
                         ${limited
-                          ? 'bg-surface-card text-slate-600 cursor-not-allowed'
-                          : 'bg-surface-card text-content-secondary hover:text-white hover:bg-brand-600'}`}
+                          ? 'bg-surface-card text-content-muted cursor-not-allowed'
+                          : 'bg-surface-card text-content-secondary hover:text-content-primary hover:bg-brand-600'}`}
                       title={limited ? `Stock max : ${stock}` : undefined}
                     >
                       <Plus className="w-3 h-3" />
@@ -298,7 +298,7 @@ export function OrderPanel({
                   </div>
 
                   <div className="text-right">
-                    <span className="text-white font-bold block">{fmt(item.price * item.quantity)}</span>
+                    <span className="text-content-primary font-bold block">{fmt(item.price * item.quantity)}</span>
                     {/* Indicateur stock */}
                     {item.product?.track_stock && (
                       <span className={`text-xs ${
@@ -306,7 +306,7 @@ export function OrderPanel({
                           ? 'text-status-error font-medium'
                           : limited
                           ? 'text-status-warning'
-                          : 'text-slate-500'
+                          : 'text-content-primary'
                       }`}>
                         {over
                           ? `⚠ Max ${stock} ${item.product.unit ?? ''} en stock`.trim()
@@ -367,7 +367,7 @@ export function OrderPanel({
           <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-badge-warning border border-status-warning flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-status-warning flex items-center gap-1">
-                <Store className="w-3 h-3" /> Prix de gros — {wholesaleCtx.reseller.name}
+                <Store className="w-3 h-3" /> Prix de gros —{wholesaleCtx.reseller.name}
               </p>
               {wholesaleCtx.client && (
                 <p className="text-xs text-content-secondary truncate">Client : {wholesaleCtx.client.name}</p>
@@ -375,7 +375,7 @@ export function OrderPanel({
             </div>
             <button
               onClick={() => { resetPriceOverrides(); onWholesaleChange?.(null); }}
-              className="p-1 rounded text-status-warning hover:text-white shrink-0"
+              className="p-1 rounded text-status-warning hover:text-content-primary shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -393,7 +393,7 @@ export function OrderPanel({
               <Gift className="w-3.5 h-3.5 shrink-0" />
               <span>
                 {eligible
-                  ? `✓ Offre déclenchée : ${offer.bonus_qty} ${offer.product_name ?? ''} offert${offer.bonus_qty > 1 ? 's' : ''}`
+                  ? `✁EOffre déclenchée : ${offer.bonus_qty} ${offer.product_name ?? ''} offert${offer.bonus_qty > 1 ? 's' : ''}`
                   : `${offer.product_name} : encore ${offer.min_qty - cartItem.quantity} pour ${offer.bonus_qty} offert${offer.bonus_qty > 1 ? 's' : ''}`}
               </span>
             </div>
@@ -408,17 +408,17 @@ export function OrderPanel({
               <Utensils className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-indigo-300 truncate">Table {selectedTable.name}</p>
-                <p className="text-[10px] text-slate-500 uppercase font-semibold">{selectedTable.floor?.name}</p>
+                <p className="text-[10px] text-content-primary uppercase font-semibold">{selectedTable.floor?.name}</p>
               </div>
               <button
                 onClick={onTableClear}
-                className="text-slate-500 hover:text-white shrink-0"
+                className="text-content-primary hover:text-content-primary shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : isRestaurant && (
-            <p className="text-[10px] text-slate-500 italic px-1">Aucune table sélectionnée</p>
+            <p className="text-[10px] text-content-primary italic px-1">Aucune table sélectionnée</p>
           )}
 
           {selectedClient ? (
@@ -426,11 +426,11 @@ export function OrderPanel({
               <User className="w-3.5 h-3.5 text-content-brand shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-content-brand truncate">{selectedClient.name}</p>
-                {selectedClient.phone && <p className="text-xs text-slate-500">{selectedClient.phone}</p>}
+                {selectedClient.phone && <p className="text-xs text-content-primary">{selectedClient.phone}</p>}
               </div>
               <button
                 onClick={() => onClientChange?.(null)}
-                className="text-slate-500 hover:text-white shrink-0"
+                className="text-content-primary hover:text-content-primary shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -439,7 +439,7 @@ export function OrderPanel({
             <div className="relative">
               <button
                 onClick={openClientPicker}
-                className="flex items-center gap-2 text-xs text-content-secondary hover:text-white transition-colors py-1"
+                className="flex items-center gap-2 text-xs text-content-secondary hover:text-content-primary transition-colors py-1"
               >
                 <User className="w-3.5 h-3.5" />
                 Associer un client (optionnel)
@@ -449,7 +449,7 @@ export function OrderPanel({
                 <div className="absolute bottom-full mb-1 left-0 right-0 z-50 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden">
                   <div className="p-2 border-b border-surface-border">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-primary" />
                       <input
                         autoFocus
                         className="input pl-8 h-8 text-sm"
@@ -461,7 +461,7 @@ export function OrderPanel({
                   </div>
                   <div className="max-h-48 overflow-y-auto">
                     {filteredClients.length === 0 ? (
-                      <p className="text-xs text-slate-500 text-center py-4">
+                      <p className="text-xs text-content-primary text-center py-4">
                         {clientList.length === 0 ? 'Aucun client enregistré' : 'Aucun résultat'}
                       </p>
                     ) : (
@@ -479,8 +479,8 @@ export function OrderPanel({
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm text-white truncate">{c.name}</p>
-                            {c.phone && <p className="text-xs text-slate-500">{c.phone}</p>}
+                            <p className="text-sm text-content-primary truncate">{c.name}</p>
+                            {c.phone && <p className="text-xs text-content-primary">{c.phone}</p>}
                           </div>
                         </button>
                       ))
@@ -510,7 +510,7 @@ export function OrderPanel({
               <span>{fmt(taxAmount(taxRate, taxInclusive))}</span>
             </div>
           )}
-          <div className="flex justify-between text-lg font-bold text-white pt-1 border-t border-surface-border">
+          <div className="flex justify-between text-lg font-bold text-content-primary pt-1 border-t border-surface-border">
             <span>Total</span>
             <span className="text-content-brand">{fmt(total(taxRate, taxInclusive))}</span>
           </div>
@@ -523,7 +523,7 @@ export function OrderPanel({
             disabled={hasOverStock}
             className={`w-full h-12 text-base flex items-center justify-center gap-2 rounded-xl font-semibold transition-all
               ${hasOverStock
-                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                ? 'bg-slate-700 text-content-primary cursor-not-allowed'
                 : 'btn-primary'}`}
           >
             {hasOverStock
@@ -552,3 +552,5 @@ export function OrderPanel({
     </>
   );
 }
+
+

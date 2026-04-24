@@ -49,7 +49,7 @@ export default function BackofficeDashboard() {
   const kpis = [
     { label: 'Revenu Mensuel (MRR)', value: formatCurrency(stats.mrr, 'XOF'), icon: TrendingUp, color: 'text-status-success', trend: '+12.5%' },
     { label: 'Organisations', value: stats.activeOrgs, icon: Layers, color: 'text-content-brand', trend: '+3' },
-    { label: 'Utilisateurs Totaux', value: stats.totalUsers, icon: Users, color: 'text-blue-400', trend: '+18%' },
+    { label: 'Utilisateurs Totaux', value: stats.totalUsers, icon: Users, color: 'text-status-info', trend: '+18%' },
     { label: 'Activité Système', value: 'Optimale', icon: Activity, color: 'text-status-purple', trend: '100%' },
   ];
 
@@ -57,8 +57,8 @@ export default function BackofficeDashboard() {
     <div className="p-8 space-y-8 pb-20 no-scrollbar">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Vue d'ensemble</h1>
-          <p className="text-slate-500 text-sm mt-1">État de santé global de la plateforme ELM.</p>
+          <h1 className="text-2xl font-black text-content-primary tracking-tight uppercase">Vue d'ensemble</h1>
+          <p className="text-content-muted text-sm mt-1">État de santé global de la plateforme ELM.</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-status-success text-xs font-black uppercase tracking-widest animate-pulse">
            <Zap size={14} /> Système Live
@@ -77,8 +77,8 @@ export default function BackofficeDashboard() {
                 {kpi.trend}
               </span>
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{kpi.label}</p>
-            <p className="text-2xl font-black text-white mt-1 tracking-tight">{kpi.value}</p>
+            <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">{kpi.label}</p>
+            <p className="text-2xl font-black text-content-primary mt-1 tracking-tight">{kpi.value}</p>
           </div>
         ))}
       </div>
@@ -86,7 +86,7 @@ export default function BackofficeDashboard() {
       {/* Main Monitoring Content */}
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <h2 className="text-lg font-black text-white uppercase tracking-widest">Activité Temps Réel</h2>
+          <h2 className="text-lg font-black text-content-primary uppercase tracking-widest">Activité Temps Réel</h2>
           <div className="h-px flex-1 bg-surface-border" />
         </div>
         <MonitoringTab />

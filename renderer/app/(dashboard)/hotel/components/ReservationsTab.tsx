@@ -42,23 +42,23 @@ export function ReservationsTab({
               <button
                 key={value}
                 onClick={() => onFilterChange(value)}
-                className={cn('px-3 py-1.5 rounded-xl text-sm transition-colors', resFilter === value ? 'bg-brand-600 text-white' : 'btn-secondary')}
+                className={cn('px-3 py-1.5 rounded-xl text-sm transition-colors', resFilter === value ? 'bg-brand-600 text-content-primary' : 'btn-secondary')}
               >
                 {label}
               </button>
             ))}
             <button
               onClick={onToggleDateCal}
-              className={cn('px-3 py-1.5 rounded-xl text-sm transition-colors flex items-center gap-1.5', resFilter === 'dates' ? 'bg-brand-600 text-white' : 'btn-secondary')}
+              className={cn('px-3 py-1.5 rounded-xl text-sm transition-colors flex items-center gap-1.5', resFilter === 'dates' ? 'bg-brand-600 text-content-primary' : 'btn-secondary')}
             >
               <Calendar className="w-3.5 h-3.5" />
               {resFilter === 'dates' && dateFilterFrom
-                ? `${fmt(dateFilterFrom)}${dateFilterTo ? ` → ${fmt(dateFilterTo)}` : ''}`
+                ? `${fmt(dateFilterFrom)}${dateFilterTo ? ` —${fmt(dateFilterTo)}` : ''}`
                 : 'Par dates'}
             </button>
           </div>
           <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-primary" />
             <input
               className="input pl-8 h-9 text-sm"
               placeholder="Chercher client, chambre…"
@@ -75,9 +75,9 @@ export function ReservationsTab({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {loading && <p className="text-center text-slate-500 py-16">Chargement…</p>}
+        {loading && <p className="text-center text-content-primary py-16">Chargement…</p>}
         {!loading && filteredReservations.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
+          <div className="flex flex-col items-center justify-center py-16 text-content-primary gap-3">
             <ClipboardList className="w-12 h-12 opacity-20" />
             <p>Aucune réservation</p>
           </div>
@@ -98,7 +98,7 @@ export function ReservationsTab({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-white truncate">{res.guest?.full_name}</p>
+                    <p className="text-sm font-semibold text-content-primary truncate">{res.guest?.full_name}</p>
                     <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', resStatusStyle(res.status))}>
                       {resStatusLabel(res.status)}
                     </span>
@@ -110,16 +110,16 @@ export function ReservationsTab({
                     )}
                   </div>
                   <p className="text-xs text-content-secondary mt-0.5">
-                    Chambre {res.room?.number} · {nights} nuit{nights > 1 ? 's' : ''} · {fmt(res.check_in)} → {fmt(res.check_out)}
+                    Chambre {res.room?.number} · {nights} nuit{nights > 1 ? 's' : ''} · {fmt(res.check_in)} —{fmt(res.check_out)}
                   </p>
                 </div>
                 <div className="text-right shrink-0 hidden sm:block">
-                  <p className="text-sm font-semibold text-white">{fmtMoney(res.total, currency)}</p>
+                  <p className="text-sm font-semibold text-content-primary">{fmtMoney(res.total, currency)}</p>
                   {res.paid_amount < res.total && res.status !== 'cancelled' && (
                     <p className="text-xs text-status-warning">Reste {fmtMoney(res.total - res.paid_amount, currency)}</p>
                   )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-content-muted shrink-0" />
               </button>
             );
           })}
@@ -128,3 +128,5 @@ export function ReservationsTab({
     </div>
   );
 }
+
+

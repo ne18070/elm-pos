@@ -50,7 +50,8 @@
       "Bash(git commit -m 'Web Push notifications for boutique/hotel public orders *)",
       "Bash(git commit -m 'Add web-push dependency for push notifications *)",
       "Bash(git commit -m 'Public vehicle rental + push notification fixes *)",
-      "Bash(xargs perl -pi -e ' *)"
+      "Bash(xargs perl -pi -e ' *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")"
     ]
   }
 }

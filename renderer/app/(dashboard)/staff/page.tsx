@@ -157,7 +157,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
               onClick={() => setTab(t.id as any)}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
-                tab === t.id ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                tab === t.id ? "bg-brand-600 text-content-primary shadow-lg" : "text-content-muted hover:text-content-primary"
               )}
             >
               <t.icon size={14} />
@@ -168,7 +168,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
 
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <div className="relative flex-1 lg:w-64">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
             <input 
               type="text" 
               placeholder={tab === 'requests' ? "Rechercher un employé..." : "Rechercher un type..."}
@@ -207,13 +207,13 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
 
           <div className="grid gap-3">
             {filteredRequests.map((req) => (
-              <div key={req.id} className="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center gap-4 hover:border-slate-700 transition-all">
+              <div key={req.id} className="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center gap-4 hover:border-surface-border transition-all">
                 <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
                   <Users className="text-content-brand" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-white truncate">{req.staff?.name}</h3>
+                    <h3 className="font-bold text-content-primary truncate">{req.staff?.name}</h3>
                     <span className={cn(
                       "text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
                       req.status === 'pending' ? "bg-amber-500/10 text-status-warning border border-amber-500/20" :
@@ -226,7 +226,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                   <p className="text-[11px] text-content-secondary">
                     {req.leave_type?.name} · {req.total_days} jours
                   </p>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-content-muted">
                     Du {new Date(req.start_date).toLocaleDateString()} au {new Date(req.end_date).toLocaleDateString()}
                   </p>
                 </div>
@@ -243,7 +243,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
               </div>
             ))}
             {filteredRequests.length === 0 && (
-              <div className="py-20 text-center text-slate-500 italic">Aucune demande trouvée.</div>
+              <div className="py-20 text-center text-content-muted italic">Aucune demande trouvée.</div>
             )}
           </div>
         </div>
@@ -270,7 +270,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
             {types.map(t => (
               <div key={t.id} className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.name}</span>
+                <span className="text-[10px] font-bold text-content-muted uppercase tracking-wider">{t.name}</span>
               </div>
             ))}
           </div>
@@ -282,7 +282,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
           {/* Leave Types */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Types de congés</h2>
+              <h2 className="text-[10px] font-black text-content-muted uppercase tracking-widest">Types de congés</h2>
               <button 
                 onClick={() => setTypeModal({ name: '', yearly_days: 25, is_paid: true, color: '#3b82f6' })}
                 className="text-content-brand hover:text-content-brand transition-colors"
@@ -296,20 +296,20 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                   <div className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color }} />
                     <div>
-                      <span className="text-sm font-bold text-white block">{t.name}</span>
-                      <span className="text-[10px] text-slate-500">{t.yearly_days} jours / an · {t.is_paid ? 'Payé' : 'Sans solde'}</span>
+                      <span className="text-sm font-bold text-content-primary block">{t.name}</span>
+                      <span className="text-[10px] text-content-muted">{t.yearly_days} jours / an · {t.is_paid ? 'Payé' : 'Sans solde'}</span>
                     </div>
                   </div>
                   <button 
                     onClick={() => setTypeModal(t)}
-                    className="p-2 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-white transition-all"
+                    className="p-2 opacity-0 group-hover:opacity-100 text-content-muted hover:text-content-primary transition-all"
                   >
                     <Pencil size={14} />
                   </button>
                 </div>
               ))}
               {types.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-xs italic">Configurez vos types de congés (Payés, Maladie, etc.)</div>
+                <div className="p-8 text-center text-content-muted text-xs italic">Configurez vos types de congés (Payés, Maladie, etc.)</div>
               )}
             </div>
           </div>
@@ -317,7 +317,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
           {/* Pressure Days */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Jours de pression</h2>
+              <h2 className="text-[10px] font-black text-content-muted uppercase tracking-widest">Jours de pression</h2>
               <button 
                 onClick={() => setPressureModal({ date: new Date().toISOString().split('T')[0], reason: '' })}
                 className="text-content-brand hover:text-content-brand transition-colors"
@@ -333,8 +333,8 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                       <AlertTriangle size={14} className="text-status-error" />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-white block">{new Date(pd.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>
-                      <span className="text-[10px] text-slate-500 italic">{pd.reason}</span>
+                      <span className="text-sm font-bold text-content-primary block">{new Date(pd.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>
+                      <span className="text-[10px] text-content-muted italic">{pd.reason}</span>
                     </div>
                   </div>
                   <button 
@@ -344,14 +344,14 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                         loadData();
                       }
                     }}
-                    className="p-2 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-status-error transition-all"
+                    className="p-2 opacity-0 group-hover:opacity-100 text-content-muted hover:text-status-error transition-all"
                   >
                     <Trash2 size={14} />
                   </button>
                 </div>
               ))}
               {pressureDays.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-xs italic">Bloquez des dates critiques pour interdire les congés.</div>
+                <div className="p-8 text-center text-content-muted text-xs italic">Bloquez des dates critiques pour interdire les congés.</div>
               )}
             </div>
           </div>
@@ -409,7 +409,7 @@ function LeaveTypeModal({ type, businessId, onClose, onSaved }: { type: Partial<
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-surface-card border border-surface-border rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4">
-        <h3 className="font-bold text-white text-lg">Type de congé</h3>
+        <h3 className="font-bold text-content-primary text-lg">Type de congé</h3>
         <Field label="Nom" value={form.name || ''} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="ex: Congés Payés" />
         <div className="grid grid-cols-2 gap-4">
           <Field label="Jours / an" type="number" value={String(form.yearly_days || 0)} onChange={v => setForm(f => ({ ...f, yearly_days: parseFloat(v) }))} />
@@ -420,7 +420,7 @@ function LeaveTypeModal({ type, businessId, onClose, onSaved }: { type: Partial<
         </div>
         <div className="flex items-center gap-2 p-3 bg-surface-input rounded-xl border border-surface-border">
           <input type="checkbox" checked={form.is_paid} onChange={e => setForm(f => ({ ...f, is_paid: e.target.checked }))} className="accent-brand-500" />
-          <span className="text-sm text-slate-300">Congé rémunéré</span>
+          <span className="text-sm text-content-primary">Congé rémunéré</span>
         </div>
         <div className="flex gap-3 pt-2">
           <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-bold text-xs uppercase tracking-widest">Annuler</button>
@@ -450,7 +450,7 @@ function PressureDayModal({ day, businessId, onClose, onSaved }: { day: Partial<
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-surface-card border border-surface-border rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4">
-        <h3 className="font-bold text-white text-lg flex items-center gap-2"><AlertTriangle className="text-status-error" size={20} /> Jour de pression</h3>
+        <h3 className="font-bold text-content-primary text-lg flex items-center gap-2"><AlertTriangle className="text-status-error" size={20} /> Jour de pression</h3>
         <Field label="Date" type="date" value={form.date || ''} onChange={v => setForm(f => ({ ...f, date: v }))} />
         <Field label="Raison" value={form.reason || ''} onChange={v => setForm(f => ({ ...f, reason: v }))} placeholder="ex: Inventaire annuel" />
         <div className="flex gap-3 pt-2">
@@ -518,14 +518,14 @@ function AdminLeaveRequestModal({ onClose, onSaved, businessId, staffList = [], 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-surface-card border border-surface-border rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
-        <h3 className="font-bold text-white text-lg">Enregistrer un congé</h3>
+        <h3 className="font-bold text-content-primary text-lg">Enregistrer un congé</h3>
         
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Employé</label>
+            <label className="text-[10px] font-black text-content-muted uppercase tracking-widest block mb-1.5">Employé</label>
             <div className="space-y-2">
               <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
                 <input 
                   type="text" 
                   placeholder="Chercher un nom..."
@@ -545,10 +545,10 @@ function AdminLeaveRequestModal({ onClose, onSaved, businessId, staffList = [], 
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Type de congé</label>
+            <label className="text-[10px] font-black text-content-muted uppercase tracking-widest block mb-1.5">Type de congé</label>
             <div className="space-y-2">
               <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
                 <input 
                   type="text" 
                   placeholder="Chercher un type..."
@@ -576,7 +576,7 @@ function AdminLeaveRequestModal({ onClose, onSaved, businessId, staffList = [], 
         <Field label="Motif / Notes" value={reason} onChange={setReason} placeholder="ex: Mariage d'un proche" />
         
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-bold text-xs uppercase tracking-widest transition-colors hover:text-white">Annuler</button>
+          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-bold text-xs uppercase tracking-widest transition-colors hover:text-content-primary">Annuler</button>
           <button onClick={save} disabled={saving} className="flex-1 h-11 rounded-xl btn-primary font-bold text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20">
             {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Enregistrer'}
           </button>
@@ -816,7 +816,7 @@ export default function StaffPage() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface-card shrink-0">
         <div className="flex items-center gap-3">
           <Users className="w-5 h-5 text-content-secondary" />
-          <h1 className="font-bold text-white text-xl tracking-tight">Personnel</h1>
+          <h1 className="font-bold text-content-primary text-xl tracking-tight">Personnel</h1>
         </div>
         
         {tab === 'employes' && (
@@ -844,7 +844,7 @@ export default function StaffPage() {
             className={`flex items-center gap-2.5 px-6 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
               tab === t.id
                 ? 'text-content-brand'
-                : 'text-slate-500 hover:text-slate-300'
+                : 'text-content-muted hover:text-content-primary'
             }`}
           >
             <t.icon className="w-4 h-4" />
@@ -868,7 +868,7 @@ export default function StaffPage() {
               {/* Search + filter bar */}
               <div className="flex flex-col sm:flex-row gap-3 items-center">
                 <div className="relative flex-1 w-full">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -878,7 +878,7 @@ export default function StaffPage() {
                   {search && (
                     <button 
                       onClick={() => setSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-content-muted hover:text-content-primary"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -891,7 +891,7 @@ export default function StaffPage() {
                     onClick={() => setStaffView('list')}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all",
-                      staffView === 'list' ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                      staffView === 'list' ? "bg-brand-600 text-content-primary shadow-lg" : "text-content-muted hover:text-content-primary"
                     )}
                   >
                     <List className="w-3.5 h-3.5" />
@@ -901,7 +901,7 @@ export default function StaffPage() {
                     onClick={() => setStaffView('offices')}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all",
-                      staffView === 'offices' ? "bg-brand-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                      staffView === 'offices' ? "bg-brand-600 text-content-primary shadow-lg" : "text-content-muted hover:text-content-primary"
                     )}
                   >
                     <MapIcon className="w-3.5 h-3.5" />
@@ -911,11 +911,11 @@ export default function StaffPage() {
               </div>
 
               <div className="flex items-center justify-between px-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                <span className="text-xs font-bold text-content-muted uppercase tracking-widest">
                   {filteredStaff.length} Résultat{filteredStaff.length > 1 ? 's' : ''}
                 </span>
                 <div className="sm:hidden h-8 w-px bg-surface-border mx-4" />
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-content-muted">
                   <span className="text-status-success font-bold">{activeStaff.length}</span> actifs
                 </div>
               </div>
@@ -923,10 +923,10 @@ export default function StaffPage() {
               {filteredStaff.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-card/30 rounded-3xl border border-dashed border-surface-border">
                   <div className="w-20 h-20 bg-surface-input rounded-full flex items-center justify-center mb-6">
-                    <Users className="w-10 h-10 text-slate-600" />
+                    <Users className="w-10 h-10 text-content-muted" />
                   </div>
-                  <p className="text-slate-300 font-bold text-lg">Aucun employé trouvé</p>
-                  <p className="text-slate-500 text-sm mt-2 max-w-xs mx-auto">
+                  <p className="text-content-primary font-bold text-lg">Aucun employé trouvé</p>
+                  <p className="text-content-muted text-sm mt-2 max-w-xs mx-auto">
                     {search ? "Réessayez avec d'autres mots-clés ou effacez la recherche." : "Commencez par ajouter votre premier employé à l'équipe."}
                   </p>
                   {!search && (
@@ -991,10 +991,10 @@ export default function StaffPage() {
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="text-center">
-                  <h2 className="font-bold text-white text-base leading-tight">
+                  <h2 className="font-bold text-content-primary text-base leading-tight">
                     {MONTH_NAMES[month - 1]}
                   </h2>
-                  <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{year}</p>
+                  <p className="text-[10px] text-content-muted font-bold tracking-widest uppercase">{year}</p>
                 </div>
                 <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary transition-colors">
                   <ChevronRight className="w-5 h-5" />
@@ -1011,27 +1011,27 @@ export default function StaffPage() {
                 ].map(({ label, value, icon: Icon, color, border }) => (
                   <div key={label} className={`bg-surface-card border ${border} rounded-xl p-4 flex flex-col items-center justify-center`}>
                     <Icon className={`w-4 h-4 mb-2 ${color}`} />
-                    <p className="text-xl font-bold text-white">{value}</p>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">{label}</p>
+                    <p className="text-xl font-bold text-content-primary">{value}</p>
+                    <p className="text-[10px] font-bold text-content-muted uppercase tracking-wider mt-1">{label}</p>
                   </div>
                 ))}
               </div>
 
               {/* Grid with horizontal scroll */}
               {activeStaff.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-20 bg-surface-card/20 rounded-xl border border-dashed border-surface-border italic">Aucun employé actif pour ce mois</p>
+                <p className="text-content-muted text-sm text-center py-20 bg-surface-card/20 rounded-xl border border-dashed border-surface-border italic">Aucun employé actif pour ce mois</p>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Registre de présence</h3>
-                    <span className="text-[10px] text-slate-500 italic">Clic pour cycler le statut</span>
+                    <h3 className="text-[10px] font-bold text-content-muted uppercase tracking-widest">Registre de présence</h3>
+                    <span className="text-[10px] text-content-muted italic">Clic pour cycler le statut</span>
                   </div>
                   
                   <div className="overflow-x-auto rounded-xl border border-surface-border bg-surface-card shadow-sm no-scrollbar">
                     <table className="min-w-full text-[11px] border-collapse">
                       <thead>
                         <tr className="bg-surface-hover/30">
-                          <th className="sticky left-0 z-20 bg-surface-card border-r border-surface-border text-left px-4 py-3 text-slate-500 font-bold uppercase tracking-tight min-w-[150px]">
+                          <th className="sticky left-0 z-20 bg-surface-card border-r border-surface-border text-left px-4 py-3 text-content-muted font-bold uppercase tracking-tight min-w-[150px]">
                             Employé
                           </th>
                           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
@@ -1041,7 +1041,7 @@ export default function StaffPage() {
                             return (
                               <th key={d}
                                 onClick={() => bulkMarkAttendance(d)}
-                                className={`px-1 py-3 text-center font-bold w-10 min-w-[36px] cursor-pointer hover:bg-surface-hover transition-colors border-r border-surface-border/50 last:border-r-0 ${isWeekend ? 'text-status-error/40 bg-red-500/5' : 'text-slate-500'}`}>
+                                className={`px-1 py-3 text-center font-bold w-10 min-w-[36px] cursor-pointer hover:bg-surface-hover transition-colors border-r border-surface-border/50 last:border-r-0 ${isWeekend ? 'text-status-error/40 bg-red-500/5' : 'text-content-muted'}`}>
                                 {d}
                               </th>
                             );
@@ -1053,17 +1053,17 @@ export default function StaffPage() {
                         {activeStaff.map((s) => {
                           const calc = computePayroll(s, attendance, year, month);
                           return (
-                            <tr key={s.id} className="border-t border-surface-border hover:bg-surface-hover/10 transition-colors text-slate-300">
+                            <tr key={s.id} className="border-t border-surface-border hover:bg-surface-hover/10 transition-colors text-content-primary">
                               <td className="sticky left-0 z-10 bg-surface-card border-r border-surface-border px-4 py-2.5">
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="min-w-0">
-                                    <p className="font-bold text-white truncate max-w-[100px]">{s.name}</p>
-                                    {s.position && <p className="text-[9px] text-slate-500 font-bold truncate uppercase tracking-tight">{s.position}</p>}
+                                    <p className="font-bold text-content-primary truncate max-w-[100px]">{s.name}</p>
+                                    {s.position && <p className="text-[9px] text-content-muted font-bold truncate uppercase tracking-tight">{s.position}</p>}
                                   </div>
                                   <button
                                     onClick={() => handlePrintAttendanceSheet(s)}
                                     title="Imprimer la feuille de présence"
-                                    className="p-1.5 text-slate-500 hover:text-content-brand hover:bg-brand-500/10 rounded-lg transition-all"
+                                    className="p-1.5 text-content-muted hover:text-content-brand hover:bg-brand-500/10 rounded-lg transition-all"
                                   >
                                     <Printer className="w-3.5 h-3.5" />
                                   </button>
@@ -1082,7 +1082,7 @@ export default function StaffPage() {
                                       className={cn(
                                         "w-7 h-7 rounded text-[10px] font-bold transition-all flex items-center justify-center mx-auto",
                                         spinning ? "opacity-30" : "active:opacity-70",
-                                        cfg ? `${cfg.bg} ${cfg.color} border` : "bg-surface-input/20 text-slate-800 hover:text-slate-500"
+                                        cfg ? `${cfg.bg} ${cfg.color} border` : "bg-surface-input/20 text-content-primary hover:text-content-muted"
                                       )}
                                     >
                                       {spinning ? <Loader2 className="w-3 h-3 animate-spin" /> : (cfg?.short ?? '·')}
@@ -1111,7 +1111,7 @@ export default function StaffPage() {
                 <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <div className="text-center font-bold text-white">
+                <div className="text-center font-bold text-content-primary">
                   {MONTH_NAMES[month - 1]} {year}
                 </div>
                 <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary">
@@ -1127,18 +1127,18 @@ export default function StaffPage() {
                         {initials(staff.name)}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-white truncate">{staff.name}</h3>
-                        <p className="text-xs text-slate-500">{staff.position} · {SALARY_TYPE_LABELS[staff.salary_type]}</p>
+                        <h3 className="font-bold text-content-primary truncate">{staff.name}</h3>
+                        <p className="text-xs text-content-muted">{staff.position} · {SALARY_TYPE_LABELS[staff.salary_type]}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 sm:flex items-center gap-8 text-center sm:text-right shrink-0">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Présence</p>
+                        <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-1">Présence</p>
                         <p className="text-sm font-bold text-content-primary">{calc.daysWorked}j {staff.salary_type === 'hourly' && ` / ${calc.hoursWorked}h`}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Salaire Base</p>
+                        <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-1">Salaire Base</p>
                         <p className="text-sm font-bold text-content-primary">{fmtMoney(calc.baseAmount, cur)}</p>
                       </div>
                     </div>
@@ -1165,7 +1165,7 @@ export default function StaffPage() {
                   </div>
                 ))}
                 {payrollData.length === 0 && (
-                  <div className="py-20 text-center text-slate-500 italic">Aucun employé actif ce mois-ci.</div>
+                  <div className="py-20 text-center text-content-muted italic">Aucun employé actif ce mois-ci.</div>
                 )}
               </div>
             </div>
@@ -1260,25 +1260,25 @@ function StaffCard({
       : `${s.salary_rate.toLocaleString('fr-FR')} ${displayCurrency(currency)}/m`;
 
   return (
-    <div className="bg-surface-card border border-surface-border rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden transition-all hover:border-slate-700">
+    <div className="bg-surface-card border border-surface-border rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden transition-all hover:border-surface-border">
       {/* Discreet status indicator */}
-      <div className={`absolute top-0 left-0 w-1 h-full ${s.status === 'active' ? 'bg-green-600' : 'bg-slate-700'}`} />
+      <div className={`absolute top-0 left-0 w-1 h-full ${s.status === 'active' ? 'bg-green-600' : 'bg-surface-input'}`} />
       
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
           <div className="w-12 h-12 rounded-xl bg-surface-input border border-surface-border flex items-center justify-center shrink-0">
-            <span className="text-slate-300 font-bold text-lg">{initials(s.name)}</span>
+            <span className="text-content-primary font-bold text-lg">{initials(s.name)}</span>
           </div>
           <div className="min-w-0">
-            <h3 className="font-bold text-white text-base truncate">{s.name}</h3>
-            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">{s.position ?? 'Poste non défini'}</p>
+            <h3 className="font-bold text-content-primary text-base truncate">{s.name}</h3>
+            <p className="text-[11px] text-content-muted font-semibold uppercase tracking-wider">{s.position ?? 'Poste non défini'}</p>
           </div>
         </div>
         
         <div className="flex flex-col items-end shrink-0">
           <p className="text-sm font-bold text-content-brand">{rate}</p>
           <span className={`text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded border ${
-            s.status === 'active' ? 'border-green-900/50 text-status-success bg-badge-success' : 'border-slate-800 text-slate-500 bg-slate-900/20'
+            s.status === 'active' ? 'border-green-900/50 text-status-success bg-badge-success' : 'border-surface-border text-content-muted bg-surface/20'
           }`}>
             {s.status === 'active' ? 'ACTIF' : 'INACTIF'}
           </span>
@@ -1312,30 +1312,30 @@ function StaffCard({
             <div className="flex items-center gap-3 min-w-0">
               <LogIn className="w-3.5 h-3.5 text-green-600" />
               <div className="min-w-0">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Accès utilisateur</p>
-                <p className="text-xs text-slate-300 truncate font-medium">{teamMember.email}</p>
+                <p className="text-[10px] font-bold text-content-muted uppercase tracking-tight">Accès utilisateur</p>
+                <p className="text-xs text-content-primary truncate font-medium">{teamMember.email}</p>
               </div>
             </div>
             <button onClick={onUnlinkAccount} 
-              className="p-1.5 text-slate-500 hover:text-status-error transition-colors"
+              className="p-1.5 text-content-muted hover:text-status-error transition-colors"
               title="Délier le compte">
               <Unlink className="w-4 h-4" />
             </button>
           </div>
         ) : (
           <button onClick={onLinkAccount}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-slate-700 text-slate-500 hover:text-content-brand hover:border-brand-500 transition-all text-xs font-semibold">
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-surface-border text-content-muted hover:text-content-brand hover:border-brand-500 transition-all text-xs font-semibold">
             <Link2 className="w-4 h-4" /> Activer accès application
           </button>
         )}
 
         <div className="flex gap-2">
           <button onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-2 py-2 bg-surface-hover hover:bg-surface-border text-slate-300 rounded-lg transition-all text-xs font-semibold">
+            className="flex-1 flex items-center justify-center gap-2 py-2 bg-surface-hover hover:bg-surface-border text-content-primary rounded-lg transition-all text-xs font-semibold">
             <Pencil className="w-3.5 h-3.5" /> Modifier
           </button>
           <button onClick={onDelete}
-            className="px-3 flex items-center justify-center border border-surface-border hover:border-red-900/50 hover:bg-red-950/10 text-slate-500 hover:text-status-error rounded-lg transition-all">
+            className="px-3 flex items-center justify-center border border-surface-border hover:border-red-900/50 hover:bg-red-950/10 text-content-muted hover:text-status-error rounded-lg transition-all">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -1419,7 +1419,7 @@ function StaffPanel({
       <div className="flex flex-col h-full w-full max-w-md bg-surface-card border-l border-surface-border shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border shrink-0">
-          <h2 className="font-semibold text-white">{isEdit ? 'Modifier l\'employé' : 'Nouvel employé'}</h2>
+          <h2 className="font-semibold text-content-primary">{isEdit ? 'Modifier l\'employé' : 'Nouvel employé'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors">
             <X className="w-5 h-5 text-content-secondary" />
           </button>
@@ -1464,7 +1464,7 @@ function StaffPanel({
                 className="input w-full text-sm"
                 placeholder="0"
               />
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-content-muted">
                 {form.salary_type === 'hourly' && 'Montant payé par heure travaillée'}
                 {form.salary_type === 'daily' && 'Montant payé par jour de présence'}
                 {form.salary_type === 'monthly' && 'Salaire mensuel fixe — proratisé selon les jours travaillés'}
@@ -1483,7 +1483,7 @@ function StaffPanel({
                       ? s === 'active'
                         ? 'bg-badge-success border-status-success text-status-success'
                         : 'bg-surface-hover border-surface-border text-content-secondary'
-                      : 'border-surface-border text-slate-500 hover:text-slate-300'
+                      : 'border-surface-border text-content-muted hover:text-content-primary'
                   }`}>
                   {s === 'active' ? 'Actif' : 'Inactif'}
                 </button>
@@ -1581,7 +1581,7 @@ function PaymentModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
           <div>
-            <h2 className="font-semibold text-white">Enregistrer un paiement</h2>
+            <h2 className="font-semibold text-content-primary">Enregistrer un paiement</h2>
             <p className="text-xs text-content-secondary mt-0.5">{staff.name} · {MONTH_NAMES[month - 1]} {year}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover">
@@ -1594,17 +1594,17 @@ function PaymentModal({
           <div className="bg-surface-hover rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between text-content-secondary">
               <span>Jours travaillés</span>
-              <span className="text-white font-medium">{calc.daysWorked}j</span>
+              <span className="text-content-primary font-medium">{calc.daysWorked}j</span>
             </div>
             {staff.salary_type === 'hourly' && (
               <div className="flex justify-between text-content-secondary">
                 <span>Heures travaillées</span>
-                <span className="text-white font-medium">{calc.hoursWorked}h</span>
+                <span className="text-content-primary font-medium">{calc.hoursWorked}h</span>
               </div>
             )}
             <div className="flex justify-between text-content-secondary">
               <span>Salaire de base ({SALARY_TYPE_LABELS[staff.salary_type]})</span>
-              <span className="text-white font-medium">{fmtMoney(calc.baseAmount, currency)}</span>
+              <span className="text-content-primary font-medium">{fmtMoney(calc.baseAmount, currency)}</span>
             </div>
           </div>
 
@@ -1624,7 +1624,7 @@ function PaymentModal({
 
           {/* Net */}
           <div className="bg-badge-brand border border-brand-800 rounded-xl p-4 flex justify-between items-center">
-            <span className="text-slate-300 font-medium">Net à payer</span>
+            <span className="text-content-primary font-medium">Net à payer</span>
             <span className="text-xl font-bold text-content-brand">{fmtMoney(net, currency)}</span>
           </div>
 
@@ -1755,7 +1755,7 @@ function LinkAccountModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
           <div>
-            <h2 className="font-semibold text-white">Compte de connexion</h2>
+            <h2 className="font-semibold text-content-primary">Compte de connexion</h2>
             <p className="text-xs text-content-secondary mt-0.5">{staff.name}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover">
@@ -1768,13 +1768,13 @@ function LinkAccountModal({
           <div className="flex gap-1 bg-surface-input rounded-xl p-1">
             <button onClick={() => setMode('new')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === 'new' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'
+                mode === 'new' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'
               }`}>
               Nouveau compte
             </button>
             <button onClick={() => setMode('existing')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === 'existing' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'
+                mode === 'existing' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'
               }`}>
               Compte existant
             </button>
@@ -1804,7 +1804,7 @@ function LinkAccountModal({
                     {copied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4 text-content-secondary" />}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">Copiez ce mot de passe et transmettez-le à l'employé.</p>
+                <p className="mt-1 text-xs text-content-muted">Copiez ce mot de passe et transmettez-le à l'employé.</p>
               </div>
             </>
           ) : (
@@ -1813,7 +1813,7 @@ function LinkAccountModal({
                 Liez cet employé à un compte déjà existant dans l'équipe.
               </p>
               {availableMembers.length === 0 ? (
-                <div className="text-center py-6 text-slate-500 text-sm">
+                <div className="text-center py-6 text-content-muted text-sm">
                   Aucun compte disponible — tous les membres sont déjà liés à un employé.
                 </div>
               ) : (
@@ -1835,7 +1835,7 @@ function LinkAccountModal({
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{m.full_name}</p>
+                        <p className="text-sm font-medium text-content-primary truncate">{m.full_name}</p>
                         <p className="text-xs text-content-secondary truncate">{m.email}</p>
                       </div>
                     </label>

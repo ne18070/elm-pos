@@ -25,7 +25,7 @@ export function InactivityGuard() {
 
   const doLogout = useCallback(async () => {
     const { session: cashSession, setSession, setLoaded: setCashLoaded } = useCashSessionStore.getState();
-    // Ne pas déconnecter si une session de caisse est en cours — juste garder l'avertissement visible
+    // Ne pas déconnecter si une session de caisse est en cours —juste garder l'avertissement visible
     if (cashSession) {
       setShowWarning(true);
       return;
@@ -83,11 +83,11 @@ export function InactivityGuard() {
             <AlertTriangle className="w-5 h-5 text-status-warning" />
           </div>
           <div>
-            <h2 className="font-semibold text-white">Session inactive</h2>
+            <h2 className="font-semibold text-content-primary">Session inactive</h2>
             <p className="text-sm text-content-secondary mt-1">
-              Vous serez déconnecté automatiquement dans <strong className="text-white">2 heures</strong> en raison d&apos;inactivité.
+              Vous serez déconnecté automatiquement dans <strong className="text-content-primary">2 heures</strong> en raison d&apos;inactivité.
               {useCashSessionStore.getState().session && (
-                <span className="block mt-1 text-status-warning text-xs">Une session de caisse est ouverte — la déconnexion est bloquée.</span>
+                <span className="block mt-1 text-status-warning text-xs">Une session de caisse est ouverte —la déconnexion est bloquée.</span>
               )}
             </p>
           </div>
@@ -111,3 +111,4 @@ export function InactivityGuard() {
     </div>
   );
 }
+

@@ -77,10 +77,10 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
       <div className="relative w-full max-w-2xl bg-surface-card border border-surface-border rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Search Input */}
         <div className="flex items-center px-6 h-16 border-b border-surface-border gap-4">
-          <Search className="text-slate-500" size={20} />
+          <Search className="text-content-primary" size={20} />
           <input
             autoFocus
-            className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-slate-500 font-bold"
+            className="flex-1 bg-transparent border-none focus:ring-0 text-content-primary placeholder-slate-500 font-bold"
             placeholder="Rechercher une organisation, un client, une demande..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -88,7 +88,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
           {loading ? (
             <Loader2 className="animate-spin text-brand-500" size={18} />
           ) : (
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-surface-border bg-surface text-[10px] font-black text-slate-500 uppercase">
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-surface-border bg-surface text-[10px] font-black text-content-primary uppercase">
               Esc
             </div>
           )}
@@ -99,16 +99,16 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
           {query.length < 2 ? (
             <div className="py-12 text-center space-y-3">
               <Command className="mx-auto text-slate-700" size={40} />
-              <p className="text-slate-500 text-sm font-medium">Saisissez au moins 2 caractères pour rechercher.</p>
+              <p className="text-content-primary text-sm font-medium">Saisissez au moins 2 caractﾃｨres pour rechercher.</p>
               <div className="flex flex-wrap justify-center gap-2 mt-4">
-                 {['Nestlé', 'Dakar', 'Standard', 'Pro'].map(t => (
-                   <button key={t} onClick={() => setQuery(t)} className="px-3 py-1.5 rounded-full bg-surface-input border border-surface-border text-[10px] font-black text-content-secondary hover:text-white transition-all">"{t}"</button>
+                 {['Nestlﾃｩ', 'Dakar', 'Standard', 'Pro'].map(t => (
+                   <button key={t} onClick={() => setQuery(t)} className="px-3 py-1.5 rounded-full bg-surface-input border border-surface-border text-[10px] font-black text-content-secondary hover:text-content-primary transition-all">"{t}"</button>
                  ))}
               </div>
             </div>
           ) : (results.orgs.length === 0 && results.demandes.length === 0 && results.subs.length === 0) ? (
             <div className="py-12 text-center">
-              <p className="text-slate-500 text-sm italic">Aucun résultat pour "{query}"</p>
+              <p className="text-content-primary text-sm italic">Aucun rﾃｩsultat pour "{query}"</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -118,7 +118,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
                     <Item 
                       key={item.id}
                       title={item.legal_name}
-                      subtitle={item.denomination || 'Entité légale'}
+                      subtitle={item.denomination || 'Entitﾃｩ lﾃｩgale'}
                       onClick={() => { router.push('/backoffice/structures'); onClose(); }}
                     />
                   )} 
@@ -158,11 +158,11 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
            <div className="flex items-center gap-6">
               <div className="flex items-center gap-1.5">
                  <kbd className="px-1.5 py-0.5 rounded border border-surface-border bg-surface text-[10px] font-black text-content-secondary">↑↓</kbd>
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Naviguer</span>
+                 <span className="text-[10px] font-bold text-content-primary uppercase tracking-widest">Naviguer</span>
               </div>
               <div className="flex items-center gap-1.5">
                  <kbd className="px-1.5 py-0.5 rounded border border-surface-border bg-surface text-[10px] font-black text-content-secondary">Enter</kbd>
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sélectionner</span>
+                 <span className="text-[10px] font-bold text-content-primary uppercase tracking-widest">Sélectionner</span>
               </div>
            </div>
            <p className="text-[10px] font-black text-content-brand uppercase tracking-widest">Command Center</p>
@@ -176,8 +176,8 @@ function Section({ title, icon: Icon, items, renderItem }: any) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 px-2">
-        <Icon size={14} className="text-slate-500" />
-        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</h4>
+        <Icon size={14} className="text-content-primary" />
+        <h4 className="text-[10px] font-black text-content-primary uppercase tracking-[0.2em]">{title}</h4>
       </div>
       <div className="space-y-1">
         {items.map(renderItem)}
@@ -194,11 +194,11 @@ function Item({ title, subtitle, badge, onClick }: any) {
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-surface-input border border-surface-border flex items-center justify-center group-hover:bg-brand-500/20 group-hover:border-brand-500/30 transition-all">
-          <ArrowRight size={16} className="text-slate-500 group-hover:text-content-brand" />
+          <ArrowRight size={16} className="text-content-primary group-hover:text-content-brand" />
         </div>
         <div>
-          <p className="text-sm font-bold text-white group-hover:text-content-brand transition-colors">{title}</p>
-          <p className="text-[10px] text-slate-500 font-medium">{subtitle}</p>
+          <p className="text-sm font-bold text-content-primary group-hover:text-content-brand transition-colors">{title}</p>
+          <p className="text-[10px] text-content-primary font-medium">{subtitle}</p>
         </div>
       </div>
       {badge && (
@@ -207,3 +207,5 @@ function Item({ title, subtitle, badge, onClick }: any) {
     </button>
   );
 }
+
+

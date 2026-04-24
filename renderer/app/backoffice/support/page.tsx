@@ -17,16 +17,16 @@ import { useNotificationStore } from '@/store/notifications';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: any }> = {
-  open:        { label: 'Ouvert',      color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', icon: Clock },
+  open:        { label: 'Ouvert',      color: 'text-status-info bg-blue-500/10 border-blue-500/20', icon: Clock },
   in_progress: { label: 'En cours',   color: 'text-status-warning bg-amber-500/10 border-amber-500/20', icon: ActivityIcon },
   resolved:    { label: 'Résolu',      color: 'text-status-success bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
-  closed:      { label: 'Fermé',      color: 'text-slate-500 bg-slate-500/10 border-slate-500/20', icon: XCircle },
+  closed:      { label: 'Fermé',      color: 'text-content-muted bg-slate-500/10 border-slate-500/20', icon: XCircle },
 };
 
 const TYPE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
   bug:        { label: 'Bug',        icon: Bug,           color: 'text-status-error' },
   suggestion: { label: 'Suggestion', icon: Lightbulb,     color: 'text-status-warning' },
-  question:   { label: 'Question',   icon: HelpCircle,    color: 'text-blue-400' },
+  question:   { label: 'Question',   icon: HelpCircle,    color: 'text-status-info' },
   feedback:   { label: 'Feedback',   icon: MessageSquare, color: 'text-status-success' },
 };
 
@@ -87,12 +87,12 @@ export default function SupportAdminPage() {
     <div className="p-8 space-y-8 pb-32">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Support Client</h1>
-          <p className="text-slate-500 text-sm mt-1">Gérez les retours, bugs et suggestions des utilisateurs.</p>
+          <h1 className="text-2xl font-black text-content-primary tracking-tight uppercase">Support Client</h1>
+          <p className="text-content-muted text-sm mt-1">Gérez les retours, bugs et suggestions des utilisateurs.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
             <input 
               type="text" 
               placeholder="Rechercher un ticket..."
@@ -114,7 +114,7 @@ export default function SupportAdminPage() {
           onClick={() => setStatusFilter('all')}
           className={cn(
             "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all",
-            statusFilter === 'all' ? "bg-white text-black border-white shadow-lg" : "bg-surface-card border border-surface-border text-slate-500 hover:text-white"
+            statusFilter === 'all' ? "bg-white text-black border-white shadow-lg" : "bg-surface-card border border-surface-border text-content-muted hover:text-content-primary"
           )}
         >
           Tous ({tickets.length})
@@ -125,7 +125,7 @@ export default function SupportAdminPage() {
             onClick={() => setStatusFilter(key)}
             className={cn(
               "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all flex items-center gap-2",
-              statusFilter === key ? cfg.color + " border-current shadow-lg ring-1 ring-current" : "bg-surface-card border border-surface-border text-slate-500 hover:text-white"
+              statusFilter === key ? cfg.color + " border-current shadow-lg ring-1 ring-current" : "bg-surface-card border border-surface-border text-content-muted hover:text-content-primary"
             )}
           >
             <cfg.icon size={14} />
@@ -140,8 +140,8 @@ export default function SupportAdminPage() {
         <div className="grid grid-cols-1 gap-4">
           {filtered.length === 0 ? (
             <div className="card p-20 text-center space-y-4 border-dashed">
-               <MessageSquare className="mx-auto text-slate-800" size={48} />
-               <p className="text-slate-500 font-medium italic">Aucun ticket de support trouvé.</p>
+               <MessageSquare className="mx-auto text-content-muted" size={48} />
+               <p className="text-content-muted font-medium italic">Aucun ticket de support trouvé.</p>
             </div>
           ) : (
             filtered.map((ticket) => {
@@ -162,16 +162,16 @@ export default function SupportAdminPage() {
                         {typeCfg.label}
                       </span>
                       <span className="text-slate-700">•</span>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">{new Date(ticket.created_at).toLocaleString('fr-FR')}</span>
+                      <span className="text-[10px] font-bold text-content-muted uppercase">{new Date(ticket.created_at).toLocaleString('fr-FR')}</span>
                     </div>
-                    <h3 className="text-lg font-black text-white tracking-tight truncate">{ticket.subject}</h3>
+                    <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{ticket.subject}</h3>
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-1.5 text-content-secondary">
-                        <User size={14} className="text-slate-600" />
+                        <User size={14} className="text-content-muted" />
                         <span className="font-bold">{ticket.user?.full_name}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-content-secondary">
-                        <Building2 size={14} className="text-slate-600" />
+                        <Building2 size={14} className="text-content-muted" />
                         <span className="font-bold">{ticket.business?.name}</span>
                       </div>
                     </div>
@@ -183,7 +183,7 @@ export default function SupportAdminPage() {
                           {statusCfg.label}
                        </span>
                        {ticket.attachments.length > 0 && (
-                         <div className="flex items-center gap-1 text-slate-500 text-[10px] font-bold uppercase">
+                         <div className="flex items-center gap-1 text-content-muted text-[10px] font-bold uppercase">
                             <Paperclip size={12} /> {ticket.attachments.length} fichiers
                          </div>
                        )}
@@ -220,7 +220,7 @@ export default function SupportAdminPage() {
                <button 
                 onClick={() => handleUpdateStatus(selectedTicket!.id, 'closed')}
                 disabled={updating}
-                className="bg-surface-card hover:bg-slate-700 text-white flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 rounded-2xl transition-all border border-slate-700"
+                className="bg-surface-card hover:bg-surface-input text-content-primary flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 rounded-2xl transition-all border border-surface-border"
               >
                 {updating ? <Loader2 className="animate-spin" size={16} /> : <XCircle size={16} />}
                 Fermer le ticket
@@ -236,28 +236,28 @@ export default function SupportAdminPage() {
                   <div className={cn("px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border", STATUS_CONFIG[selectedTicket.status].color)}>
                      {STATUS_CONFIG[selectedTicket.status].label}
                   </div>
-                  <div className="flex items-center gap-2 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <div className="flex items-center gap-2 text-content-muted text-[10px] font-black uppercase tracking-widest">
                      <Calendar size={14} /> {new Date(selectedTicket.created_at).toLocaleString()}
                   </div>
                </div>
-               <h2 className="text-2xl font-black text-white tracking-tight leading-tight">{selectedTicket.subject}</h2>
+               <h2 className="text-2xl font-black text-content-primary tracking-tight leading-tight">{selectedTicket.subject}</h2>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                <div className="p-4 rounded-2xl bg-surface-input/50 border border-surface-border space-y-1">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Utilisateur</p>
-                  <p className="text-sm font-bold text-white">{selectedTicket.user?.full_name}</p>
-                  <p className="text-xs text-slate-500">{selectedTicket.user?.email}</p>
+                  <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Utilisateur</p>
+                  <p className="text-sm font-bold text-content-primary">{selectedTicket.user?.full_name}</p>
+                  <p className="text-xs text-content-muted">{selectedTicket.user?.email}</p>
                </div>
                <div className="p-4 rounded-2xl bg-surface-input/50 border border-surface-border space-y-1">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Établissement</p>
-                  <p className="text-sm font-bold text-white">{selectedTicket.business?.name}</p>
-                  <p className="text-xs text-slate-500">{selectedTicket.business_id.slice(0, 8)}</p>
+                  <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Établissement</p>
+                  <p className="text-sm font-bold text-content-primary">{selectedTicket.business?.name}</p>
+                  <p className="text-xs text-content-muted">{selectedTicket.business_id.slice(0, 8)}</p>
                </div>
             </div>
 
             <div className="space-y-3">
-               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Message</p>
+               <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Message</p>
                <div className="p-6 rounded-3xl bg-surface-input border border-surface-border text-content-primary text-sm leading-relaxed whitespace-pre-wrap">
                   {selectedTicket.message}
                </div>
@@ -265,7 +265,7 @@ export default function SupportAdminPage() {
 
             {selectedTicket.attachments.length > 0 && (
               <div className="space-y-3">
-                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pièces jointes ({selectedTicket.attachments.length})</p>
+                 <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Pièces jointes ({selectedTicket.attachments.length})</p>
                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {selectedTicket.attachments.map((url, i) => (
                       <a 
@@ -276,7 +276,7 @@ export default function SupportAdminPage() {
                         className="aspect-video rounded-2xl overflow-hidden border border-surface-border bg-black group relative"
                       >
                          <img src={url} alt="attachment" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                         <div className="absolute inset-0 bg-brand-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                         <div className="absolute inset-0 bg-brand-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-content-primary">
                             <ExternalLink size={20} />
                          </div>
                       </a>
@@ -286,18 +286,18 @@ export default function SupportAdminPage() {
             )}
 
             <div className="space-y-3">
-               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Données Système (Metadata)</p>
-               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 font-mono text-[10px] text-content-secondary overflow-x-auto">
+               <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Données Système (Metadata)</p>
+               <div className="p-4 rounded-2xl bg-surface/50 border border-surface-border font-mono text-[10px] text-content-secondary overflow-x-auto">
                   <pre>{JSON.stringify(selectedTicket.metadata, null, 2)}</pre>
                </div>
             </div>
 
             {selectedTicket.status === 'open' && (
               <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/10 flex items-start gap-4">
-                 <ShieldAlert className="text-blue-400 shrink-0" size={20} />
+                 <ShieldAlert className="text-status-info shrink-0" size={20} />
                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-white">Prise en charge nécessaire</p>
-                    <p className="text-[10px] text-slate-500 leading-relaxed">Pensez à contacter le client par email ou WhatsApp avant de clôturer ce ticket pour lui confirmer la résolution.</p>
+                    <p className="text-xs font-bold text-content-primary">Prise en charge nécessaire</p>
+                    <p className="text-[10px] text-content-muted leading-relaxed">Pensez à contacter le client par email ou WhatsApp avant de clôturer ce ticket pour lui confirmer la résolution.</p>
                  </div>
               </div>
             )}

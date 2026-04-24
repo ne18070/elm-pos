@@ -120,14 +120,14 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-white">Importer des clients</h2>
-            <p className="text-xs text-slate-500">
+            <h2 className="text-lg font-semibold text-content-primary">Importer des clients</h2>
+            <p className="text-xs text-content-primary">
               {step === 'upload'  && 'Chargez un fichier CSV'}
-              {step === 'preview' && `${rows.length} ligne${rows.length > 1 ? 's' : ''} détectée${rows.length > 1 ? 's' : ''} — ${errCount} erreur${errCount !== 1 ? 's' : ''}`}
+              {step === 'preview' && `${rows.length} ligne${rows.length > 1 ? 's' : ''} détectée${rows.length > 1 ? 's' : ''} —${errCount} erreur${errCount !== 1 ? 's' : ''}`}
               {step === 'done'    && `${okCount} importé${okCount > 1 ? 's' : ''} · ${errCount} erreur${errCount !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -140,31 +140,31 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
 
               {/* Explication */}
               <div className="p-4 rounded-xl bg-surface-input border border-surface-border space-y-2 text-sm">
-                <p className="font-medium text-white">Comment ça fonctionne ?</p>
+                <p className="font-medium text-content-primary">Comment ça fonctionne ?</p>
                 <ol className="space-y-1 text-content-secondary text-xs">
                   <li className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                    <span className="w-4 h-4 rounded-full bg-brand-600 text-content-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
                     Téléchargez le modèle CSV ci-dessous
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                    <span className="w-4 h-4 rounded-full bg-brand-600 text-content-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
                     Remplissez-le avec vos clients (Excel, Google Sheets…)
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
-                    Enregistrez en <strong className="text-slate-300">.csv</strong> et déposez-le ici
+                    <span className="w-4 h-4 rounded-full bg-brand-600 text-content-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                    Enregistrez en <strong className="text-content-primary">.csv</strong> et déposez-le ici
                   </li>
                 </ol>
-                <p className="text-xs text-slate-500 pt-1 border-t border-surface-border">
-                  Colonnes : <span className="text-slate-300">nom</span> (obligatoire), telephone, email, adresse, notes
+                <p className="text-xs text-content-primary pt-1 border-t border-surface-border">
+                  Colonnes : <span className="text-content-primary">nom</span> (obligatoire), telephone, email, adresse, notes
                 </p>
               </div>
 
               {/* Template */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                 <div>
-                  <p className="text-sm text-white font-medium">Modèle CSV Clients</p>
-                  <p className="text-xs text-slate-500">Fichier Excel/Google Sheets compatible</p>
+                  <p className="text-sm text-content-primary font-medium">Modèle CSV Clients</p>
+                  <p className="text-xs text-content-primary">Fichier Excel/Google Sheets compatible</p>
                 </div>
                 <button onClick={downloadTemplate} className="btn-secondary h-8 text-xs px-3 flex items-center gap-1.5">
                   <Download className="w-3.5 h-3.5" /> Télécharger
@@ -180,10 +180,10 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
                 className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl py-12 cursor-pointer transition-colors
                   ${dragOver ? 'border-brand-400 bg-badge-brand' : 'border-slate-700 hover:border-slate-500'}`}
               >
-                <Upload className="w-10 h-10 text-slate-500" />
+                <Upload className="w-10 h-10 text-content-primary" />
                 <div className="text-center">
-                  <p className="text-sm font-medium text-white">Glissez votre fichier CSV ici</p>
-                  <p className="text-xs text-slate-500 mt-1">ou cliquez pour parcourir</p>
+                  <p className="text-sm font-medium text-content-primary">Glissez votre fichier CSV ici</p>
+                  <p className="text-xs text-content-primary mt-1">ou cliquez pour parcourir</p>
                 </div>
                 <input
                   ref={inputRef}
@@ -217,14 +217,14 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
                       <tr key={i} className={`border-b border-surface-border transition-colors
                         ${status === 'ok'    ? 'bg-badge-success' :
                           status === 'error' ? 'bg-badge-error'   : 'hover:bg-surface-hover'}`}>
-                        <td className="px-4 py-2 text-slate-500 text-xs">{i + 1}</td>
+                        <td className="px-4 py-2 text-content-primary text-xs">{i + 1}</td>
                         {headers.map((_, ci) => (
                           <td key={ci} className="px-4 py-2 text-content-primary text-xs truncate max-w-[140px]">
                             {row[ci] ?? ''}
                           </td>
                         ))}
                         <td className="px-4 py-2">
-                          {status === 'pending' && !importing && <span className="text-xs text-slate-500">—</span>}
+                          {status === 'pending' && !importing && <span className="text-xs text-content-primary">—</span>}
                           {status === 'pending' &&  importing && <Loader2 className="w-3 h-3 text-content-secondary animate-spin" />}
                           {status === 'ok'      && <span className="flex items-center gap-1 text-xs text-status-success"><Check className="w-3 h-3" /> Importé</span>}
                           {status === 'error'   && (
@@ -266,7 +266,7 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
           )}
           {step === 'done' && (
             <button onClick={() => { onDone(); onClose(); }} className="btn-primary flex-1 h-10 flex items-center justify-center gap-2">
-              <Check className="w-4 h-4" /> Terminé — {okCount} importé{okCount > 1 ? 's' : ''}
+              <Check className="w-4 h-4" /> Terminé —{okCount} importé{okCount > 1 ? 's' : ''}
             </button>
           )}
         </div>
@@ -274,3 +274,5 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
     </div>
   );
 }
+
+

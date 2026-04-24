@@ -77,32 +77,32 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
       <Modal title={existingUser ? 'Membre ajouté' : 'Compte créé'} onClose={onClose} size="sm">
         <div className="space-y-4">
           {existingUser ? (
-            <p className="text-sm text-slate-300">
-              <strong className="text-white">{form.email}</strong> a été ajouté à cet établissement.
+            <p className="text-sm text-content-primary">
+              <strong className="text-content-primary">{form.email}</strong> a été ajouté à cet établissement.
               Il verra le nouvel établissement dans son sélecteur en haut à gauche.
             </p>
           ) : (
             <>
-              <p className="text-sm text-slate-300">
-                Le compte <strong className="text-white">{form.email}</strong> a été créé.
+              <p className="text-sm text-content-primary">
+                Le compte <strong className="text-content-primary">{form.email}</strong> a été créé.
                 Transmettez ces identifiants à l'utilisateur.
               </p>
               <div className="rounded-xl border border-surface-border bg-surface-card p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-content-secondary">Email</span>
-                  <span className="text-white font-mono">{form.email}</span>
+                  <span className="text-content-primary font-mono">{form.email}</span>
                 </div>
                 <div className="flex justify-between text-sm items-center">
                   <span className="text-content-secondary">Mot de passe</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-mono">{form.password}</span>
-                    <button onClick={copyPassword} className="text-content-secondary hover:text-white">
+                    <span className="text-content-primary font-mono">{form.password}</span>
+                    <button onClick={copyPassword} className="text-content-secondary hover:text-content-primary">
                       {copied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-content-primary">
                 L'utilisateur pourra changer son mot de passe depuis son profil.
               </p>
             </>
@@ -145,7 +145,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
             className="w-4 h-4 accent-brand-500"
           />
           <div>
-            <p className="text-sm font-medium text-white">Utilisateur existant</p>
+            <p className="text-sm font-medium text-content-primary">Utilisateur existant</p>
             <p className="text-xs text-content-secondary">L'utilisateur a déjà un compte sur un autre établissement</p>
           </div>
         </label>
@@ -216,7 +216,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium text-white">{r.label}</p>
+                  <p className="text-sm font-medium text-content-primary">{r.label}</p>
                   <p className="text-xs text-content-secondary">{r.desc}</p>
                 </div>
               </label>
@@ -224,7 +224,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
           </div>
         </div>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-content-primary">
           {existingUser
             ? "L'utilisateur sera ajouté à cet établissement. Il pourra basculer entre ses établissements depuis la barre latérale."
             : "Le compte est créé immédiatement. Transmettez l'email et le mot de passe à l'utilisateur."}
@@ -233,3 +233,5 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
     </Modal>
   );
 }
+
+

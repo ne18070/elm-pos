@@ -36,7 +36,7 @@ export function HoldModal({ onConfirm, onClose }: HoldModalProps) {
               <Clock className="w-5 h-5 text-content-brand" />
             </div>
             <div>
-              <h2 className="font-semibold text-white">Mettre en attente</h2>
+              <h2 className="font-semibold text-content-primary">Mettre en attente</h2>
               <p className="text-xs text-content-secondary">Identifiez cette commande</p>
             </div>
           </div>
@@ -84,3 +84,4 @@ export function HoldModal({ onConfirm, onClose }: HoldModalProps) {
     </>
   );
 }
+

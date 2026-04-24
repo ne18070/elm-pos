@@ -121,7 +121,7 @@ export default function BillingPage() {
 
         {/* ── En-tête ── */}
         <div>
-          <h1 className="text-xl font-bold text-white">Abonnement & Facturation</h1>
+          <h1 className="text-xl font-bold text-content-primary">Abonnement & Facturation</h1>
           <p className="text-sm text-content-secondary mt-0.5">
             Gérez votre plan et consultez l'historique de vos demandes.
           </p>
@@ -140,7 +140,7 @@ export default function BillingPage() {
                 : <Clock className={`w-5 h-5 shrink-0 mt-0.5 ${status === 'trial' ? 'text-status-warning' : 'text-status-error'}`} />
               }
               <div>
-                <p className="font-semibold text-white">
+                <p className="font-semibold text-content-primary">
                   {status === 'active' ? 'Abonnement actif'
                     : status === 'trial' ? "Période d'essai"
                     : 'Accès expiré'}
@@ -155,14 +155,14 @@ export default function BillingPage() {
                     'Souscrivez un abonnement pour continuer à utiliser elm-pos.'}
                 </p>
                 {subscription?.payment_note && (
-                  <p className="text-xs text-slate-500 mt-1 italic">{subscription.payment_note}</p>
+                  <p className="text-xs text-content-primary mt-1 italic">{subscription.payment_note}</p>
                 )}
               </div>
             </div>
 
             <button
               onClick={handleCheck} disabled={checking}
-              className="shrink-0 flex items-center gap-1.5 text-xs text-content-secondary hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-surface-hover"
+              className="shrink-0 flex items-center gap-1.5 text-xs text-content-secondary hover:text-content-primary transition-colors px-2 py-1 rounded-lg hover:bg-surface-hover"
             >
               {checking
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -191,8 +191,8 @@ export default function BillingPage() {
                   <Package className="w-5 h-5 text-content-brand" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Plan actuel</p>
-                  <p className="text-lg font-bold text-white leading-none mt-0.5">{activePlan.label}</p>
+                  <p className="text-[11px] text-content-primary uppercase tracking-wider font-semibold">Plan actuel</p>
+                  <p className="text-lg font-bold text-content-primary leading-none mt-0.5">{activePlan.label}</p>
                 </div>
               </div>
               <div className="text-right">
@@ -203,7 +203,7 @@ export default function BillingPage() {
                   </span>
                 </p>
                 {subscription?.activated_at && (
-                  <p className="text-xs text-slate-600 mt-0.5">
+                  <p className="text-xs text-content-muted mt-0.5">
                     Activé le {format(new Date(subscription.activated_at), 'dd MMM yyyy', { locale: fr })}
                   </p>
                 )}
@@ -223,8 +223,8 @@ export default function BillingPage() {
                     {format(expiresAt, 'dd MMMM yyyy', { locale: fr })}
                   </strong>
                   {daysLeft !== null && daysLeft >= 0 && (
-                    <span className="text-slate-500 ml-1">
-                      — {daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
+                    <span className="text-content-primary ml-1">
+                      —{daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
                     </span>
                   )}
                 </span>
@@ -234,7 +234,7 @@ export default function BillingPage() {
             {activePlan.features.length > 0 && (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-surface-border">
                 {activePlan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
+                  <li key={f} className="flex items-center gap-2 text-xs text-content-primary">
                     <CheckCircle className="w-3.5 h-3.5 text-status-success shrink-0" />
                     {f}
                   </li>
@@ -258,7 +258,7 @@ export default function BillingPage() {
           <>
             <div>
               <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-                <h2 className="text-base font-bold text-white">
+                <h2 className="text-base font-bold text-content-primary">
                   {status === 'active' ? 'Renouveler / changer de plan' : 'Choisissez votre plan'}
                 </h2>
                 {hasAnnual && hasMonthly && (
@@ -268,10 +268,10 @@ export default function BillingPage() {
                         key={p}
                         onClick={() => { setPeriod(p); setSelectedPlan(null); }}
                         className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
-                          ${period === p ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
+                          ${period === p ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
                       >
                         {p === 'monthly' ? 'Mensuel' : (
-                          <span className="flex items-center gap-1">Annuel <span className="text-status-success">−10%</span></span>
+                          <span className="flex items-center gap-1">Annuel <span className="text-status-success">∁E0%</span></span>
                         )}
                       </button>
                     ))}
@@ -301,7 +301,7 @@ export default function BillingPage() {
                           1 mois offert
                         </span>
                       )}
-                      <p className="font-bold text-white text-base">{plan.label}</p>
+                      <p className="font-bold text-content-primary text-base">{plan.label}</p>
                       <p className="text-2xl font-bold text-content-brand mt-1">
                         {plan.price.toLocaleString('fr-FR')}{' '}
                         <span className="text-sm font-normal text-content-secondary">
@@ -309,13 +309,13 @@ export default function BillingPage() {
                         </span>
                       </p>
                       {monthlyEquiv && (
-                        <p className="text-xs text-slate-500 mt-0.5">
+                        <p className="text-xs text-content-primary mt-0.5">
                           soit {monthlyEquiv.toLocaleString('fr-FR')} {displayCurrency(plan.currency)}/mois
                         </p>
                       )}
                       <ul className="mt-3 space-y-1">
                         {plan.features.map((f) => (
-                          <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
+                          <li key={f} className="flex items-center gap-2 text-xs text-content-primary">
                             <CheckCircle className="w-3.5 h-3.5 text-status-success shrink-0" />
                             {f}
                           </li>
@@ -330,10 +330,10 @@ export default function BillingPage() {
             <div className="card p-5 space-y-5">
               <div className="flex items-start gap-4 p-4 rounded-xl bg-badge-brand border border-brand-800/50">
                 <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5 text-white" />
+                  <Clock className="w-5 h-5 text-content-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Activation par notre équipe</p>
+                  <p className="text-sm font-semibold text-content-primary">Activation par notre équipe</p>
                   <p className="text-xs text-content-secondary mt-1">
                     Une fois votre demande envoyée, notre équipe vous contactera sous 24h pour finaliser le règlement et activer votre accès.
                   </p>
@@ -343,9 +343,9 @@ export default function BillingPage() {
               {selectedPlan && (
                 <div className="flex items-center justify-between text-sm px-4 py-3 bg-surface-input rounded-xl border border-surface-border">
                   <span className="text-content-secondary">Plan sélectionné</span>
-                  <span className="font-bold text-white">
+                  <span className="font-bold text-content-primary">
                     {selectedPlan.label}
-                    {' — '}
+                    {' —'}
                     {selectedPlan.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan.currency)}
                   </span>
                 </div>
@@ -372,7 +372,7 @@ export default function BillingPage() {
               <CheckCircle className="w-8 h-8 text-status-success" />
             </div>
             <div>
-              <p className="text-lg font-bold text-white">Demande envoyée !</p>
+              <p className="text-lg font-bold text-content-primary">Demande envoyée !</p>
               <p className="text-sm text-content-secondary mt-1">
                 Notre équipe vous contactera très prochainement pour finaliser votre abonnement.
               </p>
@@ -390,7 +390,7 @@ export default function BillingPage() {
               Historique des demandes
             </h2>
             {myRequests.length > 0 && (
-              <span className="text-xs text-slate-600">
+              <span className="text-xs text-content-muted">
                 {myRequests.length} demande{myRequests.length > 1 ? 's' : ''}
               </span>
             )}
@@ -398,8 +398,8 @@ export default function BillingPage() {
 
           {myRequests.length === 0 ? (
             <div className="card p-10 flex flex-col items-center gap-3 text-center">
-              <FileText className="w-8 h-8 text-slate-600" />
-              <p className="text-slate-500 text-sm">Aucune demande enregistrée</p>
+              <FileText className="w-8 h-8 text-content-muted" />
+              <p className="text-content-primary text-sm">Aucune demande enregistrée</p>
             </div>
           ) : (
             myRequests.map((req) => {
@@ -410,7 +410,7 @@ export default function BillingPage() {
                     <div className="flex-1 min-w-0 space-y-1.5">
                       {/* Plan name + price */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-white">{req.plan_label ?? '—'}</p>
+                        <p className="text-sm font-semibold text-content-primary">{req.plan_label ?? '—'}</p>
                         {req.plan_price != null && req.plan_currency && (
                           <span className="text-xs font-medium text-content-brand bg-brand-600/10 border border-brand-600/20 px-2 py-0.5 rounded-full">
                             {req.plan_price.toLocaleString('fr-FR')} {displayCurrency(req.plan_currency)}
@@ -419,7 +419,7 @@ export default function BillingPage() {
                       </div>
 
                       {/* Dates */}
-                      <div className="flex flex-wrap gap-x-4 gap-y-0 text-xs text-slate-500">
+                      <div className="flex flex-wrap gap-x-4 gap-y-0 text-xs text-content-primary">
                         <span>
                           Demandé le{' '}
                           {format(new Date(req.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
@@ -451,3 +451,5 @@ export default function BillingPage() {
     </div>
   );
 }
+
+

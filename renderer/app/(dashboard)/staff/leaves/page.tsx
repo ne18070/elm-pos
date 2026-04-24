@@ -76,7 +76,7 @@ export default function LeaveManagementPage() {
       <div className="px-6 py-4 border-b border-surface-border bg-surface-card flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <Palmtree className="w-5 h-5 text-content-brand" />
-          <h1 className="text-xl font-bold text-white tracking-tight">Congés & Absences</h1>
+          <h1 className="text-xl font-bold text-content-primary tracking-tight">Congés & Absences</h1>
         </div>
         <div className="flex bg-surface-input p-1 rounded-xl border border-surface-border">
           {[
@@ -89,7 +89,7 @@ export default function LeaveManagementPage() {
               onClick={() => setTab(t.id as LeaveTab)}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all",
-                tab === t.id ? "bg-brand-600 text-white shadow-lg shadow-brand-500/20" : "text-slate-500 hover:text-slate-300"
+                tab === t.id ? "bg-brand-600 text-content-primary shadow-lg shadow-brand-500/20" : "text-content-muted hover:text-content-primary"
               )}
             >
               <t.icon size={14} />
@@ -112,7 +112,7 @@ export default function LeaveManagementPage() {
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
                     <input 
                       type="text" 
                       placeholder="Rechercher un employé..."
@@ -136,13 +136,13 @@ export default function LeaveManagementPage() {
                 {/* List */}
                 <div className="grid gap-3">
                   {filteredRequests.map((req) => (
-                    <div key={req.id} className="bg-surface-card border border-surface-border rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 hover:border-slate-700 transition-all">
+                    <div key={req.id} className="bg-surface-card border border-surface-border rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 hover:border-surface-border transition-all">
                       <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center shrink-0">
                         <User className="text-content-brand" size={24} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-white truncate">{req.staff?.name}</h3>
+                          <h3 className="font-bold text-content-primary truncate">{req.staff?.name}</h3>
                           <span className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
                             req.status === 'pending' ? "bg-amber-500/10 text-status-warning border border-amber-500/20" :
@@ -155,7 +155,7 @@ export default function LeaveManagementPage() {
                         <p className="text-xs text-content-secondary mt-0.5">
                           {req.leave_type?.name} · {req.total_days} jours
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-1">
+                        <p className="text-[11px] text-content-muted mt-1">
                           Du {new Date(req.start_date).toLocaleDateString()} au {new Date(req.end_date).toLocaleDateString()}
                         </p>
                       </div>
@@ -164,13 +164,13 @@ export default function LeaveManagementPage() {
                         <div className="flex gap-2">
                           <button 
                             onClick={() => handleAction(req.id, 'rejected')}
-                            className="p-2.5 rounded-xl bg-red-500/10 text-status-error hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                            className="p-2.5 rounded-xl bg-red-500/10 text-status-error hover:bg-red-500 hover:text-content-primary transition-all border border-red-500/20"
                           >
                             <XCircle size={18} />
                           </button>
                           <button 
                             onClick={() => handleAction(req.id, 'approved')}
-                            className="p-2.5 rounded-xl bg-green-500/10 text-status-success hover:bg-green-500 hover:text-white transition-all border border-green-500/20"
+                            className="p-2.5 rounded-xl bg-green-500/10 text-status-success hover:bg-green-500 hover:text-content-primary transition-all border border-green-500/20"
                           >
                             <CheckCircle size={18} />
                           </button>
@@ -180,7 +180,7 @@ export default function LeaveManagementPage() {
                   ))}
                   {filteredRequests.length === 0 && (
                     <div className="py-20 text-center">
-                      <p className="text-slate-500 italic">Aucune demande trouvée.</p>
+                      <p className="text-content-muted italic">Aucune demande trouvée.</p>
                     </div>
                   )}
                 </div>
@@ -189,8 +189,8 @@ export default function LeaveManagementPage() {
 
             {tab === 'overview' && (
               <div className="bg-surface-card border border-surface-border rounded-3xl p-8 text-center space-y-4">
-                <Calendar className="w-12 h-12 text-slate-600 mx-auto" />
-                <h3 className="text-lg font-bold text-white">Calendrier des congés</h3>
+                <Calendar className="w-12 h-12 text-content-muted mx-auto" />
+                <h3 className="text-lg font-bold text-content-primary">Calendrier des congés</h3>
                 <p className="text-content-secondary text-sm max-w-sm mx-auto">
                   Visualisez l'absence de votre équipe sur un calendrier interactif pour mieux organiser vos opérations.
                 </p>
@@ -206,7 +206,7 @@ export default function LeaveManagementPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">Types de congés</h2>
+                    <h2 className="text-xs font-black text-content-muted uppercase tracking-widest">Types de congés</h2>
                     <button className="text-content-brand hover:text-content-brand transition-colors">
                       <Plus size={18} />
                     </button>
@@ -217,15 +217,15 @@ export default function LeaveManagementPage() {
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.color }} />
                           <div>
-                            <p className="text-sm font-bold text-white">{t.name}</p>
-                            <p className="text-[10px] text-slate-500">{t.yearly_days} jours / an</p>
+                            <p className="text-sm font-bold text-content-primary">{t.name}</p>
+                            <p className="text-[10px] text-content-muted">{t.yearly_days} jours / an</p>
                           </div>
                         </div>
-                        <ChevronRight size={16} className="text-slate-600" />
+                        <ChevronRight size={16} className="text-content-muted" />
                       </div>
                     ))}
                     {types.length === 0 && (
-                      <div className="p-8 text-center text-slate-500 text-sm italic">
+                      <div className="p-8 text-center text-content-muted text-sm italic">
                         Configurez vos types de congés (Payés, Maladie, etc.)
                       </div>
                     )}
@@ -234,7 +234,7 @@ export default function LeaveManagementPage() {
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">Jours de pression</h2>
+                    <h2 className="text-xs font-black text-content-muted uppercase tracking-widest">Jours de pression</h2>
                     <button className="text-content-brand hover:text-content-brand transition-colors">
                       <Plus size={18} />
                     </button>
@@ -248,8 +248,8 @@ export default function LeaveManagementPage() {
                     </div>
                     {pressureDays.map(pd => (
                        <div key={pd.id} className="flex items-center justify-between p-2 border-b border-surface-border last:border-0">
-                          <span className="text-xs text-white font-medium">{new Date(pd.date).toLocaleDateString()}</span>
-                          <span className="text-[10px] text-slate-500 italic">{pd.reason}</span>
+                          <span className="text-xs text-content-primary font-medium">{new Date(pd.date).toLocaleDateString()}</span>
+                          <span className="text-[10px] text-content-muted italic">{pd.reason}</span>
                        </div>
                     ))}
                   </div>

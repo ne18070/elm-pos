@@ -206,7 +206,7 @@ export default function ContractSignPage() {
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20">
           <Loader2 className="w-10 h-10 animate-spin text-brand-500" />
-          <p className="text-slate-500">Chargement du contrat…</p>
+          <p className="text-content-muted">Chargement du contrat…</p>
         </div>
       </MobileShell>
     );
@@ -217,7 +217,7 @@ export default function ContractSignPage() {
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
           <AlertTriangle className="w-12 h-12 text-status-error" />
-          <p className="text-lg font-semibold text-white">Erreur</p>
+          <p className="text-lg font-semibold text-content-primary">Erreur</p>
           <p className="text-content-secondary text-sm">{errorMsg}</p>
         </div>
       </MobileShell>
@@ -229,7 +229,7 @@ export default function ContractSignPage() {
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
           <AlertTriangle className="w-12 h-12 text-status-warning" />
-          <p className="text-lg font-semibold text-white">Lien expiré</p>
+          <p className="text-lg font-semibold text-content-primary">Lien expiré</p>
           <p className="text-content-secondary text-sm">
             Ce lien de signature n&apos;est plus valide. Contactez le loueur pour obtenir un nouveau lien.
           </p>
@@ -243,7 +243,7 @@ export default function ContractSignPage() {
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
           <CheckCircle className="w-12 h-12 text-status-success" />
-          <p className="text-lg font-semibold text-white">Contrat déjà signé</p>
+          <p className="text-lg font-semibold text-content-primary">Contrat déjà signé</p>
           <p className="text-content-secondary text-sm">
             Ce contrat a déjà été signé le {contract.signed_at
               ? new Date(contract.signed_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -251,7 +251,7 @@ export default function ContractSignPage() {
           </p>
           {contract.pdf_url && (
             <a href={contract.pdf_url} target="_blank" rel="noreferrer"
-               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-5 py-3 rounded-xl transition-colors">
+               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary text-sm font-medium px-5 py-3 rounded-xl transition-colors">
               <Download className="w-4 h-4" /> Télécharger le PDF
             </a>
           )}
@@ -267,13 +267,13 @@ export default function ContractSignPage() {
           <div className="w-20 h-20 rounded-full bg-badge-success border-2 border-green-500 flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-status-success" />
           </div>
-          <p className="text-xl font-bold text-white">Contrat signé !</p>
+          <p className="text-xl font-bold text-content-primary">Contrat signé !</p>
           <p className="text-content-secondary text-sm">
             Votre signature électronique a bien été enregistrée. Vous recevrez une confirmation.
           </p>
           {contract?.pdf_url && (
             <a href={contract.pdf_url} target="_blank" rel="noreferrer"
-               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-5 py-3 rounded-xl transition-colors">
+               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary text-sm font-medium px-5 py-3 rounded-xl transition-colors">
               <Download className="w-4 h-4" /> Télécharger mon exemplaire (PDF)
             </a>
           )}
@@ -317,7 +317,7 @@ export default function ContractSignPage() {
             </div>
             <button
               onClick={() => setStage('signing')}
-              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold py-4 rounded-2xl transition-colors text-base"
+              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold py-4 rounded-2xl transition-colors text-base"
             >
               <PenLine className="w-5 h-5" /> Signer ce contrat
             </button>
@@ -361,7 +361,7 @@ export default function ContractSignPage() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-60 text-white font-semibold py-4 rounded-2xl transition-colors text-base"
+              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-60 text-content-primary font-semibold py-4 rounded-2xl transition-colors text-base"
             >
               {submitting
                 ? <><Loader2 className="w-5 h-5 animate-spin" /> Signature en cours…</>
@@ -384,7 +384,7 @@ function MobileShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-white" style={{ maxWidth: '640px', margin: '0 auto' }}>
       {/* Brand header */}
-      <div className="bg-brand-600 text-white px-4 py-3 flex items-center gap-2">
+      <div className="bg-brand-600 text-content-primary px-4 py-3 flex items-center gap-2">
         <span className="font-bold text-lg tracking-tight">ELM</span>
         <span className="text-brand-200 text-xs">|</span>
         <span className="text-brand-100 text-sm">Signature de contrat</span>

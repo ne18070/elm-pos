@@ -78,7 +78,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
   const TICKET_TYPES: { value: TicketType; label: string; icon: any; color: string }[] = [
     { value: 'bug',        label: 'Signaler un Bug', icon: Bug,         color: 'text-status-error bg-red-500/10 border-red-500/20' },
     { value: 'suggestion', label: 'Suggestion',      icon: Lightbulb,   color: 'text-status-warning bg-amber-500/10 border-amber-500/20' },
-    { value: 'question',   label: 'Question',        icon: HelpCircle,  color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+    { value: 'question',   label: 'Question',        icon: HelpCircle,  color: 'text-status-info bg-blue-500/10 border-blue-500/20' },
     { value: 'feedback',   label: 'Retour général',  icon: MessageSquare, color: 'text-status-success bg-emerald-500/10 border-emerald-500/20' },
   ];
 
@@ -103,7 +103,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Type Selection */}
         <div className="space-y-3">
-          <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Nature de votre message</label>
+          <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Nature de votre message</label>
           <div className="grid grid-cols-2 gap-2">
             {TICKET_TYPES.map((t) => (
               <button
@@ -114,7 +114,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                   "flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all text-center",
                   type === t.value 
                     ? t.color + " ring-2 ring-current ring-offset-2 ring-offset-surface" 
-                    : "bg-surface-input/50 border-surface-border text-slate-500 hover:text-slate-300 hover:bg-surface-input"
+                    : "bg-surface-input/50 border-surface-border text-content-muted hover:text-content-primary hover:bg-surface-input"
                 )}
               >
                 <t.icon size={20} />
@@ -127,7 +127,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
         {/* Subject & Message */}
         <div className="space-y-4">
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Sujet</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Sujet</label>
             <input
               required
               value={subject}
@@ -137,7 +137,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
             />
           </div>
           <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Message détaillé</label>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Message détaillé</label>
             <textarea
               required
               rows={5}
@@ -151,7 +151,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
         {/* Attachments */}
         <div className="space-y-3">
-          <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Captures d'écran (Optionnel)</label>
+          <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Captures d'écran (Optionnel)</label>
           <div className="flex flex-wrap gap-2">
             {attachments.map((url) => (
               <div key={url} className="relative group w-20 h-20 rounded-xl overflow-hidden border border-surface-border bg-surface-input">
@@ -159,7 +159,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                 <button
                   type="button"
                   onClick={() => removeAttachment(url)}
-                  className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                  className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-content-primary"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -170,7 +170,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-20 h-20 rounded-xl border-2 border-dashed border-surface-border flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-content-brand hover:border-brand-500/50 transition-all bg-surface-input/30"
+              className="w-20 h-20 rounded-xl border-2 border-dashed border-surface-border flex flex-col items-center justify-center gap-1 text-content-muted hover:text-content-brand hover:border-brand-500/50 transition-all bg-surface-input/30"
             >
               {uploading ? <Loader2 className="animate-spin w-5 h-5" /> : <Paperclip size={20} />}
               <span className="text-[8px] font-black uppercase">Ajouter</span>
@@ -184,7 +184,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
               className="hidden"
             />
           </div>
-          <p className="text-[10px] text-slate-500 italic">Formats acceptés : JPG, PNG. Max 5Mo.</p>
+          <p className="text-[10px] text-content-muted italic">Formats acceptés : JPG, PNG. Max 5Mo.</p>
         </div>
 
         <div className="p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10 flex items-start gap-3">

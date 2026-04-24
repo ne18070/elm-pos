@@ -142,7 +142,7 @@ export function ModulesTab() {
       <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
         {([['types', "Types d'établissement", Layers], ['modules', 'Modules', Package], ['matrix', 'Matrice', Grid3X3]] as const).map(([id, label, Icon]) => (
           <button key={id} onClick={() => setSubTab(id)}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${subTab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${subTab === id ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
             <Icon className="w-3.5 h-3.5" />{label}
           </button>
         ))}
@@ -152,7 +152,7 @@ export function ModulesTab() {
       {subTab === 'types' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-white font-semibold">Types d&apos;établissement ({types.length})</h3>
+            <h3 className="text-content-primary font-semibold">Types d&apos;établissement ({types.length})</h3>
             <button onClick={() => setEditingType({ is_active: true, sort_order: types.length, accent_color: 'brand', icon: 'ShoppingBag' })}
               className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" />Nouveau type
@@ -162,7 +162,7 @@ export function ModulesTab() {
           {/* Inline form */}
           {editingType && (
             <div className="bg-surface-input rounded-xl p-4 border border-brand-600 space-y-3">
-              <h4 className="text-sm font-semibold text-white">{editingType.id && types.find(t => t.id === editingType.id) ? 'Modifier' : 'Nouveau'} type</h4>
+              <h4 className="text-sm font-semibold text-content-primary">{editingType.id && types.find(t => t.id === editingType.id) ? 'Modifier' : 'Nouveau'} type</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">ID (slug)</label>
@@ -185,7 +185,7 @@ export function ModulesTab() {
                 <div>
                   <label className="label">Couleur accent</label>
                   <select className="input" value={editingType.accent_color ?? 'brand'} onChange={(e) => setEditingType((p) => ({ ...p, accent_color: e.target.value }))}>
-                    {ACCENT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-gray-900 text-white">{o.label}</option>)}
+                    {ACCENT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-gray-900 text-content-primary">{o.label}</option>)}
                   </select>
                 </div>
                 <div>
@@ -193,8 +193,8 @@ export function ModulesTab() {
                   <input type="number" className="input" value={editingType.sort_order ?? 0} onChange={(e) => setEditingType((p) => ({ ...p, sort_order: parseInt(e.target.value) }))} />
                 </div>
                 <div className="flex items-end pb-1">
-                  <button onClick={() => setEditingType((p) => ({ ...p, is_active: !p?.is_active }))} className="flex items-center gap-2 text-sm text-slate-300">
-                    {editingType.is_active ? <ToggleRight className="w-5 h-5 text-content-brand" /> : <ToggleLeft className="w-5 h-5 text-slate-500" />}
+                  <button onClick={() => setEditingType((p) => ({ ...p, is_active: !p?.is_active }))} className="flex items-center gap-2 text-sm text-content-primary">
+                    {editingType.is_active ? <ToggleRight className="w-5 h-5 text-content-brand" /> : <ToggleLeft className="w-5 h-5 text-content-muted" />}
                     Actif
                   </button>
                 </div>
@@ -225,7 +225,7 @@ export function ModulesTab() {
                 {types.map((t) => (
                   <tr key={t.id} className="hover:bg-surface-hover transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-content-secondary">{t.id}</td>
-                    <td className="px-4 py-3 text-white font-medium">{t.label}</td>
+                    <td className="px-4 py-3 text-content-primary font-medium">{t.label}</td>
                     <td className="px-4 py-3 text-content-secondary">{t.icon}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -238,15 +238,15 @@ export function ModulesTab() {
                       <button onClick={() => toggleTypeActive(t)} className="flex items-center gap-1.5 transition-colors">
                         {t.is_active
                           ? <ToggleRight className="w-5 h-5 text-status-success" />
-                          : <ToggleLeft  className="w-5 h-5 text-slate-600" />}
-                        <span className={`text-xs ${t.is_active ? 'text-status-success' : 'text-slate-500'}`}>
+                          : <ToggleLeft  className="w-5 h-5 text-content-muted" />}
+                        <span className={`text-xs ${t.is_active ? 'text-status-success' : 'text-content-muted'}`}>
                           {t.is_active ? 'Actif' : 'Inactif'}
                         </span>
                       </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => setEditingType(t)} className="p-1.5 text-content-secondary hover:text-white rounded-lg hover:bg-surface-input transition-colors">
+                        <button onClick={() => setEditingType(t)} className="p-1.5 text-content-secondary hover:text-content-primary rounded-lg hover:bg-surface-input transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={async () => { if (confirm(`Supprimer "${t.label}" ?`)) { await deleteBusinessType(t.id); load(); } }}
@@ -267,7 +267,7 @@ export function ModulesTab() {
       {subTab === 'modules' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-white font-semibold">Modules disponibles ({modules.length})</h3>
+            <h3 className="text-content-primary font-semibold">Modules disponibles ({modules.length})</h3>
             <button onClick={() => setEditingModule({ is_active: true, is_core: false, sort_order: modules.length, icon: 'Package' })}
               className="btn-primary flex items-center gap-2 text-sm">
               <Plus className="w-4 h-4" />Nouveau module
@@ -276,7 +276,7 @@ export function ModulesTab() {
 
           {editingModule && (
             <div className="bg-surface-input rounded-xl p-4 border border-brand-600 space-y-3">
-              <h4 className="text-sm font-semibold text-white">{editingModule.id && modules.find(m => m.id === editingModule.id) ? 'Modifier' : 'Nouveau'} module</h4>
+              <h4 className="text-sm font-semibold text-content-primary">{editingModule.id && modules.find(m => m.id === editingModule.id) ? 'Modifier' : 'Nouveau'} module</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">ID (slug)</label>
@@ -301,12 +301,12 @@ export function ModulesTab() {
                   <input type="number" className="input" value={editingModule.sort_order ?? 0} onChange={(e) => setEditingModule((p) => ({ ...p, sort_order: parseInt(e.target.value) }))} />
                 </div>
                 <div className="flex items-end gap-4 pb-1">
-                  <button onClick={() => setEditingModule((p) => ({ ...p, is_core: !p?.is_core }))} className="flex items-center gap-2 text-sm text-slate-300">
-                    {editingModule.is_core ? <ToggleRight className="w-5 h-5 text-content-brand" /> : <ToggleLeft className="w-5 h-5 text-slate-500" />}
+                  <button onClick={() => setEditingModule((p) => ({ ...p, is_core: !p?.is_core }))} className="flex items-center gap-2 text-sm text-content-primary">
+                    {editingModule.is_core ? <ToggleRight className="w-5 h-5 text-content-brand" /> : <ToggleLeft className="w-5 h-5 text-content-muted" />}
                     Cœur (non désactivable)
                   </button>
-                  <button onClick={() => setEditingModule((p) => ({ ...p, is_active: !p?.is_active }))} className="flex items-center gap-2 text-sm text-slate-300">
-                    {editingModule.is_active ? <ToggleRight className="w-5 h-5 text-content-brand" /> : <ToggleLeft className="w-5 h-5 text-slate-500" />}
+                  <button onClick={() => setEditingModule((p) => ({ ...p, is_active: !p?.is_active }))} className="flex items-center gap-2 text-sm text-content-primary">
+                    {editingModule.is_active ? <ToggleRight className="w-5 h-5 text-content-brand" /> : <ToggleLeft className="w-5 h-5 text-content-muted" />}
                     Actif
                   </button>
                 </div>
@@ -337,7 +337,7 @@ export function ModulesTab() {
                 {modules.map((m) => (
                   <tr key={m.id} className="hover:bg-surface-hover transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-content-secondary">{m.id}</td>
-                    <td className="px-4 py-3 text-white font-medium">{m.label}</td>
+                    <td className="px-4 py-3 text-content-primary font-medium">{m.label}</td>
                     <td className="px-4 py-3 text-content-secondary">{m.icon}</td>
                     <td className="px-4 py-3">
                       {m.is_core && <span className="text-xs px-2 py-0.5 rounded-full bg-badge-purple text-status-purple">Core</span>}
@@ -347,15 +347,15 @@ export function ModulesTab() {
                       <button onClick={() => toggleModuleActive(m)} className="flex items-center gap-1.5 transition-colors">
                         {m.is_active
                           ? <ToggleRight className="w-5 h-5 text-status-success" />
-                          : <ToggleLeft  className="w-5 h-5 text-slate-600" />}
-                        <span className={`text-xs ${m.is_active ? 'text-status-success' : 'text-slate-500'}`}>
+                          : <ToggleLeft  className="w-5 h-5 text-content-muted" />}
+                        <span className={`text-xs ${m.is_active ? 'text-status-success' : 'text-content-muted'}`}>
                           {m.is_active ? 'Actif' : 'Inactif'}
                         </span>
                       </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => setEditingModule(m)} className="p-1.5 text-content-secondary hover:text-white rounded-lg hover:bg-surface-input transition-colors">
+                        <button onClick={() => setEditingModule(m)} className="p-1.5 text-content-secondary hover:text-content-primary rounded-lg hover:bg-surface-input transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         {!m.is_core && (
@@ -378,8 +378,8 @@ export function ModulesTab() {
       {subTab === 'matrix' && (
         <div className="space-y-3">
           <div>
-            <h3 className="text-white font-semibold mb-1">Matrice modules × types</h3>
-            <p className="text-xs text-slate-500">✓ = inclus · ★ = activé par défaut pour les nouvelles boutiques</p>
+            <h3 className="text-content-primary font-semibold mb-1">Matrice modules × types</h3>
+            <p className="text-xs text-content-muted">✓ = inclus · ★ = activé par défaut pour les nouvelles boutiques</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
@@ -387,7 +387,7 @@ export function ModulesTab() {
                 <tr>
                   <th className="text-left px-4 py-3 text-content-secondary font-medium bg-surface-input rounded-tl-xl">Module</th>
                   {types.map((t) => (
-                    <th key={t.id} className={`px-3 py-3 text-center font-medium bg-surface-input whitespace-nowrap ${t.is_active ? 'text-slate-300' : 'text-slate-600 line-through'}`}>
+                    <th key={t.id} className={`px-3 py-3 text-center font-medium bg-surface-input whitespace-nowrap ${t.is_active ? 'text-content-primary' : 'text-content-muted line-through'}`}>
                       {t.label}
                       {!t.is_active && <span className="block text-[10px] text-status-error no-underline normal-case font-normal">inactif</span>}
                     </th>
@@ -399,8 +399,8 @@ export function ModulesTab() {
                   <tr key={m.id} className="hover:bg-surface-hover/30 transition-colors">
                     <td className="px-4 py-3">
                       <div>
-                        <p className="text-white text-sm">{m.label}</p>
-                        <p className="font-mono text-xs text-slate-500">{m.id}</p>
+                        <p className="text-content-primary text-sm">{m.label}</p>
+                        <p className="font-mono text-xs text-content-muted">{m.id}</p>
                       </div>
                     </td>
                     {types.map((t) => {
@@ -413,7 +413,7 @@ export function ModulesTab() {
                               onClick={() => toggleLink(t.id, m.id)}
                               title={linked ? 'Retirer ce module' : 'Ajouter ce module'}
                               className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                                linked ? 'bg-brand-600 text-white' : 'bg-surface-input text-slate-600 hover:text-content-secondary'
+                                linked ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-muted hover:text-content-secondary'
                               }`}>
                               <Check className="w-3.5 h-3.5" />
                             </button>
@@ -422,7 +422,7 @@ export function ModulesTab() {
                                 onClick={() => toggleDefault(t.id, m.id)}
                                 title={def ? 'Désactiver par défaut' : 'Activer par défaut'}
                                 className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
-                                  def ? 'bg-badge-warning text-status-warning border border-status-warning' : 'bg-surface-input text-slate-600 hover:text-content-secondary'
+                                  def ? 'bg-badge-warning text-status-warning border border-status-warning' : 'bg-surface-input text-content-muted hover:text-content-secondary'
                                 }`}>
                                 {def ? '★ défaut' : '☆ optionnel'}
                               </button>

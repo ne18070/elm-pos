@@ -22,7 +22,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
   const [confirming, setConfirming] = useState(false);
   const [lastScanned, setLastScanned] = useState<{ text: string; ok: boolean } | null>(null);
 
-  // Scanner activé/désactivé — persisté en localStorage
+  // Scanner activé/désactivé —persisté en localStorage
   const [scannerEnabled, setScannerEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const saved = localStorage.getItem(SCANNER_KEY);
@@ -64,7 +64,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
     setVerified(new Set());
   }
 
-  // Scan code-barres → coche l'article correspondant
+  // Scan code-barres —coche l'article correspondant
   const handleBarcode = useCallback(
     (barcode: string) => {
       const match = items.find((i) => i.product?.barcode === barcode);
@@ -100,19 +100,19 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
         <div className="px-6 py-4 border-b border-surface-border">
           <div className="flex items-start justify-between">
             <div>
-              <p className="font-mono font-bold text-white text-lg">
+              <p className="font-mono font-bold text-content-primary text-lg">
                 #{order.id.slice(0, 8).toUpperCase()}
               </p>
               <p className="text-sm text-content-secondary mt-0.5">
                 {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
                 {order.cashier && (
-                  <span className="ml-2 text-slate-500">· {order.cashier.full_name}</span>
+                  <span className="ml-2 text-content-primary">· {order.cashier.full_name}</span>
                 )}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="text-content-secondary hover:text-white transition-colors"
+              className="text-content-secondary hover:text-content-primary transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -122,10 +122,10 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
           <div className="mt-4">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-content-secondary">
-                <span className={`font-semibold ${allDone ? 'text-status-success' : 'text-white'}`}>
+                <span className={`font-semibold ${allDone ? 'text-status-success' : 'text-content-primary'}`}>
                   {verifiedCount}
                 </span>
-                <span className="text-slate-500"> / {total} article{total > 1 ? 's' : ''} vérifiés</span>
+                <span className="text-content-primary"> / {total} article{total > 1 ? 's' : ''} vérifiés</span>
               </span>
               <span className="text-content-brand font-bold">{fmt(order.total)}</span>
             </div>
@@ -165,7 +165,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                 : 'bg-badge-error border-status-error text-status-error'
             }`}>
               <ScanLine className="w-4 h-4 shrink-0" />
-              {lastScanned.ok ? `✓ ${lastScanned.text}` : lastScanned.text}
+              {lastScanned.ok ? `✁E${lastScanned.text}` : lastScanned.text}
             </div>
           )}
         </div>
@@ -199,7 +199,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                 scannerEnabled
                   ? 'border-brand-700 bg-badge-brand text-content-brand hover:bg-badge-brand'
-                  : 'border-slate-700 bg-surface-input text-slate-500 hover:border-slate-600 hover:text-slate-300'
+                  : 'border-slate-700 bg-surface-input text-content-primary hover:border-slate-600 hover:text-content-primary'
               }`}
             >
               {scannerEnabled
@@ -212,7 +212,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
           {!scannerEnabled && (
             <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-badge-warning border border-status-warning rounded-xl text-xs text-status-warning">
               <WifiOff className="w-3.5 h-3.5 shrink-0" />
-              Scanner désactivé — cochage manuel uniquement. Cliquez sur un article pour le valider.
+              Scanner désactivé —cochage manuel uniquement. Cliquez sur un article pour le valider.
             </div>
           )}
 
@@ -233,7 +233,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                   ${done
                     ? 'bg-green-500 border-green-500'
                     : 'border-slate-600'}`}>
-                  {done && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                  {done && <Check className="w-4 h-4 text-content-primary" strokeWidth={3} />}
                 </div>
 
                 {/* Image miniature */}
@@ -246,20 +246,20 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Package className="w-6 h-6 text-slate-600" />
+                    <Package className="w-6 h-6 text-content-muted" />
                   )}
                 </div>
 
                 {/* Infos article */}
                 <div className="flex-1 min-w-0">
                   <p className={`font-medium truncate transition-colors ${
-                    done ? 'text-status-success line-through decoration-green-600/50' : 'text-white'
+                    done ? 'text-status-success line-through decoration-green-600/50' : 'text-content-primary'
                   }`}>
                     {item.name}
                   </p>
                   <div className="flex items-center gap-3 mt-0.5">
                     {item.product?.barcode && (
-                      <span className="text-xs text-slate-500 font-mono">{item.product.barcode}</span>
+                      <span className="text-xs text-content-primary font-mono">{item.product.barcode}</span>
                     )}
                     <span className="text-xs text-content-secondary">{fmt(item.price)} / unité</span>
                   </div>
@@ -267,10 +267,10 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
 
                 {/* Quantité */}
                 <div className="shrink-0 text-right">
-                  <p className={`text-xl font-bold ${done ? 'text-status-success' : 'text-white'}`}>
+                  <p className={`text-xl font-bold ${done ? 'text-status-success' : 'text-content-primary'}`}>
                     ×{item.quantity}
                   </p>
-                  <p className="text-xs text-slate-500">{fmt(item.total)}</p>
+                  <p className="text-xs text-content-primary">{fmt(item.total)}</p>
                 </div>
               </button>
             );
@@ -280,7 +280,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
         {/* Footer actions */}
         <div className="px-6 py-4 border-t border-surface-border space-y-3">
           {!allDone && (
-            <p className="text-xs text-center text-slate-500">
+            <p className="text-xs text-center text-content-primary">
               {total - verifiedCount} article{total - verifiedCount > 1 ? 's' : ''} restant{total - verifiedCount > 1 ? 's' : ''} à vérifier
             </p>
           )}
@@ -290,8 +290,8 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
             className={`w-full h-12 rounded-xl font-semibold text-base flex items-center justify-center gap-2
               transition-all duration-200
               ${allDone && !confirming
-                ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/30'
-                : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                ? 'bg-green-600 hover:bg-green-500 text-content-primary shadow-lg shadow-green-900/30'
+                : 'bg-slate-700 text-content-primary cursor-not-allowed'}`}
           >
             {confirming ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -305,3 +305,5 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
     </>
   );
 }
+
+

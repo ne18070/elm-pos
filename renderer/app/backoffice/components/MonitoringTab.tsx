@@ -45,9 +45,9 @@ function StatCard({ icon: Icon, label, value, sub, color = 'text-content-brand' 
         <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-2xl font-bold text-content-primary">{value}</p>
         <p className="text-xs text-content-secondary">{label}</p>
-        {sub && <p className="text-xs text-slate-500">{sub}</p>}
+        {sub && <p className="text-xs text-content-muted">{sub}</p>}
       </div>
     </div>
   );
@@ -108,10 +108,10 @@ function BusinessConfigModal({
       <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
           <div>
-            <p className="text-white font-semibold">{row.business_name}</p>
+            <p className="text-content-primary font-semibold">{row.business_name}</p>
             <p className="text-xs text-content-secondary mt-0.5">Type & modules</p>
           </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -120,7 +120,7 @@ function BusinessConfigModal({
           {/* Types */}
           <div>
             <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
-              Types d&apos;établissement <span className="text-slate-600 font-normal normal-case">(plusieurs possibles)</span>
+              Types d&apos;établissement <span className="text-content-muted font-normal normal-case">(plusieurs possibles)</span>
             </p>
             <div className="grid grid-cols-2 gap-2">
               {allTypes.map((t) => {
@@ -136,8 +136,8 @@ function BusinessConfigModal({
                   >
                     {active
                       ? <ToggleRight className="w-4 h-4 text-content-brand shrink-0" />
-                      : <ToggleLeft  className="w-4 h-4 text-slate-600 shrink-0" />}
-                    <p className={cn('text-sm font-medium', active ? 'text-content-brand' : 'text-slate-300')}>
+                      : <ToggleLeft  className="w-4 h-4 text-content-muted shrink-0" />}
+                    <p className={cn('text-sm font-medium', active ? 'text-content-brand' : 'text-content-primary')}>
                       {t.label}
                     </p>
                   </button>
@@ -150,7 +150,7 @@ function BusinessConfigModal({
           <div>
             <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
               Modules actifs
-              <span className="text-slate-600 font-normal normal-case ml-1">— le client verra uniquement ceux activés ici</span>
+              <span className="text-content-muted font-normal normal-case ml-1">— le client verra uniquement ceux activés ici</span>
             </p>
             <div className="space-y-2">
               {allModules.map((m) => {
@@ -166,10 +166,10 @@ function BusinessConfigModal({
                   >
                     {enabled
                       ? <ToggleRight className="w-6 h-6 text-content-brand shrink-0" />
-                      : <ToggleLeft  className="w-6 h-6 text-slate-600 shrink-0" />}
+                      : <ToggleLeft  className="w-6 h-6 text-content-muted shrink-0" />}
                     <div>
                       <p className={cn('text-sm font-medium', enabled ? 'text-content-brand' : 'text-content-secondary')}>{m.label}</p>
-                      {m.description && <p className="text-xs text-slate-500">{m.description}</p>}
+                      {m.description && <p className="text-xs text-content-muted">{m.description}</p>}
                     </div>
                   </button>
                 );
@@ -260,11 +260,11 @@ function OwnerRow({
 
         {/* Owner info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">
+          <p className="text-sm font-semibold text-content-primary truncate">
             {expiringSoon && <AlertTriangle className="w-3.5 h-3.5 text-status-warning inline mr-1.5 -mt-0.5" />}
             {group.owner_name ?? '—'}
           </p>
-          <p className="text-xs text-slate-500 truncate">{group.owner_email ?? ''}</p>
+          <p className="text-xs text-content-muted truncate">{group.owner_email ?? ''}</p>
         </div>
 
         {/* Plan + status */}
@@ -277,17 +277,17 @@ function OwnerRow({
 
         {/* Expiry */}
         <div className="hidden md:block text-xs shrink-0">
-          <span className={expiringSoon ? 'text-status-warning font-medium' : 'text-slate-500'}>
+          <span className={expiringSoon ? 'text-status-warning font-medium' : 'text-content-muted'}>
             {fmtDate(expiry)}
             {expiringSoon && days !== null && <span className="ml-1">({days}j)</span>}
           </span>
         </div>
 
         {/* Quick stats */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 shrink-0">
+        <div className="hidden lg:flex items-center gap-4 text-xs text-content-muted shrink-0">
           <span><span className="text-status-orange font-medium">{totalProducts}</span> produits</span>
           <span><span className="text-status-success font-medium">{totalOrders30d}</span> cmd/30j</span>
-          <span className="text-slate-600">{group.businesses.length} établ.</span>
+          <span className="text-content-muted">{group.businesses.length} établ.</span>
         </div>
       </button>
 
@@ -305,8 +305,8 @@ function OwnerRow({
 
                 {/* Business name + type */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{biz.business_name}</p>
-                  <p className="text-xs text-slate-500 truncate">{typeLabels}</p>
+                  <p className="text-sm font-medium text-content-primary truncate">{biz.business_name}</p>
+                  <p className="text-xs text-content-muted truncate">{typeLabels}</p>
                 </div>
 
                 {/* Features tags */}
@@ -317,14 +317,14 @@ function OwnerRow({
                           {f}
                         </span>
                       ))
-                    : <span className="text-xs text-slate-600 italic">aucune feature</span>}
+                    : <span className="text-xs text-content-muted italic">aucune feature</span>}
                   {biz.features.length > 3 && (
-                    <span className="text-xs text-slate-500">+{biz.features.length - 3}</span>
+                    <span className="text-xs text-content-muted">+{biz.features.length - 3}</span>
                   )}
                 </div>
 
                 {/* Stats */}
-                <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 shrink-0">
+                <div className="hidden lg:flex items-center gap-4 text-xs text-content-muted shrink-0">
                   <span><span className="text-status-orange">{biz.products_count}</span> prod.</span>
                   <span><span className="text-status-success">{biz.orders_30d}</span> cmd</span>
                   <span><span className="text-cyan-400">{biz.members_count}</span> mbr</span>
@@ -334,7 +334,7 @@ function OwnerRow({
                 <button
                   onClick={() => onConfigClick(biz)}
                   title="Gérer type & modules"
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-content-brand hover:bg-badge-brand transition-colors shrink-0"
+                  className="p-1.5 rounded-lg text-content-muted hover:text-content-brand hover:bg-badge-brand transition-colors shrink-0"
                 >
                   <Settings className="w-4 h-4" />
                 </button>
@@ -413,7 +413,7 @@ export function MonitoringTab() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-content-primary">
           Monitoring — {groups.length} compte{groups.length !== 1 ? 's' : ''} · {rows.length} établissement{rows.length !== 1 ? 's' : ''}
         </h2>
         <button onClick={load} disabled={loading}
@@ -449,7 +449,7 @@ export function MonitoringTab() {
           {(['all', 'active', 'trial', 'expired', 'expiring'] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                filter === f ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white')}>
+                filter === f ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary')}>
               {f === 'all' ? 'Tous' : f === 'active' ? 'Actifs' : f === 'trial' ? 'Essai'
                 : f === 'expired' ? 'Expirés' : '⚠ Expirent bientôt'}
             </button>
@@ -463,7 +463,7 @@ export function MonitoringTab() {
           <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
         </div>
       ) : filteredGroups.length === 0 ? (
-        <p className="text-center text-slate-500 py-12">Aucun résultat</p>
+        <p className="text-center text-content-muted py-12">Aucun résultat</p>
       ) : (
         <div className="space-y-2">
           {filteredGroups.map((group) => (

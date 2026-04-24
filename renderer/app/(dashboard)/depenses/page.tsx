@@ -18,8 +18,8 @@ const EXPENSE_TYPES = [
   { id: 'transport',    label: 'Transport',              debit: { code: '611', name: 'Transports sur achats' },                  credit: { code: '571', name: 'Caisse' } },
   { id: 'telephone',    label: 'Téléphone / Internet',   debit: { code: '625', name: 'Frais de télécommunications' },            credit: { code: '571', name: 'Caisse' } },
   { id: 'publicite',    label: 'Publicité',              debit: { code: '621', name: 'Publicité, publications' },                credit: { code: '571', name: 'Caisse' } },
-  { id: 'frais_banque', label: 'Frais bancaires',        debit: { code: '631', name: 'Frais bancaires' },                       credit: { code: '521', name: 'Banques – comptes courants' } },
-  { id: 'impots',       label: 'Impôts / Taxes',         debit: { code: '444', name: 'État – impôts et taxes divers' },         credit: { code: '571', name: 'Caisse' } },
+  { id: 'frais_banque', label: 'Frais bancaires',        debit: { code: '631', name: 'Frais bancaires' },                       credit: { code: '521', name: 'Banques —comptes courants' } },
+  { id: 'impots',       label: 'Impôts / Taxes',         debit: { code: '444', name: 'État —impôts et taxes divers' },         credit: { code: '571', name: 'Caisse' } },
   { id: 'fournitures',  label: 'Fournitures',            debit: { code: '604', name: 'Achats de fournitures' },                  credit: { code: '571', name: 'Caisse' } },
   { id: 'eau_electricite', label: 'Eau / Électricité',   debit: { code: '626', name: 'Eau, gaz, électricité' },                 credit: { code: '571', name: 'Caisse' } },
   { id: 'entretien',    label: 'Entretien / Réparation', debit: { code: '615', name: 'Entretien et réparations' },               credit: { code: '571', name: 'Caisse' } },
@@ -88,7 +88,7 @@ export default function DepensesPage() {
 
     const tpl = EXPENSE_TYPES.find((t) => t.id === form.type) ?? EXPENSE_TYPES[EXPENSE_TYPES.length - 1];
     const creditAccount = form.payMethod === 'card'
-      ? { code: '521', name: 'Banques – comptes courants' }
+      ? { code: '521', name: 'Banques —comptes courants' }
       : form.payMethod === 'mobile'
       ? { code: '576', name: 'Mobile Money' }
       : tpl.credit;
@@ -138,11 +138,11 @@ export default function DepensesPage() {
       {/* Header */}
       <div className="p-6 border-b border-surface-border flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl font-bold text-content-primary flex items-center gap-2">
             <TrendingDown className="w-5 h-5 text-status-error" />
             Dépenses
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-content-primary mt-0.5">
             Ce mois : <span className="text-status-error font-semibold">{fmtMoney(totalMonth, currency)}</span>
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function DepensesPage() {
         {/* ── Formulaire ── */}
         {showForm && (
           <div className="card p-5 space-y-4 border-brand-700/50">
-            <h2 className="font-semibold text-white">Enregistrer une dépense</h2>
+            <h2 className="font-semibold text-content-primary">Enregistrer une dépense</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Type */}
@@ -179,7 +179,7 @@ export default function DepensesPage() {
 
               {/* Description */}
               <div className="sm:col-span-2">
-                <label className="label">Description <span className="text-slate-500 font-normal">(optionnel)</span></label>
+                <label className="label">Description <span className="text-content-primary font-normal">(optionnel)</span></label>
                 <input
                   className="input"
                   placeholder={EXPENSE_TYPES.find((t) => t.id === form.type)?.label ?? ''}
@@ -224,7 +224,7 @@ export default function DepensesPage() {
                       onClick={() => setForm((f) => ({ ...f, payMethod: v }))}
                       className={`flex-1 py-2 rounded-lg border text-sm transition-all ${
                         form.payMethod === v
-                          ? 'border-brand-600 bg-brand-600/10 text-white'
+                          ? 'border-brand-600 bg-brand-600/10 text-content-primary'
                           : 'border-surface-border text-content-secondary hover:border-slate-600'
                       }`}
                     >
@@ -254,10 +254,10 @@ export default function DepensesPage() {
         {/* ── Liste ── */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-content-primary" />
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-3">
+          <div className="flex flex-col items-center justify-center py-20 text-content-primary gap-3">
             <TrendingDown className="w-10 h-10 opacity-30" />
             <p>Aucune dépense enregistrée</p>
             <button onClick={() => setShowForm(true)} className="btn-secondary text-sm">
@@ -290,11 +290,11 @@ export default function DepensesPage() {
                         className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
                         onClick={() => setExpanded(isOpen ? null : e.id)}
                       >
-                        <td className="px-3 py-3 text-slate-500">
+                        <td className="px-3 py-3 text-content-primary">
                           {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         </td>
                         <td className="px-4 py-3 text-content-secondary whitespace-nowrap">{fmtDate(e.entry_date)}</td>
-                        <td className="px-4 py-3 text-white">{e.description}</td>
+                        <td className="px-4 py-3 text-content-primary">{e.description}</td>
                         <td className="px-4 py-3 text-content-secondary hidden sm:table-cell text-xs">
                           {debitLine?.account_name ?? '—'}
                         </td>
@@ -308,7 +308,7 @@ export default function DepensesPage() {
                               className={`p-1.5 rounded-lg transition-colors ${
                                 deletingId === e.id
                                   ? 'text-status-error bg-badge-error'
-                                  : 'text-slate-600 hover:text-status-error hover:bg-badge-error'
+                                  : 'text-content-muted hover:text-status-error hover:bg-badge-error'
                               }`}
                               title={deletingId === e.id ? 'Confirmer la suppression' : 'Supprimer'}
                             >
@@ -322,8 +322,8 @@ export default function DepensesPage() {
                           <td />
                           <td colSpan={isOwnerOrAdmin ? 5 : 4} className="px-4 py-3">
                             <div className="flex gap-8 text-xs text-content-secondary">
-                              <span>Débit : <span className="text-white font-mono">{debitLine?.account_code} – {debitLine?.account_name}</span></span>
-                              <span>Crédit : <span className="text-white font-mono">{creditLine?.account_code} – {creditLine?.account_name}</span></span>
+                              <span>Débit : <span className="text-content-primary font-mono">{debitLine?.account_code} —{debitLine?.account_name}</span></span>
+                              <span>Crédit : <span className="text-content-primary font-mono">{creditLine?.account_code} —{creditLine?.account_name}</span></span>
                             </div>
                           </td>
                         </tr>
@@ -339,3 +339,5 @@ export default function DepensesPage() {
     </div>
   );
 }
+
+

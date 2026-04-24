@@ -93,13 +93,13 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
         <div className="p-6 flex items-center justify-between">
           <div className={cn("flex items-center gap-3 overflow-hidden transition-all", !isSidebarOpen && "w-0")}>
             <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/20">
-              <span className="text-white font-black text-xs">ELM</span>
+              <span className="text-content-primary font-black text-xs">ELM</span>
             </div>
-            <span className="text-white font-black tracking-tight text-sm whitespace-nowrap">BACKOFFICE</span>
+            <span className="text-content-primary font-black tracking-tight text-sm whitespace-nowrap">BACKOFFICE</span>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-1.5 rounded-lg hover:bg-surface-input text-slate-500 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-surface-input text-content-muted transition-colors"
           >
             {isSidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
@@ -115,17 +115,17 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
                   isActive 
-                    ? "bg-brand-600 text-white shadow-lg shadow-brand-500/10" 
-                    : "text-content-secondary hover:text-white hover:bg-surface-input"
+                    ? "bg-brand-600 text-content-primary shadow-lg shadow-brand-500/10" 
+                    : "text-content-secondary hover:text-content-primary hover:bg-surface-input"
                 )}
               >
-                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300")} />
+                <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-content-primary" : "text-content-muted group-hover:text-content-primary")} />
                 {isSidebarOpen && (
                   <span className="text-sm font-bold truncate">{item.label}</span>
                 )}
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className={cn(
-                    "absolute flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[10px] font-black bg-red-500 text-white shadow-lg",
+                    "absolute flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[10px] font-black bg-red-500 text-content-primary shadow-lg",
                     isSidebarOpen ? "right-3" : "top-1 right-1"
                   )}>
                     {item.badge > 9 ? '9+' : item.badge}
@@ -141,7 +141,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-all group"
           >
-            <LogOut className="w-5 h-5 text-slate-500 group-hover:text-status-error" />
+            <LogOut className="w-5 h-5 text-content-muted group-hover:text-status-error" />
             {isSidebarOpen && <span className="text-sm font-bold">Déconnexion</span>}
           </button>
         </div>
@@ -153,7 +153,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
         <header className="h-16 border-b border-surface-border bg-surface/50 backdrop-blur-xl flex items-center justify-between px-8 z-20 shrink-0">
           <div className="flex items-center gap-4 flex-1">
             <div className="relative max-w-md w-full hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
               <input 
                 type="text" 
                 placeholder="Recherche globale... (Ctrl+K)" 
@@ -161,7 +161,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
                 readOnly
                 onClick={() => setIsCommandPaletteOpen(true)}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-surface-border bg-surface text-[10px] font-black text-slate-500">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-surface-border bg-surface text-[10px] font-black text-content-muted">
                 <Command className="w-2.5 h-2.5" />
                 <span>K</span>
               </div>
@@ -170,11 +170,11 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
 
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end mr-2">
-              <span className="text-xs font-black text-white leading-none">{user?.full_name}</span>
+              <span className="text-xs font-black text-content-primary leading-none">{user?.full_name}</span>
               <span className="text-[10px] font-bold text-content-brand uppercase tracking-widest mt-1">Super Admin</span>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-surface-input border border-surface-border flex items-center justify-center shadow-inner overflow-hidden">
-              <span className="text-sm font-black text-slate-500">{user?.full_name?.charAt(0).toUpperCase()}</span>
+              <span className="text-sm font-black text-content-muted">{user?.full_name?.charAt(0).toUpperCase()}</span>
             </div>
           </div>
         </header>

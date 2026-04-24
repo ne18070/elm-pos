@@ -53,14 +53,14 @@ export function VariantPicker({
             {product.image_url ? (
               <img src={product.image_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <Package className="w-6 h-6 text-slate-500" />
+              <Package className="w-6 h-6 text-content-primary" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-white truncate">{product.name}</p>
+            <p className="font-semibold text-content-primary truncate">{product.name}</p>
             <p className="text-xs text-content-secondary">Choisir une variante</p>
           </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-white shrink-0">
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -90,9 +90,9 @@ export function VariantPicker({
                                     bg-brand-400" />
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">{variant.name}</p>
+                    <p className="text-sm font-medium text-content-primary">{variant.name}</p>
                     {product.track_stock && variant.stock_consumption && variant.stock_consumption !== 1 && (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-content-primary">
                         {variant.stock_consumption} {product.unit ?? 'unité'}
                       </p>
                     )}
@@ -124,3 +124,5 @@ export function VariantPicker({
     </div>
   );
 }
+
+

@@ -152,7 +152,7 @@ export function BusinessSwitcher({
             <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-sm overflow-hidden p-1">
               {business?.logo_url
                 ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" />
-                : <Building2 className="w-4 h-4 text-white" />}
+                : <Building2 className="w-4 h-4 text-content-primary" />}
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export function BusinessSwitcher({
             expanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none w-0 overflow-hidden"
           )}>
             <div className="min-w-0 text-left">
-              <p className="text-sm font-semibold text-white truncate leading-tight">
+              <p className="text-sm font-semibold text-content-primary truncate leading-tight">
                 {business?.name ?? 'Mon établissement'}
               </p>
               {business?.organization_name && business.organization_name !== business.name && (
@@ -170,7 +170,7 @@ export function BusinessSwitcher({
                   {business.organization_name}
                 </p>
               )}
-              <p className="text-xs text-slate-500 truncate leading-tight">
+              <p className="text-xs text-content-muted truncate leading-tight">
                 {getRoleLabel(user?.role)}
               </p>
             </div>
@@ -211,7 +211,7 @@ export function BusinessSwitcher({
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden
                                     text-sm font-bold p-1
-                      ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-slate-300'}`}>
+                      ${isActive ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-primary'}`}>
                       {isLoading
                         ? <Loader2 className="w-4 h-4 animate-spin" />
                         : biz.logo_url
@@ -221,7 +221,7 @@ export function BusinessSwitcher({
 
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium truncate
-                        ${isActive ? 'text-content-brand' : 'text-white'}`}>
+                        ${isActive ? 'text-content-brand' : 'text-content-primary'}`}>
                         {biz.name}
                       </p>
                       {biz.organization_name && biz.organization_name !== biz.name && (
@@ -229,7 +229,7 @@ export function BusinessSwitcher({
                           {biz.organization_name}
                         </p>
                       )}
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+                      <span className="text-[10px] font-bold text-content-muted uppercase tracking-tight">
                         {getRoleLabel(role as UserRole)}
                       </span>
                     </div>
@@ -242,7 +242,7 @@ export function BusinessSwitcher({
               })}
 
               {displayList.length === 0 && (
-                <p className="px-3 py-3 text-xs text-slate-500 text-center">
+                <p className="px-3 py-3 text-xs text-content-muted text-center">
                   Aucun établissement
                 </p>
               )}
@@ -254,7 +254,7 @@ export function BusinessSwitcher({
                 <button
                   onClick={() => { setOpen(false); setShowCreate(true); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5
-                             text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
+                             text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
                 >
                   <div className="w-8 h-8 rounded-lg border border-dashed border-slate-600
                                   flex items-center justify-center shrink-0">

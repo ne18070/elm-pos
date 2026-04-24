@@ -196,7 +196,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (text.includes('\uFFFD')) {
-        // Caractères mal décodés → relire en latin1
+        // Caractères mal décodés —relire en latin1
         const reader2 = new FileReader();
         reader2.onload = (ev2) => process(ev2.target?.result as string);
         reader2.readAsText(file, 'windows-1252');
@@ -279,17 +279,17 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
             <FileSpreadsheet className="w-4 h-4" />
             Comment importer vos produits ?
           </h3>
-          <ol className="space-y-2 text-sm text-slate-300">
+          <ol className="space-y-2 text-sm text-content-primary">
             <li className="flex gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-700 text-white text-xs flex items-center justify-center shrink-0 font-bold">1</span>
+              <span className="w-5 h-5 rounded-full bg-brand-700 text-content-primary text-xs flex items-center justify-center shrink-0 font-bold">1</span>
               <span>Téléchargez le modèle CSV ci-dessous et ouvrez-le dans Excel ou Google Sheets.</span>
             </li>
             <li className="flex gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-700 text-white text-xs flex items-center justify-center shrink-0 font-bold">2</span>
+              <span className="w-5 h-5 rounded-full bg-brand-700 text-content-primary text-xs flex items-center justify-center shrink-0 font-bold">2</span>
               <span>Remplissez les lignes en respectant le format : <code className="text-content-brand bg-badge-brand px-1 rounded">nom</code> et <code className="text-content-brand bg-badge-brand px-1 rounded">prix</code> sont obligatoires.</span>
             </li>
             <li className="flex gap-2">
-              <span className="w-5 h-5 rounded-full bg-brand-700 text-white text-xs flex items-center justify-center shrink-0 font-bold">3</span>
+              <span className="w-5 h-5 rounded-full bg-brand-700 text-content-primary text-xs flex items-center justify-center shrink-0 font-bold">3</span>
               <span>Enregistrez en <strong>CSV (séparé par des virgules)</strong> puis chargez le fichier ici.</span>
             </li>
           </ol>
@@ -297,7 +297,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
           <div className="grid grid-cols-3 gap-2 text-xs mt-2 border-t border-brand-800 pt-3">
             {[
               { col: 'nom', desc: 'Nom du produit (requis)' },
-              { col: 'prix', desc: 'Prix en chiffres — ex: 1500' },
+              { col: 'prix', desc: 'Prix en chiffres —ex: 1500' },
               { col: 'categorie', desc: 'Nom exact de la catégorie' },
               { col: 'code_barres', desc: 'Code-barres EAN/UPC' },
               { col: 'sku', desc: 'Référence interne' },
@@ -329,7 +329,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
             onClick={() => fileRef.current?.click()}
             className="w-full border-2 border-dashed border-surface-border hover:border-brand-600
                        rounded-xl p-6 flex flex-col items-center gap-2 text-content-secondary
-                       hover:text-white transition-colors group"
+                       hover:text-content-primary transition-colors group"
           >
             <Upload className="w-8 h-8 group-hover:text-content-brand transition-colors" />
             <span className="text-sm font-medium">Cliquez pour choisir un fichier CSV</span>
@@ -372,8 +372,8 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
                         row.errors.length > 0 ? 'bg-badge-error' : ''
                       }`}
                     >
-                      <td className="px-3 py-2 text-slate-500">{row.line}</td>
-                      <td className="px-3 py-2 text-white font-medium max-w-[150px] truncate">{row.nom || '—'}</td>
+                      <td className="px-3 py-2 text-content-primary">{row.line}</td>
+                      <td className="px-3 py-2 text-content-primary font-medium max-w-[150px] truncate">{row.nom || '—'}</td>
                       <td className="px-3 py-2 text-content-brand">{row.prix || '—'}</td>
                       <td className="px-3 py-2 text-content-secondary">{row.categorie || '—'}</td>
                       <td className="px-3 py-2">
@@ -398,3 +398,5 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
     </Modal>
   );
 }
+
+

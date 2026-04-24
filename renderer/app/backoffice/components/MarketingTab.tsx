@@ -107,7 +107,7 @@ export function MarketingTab() {
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Mail className="w-5 h-5 text-content-brand" />
-          <h2 className="font-semibold text-white">Nouvelle Campagne Email</h2>
+          <h2 className="font-semibold text-content-primary">Nouvelle Campagne Email</h2>
         </div>
 
         <div className="space-y-3">
@@ -123,7 +123,7 @@ export function MarketingTab() {
               <option value="trial">En essai ({subs.filter(s => effectiveStatus(s) === 'trial').length})</option>
               <option value="expired">Expirés ({subs.filter(s => effectiveStatus(s) === 'expired').length})</option>
             </select>
-            <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+            <p className="text-[10px] text-content-muted mt-1 flex items-center gap-1">
               <Users className="w-3 h-3" /> {emails.length} emails uniques seront contactés
             </p>
           </div>
@@ -225,7 +225,7 @@ export function MarketingTab() {
           <div className="bg-[#0a0f1e] p-6 text-center">
             <div className="inline-flex items-center gap-2">
               {/* <div className="w-6 h-6 bg-brand-600 rounded-md"></div> */}
-              <span className="text-white font-bold">ELM <span className="text-content-brand">APP</span></span>
+              <span className="text-content-primary font-bold">ELM <span className="text-content-brand">APP</span></span>
             </div>
           </div>
           
@@ -238,7 +238,7 @@ export function MarketingTab() {
             
             {form.buttonLabel && form.buttonUrl && (
               <div className="py-4 text-center">
-                <div className="inline-block bg-brand-600 text-white text-sm font-bold px-8 py-3 rounded-xl shadow-lg">
+                <div className="inline-block bg-brand-600 text-content-primary text-sm font-bold px-8 py-3 rounded-xl shadow-lg">
                   {form.buttonLabel}
                 </div>
               </div>

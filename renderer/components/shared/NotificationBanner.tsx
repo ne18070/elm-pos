@@ -37,7 +37,7 @@ export function NotificationBanner() {
       </p>
       <button
         onClick={enable}
-        className="bg-brand-600 text-white px-3 py-1.5 rounded-lg font-semibold text-xs hover:bg-brand-700 transition-colors shrink-0"
+        className="bg-brand-600 text-content-primary px-3 py-1.5 rounded-lg font-semibold text-xs hover:bg-brand-700 transition-colors shrink-0"
       >
         Activer
       </button>

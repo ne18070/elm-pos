@@ -119,10 +119,10 @@ export default function AnalyticsPage() {
     // Si l'établissement est purement Juridique, on garde la vue spécialisée
     if (isJuridique && !isHotel && !isStandard) {
       return [
-        { label: 'Total Honoraires', value: fmt(totalFees), icon: DollarSign, color: 'text-content-brand', bg: 'bg-badge-brand border-brand-800' },
+        { label: 'Total Honoraires', value: fmt(totalFees), icon: DollarSign, color: 'text-content-brand', bg: 'bg-badge-brand border-status-brand' },
         { label: 'Encaissé', value: fmt(totalPaidFees), sub: `${fmt(juridiqueData?.total_pending ?? 0)} en attente`, icon: Banknote, color: 'text-status-success', bg: 'bg-badge-success border-status-success' },
-        { label: 'Dossiers Actifs', value: String(juridiqueData?.active_dossiers ?? 0), icon: Briefcase, color: 'text-status-purple', bg: 'bg-badge-purple border-purple-800' },
-        { label: 'Audiences', value: String(juridiqueData?.upcoming_audiences ?? 0), icon: Gavel, color: 'text-status-warning', bg: 'bg-yellow-900/20 border-yellow-800' },
+        { label: 'Dossiers Actifs', value: String(juridiqueData?.active_dossiers ?? 0), icon: Briefcase, color: 'text-status-purple', bg: 'bg-badge-purple border-status-purple' },
+        { label: 'Audiences', value: String(juridiqueData?.upcoming_audiences ?? 0), icon: Gavel, color: 'text-status-warning', bg: 'bg-badge-warning border-status-warning' },
       ];
     }
 
@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
         label: 'C.A Global',
         value: fmt(globalCA),
         sub: totalSales > 0 ? `Dont ${Math.round((totalSales/globalCA)*100 || 0)}% ventes` : 'Toutes activités',
-        icon: TrendingUp, color: 'text-content-brand', bg: 'bg-badge-brand border-brand-800',
+        icon: TrendingUp, color: 'text-content-brand', bg: 'bg-badge-brand border-status-brand',
       },
       {
         label: 'Total Encaissé',
@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
         label: 'Dossiers Actifs',
         value: String(juridiqueData?.active_dossiers ?? 0),
         sub: 'Espace Juridique',
-        icon: Briefcase, color: 'text-status-purple', bg: 'bg-badge-purple border-purple-800',
+        icon: Briefcase, color: 'text-status-purple', bg: 'bg-badge-purple border-status-purple',
       });
     }
 
@@ -157,7 +157,7 @@ export default function AnalyticsPage() {
         label: 'Commandes',
         value: String(data?.order_count ?? 0),
         sub: 'Ventes & Boutique',
-        icon: ShoppingBag, color: 'text-status-warning', bg: 'bg-yellow-900/20 border-yellow-800',
+        icon: ShoppingBag, color: 'text-status-warning', bg: 'bg-badge-warning border-status-warning',
       });
     }
 
@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
         label: 'Occupation Hôtel',
         value: `${hotelData?.occupancy_rate ?? 0}%`,
         sub: `${hotelData?.occupied_rooms ?? 0} chambres occupées`,
-        icon: BedDouble, color: 'text-blue-400', bg: 'bg-badge-info border-blue-800',
+        icon: BedDouble, color: 'text-status-info', bg: 'bg-badge-info border-status-info',
       });
     }
 
@@ -212,7 +212,7 @@ export default function AnalyticsPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-surface-border flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <h1 className="text-lg font-bold text-white">Statistiques {isJuridique ? 'Juridiques' : ''}</h1>
+        <h1 className="text-lg font-bold text-content-primary">Statistiques {isJuridique ? 'Juridiques' : ''}</h1>
         <div className="flex items-center gap-2">
           <button onClick={exportCSV} disabled={!data} className="btn-secondary p-2" title="Exporter CSV">
             <Download className="w-4 h-4" />
@@ -224,7 +224,7 @@ export default function AnalyticsPage() {
             {PERIODS.map(({ label, value }) => (
               <button key={value} onClick={() => setPeriod(value)}
                 className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  period === value ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'
+                  period === value ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'
                 }`}>
                 {label}
               </button>
@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors border-b-2 ${
               tab === id
                 ? 'border-brand-500 text-content-brand'
-                : 'border-transparent text-content-secondary hover:text-white'
+                : 'border-transparent text-content-secondary hover:text-content-primary'
             }`}
           >
             <Icon className="w-4 h-4" />
@@ -263,10 +263,10 @@ export default function AnalyticsPage() {
                     <p className="text-xs text-content-secondary">{label}</p>
                     <Icon className={`w-4 h-4 ${color}`} />
                   </div>
-                  <p className={`text-xl font-bold ${loading ? 'text-slate-600 animate-pulse' : 'text-white'}`}>
+                  <p className={`text-xl font-bold ${loading ? 'text-content-muted animate-pulse' : 'text-content-primary'}`}>
                     {loading ? '...' : value}
                   </p>
-                  {sub && !loading && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+                  {sub && !loading && <p className="text-xs text-content-muted mt-0.5">{sub}</p>}
                 </div>
               ))}
             </div>
@@ -284,8 +284,8 @@ export default function AnalyticsPage() {
                         return (
                           <div key={f.type}>
                             <div className="flex justify-between text-xs mb-1.5">
-                              <span className="text-slate-300 font-bold capitalize">{f.type.replace(/_/g, ' ')}</span>
-                              <span className="text-white font-black">{fmt(f.amount)}</span>
+                              <span className="text-content-secondary font-bold capitalize">{f.type.replace(/_/g, ' ')}</span>
+                              <span className="text-content-primary font-black">{fmt(f.amount)}</span>
                             </div>
                             <div className="h-1.5 bg-surface-card rounded-full overflow-hidden">
                               <div className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]" style={{ width: `${pct}%` }} />
@@ -302,9 +302,9 @@ export default function AnalyticsPage() {
                     </h2>
                     <div className="grid grid-cols-2 gap-3">
                       {juridiqueData.dossiers_by_status.map(s => (
-                        <div key={s.status} className="bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
-                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-tight mb-1 capitalize">{s.status}</p>
-                          <p className="text-xl font-black text-white">{s.count}</p>
+                        <div key={s.status} className="bg-surface-input p-3 rounded-xl border border-surface-border">
+                          <p className="text-[10px] font-black text-content-muted uppercase tracking-tight mb-1 capitalize">{s.status}</p>
+                          <p className="text-xl font-black text-content-primary">{s.count}</p>
                         </div>
                       ))}
                     </div>
@@ -315,7 +315,7 @@ export default function AnalyticsPage() {
             {/* Chart section */}
             {((isJuridique && juridiqueData && juridiqueData.daily_fees.length > 0) || (data && data.daily_stats.length > 0)) && (
               <div className="card p-4">
-                <h2 className="text-sm font-semibold text-slate-300 mb-4">
+                <h2 className="text-sm font-semibold text-content-secondary mb-4">
                   {isJuridique ? 'Volume Honoraires (par jour)' : 'Ventes journalières'}
                 </h2>
                 <div className="flex items-end gap-1 h-36">
@@ -347,12 +347,12 @@ export default function AnalyticsPage() {
         {tab === 'juridique' && isJuridique && juridiqueData && (
           <div className="space-y-5">
             <div className="card p-6">
-              <h2 className="text-lg font-black text-white mb-6 flex items-center gap-3">
+              <h2 className="text-lg font-black text-content-primary mb-6 flex items-center gap-3">
                 <Scale className="w-5 h-5 text-brand-500" /> Performance du Cabinet
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                  <div className="space-y-1">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center">Taux de Recouvrement</p>
+                    <p className="text-xs text-content-muted font-bold uppercase tracking-widest text-center">Taux de Recouvrement</p>
                     <p className="text-3xl font-black text-status-success text-center">
                       {juridiqueData.total_fees > 0 
                         ? Math.round((juridiqueData.total_paid / juridiqueData.total_fees) * 100) 
@@ -360,7 +360,7 @@ export default function AnalyticsPage() {
                     </p>
                  </div>
                  <div className="space-y-1">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center">Efficacité Clôture</p>
+                    <p className="text-xs text-content-muted font-bold uppercase tracking-widest text-center">Efficacité Clôture</p>
                     <p className="text-3xl font-black text-content-brand text-center">
                       {juridiqueData.total_dossiers > 0 
                         ? Math.round(((juridiqueData.total_dossiers - juridiqueData.active_dossiers) / juridiqueData.total_dossiers) * 100) 
@@ -368,7 +368,7 @@ export default function AnalyticsPage() {
                     </p>
                  </div>
                  <div className="space-y-1">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest text-center">Moyenne / Dossier</p>
+                    <p className="text-xs text-content-muted font-bold uppercase tracking-widest text-center">Moyenne / Dossier</p>
                     <p className="text-3xl font-black text-status-purple text-center">
                       {fmt(juridiqueData.total_dossiers > 0 ? juridiqueData.total_fees / juridiqueData.total_dossiers : 0)}
                     </p>
@@ -382,19 +382,19 @@ export default function AnalyticsPage() {
                     <Gavel className="w-4 h-4 text-status-warning" /> Prochaines Audiences
                   </h2>
                   {audiences.length === 0 ? (
-                    <p className="text-sm text-slate-500 text-center py-8">Aucune audience prévue</p>
+                    <p className="text-sm text-content-muted text-center py-8">Aucune audience prévue</p>
                   ) : (
                     <div className="space-y-3">
                       {audiences.map(aud => (
-                        <div key={aud.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-slate-800/50">
+                        <div key={aud.id} className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                           <div className="min-w-0">
                             <p className="text-xs font-black text-content-brand uppercase">{aud.reference}</p>
-                            <p className="text-sm text-white font-bold truncate">{aud.client_name}</p>
-                            <p className="text-[10px] text-slate-500 font-medium truncate">{aud.tribunal}</p>
+                            <p className="text-sm text-content-primary font-bold truncate">{aud.client_name}</p>
+                            <p className="text-[10px] text-content-muted font-medium truncate">{aud.tribunal}</p>
                           </div>
                           <div className="text-right shrink-0 ml-4">
-                            <p className="text-xs font-black text-white">{format(new Date(aud.date_audience), 'dd MMM yyyy', { locale: fr })}</p>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter mt-1">À {format(new Date(aud.date_audience), 'HH:mm') === '00:00' ? 'Heure à confirmer' : format(new Date(aud.date_audience), 'HH:mm')}</p>
+                            <p className="text-xs font-black text-content-primary">{format(new Date(aud.date_audience), 'dd MMM yyyy', { locale: fr })}</p>
+                            <p className="text-[9px] font-bold text-content-muted uppercase tracking-tighter mt-1">À {format(new Date(aud.date_audience), 'HH:mm') === '00:00' ? 'Heure à confirmer' : format(new Date(aud.date_audience), 'HH:mm')}</p>
                           </div>
                         </div>
                       ))}
@@ -408,14 +408,14 @@ export default function AnalyticsPage() {
                   </h2>
                   
                   {juridiqueData.monthly_fees.length < 2 ? (
-                    <p className="text-sm text-slate-500 text-center py-8 italic">Pas assez de données historiques pour calculer la croissance</p>
+                    <p className="text-sm text-content-muted text-center py-8 italic">Pas assez de données historiques pour calculer la croissance</p>
                   ) : (
                     <div className="space-y-6">
                       <div className="flex items-end justify-between">
                         <div>
-                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Tendance (6 mois)</p>
+                          <p className="text-[10px] font-black text-content-muted uppercase tracking-widest mb-1">Tendance (6 mois)</p>
                           <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-black text-white">
+                            <span className="text-2xl font-black text-content-primary">
                               {fmt(juridiqueData.monthly_fees[juridiqueData.monthly_fees.length - 1].amount)}
                             </span>
                             {(() => {
@@ -424,7 +424,7 @@ export default function AnalyticsPage() {
                               if (prev === 0) return null;
                               const growth = ((last - prev) / prev) * 100;
                               return (
-                                <span className={`text-xs font-black flex items-center gap-0.5 ${growth >= 0 ? 'text-status-success' : 'text-rose-400'}`}>
+                                <span className={`text-xs font-black flex items-center gap-0.5 ${growth >= 0 ? 'text-status-success' : 'text-status-error'}`}>
                                   {growth >= 0 ? '↑' : '↓'} {Math.abs(Math.round(growth))}%
                                 </span>
                               );
@@ -432,8 +432,8 @@ export default function AnalyticsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Mois en cours</p>
-                           <p className="text-xs font-bold text-slate-300 capitalize">
+                           <p className="text-[10px] font-black text-content-muted uppercase tracking-widest mb-1">Mois en cours</p>
+                           <p className="text-xs font-bold text-content-secondary capitalize">
                              {format(parseISO(juridiqueData.monthly_fees[juridiqueData.monthly_fees.length - 1].month + '-01'), 'MMMM yyyy', { locale: fr })}
                            </p>
                         </div>
@@ -449,12 +449,12 @@ export default function AnalyticsPage() {
                                 className="w-full bg-emerald-500/20 hover:bg-emerald-500/40 border-t-2 border-emerald-500/50 rounded-t-sm transition-all cursor-help"
                                 style={{ height: `${height}%` }}
                               />
-                              <span className="text-[8px] font-black text-slate-600 uppercase group-hover:text-content-secondary transition-colors">
+                              <span className="text-[8px] font-black text-content-muted uppercase group-hover:text-content-secondary transition-colors">
                                 {format(parseISO(m.month + '-01'), 'MMM', { locale: fr })}
                               </span>
                               
                               {/* Tooltip */}
-                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-card text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-xl border border-slate-700">
+                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-card text-content-primary text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-xl border border-surface-border">
                                 {fmt(m.amount)}
                               </div>
                             </div>
@@ -471,11 +471,11 @@ export default function AnalyticsPage() {
         {/* ── Produits ── */}
         {tab === 'produits' && (
           <div className="card p-4">
-            <h2 className="text-sm font-semibold text-slate-300 mb-4">Top produits</h2>
+            <h2 className="text-sm font-semibold text-content-secondary mb-4">Top produits</h2>
             {loading ? (
-              <p className="text-sm text-slate-500">Chargement…</p>
+              <p className="text-sm text-content-muted">Chargement…</p>
             ) : !data || data.top_products.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-6">Aucune vente sur la période</p>
+              <p className="text-sm text-content-muted text-center py-6">Aucune vente sur la période</p>
             ) : (
               <div className="space-y-3">
                 {data.top_products.map((p, i) => {
@@ -483,17 +483,17 @@ export default function AnalyticsPage() {
                   const pct = maxRev > 0 ? (p.revenue / maxRev) * 100 : 0;
                   return (
                     <div key={p.product_id} className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-slate-500 w-4 shrink-0">{i + 1}</span>
+                      <span className="text-xs font-mono text-content-muted w-4 shrink-0">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="text-white font-medium truncate">{p.name}</span>
+                          <span className="text-content-primary font-medium truncate">{p.name}</span>
                           <span className="text-content-secondary shrink-0 ml-2">{fmt(p.revenue)}</span>
                         </div>
                         <div className="h-1.5 bg-surface-input rounded-full overflow-hidden">
                           <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
-                      <span className="text-xs text-slate-500 w-16 text-right shrink-0">
+                      <span className="text-xs text-content-muted w-16 text-right shrink-0">
                         {p.quantity_sold} ventes
                       </span>
                     </div>
@@ -514,12 +514,12 @@ export default function AnalyticsPage() {
           <div className="card p-4">
             <div className="flex items-center gap-2 mb-4">
               <Tag className="w-4 h-4 text-status-success" />
-              <h2 className="text-sm font-semibold text-slate-300">Utilisation des coupons</h2>
+              <h2 className="text-sm font-semibold text-content-secondary">Utilisation des coupons</h2>
             </div>
             {loading ? (
-              <p className="text-sm text-slate-500">Chargement…</p>
+              <p className="text-sm text-content-muted">Chargement…</p>
             ) : coupons.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-6">Aucun coupon utilisé sur la période</p>
+              <p className="text-sm text-content-muted text-center py-6">Aucun coupon utilisé sur la période</p>
             ) : (
               <div className="space-y-0 divide-y divide-surface-border">
                 {coupons.map((c) => (
@@ -531,14 +531,14 @@ export default function AnalyticsPage() {
                           ×{c.usage_count}
                         </span>
                       </div>
-                      <div className="flex gap-4 text-xs text-slate-500">
+                      <div className="flex gap-4 text-xs text-content-muted">
                         <span>CA : {fmt(c.revenue)}</span>
-                        <span>Remise : <span className="text-rose-400">−{fmt(c.total_discount)}</span></span>
+                        <span>Remise : <span className="text-status-error">−{fmt(c.total_discount)}</span></span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-white">{fmt(c.revenue)}</p>
-                      <p className="text-xs text-slate-500">{c.usage_count} utilisation{c.usage_count > 1 ? 's' : ''}</p>
+                      <p className="text-sm font-semibold text-content-primary">{fmt(c.revenue)}</p>
+                      <p className="text-xs text-content-muted">{c.usage_count} utilisation{c.usage_count > 1 ? 's' : ''}</p>
                     </div>
                   </div>
                 ))}
@@ -551,40 +551,40 @@ export default function AnalyticsPage() {
         {tab === 'hotel' && (
           <div className="space-y-5">
             {loading ? (
-              <p className="text-sm text-slate-500">Chargement…</p>
+              <p className="text-sm text-content-muted">Chargement…</p>
             ) : !hotelData ? (
-              <p className="text-sm text-slate-500 text-center py-6">Aucun séjour terminé sur la période</p>
+              <p className="text-sm text-content-muted text-center py-6">Aucun séjour terminé sur la période</p>
             ) : (
               <>
                 {/* KPIs */}
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'Revenus hébergement', value: fmt(hotelData.total_revenue),      icon: DollarSign, color: 'text-status-teal',   bg: 'bg-badge-teal border-teal-700' },
+                    { label: 'Revenus hébergement', value: fmt(hotelData.total_revenue),      icon: DollarSign, color: 'text-status-teal',   bg: 'bg-badge-teal border-status-teal' },
                     { label: 'Check-outs',           value: String(hotelData.total_checkouts), icon: LogOut,     color: 'text-status-success',  bg: 'bg-badge-success border-status-success' },
-                    { label: 'Séjour moyen',         value: fmt(hotelData.avg_stay_value),     icon: BedDouble,  color: 'text-content-brand',  bg: 'bg-badge-brand border-brand-800' },
-                    { label: 'Nuits moyennes',       value: hotelData.avg_nights.toFixed(1),   icon: LogIn,      color: 'text-status-purple', bg: 'bg-badge-purple border-purple-800' },
+                    { label: 'Séjour moyen',         value: fmt(hotelData.avg_stay_value),     icon: BedDouble,  color: 'text-content-brand',  bg: 'bg-badge-brand border-status-brand' },
+                    { label: 'Nuits moyennes',       value: hotelData.avg_nights.toFixed(1),   icon: LogIn,      color: 'text-status-purple', bg: 'bg-badge-purple border-status-purple' },
                   ].map(({ label, value, icon: Icon, color, bg }) => (
                     <div key={label} className={`p-4 rounded-xl border ${bg}`}>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs text-content-secondary">{label}</p>
                         <Icon className={`w-4 h-4 ${color}`} />
                       </div>
-                      <p className="text-xl font-bold text-white">{value}</p>
+                      <p className="text-xl font-bold text-content-primary">{value}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Détail revenus */}
                 <div className="card p-4 space-y-3">
-                  <h2 className="text-sm font-semibold text-slate-300">Détail des revenus</h2>
+                  <h2 className="text-sm font-semibold text-content-secondary">Détail des revenus</h2>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-content-secondary flex items-center gap-2"><BedDouble className="w-3.5 h-3.5" /> Nuitées</span>
-                      <span className="text-white font-medium">{fmt(hotelData.total_room_revenue)}</span>
+                      <span className="text-content-primary font-medium">{fmt(hotelData.total_room_revenue)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-content-secondary flex items-center gap-2"><Wrench className="w-3.5 h-3.5" /> Prestations</span>
-                      <span className="text-white font-medium">{fmt(hotelData.total_services_revenue)}</span>
+                      <span className="text-content-primary font-medium">{fmt(hotelData.total_services_revenue)}</span>
                     </div>
                     {hotelData.outstanding_balance > 0 && (
                       <div className="flex justify-between border-t border-surface-border pt-2">
@@ -593,7 +593,7 @@ export default function AnalyticsPage() {
                       </div>
                     )}
                     <div className="flex justify-between border-t border-surface-border pt-2 font-bold">
-                      <span className="text-slate-300">Total encaissé</span>
+                      <span className="text-content-secondary">Total encaissé</span>
                       <span className="text-status-teal">{fmt(hotelData.total_revenue - hotelData.outstanding_balance)}</span>
                     </div>
                   </div>
@@ -602,7 +602,7 @@ export default function AnalyticsPage() {
                 {/* Top chambres */}
                 {hotelData.room_stats.length > 0 && (
                   <div className="card p-4">
-                    <h2 className="text-sm font-semibold text-slate-300 mb-4">Performance par chambre</h2>
+                    <h2 className="text-sm font-semibold text-content-secondary mb-4">Performance par chambre</h2>
                     <div className="space-y-3">
                       {hotelData.room_stats.map((r) => {
                         const maxRev = hotelData.room_stats[0].revenue;
@@ -614,14 +614,14 @@ export default function AnalyticsPage() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between text-sm mb-1">
-                                <span className="text-white font-medium">Ch. {r.room_number} <span className="text-slate-500 text-xs capitalize">{r.room_type}</span></span>
+                                <span className="text-content-primary font-medium">Ch. {r.room_number} <span className="text-content-muted text-xs capitalize">{r.room_type}</span></span>
                                 <span className="text-content-secondary shrink-0 ml-2">{fmt(r.revenue)}</span>
                               </div>
                               <div className="h-1.5 bg-surface-input rounded-full overflow-hidden">
                                 <div className="h-full bg-teal-500 rounded-full" style={{ width: `${pct}%` }} />
                               </div>
                             </div>
-                            <span className="text-xs text-slate-500 w-20 text-right shrink-0">
+                            <span className="text-xs text-content-muted w-20 text-right shrink-0">
                               {r.checkouts} séjour{r.checkouts > 1 ? 's' : ''} · {r.nights}n
                             </span>
                           </div>

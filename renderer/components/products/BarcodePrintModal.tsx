@@ -219,14 +219,14 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
         <div className="flex items-center justify-between p-5 border-b border-surface-border">
           <div className="flex items-center gap-2">
             <Barcode className="w-5 h-5 text-content-brand" />
-            <h2 className="text-white font-semibold">Imprimer codes-barres</h2>
+            <h2 className="text-content-primary font-semibold">Imprimer codes-barres</h2>
           </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Corps — liste produits */}
+        {/* Corps —liste produits */}
         <div className="flex-1 overflow-y-auto">
           {/* Sélectionner tout */}
           <div className="flex items-center gap-3 px-5 py-3 border-b border-surface-border bg-surface-input/30">
@@ -257,7 +257,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
 
                 {/* Nom + barcode */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{item.product.name}</p>
+                  <p className="text-sm font-medium text-content-primary truncate">{item.product.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-xs font-mono text-content-secondary">{item.barcode}</span>
                     {item.isNew && (
@@ -266,7 +266,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
                     <button
                       onClick={() => regenerate(item.product.id)}
                       title="Générer un nouveau code"
-                      className="text-slate-500 hover:text-slate-300 transition-colors"
+                      className="text-content-primary hover:text-content-primary transition-colors"
                     >
                       <RotateCcw className="w-3 h-3" />
                     </button>
@@ -278,19 +278,19 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
                   <button
                     onClick={() => setQty(item.product.id, -1)}
                     disabled={!item.selected}
-                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-content-secondary hover:text-white disabled:opacity-30 transition-colors"
+                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-content-secondary hover:text-content-primary disabled:opacity-30 transition-colors"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
-                  <span className="w-8 text-center text-sm text-white">{item.qty}</span>
+                  <span className="w-8 text-center text-sm text-content-primary">{item.qty}</span>
                   <button
                     onClick={() => setQty(item.product.id, +1)}
                     disabled={!item.selected}
-                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-content-secondary hover:text-white disabled:opacity-30 transition-colors"
+                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-content-secondary hover:text-content-primary disabled:opacity-30 transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
-                  <span className="text-xs text-slate-500 ml-1">étiq.</span>
+                  <span className="text-xs text-content-primary ml-1">étiq.</span>
                 </div>
               </div>
             ))}
@@ -299,7 +299,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-4 border-t border-surface-border bg-surface-input/20">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-content-primary">
             {selected.length === 0
               ? 'Sélectionnez des produits'
               : `${selected.reduce((s, i) => s + i.qty, 0)} étiquette${selected.reduce((s, i) => s + i.qty, 0) > 1 ? 's' : ''} à imprimer`}
@@ -329,3 +329,5 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
     </div>
   );
 }
+
+

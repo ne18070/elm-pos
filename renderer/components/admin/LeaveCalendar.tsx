@@ -44,7 +44,7 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
     <div className="bg-surface-card border border-surface-border rounded-3xl overflow-hidden shadow-sm">
       {/* Header Calendrier */}
       <div className="p-4 border-b border-surface-border flex items-center justify-between bg-surface-hover/30">
-        <h3 className="text-sm font-bold text-white capitalize">{monthName}</h3>
+        <h3 className="text-sm font-bold text-content-primary capitalize">{monthName}</h3>
         <div className="flex gap-1">
           <button onClick={onPrev} className="p-2 hover:bg-surface-hover rounded-xl text-content-secondary transition-colors">
             <ChevronLeft size={18} />
@@ -58,7 +58,7 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
       {/* Grille */}
       <div className="grid grid-cols-7 bg-surface-border/20 gap-px">
         {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => (
-          <div key={d} className="bg-surface-card py-2 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest">
+          <div key={d} className="bg-surface-card py-2 text-center text-[10px] font-black text-content-primary uppercase tracking-widest">
             {d}
           </div>
         ))}
@@ -72,7 +72,7 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
             )}>
               {day && (
                 <>
-                  <span className="text-xs font-bold text-slate-500">{day}</span>
+                  <span className="text-xs font-bold text-content-primary">{day}</span>
                   <div className="mt-1 space-y-1">
                     {leaves.map(l => (
                       <div 
@@ -95,3 +95,5 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
     </div>
   );
 }
+
+

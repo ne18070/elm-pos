@@ -24,9 +24,9 @@ function StatCard({
     <div className={`card p-4 border-l-4 ${color}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-          <p className="text-3xl font-bold text-white mt-1">{value}</p>
-          {sublabel && <p className="text-xs text-slate-500 mt-0.5">{sublabel}</p>}
+          <p className="text-xs font-semibold text-content-muted uppercase tracking-wide">{label}</p>
+          <p className="text-3xl font-bold text-content-primary mt-1">{value}</p>
+          {sublabel && <p className="text-xs text-content-muted mt-0.5">{sublabel}</p>}
         </div>
         <div className="text-content-secondary">{icon}</div>
       </div>
@@ -61,8 +61,8 @@ function BlockedRow({
     <div className="flex items-center gap-3 py-2.5 border-b border-surface-border last:border-0">
       <div className={`w-2 h-2 rounded-full shrink-0 ${isOverdue ? 'bg-red-400' : 'bg-amber-400'}`} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white truncate font-medium">{item.node?.label ?? 'Étape inconnue'}</p>
-        <p className="text-xs text-slate-500 truncate">Dossier {item.instance.dossier_id.slice(0, 8)}…</p>
+        <p className="text-sm text-content-primary truncate font-medium">{item.node?.label ?? 'Étape inconnue'}</p>
+        <p className="text-xs text-content-muted truncate">Dossier {item.instance.dossier_id.slice(0, 8)}…</p>
       </div>
       <span className={`text-xs font-semibold shrink-0 ${isOverdue ? 'text-status-error' : 'text-status-warning'}`}>
         {hours}h
@@ -98,7 +98,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
 
   if (loading && !stats) {
     return (
-      <div className="flex items-center justify-center py-16 text-slate-500">
+      <div className="flex items-center justify-center py-16 text-content-muted">
         <Loader2 className="w-6 h-6 animate-spin mr-2" />
         Chargement du monitoring…
       </div>
@@ -114,11 +114,11 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-content-brand" />
-          <h2 className="font-semibold text-white">Suivi des processus</h2>
+          <h2 className="font-semibold text-content-primary">Suivi des processus</h2>
         </div>
         <div className="flex items-center gap-3">
           {lastRefresh && (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-content-muted">
               Mis à jour {lastRefresh.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
@@ -168,7 +168,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-status-warning" />
-            <h3 className="font-medium text-white text-sm">Étapes bloquées</h3>
+            <h3 className="font-medium text-content-primary text-sm">Étapes bloquées</h3>
             {stats.blocked_instances.length > 0 && (
               <span className="ml-auto text-xs font-bold text-status-warning bg-badge-warning px-2 py-0.5 rounded-full">
                 {stats.blocked_instances.length}
@@ -176,7 +176,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
             )}
           </div>
           {stats.blocked_instances.length === 0 ? (
-            <p className="text-sm text-slate-500 italic py-4 text-center">
+            <p className="text-sm text-content-muted italic py-4 text-center">
               <CheckCircle2 className="w-5 h-5 text-status-success mx-auto mb-1" />
               Aucune étape bloquée
             </p>
@@ -186,7 +186,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
                 <BlockedRow key={item.instance.id} item={item} />
               ))}
               {stats.blocked_instances.length > 8 && (
-                <p className="text-xs text-slate-500 pt-2 text-center">
+                <p className="text-xs text-content-muted pt-2 text-center">
                   +{stats.blocked_instances.length - 8} autres…
                 </p>
               )}
@@ -198,10 +198,10 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
             <XCircle className="w-4 h-4 text-status-error" />
-            <h3 className="font-medium text-white text-sm">Erreurs récentes</h3>
+            <h3 className="font-medium text-content-primary text-sm">Erreurs récentes</h3>
           </div>
           {stats.recent_errors.length === 0 ? (
-            <p className="text-sm text-slate-500 italic py-4 text-center">
+            <p className="text-sm text-content-muted italic py-4 text-center">
               <CheckCircle2 className="w-5 h-5 text-status-success mx-auto mb-1" />
               Aucune erreur
             </p>
@@ -211,8 +211,8 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
                 <div key={err.id} className="flex items-start gap-2 py-1.5 border-b border-surface-border last:border-0">
                   <LevelBadge level={err.level} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-300 truncate">{err.message}</p>
-                    <p className="text-[10px] text-slate-600 mt-0.5">
+                    <p className="text-xs text-content-primary truncate">{err.message}</p>
+                    <p className="text-[10px] text-content-muted mt-0.5">
                       {new Date(err.created_at).toLocaleString('fr-FR')}
                     </p>
                   </div>

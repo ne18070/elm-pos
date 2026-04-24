@@ -225,7 +225,7 @@ function SidebarContent({
           <BusinessSwitcher collapsed={collapsed} isHovering={isHovering} />
         </div>
         {onClose && (
-          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors shrink-0">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors shrink-0">
             <X className="w-5 h-5" />
           </button>
         )}
@@ -239,7 +239,7 @@ function SidebarContent({
               "px-3 transition-all duration-300 overflow-hidden",
               expanded ? "h-6 opacity-100" : "h-0 opacity-0"
             )}>
-              <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 truncate">
+              <h3 className="text-[10px] font-bold text-content-muted uppercase tracking-widest mb-2 truncate">
                 {section.label}
               </h3>
             </div>
@@ -272,7 +272,7 @@ function SidebarContent({
                       {badge > 0 && (
                         <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5
                                          flex items-center justify-center rounded-full
-                                         bg-red-500 text-white text-[9px] font-bold leading-none shadow-sm">
+                                         bg-red-500 text-content-primary text-[9px] font-bold leading-none shadow-sm">
                           {badge > 99 ? '99+' : badge}
                         </span>
                       )}
@@ -346,7 +346,7 @@ function SidebarContent({
             onClick={() => setIsSupportOpen(true)}
             title="Signaler un problème"
             className={cn(
-              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-content-secondary hover:text-white hover:bg-white/5 group p-1',
+              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-content-secondary hover:text-content-primary hover:bg-white/5 group p-1',
             )}
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
@@ -409,7 +409,7 @@ function SidebarContent({
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0 overflow-hidden"
             )}>
               <p className="text-xs font-bold text-content-primary truncate leading-tight">{user?.full_name}</p>
-              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{getRoleLabel(role)}</p>
+              <p className="text-[10px] text-content-muted font-medium uppercase tracking-tight">{getRoleLabel(role)}</p>
             </div>
           </Link>
 
@@ -448,7 +448,7 @@ function SidebarContent({
             "flex items-center justify-between flex-1 min-w-0 transition-all duration-300",
             expanded ? "opacity-100 ml-1" : "opacity-0 w-0"
           )}>
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter truncate">
+            <span className="text-[10px] font-bold text-content-muted uppercase tracking-tighter truncate">
               ELM APP
             </span>
             <span className="text-[10px] font-mono text-slate-700 ml-1">
@@ -472,11 +472,11 @@ export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
     >
       <button
         onClick={onMenuOpen}
-        className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
+        className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
       >
         <Menu className="w-5 h-5" />
       </button>
-      <p className="text-sm font-semibold text-white truncate flex-1">
+      <p className="text-sm font-semibold text-content-primary truncate flex-1">
         {business?.name ?? 'Elm'}
       </p>
       <OfflineBadge compact />
@@ -516,7 +516,7 @@ export function MobileBottomNav() {
             href={href}
             className={cn(
               'flex-1 flex flex-col items-center gap-1 py-2.5 px-1 transition-colors relative',
-              active ? 'text-content-brand' : 'text-slate-500 hover:text-slate-300'
+              active ? 'text-content-brand' : 'text-content-muted hover:text-content-primary'
             )}
           >
             <div className="relative">
@@ -524,7 +524,7 @@ export function MobileBottomNav() {
               {badge > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
                                  flex items-center justify-center rounded-full
-                                 bg-red-500 text-white text-[9px] font-bold leading-none">
+                                 bg-red-500 text-content-primary text-[9px] font-bold leading-none">
                   {badge > 99 ? '99+' : badge}
                 </span>
               )}

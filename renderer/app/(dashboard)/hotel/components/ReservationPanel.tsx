@@ -48,8 +48,8 @@ export function ReservationPanel({
   return (
     <div className="absolute inset-y-0 right-0 w-[420px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-        <h3 className="font-semibold text-white">Nouvelle réservation</h3>
-        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+        <h3 className="font-semibold text-content-primary">Nouvelle réservation</h3>
+        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -65,10 +65,10 @@ export function ReservationPanel({
               onChange({ ...form, room_id: e.target.value, price_per_night: room ? String(room.price_per_night) : form.price_per_night });
             }}
           >
-            <option value="">— Choisir —</option>
+            <option value="">—Choisir —</option>
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.number} — {ROOM_TYPES.find((t) => t.value === r.type)?.label} ({fmtMoney(r.price_per_night, currency)}/nuit)
+                {r.number} —{ROOM_TYPES.find((t) => t.value === r.type)?.label} ({fmtMoney(r.price_per_night, currency)}/nuit)
                 {r.status !== 'available' ? ` [${roomStatusLabel(r.status)}]` : ''}
               </option>
             ))}
@@ -93,7 +93,7 @@ export function ReservationPanel({
               onBlur={() => setTimeout(() => setGuestDropOpen(false), 150)}
             />
             {form.guest_id && (
-              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
+              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-content-secondary hover:text-content-primary"
                 onClick={() => { onChange({ ...form, guest_id: '' }); setGuestSearch(''); }}>
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -111,10 +111,10 @@ export function ReservationPanel({
                       type="button"
                       onMouseDown={() => {
                         onChange({ ...form, guest_id: g.id });
-                        setGuestSearch(g.full_name + (g.phone ? ` — ${g.phone}` : ''));
+                        setGuestSearch(g.full_name + (g.phone ? ` —${g.phone}` : ''));
                         setGuestDropOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 hover:bg-surface-hover flex items-center gap-2 transition-colors ${form.guest_id === g.id ? 'bg-brand-600/10 text-content-brand' : 'text-white'}`}
+                      className={`w-full text-left px-3 py-2 hover:bg-surface-hover flex items-center gap-2 transition-colors ${form.guest_id === g.id ? 'bg-brand-600/10 text-content-brand' : 'text-content-primary'}`}
                     >
                       <div className="w-7 h-7 rounded-full bg-brand-600/20 text-content-brand flex items-center justify-center text-xs font-bold shrink-0">
                         {g.full_name.charAt(0).toUpperCase()}
@@ -129,7 +129,7 @@ export function ReservationPanel({
                   const q = guestSearch.toLowerCase();
                   return !q || g.full_name.toLowerCase().includes(q) || (g.phone ?? '').includes(q) || (g.id_number ?? '').includes(q);
                 }).length === 0 && (
-                  <p className="px-3 py-3 text-sm text-slate-500 text-center">Aucun client trouvé</p>
+                  <p className="px-3 py-3 text-sm text-content-primary text-center">Aucun client trouvé</p>
                 )}
               </div>
             )}
@@ -172,7 +172,7 @@ export function ReservationPanel({
         {resNights > 0 && form.price_per_night && (
           <div className="p-3 rounded-xl bg-badge-brand border border-brand-800 text-sm text-content-brand">
             <Calendar className="w-4 h-4 inline mr-1.5" />
-            <strong>{resNights} nuit{resNights > 1 ? 's' : ''}</strong> → {fmtMoney(resTotal, currency)}
+            <strong>{resNights} nuit{resNights > 1 ? 's' : ''}</strong> —{fmtMoney(resTotal, currency)}
           </div>
         )}
 
@@ -221,3 +221,5 @@ export function ReservationPanel({
     </div>
   );
 }
+
+

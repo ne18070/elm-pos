@@ -161,7 +161,7 @@ export default function LoginPage() {
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <p className="text-content-secondary text-sm mt-1">Connectez-vous à votre compte</p>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-content-muted mt-2">
             Pas encore de compte ?{' '}
             <a href="/subscribe" className="text-content-brand hover:text-content-brand transition-colors">
               S&apos;inscrire
@@ -212,7 +212,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-content-primary"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -241,7 +241,7 @@ export default function LoginPage() {
         )}
 
         <div className="text-center mt-8 space-y-2">
-          <p className="text-[10px] font-medium text-slate-600 tracking-widest uppercase">
+          <p className="text-[10px] font-medium text-content-muted tracking-widest uppercase">
             ELM APP v{version || '1.0.0'}
           </p>
           <p className="text-xs text-slate-700">
@@ -281,18 +281,18 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="card w-full max-w-sm p-6 relative">
-        <button onClick={onClose} className="absolute right-4 top-4 text-slate-500 hover:text-white">
+        <button onClick={onClose} className="absolute right-4 top-4 text-content-muted hover:text-content-primary">
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold text-white mb-2">Mot de passe oublié</h2>
+        <h2 className="text-xl font-bold text-content-primary mb-2">Mot de passe oublié</h2>
         
         {success ? (
           <div className="text-center py-6">
             <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-6 h-6 text-status-success" />
             </div>
-            <p className="text-slate-300 text-sm mb-6">
+            <p className="text-content-primary text-sm mb-6">
               Un e-mail de réinitialisation a été envoyé à <strong>{email}</strong>. 
               Veuillez vérifier votre boîte de réception.
             </p>

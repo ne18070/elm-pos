@@ -50,7 +50,7 @@ export function CouponInput({ businessId, orderTotal, cartItemCount = 0, onApply
     <div className="space-y-1">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-primary" />
           <input
             type="text"
             value={code}
@@ -73,3 +73,4 @@ export function CouponInput({ businessId, orderTotal, cartItemCount = 0, onApply
     </div>
   );
 }
+

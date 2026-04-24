@@ -41,14 +41,14 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Sélectionner une chambre</h3>
-        <button onClick={onCancel} className="text-content-secondary hover:text-white">
+        <h3 className="text-lg font-semibold text-content-primary">Sélectionner une chambre</h3>
+        <button onClick={onCancel} className="text-content-secondary hover:text-content-primary">
           <X className="w-5 h-5" />
         </button>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-primary" />
         <input
           type="text"
           placeholder="Rechercher une chambre ou un client..."
@@ -61,12 +61,12 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
 
       <div className="max-h-[300px] overflow-y-auto pr-1 -mr-1 space-y-2">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-content-primary">
             <Loader2 className="w-8 h-8 animate-spin" />
             <p className="text-sm">Chargement des chambres...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 border border-dashed border-slate-800 rounded-xl">
+          <div className="text-center py-12 text-content-primary border border-dashed border-slate-800 rounded-xl">
             <p className="text-sm">{search ? 'Aucun résultat trouvé' : 'Aucun client en chambre actuellement'}</p>
           </div>
         ) : (
@@ -81,15 +81,15 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
                   <BedDouble className="w-5 h-5 text-content-brand" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-white font-bold">Chambre {r.room?.number}</p>
+                  <p className="text-content-primary font-bold">Chambre {r.room?.number}</p>
                   <p className="text-xs text-content-secondary flex items-center gap-1">
                     <User className="w-3 h-3" /> {r.guest?.full_name}
                   </p>
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-xs text-slate-500 uppercase font-medium">Solde actuel</p>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-xs text-content-primary uppercase font-medium">Solde actuel</p>
+                <p className="text-sm font-semibold text-content-primary">
                   {formatCurrency(Number(r.total) - Number(r.paid_amount), currency)}
                 </p>
               </div>
@@ -100,3 +100,5 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
     </div>
   );
 }
+
+

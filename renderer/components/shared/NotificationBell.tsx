@@ -131,7 +131,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-content-secondary hover:text-white hover:bg-surface-hover",
+          "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-content-secondary hover:text-content-primary hover:bg-surface-hover",
           collapsed ? "justify-center" : ""
         )}
         title={collapsed ? "Notifications" : undefined}
@@ -141,7 +141,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
           {count > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
                              flex items-center justify-center rounded-full
-                             bg-red-500 text-white text-[9px] font-bold leading-none">
+                             bg-red-500 text-content-primary text-[9px] font-bold leading-none">
               {count}
             </span>
           )}
@@ -149,7 +149,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
         {expanded && <span className="text-sm flex-1 text-left">Notifications</span>}
         {expanded && count > 0 && (
           <span className="flex items-center justify-center min-w-[20px] h-5 px-1
-                           rounded-full bg-red-500 text-white text-xs font-bold">
+                           rounded-full bg-red-500 text-content-primary text-xs font-bold">
             {count}
           </span>
         )}
@@ -161,16 +161,16 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
           "md:bottom-0 md:mb-0 md:ml-2 md:left-full"
         )}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
-            <p className="text-sm font-semibold text-white">Notifications</p>
-            <button onClick={() => setOpen(false)} className="text-content-secondary hover:text-white">
+            <p className="text-sm font-semibold text-content-primary">Notifications</p>
+            <button onClick={() => setOpen(false)} className="text-content-secondary hover:text-content-primary">
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {alerts.length === 0 ? (
             <div className="px-4 py-8 text-center">
-              <Bell className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">Aucune notification</p>
+              <Bell className="w-8 h-8 text-content-muted mx-auto mb-2" />
+              <p className="text-sm text-content-muted">Aucune notification</p>
             </div>
           ) : (
             <div className="divide-y divide-surface-border max-h-80 overflow-y-auto">
@@ -182,7 +182,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white leading-tight">{alert.title}</p>
+                      <p className="text-sm font-medium text-content-primary leading-tight">{alert.title}</p>
                       <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">{alert.description}</p>
                     </div>
                   </div>

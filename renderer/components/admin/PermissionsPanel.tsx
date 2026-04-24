@@ -70,7 +70,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
       const newGranted = !currentEffective;
 
       if (newGranted === roleDefault) {
-        // Remove override — fall back to role default
+        // Remove override —fall back to role default
         await deleteMemberPermissionOverride(businessId, selectedUserId, permission);
         setOverrides((prev) => { const next = { ...prev }; delete next[permission]; return next; });
       } else {
@@ -121,18 +121,18 @@ export function PermissionsPanel({ businessId, members }: Props) {
       {/* Member selector */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1">
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+          <label className="block text-xs font-bold text-content-primary uppercase tracking-widest mb-2">
             Membre
           </label>
           <select
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
-            className="w-full bg-surface-input border border-surface-border text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-full bg-surface-input border border-surface-border text-content-primary rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             style={{ colorScheme: 'dark' }}
           >
             {members.map((m) => (
               <option key={m.user_id} value={m.user_id} style={{ background: '#111827', color: '#fff' }}>
-                {m.user_name} — {m.role}
+                {m.user_name} —{m.role}
               </option>
             ))}
           </select>
@@ -163,7 +163,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-hover/30 transition-colors"
               >
                 <span className="text-xs font-bold text-content-secondary uppercase tracking-widest">{label}</span>
-                {collapsed[group] ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronUp className="w-4 h-4 text-slate-500" />}
+                {collapsed[group] ? <ChevronDown className="w-4 h-4 text-content-primary" /> : <ChevronUp className="w-4 h-4 text-content-primary" />}
               </button>
 
               {!collapsed[group] && (
@@ -184,7 +184,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                         )}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white">{meta.label}</p>
+                          <p className="text-sm font-medium text-content-primary">{meta.label}</p>
                           {hasOverride && !isImmutable && (
                             <p className="text-xs text-status-warning mt-0.5">
                               Remplacé (défaut rôle: {checkPermission(selectedMember.role, key, {}, business) ? 'Oui' : 'Non'})
@@ -215,7 +215,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
 
                           <span className={cn(
                             'text-xs font-medium w-8 text-right',
-                            effective ? 'text-status-success' : 'text-slate-500'
+                            effective ? 'text-status-success' : 'text-content-primary'
                           )}>
                             {effective ? 'Oui' : 'Non'}
                           </span>
@@ -231,9 +231,11 @@ export function PermissionsPanel({ businessId, members }: Props) {
       ) : (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <ShieldCheck className="w-10 h-10 text-slate-700 mb-4" />
-          <p className="text-slate-500 text-sm">Sélectionnez un membre pour voir ses permissions.</p>
+          <p className="text-content-primary text-sm">Sélectionnez un membre pour voir ses permissions.</p>
         </div>
       )}
     </div>
   );
 }
+
+

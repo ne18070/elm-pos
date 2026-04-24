@@ -57,7 +57,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
   });
 
   function handleSelect(product: Product) {
-    // Produit avec variantes → ouvrir le picker
+    // Produit avec variantes —ouvrir le picker
     if (product.variants && product.variants.length > 0) {
       setPickerProduct(product);
       return;
@@ -116,7 +116,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
   if (filtered.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+      <div className="flex flex-col items-center justify-center py-20 text-content-primary">
         <Package className="w-12 h-12 mb-3 opacity-30" />
         <p className="text-sm">Aucun produit trouvé</p>
       </div>
@@ -169,7 +169,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                 {product.image_url ? (
                   <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
-                  <Package className="w-8 h-8 text-slate-600" />
+                  <Package className="w-8 h-8 text-content-muted" />
                 )}
                 {state === 'out' && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
@@ -182,14 +182,14 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                 {/* Badge quantité en panier */}
                 {qtyInCart(product.id) > 0 && (
                   <div className="absolute top-1.5 left-1.5 min-w-[1.25rem] h-5 px-1 rounded-full
-                                  bg-brand-600 text-white text-xs font-bold flex items-center justify-center">
+                                  bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center">
                     {qtyInCart(product.id)}
                   </div>
                 )}
               </div>
 
               {/* Nom */}
-              <p className="text-sm font-medium text-white line-clamp-2 leading-tight">
+              <p className="text-sm font-medium text-content-primary line-clamp-2 leading-tight">
                 {product.name}
               </p>
 
@@ -200,7 +200,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                     {formatCurrency(product.price, business?.currency)}
                   </span>
                   {product.variants?.length > 0 && (
-                    <p className="text-[10px] text-slate-500 flex items-center gap-0.5 mt-0.5">
+                    <p className="text-[10px] text-content-primary flex items-center gap-0.5 mt-0.5">
                       <ChevronDown className="w-3 h-3" />
                       {product.variants.length} variante{product.variants.length > 1 ? 's' : ''}
                     </p>
@@ -256,11 +256,11 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
               {product.image_url ? (
                 <img src={product.image_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <Package className="w-5 h-5 text-slate-600" />
+                <Package className="w-5 h-5 text-content-muted" />
               )}
               {qtyInCart(product.id) > 0 && (
                 <div className="absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full
-                                bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                bg-brand-600 text-content-primary text-[10px] font-bold flex items-center justify-center">
                   {qtyInCart(product.id)}
                 </div>
               )}
@@ -268,10 +268,10 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
             {/* Infos */}
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-white text-sm truncate">{product.name}</p>
+              <p className="font-medium text-content-primary text-sm truncate">{product.name}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {product.category && (
-                  <span className="text-xs text-slate-500">{product.category.name}</span>
+                  <span className="text-xs text-content-primary">{product.category.name}</span>
                 )}
                 {label && (
                   <span className={`text-xs font-medium flex items-center gap-0.5 ${
@@ -291,7 +291,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                   {formatCurrency(product.price, business?.currency)}
                 </span>
                 {product.variants?.length > 0 && (
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-content-primary">
                     {product.variants.length} variante{product.variants.length > 1 ? 's' : ''}
                   </p>
                 )}
@@ -302,8 +302,8 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                                   ? 'bg-amber-600 group-hover:bg-amber-500'
                                   : 'bg-brand-600 group-hover:bg-brand-500'}`}>
                   {product.variants?.length > 0
-                    ? <ChevronDown className="w-4 h-4 text-white" />
-                    : <Plus className="w-4 h-4 text-white" />}
+                    ? <ChevronDown className="w-4 h-4 text-content-primary" />
+                    : <Plus className="w-4 h-4 text-content-primary" />}
                 </div>
               )}
             </div>
@@ -323,3 +323,5 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     </>
   );
 }
+
+

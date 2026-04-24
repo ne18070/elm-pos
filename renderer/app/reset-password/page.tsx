@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
           <div className="w-64 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tighter">ELM APP</h1>
+          <h1 className="text-3xl font-black text-content-primary tracking-tighter">ELM APP</h1>
           <p className="text-content-secondary text-sm mt-1">
             {isActivation ? 'Activation de votre compte' : 'Réinitialisation du mot de passe'}
           </p>
@@ -97,7 +97,7 @@ export default function ResetPasswordPage() {
               <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-6 h-6 text-status-success" />
               </div>
-              <h2 className="text-white font-bold mb-2">
+              <h2 className="text-content-primary font-bold mb-2">
                 {isActivation ? 'Compte activé !' : 'Mot de passe mis à jour'}
               </h2>
               <p className="text-content-secondary text-sm mb-6">
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-content-primary"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -176,7 +176,7 @@ export default function ResetPasswordPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-slate-600 mt-6">
+        <p className="text-center text-xs text-content-muted mt-6">
           <button 
             onClick={() => router.push('/login')}
             className="hover:text-content-secondary transition-colors"

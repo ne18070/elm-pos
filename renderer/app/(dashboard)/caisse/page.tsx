@@ -162,22 +162,22 @@ function ReportModal({ data, onClose }: { data: ReportData; onClose: () => void 
               <FileText className="w-4 h-4 text-content-brand" />
             </div>
             <div>
-              <h2 className="font-semibold text-white text-base leading-none">
+              <h2 className="font-semibold text-content-primary text-base leading-none">
                 Rapport {data.type} — {isZ ? 'Clôture' : 'Lecture'}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-content-muted mt-0.5">
                 {isZ ? 'Clôture définitive de session' : 'Lecture en cours de journée'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-white">
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
           <div className="bg-white rounded-xl p-4 font-mono shadow-inner">
-            <p className="text-center font-bold text-sm text-black mb-0.5">{data.businessName}</p>
+            <p className="text-center font-bold text-sm text-content-primary mb-0.5">{data.businessName}</p>
             <p className="text-center text-[10px] text-gray-500 border-b border-dashed border-gray-300 pb-1 mb-1">
               {isZ ? '— RAPPORT Z — CLÔTURE —' : '— RAPPORT X — LECTURE —'}
             </p>
@@ -260,7 +260,7 @@ function ReportModal({ data, onClose }: { data: ReportData; onClose: () => void 
 // ── MetricCard ────────────────────────────────────────────────────────────────
 
 function MetricCard({
-  label, value, icon: Icon, color = 'text-white',
+  label, value, icon: Icon, color = 'text-content-primary',
 }: { label: string; value: string; icon: React.ElementType; color?: string }) {
   return (
     <div className="card p-4 flex items-center gap-3">
@@ -268,7 +268,7 @@ function MetricCard({
         <Icon className={`w-5 h-5 ${color}`} />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-slate-500 truncate">{label}</p>
+        <p className="text-xs text-content-muted truncate">{label}</p>
         <p className={`text-lg font-bold truncate ${color}`}>{value}</p>
       </div>
     </div>
@@ -294,8 +294,8 @@ function OpenModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="card p-6 w-full max-w-sm space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-white text-lg">Ouvrir la caisse</h2>
-          <button onClick={onClose} className="text-content-secondary hover:text-white"><X className="w-5 h-5" /></button>
+          <h2 className="font-semibold text-content-primary text-lg">Ouvrir la caisse</h2>
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
         </div>
         <div>
           <label className="label">Fond de caisse (espèces disponibles)</label>
@@ -305,7 +305,7 @@ function OpenModal({
             className="input text-xl font-bold text-center"
             placeholder="0" autoFocus
           />
-          <p className="text-xs text-slate-500 mt-1.5">
+          <p className="text-xs text-content-muted mt-1.5">
             Montant en espèces présent dans la caisse en début de session.
           </p>
         </div>
@@ -350,19 +350,19 @@ function CloseModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="card p-6 w-full max-w-md space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-white text-lg">Clôturer la caisse</h2>
-          <button onClick={onClose} className="text-content-secondary hover:text-white"><X className="w-5 h-5" /></button>
+          <h2 className="font-semibold text-content-primary text-lg">Clôturer la caisse</h2>
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
-          <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">Résumé de la session</p>
-          <div className="flex justify-between"><span className="text-content-secondary">Fond de caisse</span><span className="text-white font-medium">{fmt(session.opening_amount)}</span></div>
+          <p className="text-xs text-content-muted uppercase tracking-wider font-medium mb-3">Résumé de la session</p>
+          <div className="flex justify-between"><span className="text-content-secondary">Fond de caisse</span><span className="text-content-primary font-medium">{fmt(session.opening_amount)}</span></div>
           <div className="flex justify-between"><span className="text-content-secondary">Ventes espèces</span><span className="text-status-success font-medium">+{fmt(summary.total_cash)}</span></div>
-          {summary.total_card > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes carte</span><span className="text-white">{fmt(summary.total_card)}</span></div>}
-          {summary.total_mobile > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes mobile money</span><span className="text-white">{fmt(summary.total_mobile)}</span></div>}
+          {summary.total_card > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes carte</span><span className="text-content-primary">{fmt(summary.total_card)}</span></div>}
+          {summary.total_mobile > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes mobile money</span><span className="text-content-primary">{fmt(summary.total_mobile)}</span></div>}
           {summary.total_refunds > 0 && <div className="flex justify-between"><span className="text-content-secondary">Remboursements</span><span className="text-status-error">-{fmt(summary.total_refunds)}</span></div>}
-          <div className="flex justify-between font-bold border-t border-surface-border pt-2 mt-1"><span className="text-slate-300">Total ventes</span><span className="text-content-brand">{fmt(summary.total_sales)}</span></div>
-          <div className="flex justify-between font-semibold"><span className="text-slate-300">Espèces attendues en caisse</span><span className="text-white">{fmt(expectedCash)}</span></div>
+          <div className="flex justify-between font-bold border-t border-surface-border pt-2 mt-1"><span className="text-content-primary">Total ventes</span><span className="text-content-brand">{fmt(summary.total_sales)}</span></div>
+          <div className="flex justify-between font-semibold"><span className="text-content-primary">Espèces attendues en caisse</span><span className="text-content-primary">{fmt(expectedCash)}</span></div>
         </div>
 
         <div>
@@ -383,11 +383,11 @@ function CloseModal({
           }`}>
             <p className="text-xs text-content-secondary mb-1">Écart</p>
             <p className={`text-2xl font-bold ${
-              Math.abs(difference) < 1 ? 'text-status-success' : difference > 0 ? 'text-blue-400' : 'text-status-error'
+              Math.abs(difference) < 1 ? 'text-status-success' : difference > 0 ? 'text-status-info' : 'text-status-error'
             }`}>
               {difference >= 0 ? '+' : ''}{fmt(difference)}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-content-muted mt-1">
               {Math.abs(difference) < 1 ? 'Caisse équilibrée' : difference > 0 ? 'Excédent de caisse' : 'Déficit de caisse'}
             </p>
           </div>
@@ -525,7 +525,7 @@ export default function CaissePage() {
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">Clôture de caisse</h1>
+            <h1 className="text-xl font-bold text-content-primary">Clôture de caisse</h1>
             <p className="text-sm text-content-secondary mt-0.5">
               {session
                 ? `Session ouverte le ${format(new Date(session.opened_at), 'dd MMM à HH:mm', { locale: fr })}`
@@ -570,7 +570,7 @@ export default function CaissePage() {
 
         {/* Explication */}
         <div className="card p-5 border-l-4 border-brand-500 space-y-4">
-          <p className="text-sm font-semibold text-white">Comment ça fonctionne ?</p>
+          <p className="text-sm font-semibold text-content-primary">Comment ça fonctionne ?</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { n: 1, title: 'Ouvrir la caisse', body: "Indiquez le montant d'espèces déjà présent — c'est le fond de caisse." },
@@ -578,15 +578,15 @@ export default function CaissePage() {
               { n: 3, title: 'Clôturer en fin de service', body: "Comptez les billets, saisissez le total. Le Z-Report calcule l'écart." },
             ].map(({ n, title, body }) => (
               <div key={n} className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
+                <span className="w-7 h-7 rounded-full bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
                 <div>
-                  <p className="text-sm font-medium text-white">{title}</p>
+                  <p className="text-sm font-medium text-content-primary">{title}</p>
                   <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">{body}</p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap gap-4 pt-1 border-t border-surface-border text-xs text-slate-500">
+          <div className="flex flex-wrap gap-4 pt-1 border-t border-surface-border text-xs text-content-muted">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />Écart nul = caisse équilibrée</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Écart positif = excédent</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Écart négatif = déficit</span>
@@ -602,7 +602,7 @@ export default function CaissePage() {
             <button
               key={id} onClick={() => setTab(id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
+                ${tab === id ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
             >
               {label}
             </button>
@@ -615,10 +615,10 @@ export default function CaissePage() {
             {!session ? (
               <div className="card p-12 flex flex-col items-center gap-4 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
-                  <Lock className="w-8 h-8 text-slate-500" />
+                  <Lock className="w-8 h-8 text-content-muted" />
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-white">Caisse fermée</p>
+                  <p className="text-lg font-semibold text-content-primary">Caisse fermée</p>
                   <p className="text-sm text-content-secondary mt-1">Ouvrez une session pour commencer à encaisser.</p>
                 </div>
                 <button onClick={() => setShowOpenModal(true)} className="btn-primary flex items-center gap-2 mt-2">
@@ -630,8 +630,8 @@ export default function CaissePage() {
                 <div className="card p-4 flex items-center gap-3 border-l-4 border-brand-500">
                   <Banknote className="w-5 h-5 text-content-brand shrink-0" />
                   <div>
-                    <p className="text-xs text-slate-500">Fond de caisse initial</p>
-                    <p className="text-xl font-bold text-white">{fmt(session.opening_amount)}</p>
+                    <p className="text-xs text-content-muted">Fond de caisse initial</p>
+                    <p className="text-xl font-bold text-content-primary">{fmt(session.opening_amount)}</p>
                   </div>
                 </div>
 
@@ -639,9 +639,9 @@ export default function CaissePage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <MetricCard label="Total ventes"   value={fmt(summary.total_sales)}              icon={CheckCircle} color="text-content-brand" />
                     <MetricCard label="Espèces"         value={fmt(summary.total_cash)}              icon={Banknote}    color="text-status-success" />
-                    <MetricCard label="Carte"           value={fmt(summary.total_card)}              icon={CreditCard}  color="text-blue-400" />
+                    <MetricCard label="Carte"           value={fmt(summary.total_card)}              icon={CreditCard}  color="text-status-info" />
                     <MetricCard label="Mobile Money"    value={fmt(summary.total_mobile)}            icon={Smartphone}  color="text-status-purple" />
-                    <MetricCard label="Transactions"    value={String(summary.total_orders)}         icon={CheckCircle} color="text-slate-300" />
+                    <MetricCard label="Transactions"    value={String(summary.total_orders)}         icon={CheckCircle} color="text-content-primary" />
                     {summary.total_refunds > 0 && (
                       <MetricCard label="Remboursements" value={`-${fmt(summary.total_refunds)}`}   icon={RotateCcw}   color="text-status-error" />
                     )}
@@ -654,11 +654,11 @@ export default function CaissePage() {
 
                 {summary && (
                   <div className="card p-4 space-y-2 text-sm">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Espèces attendues en caisse</p>
-                    <div className="flex justify-between"><span className="text-content-secondary">Fond initial</span><span className="text-white">{fmt(session.opening_amount)}</span></div>
+                    <p className="text-xs text-content-muted uppercase tracking-wider font-medium">Espèces attendues en caisse</p>
+                    <div className="flex justify-between"><span className="text-content-secondary">Fond initial</span><span className="text-content-primary">{fmt(session.opening_amount)}</span></div>
                     <div className="flex justify-between"><span className="text-content-secondary">+ Ventes espèces</span><span className="text-status-success">+{fmt(summary.total_cash)}</span></div>
                     <div className="flex justify-between font-bold border-t border-surface-border pt-2">
-                      <span className="text-white">Total attendu</span>
+                      <span className="text-content-primary">Total attendu</span>
                       <span className="text-content-brand">{fmt(session.opening_amount + summary.total_cash)}</span>
                     </div>
                   </div>
@@ -673,8 +673,8 @@ export default function CaissePage() {
           <div className="space-y-3">
             {history.filter((s) => s.status === 'closed').length === 0 ? (
               <div className="card p-12 flex flex-col items-center gap-3 text-center">
-                <History className="w-10 h-10 text-slate-600" />
-                <p className="text-slate-500">Aucune clôture enregistrée</p>
+                <History className="w-10 h-10 text-content-muted" />
+                <p className="text-content-muted">Aucune clôture enregistrée</p>
               </div>
             ) : (
               history.filter((s) => s.status === 'closed').map((s) => {
@@ -683,10 +683,10 @@ export default function CaissePage() {
                   <div key={s.id} className="card p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-content-primary">
                           {format(new Date(s.opened_at), 'EEEE dd MMMM yyyy', { locale: fr })}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-content-muted">
                           {format(new Date(s.opened_at), 'HH:mm')}
                           {' → '}
                           {s.closed_at && format(new Date(s.closed_at), 'HH:mm')}
@@ -702,7 +702,7 @@ export default function CaissePage() {
                           Rapport Z
                         </button>
                         <span className={`text-sm font-bold ${
-                          Math.abs(diff) < 1 ? 'text-status-success' : diff > 0 ? 'text-blue-400' : 'text-status-error'
+                          Math.abs(diff) < 1 ? 'text-status-success' : diff > 0 ? 'text-status-info' : 'text-status-error'
                         }`}>
                           {diff >= 0 ? '+' : ''}{fmt(diff)}
                         </span>
@@ -711,22 +711,22 @@ export default function CaissePage() {
 
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div className="bg-surface-input rounded-lg px-3 py-2">
-                        <p className="text-slate-500">Ventes</p>
-                        <p className="text-white font-semibold">{fmt(s.total_sales ?? 0)}</p>
+                        <p className="text-content-muted">Ventes</p>
+                        <p className="text-content-primary font-semibold">{fmt(s.total_sales ?? 0)}</p>
                       </div>
                       <div className="bg-surface-input rounded-lg px-3 py-2">
-                        <p className="text-slate-500">Espèces attendues</p>
-                        <p className="text-white font-semibold">{fmt(s.expected_cash ?? 0)}</p>
+                        <p className="text-content-muted">Espèces attendues</p>
+                        <p className="text-content-primary font-semibold">{fmt(s.expected_cash ?? 0)}</p>
                       </div>
                       <div className="bg-surface-input rounded-lg px-3 py-2">
-                        <p className="text-slate-500">Espèces comptées</p>
-                        <p className="text-white font-semibold">{fmt(s.actual_cash ?? 0)}</p>
+                        <p className="text-content-muted">Espèces comptées</p>
+                        <p className="text-content-primary font-semibold">{fmt(s.actual_cash ?? 0)}</p>
                       </div>
                     </div>
 
                     {Math.abs(diff) >= 1 && (
                       <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${
-                        diff > 0 ? 'border-blue-800 bg-badge-info text-blue-400'
+                        diff > 0 ? 'border-blue-800 bg-badge-info text-status-info'
                                  : 'border-status-error bg-badge-error text-status-error'
                       }`}>
                         <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -735,10 +735,10 @@ export default function CaissePage() {
                       </div>
                     )}
 
-                    <div className="flex gap-3 text-xs text-slate-500">
+                    <div className="flex gap-3 text-xs text-content-muted">
                       <span className="text-status-success">Esp. {fmt(s.total_cash ?? 0)}</span>
                       <span>·</span>
-                      <span className="text-blue-400">CB {fmt(s.total_card ?? 0)}</span>
+                      <span className="text-status-info">CB {fmt(s.total_card ?? 0)}</span>
                       <span>·</span>
                       <span className="text-status-purple">Mobile {fmt(s.total_mobile ?? 0)}</span>
                       <span>·</span>

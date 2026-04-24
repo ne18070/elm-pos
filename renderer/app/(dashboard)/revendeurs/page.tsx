@@ -4,8 +4,9 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import {
   Plus, Search, Phone, MapPin, Users, Pencil, Trash2,
-  ChevronRight, X, Check, Gift, Store, Upload, Loader2,
+  ChevronRight, Check, Gift, Store, Upload, Loader2,
 } from 'lucide-react';
+import { SideDrawer } from '@/components/ui/SideDrawer';
 import { ImportModal } from '@/components/resellers/ImportModal';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -251,8 +252,8 @@ export default function RevendeursPage() {
       {/* ── Header ── */}
       <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white">Revendeurs</h1>
-          <p className="text-xs text-slate-500">{resellers.length} vendeur{resellers.length !== 1 ? 's' : ''} marché</p>
+          <h1 className="text-xl font-bold text-content-primary">Revendeurs</h1>
+          <p className="text-xs text-content-muted">{resellers.length} vendeur{resellers.length !== 1 ? 's' : ''} marché</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -293,7 +294,7 @@ export default function RevendeursPage() {
           <div className="w-64 border-r border-surface-border flex flex-col shrink-0">
             <div className="p-3 border-b border-surface-border space-y-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
                 <input
                   className="input pl-8 h-8 text-sm"
                   placeholder="Chercher…"
@@ -307,7 +308,7 @@ export default function RevendeursPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {loading && <p className="text-center text-slate-500 text-sm py-8">Chargement…</p>}
+              {loading && <p className="text-center text-content-muted text-sm py-8">Chargement…</p>}
               {filteredResellers.map((r) => (
                 <button
                   key={r.id}
@@ -320,15 +321,15 @@ export default function RevendeursPage() {
                     {r.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">{r.name}</p>
-                    {r.phone && <p className="text-xs text-slate-500 truncate">{r.phone}</p>}
+                    <p className="text-sm font-medium text-content-primary truncate">{r.name}</p>
+                    {r.phone && <p className="text-xs text-content-muted truncate">{r.phone}</p>}
                   </div>
                   {!r.is_active && <span className="text-xs text-status-warning shrink-0">Inactif</span>}
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                  <ChevronRight className="w-3.5 h-3.5 text-content-muted shrink-0" />
                 </button>
               ))}
               {!loading && filteredResellers.length === 0 && (
-                <p className="text-center text-slate-500 text-sm py-8">Aucun revendeur</p>
+                <p className="text-center text-content-muted text-sm py-8">Aucun revendeur</p>
               )}
             </div>
           </div>
@@ -336,11 +337,11 @@ export default function RevendeursPage() {
           {/* Détail revendeur sélectionné */}
           <div className="flex-1 overflow-y-auto p-6">
             {!selected ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3 text-center">
+              <div className="flex flex-col items-center justify-center h-full text-content-muted gap-3 text-center">
                 <Store className="w-12 h-12 opacity-20" />
                 {resellers.length === 0 ? (
                   <>
-                    <p className="text-white font-medium">Aucun revendeur enregistré</p>
+                    <p className="text-content-primary font-medium">Aucun revendeur enregistré</p>
                     <p className="text-sm max-w-xs">Créez votre premier revendeur pour commencer à gérer ses clients.</p>
                     <button onClick={() => openResellerPanel(null)} className="btn-primary flex items-center gap-2 mt-2">
                       <Plus className="w-4 h-4" /> Nouveau revendeur
@@ -355,10 +356,10 @@ export default function RevendeursPage() {
                 {/* Info revendeur */}
                 <div className="card p-5 flex items-start justify-between gap-4">
                   <div className="space-y-1">
-                    <h2 className="text-lg font-bold text-white">{selected.name}</h2>
+                    <h2 className="text-lg font-bold text-content-primary">{selected.name}</h2>
                     {selected.phone && <p className="text-sm text-content-secondary flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{selected.phone}</p>}
                     {selected.address && <p className="text-sm text-content-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{selected.address}</p>}
-                    {selected.notes && <p className="text-sm text-slate-500 italic mt-1">{selected.notes}</p>}
+                    {selected.notes && <p className="text-sm text-content-muted italic mt-1">{selected.notes}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => openResellerPanel(selected)} className="btn-secondary p-2">
@@ -373,7 +374,7 @@ export default function RevendeursPage() {
                 {/* Clients du revendeur */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-content-primary flex items-center gap-2">
                       <Users className="w-4 h-4 text-content-brand" />
                       Clients ({clients.length})
                     </h3>
@@ -399,7 +400,7 @@ export default function RevendeursPage() {
                   {clients.length > 0 && (
                     <div className="flex items-center gap-2 mb-3">
                       <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
                         <input
                           className="input pl-8 h-8 text-sm w-full"
                           placeholder="Rechercher un client…"
@@ -418,10 +419,10 @@ export default function RevendeursPage() {
                   )}
 
                   {clients.length === 0 && (
-                    <p className="text-sm text-slate-500 text-center py-6 card">Aucun client enregistré</p>
+                    <p className="text-sm text-content-muted text-center py-6 card">Aucun client enregistré</p>
                   )}
                   {clients.length > 0 && filteredClients.length === 0 && (
-                    <p className="text-sm text-slate-500 text-center py-6 card">Aucun résultat</p>
+                    <p className="text-sm text-content-muted text-center py-6 card">Aucun résultat</p>
                   )}
 
                   <div className="space-y-2">
@@ -433,19 +434,19 @@ export default function RevendeursPage() {
                         onClick={() => toggleClientSelect(c.id)}
                         className={`card p-3 flex items-center gap-3 cursor-pointer transition-colors ${isChecked ? 'border border-brand-600 bg-badge-brand' : 'hover:bg-surface-hover'}`}
                       >
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-brand-600 border-brand-600' : 'border-slate-600'}`}>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-brand-600 border-brand-600' : 'border-surface-border'}`}>
                           {isChecked && <Check className="w-3 h-3 text-white" />}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-xs font-bold text-slate-300">
+                        <div className="w-8 h-8 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-xs font-bold text-content-primary">
                           {c.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{c.name}</p>
-                          {c.phone && <p className="text-xs text-slate-500">{c.phone}</p>}
-                          {c.address && <p className="text-xs text-slate-500 truncate">{c.address}</p>}
+                          <p className="text-sm font-medium text-content-primary truncate">{c.name}</p>
+                          {c.phone && <p className="text-xs text-content-muted">{c.phone}</p>}
+                          {c.address && <p className="text-xs text-content-muted truncate">{c.address}</p>}
                         </div>
                         <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => openClientPanel(selected, c)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+                          <button onClick={() => openClientPanel(selected, c)} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => removeClient(c.id)} className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error">
@@ -480,7 +481,7 @@ export default function RevendeursPage() {
             </div>
 
             {offers.length === 0 && (
-              <div className="text-center py-12 text-slate-500 card">
+              <div className="text-center py-12 text-content-muted card">
                 <Gift className="w-10 h-10 mx-auto mb-3 opacity-20" />
                 <p>Aucune offre volume configurée</p>
                 <p className="text-xs mt-1">Ex : pour 100 cartons achetés → 1 offert</p>
@@ -493,10 +494,10 @@ export default function RevendeursPage() {
                   <Gift className="w-5 h-5 text-status-warning" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-content-primary">
                     {o.product_name ?? 'Produit'} — {o.min_qty} → {o.bonus_qty} offert{o.bonus_qty > 1 ? 's' : ''}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-content-muted">
                     {o.reseller_id ? (resellers.find((r) => r.id === o.reseller_id)?.name ?? 'Revendeur spécifique') : 'Tous les revendeurs'}
                     {o.label ? ` · ${o.label}` : ''}
                   </p>
@@ -504,7 +505,7 @@ export default function RevendeursPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => toggleOffer(o)}
-                    className={`w-8 h-5 rounded-full transition-colors ${o.is_active ? 'bg-brand-600' : 'bg-slate-700'}`}
+                    className={`w-8 h-5 rounded-full transition-colors ${o.is_active ? 'bg-brand-600' : 'bg-surface-input'}`}
                   >
                     <span className={`block w-3.5 h-3.5 bg-white rounded-full shadow transition-transform mx-auto ${o.is_active ? 'translate-x-1.5' : '-translate-x-1.5'}`} />
                   </button>
@@ -518,85 +519,81 @@ export default function RevendeursPage() {
         </div>
       )}
 
-      {/* ── Panneau latéral : Revendeur ── */}
-      {panel?.type === 'reseller' && tab === 'revendeurs' && (
-        <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-            <h3 className="font-semibold text-white">{panel.item ? 'Modifier revendeur' : 'Nouveau revendeur'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
-              <X className="w-4 h-4" />
-            </button>
+      {/* ── Panneau : Revendeur ── */}
+      <SideDrawer
+        isOpen={!!panel && panel.type === 'reseller' && tab === 'revendeurs'}
+        onClose={() => setPanel(null)}
+        title={panel?.item ? 'Modifier revendeur' : 'Nouveau revendeur'}
+        maxWidth="max-w-sm"
+        footer={
+          <button onClick={saveReseller} disabled={saving || !rForm.name.trim()} className="btn-primary w-full h-10">
+            {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="label">Nom <span className="text-status-error">*</span></label>
+            <input className="input" value={rForm.name} onChange={(e) => setRForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Modou Fall" />
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <div>
-              <label className="label">Nom <span className="text-status-error">*</span></label>
-              <input className="input" value={rForm.name} onChange={(e) => setRForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Modou Fall" />
-            </div>
-            <div>
-              <label className="label">Téléphone</label>
-              <input className="input" value={rForm.phone} onChange={(e) => setRForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+221 77 000 00 00" />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input className="input" type="email" value={rForm.email} onChange={(e) => setRForm((f) => ({ ...f, email: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label">Adresse / Zone</label>
-              <input className="input" value={rForm.address} onChange={(e) => setRForm((f) => ({ ...f, address: e.target.value }))} placeholder="Ex : Marché Sandaga" />
-            </div>
-            <div>
-              <label className="label">Notes</label>
-              <textarea className="input min-h-[80px] resize-none" value={rForm.notes} onChange={(e) => setRForm((f) => ({ ...f, notes: e.target.value }))} />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <div
-                onClick={() => setRForm((f) => ({ ...f, is_active: !f.is_active }))}
-                className={`w-10 h-6 rounded-full transition-colors ${rForm.is_active ? 'bg-brand-600' : 'bg-slate-700'}`}
-              >
-                <span className={`block w-4 h-4 bg-white rounded-full shadow mt-1 transition-transform ${rForm.is_active ? 'translate-x-5' : 'translate-x-1'}`} />
-              </div>
-              <span className="text-sm text-slate-300">Actif</span>
-            </label>
+          <div>
+            <label className="label">Téléphone</label>
+            <input className="input" value={rForm.phone} onChange={(e) => setRForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+221 77 000 00 00" />
           </div>
-          <div className="px-5 py-4 border-t border-surface-border">
-            <button onClick={saveReseller} disabled={saving || !rForm.name.trim()} className="btn-primary w-full h-10">
-              {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2" /> Enregistrer</>}
-            </button>
+          <div>
+            <label className="label">Email</label>
+            <input className="input" type="email" value={rForm.email} onChange={(e) => setRForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
+          <div>
+            <label className="label">Adresse / Zone</label>
+            <input className="input" value={rForm.address} onChange={(e) => setRForm((f) => ({ ...f, address: e.target.value }))} placeholder="Ex : Marché Sandaga" />
+          </div>
+          <div>
+            <label className="label">Notes</label>
+            <textarea className="input min-h-[80px] resize-none" value={rForm.notes} onChange={(e) => setRForm((f) => ({ ...f, notes: e.target.value }))} />
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setRForm((f) => ({ ...f, is_active: !f.is_active }))}
+              className={`w-10 h-6 rounded-full transition-colors ${rForm.is_active ? 'bg-brand-600' : 'bg-surface-input'}`}
+            >
+              <span className={`block w-4 h-4 bg-white rounded-full shadow mt-1 transition-transform ${rForm.is_active ? 'translate-x-5' : 'translate-x-1'}`} />
+            </div>
+            <span className="text-sm text-content-primary">Actif</span>
+          </label>
         </div>
-      )}
+      </SideDrawer>
 
-      {/* ── Panneau latéral : Client ── */}
-      {panel?.type === 'client' && (
-        <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-            <h3 className="font-semibold text-white">{panel.item ? 'Modifier client' : 'Ajouter un client'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
-              <X className="w-4 h-4" />
-            </button>
+      {/* ── Panneau : Client revendeur ── */}
+      <SideDrawer
+        isOpen={!!panel && panel.type === 'client'}
+        onClose={() => setPanel(null)}
+        title={panel?.item ? 'Modifier client' : 'Ajouter un client'}
+        maxWidth="max-w-sm"
+        footer={
+          <button onClick={saveClient} disabled={saving || !cForm.name.trim()} className="btn-primary w-full h-10">
+            {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          {panel?.type === 'client' && (
+            <p className="text-xs text-content-muted">Client de <strong className="text-content-primary">{panel.reseller.name}</strong></p>
+          )}
+          <div>
+            <label className="label">Nom <span className="text-status-error">*</span></label>
+            <input className="input" value={cForm.name} onChange={(e) => setCForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Fatou Diop" autoFocus />
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <p className="text-xs text-slate-500">Client de <strong className="text-white">{panel.reseller.name}</strong></p>
-            <div>
-              <label className="label">Nom <span className="text-status-error">*</span></label>
-              <input className="input" value={cForm.name} onChange={(e) => setCForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Fatou Diop" autoFocus />
-            </div>
-            <div>
-              <label className="label">Téléphone</label>
-              <input className="input" value={cForm.phone} onChange={(e) => setCForm((f) => ({ ...f, phone: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label">Adresse</label>
-              <input className="input" value={cForm.address} onChange={(e) => setCForm((f) => ({ ...f, address: e.target.value }))} />
-            </div>
+          <div>
+            <label className="label">Téléphone</label>
+            <input className="input" value={cForm.phone} onChange={(e) => setCForm((f) => ({ ...f, phone: e.target.value }))} />
           </div>
-          <div className="px-5 py-4 border-t border-surface-border">
-            <button onClick={saveClient} disabled={saving || !cForm.name.trim()} className="btn-primary w-full h-10">
-              {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2" /> Enregistrer</>}
-            </button>
+          <div>
+            <label className="label">Adresse</label>
+            <input className="input" value={cForm.address} onChange={(e) => setCForm((f) => ({ ...f, address: e.target.value }))} />
           </div>
         </div>
-      )}
+      </SideDrawer>
 
       {/* ── Modal Import CSV ── */}
       {importType && (
@@ -610,57 +607,54 @@ export default function RevendeursPage() {
       )}
 
       {/* ── Panneau : Offre volume ── */}
-      {panel?.type === 'reseller' && panel.item === null && tab === 'offres' && (
-        <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-            <h3 className="font-semibold text-white">Nouvelle offre volume</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
-              <X className="w-4 h-4" />
-            </button>
+      <SideDrawer
+        isOpen={!!panel && panel.type === 'reseller' && panel.item === null && tab === 'offres'}
+        onClose={() => setPanel(null)}
+        title="Nouvelle offre volume"
+        maxWidth="max-w-sm"
+        footer={
+          <button onClick={saveOffer} disabled={saving || !oForm.product_id || !oForm.min_qty} className="btn-primary w-full h-10">
+            {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Créer l'offre</>}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="label">Produit <span className="text-status-error">*</span></label>
+            <select className="input" value={oForm.product_id} onChange={(e) => setOForm((f) => ({ ...f, product_id: e.target.value }))}>
+              <option value="">Choisir un produit…</option>
+              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div>
+            <label className="label">Revendeur concerné</label>
+            <select className="input" value={oForm.reseller_id ?? ''} onChange={(e) => setOForm((f) => ({ ...f, reseller_id: e.target.value || null }))}>
+              <option value="">Tous les revendeurs</option>
+              {resellers.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Produit <span className="text-status-error">*</span></label>
-              <select className="input" value={oForm.product_id} onChange={(e) => setOForm((f) => ({ ...f, product_id: e.target.value }))}>
-                <option value="">Choisir un produit…</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Revendeur concerné</label>
-              <select className="input" value={oForm.reseller_id ?? ''} onChange={(e) => setOForm((f) => ({ ...f, reseller_id: e.target.value || null }))}>
-                <option value="">Tous les revendeurs</option>
-                {resellers.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Seuil (qté min) <span className="text-status-error">*</span></label>
-                <input className="input" type="number" value={oForm.min_qty} onChange={(e) => setOForm((f) => ({ ...f, min_qty: e.target.value }))} placeholder="100" />
-              </div>
-              <div>
-                <label className="label">Qté offerte</label>
-                <input className="input" type="number" value={oForm.bonus_qty} onChange={(e) => setOForm((f) => ({ ...f, bonus_qty: e.target.value }))} placeholder="1" />
-              </div>
+              <label className="label">Seuil (qté min) <span className="text-status-error">*</span></label>
+              <input className="input" type="number" value={oForm.min_qty} onChange={(e) => setOForm((f) => ({ ...f, min_qty: e.target.value }))} placeholder="100" />
             </div>
             <div>
-              <label className="label">Libellé (optionnel)</label>
-              <input className="input" value={oForm.label} onChange={(e) => setOForm((f) => ({ ...f, label: e.target.value }))} placeholder="Ex : 1 carton offert pour 100 achetés" />
+              <label className="label">Qté offerte</label>
+              <input className="input" type="number" value={oForm.bonus_qty} onChange={(e) => setOForm((f) => ({ ...f, bonus_qty: e.target.value }))} placeholder="1" />
             </div>
-            {oForm.product_id && oForm.min_qty && (
-              <div className="p-3 rounded-xl bg-badge-warning border border-status-warning text-sm text-status-warning">
-                <Gift className="w-4 h-4 inline mr-1.5" />
-                Pour {oForm.min_qty} {products.find((p) => p.id === oForm.product_id)?.name ?? '…'} achetés → <strong>{oForm.bonus_qty} offert{Number(oForm.bonus_qty) > 1 ? 's' : ''}</strong>
-              </div>
-            )}
           </div>
-          <div className="px-5 py-4 border-t border-surface-border">
-            <button onClick={saveOffer} disabled={saving || !oForm.product_id || !oForm.min_qty} className="btn-primary w-full h-10">
-              {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2" /> Créer l'offre</>}
-            </button>
+          <div>
+            <label className="label">Libellé (optionnel)</label>
+            <input className="input" value={oForm.label} onChange={(e) => setOForm((f) => ({ ...f, label: e.target.value }))} placeholder="Ex : 1 carton offert pour 100 achetés" />
           </div>
+          {oForm.product_id && oForm.min_qty && (
+            <div className="p-3 rounded-xl bg-badge-warning border border-status-warning text-sm text-status-warning">
+              <Gift className="w-4 h-4 inline mr-1.5" />
+              Pour {oForm.min_qty} {products.find((p) => p.id === oForm.product_id)?.name ?? '…'} achetés → <strong>{oForm.bonus_qty} offert{Number(oForm.bonus_qty) > 1 ? 's' : ''}</strong>
+            </div>
+          )}
         </div>
-      )}
+      </SideDrawer>
     </div>
   );
 }

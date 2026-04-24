@@ -352,7 +352,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="p-6 border-b border-surface-border">
-        <h1 className="text-xl font-bold text-white">Paramètres</h1>
+        <h1 className="text-xl font-bold text-content-primary">Paramètres</h1>
       </div>
 
       <div className="p-6 space-y-6 max-w-2xl">
@@ -369,19 +369,19 @@ export default function SettingsPage() {
             <div className="card p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Type d&apos;établissement</p>
+                  <p className="text-xs text-content-muted uppercase tracking-wide">Type d&apos;établissement</p>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {selectedTypes.length > 0 ? selectedTypes.map(t => {
                       const Icon = getIcon(t.icon);
                       return (
                         <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-badge-brand border border-brand-800/50">
                           <Icon className="w-3.5 h-3.5 text-content-brand" />
-                          <span className="text-sm font-semibold text-white">{t.label}</span>
+                          <span className="text-sm font-semibold text-content-primary">{t.label}</span>
                         </div>
                       );
                     }) : <p className="text-sm text-content-secondary font-medium italic">Aucun type défini</p>}
                   </div>
-                  <p className="text-xs text-slate-500 mt-3">Détermine les fonctionnalités disponibles dans votre espace de travail.</p>
+                  <p className="text-xs text-content-muted mt-3">Détermine les fonctionnalités disponibles dans votre espace de travail.</p>
                 </div>
                 <Link
                   href="/configure"
@@ -399,8 +399,8 @@ export default function SettingsPage() {
           <div className="card overflow-hidden">
             <div className="p-5 border-b border-surface-border flex items-center justify-between">
               <div>
-                <h2 className="font-semibold text-white">Organisation / Entité légale</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Raison sociale partagée par tous vos établissements</p>
+                <h2 className="font-semibold text-content-primary">Organisation / Entité légale</h2>
+                <p className="text-xs text-content-muted mt-0.5">Raison sociale partagée par tous vos établissements</p>
               </div>
             </div>
             <div className="p-5 space-y-4">
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="label">Dénomination commerciale <span className="text-slate-500 font-normal">(si différente)</span></label>
+                  <label className="label">Dénomination commerciale <span className="text-content-muted font-normal">(si différente)</span></label>
                   <input
                     type="text"
                     value={orgForm.denomination}
@@ -451,7 +451,7 @@ export default function SettingsPage() {
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('etablissement')} className="w-full flex items-center justify-between p-5">
-            <h2 className="font-semibold text-white flex items-center gap-2">
+            <h2 className="font-semibold text-content-primary flex items-center gap-2">
               Informations de l&apos;établissement
             </h2>
             <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.etablissement ? 'rotate-180' : ''}`} />
@@ -469,7 +469,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="label">Nom sur les reçus <span className="text-slate-500 font-normal">(si différent)</span></label>
+              <label className="label">Nom sur les reçus <span className="text-content-muted font-normal">(si différent)</span></label>
               <input
                 type="text"
                 value={bizForm.denomination}
@@ -543,14 +543,14 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setBizForm({ ...bizForm, tax_inclusive: !bizForm.tax_inclusive })}
-                className="mt-2 flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
+                className="mt-2 flex items-center gap-2 text-sm text-content-primary hover:text-content-primary transition-colors"
               >
                 {bizForm.tax_inclusive
                   ? <ToggleRight className="w-5 h-5 text-content-brand" />
-                  : <ToggleLeft  className="w-5 h-5 text-slate-500" />}
+                  : <ToggleLeft  className="w-5 h-5 text-content-muted" />}
                 <span>
                   TVA incluse dans les prix
-                  <span className="ml-1 text-xs text-slate-500">
+                  <span className="ml-1 text-xs text-content-muted">
                     ({bizForm.tax_inclusive ? 'prix TTC saisis — TVA déduite' : 'prix HT saisis — TVA ajoutée'})
                   </span>
                 </span>
@@ -579,7 +579,7 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="w-20 h-20 rounded-2xl bg-surface-input border border-surface-border flex items-center justify-center">
-                  <ImageIcon className="w-8 h-8 text-slate-500" />
+                  <ImageIcon className="w-8 h-8 text-content-muted" />
                 </div>
               )}
               <div className="flex flex-col gap-2">
@@ -627,14 +627,14 @@ export default function SettingsPage() {
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('stock')} className="w-full flex items-center justify-between p-5">
-            <h2 className="font-semibold text-white flex items-center gap-2">
+            <h2 className="font-semibold text-content-primary flex items-center gap-2">
               <Package className="w-4 h-4 text-content-secondary" />
               Unités de stock
             </h2>
             <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.stock ? 'rotate-180' : ''}`} />
           </button>
           {openSections.stock && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-content-muted">
             Ces unités seront disponibles en liste déroulante lors de la création de produits.
           </p>
 
@@ -644,12 +644,12 @@ export default function SettingsPage() {
               <span
                 key={unit}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-input
-                           border border-surface-border rounded-lg text-sm text-slate-300"
+                           border border-surface-border rounded-lg text-sm text-content-primary"
               >
                 {unit}
                 <button
                   onClick={() => removeUnit(unit)}
-                  className="text-slate-500 hover:text-status-error transition-colors"
+                  className="text-content-muted hover:text-status-error transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -688,14 +688,14 @@ export default function SettingsPage() {
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('facture')} className="w-full flex items-center justify-between p-5">
-            <h2 className="font-semibold text-white flex items-center gap-2">
+            <h2 className="font-semibold text-content-primary flex items-center gap-2">
               <Printer className="w-4 h-4 text-content-secondary" />
               Modèles de facture
             </h2>
             <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.facture ? 'rotate-180' : ''}`} />
           </button>
           {openSections.facture && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-content-muted">
             Créez et personnalisez vos modèles d&apos;impression : format, couleurs, champs affichés, duplicata…
           </p>
           <button onClick={() => setShowTemplateManager(true)} className="btn-secondary flex items-center gap-2">
@@ -712,7 +712,7 @@ export default function SettingsPage() {
         {/* Synchronisation */}
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('sync')} className="w-full flex items-center justify-between p-5">
-            <h2 className="font-semibold text-white">Synchronisation & Mode hors ligne</h2>
+            <h2 className="font-semibold text-content-primary">Synchronisation & Mode hors ligne</h2>
             <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.sync ? 'rotate-180' : ''}`} />
           </button>
           {openSections.sync && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
@@ -748,7 +748,7 @@ export default function SettingsPage() {
         {/* Config imprimante */}
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('printer')} className="w-full flex items-center justify-between p-5">
-            <h2 className="font-semibold text-white flex items-center gap-2">
+            <h2 className="font-semibold text-content-primary flex items-center gap-2">
               <Printer className="w-4 h-4 text-content-secondary" />
               Imprimante thermique
             </h2>
@@ -765,7 +765,7 @@ export default function SettingsPage() {
                   onClick={() => { setPrinterConfig({ ...printerConfig, type }); setPrinterTestResult(null); }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                     printerConfig.type === type
-                      ? 'border-brand-600 bg-brand-600/10 text-white'
+                      ? 'border-brand-600 bg-brand-600/10 text-content-primary'
                       : 'border-surface-border text-content-secondary hover:border-slate-600 hover:bg-surface-hover'
                   }`}
                 >
@@ -862,7 +862,7 @@ export default function SettingsPage() {
         {/* Tiroir-caisse */}
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('drawer')} className="w-full flex items-center justify-between p-5">
-            <h2 className="font-semibold text-white flex items-center gap-2">
+            <h2 className="font-semibold text-content-primary flex items-center gap-2">
               <Archive className="w-4 h-4 text-content-secondary" />
               Tiroir-caisse
             </h2>
@@ -876,13 +876,13 @@ export default function SettingsPage() {
 
           {/* Toggle activé/désactivé */}
           <label className="flex items-center justify-between cursor-pointer select-none">
-            <span className="text-sm text-slate-300">Activer le tiroir-caisse</span>
+            <span className="text-sm text-content-primary">Activer le tiroir-caisse</span>
             <button
               role="switch"
               aria-checked={drawerConfig.enabled}
               onClick={() => handleSaveDrawerConfig({ ...drawerConfig, enabled: !drawerConfig.enabled })}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                drawerConfig.enabled ? 'bg-brand-600' : 'bg-slate-700'
+                drawerConfig.enabled ? 'bg-brand-600' : 'bg-surface-input'
               }`}
             >
               <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
@@ -893,7 +893,7 @@ export default function SettingsPage() {
 
           {drawerConfig.enabled && (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-content-muted">
                 La connexion utilise la même configuration que l&apos;imprimante thermique ci-dessus.
                 Assurez-vous que le câble RJ11 du tiroir est branché sur l&apos;imprimante.
               </p>
@@ -926,7 +926,7 @@ export default function SettingsPage() {
                 <div className="w-8 h-8 rounded-xl bg-badge-success flex items-center justify-center">
                   <MessageCircle className="w-4 h-4 text-status-success" />
                 </div>
-                <h2 className="font-semibold text-white">WhatsApp Business</h2>
+                <h2 className="font-semibold text-content-primary">WhatsApp Business</h2>
               </div>
               <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.whatsapp ? 'rotate-180' : ''}`} />
             </button>
@@ -940,12 +940,12 @@ export default function SettingsPage() {
                 {/* Statut */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                   <div>
-                    <p className="text-sm font-medium text-white">Intégration active</p>
+                    <p className="text-sm font-medium text-content-primary">Intégration active</p>
                     <p className="text-xs text-content-secondary">Activez pour recevoir et répondre aux messages</p>
                   </div>
                   <button
                     onClick={() => setWaForm((f) => ({ ...f, is_active: !f.is_active }))}
-                    className="text-content-secondary hover:text-white transition-colors"
+                    className="text-content-secondary hover:text-content-primary transition-colors"
                   >
                     {waForm.is_active
                       ? <ToggleRight className="w-7 h-7 text-status-success" />
@@ -956,7 +956,7 @@ export default function SettingsPage() {
                 {/* Champs */}
                 <div className="space-y-3">
                   <div>
-                    <label className="label">Phone Number ID <span className="text-slate-500">(Meta Dashboard)</span></label>
+                    <label className="label">Phone Number ID <span className="text-content-muted">(Meta Dashboard)</span></label>
                     <input
                       type="text"
                       placeholder="123456789012345"
@@ -969,7 +969,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="label">
                       Access Token permanent
-                      <span className="text-slate-500 font-normal"> — obtenu depuis Meta Developer Dashboard</span>
+                      <span className="text-content-muted font-normal"> — obtenu depuis Meta Developer Dashboard</span>
                     </label>
                     <div className="relative">
                       <input
@@ -982,18 +982,18 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => setShowToken((s) => !s)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-content-secondary hover:text-content-primary"
                       >
                         {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       Ce token vient de Meta : <span className="text-content-secondary">developers.facebook.com → votre App → WhatsApp → Paramètres → Token d&apos;accès permanent</span>
                     </p>
                   </div>
 
                   <div>
-                    <label className="label">Numéro affiché <span className="text-slate-500">(ex: +221 77 000 0000)</span></label>
+                    <label className="label">Numéro affiché <span className="text-content-muted">(ex: +221 77 000 0000)</span></label>
                     <input
                       type="tel"
                       placeholder="+221 77 000 0000"
@@ -1009,7 +1009,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="label">
                       Verify Token
-                      <span className="text-slate-500 font-normal"> — généré par ELM APP, à coller dans Meta</span>
+                      <span className="text-content-muted font-normal"> — généré par ELM APP, à coller dans Meta</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -1039,7 +1039,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-status-warning/80 mt-1">
                       ⚠ Régénérer invalide l&apos;ancien token — vous devrez reconfigurer le webhook dans Meta.
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       URL du webhook :{' '}
                       <span className="font-mono text-content-secondary select-all">
                         [URL Supabase]/functions/v1/whatsapp-webhook
@@ -1051,12 +1051,12 @@ export default function SettingsPage() {
                 {/* Catalogue interactif */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                   <div>
-                    <p className="text-sm font-medium text-white">Catalogue interactif</p>
+                    <p className="text-sm font-medium text-content-primary">Catalogue interactif</p>
                     <p className="text-xs text-content-secondary">Les clients peuvent commander via un menu WhatsApp cliquable</p>
                   </div>
                   <button
                     onClick={() => setWaForm((f) => ({ ...f, catalog_enabled: !f.catalog_enabled }))}
-                    className="text-content-secondary hover:text-white transition-colors"
+                    className="text-content-secondary hover:text-content-primary transition-colors"
                   >
                     {waForm.catalog_enabled
                       ? <ToggleRight className="w-7 h-7 text-content-brand" />
@@ -1088,7 +1088,7 @@ export default function SettingsPage() {
                       }}
                       className="input font-mono text-sm"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       Le client envoie ce mot pour voir le catalogue. Par défaut : <span className="font-mono text-content-secondary">menu</span>
                     </p>
                   </div>
@@ -1100,7 +1100,7 @@ export default function SettingsPage() {
                       onChange={(e) => setWaForm((f) => ({ ...f, welcome_message: e.target.value }))}
                       className="input resize-none text-sm"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       Utilisez <span className="font-mono text-content-secondary">{'{nom}'}</span> pour le nom de l&apos;établissement.
                     </p>
                   </div>
@@ -1112,14 +1112,14 @@ export default function SettingsPage() {
                       onChange={(e) => setWaForm((f) => ({ ...f, confirm_message: e.target.value }))}
                       className="input resize-none text-sm font-mono"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       Envoyé automatiquement quand le client tape <span className="font-mono text-content-secondary">confirmer</span>.
                       Placeholders : <span className="font-mono text-content-secondary">{'{nom}'}</span> → nom de l&apos;établissement,{' '}
                       <span className="font-mono text-content-secondary">{'{mot_cle}'}</span> → mot-clé du menu.
                     </p>
                   </div>
                   <div>
-                    <label className="label">Lien de paiement Wave <span className="text-slate-500 font-normal">(optionnel)</span></label>
+                    <label className="label">Lien de paiement Wave <span className="text-content-muted font-normal">(optionnel)</span></label>
                     <input
                       type="url"
                       value={waForm.wave_payment_url ?? ''}
@@ -1127,25 +1127,25 @@ export default function SettingsPage() {
                       placeholder="https://pay.wave.com/m/M_xxx/c/sn/?"
                       className="input text-sm font-mono"
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-content-muted mt-1">
                       URL de base Wave du marchand (se termine par <span className="font-mono text-content-secondary">?</span>).
                       Le montant sera ajouté automatiquement à la validation de chaque commande.
                     </p>
                   </div>
 
                   {/* Options de livraison */}
-                  <div className="border border-slate-700 rounded-lg p-4 space-y-3">
-                    <h4 className="text-sm font-semibold text-slate-300">Options de commande</h4>
+                  <div className="border border-surface-border rounded-lg p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-content-primary">Options de commande</h4>
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-slate-300">Retrait sur place</p>
-                        <p className="text-xs text-slate-500">Le client peut venir chercher sa commande</p>
+                        <p className="text-sm text-content-primary">Retrait sur place</p>
+                        <p className="text-xs text-content-muted">Le client peut venir chercher sa commande</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setWaForm((f) => ({ ...f, enable_pickup: !f.enable_pickup }))}
-                        className="text-content-secondary hover:text-white transition-colors"
+                        className="text-content-secondary hover:text-content-primary transition-colors"
                       >
                         {waForm.enable_pickup
                           ? <ToggleRight className="w-7 h-7 text-status-success" />
@@ -1155,13 +1155,13 @@ export default function SettingsPage() {
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-slate-300">Livraison à domicile</p>
-                        <p className="text-xs text-slate-500">Le client partage son adresse ou sa localisation</p>
+                        <p className="text-sm text-content-primary">Livraison à domicile</p>
+                        <p className="text-xs text-content-muted">Le client partage son adresse ou sa localisation</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setWaForm((f) => ({ ...f, enable_delivery: !f.enable_delivery }))}
-                        className="text-content-secondary hover:text-white transition-colors"
+                        className="text-content-secondary hover:text-content-primary transition-colors"
                       >
                         {waForm.enable_delivery
                           ? <ToggleRight className="w-7 h-7 text-status-success" />
@@ -1172,9 +1172,9 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Messages B2C personnalisables */}
-                  <div className="border border-slate-700 rounded-lg p-4 space-y-4">
-                    <h4 className="text-sm font-semibold text-slate-300">Messages automatiques</h4>
-                    <p className="text-xs text-slate-500">
+                  <div className="border border-surface-border rounded-lg p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-content-primary">Messages automatiques</h4>
+                    <p className="text-xs text-content-muted">
                       Placeholders : <span className="font-mono text-content-secondary">{'{nom}'}</span> → établissement,{' '}
                       <span className="font-mono text-content-secondary">{'{mot_cle}'}</span> → mot-clé menu,{' '}
                       <span className="font-mono text-content-secondary">{'{commande}'}</span> → n° commande,{' '}
@@ -1189,7 +1189,7 @@ export default function SettingsPage() {
                         onChange={(e) => setWaForm((f) => ({ ...f, msg_cart_footer: e.target.value }))}
                         className="input resize-none text-sm font-mono"
                       />
-                      <p className="text-xs text-slate-500 mt-1">Affiché sous le récapitulatif du panier.</p>
+                      <p className="text-xs text-content-muted mt-1">Affiché sous le récapitulatif du panier.</p>
                     </div>
 
                     <div>
@@ -1200,7 +1200,7 @@ export default function SettingsPage() {
                         onChange={(e) => setWaForm((f) => ({ ...f, msg_shipping_question: e.target.value }))}
                         className="input resize-none text-sm font-mono"
                       />
-                      <p className="text-xs text-slate-500 mt-1">Demande au client de choisir retrait ou livraison.</p>
+                      <p className="text-xs text-content-muted mt-1">Demande au client de choisir retrait ou livraison.</p>
                     </div>
 
                     <div>
@@ -1211,7 +1211,7 @@ export default function SettingsPage() {
                         onChange={(e) => setWaForm((f) => ({ ...f, msg_address_request: e.target.value }))}
                         className="input resize-none text-sm font-mono"
                       />
-                      <p className="text-xs text-slate-500 mt-1">Envoyé quand le client choisit la livraison à domicile.</p>
+                      <p className="text-xs text-content-muted mt-1">Envoyé quand le client choisit la livraison à domicile.</p>
                     </div>
 
                     <div>
@@ -1222,7 +1222,7 @@ export default function SettingsPage() {
                         onChange={(e) => setWaForm((f) => ({ ...f, msg_delivery_confirmation: e.target.value }))}
                         className="input resize-none text-sm font-mono"
                       />
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-content-muted mt-1">
                         Envoyé au client quand la commande est marquée livrée.
                         Utilisez <span className="font-mono text-content-secondary">{'{commande}'}</span> et <span className="font-mono text-content-secondary">{'{total}'}</span>.
                       </p>
@@ -1247,10 +1247,10 @@ export default function SettingsPage() {
 
         {/* Compte utilisateur */}
         <div className="card p-5 space-y-2">
-          <h2 className="font-semibold text-white">Compte</h2>
+          <h2 className="font-semibold text-content-primary">Compte</h2>
           <p className="text-sm text-content-secondary">{user?.full_name}</p>
-          <p className="text-xs text-slate-500">{user?.email}</p>
-          <p className="text-xs text-slate-500 capitalize">Rôle : {user?.role}</p>
+          <p className="text-xs text-content-muted">{user?.email}</p>
+          <p className="text-xs text-content-muted capitalize">Rôle : {user?.role}</p>
         </div>
       </div>
     </div>

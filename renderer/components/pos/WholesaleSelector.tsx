@@ -88,9 +88,9 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
           <div className="flex items-center gap-2">
             <Store className="w-5 h-5 text-status-warning" />
-            <h3 className="font-semibold text-white">Mode Grossiste</h3>
+            <h3 className="font-semibold text-content-primary">Mode Grossiste</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -101,9 +101,9 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
           <div>
             <label className="label">Revendeur <span className="text-status-error">*</span></label>
             {loading ? (
-              <p className="text-sm text-slate-500">Chargement…</p>
+              <p className="text-sm text-content-primary">Chargement…</p>
             ) : resellers.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-4">Aucun revendeur actif — créez-en un dans le menu Revendeurs</p>
+              <p className="text-sm text-content-primary text-center py-4">Aucun revendeur actif —créez-en un dans le menu Revendeurs</p>
             ) : (
               <div className="space-y-2">
                 {/* Barre de recherche */}
@@ -124,7 +124,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                     value={selectedReseller?.id ?? ''}
                     onChange={(e) => handleResellerChange(e.target.value)}
                   >
-                    <option value="">— Choisir un revendeur —</option>
+                    <option value="">—Choisir un revendeur —</option>
                     {filteredResellers.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name}{r.phone ? ` · ${r.phone}` : ''}
@@ -134,7 +134,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
                 </div>
                 {resellerSearch && filteredResellers.length === 0 && (
-                  <p className="text-xs text-slate-500 text-center py-1">Aucun revendeur trouvé</p>
+                  <p className="text-xs text-content-primary text-center py-1">Aucun revendeur trouvé</p>
                 )}
               </div>
             )}
@@ -144,10 +144,10 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
           {selectedReseller && (
             <div>
               <label className="label flex items-center gap-2">
-                <Users className="w-3.5 h-3.5" /> Client <span className="text-slate-500 font-normal">(optionnel)</span>
+                <Users className="w-3.5 h-3.5" /> Client <span className="text-content-primary font-normal">(optionnel)</span>
               </label>
               {clients.length === 0 ? (
-                <p className="text-xs text-slate-500">Aucun client enregistré pour ce revendeur</p>
+                <p className="text-xs text-content-primary">Aucun client enregistré pour ce revendeur</p>
               ) : (
                 <div className="relative">
                   <select
@@ -155,7 +155,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                     value={selectedClient?.id ?? ''}
                     onChange={(e) => setSelectedClient(clients.find((c) => c.id === e.target.value) ?? null)}
                   >
-                    <option value="">— Sans client spécifique —</option>
+                    <option value="">—Sans client spécifique —</option>
                     {clients.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>
                     ))}
@@ -177,7 +177,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                   <div key={o.id} className="flex items-center gap-3 p-3 rounded-xl bg-badge-warning border border-status-warning/50 text-sm">
                     <Gift className="w-4 h-4 text-status-warning shrink-0" />
                     <span className="text-content-primary">
-                      {o.label || `${o.product_name} : pour ${o.min_qty} → ${o.bonus_qty} offert${o.bonus_qty > 1 ? 's' : ''}`}
+                      {o.label || `${o.product_name} : pour ${o.min_qty} —${o.bonus_qty} offert${o.bonus_qty > 1 ? 's' : ''}`}
                     </span>
                   </div>
                 ))}
@@ -209,3 +209,5 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
     </div>
   );
 }
+
+

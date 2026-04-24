@@ -87,7 +87,7 @@ export default function PublicTrackingView() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="text-center space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-brand-600 mx-auto" />
-          <p className="text-slate-500 font-medium animate-pulse">Chargement de votre dossier...</p>
+          <p className="text-content-muted font-medium animate-pulse">Chargement de votre dossier...</p>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ export default function PublicTrackingView() {
             <AlertCircle className="w-10 h-10" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Oups !</h1>
-          <p className="text-slate-500 leading-relaxed">{error}</p>
+          <p className="text-content-muted leading-relaxed">{error}</p>
           <button onClick={() => window.location.reload()} className="btn-primary w-full py-4 rounded-2xl shadow-lg shadow-brand-500/20">Réessayer</button>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function PublicTrackingView() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-brand-600 rounded-xl text-white shadow-lg shadow-brand-500/30">
+            <div className="p-2.5 bg-brand-600 rounded-xl text-content-primary shadow-lg shadow-brand-500/30">
               <Scale className="w-6 h-6" />
             </div>
             <div>
@@ -131,7 +131,7 @@ export default function PublicTrackingView() {
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
         {/* Infos Dossier */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 bg-surface text-white flex justify-between items-start">
+          <div className="p-6 bg-surface text-content-primary flex justify-between items-start">
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Dossier Référence</p>
               <h2 className="text-2xl font-black font-mono tracking-tight">{dossier.reference}</h2>
@@ -178,14 +178,14 @@ export default function PublicTrackingView() {
                 </div>
                 <div className="space-y-2">
                   <h4 className="text-2xl font-black text-slate-900">{currentNode?.label || "Procédure en cours"}</h4>
-                  <p className="text-slate-500 leading-relaxed max-w-sm mx-auto">
+                  <p className="text-content-muted leading-relaxed max-w-sm mx-auto">
                     {currentNode?.description || "Nous traitons actuellement cette étape de votre dossier. Vous recevrez une notification dès qu'une action de votre part sera requise."}
                   </p>
                 </div>
                 <div className="pt-4 flex justify-center gap-4">
                   <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
                     <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mis à jour aujourd'hui</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Mis à jour aujourd'hui</span>
                   </div>
                 </div>
               </>
@@ -194,7 +194,7 @@ export default function PublicTrackingView() {
                 <CheckCircle2 className="w-16 h-16 text-status-success mx-auto" />
                 <div className="space-y-1">
                   <h4 className="text-xl font-bold text-slate-900">Dossier Ouvert</h4>
-                  <p className="text-slate-500 italic">Le processus de traitement va bientôt démarrer.</p>
+                  <p className="text-content-muted italic">Le processus de traitement va bientôt démarrer.</p>
                 </div>
               </div>
             )}
@@ -207,7 +207,7 @@ export default function PublicTrackingView() {
             Ce lien est personnel et confidentiel. Ne le partagez pas avec des tiers.
           </p>
           <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Géré par ELM APP & Workflow</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-content-primary">Géré par ELM APP & Workflow</p>
         </footer>
       </main>
     </div>

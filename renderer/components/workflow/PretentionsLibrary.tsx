@@ -79,13 +79,13 @@ function FieldConfigModal({
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-surface/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 w-full max-w-sm space-y-4 animate-in zoom-in-95 duration-200">
         <div className="flex items-center gap-2 text-blue-600">
           <Settings2 className="w-5 h-5" />
           <h3 className="font-bold text-slate-900">Configurer le champ</h3>
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <p className="text-xs text-content-muted leading-relaxed">
           Donnez un nom clair. Ce nom sera affiché comme question lors de la génération du document.
         </p>
         <input 
@@ -103,10 +103,10 @@ function FieldConfigModal({
             </button>
           )}
           <div className="flex gap-2 ml-auto">
-            <button onClick={onCancel} className="px-4 py-2 text-content-secondary font-bold text-sm hover:text-slate-600 transition-colors">Annuler</button>
+            <button onClick={onCancel} className="px-4 py-2 text-content-secondary font-bold text-sm hover:text-content-muted transition-colors">Annuler</button>
             <button 
               onClick={() => onConfirm(val)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-200 transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-content-primary font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-200 transition-all"
             >
               <Check className="w-4 h-4" /> Valider
             </button>
@@ -123,7 +123,7 @@ function FormattingToolbar() {
     document.execCommand(cmd, false, val);
   };
 
-  const btnCls = "p-2 rounded-lg hover:bg-slate-200 text-slate-600 transition-all active:scale-95";
+  const btnCls = "p-2 rounded-lg hover:bg-slate-200 text-content-muted transition-all active:scale-95";
 
   return (
     <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm shrink-0">
@@ -175,10 +175,10 @@ function VariableSidebar({ onInsert }: { onInsert: (key: string, label: string) 
         ))}
 
         <div className="pt-4 border-t border-slate-200">
-          <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] px-1 mb-2">Variables personnalisées</p>
+          <p className="text-[9px] font-black text-content-muted uppercase tracking-[0.2em] px-1 mb-2">Variables personnalisées</p>
           <button 
             onClick={() => onInsert('', '')}
-            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-brand-600 hover:border-brand-500 transition-all text-[10px] font-black uppercase tracking-widest"
+            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-300 rounded-xl text-content-muted hover:text-brand-600 hover:border-brand-500 transition-all text-[10px] font-black uppercase tracking-widest"
           >
             <Plus className="w-3.5 h-3.5" /> Créer un champ
           </button>
@@ -318,7 +318,7 @@ function PretentionEditor({
       <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-4 flex-1 mr-8">
           <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5 text-slate-500" />
+            <ArrowLeft className="w-5 h-5 text-content-muted" />
           </button>
           <div className="flex-1 max-w-md">
             <input 
@@ -328,9 +328,9 @@ function PretentionEditor({
               placeholder="Nom du modèle (ex: Mise en demeure)"
             />
             <div className="flex items-center gap-2 mt-1.5 px-1">
-              <Tag className="w-3 h-3 text-slate-500" />
+              <Tag className="w-3 h-3 text-content-muted" />
               <input 
-                className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest !text-slate-600 focus:ring-0 p-0 w-full placeholder-slate-400"
+                className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest !text-content-muted focus:ring-0 p-0 w-full placeholder-slate-400"
                 value={category}
                 onChange={e => setCategory(e.target.value)}
                 placeholder="Catégorie (ex: Civil)"
@@ -340,8 +340,8 @@ function PretentionEditor({
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-slate-500 hover:text-slate-800 font-bold text-sm transition-colors uppercase tracking-widest text-[10px]">Annuler</button>
-          <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white font-black py-2.5 px-8 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-200 transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-widest">
+          <button onClick={onCancel} className="px-4 py-2 text-content-muted hover:text-slate-800 font-bold text-sm transition-colors uppercase tracking-widest text-[10px]">Annuler</button>
+          <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-content-primary font-black py-2.5 px-8 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-200 transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-widest">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Enregistrer le modèle
           </button>
@@ -374,7 +374,7 @@ function PretentionEditor({
             />
 
             <div className="mt-8 text-center opacity-30 pb-20">
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Fin du document</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-content-muted">Fin du document</p>
             </div>
           </div>
         </div>
@@ -391,7 +391,7 @@ function PretentionEditor({
 
       {error && (
         <div className="fixed bottom-8 right-8 z-[100] animate-in slide-in-from-right-4 duration-300">
-          <p className="text-sm text-white bg-red-600 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-3 font-bold border border-red-500">
+          <p className="text-sm text-content-primary bg-red-600 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-3 font-bold border border-red-500">
             <X className="w-5 h-5 shrink-0" /> {error}
           </p>
         </div>
@@ -458,11 +458,11 @@ function PretentionCard({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="card group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:bg-surface border-slate-800/50">
+    <div className="card group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:bg-surface border-surface-border/50">
       <div className="p-6 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2 min-w-0">
-            <h3 className="font-bold text-white text-lg truncate group-hover:text-content-brand transition-colors">
+            <h3 className="font-bold text-content-primary text-lg truncate group-hover:text-content-brand transition-colors">
               {pretention.name}
             </h3>
             <div className="flex items-center gap-2">
@@ -476,32 +476,32 @@ function PretentionCard({
           <div className="flex items-center gap-2 shrink-0">
             <button 
               onClick={onDuplicate} 
-              className="p-2.5 rounded-xl bg-surface-overlay border border-slate-800 text-slate-500 hover:text-status-success hover:border-emerald-500/50 transition-all active:scale-90 shadow-sm"
+              className="p-2.5 rounded-xl bg-surface-overlay border border-surface-border text-content-muted hover:text-status-success hover:border-emerald-500/50 transition-all active:scale-90 shadow-sm"
               title="Dupliquer ce modèle"
             >
               <Copy className="w-4 h-4" />
             </button>
             <button 
               onClick={onEdit} 
-              className="p-2.5 rounded-xl bg-surface-overlay border border-slate-800 text-slate-500 hover:text-white hover:border-brand-500/50 transition-all active:scale-90 shadow-sm"
+              className="p-2.5 rounded-xl bg-surface-overlay border border-surface-border text-content-muted hover:text-content-primary hover:border-brand-500/50 transition-all active:scale-90 shadow-sm"
               title="Modifier"
             >
               <Edit2 className="w-4 h-4" />
             </button>
             <button 
               onClick={onDelete} 
-              className="p-2.5 rounded-xl bg-surface-overlay border border-slate-800 text-slate-500 hover:text-status-error hover:border-red-500/50 transition-all active:scale-90 shadow-sm"
+              className="p-2.5 rounded-xl bg-surface-overlay border border-surface-border text-content-muted hover:text-status-error hover:border-red-500/50 transition-all active:scale-90 shadow-sm"
               title="Supprimer"
             >
               <Trash2 className="w-4 h-4" />
             </button>
-            <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-white' : 'bg-surface-overlay border-slate-800 text-slate-500'}`}>
+            <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-content-primary' : 'bg-surface-overlay border-surface-border text-content-muted'}`}>
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
         </div>
         {expanded && (
-          <div className="pt-6 space-y-4 border-t border-slate-800 animate-in slide-in-from-top-2 duration-300">
+          <div className="pt-6 space-y-4 border-t border-surface-border animate-in slide-in-from-top-2 duration-300">
              <div 
               className="bg-white rounded-2xl p-10 font-serif text-base leading-relaxed text-slate-800 border border-slate-200 shadow-inner overflow-hidden max-h-[500px] overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: templateToHtml(pretention.template) }}
@@ -595,30 +595,30 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Bibliothèque de Modèles</h2>
-          <p className="text-slate-500 text-sm mt-1 font-medium">Gérez vos lettres types et documents juridiques automatisés.</p>
+          <h2 className="text-2xl font-black text-content-primary tracking-tight">Bibliothèque de Modèles</h2>
+          <p className="text-content-muted text-sm mt-1 font-medium">Gérez vos lettres types et documents juridiques automatisés.</p>
         </div>
-        <button onClick={() => setShowNew(true)} className="bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95">
+        <button onClick={() => setShowNew(true)} className="bg-brand-500 hover:bg-brand-600 text-content-primary font-bold py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95">
           <Plus className="w-5 h-5" /> Nouveau modèle
         </button>
       </div>
 
       <div className="relative group">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-content-brand transition-colors" />
-        <input className="w-full bg-surface border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un document..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted group-focus-within:text-content-brand transition-colors" />
+        <input className="w-full bg-surface border border-surface-border rounded-2xl pl-14 pr-6 py-4 text-base text-content-primary placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un document..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-brand-500" />
-          <p className="text-slate-500 font-bold animate-pulse tracking-widest uppercase text-[10px]">Chargement...</p>
+          <p className="text-content-muted font-bold animate-pulse tracking-widest uppercase text-[10px]">Chargement...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card border-dashed border-slate-800 bg-transparent py-24 text-center space-y-6">
+        <div className="card border-dashed border-surface-border bg-transparent py-24 text-center space-y-6">
           <BookOpen className="w-12 h-12 text-slate-800 mx-auto" />
           <div className="space-y-2">
             <p className="text-content-secondary font-bold text-lg">Aucun modèle</p>
-            <p className="text-slate-600 text-sm max-w-xs mx-auto font-medium">Commencez par créer votre premier modèle de lettre automatisée.</p>
+            <p className="text-content-muted text-sm max-w-xs mx-auto font-medium">Commencez par créer votre premier modèle de lettre automatisée.</p>
           </div>
         </div>
       ) : (
@@ -626,7 +626,7 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
           {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => (
             <div key={cat} className="space-y-6">
               <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] whitespace-nowrap">{cat}</span>
+                <span className="text-[10px] font-black text-content-muted uppercase tracking-[0.3em] whitespace-nowrap">{cat}</span>
                 <div className="h-px w-full bg-surface-card" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">

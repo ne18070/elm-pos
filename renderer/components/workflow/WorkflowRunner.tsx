@@ -31,7 +31,7 @@ interface WorkflowRunnerProps {
 
 // ── Badge de statut ───────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<WorkflowStatus, { label: string; className: string; icon: React.ReactNode }> = {
-  PENDING:   { label: 'En attente',  className: 'border-slate-600 bg-slate-800/50 text-content-secondary',    icon: <Clock className="w-3 h-3" /> },
+  PENDING:   { label: 'En attente',  className: 'border-surface-border bg-surface-card/50 text-content-secondary',    icon: <Clock className="w-3 h-3" /> },
   RUNNING:   { label: 'En cours',    className: 'border-blue-700 bg-badge-info text-blue-300',       icon: <Loader2 className="w-3 h-3 animate-spin" /> },
   WAITING:   { label: 'Action req.', className: 'border-status-warning bg-badge-warning text-status-warning',    icon: <Clock className="w-3 h-3" /> },
   PAUSED:    { label: 'En pause',    className: 'border-purple-700 bg-badge-purple text-status-purple', icon: <PauseCircle className="w-3 h-3" /> },
@@ -70,7 +70,7 @@ function FormFieldInput({
 }: {
   field: FormField; value: unknown; onChange: (key: string, val: unknown) => void;
 }) {
-  const base = 'w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500';
+  const base = 'w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-sm text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-brand-500';
 
   if (field.type === 'select') {
     return (
@@ -95,7 +95,7 @@ function FormFieldInput({
     return (
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={Boolean(value)} onChange={e => onChange(field.key, e.target.checked)} className="w-4 h-4 accent-brand-500" />
-        <span className="text-sm text-slate-300">{field.label}</span>
+        <span className="text-sm text-content-primary">{field.label}</span>
       </label>
     );
   }
@@ -153,12 +153,12 @@ function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Rec
       {node.document_name && (
         <p className="text-xs font-semibold text-content-brand uppercase tracking-wide">{node.document_name}</p>
       )}
-      <div className="bg-surface border border-slate-700 rounded-xl p-4 max-h-60 overflow-y-auto">
+      <div className="bg-surface border border-surface-border rounded-xl p-4 max-h-60 overflow-y-auto">
         <pre className="text-sm text-content-primary whitespace-pre-wrap font-sans leading-relaxed">{text}</pre>
       </div>
       {waUrl ? (
         <a href={waUrl} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors">
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-content-primary text-sm font-semibold transition-colors">
           <MessageCircle className="w-4 h-4" />
           Envoyer via WhatsApp
         </a>
@@ -202,13 +202,13 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
                 Message WhatsApp prêt
               </div>
               <p className="text-sm text-content-primary whitespace-pre-wrap leading-relaxed">
-                {message || <span className="italic text-slate-500">Template non défini</span>}
+                {message || <span className="italic text-content-muted">Template non défini</span>}
               </p>
             </div>
             {waUrl ? (
               <a
                 href={waUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2.5 px-4 py-3 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/30"
+                className="flex items-center justify-center gap-2.5 px-4 py-3 bg-green-600 hover:bg-green-500 active:bg-green-700 text-content-primary rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/30"
               >
                 <Send className="w-4 h-4" />
                 Ouvrir WhatsApp et envoyer
@@ -223,12 +223,12 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
         );
       })}
       {otherCount > 0 && (
-        <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-1">
+        <div className="flex items-center gap-1.5 text-xs text-content-muted pt-1">
           <RefreshCw className="w-3 h-3 animate-spin" />
           {otherCount} action{otherCount > 1 ? 's' : ''} automatique{otherCount > 1 ? 's' : ''} en attente
         </div>
       )}
-      <p className="text-[10px] text-slate-600 italic pt-1">
+      <p className="text-[10px] text-content-muted italic pt-1">
         Une fois le message envoyé, confirmez ci-dessous pour continuer.
       </p>
     </div>
@@ -254,7 +254,7 @@ function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: Wor
           </p>
         )}
         {resumeAt && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-content-muted">
             Timeout automatique le {resumeAt.toLocaleString('fr-FR')}
           </p>
         )}
@@ -276,11 +276,11 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
           {node.delay_label ?? (hours > 0 ? `Délai de ${hours}h` : 'Délai non configuré')}
         </div>
         {resumeAt ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-content-muted">
             Reprise automatique le {resumeAt.toLocaleString('fr-FR')}
           </p>
         ) : (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-content-muted">
             Durée : {hours} heure{hours > 1 ? 's' : ''}
           </p>
         )}
@@ -307,20 +307,20 @@ function FeeRequestPanel({ node, context }: { node: any; context: Record<string,
 
   return (
     <div className="space-y-3">
-      <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-xl px-4 py-4 space-y-2.5">
+      <div className="bg-badge-success border border-status-success/50 rounded-xl px-4 py-4 space-y-2.5">
         <div className="flex items-center gap-2 text-status-success text-sm font-semibold">
           <Receipt className="w-4 h-4" />
           Génération d&apos;honoraire automatique
         </div>
         <div className="space-y-1">
-          <p className="text-2xl font-black text-white">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-content-secondary">XOF</span></p>
-          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{node.prestation_type || 'Provision'}</p>
+          <p className="text-2xl font-black text-content-primary">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-content-secondary">XOF</span></p>
+          <p className="text-[10px] text-content-muted uppercase font-bold tracking-widest">{node.prestation_type || 'Provision'}</p>
         </div>
-        <p className="text-xs text-content-secondary leading-relaxed italic border-t border-emerald-800/30 pt-2">
+        <p className="text-xs text-content-secondary leading-relaxed italic border-t border-status-success/30 pt-2">
           {node.description || node.label}
         </p>
       </div>
-      <p className="text-[10px] text-slate-600 italic">
+      <p className="text-[10px] text-content-muted italic">
         Cet honoraire a été enregistré en base de données. Cliquez sur Suivant pour continuer la procédure.
       </p>
     </div>
@@ -338,7 +338,7 @@ function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetr
         </div>
         <button 
           onClick={onRetry}
-          className="text-[10px] font-black uppercase tracking-widest bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-all"
+          className="text-[10px] font-black uppercase tracking-widest bg-red-500 hover:bg-red-600 text-content-primary px-3 py-1.5 rounded-lg transition-all"
         >
           Réessayer
         </button>
@@ -349,7 +349,7 @@ function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetr
         </pre>
       )}
       {instance.retry_count > 0 && (
-        <p className="text-xs text-slate-500">{instance.retry_count} tentative{instance.retry_count > 1 ? 's' : ''} effectuée{instance.retry_count > 1 ? 's' : ''}</p>
+        <p className="text-xs text-content-muted">{instance.retry_count} tentative{instance.retry_count > 1 ? 's' : ''} effectuée{instance.retry_count > 1 ? 's' : ''}</p>
       )}
     </div>
   );
@@ -431,7 +431,7 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
             <CheckCircle2 className="w-8 h-8 text-status-success" />
           </div>
         </div>
-        <p className="text-lg font-black text-white">Processus terminé avec succès</p>
+        <p className="text-lg font-black text-content-primary">Processus terminé avec succès</p>
 
         <div className="flex items-center justify-center gap-4 pt-1">
           {instance.completed_at && (
@@ -450,15 +450,15 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
       {/* Étapes parcourues */}
       {steps.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Étapes complétées</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Étapes complétées</p>
           <div className="space-y-1">
             {steps.map((node, i) => (
-              <div key={node.id} className="flex items-center gap-3 py-1.5 px-3 rounded-lg bg-slate-900/40">
+              <div key={node.id} className="flex items-center gap-3 py-1.5 px-3 rounded-lg bg-surface/40">
                 <div className="w-5 h-5 rounded-full bg-badge-success border border-status-success/50 flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-3 h-3 text-status-success" />
                 </div>
-                <span className="text-xs text-slate-300 font-medium">{node.label}</span>
-                <span className="ml-auto text-[9px] text-slate-600 font-mono">{i + 1}/{steps.length}</span>
+                <span className="text-xs text-content-primary font-medium">{node.label}</span>
+                <span className="ml-auto text-[9px] text-content-muted font-mono">{i + 1}/{steps.length}</span>
               </div>
             ))}
           </div>
@@ -468,11 +468,11 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
       {/* Données collectées */}
       {contextEntries.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Données collectées</p>
-          <div className="bg-slate-900/50 border border-slate-800 rounded-xl divide-y divide-slate-800/60">
+          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Données collectées</p>
+          <div className="bg-surface/50 border border-surface-border rounded-xl divide-y divide-surface-border/60">
             {contextEntries.map(({ label, display }: { label: string; display: string }) => (
               <div key={label} className="flex items-start justify-between gap-4 px-3 py-2">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide shrink-0">{label}</span>
+                <span className="text-[10px] text-content-muted font-bold uppercase tracking-wide shrink-0">{label}</span>
                 <span className="text-xs text-content-primary text-right break-all">{display}</span>
               </div>
             ))}
@@ -484,7 +484,7 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
       {onRestart && (
         <button
           onClick={onRestart}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-surface-card text-slate-300 hover:text-white text-sm font-bold transition-all"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-surface-border bg-surface/50 hover:bg-surface-card text-content-primary hover:text-content-primary text-sm font-bold transition-all"
         >
           <RefreshCw className="w-4 h-4" /> Relancer le processus
         </button>
@@ -496,11 +496,11 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
 // ── Panel CANCELLED ───────────────────────────────────────────────────────────
 function CancelledPanel({ instance }: { instance: WorkflowInstance }) {
   return (
-    <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-5 text-center space-y-2">
-      <Ban className="w-8 h-8 text-slate-500 mx-auto" />
-      <p className="font-bold text-slate-300">Processus annulé</p>
+    <div className="bg-surface/50 border border-surface-border rounded-2xl p-5 text-center space-y-2">
+      <Ban className="w-8 h-8 text-content-muted mx-auto" />
+      <p className="font-bold text-content-primary">Processus annulé</p>
       {instance.completed_at && (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-content-muted">
           {new Date(instance.completed_at).toLocaleString('fr-FR')}
         </p>
       )}
@@ -649,8 +649,8 @@ export function WorkflowRunner({
             <NodeIcon type={currentNode.type} />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Étape actuelle</p>
-            <p className="font-semibold text-white">{currentNode.label}</p>
+            <p className="text-xs font-semibold text-content-muted uppercase tracking-wide">Étape actuelle</p>
+            <p className="font-semibold text-content-primary">{currentNode.label}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -659,7 +659,7 @@ export function WorkflowRunner({
               onClick={handleRetry}
               disabled={isPending}
               title="Relancer cette étape"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-content-brand hover:bg-badge-brand transition-all"
+              className="p-1.5 rounded-lg text-content-muted hover:text-content-brand hover:bg-badge-brand transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isPending ? 'animate-spin' : ''}`} />
             </button>
@@ -685,7 +685,7 @@ export function WorkflowRunner({
               <Info className="w-5 h-5 text-status-purple shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-status-purple">Consignes de l&apos;étape</p>
-                <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                <div className="text-sm text-content-primary leading-relaxed whitespace-pre-wrap">
                   {currentNode.instructions}
                 </div>
               </div>
@@ -752,7 +752,7 @@ export function WorkflowRunner({
             <button
               key={edge.id}
               onClick={() => handleTransition(edge)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-brand-700 bg-badge-brand hover:bg-brand-800/30 text-content-brand hover:text-white text-sm font-medium transition-all group"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-brand-700 bg-badge-brand hover:bg-brand-800/30 text-content-brand hover:text-content-primary text-sm font-medium transition-all group"
             >
               <span>{edge.label}</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -765,7 +765,7 @@ export function WorkflowRunner({
       {!readOnly && !confirm && !isPending &&
         (instance.status === 'RUNNING' || instance.status === 'WAITING') &&
         eligibleEdges.length === 0 && (
-        <p className="text-xs text-slate-500 italic pt-1">
+        <p className="text-xs text-content-muted italic pt-1">
           Aucune action disponible dans ce contexte.
         </p>
       )}
@@ -774,7 +774,7 @@ export function WorkflowRunner({
       {!readOnly && !isPending && instance.status !== 'FAILED' && (
         <button
           onClick={handleCancel}
-          className="w-full text-xs text-slate-600 hover:text-status-error py-1 transition-colors"
+          className="w-full text-xs text-content-muted hover:text-status-error py-1 transition-colors"
         >
           Annuler ce workflow
         </button>

@@ -12,6 +12,7 @@ interface SideDrawerProps {
   subtitle?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  headerActions?: React.ReactNode;
   maxWidth?: string;
 }
 
@@ -22,6 +23,7 @@ export function SideDrawer({
   subtitle,
   children,
   footer,
+  headerActions,
   maxWidth = "max-w-xl"
 }: SideDrawerProps) {
   const [mounted, setMounted] = useState(false);
@@ -57,16 +59,19 @@ export function SideDrawer({
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover shrink-0 sticky top-0 z-20">
           <div className="min-w-0 flex-1 pr-4">
-            <h3 className="text-base sm:text-xl font-black text-white tracking-tight uppercase truncate">{title}</h3>
-            {subtitle && <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5 truncate">{subtitle}</p>}
+            <h3 className="text-base sm:text-xl font-black text-content-primary tracking-tight uppercase truncate">{title}</h3>
+            {subtitle && <p className="text-[9px] sm:text-[10px] font-black text-content-primary uppercase tracking-widest mt-0.5 truncate">{subtitle}</p>}
           </div>
-          <button
-            onClick={onClose}
-            className="p-3 bg-surface-input/50 sm:bg-transparent hover:bg-surface-input rounded-xl text-content-secondary hover:text-white transition-all shrink-0"
-            aria-label="Fermer"
-          >
-            <X size={20} className="sm:w-6 sm:h-6" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {headerActions}
+            <button
+              onClick={onClose}
+              className="p-3 bg-surface-input/50 sm:bg-transparent hover:bg-surface-input rounded-xl text-content-secondary hover:text-content-primary transition-all"
+              aria-label="Fermer"
+            >
+              <X size={20} className="sm:w-6 sm:h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -85,3 +90,5 @@ export function SideDrawer({
     document.body
   );
 }
+
+

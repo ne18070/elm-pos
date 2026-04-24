@@ -23,7 +23,7 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
   if (byClass.length === 0) {
     return (
       <div className="card p-8 text-center">
-        <Scale className="w-10 h-10 text-slate-600 mx-auto mb-2" />
+        <Scale className="w-10 h-10 text-content-muted mx-auto mb-2" />
         <p className="text-content-secondary text-sm">Aucun mouvement pour cette période.</p>
       </div>
     );
@@ -37,7 +37,7 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
             onClick={() => toggleClass(cls)}
             className="w-full flex items-center justify-between px-5 py-3 hover:bg-surface-hover transition-colors"
           >
-            <span className="font-semibold text-white text-sm">
+            <span className="font-semibold text-content-primary text-sm">
               {CLASS_LABELS[cls] ?? `Classe ${cls}`}
             </span>
             <div className="flex items-center gap-6">
@@ -53,7 +53,7 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
           {expandedClasses.has(cls) && (
             <div className="border-t border-surface-border">
               <table className="w-full text-sm">
-                <thead className="text-xs text-slate-500 uppercase bg-surface-input">
+                <thead className="text-xs text-content-primary uppercase bg-surface-input">
                   <tr>
                     <th className="px-4 py-2 text-left w-24">Compte</th>
                     <th className="px-4 py-2 text-left">Intitulé</th>
@@ -69,11 +69,11 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
                     return (
                       <tr key={row.account_code} className="border-t border-surface-border hover:bg-surface-hover">
                         <td className="px-4 py-2 font-mono text-xs text-content-brand">{row.account_code}</td>
-                        <td className="px-4 py-2 text-slate-300 text-xs">{row.account_name}</td>
-                        <td className="px-4 py-2 text-right font-mono text-xs text-white">
+                        <td className="px-4 py-2 text-content-primary text-xs">{row.account_name}</td>
+                        <td className="px-4 py-2 text-right font-mono text-xs text-content-primary">
                           {row.total_debit > 0 ? formatCurrency(row.total_debit, currency) : ''}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-xs text-white">
+                        <td className="px-4 py-2 text-right font-mono text-xs text-content-primary">
                           {row.total_credit > 0 ? formatCurrency(row.total_credit, currency) : ''}
                         </td>
                         <td className="px-4 py-2 text-right font-mono text-xs text-status-success hidden sm:table-cell">
@@ -91,10 +91,10 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
                     <td colSpan={2} className="px-4 py-2 text-xs font-bold text-content-secondary uppercase">
                       Total Classe {cls}
                     </td>
-                    <td className="px-4 py-2 text-right font-bold text-white font-mono text-xs">
+                    <td className="px-4 py-2 text-right font-bold text-content-primary font-mono text-xs">
                       {formatCurrency(totalDebit, currency)}
                     </td>
-                    <td className="px-4 py-2 text-right font-bold text-white font-mono text-xs">
+                    <td className="px-4 py-2 text-right font-bold text-content-primary font-mono text-xs">
                       {formatCurrency(totalCredit, currency)}
                     </td>
                     <td colSpan={2} className="hidden sm:table-cell"></td>
@@ -108,17 +108,17 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
 
       <div className="card p-4 bg-brand-600/10 border-brand-700/40">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-white">TOTAL GÉNÉRAL</span>
+          <span className="font-bold text-content-primary">TOTAL GÉNÉRAL</span>
           <div className="flex gap-8">
             <div className="text-right">
               <p className="text-xs text-content-secondary">Total Débit</p>
-              <p className="font-bold text-white font-mono">
+              <p className="font-bold text-content-primary font-mono">
                 {formatCurrency(byClass.reduce((s, c) => s + c.totalDebit, 0), currency)}
               </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-content-secondary">Total Crédit</p>
-              <p className="font-bold text-white font-mono">
+              <p className="font-bold text-content-primary font-mono">
                 {formatCurrency(byClass.reduce((s, c) => s + c.totalCredit, 0), currency)}
               </p>
             </div>
@@ -128,3 +128,5 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
     </div>
   );
 }
+
+

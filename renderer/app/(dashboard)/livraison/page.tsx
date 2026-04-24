@@ -176,11 +176,11 @@ export default function LivraisonPage() {
         <div className="p-6 border-b border-surface-border">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+              <h1 className="text-xl font-bold text-content-primary flex items-center gap-2">
                 <Truck className="w-5 h-5 text-content-brand" />
                 Livraisons
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-content-muted mt-0.5">
                 {orders.length} commande{orders.length !== 1 ? 's' : ''} à traiter
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function LivraisonPage() {
           {loading ? (
             <div className="text-content-secondary text-center py-16 text-sm">Chargement…</div>
           ) : orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
+            <div className="flex flex-col items-center justify-center py-16 text-content-muted gap-3">
               <CheckCircle className="w-12 h-12 opacity-30" />
               <p className="font-medium">Tout est livré !</p>
               <p className="text-xs text-center">Aucune commande en attente de vérification.</p>
@@ -226,14 +226,14 @@ export default function LivraisonPage() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-mono font-bold text-white text-sm">
+                          <p className="font-mono font-bold text-content-primary text-sm">
                             #{order.id.slice(0, 8).toUpperCase()}
                           </p>
                           {order.customer_name && (
                             <p className="text-xs text-content-secondary truncate">{order.customer_name}</p>
                           )}
                           {order.cashier && (
-                            <p className="text-xs text-slate-500 truncate">{order.cashier.full_name}</p>
+                            <p className="text-xs text-content-muted truncate">{order.cashier.full_name}</p>
                           )}
                         </div>
                         <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
@@ -246,23 +246,23 @@ export default function LivraisonPage() {
                           <div key={item.id} className="flex items-center gap-1.5 text-xs text-content-secondary">
                             <Package className="w-3 h-3 shrink-0" />
                             <span className="truncate flex-1">{item.name}</span>
-                            <span className="text-slate-500 shrink-0">×{item.quantity}</span>
+                            <span className="text-content-muted shrink-0">×{item.quantity}</span>
                           </div>
                         ))}
                         {(order.items?.length ?? 0) > 2 && (
-                          <p className="text-xs text-slate-600">
+                          <p className="text-xs text-content-muted">
                             +{order.items!.length - 2} article{order.items!.length - 2 > 1 ? 's' : ''}
                           </p>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between mt-3 pt-2 border-t border-surface-border">
-                        <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <div className="flex items-center gap-1 text-xs text-content-muted">
                           <Clock className="w-3 h-3" />
                           {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: fr })}
                         </div>
                         <div className="text-right">
-                          <span className="text-xs text-slate-500">{itemCount} article{itemCount > 1 ? 's' : ''}</span>
+                          <span className="text-xs text-content-muted">{itemCount} article{itemCount > 1 ? 's' : ''}</span>
                           <span className="text-sm font-bold text-content-brand ml-2">
                             {formatCurrency(order.total, business?.currency)}
                           </span>
@@ -277,7 +277,7 @@ export default function LivraisonPage() {
                           className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors ${
                             hasLivreur
                               ? 'border-status-success text-status-success bg-badge-success hover:bg-badge-success'
-                              : 'border-surface-border text-content-secondary hover:text-white hover:bg-surface-hover'
+                              : 'border-surface-border text-content-secondary hover:text-content-primary hover:bg-surface-hover'
                           }`}
                         >
                           <UserCheck className="w-3 h-3" />
@@ -307,7 +307,7 @@ export default function LivraisonPage() {
           />
         </div>
       ) : (
-        <div className="flex-1 hidden md:flex flex-col items-center justify-center text-slate-600 gap-3">
+        <div className="flex-1 hidden md:flex flex-col items-center justify-center text-content-muted gap-3">
           <Truck className="w-16 h-16 opacity-20" />
           <p className="text-sm">Sélectionnez une commande pour démarrer la vérification</p>
         </div>
@@ -318,17 +318,17 @@ export default function LivraisonPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-              <h3 className="font-semibold text-white">Assigner un livreur</h3>
+              <h3 className="font-semibold text-content-primary">Assigner un livreur</h3>
               <button
                 onClick={() => setAssigningOrder(null)}
-                className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover"
+                className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <p className="text-xs text-content-secondary">
-                Commande <span className="font-mono font-bold text-white">#{assigningOrder.id.slice(0, 8).toUpperCase()}</span>
+                Commande <span className="font-mono font-bold text-content-primary">#{assigningOrder.id.slice(0, 8).toUpperCase()}</span>
                 {assigningOrder.customer_name && <> · {assigningOrder.customer_name}</>}
               </p>
 
@@ -363,7 +363,7 @@ export default function LivraisonPage() {
                     onChange={(e) => setSendWhatsApp(e.target.checked)}
                     className="w-4 h-4 rounded"
                   />
-                  <span className="text-sm text-slate-300">Envoyer la localisation par WhatsApp</span>
+                  <span className="text-sm text-content-primary">Envoyer la localisation par WhatsApp</span>
                 </label>
               )}
             </div>

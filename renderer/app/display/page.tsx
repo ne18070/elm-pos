@@ -35,11 +35,11 @@ function IdleScreen({ state }: { state: DisplayState }) {
         <img src={state.logoUrl} alt={state.businessName} className="h-24 w-auto object-contain" />
       ) : (
         <div className="w-24 h-24 bg-brand-600 rounded-3xl flex items-center justify-center">
-          <ShoppingCart className="w-12 h-12 text-white" />
+          <ShoppingCart className="w-12 h-12 text-content-primary" />
         </div>
       )}
       <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold text-white">{state.businessName ?? 'Bienvenue'}</h1>
+        <h1 className="text-4xl font-bold text-content-primary">{state.businessName ?? 'Bienvenue'}</h1>
         <p className="text-xl text-content-secondary">Votre satisfaction, notre priorité</p>
       </div>
       <p className="text-6xl font-light text-content-brand tabular-nums">{time}</p>
@@ -60,14 +60,14 @@ function CartScreen({ state }: { state: DisplayState }) {
           <img src={state.logoUrl} alt={state.businessName} className="h-10 w-auto object-contain" />
         ) : (
           <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center">
-            <ShoppingCart className="w-5 h-5 text-white" />
+            <ShoppingCart className="w-5 h-5 text-content-primary" />
           </div>
         )}
-        <h1 className="text-2xl font-bold text-white">{state.businessName}</h1>
+        <h1 className="text-2xl font-bold text-content-primary">{state.businessName}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs text-slate-500 uppercase tracking-wider px-3 pb-1 border-b border-slate-700">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs text-content-muted uppercase tracking-wider px-3 pb-1 border-b border-surface-border">
           <span>Article</span>
           <span className="text-right">P.U.</span>
           <span className="text-right">Qté</span>
@@ -77,9 +77,9 @@ function CartScreen({ state }: { state: DisplayState }) {
         {items.map((item: DisplayItem, i: number) => (
           <div
             key={i}
-            className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-3 py-2.5 rounded-xl bg-slate-800/50"
+            className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-3 py-2.5 rounded-xl bg-surface-card/50"
           >
-            <span className="text-white font-medium truncate">{item.name}</span>
+            <span className="text-content-primary font-medium truncate">{item.name}</span>
             <span className="text-content-secondary text-sm text-right tabular-nums">{fmt(item.price, currency)}</span>
             <span className="text-content-secondary text-sm text-right tabular-nums">×{item.quantity}</span>
             <span className="text-content-brand font-semibold text-right tabular-nums">{fmt(item.total, currency)}</span>
@@ -87,7 +87,7 @@ function CartScreen({ state }: { state: DisplayState }) {
         ))}
       </div>
 
-      <div className="bg-slate-800/60 rounded-2xl p-5 space-y-2 border border-slate-700">
+      <div className="bg-surface-card/60 rounded-2xl p-5 space-y-2 border border-surface-border">
         {(state.discount ?? 0) > 0 && (
           <div className="flex justify-between text-status-success text-lg">
             <span>Remise</span>
@@ -100,8 +100,8 @@ function CartScreen({ state }: { state: DisplayState }) {
             <span>{fmt(state.tax!, currency)}</span>
           </div>
         )}
-        <div className="flex justify-between items-center pt-2 border-t border-slate-700">
-          <span className="text-2xl font-bold text-white">Total</span>
+        <div className="flex justify-between items-center pt-2 border-t border-surface-border">
+          <span className="text-2xl font-bold text-content-primary">Total</span>
           <span className="text-4xl font-black text-content-brand tabular-nums">{fmt(state.total ?? 0, currency)}</span>
         </div>
       </div>
@@ -125,13 +125,13 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
         {state.logoUrl && (
           <img src={state.logoUrl} alt={state.businessName} className="h-12 w-auto object-contain mx-auto mb-3" />
         )}
-        <h1 className="text-3xl font-bold text-white">Votre facture</h1>
+        <h1 className="text-3xl font-bold text-content-primary">Votre facture</h1>
         <p className="text-content-secondary mt-1">Vérifiez et appuyez sur <strong className="text-content-brand">OK</strong> pour valider</p>
       </div>
 
       {/* Liste articles */}
       <div className="flex-1 overflow-y-auto space-y-2">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs text-slate-500 uppercase tracking-wider px-3 pb-1 border-b border-slate-700">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs text-content-muted uppercase tracking-wider px-3 pb-1 border-b border-surface-border">
           <span>Article</span>
           <span className="text-right">P.U.</span>
           <span className="text-right">Qté</span>
@@ -140,9 +140,9 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
         {items.map((item: DisplayItem, i: number) => (
           <div
             key={i}
-            className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-3 py-2.5 rounded-xl bg-slate-800/50"
+            className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-3 py-2.5 rounded-xl bg-surface-card/50"
           >
-            <span className="text-white font-medium truncate">{item.name}</span>
+            <span className="text-content-primary font-medium truncate">{item.name}</span>
             <span className="text-content-secondary text-sm text-right tabular-nums">{fmt(item.price, currency)}</span>
             <span className="text-content-secondary text-sm text-right tabular-nums">×{item.quantity}</span>
             <span className="text-content-brand font-semibold text-right tabular-nums">{fmt(item.total, currency)}</span>
@@ -151,7 +151,7 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
       </div>
 
       {/* Totaux */}
-      <div className="bg-slate-800/60 rounded-2xl p-5 space-y-2 border border-slate-700">
+      <div className="bg-surface-card/60 rounded-2xl p-5 space-y-2 border border-surface-border">
         {(state.discount ?? 0) > 0 && (
           <div className="flex justify-between text-status-success text-lg">
             <span>Remise</span>
@@ -164,14 +164,14 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
             <span>{fmt(state.tax!, currency)}</span>
           </div>
         )}
-        <div className="flex justify-between items-center pt-2 border-t border-slate-700">
-          <span className="text-2xl font-bold text-white">Total</span>
+        <div className="flex justify-between items-center pt-2 border-t border-surface-border">
+          <span className="text-2xl font-bold text-content-primary">Total</span>
           <span className="text-4xl font-black text-content-brand tabular-nums">{fmt(total, currency)}</span>
         </div>
 
         {isPartial && (
           <>
-            <div className="flex justify-between text-content-brand pt-2 border-t border-slate-700 text-lg">
+            <div className="flex justify-between text-content-brand pt-2 border-t border-surface-border text-lg">
               <span>Acompte versé</span>
               <span className="font-bold tabular-nums">{fmt(acompte!, currency)}</span>
             </div>
@@ -186,7 +186,7 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
       {/* Bouton OK client */}
       <button
         onClick={onConfirm}
-        className="w-full py-7 bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-white text-4xl font-black rounded-2xl transition-colors flex items-center justify-center gap-4"
+        className="w-full py-7 bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-content-primary text-4xl font-black rounded-2xl transition-colors flex items-center justify-center gap-4"
       >
         <CheckCircle className="w-10 h-10" />
         OK — Valider
@@ -210,11 +210,11 @@ function PaymentScreen({ state }: { state: DisplayState }) {
       </div>
 
       <div className="text-center space-y-3">
-        <h1 className="text-5xl font-black text-white">Merci !</h1>
+        <h1 className="text-5xl font-black text-content-primary">Merci !</h1>
         <p className="text-2xl text-content-secondary">Paiement accepté</p>
       </div>
 
-      <div className="bg-slate-800/60 rounded-3xl px-12 py-6 border border-slate-700 text-center space-y-1">
+      <div className="bg-surface-card/60 rounded-3xl px-12 py-6 border border-surface-border text-center space-y-1">
         <p className="text-content-secondary text-lg">Total</p>
         <p className="text-4xl font-bold text-content-brand tabular-nums">{fmt(state.total ?? 0, currency)}</p>
       </div>
@@ -227,7 +227,7 @@ function PaymentScreen({ state }: { state: DisplayState }) {
       )}
 
       {state.businessName && (
-        <p className="text-slate-500 text-lg mt-4">{state.businessName}</p>
+        <p className="text-content-muted text-lg mt-4">{state.businessName}</p>
       )}
     </div>
   );
@@ -304,7 +304,7 @@ export default function DisplayPage() {
       {/* Bouton fermer — visible au survol */}
       <button
         onClick={() => window.electronAPI?.invoke('display:close')}
-        className="absolute top-3 right-3 z-50 p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-500 hover:text-white opacity-0 hover:opacity-100 focus:opacity-100 transition-all"
+        className="absolute top-3 right-3 z-50 p-1.5 rounded-lg bg-surface-card/60 hover:bg-surface-input text-content-muted hover:text-content-primary opacity-0 hover:opacity-100 focus:opacity-100 transition-all"
         title="Fermer l'écran client"
       >
         <X className="w-4 h-4" />

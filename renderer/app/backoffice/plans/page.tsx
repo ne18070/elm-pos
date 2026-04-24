@@ -37,8 +37,8 @@ export default function PlansPage() {
     <div className="p-8 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Plans & Tarification</h1>
-          <p className="text-slate-500 text-sm mt-1">Gérez les offres commerciales et les fonctionnalités incluses.</p>
+          <h1 className="text-2xl font-black text-content-primary tracking-tight uppercase">Plans & Tarification</h1>
+          <p className="text-content-muted text-sm mt-1">Gérez les offres commerciales et les fonctionnalités incluses.</p>
         </div>
         <button 
           onClick={() => setEditing({ name: '', label: '', price: 0, currency: 'XOF', duration_days: 30, features: [], is_active: true, sort_order: 0 })} 
@@ -59,33 +59,33 @@ export default function PlansPage() {
               !plan.is_active && "opacity-60"
             )}>
               {/* Premium-like header for active plans */}
-              <div className={cn("h-2 w-full", plan.is_active ? "bg-brand-600" : "bg-slate-700")} />
+              <div className={cn("h-2 w-full", plan.is_active ? "bg-brand-600" : "bg-surface-input")} />
               
               <div className="p-6 flex-1 space-y-6 flex flex-col">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black text-white tracking-tight">{plan.label}</h3>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{plan.name}</p>
+                    <h3 className="text-lg font-black text-content-primary tracking-tight">{plan.label}</h3>
+                    <p className="text-[10px] font-black text-content-muted uppercase tracking-[0.2em]">{plan.name}</p>
                   </div>
                   <button 
                     onClick={() => setEditing({ ...plan })} 
-                    className="p-2 rounded-xl bg-surface-input text-content-secondary hover:text-white transition-all border border-surface-border shadow-sm"
+                    className="p-2 rounded-xl bg-surface-input text-content-secondary hover:text-content-primary transition-all border border-surface-border shadow-sm"
                   >
                     <Pencil size={16} />
                   </button>
                 </div>
 
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">{plan.price.toLocaleString()}</span>
-                  <span className="text-sm font-bold text-slate-500 uppercase">{displayCurrency(plan.currency)}</span>
-                  <span className="text-xs text-slate-500 ml-1">/ {plan.duration_days}j</span>
+                  <span className="text-3xl font-black text-content-primary">{plan.price.toLocaleString()}</span>
+                  <span className="text-sm font-bold text-content-muted uppercase">{displayCurrency(plan.currency)}</span>
+                  <span className="text-xs text-content-muted ml-1">/ {plan.duration_days}j</span>
                 </div>
 
                 <div className="space-y-2 flex-1">
                   <p className="text-[9px] font-black text-content-brand uppercase tracking-widest">Inclus dans le plan</p>
                   <ul className="space-y-2">
                     {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2 text-xs text-slate-300 font-medium">
+                      <li key={f} className="flex items-start gap-2 text-xs text-content-primary font-medium">
                         <Check className="w-3.5 h-3.5 text-brand-500 shrink-0 mt-0.5" />
                         <span>{f}</span>
                       </li>
@@ -94,7 +94,7 @@ export default function PlansPage() {
                 </div>
 
                 <div className="pt-4 border-t border-surface-border flex items-center justify-between">
-                   <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                   <div className="flex items-center gap-1.5 text-[10px] font-black text-content-muted uppercase tracking-widest">
                       <Clock size={12} /> {plan.duration_days} Jours
                    </div>
                    {!plan.is_active && (
@@ -113,10 +113,10 @@ export default function PlansPage() {
           <div className="card w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] scale-in-center">
             <div className="p-6 border-b border-surface-border flex items-center justify-between bg-surface-hover shrink-0">
                <div>
-                  <h3 className="text-xl font-black text-white tracking-tight uppercase">{editing.id ? 'Modifier Plan' : 'Nouveau Plan'}</h3>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Configuration de l'offre</p>
+                  <h3 className="text-xl font-black text-content-primary tracking-tight uppercase">{editing.id ? 'Modifier Plan' : 'Nouveau Plan'}</h3>
+                  <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Configuration de l'offre</p>
                </div>
-               <button onClick={() => setEditing(null)} className="p-2 hover:bg-surface-input rounded-xl text-slate-500 transition-colors"><X size={24} /></button>
+               <button onClick={() => setEditing(null)} className="p-2 hover:bg-surface-input rounded-xl text-content-muted transition-colors"><X size={24} /></button>
             </div>
             
             <div className="flex-1 overflow-y-auto p-8 space-y-6">
@@ -140,10 +140,10 @@ export default function PlansPage() {
                  <div className="col-span-2">
                     <label className="label text-[10px] uppercase font-black tracking-widest">Durée (Jours)</label>
                     <div className="flex gap-2 p-1 bg-surface-input rounded-xl border border-surface-border h-14 items-center px-4">
-                       <input type="number" className="bg-transparent border-none focus:ring-0 text-white font-black text-xl w-24" value={editing.duration_days ?? 30} onChange={e => setEditing({...editing, duration_days: parseInt(e.target.value) || 30})} />
-                       <div className="h-6 w-px bg-slate-700 mx-2" />
-                       <button onClick={() => setEditing({...editing, duration_days: 30})} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", editing.duration_days === 30 ? "bg-brand-600 text-white" : "text-slate-500")}>Mensuel</button>
-                       <button onClick={() => setEditing({...editing, duration_days: 365})} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", editing.duration_days === 365 ? "bg-brand-600 text-white" : "text-slate-500")}>Annuel</button>
+                       <input type="number" className="bg-transparent border-none focus:ring-0 text-content-primary font-black text-xl w-24" value={editing.duration_days ?? 30} onChange={e => setEditing({...editing, duration_days: parseInt(e.target.value) || 30})} />
+                       <div className="h-6 w-px bg-surface-input mx-2" />
+                       <button onClick={() => setEditing({...editing, duration_days: 30})} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", editing.duration_days === 30 ? "bg-brand-600 text-content-primary" : "text-content-muted")}>Mensuel</button>
+                       <button onClick={() => setEditing({...editing, duration_days: 365})} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", editing.duration_days === 365 ? "bg-brand-600 text-content-primary" : "text-content-muted")}>Annuel</button>
                     </div>
                  </div>
                  <div className="col-span-2">
@@ -160,8 +160,8 @@ export default function PlansPage() {
               <label className="flex items-center gap-3 p-4 rounded-2xl bg-surface-input border border-surface-border cursor-pointer group">
                  <input type="checkbox" checked={editing.is_active ?? true} onChange={e => setEditing({...editing, is_active: e.target.checked})} className="w-5 h-5 accent-brand-500" />
                  <div>
-                    <p className="text-xs font-black text-white uppercase tracking-widest">Plan Actif</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Si décoché, le plan ne sera plus proposé aux nouveaux clients.</p>
+                    <p className="text-xs font-black text-content-primary uppercase tracking-widest">Plan Actif</p>
+                    <p className="text-[10px] text-content-muted mt-0.5">Si décoché, le plan ne sera plus proposé aux nouveaux clients.</p>
                  </div>
               </label>
             </div>

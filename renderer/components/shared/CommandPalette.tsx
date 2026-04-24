@@ -112,18 +112,18 @@ export function CommandPalette() {
       {/* Palette */}
       <div className="relative w-full max-w-xl bg-surface-card rounded-2xl shadow-2xl border border-surface-border overflow-hidden flex flex-col">
         <div className="flex items-center px-4 py-3 border-b border-surface-border bg-surface-input/50">
-          <Search className="w-5 h-5 text-slate-500 mr-3" />
+          <Search className="w-5 h-5 text-content-muted mr-3" />
           <input
             ref={inputRef}
             type="text"
             placeholder="Rechercher une page ou une action... (Ctrl+K)"
-            className="flex-1 bg-transparent border-none outline-none text-white text-base placeholder:text-slate-500"
+            className="flex-1 bg-transparent border-none outline-none text-content-primary text-base placeholder:text-content-muted"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
             onKeyDown={onKeyDown}
           />
           <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-surface-card border border-surface-border">
-            <span className="text-[10px] font-bold text-slate-500">ESC</span>
+            <span className="text-[10px] font-bold text-content-muted">ESC</span>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export function CommandPalette() {
                   key={cmd.href}
                   className={cn(
                     "w-full flex items-center gap-4 px-4 py-3 text-left transition-colors",
-                    active ? "bg-brand-600 text-white" : "text-content-secondary hover:bg-surface-hover hover:text-white"
+                    active ? "bg-brand-600 text-content-primary" : "text-content-secondary hover:bg-surface-hover hover:text-content-primary"
                   )}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => handleSelect(cmd.href)}
@@ -150,7 +150,7 @@ export function CommandPalette() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{cmd.label}</p>
-                    <p className={cn("text-xs truncate", active ? "text-brand-100" : "text-slate-500")}>
+                    <p className={cn("text-xs truncate", active ? "text-brand-100" : "text-content-muted")}>
                       {cmd.desc}
                     </p>
                   </div>
@@ -159,7 +159,7 @@ export function CommandPalette() {
               );
             })
           ) : (
-            <div className="py-12 text-center text-slate-500">
+            <div className="py-12 text-center text-content-muted">
               <Search className="w-8 h-8 mx-auto mb-3 opacity-20" />
               <p className="text-sm">Aucun résultat pour &quot;{query}&quot;</p>
             </div>
@@ -167,16 +167,16 @@ export function CommandPalette() {
         </div>
 
         <div className="px-4 py-3 border-t border-surface-border bg-surface-input/30 flex items-center justify-between">
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+          <p className="text-[10px] text-content-muted uppercase tracking-widest font-semibold">
             Navigation Rapide
           </p>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-500">Choisir</span>
+              <span className="text-[10px] text-content-muted">Choisir</span>
               <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[9px] text-content-secondary font-bold">↑↓</kbd>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-500">Ouvrir</span>
+              <span className="text-[10px] text-content-muted">Ouvrir</span>
               <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[9px] text-content-secondary font-bold">↵</kbd>
             </div>
           </div>

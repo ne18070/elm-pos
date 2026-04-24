@@ -55,7 +55,7 @@ const FORMAT_LABELS: Record<TemplateConfig['format'], string> = {
   thermal: 'Thermique 80mm', 'a4-landscape': 'A4 Paysage', 'a4-portrait': 'A4 Portrait', 'a5-portrait': 'A5',
 };
 const FORMAT_BADGE: Record<TemplateConfig['format'], string> = {
-  thermal: 'bg-badge-orange text-orange-300', 'a4-landscape': 'bg-indigo-900/40 text-indigo-300',
+  thermal: 'bg-badge-orange text-orange-300', 'a4-landscape': 'bg-badge-brand text-content-brand',
   'a4-portrait': 'bg-badge-info text-blue-300', 'a5-portrait': 'bg-badge-purple text-status-purple',
 };
 
@@ -83,7 +83,7 @@ function Section({ title, children, defaultOpen = false, sectionKey, onActivate 
     <div className="border border-surface-border rounded-xl overflow-hidden">
       <button onClick={toggle}
         className="w-full flex items-center justify-between px-4 py-3 bg-surface-card hover:bg-surface-hover transition-colors text-left">
-        <span className="text-sm font-semibold text-white">{title}</span>
+        <span className="text-sm font-semibold text-content-primary">{title}</span>
         {open ? <ChevronDown className="w-4 h-4 text-content-secondary" /> : <ChevronRight className="w-4 h-4 text-content-secondary" />}
       </button>
       {open && <div className="px-4 py-4 bg-surface-input space-y-4">{children}</div>}
@@ -94,7 +94,7 @@ function Section({ title, children, defaultOpen = false, sectionKey, onActivate 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center justify-between gap-3 cursor-pointer">
-      <span className="text-sm text-slate-300">{label}</span>
+      <span className="text-sm text-content-primary">{label}</span>
       <button type="button" onClick={() => onChange(!checked)}
         className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${checked ? 'bg-brand-600' : 'bg-surface-border'}`}>
         <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${checked ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
@@ -129,8 +129,8 @@ function SubGroup({ sectionKey, onActivate, label, children }: {
 }) {
   return (
     <div onMouseEnter={() => onActivate(SECTION_HIGHLIGHT[sectionKey] ?? null)}
-      className="space-y-1 p-2 -mx-2 rounded-lg transition-colors hover:bg-white/5">
-      <p className="text-xs text-slate-500 mb-2">{label}</p>
+      className="space-y-1 p-2 -mx-2 rounded-lg transition-colors hover:bg-surface-hover">
+      <p className="text-xs text-content-muted mb-2">{label}</p>
       {children}
     </div>
   );
@@ -160,22 +160,22 @@ function BlockRow({ block, index, total, isEditing, onDragStart, onDragOver, onD
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={() => onDrop(index)}
       className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-all cursor-grab active:cursor-grabbing
-        ${isEditing ? 'border-brand-600 bg-badge-brand' : 'border-surface-border hover:border-slate-600 bg-surface-card'}`}
+        ${isEditing ? 'border-brand-600 bg-badge-brand' : 'border-surface-border hover:border-brand-600 bg-surface-card'}`}
     >
-      <GripVertical className="w-4 h-4 text-slate-600 shrink-0 cursor-grab" />
-      <span className={`flex-1 text-xs truncate ${block.enabled ? 'text-content-primary' : 'text-slate-500'}`}>
+      <GripVertical className="w-4 h-4 text-content-muted shrink-0 cursor-grab" />
+      <span className={`flex-1 text-xs truncate ${block.enabled ? 'text-content-primary' : 'text-content-muted'}`}>
         {label}
       </span>
       {/* Enable/disable */}
       <button type="button" onClick={onToggle}
-        className={`p-1 rounded transition-colors ${block.enabled ? 'text-content-brand hover:text-content-brand' : 'text-slate-600 hover:text-content-secondary'}`}
+        className={`p-1 rounded transition-colors ${block.enabled ? 'text-content-brand hover:text-content-brand' : 'text-content-muted hover:text-content-secondary'}`}
         title={block.enabled ? 'Masquer' : 'Afficher'}>
         {block.enabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
       </button>
       {/* Edit (custom blocks only) */}
       {!isBuiltin && (
         <button type="button" onClick={onEdit}
-          className={`p-1 rounded transition-colors text-slate-500 hover:text-white`}
+          className={`p-1 rounded transition-colors text-content-muted hover:text-content-primary`}
           title="Modifier">
           <Type className="w-3.5 h-3.5" />
         </button>
@@ -183,7 +183,7 @@ function BlockRow({ block, index, total, isEditing, onDragStart, onDragOver, onD
       {/* Delete (custom blocks only) */}
       {!isBuiltin && (
         <button type="button" onClick={onDelete}
-          className="p-1 rounded text-slate-600 hover:text-status-error transition-colors"
+          className="p-1 rounded text-content-muted hover:text-status-error transition-colors"
           title="Supprimer">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -217,7 +217,7 @@ function CustomBlockEditor({ block, onChange }: { block: TemplateBlock; onChange
             <div className="flex gap-1 mt-1">
               {(['left', 'center', 'right'] as const).map((a) => (
                 <button key={a} type="button" onClick={() => onChange({ textAlign: a })}
-                  className={`flex-1 py-1 rounded text-xs border transition-all ${block.textAlign === a ? 'border-brand-600 bg-brand-600/10 text-white' : 'border-surface-border text-content-secondary hover:border-slate-600'}`}>
+                  className={`flex-1 py-1 rounded text-xs border transition-all ${block.textAlign === a ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600'}`}>
                   {a === 'left' ? '←' : a === 'center' ? '↔' : '→'}
                 </button>
               ))}
@@ -228,7 +228,7 @@ function CustomBlockEditor({ block, onChange }: { block: TemplateBlock; onChange
             <div className="flex gap-1 mt-1">
               {(['xs', 'sm', 'md', 'lg'] as const).map((s) => (
                 <button key={s} type="button" onClick={() => onChange({ textSize: s })}
-                  className={`flex-1 py-1 rounded text-xs border transition-all ${block.textSize === s ? 'border-brand-600 bg-brand-600/10 text-white' : 'border-surface-border text-content-secondary hover:border-slate-600'}`}>
+                  className={`flex-1 py-1 rounded text-xs border transition-all ${block.textSize === s ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600'}`}>
                   {s}
                 </button>
               ))}
@@ -285,7 +285,7 @@ function CustomBlockEditor({ block, onChange }: { block: TemplateBlock; onChange
           <div className="flex gap-1 mt-1">
             {(['left', 'center', 'right'] as const).map((a) => (
               <button key={a} type="button" onClick={() => onChange({ imageAlign: a })}
-                className={`flex-1 py-1 rounded text-xs border transition-all ${block.imageAlign === a ? 'border-brand-600 bg-brand-600/10 text-white' : 'border-surface-border text-content-secondary hover:border-slate-600'}`}>
+                className={`flex-1 py-1 rounded text-xs border transition-all ${block.imageAlign === a ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600'}`}>
                 {a === 'left' ? '← Gauche' : a === 'center' ? '↔ Centre' : 'Droite →'}
               </button>
             ))}
@@ -447,8 +447,8 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
         {/* ── 1. Template list ── */}
         <div className="w-56 flex-shrink-0 border-r border-surface-border flex flex-col">
           <div className="flex items-center justify-between px-4 py-4 border-b border-surface-border">
-            <h2 className="font-bold text-white text-sm">Modèles</h2>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+            <h2 className="font-bold text-content-primary text-sm">Modèles</h2>
+            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -457,16 +457,16 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
             {templates.map((t) => (
               <div key={t.id}
                 className={`group flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                  selectedId === t.id ? 'border-brand-600 bg-brand-600/10' : 'border-surface-border hover:border-slate-600 hover:bg-surface-hover'}`}
+                  selectedId === t.id ? 'border-brand-600 bg-brand-600/10' : 'border-surface-border hover:border-brand-600 hover:bg-surface-hover'}`}
                 onClick={() => setSelectedId(t.id)}
               >
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold truncate ${selectedId === t.id ? 'text-white' : 'text-slate-300'}`}>{t.name}</p>
+                  <p className={`text-xs font-semibold truncate ${selectedId === t.id ? 'text-content-primary' : 'text-content-primary'}`}>{t.name}</p>
                   <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 ${FORMAT_BADGE[t.format]}`}>{FORMAT_LABELS[t.format]}</span>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
                   className={`p-1 rounded-lg transition-colors opacity-0 group-hover:opacity-100 shrink-0 ${
-                    deletingId === t.id ? 'text-status-error bg-badge-error opacity-100' : 'text-slate-500 hover:text-status-error hover:bg-badge-error'}`}
+                    deletingId === t.id ? 'text-status-error bg-badge-error opacity-100' : 'text-content-muted hover:text-status-error hover:bg-badge-error'}`}
                   title={deletingId === t.id ? 'Confirmer suppression' : 'Supprimer'}>
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -493,7 +493,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
             {/* ── Editor panel ── */}
             <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-border min-w-0">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-border shrink-0 gap-2">
-                <h3 className="font-bold text-white text-sm truncate">{selected.name}</h3>
+                <h3 className="font-bold text-content-primary text-sm truncate">{selected.name}</h3>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={handleExport} className="btn-secondary flex items-center gap-1.5 text-xs py-1.5" title="Exporter JSON">
                     <Download className="w-3.5 h-3.5" /> Export
@@ -531,11 +531,11 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   {/* Add custom blocks */}
                   <div className="flex gap-2 pt-2 border-t border-surface-border">
                     <button onClick={() => addBlock('custom-text')}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-slate-600 text-xs text-content-secondary hover:border-brand-600 hover:text-content-brand transition-colors">
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-surface-border text-xs text-content-secondary hover:border-brand-600 hover:text-content-brand transition-colors">
                       <Type className="w-3.5 h-3.5" /> + Texte libre
                     </button>
                     <button onClick={() => addBlock('custom-image')}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-slate-600 text-xs text-content-secondary hover:border-brand-600 hover:text-content-brand transition-colors">
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-surface-border text-xs text-content-secondary hover:border-brand-600 hover:text-content-brand transition-colors">
                       <ImageIcon className="w-3.5 h-3.5" /> + Image
                     </button>
                   </div>
@@ -553,7 +553,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                     <div className="grid grid-cols-2 gap-2 mt-1">
                       {(Object.keys(FORMAT_LABELS) as TemplateConfig['format'][]).map((f) => (
                         <button key={f} type="button" onClick={() => updateSelected({ format: f })}
-                          className={`px-3 py-2 rounded-lg border text-sm text-left transition-all ${selected.format === f ? 'border-brand-600 bg-brand-600/10 text-white' : 'border-surface-border text-content-secondary hover:border-slate-600 hover:bg-surface-hover'}`}>
+                          className={`px-3 py-2 rounded-lg border text-sm text-left transition-all ${selected.format === f ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600 hover:bg-surface-hover'}`}>
                           {FORMAT_LABELS[f]}
                         </button>
                       ))}
@@ -565,7 +565,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                       <div className="flex gap-2 mt-1">
                         {([1, 2] as const).map((n) => (
                           <button key={n} type="button" onClick={() => updateSelected({ copies: n })}
-                            className={`flex-1 py-2 rounded-lg border text-sm transition-all ${selected.copies === n ? 'border-brand-600 bg-brand-600/10 text-white' : 'border-surface-border text-content-secondary hover:border-slate-600'}`}>
+                            className={`flex-1 py-2 rounded-lg border text-sm transition-all ${selected.copies === n ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600'}`}>
                             {n === 1 ? '1 exemplaire' : '2 (duplicata)'}
                           </button>
                         ))}
@@ -585,7 +585,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                     <div className="flex gap-2 mt-1">
                       {([['mono', 'Mono'], ['sans', 'Sans'], ['serif', 'Serif']] as const).map(([k, lbl]) => (
                         <button key={k} type="button" onClick={() => updateSelected({ fontFamily: k })}
-                          className={`flex-1 py-2 rounded-lg border text-sm transition-all ${selected.fontFamily === k ? 'border-brand-600 bg-brand-600/10 text-white' : 'border-surface-border text-content-secondary hover:border-slate-600'}`}>
+                          className={`flex-1 py-2 rounded-lg border text-sm transition-all ${selected.fontFamily === k ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600'}`}>
                           {lbl}
                         </button>
                       ))}
@@ -647,7 +647,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                     <div className="grid grid-cols-2 gap-4">
                       {([1, 2] as const).map((n) => (
                         <div key={n} className="space-y-3">
-                          <p className="text-xs text-slate-500 font-semibold">Exemplaire {n}</p>
+                          <p className="text-xs text-content-muted font-semibold">Exemplaire {n}</p>
                           <div>
                             <label className="label">Libellé</label>
                             <input type="text"
@@ -672,9 +672,9 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
             <div className="flex-1 flex flex-col overflow-hidden bg-surface min-w-0">
               <div className="flex items-center justify-between px-4 py-3.5 border-b border-surface-border shrink-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">Aperçu</span>
+                  <span className="text-sm font-semibold text-content-primary">Aperçu</span>
                   {activeSection && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-900/50 border border-indigo-700 text-indigo-300">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-badge-brand border border-status-brand/40 text-content-brand">
                       {activeSection}
                     </span>
                   )}
@@ -714,7 +714,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
 
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500">
+          <div className="flex-1 flex items-center justify-center text-content-muted">
             Sélectionnez ou créez un modèle
           </div>
         )}

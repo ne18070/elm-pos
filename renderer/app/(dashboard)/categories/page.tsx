@@ -34,7 +34,7 @@ export default function CategoriesPage() {
       {/* Header */}
       <div className="p-6 border-b border-surface-border">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">Catégories</h1>
+          <h1 className="text-xl font-bold text-content-primary">Catégories</h1>
           <button
             onClick={() => setShowCreate(true)}
             className="btn-primary flex items-center gap-2"
@@ -75,8 +75,8 @@ export default function CategoriesPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{cat.name}</p>
-                  <p className="text-xs text-slate-500">Ordre : {cat.sort_order}</p>
+                  <p className="font-medium text-content-primary truncate">{cat.name}</p>
+                  <p className="text-xs text-content-muted">Ordre : {cat.sort_order}</p>
                 </div>
 
                 {/* Actions */}

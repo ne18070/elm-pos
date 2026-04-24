@@ -62,18 +62,18 @@ export function CalendarPicker({ checkIn, checkOut, onSelect, bookedRanges = [] 
   return (
     <div className="rounded-xl border border-surface-border bg-surface-input p-3 select-none">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={prevMonth} className="p-1 rounded-lg hover:bg-surface-hover text-content-secondary hover:text-white">
+        <button onClick={prevMonth} className="p-1 rounded-lg hover:bg-surface-hover text-content-secondary hover:text-content-primary">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold text-white">{MONTH_NAMES[month]} {year}</span>
-        <button onClick={nextMonth} className="p-1 rounded-lg hover:bg-surface-hover text-content-secondary hover:text-white">
+        <span className="text-sm font-semibold text-content-primary">{MONTH_NAMES[month]} {year}</span>
+        <button onClick={nextMonth} className="p-1 rounded-lg hover:bg-surface-hover text-content-secondary hover:text-content-primary">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 mb-1">
         {WEEK_DAYS.map((d) => (
-          <div key={d} className="text-center text-xs text-slate-500 font-medium py-1">{d}</div>
+          <div key={d} className="text-center text-xs text-content-primary font-medium py-1">{d}</div>
         ))}
       </div>
 
@@ -96,10 +96,10 @@ export function CalendarPicker({ checkIn, checkOut, onSelect, bookedRanges = [] 
               onClick={() => !past && handleClick(d)}
               className={cn(
                 'relative h-8 flex items-center justify-center text-xs font-medium transition-colors',
-                past ? 'text-slate-600 cursor-default' : 'cursor-pointer',
-                range && !start && !end ? 'bg-badge-brand text-white' : '',
-                start ? 'rounded-l-full bg-brand-600 text-white' : '',
-                end   ? 'rounded-r-full bg-brand-600 text-white' : '',
+                past ? 'text-content-muted cursor-default' : 'cursor-pointer',
+                range && !start && !end ? 'bg-badge-brand text-content-primary' : '',
+                start ? 'rounded-l-full bg-brand-600 text-content-primary' : '',
+                end   ? 'rounded-r-full bg-brand-600 text-content-primary' : '',
                 booked && !start && !end ? 'text-status-error' : '',
                 isToday && !start && !end ? 'font-bold' : '',
                 !start && !end && !range && !past ? 'hover:bg-surface-hover rounded-full' : '',
@@ -120,15 +120,17 @@ export function CalendarPicker({ checkIn, checkOut, onSelect, bookedRanges = [] 
       {(checkIn || checkOut) && (
         <div className="mt-3 pt-3 border-t border-surface-border flex items-center justify-between text-xs text-content-secondary">
           <span>
-            {checkIn ? fmt(checkIn) : '—'} → {checkOut ? fmt(checkOut) : <span className="text-status-warning italic">choisir départ</span>}
+            {checkIn ? fmt(checkIn) : '—'} —{checkOut ? fmt(checkOut) : <span className="text-status-warning italic">choisir départ</span>}
           </span>
-          <button onClick={() => onSelect('', '')} className="text-slate-500 hover:text-status-error ml-2">
+          <button onClick={() => onSelect('', '')} className="text-content-primary hover:text-status-error ml-2">
             <X className="w-3 h-3" />
           </button>
         </div>
       )}
-      {!checkIn && <p className="mt-2 text-xs text-slate-500 text-center">Cliquez sur la date d&apos;arrivée</p>}
+      {!checkIn && <p className="mt-2 text-xs text-content-primary text-center">Cliquez sur la date d&apos;arrivée</p>}
       {checkIn && !checkOut && <p className="mt-2 text-xs text-status-warning text-center">Cliquez sur la date de départ</p>}
     </div>
   );
 }
+
+

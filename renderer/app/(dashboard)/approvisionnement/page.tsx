@@ -58,12 +58,12 @@ export default function ApprovisionnementPage() {
       <div className="p-6 border-b border-surface-border space-y-4 shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-xl font-bold text-content-primary flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-content-brand" />
               Approvisionnements
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {totalEntries} entrée{totalEntries !== 1 ? 's' : ''} — {totalProducts} produit{totalProducts !== 1 ? 's' : ''}
+            <p className="text-xs text-content-primary mt-0.5">
+              {totalEntries} entrée{totalEntries !== 1 ? 's' : ''} —{totalProducts} produit{totalProducts !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex gap-2">
@@ -122,7 +122,7 @@ export default function ApprovisionnementPage() {
             Chargement…
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-500 gap-3">
+          <div className="flex flex-col items-center justify-center h-48 text-content-primary gap-3">
             <Filter className="w-10 h-10 opacity-30" />
             <p className="font-medium">
               {search ? 'Aucun résultat' : 'Aucun approvisionnement enregistré'}
@@ -167,7 +167,7 @@ export default function ApprovisionnementPage() {
                     <td className="px-4 py-3 text-xs text-content-secondary whitespace-nowrap">
                       {format(new Date(entry.created_at), 'dd MMM yy', { locale: fr })}
                       <br />
-                      <span className="text-slate-600">
+                      <span className="text-content-muted">
                         {format(new Date(entry.created_at), 'HH:mm')}
                       </span>
                     </td>
@@ -176,9 +176,9 @@ export default function ApprovisionnementPage() {
                     <td className="px-4 py-3 max-w-[180px]">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
-                          <Package className="w-3.5 h-3.5 text-slate-500" />
+                          <Package className="w-3.5 h-3.5 text-content-primary" />
                         </div>
-                        <span className="text-sm font-medium text-white truncate">
+                        <span className="text-sm font-medium text-content-primary truncate">
                           {entry.product?.name ?? '—'}
                         </span>
                       </div>
@@ -188,10 +188,10 @@ export default function ApprovisionnementPage() {
                     <td className="px-4 py-3 text-sm text-content-secondary hidden lg:table-cell whitespace-nowrap">
                       {hasPackaging ? (
                         <span>
-                          {entry.packaging_qty} {entry.packaging_unit ?? 'colis'} × {entry.packaging_size} {unit}
+                          {entry.packaging_qty} {entry.packaging_unit ?? 'colis'} —{entry.packaging_size} {unit}
                         </span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-content-muted">—</span>
                       )}
                     </td>
 
@@ -204,22 +204,22 @@ export default function ApprovisionnementPage() {
 
                     {/* Fournisseur */}
                     <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell max-w-[140px]">
-                      <span className="truncate block">{entry.supplier ?? <span className="text-slate-600">—</span>}</span>
+                      <span className="truncate block">{entry.supplier ?? <span className="text-content-muted">—</span>}</span>
                     </td>
 
                     {/* Coût total */}
                     <td className="px-4 py-3 text-sm hidden sm:table-cell whitespace-nowrap">
                       {totalCost != null ? (
-                        <span className="text-white font-medium">
+                        <span className="text-content-primary font-medium">
                           {formatCurrency(totalCost, business?.currency)}
                         </span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-content-muted">—</span>
                       )}
                     </td>
 
                     {/* Créé par */}
-                    <td className="px-4 py-3 text-xs text-slate-500 hidden lg:table-cell max-w-[120px]">
+                    <td className="px-4 py-3 text-xs text-content-primary hidden lg:table-cell max-w-[120px]">
                       <span className="truncate block">
                         {(entry.creator as { full_name?: string } | null)?.full_name ?? '—'}
                       </span>
@@ -241,3 +241,5 @@ export default function ApprovisionnementPage() {
     </div>
   );
 }
+
+

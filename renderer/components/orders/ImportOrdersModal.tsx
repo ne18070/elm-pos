@@ -42,7 +42,7 @@ interface ParsedOrder {
   notes?:             string;
   discount_amount:    number;   // remise globale commande
   coupon_code?:       string;
-  revendeur_name?:    string;   // nom brut — résolu en ID à l'import
+  revendeur_name?:    string;   // nom brut —résolu en ID à l'import
   client_revendeur?:  string;
   items:              ParsedItem[];
   total:              number;
@@ -293,7 +293,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
             discount_amount: order.discount_amount,
             total:           totalAfterDiscount,
             coupon_code:     order.coupon_code ?? null,
-            notes:           order.notes ?? `Import CSV — ${order.date}`,
+            notes:           order.notes ?? `Import CSV —${order.date}`,
             customer_name:   order.customer_name ?? null,
             customer_phone:  order.customer_phone ?? null,
             reseller_id:     resellerId,
@@ -350,11 +350,11 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
 
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
-          <h2 className="font-semibold text-white flex items-center gap-2">
+          <h2 className="font-semibold text-content-primary flex items-center gap-2">
             <Upload className="w-4 h-4 text-content-brand" />
             Importer des commandes
           </h2>
-          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -382,12 +382,12 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
                 className="border-2 border-dashed border-slate-700 hover:border-brand-600 rounded-xl p-8
                            flex flex-col items-center gap-3 cursor-pointer transition-colors text-center"
               >
-                <FileText className="w-8 h-8 text-slate-500" />
+                <FileText className="w-8 h-8 text-content-primary" />
                 <div>
-                  <p className="text-white font-medium">
+                  <p className="text-content-primary font-medium">
                     {fileName || 'Cliquez pour sélectionner un fichier'}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">CSV ou Excel (.csv, .xlsx, .xls)</p>
+                  <p className="text-xs text-content-primary mt-1">CSV ou Excel (.csv, .xlsx, .xls)</p>
                 </div>
               </div>
               <input
@@ -401,8 +401,8 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
               {/* Template */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                 <div>
-                  <p className="text-sm text-white">Modèle CSV</p>
-                  <p className="text-xs text-slate-500">Téléchargez le modèle à remplir</p>
+                  <p className="text-sm text-content-primary">Modèle CSV</p>
+                  <p className="text-xs text-content-primary">Téléchargez le modèle à remplir</p>
                 </div>
                 <button onClick={downloadTemplate} className="btn-secondary flex items-center gap-2 text-sm">
                   <Download className="w-4 h-4" />
@@ -411,11 +411,11 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
               </div>
 
               {/* Format hint */}
-              <div className="text-xs text-slate-500 space-y-1 px-1">
+              <div className="text-xs text-content-primary space-y-1 px-1">
                 <p className="font-medium text-content-secondary">Colonnes attendues :</p>
-                <p><span className="font-mono text-slate-300">date</span> (YYYY-MM-DD ou JJ/MM/AAAA) · <span className="font-mono text-slate-300">article</span> · <span className="font-mono text-slate-300">quantite</span> · <span className="font-mono text-slate-300">prix_unitaire</span></p>
-                <p>Optionnel : <span className="font-mono text-slate-300">client_nom</span> · <span className="font-mono text-slate-300">client_telephone</span> · <span className="font-mono text-slate-300">statut</span> (paid/pending/cancelled) · <span className="font-mono text-slate-300">methode_paiement</span> (cash/card/mobile_money) · <span className="font-mono text-slate-300">remise_article</span> · <span className="font-mono text-slate-300">remise_commande</span> · <span className="font-mono text-slate-300">code_promo</span> · <span className="font-mono text-slate-300">revendeur</span> · <span className="font-mono text-slate-300">notes</span></p>
-                <p className="text-slate-600">Plusieurs lignes avec même date + client = une seule commande avec plusieurs articles.</p>
+                <p><span className="font-mono text-content-primary">date</span> (YYYY-MM-DD ou JJ/MM/AAAA) · <span className="font-mono text-content-primary">article</span> · <span className="font-mono text-content-primary">quantite</span> · <span className="font-mono text-content-primary">prix_unitaire</span></p>
+                <p>Optionnel : <span className="font-mono text-content-primary">client_nom</span> · <span className="font-mono text-content-primary">client_telephone</span> · <span className="font-mono text-content-primary">statut</span> (paid/pending/cancelled) · <span className="font-mono text-content-primary">methode_paiement</span> (cash/card/mobile_money) · <span className="font-mono text-content-primary">remise_article</span> · <span className="font-mono text-content-primary">remise_commande</span> · <span className="font-mono text-content-primary">code_promo</span> · <span className="font-mono text-content-primary">revendeur</span> · <span className="font-mono text-content-primary">notes</span></p>
+                <p className="text-content-muted">Plusieurs lignes avec même date + client = une seule commande avec plusieurs articles.</p>
               </div>
             </>
           )}
@@ -424,8 +424,8 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
           {orders && !done && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white">
-                  Aperçu — {orders.length} commande(s) détectée(s)
+                <p className="text-sm font-medium text-content-primary">
+                  Aperçu —{orders.length} commande(s) détectée(s)
                 </p>
                 {hasErrors && (
                   <span className="text-xs text-status-error flex items-center gap-1">
@@ -450,10 +450,10 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
                   <tbody>
                     {orders.map((o, i) => (
                       <tr key={i} className={`border-t border-surface-border ${o.errors.length > 0 ? 'opacity-50' : ''}`}>
-                        <td className="px-3 py-2 text-slate-300">{o.date}</td>
-                        <td className="px-3 py-2 text-slate-300">{o.customer_name ?? '—'}</td>
-                        <td className="px-3 py-2 text-right text-slate-300">{o.items.length}</td>
-                        <td className="px-3 py-2 text-right text-white font-mono">
+                        <td className="px-3 py-2 text-content-primary">{o.date}</td>
+                        <td className="px-3 py-2 text-content-primary">{o.customer_name ?? '—'}</td>
+                        <td className="px-3 py-2 text-right text-content-primary">{o.items.length}</td>
+                        <td className="px-3 py-2 text-right text-content-primary font-mono">
                           {o.total.toLocaleString()}
                         </td>
                         <td className="px-3 py-2">
@@ -503,3 +503,5 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
     </div>
   );
 }
+
+

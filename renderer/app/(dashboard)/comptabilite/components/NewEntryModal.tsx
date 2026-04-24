@@ -110,11 +110,11 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
         <div className="flex items-center justify-between p-4 border-b border-surface-border">
           <div className="flex items-center gap-2">
             {!expertMode && (category || op) && (
-              <button onClick={back} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+              <button onClick={back} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
                 <ChevronLeft className="w-4 h-4" />
               </button>
             )}
-            <h2 className="text-base font-bold text-white">
+            <h2 className="text-base font-bold text-content-primary">
               {expertMode ? 'Écriture comptable (expert)' :
                op ? op.label :
                category ? OP_CATEGORIES.find((c) => c.id === category)?.label :
@@ -123,11 +123,11 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setExpertMode((v) => !v)}
-              className="text-xs flex items-center gap-1 text-content-secondary hover:text-white transition-colors">
+              className="text-xs flex items-center gap-1 text-content-secondary hover:text-content-primary transition-colors">
               <Settings2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{expertMode ? 'Mode simple' : 'Mode expert'}</span>
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -144,7 +144,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                       <button key={cat.id} onClick={() => setCategory(cat.id)}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all hover:scale-[1.02] ${cat.color}`}>
                         <Icon className="w-6 h-6" />
-                        <span className="text-sm font-medium text-white">{cat.label}</span>
+                        <span className="text-sm font-medium text-content-primary">{cat.label}</span>
                       </button>
                     );
                   })}
@@ -162,10 +162,10 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                           <Icon className="w-4 h-4 text-content-secondary group-hover:text-content-brand" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-white text-sm">{tmpl.label}</p>
-                          <p className="text-xs text-slate-500 truncate">{tmpl.desc}</p>
+                          <p className="font-medium text-content-primary text-sm">{tmpl.label}</p>
+                          <p className="text-xs text-content-primary truncate">{tmpl.desc}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-content-brand ml-auto shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-content-muted group-hover:text-content-brand ml-auto shrink-0" />
                       </button>
                     );
                   })}
@@ -177,8 +177,8 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                   <div className="p-3 rounded-xl bg-surface-input flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-content-brand shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-white">{op.label}</p>
-                      <p className="text-xs text-slate-500">{op.desc}</p>
+                      <p className="text-sm font-medium text-content-primary">{op.label}</p>
+                      <p className="text-xs text-content-primary">{op.desc}</p>
                     </div>
                   </div>
                   <div>
@@ -186,7 +186,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                     <div className="relative">
                       <input type="number" min="0" step="0.01" autoFocus value={amount}
                         onChange={(e) => setAmount(e.target.value)} placeholder="0"
-                        className="input text-xl font-bold text-white text-right pr-16" />
+                        className="input text-xl font-bold text-content-primary text-right pr-16" />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-content-secondary text-sm font-medium">
                         {displayCurrency(currency ?? 'XOF')}
                       </span>
@@ -199,7 +199,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                         {(['caisse', 'banque', 'mobile'] as PaySide[]).map((p) => (
                           <button key={p} onClick={() => setPaySide(p)}
                             className={`flex-1 py-2 px-3 rounded-xl border text-sm font-medium transition-colors capitalize ${
-                              paySide === p ? 'bg-brand-600 border-brand-500 text-white' : 'border-surface-border text-content-secondary hover:text-white hover:bg-surface-hover'
+                              paySide === p ? 'bg-brand-600 border-brand-500 text-content-primary' : 'border-surface-border text-content-secondary hover:text-content-primary hover:bg-surface-hover'
                             }`}>
                             {p === 'caisse' ? '💵 Caisse' : p === 'banque' ? '🏦 Banque' : '📱 Mobile'}
                           </button>
@@ -223,7 +223,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                       </div>
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="text-slate-500 border-b border-surface-border">
+                          <tr className="text-content-primary border-b border-surface-border">
                             <th className="px-3 py-2 text-left">Compte</th>
                             <th className="px-3 py-2 text-left">Intitulé</th>
                             <th className="px-3 py-2 text-right">Débit</th>
@@ -234,9 +234,9 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                           {previewLines.map((l, i) => (
                             <tr key={i} className="border-b border-surface-border last:border-0">
                               <td className="px-3 py-2 font-mono text-content-brand">{l.account_code}</td>
-                              <td className="px-3 py-2 text-slate-300">{l.account_name}</td>
-                              <td className="px-3 py-2 text-right text-white font-mono">{l.debit > 0 ? formatCurrency(l.debit, currency) : ''}</td>
-                              <td className="px-3 py-2 text-right text-white font-mono">{l.credit > 0 ? formatCurrency(l.credit, currency) : ''}</td>
+                              <td className="px-3 py-2 text-content-primary">{l.account_name}</td>
+                              <td className="px-3 py-2 text-right text-content-primary font-mono">{l.debit > 0 ? formatCurrency(l.debit, currency) : ''}</td>
+                              <td className="px-3 py-2 text-right text-content-primary font-mono">{l.credit > 0 ? formatCurrency(l.credit, currency) : ''}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -283,7 +283,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                             onChange={(e) => updateLine(i, 'account_code', e.target.value)}
                             placeholder="571" className="input py-1 px-2 text-xs font-mono" />
                           <datalist id={`al-${i}`}>
-                            {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} – {a.name}</option>)}
+                            {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} —{a.name}</option>)}
                           </datalist>
                         </td>
                         <td className="px-1.5 py-1.5">
@@ -302,7 +302,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                         </td>
                         <td className="px-1">
                           <button onClick={() => lines.length > 2 && setLines(lines.filter((_, j) => j !== i))}
-                            className="p-1 text-slate-600 hover:text-status-error"><X className="w-3 h-3" /></button>
+                            className="p-1 text-content-muted hover:text-status-error"><X className="w-3 h-3" /></button>
                         </td>
                       </tr>
                     ))}
@@ -354,3 +354,5 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
     </div>
   );
 }
+
+

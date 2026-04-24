@@ -35,7 +35,7 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
 
 const getTypeBadge = (type: string) => {
   switch (type) {
-    case 'hotel':      return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    case 'hotel':      return 'bg-blue-500/10 text-status-info border-blue-500/20';
     case 'restaurant': return 'bg-orange-500/10 text-status-orange border-orange-500/20';
     case 'retail':     return 'bg-green-500/10 text-status-success border-green-500/20';
     case 'service':    return 'bg-purple-500/10 text-status-purple border-purple-500/20';
@@ -181,12 +181,12 @@ export default function StructuresPage() {
     <div className="p-8 space-y-8 pb-32">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Organisations</h1>
-          <p className="text-slate-500 text-sm mt-1">Gérez les entités légales et leurs établissements rattachés.</p>
+          <h1 className="text-2xl font-black text-content-primary tracking-tight uppercase">Organisations</h1>
+          <p className="text-content-muted text-sm mt-1">Gérez les entités légales et leurs établissements rattachés.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
             <input 
               type="text" 
               placeholder="Rechercher..."
@@ -212,7 +212,7 @@ export default function StructuresPage() {
             <Layers className="text-content-brand" size={24} />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-black text-white uppercase tracking-widest">Organisations</p>
+            <p className="text-xs font-black text-content-primary uppercase tracking-widest">Organisations</p>
             <p className="text-[11px] text-content-secondary leading-relaxed">
               Représente l'<b>entité légale</b> (Raison sociale). C'est ici qu'est rattaché l'<b>abonnement unique</b> et les informations de facturation (RIB).
             </p>
@@ -220,10 +220,10 @@ export default function StructuresPage() {
         </div>
         <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/10 flex gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
-            <Building2 size={24} className="text-blue-400" />
+            <Building2 size={24} className="text-status-info" />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-black text-white uppercase tracking-widest">Établissements</p>
+            <p className="text-xs font-black text-content-primary uppercase tracking-widest">Établissements</p>
             <p className="text-[11px] text-content-secondary leading-relaxed">
               Unités physiques rattachées (Restaurant, Boutique, Hôtel). Chaque site possède ses propres coordonnées, stocks et terminaux de vente.
             </p>
@@ -246,14 +246,14 @@ export default function StructuresPage() {
                   <div className="flex items-start justify-between relative z-10">
                     <div className="space-y-0.5 min-w-0">
                       <p className="text-[10px] font-black text-content-brand uppercase tracking-[0.15em]">Organisation</p>
-                      <h3 className="text-lg font-black text-white tracking-tight truncate">{org.legal_name}</h3>
+                      <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{org.legal_name}</h3>
                       {org.denomination && org.denomination !== org.legal_name && (
                         <p className="text-xs text-content-secondary italic truncate">{org.denomination}</p>
                       )}
                     </div>
                     <button
                       onClick={() => setOrgModal(org)}
-                      className="p-2 rounded-lg hover:bg-surface-input text-content-secondary hover:text-white transition-all shrink-0"
+                      className="p-2 rounded-lg hover:bg-surface-input text-content-secondary hover:text-content-primary transition-all shrink-0"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -262,18 +262,18 @@ export default function StructuresPage() {
                   <div className="space-y-2 py-3 border-y border-surface-border/50">
                     {org.owner_email && (
                       <div className="flex justify-between items-center group/info">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest flex items-center gap-1">
                           <MailIcon className="w-2.5 h-2.5" /> Propriétaire
                         </span>
                         <div className="flex items-center gap-1">
-                          <span className="text-xs text-slate-300 truncate max-w-[150px]">{org.owner_name ?? org.owner_email}</span>
+                          <span className="text-xs text-content-primary truncate max-w-[150px]">{org.owner_name ?? org.owner_email}</span>
                           <CopyButton text={org.owner_email} className="opacity-0 group-hover/info:opacity-100 scale-75" />
                         </div>
                       </div>
                     )}
                     {org.rib && (
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">RIB</span>
+                        <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest">RIB</span>
                         <span className="text-[10px] font-mono text-content-secondary bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">
                           {org.rib}
                         </span>
@@ -283,13 +283,13 @@ export default function StructuresPage() {
 
                   {org.businesses.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">
                         Établissements · {org.businesses.length}
                       </p>
                       {org.businesses.map((biz) => (
                         <div key={biz.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface-input border border-surface-border">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{biz.name}</p>
+                            <p className="text-sm font-semibold text-content-primary truncate">{biz.name}</p>
                             <span className={`text-[10px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded border ${getTypeBadge(biz.type)}`}>
                               {biz.type}
                             </span>
@@ -309,7 +309,7 @@ export default function StructuresPage() {
                 </div>
 
                 <div className="px-6 py-3 bg-surface-hover/50 border-t border-surface-border flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest">
                     {org.businesses.length} établissement{org.businesses.length !== 1 ? 's' : ''}
                   </span>
                   <span className="text-xs text-status-success font-bold">✅ {org.owner_name ? 'Assignée' : 'Sans owner'}</span>
@@ -323,7 +323,7 @@ export default function StructuresPage() {
               <button 
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
-                className="p-2 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-white disabled:opacity-20 transition-all"
+                className="p-2 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-content-primary disabled:opacity-20 transition-all"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -334,7 +334,7 @@ export default function StructuresPage() {
                     onClick={() => setPage(p)}
                     className={cn(
                       "w-10 h-10 rounded-xl font-bold text-sm transition-all",
-                      page === p ? "bg-brand-600 text-white shadow-lg shadow-brand-500/20" : "bg-surface-card border border-surface-border text-slate-500 hover:text-white"
+                      page === p ? "bg-brand-600 text-content-primary shadow-lg shadow-brand-500/20" : "bg-surface-card border border-surface-border text-content-muted hover:text-content-primary"
                     )}
                   >
                     {p}
@@ -344,7 +344,7 @@ export default function StructuresPage() {
               <button 
                 disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}
-                className="p-2 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-white disabled:opacity-20 transition-all"
+                className="p-2 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-content-primary disabled:opacity-20 transition-all"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -365,7 +365,7 @@ export default function StructuresPage() {
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
-                          <h3 className="text-lg font-black text-white tracking-tight mt-1">{biz.name}</h3>
+                          <h3 className="text-lg font-black text-content-primary tracking-tight mt-1">{biz.name}</h3>
                           {biz.denomination && <p className="text-xs text-content-secondary italic">{biz.denomination}</p>}
                         </div>
                         <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-content-brand hover:text-content-brand transition-all shrink-0">
@@ -398,15 +398,15 @@ export default function StructuresPage() {
         <form id="org-form" onSubmit={orgModal === 'new' ? handleCreateOrg : handleUpdateOrg} className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">Raison sociale *</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Raison sociale *</label>
               <input name="legal_name" defaultValue={orgModal !== 'new' ? orgModal?.legal_name : ''} required className="input h-12" placeholder="Ex: SARL Le Gourmet Afrique" />
             </div>
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">Dénomination commerciale</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Dénomination commerciale</label>
               <input name="denomination" defaultValue={orgModal !== 'new' ? orgModal?.denomination : ''} className="input h-12" placeholder="Ex: Restaurant Le Gourmet" />
             </div>
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">Devise de facturation</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Devise de facturation</label>
               <select name="currency" defaultValue={orgModal !== 'new' ? orgModal?.currency : 'XOF'} className="input h-12">
                 <option value="XOF">XOF — Franc CFA</option>
                 <option value="EUR">EUR — Euro</option>
@@ -414,7 +414,7 @@ export default function StructuresPage() {
               </select>
             </div>
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">RIB / Coordonnées bancaires</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">RIB / Coordonnées bancaires</label>
               <textarea name="rib" defaultValue={orgModal !== 'new' ? orgModal?.rib : ''} className="input min-h-[120px] py-4 text-xs font-mono leading-relaxed" placeholder="Saisir le RIB complet pour les factures..." />
             </div>
           </div>
@@ -434,24 +434,24 @@ export default function StructuresPage() {
                <Layers className="text-content-brand" size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Établissement rattaché</p>
-              <p className="text-sm font-bold text-white">{adminModal?.name}</p>
+              <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Établissement rattaché</p>
+              <p className="text-sm font-bold text-content-primary">{adminModal?.name}</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">Nom complet</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Nom complet</label>
               <input name="full_name" required className="input h-12" placeholder="Prénom et Nom" />
             </div>
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">Email de connexion</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Email de connexion</label>
               <input name="email" type="email" required className="input h-12" placeholder="admin@exemple.com" />
             </div>
             <div>
-              <label className="label text-[10px] uppercase font-bold tracking-widest text-slate-500">Mot de passe provisoire</label>
+              <label className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Mot de passe provisoire</label>
               <input name="password" type="password" required className="input h-12" placeholder="••••••••" minLength={8} />
-              <p className="text-[10px] text-slate-500 mt-2 italic">L'utilisateur pourra changer son mot de passe après sa première connexion.</p>
+              <p className="text-[10px] text-content-muted mt-2 italic">L'utilisateur pourra changer son mot de passe après sa première connexion.</p>
             </div>
           </div>
         </form>

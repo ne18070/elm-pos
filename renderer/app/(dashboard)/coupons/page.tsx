@@ -67,9 +67,9 @@ export default function CouponsPage() {
       <div className="p-6 border-b border-surface-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">Coupons & Remises</h1>
+            <h1 className="text-xl font-bold text-content-primary">Coupons & Remises</h1>
             {!loading && (
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-content-primary mt-0.5">
                 {filtered.length} coupon{filtered.length !== 1 ? 's' : ''}
                 {search && ` · filtrés sur ${coupons.length}`}
               </p>
@@ -145,7 +145,7 @@ export default function CouponsPage() {
                           >
                             <CouponTypeIcon type={coupon.type} />
                           </span>
-                          <span className="text-sm text-white font-medium truncate">
+                          <span className="text-sm text-content-primary font-medium truncate">
                             {couponValueLabel(coupon, currency)}
                           </span>
                         </div>
@@ -161,7 +161,7 @@ export default function CouponsPage() {
                             <p className="truncate">Min {coupon.min_quantity} articles</p>
                           )}
                           {!coupon.min_order_amount && !coupon.min_quantity && (
-                            <span className="text-slate-600">—</span>
+                            <span className="text-content-muted">—</span>
                           )}
                         </div>
                       </td>
@@ -170,7 +170,7 @@ export default function CouponsPage() {
                       <td className="px-4 py-3 hidden sm:table-cell text-sm text-content-secondary whitespace-nowrap">
                         {coupon.uses_count}
                         {coupon.max_uses != null && (
-                          <span className="text-slate-600"> / {coupon.max_uses}</span>
+                          <span className="text-content-muted"> / {coupon.max_uses}</span>
                         )}
                       </td>
 
@@ -178,7 +178,7 @@ export default function CouponsPage() {
                       <td className="px-4 py-3 hidden lg:table-cell text-sm text-content-secondary whitespace-nowrap">
                         {coupon.expires_at
                           ? format(new Date(coupon.expires_at), 'd MMM yyyy', { locale: fr })
-                          : <span className="text-slate-600">—</span>
+                          : <span className="text-content-muted">—</span>
                         }
                       </td>
 
@@ -228,3 +228,5 @@ export default function CouponsPage() {
     </div>
   );
 }
+
+

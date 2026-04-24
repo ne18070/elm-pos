@@ -23,10 +23,10 @@ export default function PrivacyPage() {
           <p className="text-content-secondary text-sm mt-1">Politique de confidentialité</p>
         </div>
 
-        <div className="card p-8 space-y-8 text-slate-300 text-sm leading-relaxed">
+        <div className="card p-8 space-y-8 text-content-primary text-sm leading-relaxed">
 
           <div className="space-y-2">
-            <p className="text-xs text-slate-500">Dernière mise à jour : avril 2026</p>
+            <p className="text-xs text-content-muted">Dernière mise à jour : avril 2026</p>
             <p>
               ELM APP s&apos;engage à protéger la vie privée de ses utilisateurs. La présente politique de
               confidentialité décrit les données que nous collectons, la manière dont nous les utilisons et
@@ -54,30 +54,30 @@ export default function PrivacyPage() {
             <p>Dans le cadre de l&apos;utilisation d&apos;ELM APP, nous collectons les catégories de données suivantes :</p>
             <ul className="list-disc pl-5 space-y-1.5 mt-2">
               <li>
-                <span className="text-white font-medium">Données de compte :</span> nom complet, adresse
+                <span className="text-content-primary font-medium">Données de compte :</span> nom complet, adresse
                 e-mail, numéro de téléphone, mot de passe (haché, jamais stocké en clair).
               </li>
               <li>
-                <span className="text-white font-medium">Données de l&apos;établissement :</span> nom commercial,
+                <span className="text-content-primary font-medium">Données de l&apos;établissement :</span> nom commercial,
                 adresse, type d&apos;activité, logo, paramètres fiscaux, coordonnées bancaires (pour les
                 abonnements).
               </li>
               <li>
-                <span className="text-white font-medium">Données transactionnelles :</span> commandes, articles,
+                <span className="text-content-primary font-medium">Données transactionnelles :</span> commandes, articles,
                 paiements, remises, acomptes, remboursements, sessions de caisse, dépenses, écritures
                 comptables.
               </li>
               <li>
-                <span className="text-white font-medium">Données clients de l&apos;établissement :</span> nom,
+                <span className="text-content-primary font-medium">Données clients de l&apos;établissement :</span> nom,
                 téléphone et adresse des clients enregistrés par l&apos;abonné dans le module Clients.
               </li>
               <li>
-                <span className="text-white font-medium">Messages WhatsApp Business</span> (si le module est
+                <span className="text-content-primary font-medium">Messages WhatsApp Business</span> (si le module est
                 activé) : numéros de téléphone, noms et contenus des messages échangés via l&apos;API
                 WhatsApp Business de Meta.
               </li>
               <li>
-                <span className="text-white font-medium">Données de connexion :</span> adresse IP, date et
+                <span className="text-content-primary font-medium">Données de connexion :</span> adresse IP, date et
                 heure de connexion, type d&apos;appareil, journaux d&apos;activité (actions critiques).
               </li>
             </ul>
@@ -103,15 +103,15 @@ export default function PrivacyPage() {
           <Section title="4. Base légale du traitement">
             <ul className="list-disc pl-5 space-y-1.5">
               <li>
-                <span className="text-white font-medium">Exécution du contrat</span> — pour la fourniture du
+                <span className="text-content-primary font-medium">Exécution du contrat</span> — pour la fourniture du
                 service d&apos;abonnement.
               </li>
               <li>
-                <span className="text-white font-medium">Intérêt légitime</span> — pour la sécurité, la
+                <span className="text-content-primary font-medium">Intérêt légitime</span> — pour la sécurité, la
                 détection de fraude et l&apos;amélioration du service.
               </li>
               <li>
-                <span className="text-white font-medium">Consentement</span> — pour les modules optionnels
+                <span className="text-content-primary font-medium">Consentement</span> — pour les modules optionnels
                 (WhatsApp Business), activés volontairement par l&apos;abonné.
               </li>
             </ul>
@@ -120,12 +120,12 @@ export default function PrivacyPage() {
           {/* 5 */}
           <Section title="5. Hébergement et sous-traitants">
             <p>
-              ELM APP utilise <span className="text-white font-medium">Supabase</span> (infrastructure cloud
+              ELM APP utilise <span className="text-content-primary font-medium">Supabase</span> (infrastructure cloud
               basée sur PostgreSQL) pour l&apos;hébergement des données. Les serveurs sont localisés dans des
               centres de données certifiés ISO 27001.
             </p>
             <p className="mt-2">
-              Le module WhatsApp Business utilise l&apos;<span className="text-white font-medium">API Cloud de
+              Le module WhatsApp Business utilise l&apos;<span className="text-content-primary font-medium">API Cloud de
               Meta</span> pour l&apos;envoi et la réception des messages. Les données transitant par ce service
               sont soumises à la politique de confidentialité de Meta.
             </p>
@@ -138,18 +138,18 @@ export default function PrivacyPage() {
           <Section title="6. Durée de conservation">
             <ul className="list-disc pl-5 space-y-1.5">
               <li>
-                <span className="text-white font-medium">Données de compte :</span> conservées pendant toute
+                <span className="text-content-primary font-medium">Données de compte :</span> conservées pendant toute
                 la durée de l&apos;abonnement, puis supprimées dans les 90 jours suivant la résiliation.
               </li>
               <li>
-                <span className="text-white font-medium">Données transactionnelles :</span> conservées 5 ans
+                <span className="text-content-primary font-medium">Données transactionnelles :</span> conservées 5 ans
                 à compter de la date de la transaction, conformément aux obligations comptables légales.
               </li>
               <li>
-                <span className="text-white font-medium">Journaux d&apos;activité :</span> conservés 12 mois.
+                <span className="text-content-primary font-medium">Journaux d&apos;activité :</span> conservés 12 mois.
               </li>
               <li>
-                <span className="text-white font-medium">Messages WhatsApp :</span> conservés pendant toute
+                <span className="text-content-primary font-medium">Messages WhatsApp :</span> conservés pendant toute
                 la durée de l&apos;abonnement.
               </li>
             </ul>
@@ -178,12 +178,12 @@ export default function PrivacyPage() {
               vous disposez des droits suivants :
             </p>
             <ul className="list-disc pl-5 space-y-1.5 mt-2">
-              <li><span className="text-white font-medium">Droit d&apos;accès</span> — obtenir une copie de vos données.</li>
-              <li><span className="text-white font-medium">Droit de rectification</span> — corriger des données inexactes.</li>
-              <li><span className="text-white font-medium">Droit à l&apos;effacement</span> — demander la suppression de vos données dans les limites légales.</li>
-              <li><span className="text-white font-medium">Droit à la portabilité</span> — recevoir vos données dans un format structuré.</li>
-              <li><span className="text-white font-medium">Droit d&apos;opposition</span> — vous opposer à certains traitements basés sur l&apos;intérêt légitime.</li>
-              <li><span className="text-white font-medium">Droit de retrait du consentement</span> — à tout moment pour les modules activés volontairement.</li>
+              <li><span className="text-content-primary font-medium">Droit d&apos;accès</span> — obtenir une copie de vos données.</li>
+              <li><span className="text-content-primary font-medium">Droit de rectification</span> — corriger des données inexactes.</li>
+              <li><span className="text-content-primary font-medium">Droit à l&apos;effacement</span> — demander la suppression de vos données dans les limites légales.</li>
+              <li><span className="text-content-primary font-medium">Droit à la portabilité</span> — recevoir vos données dans un format structuré.</li>
+              <li><span className="text-content-primary font-medium">Droit d&apos;opposition</span> — vous opposer à certains traitements basés sur l&apos;intérêt légitime.</li>
+              <li><span className="text-content-primary font-medium">Droit de retrait du consentement</span> — à tout moment pour les modules activés volontairement.</li>
             </ul>
             <p className="mt-3">
               Pour exercer ces droits, contactez-nous à :{' '}
@@ -217,7 +217,7 @@ export default function PrivacyPage() {
               Pour toute question relative à la présente politique ou au traitement de vos données personnelles :
             </p>
             <div className="mt-3 p-4 rounded-xl bg-surface-input border border-surface-border space-y-1">
-              <p className="text-white font-medium">ELM APP</p>
+              <p className="text-content-primary font-medium">ELM APP</p>
               <p>
                 E-mail :{' '}
                 <a href="mailto:privacy@elm-app.click" className="text-content-brand hover:text-content-brand">
@@ -229,13 +229,13 @@ export default function PrivacyPage() {
         </div>
 
         {/* Retour */}
-        <div className="flex items-center justify-center gap-6 mt-8 text-sm text-slate-500">
-          <Link href="/login" className="flex items-center gap-1.5 hover:text-slate-300 transition-colors">
+        <div className="flex items-center justify-center gap-6 mt-8 text-sm text-content-muted">
+          <Link href="/login" className="flex items-center gap-1.5 hover:text-content-primary transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />
             Retour à la connexion
           </Link>
           <span>·</span>
-          <Link href="/subscribe" className="hover:text-slate-300 transition-colors">
+          <Link href="/subscribe" className="hover:text-content-primary transition-colors">
             S&apos;abonner
           </Link>
         </div>
@@ -247,7 +247,7 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <h2 className="text-base font-semibold text-white">{title}</h2>
+      <h2 className="text-base font-semibold text-content-primary">{title}</h2>
       {children}
     </div>
   );

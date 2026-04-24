@@ -50,7 +50,7 @@ export default function ConfigurePage() {
   const [modules, setModules] = useState<AppModule[]>([]);
   const [loadingConfig, setLoadingConfig] = useState(true);
 
-  // Types définis par l'admin — le client ne peut pas les changer
+  // Types définis par l'admin —le client ne peut pas les changer
   const businessTypes: string[] = business?.types?.length
     ? business.types
     : business?.type ? [business.type as string] : [];
@@ -123,7 +123,7 @@ export default function ConfigurePage() {
 
         {/* ── En-tête ── */}
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white">Configuration</h1>
+          <h1 className="text-2xl font-bold text-content-primary">Configuration</h1>
           <p className="text-content-secondary">
             Activez ou désactivez les fonctionnalités disponibles pour votre établissement.
           </p>
@@ -132,13 +132,13 @@ export default function ConfigurePage() {
         {/* ── Types assignés (read-only) ── */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-white">Type d&apos;établissement</h2>
-            <span className="flex items-center gap-1 text-xs text-slate-500">
+            <h2 className="text-sm font-semibold text-content-primary">Type d&apos;établissement</h2>
+            <span className="flex items-center gap-1 text-xs text-content-primary">
               <Lock className="w-3 h-3" /> Géré par l&apos;administrateur
             </span>
           </div>
           {selectedTypes.length === 0 ? (
-            <p className="text-sm text-slate-500 italic">Aucun type assigné — contactez l&apos;administrateur.</p>
+            <p className="text-sm text-content-primary italic">Aucun type assigné —contactez l&apos;administrateur.</p>
           ) : (
             <div className="flex flex-wrap gap-3">
               {selectedTypes.map((t) => {
@@ -155,7 +155,7 @@ export default function ConfigurePage() {
                     <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', a.icon)}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-semibold text-white">{t.label}</span>
+                    <span className="text-sm font-semibold text-content-primary">{t.label}</span>
                   </div>
                 );
               })}
@@ -165,12 +165,12 @@ export default function ConfigurePage() {
 
         {/* ── Fonctionnalités (toggleable) ── */}
         {allowedModules.length === 0 ? (
-          <p className="text-sm text-slate-500 italic">
-            Aucun module disponible — contactez l&apos;administrateur.
+          <p className="text-sm text-content-primary italic">
+            Aucun module disponible —contactez l&apos;administrateur.
           </p>
         ) : (
           <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-white">Fonctionnalités actives</h2>
+            <h2 className="text-sm font-semibold text-content-primary">Fonctionnalités actives</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {allowedModules.map((m) => {
                 const enabled = features.includes(m.id);
@@ -187,13 +187,13 @@ export default function ConfigurePage() {
                   >
                     {enabled
                       ? <ToggleRight className="w-7 h-7 text-content-brand shrink-0" />
-                      : <ToggleLeft  className="w-7 h-7 text-slate-600 shrink-0" />}
+                      : <ToggleLeft  className="w-7 h-7 text-content-muted shrink-0" />}
                     <div>
-                      <p className={cn('text-sm font-semibold', enabled ? 'text-content-brand' : 'text-slate-300')}>
+                      <p className={cn('text-sm font-semibold', enabled ? 'text-content-brand' : 'text-content-primary')}>
                         {m.label}
                       </p>
                       {m.description && (
-                        <p className="text-xs text-slate-500 mt-0.5">{m.description}</p>
+                        <p className="text-xs text-content-primary mt-0.5">{m.description}</p>
                       )}
                     </div>
                   </button>
@@ -206,7 +206,7 @@ export default function ConfigurePage() {
         {/* ── Résumé ── */}
         {allowedModules.length > 0 && (
           <div className={cn('card p-5 border', ac.border)}>
-            <p className="text-sm font-semibold text-white mb-3">
+            <p className="text-sm font-semibold text-content-primary mb-3">
               {features.length} fonctionnalité{features.length > 1 ? 's' : ''} active{features.length > 1 ? 's' : ''} sur {allowedModules.length} disponible{allowedModules.length > 1 ? 's' : ''}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ export default function ConfigurePage() {
                 </span>
               ))}
               {allowedModules.filter((m) => !features.includes(m.id)).map((m) => (
-                <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface-input text-slate-600">
+                <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-surface-input text-content-muted">
                   <XCircle className="w-3 h-3" />{m.label}
                 </span>
               ))}
@@ -247,3 +247,5 @@ export default function ConfigurePage() {
     </div>
   );
 }
+
+

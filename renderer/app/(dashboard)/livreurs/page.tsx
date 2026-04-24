@@ -2,7 +2,8 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
-import { Plus, Phone, Pencil, Trash2, UserCheck, X, Check } from 'lucide-react';
+import { Plus, Phone, Pencil, Trash2, UserCheck, Check } from 'lucide-react';
+import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import {
@@ -81,8 +82,8 @@ export default function LivreursPage() {
       {/* ── Header ── */}
       <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-white">Livreurs</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-xl font-bold text-content-primary">Livreurs</h1>
+          <p className="text-xs text-content-muted">
             {total} livreur{total !== 1 ? 's' : ''} · {actifs} actif{actifs !== 1 ? 's' : ''}
           </p>
         </div>
@@ -98,16 +99,16 @@ export default function LivreursPage() {
       <div className="flex-1 overflow-y-auto p-6">
 
         {loading && (
-          <p className="text-center text-slate-500 py-12">Chargement…</p>
+          <p className="text-center text-content-muted py-12">Chargement…</p>
         )}
 
         {!loading && livreurs.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
-              <UserCheck className="w-8 h-8 text-slate-500" />
+              <UserCheck className="w-8 h-8 text-content-muted" />
             </div>
             <div>
-              <p className="text-lg font-semibold text-white">Aucun livreur enregistré</p>
+              <p className="text-lg font-semibold text-content-primary">Aucun livreur enregistré</p>
               <p className="text-sm text-content-secondary mt-1 max-w-sm">
                 Ajoutez vos livreurs pour pouvoir les assigner aux commandes de livraison.
               </p>
@@ -127,11 +128,11 @@ export default function LivreursPage() {
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-white truncate">{l.name}</p>
+                    <p className="text-sm font-semibold text-content-primary truncate">{l.name}</p>
                     <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${
                       l.is_active
                         ? 'text-status-success bg-badge-success border-status-success'
-                        : 'text-content-secondary bg-slate-800/40 border-slate-700'
+                        : 'text-content-secondary bg-surface-card/40 border-surface-border'
                     }`}>
                       {l.is_active ? 'Actif' : 'Inactif'}
                     </span>
@@ -143,13 +144,13 @@ export default function LivreursPage() {
                     <Phone className="w-3 h-3 shrink-0" /> {l.phone}
                   </a>
                   {l.notes && (
-                    <p className="text-xs text-slate-500 truncate">{l.notes}</p>
+                    <p className="text-xs text-content-muted truncate">{l.notes}</p>
                   )}
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <button
                     onClick={() => openPanel(l)}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
@@ -167,69 +168,66 @@ export default function LivreursPage() {
       </div>
 
       {/* ── Panneau latéral ── */}
-      {panel && (
-        <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-            <h3 className="font-semibold text-white">{panel.item ? 'Modifier livreur' : 'Nouveau livreur'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
-              <X className="w-4 h-4" />
-            </button>
+      <SideDrawer
+        isOpen={!!panel}
+        onClose={() => setPanel(null)}
+        title={panel?.item ? 'Modifier livreur' : 'Nouveau livreur'}
+        maxWidth="max-w-sm"
+        footer={
+          <button
+            onClick={save}
+            disabled={saving || !form.name.trim() || !form.phone.trim()}
+            className="btn-primary w-full h-10"
+          >
+            {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="label">Nom <span className="text-status-error">*</span></label>
+            <input
+              className="input"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Ex : Amadou Diallo"
+              autoFocus
+            />
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <div>
-              <label className="label">Nom <span className="text-status-error">*</span></label>
-              <input
-                className="input"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Ex : Amadou Diallo"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="label">Téléphone <span className="text-status-error">*</span></label>
-              <input
-                className="input"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="+221 77 000 00 00"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="label mb-0">Actif</label>
-              <button
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  form.is_active ? 'bg-brand-600' : 'bg-slate-700'
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  form.is_active ? 'translate-x-6' : 'translate-x-1'
-                }`} />
-              </button>
-            </div>
-            <div>
-              <label className="label">Notes</label>
-              <textarea
-                className="input resize-none h-20"
-                value={form.notes ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Infos utiles…"
-              />
-            </div>
+          <div>
+            <label className="label">Téléphone <span className="text-status-error">*</span></label>
+            <input
+              className="input"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="+221 77 000 00 00"
+            />
           </div>
-          <div className="px-5 py-4 border-t border-surface-border">
+          <div className="flex items-center justify-between">
+            <label className="label mb-0">Actif</label>
             <button
-              onClick={save}
-              disabled={saving || !form.name.trim() || !form.phone.trim()}
-              className="btn-primary w-full h-10"
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                form.is_active ? 'bg-brand-600' : 'bg-surface-input'
+              }`}
             >
-              {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                form.is_active ? 'translate-x-6' : 'translate-x-1'
+              }`} />
             </button>
+          </div>
+          <div>
+            <label className="label">Notes</label>
+            <textarea
+              className="input resize-none h-20"
+              value={form.notes ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              placeholder="Infos utiles…"
+            />
           </div>
         </div>
-      )}
+      </SideDrawer>
     </div>
   );
 }

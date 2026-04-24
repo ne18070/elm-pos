@@ -52,12 +52,12 @@ export function NumpadModal({ value, label, hint, onDigit, onClose }: NumpadModa
       >
         {/* Affichage valeur */}
         <div className="px-5 pt-4 pb-2 border-b border-surface-border">
-          {label && <p className="text-xs text-slate-500 mb-0.5">{label}</p>}
-          <p className="text-3xl font-bold text-white tabular-nums tracking-tight">{display}</p>
-          {hint && <p className="text-xs text-slate-500 mt-0.5">{hint}</p>}
+          {label && <p className="text-xs text-content-primary mb-0.5">{label}</p>}
+          <p className="text-3xl font-bold text-content-primary tabular-nums tracking-tight">{display}</p>
+          {hint && <p className="text-xs text-content-primary mt-0.5">{hint}</p>}
         </div>
 
-        {/* Grille 3×4 */}
+        {/* Grille 3— */}
         <div className="grid grid-cols-3 gap-px bg-surface-border p-px">
           {KEYS.map((k) => (
             <button
@@ -66,7 +66,7 @@ export function NumpadModal({ value, label, hint, onDigit, onClose }: NumpadModa
               className={`flex items-center justify-center h-14 text-xl font-semibold transition-colors select-none
                 ${k === '⌫'
                   ? 'bg-surface-input text-status-warning hover:bg-badge-warning'
-                  : 'bg-surface-card text-white hover:bg-surface-hover active:bg-surface-input'
+                  : 'bg-surface-card text-content-primary hover:bg-surface-hover active:bg-surface-input'
                 }`}
             >
               {k === '⌫' ? <Delete className="w-5 h-5" /> : k}
@@ -84,7 +84,7 @@ export function NumpadModal({ value, label, hint, onDigit, onClose }: NumpadModa
           </button>
           <button
             onClick={onClose}
-            className="h-12 bg-brand-600 text-white hover:bg-brand-500 font-semibold flex items-center justify-center gap-2 transition-colors"
+            className="h-12 bg-brand-600 text-content-primary hover:bg-brand-500 font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             <Check className="w-5 h-5" /> OK
           </button>
@@ -93,3 +93,5 @@ export function NumpadModal({ value, label, hint, onDigit, onClose }: NumpadModa
     </div>
   );
 }
+
+

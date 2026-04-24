@@ -33,7 +33,7 @@ interface RowResult {
 
 interface ImportModalProps {
   businessId: string;
-  resellers: Reseller[];        // pour matcher les clients → revendeur
+  resellers: Reseller[];        // pour matcher les clients —revendeur
   type: ImportType;
   onClose: () => void;
   onDone: () => void;           // refresh parent
@@ -181,14 +181,14 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-white">Importer {label}</h2>
-            <p className="text-xs text-slate-500">
+            <h2 className="text-lg font-semibold text-content-primary">Importer {label}</h2>
+            <p className="text-xs text-content-primary">
               {step === 'upload' && 'Chargez un fichier CSV'}
-              {step === 'preview' && `${rows.length} ligne${rows.length > 1 ? 's' : ''} détectée${rows.length > 1 ? 's' : ''} — ${errCount} erreur${errCount !== 1 ? 's' : ''}`}
+              {step === 'preview' && `${rows.length} ligne${rows.length > 1 ? 's' : ''} détectée${rows.length > 1 ? 's' : ''} —${errCount} erreur${errCount !== 1 ? 's' : ''}`}
               {step === 'done' && `${okCount} importé${okCount > 1 ? 's' : ''} · ${errCount} erreur${errCount !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -201,8 +201,8 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
               {/* Template download */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                 <div>
-                  <p className="text-sm text-white font-medium">Modèle CSV {label}</p>
-                  <p className="text-xs text-slate-500">Colonnes : {expectedHeaders.join(', ')}</p>
+                  <p className="text-sm text-content-primary font-medium">Modèle CSV {label}</p>
+                  <p className="text-xs text-content-primary">Colonnes : {expectedHeaders.join(', ')}</p>
                 </div>
                 <button
                   onClick={() => downloadTemplate(type)}
@@ -221,10 +221,10 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
                 className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl py-12 cursor-pointer transition-colors
                   ${dragOver ? 'border-brand-400 bg-badge-brand' : 'border-slate-700 hover:border-slate-500'}`}
               >
-                <Upload className="w-10 h-10 text-slate-500" />
+                <Upload className="w-10 h-10 text-content-primary" />
                 <div className="text-center">
-                  <p className="text-sm font-medium text-white">Glissez votre fichier CSV ici</p>
-                  <p className="text-xs text-slate-500 mt-1">ou cliquez pour parcourir</p>
+                  <p className="text-sm font-medium text-content-primary">Glissez votre fichier CSV ici</p>
+                  <p className="text-xs text-content-primary mt-1">ou cliquez pour parcourir</p>
                 </div>
                 <input
                   ref={inputRef}
@@ -265,14 +265,14 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
                       <tr key={i} className={`border-b border-surface-border transition-colors
                         ${status === 'ok'    ? 'bg-badge-success' :
                           status === 'error' ? 'bg-badge-error' : 'hover:bg-surface-hover'}`}>
-                        <td className="px-4 py-2 text-slate-500 text-xs">{i + 1}</td>
+                        <td className="px-4 py-2 text-content-primary text-xs">{i + 1}</td>
                         {headers.map((_, ci) => (
                           <td key={ci} className="px-4 py-2 text-content-primary text-xs truncate max-w-[150px]">
                             {row[ci] ?? ''}
                           </td>
                         ))}
                         <td className="px-4 py-2">
-                          {status === 'pending' && <span className="text-xs text-slate-500">—</span>}
+                          {status === 'pending' && <span className="text-xs text-content-primary">—</span>}
                           {status === 'ok'      && <span className="flex items-center gap-1 text-xs text-status-success"><Check className="w-3 h-3" /> Importé</span>}
                           {status === 'error'   && (
                             <span className="flex items-center gap-1 text-xs text-status-error">
@@ -319,7 +319,7 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
               onClick={() => { onDone(); onClose(); }}
               className="btn-primary flex-1 h-10 flex items-center justify-center gap-2"
             >
-              <Check className="w-4 h-4" /> Terminé — {okCount} importé{okCount > 1 ? 's' : ''}
+              <Check className="w-4 h-4" /> Terminé —{okCount} importé{okCount > 1 ? 's' : ''}
             </button>
           )}
         </div>
@@ -327,3 +327,5 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
     </div>
   );
 }
+
+

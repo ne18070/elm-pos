@@ -89,12 +89,12 @@ export function EmailTemplatesTab() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <Mail className="w-4 h-4 text-content-brand shrink-0" />
-                <p className="font-medium text-white">{tpl.name}</p>
+                <p className="font-medium text-content-primary">{tpl.name}</p>
                 {tpl.is_active
                   ? <span className="text-xs px-2 py-0.5 rounded-full border border-status-success text-status-success bg-badge-success">Actif</span>
-                  : <span className="text-xs px-2 py-0.5 rounded-full border border-slate-700 text-slate-500">Inactif</span>}
+                  : <span className="text-xs px-2 py-0.5 rounded-full border border-surface-border text-content-muted">Inactif</span>}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 font-mono">{tpl.key}</p>
+              <p className="text-xs text-content-muted mt-0.5 font-mono">{tpl.key}</p>
               {tpl.description && <p className="text-xs text-content-secondary mt-1">{tpl.description}</p>}
               {Array.isArray(tpl.variables) && (tpl.variables as string[]).length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -123,16 +123,16 @@ export function EmailTemplatesTab() {
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
               <div>
-                <h2 className="font-semibold text-white">{editing.name}</h2>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">{editing.key}</p>
+                <h2 className="font-semibold text-content-primary">{editing.name}</h2>
+                <p className="text-xs text-content-muted font-mono mt-0.5">{editing.key}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setPreview(!preview)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border
                     ${preview
-                      ? 'bg-brand-600 border-brand-500 text-white'
-                      : 'border-surface-border text-content-secondary hover:text-white'}`}
+                      ? 'bg-brand-600 border-brand-500 text-content-primary'
+                      : 'border-surface-border text-content-secondary hover:text-content-primary'}`}
                 >
                   {preview ? <Code2 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   {preview ? 'HTML' : 'Aperçu'}
@@ -144,7 +144,7 @@ export function EmailTemplatesTab() {
                     onChange={(e) => setEditing((t) => t && { ...t, is_active: e.target.checked })}
                     className="w-4 h-4 accent-brand-500"
                   />
-                  <span className="text-sm text-slate-300">Actif</span>
+                  <span className="text-sm text-content-primary">Actif</span>
                 </label>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function EmailTemplatesTab() {
             {/* Variables */}
             {variables.length > 0 && (
               <div className="px-5 pt-4 flex flex-wrap gap-1.5 shrink-0">
-                <span className="text-xs text-slate-500 self-center mr-1">Variables :</span>
+                <span className="text-xs text-content-muted self-center mr-1">Variables :</span>
                 {variables.map((v) => (
                   <span key={v} className="text-xs font-mono px-2 py-0.5 bg-surface-input rounded border border-surface-border text-content-brand">
                     {`{{${v}}}`}

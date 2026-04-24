@@ -100,8 +100,8 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
       <div className="relative bg-surface-card border border-surface-border rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
-          <h2 className="font-semibold text-white text-lg">Nouvel approvisionnement</h2>
-          <button onClick={requestClose} className="text-content-secondary hover:text-white">
+          <h2 className="font-semibold text-content-primary text-lg">Nouvel approvisionnement</h2>
+          <button onClick={requestClose} className="text-content-secondary hover:text-content-primary">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -138,10 +138,10 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                       <div className="w-8 h-8 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
                         {p.image_url
                           ? <img src={p.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
-                          : <Package className="w-4 h-4 text-slate-500" />}
+                          : <Package className="w-4 h-4 text-content-primary" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm text-white font-medium truncate">{p.name}</p>
+                        <p className="text-sm text-content-primary font-medium truncate">{p.name}</p>
                         <p className="text-xs text-content-secondary">
                           Stock actuel : {p.stock ?? 0} {p.unit ?? 'pièce'}
                         </p>
@@ -157,8 +157,8 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
               <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-badge-brand border border-brand-800 rounded-xl text-sm">
                 <Package className="w-4 h-4 text-content-brand shrink-0" />
                 <span className="text-content-brand font-medium">{selectedProduct.name}</span>
-                <span className="text-slate-500 ml-auto">
-                  Stock actuel : <strong className="text-white">{currentStock} {unit}</strong>
+                <span className="text-content-primary ml-auto">
+                  Stock actuel : <strong className="text-content-primary">{currentStock} {unit}</strong>
                 </span>
               </div>
             )}
@@ -173,7 +173,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                   mode === 'packaging'
                     ? 'border-brand-500 bg-badge-brand text-content-brand'
-                    : 'border-surface-border text-content-secondary hover:text-white'
+                    : 'border-surface-border text-content-secondary hover:text-content-primary'
                 }`}
               >
                 Par conditionnement
@@ -183,7 +183,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                   mode === 'direct'
                     ? 'border-brand-500 bg-badge-brand text-content-brand'
-                    : 'border-surface-border text-content-secondary hover:text-white'
+                    : 'border-surface-border text-content-secondary hover:text-content-primary'
                 }`}
               >
                 Quantité directe
@@ -194,7 +194,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
           {/* Saisie quantité */}
           {mode === 'packaging' ? (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">Ex : 20 sacs × 50 kg</p>
+              <p className="text-xs text-content-primary">Ex : 20 sacs —50 kg</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs text-content-secondary mb-1 block">Nb de colis</label>
@@ -237,7 +237,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 <div className="flex items-center gap-2 p-3 bg-slate-800/60 rounded-xl text-sm">
                   <Calculator className="w-4 h-4 text-content-brand shrink-0" />
                   <span className="text-content-secondary">
-                    {packQty} {packUnit || 'colis'} × {packSize} {unit} =
+                    {packQty} {packUnit || 'colis'} —{packSize} {unit} =
                   </span>
                   <span className="font-bold text-content-brand ml-1">{totalQty} {unit}</span>
                 </div>
@@ -264,16 +264,16 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
           {selectedProduct && totalQty > 0 && (
             <div className="grid grid-cols-3 gap-3 p-3 bg-surface-input rounded-xl text-center text-sm">
               <div>
-                <p className="text-xs text-slate-500 mb-0.5">Stock actuel</p>
-                <p className="font-bold text-white">{currentStock} {unit}</p>
+                <p className="text-xs text-content-primary mb-0.5">Stock actuel</p>
+                <p className="font-bold text-content-primary">{currentStock} {unit}</p>
               </div>
               <div className="flex items-center justify-center text-content-brand font-bold text-lg">+</div>
               <div>
-                <p className="text-xs text-slate-500 mb-0.5">Reçu</p>
+                <p className="text-xs text-content-primary mb-0.5">Reçu</p>
                 <p className="font-bold text-content-brand">{totalQty} {unit}</p>
               </div>
               <div className="col-span-3 pt-2 border-t border-surface-border">
-                <p className="text-xs text-slate-500 mb-0.5">Nouveau stock</p>
+                <p className="text-xs text-content-primary mb-0.5">Nouveau stock</p>
                 <p className="font-bold text-status-success text-lg">{newStock} {unit}</p>
               </div>
             </div>
@@ -281,7 +281,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
 
           {/* Infos achat (optionnel) */}
           <div className="space-y-3">
-            <p className="label">Informations achat <span className="text-slate-600 font-normal">(optionnel)</span></p>
+            <p className="label">Informations achat <span className="text-content-muted font-normal">(optionnel)</span></p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-content-secondary mb-1 block">Fournisseur</label>
@@ -310,7 +310,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
             </div>
             {totalCost > 0 && (
               <p className="text-xs text-content-secondary">
-                Coût total : <strong className="text-white">
+                Coût total : <strong className="text-content-primary">
                   {formatCurrency(totalCost, business?.currency)}
                 </strong>
               </p>
@@ -347,7 +347,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-white">Annuler la saisie ?</p>
+                  <p className="font-semibold text-content-primary">Annuler la saisie ?</p>
                   <p className="text-sm text-content-secondary mt-1">Les informations saisies seront perdues.</p>
                 </div>
               </div>
@@ -369,3 +369,4 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
     </div>
   );
 }
+

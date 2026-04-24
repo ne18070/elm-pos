@@ -198,7 +198,7 @@ export default function MenuDuJourPage() {
             <CalendarDays className="w-5 h-5 text-status-orange" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-white">Menu du jour</h1>
+            <h1 className="text-lg font-semibold text-content-primary">Menu du jour</h1>
             <p className="text-xs text-content-secondary">Sélectionnez les produits à mettre en avant</p>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function MenuDuJourPage() {
             <ChevronLeft className="w-4 h-4" />
           </button>
           <div className="text-center">
-            <p className="text-sm font-medium text-white capitalize">
+            <p className="text-sm font-medium text-content-primary capitalize">
               {format(new Date(date + 'T12:00:00'), 'EEEE d MMMM', { locale: fr })}
             </p>
             {isToday && <p className="text-xs text-status-orange">Aujourd&apos;hui</p>}
@@ -228,7 +228,7 @@ export default function MenuDuJourPage() {
         <>
           {/* Image du menu */}
           <div>
-            <label className="label">Image du menu <span className="text-slate-500 font-normal">(optionnel)</span></label>
+            <label className="label">Image du menu <span className="text-content-muted font-normal">(optionnel)</span></label>
             {imagePreview ? (
               <div className="relative w-full max-w-sm rounded-xl overflow-hidden border border-surface-border">
                 <img src={imagePreview} alt="menu" className="w-full max-h-48 object-cover" />
@@ -236,7 +236,7 @@ export default function MenuDuJourPage() {
                   onClick={removeImage}
                   className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center"
                 >
-                  <X className="w-4 h-4 text-white" />
+                  <X className="w-4 h-4 text-content-primary" />
                 </button>
               </div>
             ) : (
@@ -250,12 +250,12 @@ export default function MenuDuJourPage() {
               </button>
             )}
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-            <p className="text-xs text-slate-500 mt-1">Envoyée en tête du broadcast WhatsApp.</p>
+            <p className="text-xs text-content-muted mt-1">Envoyée en tête du broadcast WhatsApp.</p>
           </div>
 
           {/* Note */}
           <div>
-            <label className="label">Message d&apos;introduction <span className="text-slate-500 font-normal">(optionnel)</span></label>
+            <label className="label">Message d&apos;introduction <span className="text-content-muted font-normal">(optionnel)</span></label>
             <input
               type="text"
               value={note}
@@ -263,7 +263,7 @@ export default function MenuDuJourPage() {
               placeholder="Ex : Spécial week-end 🎉, Plats du jour fraîchement préparés…"
               className="input text-sm"
             />
-            <p className="text-xs text-slate-500 mt-1">Affiché en intro du menu du jour sur WhatsApp.</p>
+            <p className="text-xs text-content-muted mt-1">Affiché en intro du menu du jour sur WhatsApp.</p>
           </div>
 
           {/* Sélection produits */}
@@ -271,12 +271,12 @@ export default function MenuDuJourPage() {
             <div className="flex items-center justify-between mb-3">
               <label className="label mb-0">
                 Produits du jour{' '}
-                <span className="text-slate-500 font-normal">
+                <span className="text-content-muted font-normal">
                   ({selected.size} sélectionné{selected.size > 1 ? 's' : ''})
                 </span>
               </label>
               {selected.size > 0 && (
-                <button onClick={() => setSelected(new Set())} className="text-xs text-slate-500 hover:text-slate-300">
+                <button onClick={() => setSelected(new Set())} className="text-xs text-content-muted hover:text-content-primary">
                   Tout désélectionner
                 </button>
               )}
@@ -297,15 +297,15 @@ export default function MenuDuJourPage() {
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-slate-700 shrink-0" />
+                      <div className="w-10 h-10 rounded-lg bg-surface-input shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{p.name}</p>
+                      <p className="text-sm font-medium text-content-primary truncate">{p.name}</p>
                       <p className="text-xs text-content-secondary">{p.price.toLocaleString()} {displayCurrency(business?.currency ?? 'XOF')}</p>
                     </div>
                     {isSelected && (
                       <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 text-white" />
+                        <Check className="w-3 h-3 text-content-primary" />
                       </div>
                     )}
                   </button>
@@ -313,7 +313,7 @@ export default function MenuDuJourPage() {
               })}
             </div>
             {products.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-8">Aucun produit actif.</p>
+              <p className="text-sm text-content-muted text-center py-8">Aucun produit actif.</p>
             )}
           </div>
 
@@ -334,7 +334,7 @@ export default function MenuDuJourPage() {
                 onClick={handleBroadcast}
                 disabled={broadcasting || saving || !canBroadcast}
                 title={!isToday ? 'Disponible uniquement pour aujourd\'hui' : undefined}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-content-primary text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {broadcasting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {broadcasting ? 'Envoi en cours…' : 'Diffuser sur WhatsApp'}
@@ -355,7 +355,7 @@ export default function MenuDuJourPage() {
           {broadcastLog.length > 0 && (
             <div className="rounded-xl border border-surface-border p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-content-primary">
                   Historique du jour
                 </p>
                 <span className="text-xs text-content-secondary">
@@ -380,7 +380,7 @@ export default function MenuDuJourPage() {
                 ? 'border-yellow-600/40 bg-yellow-900/20'
                 : 'border-green-600/40 bg-badge-success'
             }`}>
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium text-content-primary">
                 Résultat du broadcast
               </p>
               <div className="flex items-center gap-4 text-sm flex-wrap">
@@ -406,7 +406,7 @@ export default function MenuDuJourPage() {
           )}
 
           {!hasWaConfig && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-content-muted">
               💡 Activez WhatsApp Business dans les Paramètres pour pouvoir diffuser le menu à vos contacts.
             </p>
           )}

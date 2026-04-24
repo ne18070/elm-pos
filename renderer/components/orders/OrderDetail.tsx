@@ -193,7 +193,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         user_name:   user?.full_name,
         metadata:    { amount, method: completeMethod, fully_paid: amount >= remaining - 0.01 },
       });
-      success(`Paiement de ${fmt(amount)} enregistré${amount >= remaining - 0.01 ? ' — commande soldée !' : ''}`);
+      success(`Paiement de ${fmt(amount)} enregistré${amount >= remaining - 0.01 ? ' —commande soldée !' : ''}`);
       onRefresh();
       onClose();
     } catch (err) {
@@ -209,14 +209,14 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         {/* En-tête */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
           <div>
-            <p className="font-semibold text-white font-mono text-sm">
+            <p className="font-semibold text-content-primary font-mono text-sm">
               #{order.id.slice(0, 8).toUpperCase()}
             </p>
             <p className="text-xs text-content-secondary">
               {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
             </p>
           </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-white">
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -241,7 +241,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
           {order.customer_name && (
             <div className="bg-badge-warning border border-status-warning rounded-xl px-3 py-2.5 space-y-0.5">
               <p className="label text-status-warning">Client</p>
-              <p className="text-sm font-semibold text-white">{order.customer_name}</p>
+              <p className="text-sm font-semibold text-content-primary">{order.customer_name}</p>
               {order.customer_phone && (
                 <p className="text-sm text-content-secondary">{order.customer_phone}</p>
               )}
@@ -251,7 +251,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
           {/* Caissier */}
           <div>
             <p className="label">Caissier</p>
-            <p className="text-sm text-white">{order.cashier?.full_name ?? '—'}</p>
+            <p className="text-sm text-content-primary">{order.cashier?.full_name ?? '—'}</p>
           </div>
 
           {/* Articles */}
@@ -261,10 +261,10 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               {order.items?.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <div className="flex-1 min-w-0">
-                    <p className="text-white truncate">{item.name}</p>
-                    <p className="text-slate-500 text-xs">{fmt(item.price)} × {item.quantity}</p>
+                    <p className="text-content-primary truncate">{item.name}</p>
+                    <p className="text-content-primary text-xs">{fmt(item.price)} —{item.quantity}</p>
                   </div>
-                  <p className="text-white font-medium shrink-0 ml-2">{fmt(item.total)}</p>
+                  <p className="text-content-primary font-medium shrink-0 ml-2">{fmt(item.total)}</p>
                 </div>
               ))}
             </div>
@@ -294,7 +294,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                 <span>{fmt(order.tax_amount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-white pt-1 border-t border-surface-border">
+            <div className="flex justify-between font-bold text-content-primary pt-1 border-t border-surface-border">
               <span>Total</span>
               <span>{fmt(order.total)}</span>
             </div>
@@ -321,7 +321,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               {order.payments.map((p) => (
                 <div key={p.id} className="flex justify-between text-sm py-1">
                   <span className="text-content-secondary">{METHOD_LABELS[p.method] ?? p.method}</span>
-                  <span className="text-white">{fmt(p.amount)}</span>
+                  <span className="text-content-primary">{fmt(p.amount)}</span>
                 </div>
               ))}
             </div>
@@ -343,7 +343,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                     className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all ${
                       completeMethod === m
                         ? 'border-brand-500 bg-badge-brand text-content-brand'
-                        : 'border-slate-700 text-content-secondary hover:text-white'
+                        : 'border-slate-700 text-content-secondary hover:text-content-primary'
                     }`}
                   >
                     {m === 'cash'         && <Banknote className="w-4 h-4" />}
@@ -393,11 +393,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                 <div key={r.id} className="text-sm py-1.5 border-b border-surface-border last:border-0">
                   <div className="flex justify-between">
                     <span className="text-status-purple font-medium">-{fmt(r.amount)}</span>
-                    <span className="text-slate-500 text-xs">
+                    <span className="text-content-primary text-xs">
                       {format(new Date(r.refunded_at), 'dd/MM/yyyy HH:mm')}
                     </span>
                   </div>
-                  {r.reason && <p className="text-xs text-slate-500 mt-0.5">{r.reason}</p>}
+                  {r.reason && <p className="text-xs text-content-primary mt-0.5">{r.reason}</p>}
                 </div>
               ))}
             </div>
@@ -452,24 +452,24 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             </button>
           </div>
 
-          {/* Compléter le paiement — acompte */}
+          {/* Compléter le paiement —acompte */}
           {partial && !showCompleteForm && (
             <button
               onClick={() => setShowCompleteForm(true)}
               className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
-                         bg-amber-600 hover:bg-amber-500 text-white font-medium text-sm transition-colors"
+                         bg-amber-600 hover:bg-amber-500 text-content-primary font-medium text-sm transition-colors"
             >
               <CreditCard className="w-4 h-4" />
               Encaisser le solde ({fmt(remaining)})
             </button>
           )}
 
-          {/* Payer — commande WhatsApp en attente */}
+          {/* Payer —commande WhatsApp en attente */}
           {isWhatsAppPending && !showCompleteForm && (
             <button
               onClick={() => setShowCompleteForm(true)}
               className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
-                         bg-green-700 hover:bg-green-600 text-white font-medium text-sm transition-colors"
+                         bg-green-700 hover:bg-green-600 text-content-primary font-medium text-sm transition-colors"
             >
               <CreditCard className="w-4 h-4" />
               Payer ({fmt(order.total)})
@@ -520,3 +520,5 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     </>
   );
 }
+
+

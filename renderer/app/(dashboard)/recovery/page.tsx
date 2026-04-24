@@ -29,7 +29,7 @@ const TABLE_LABELS: Record<SnapshotTable, string> = {
 
 const TYPE_CONFIG = {
   manual:      { label: 'Manuel',           color: 'bg-brand-600/10 text-content-brand border-brand-600/20' },
-  auto:        { label: 'Automatique',      color: 'bg-slate-700 text-content-secondary border-slate-600' },
+  auto:        { label: 'Automatique',      color: 'bg-surface-input text-content-secondary border-slate-600' },
   pre_restore: { label: 'Sécurité',         color: 'bg-amber-500/10 text-status-warning border-amber-500/20' },
 };
 
@@ -149,7 +149,7 @@ export default function RecoveryPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-content-primary flex items-center gap-3">
             <History className="w-6 h-6 text-content-brand" />
             Récupération & Sauvegardes
           </h1>
@@ -170,7 +170,7 @@ export default function RecoveryPage() {
 
       {/* Explication */}
       <div className="card p-4 border-brand-600/20 bg-brand-600/5 space-y-3">
-        <h2 className="font-semibold text-white flex items-center gap-2 text-sm">
+        <h2 className="font-semibold text-content-primary flex items-center gap-2 text-sm">
           <Info className="w-4 h-4 text-content-brand" />
           Comment fonctionne la récupération ?
         </h2>
@@ -186,7 +186,7 @@ export default function RecoveryPage() {
               </div>
               <div>
                 <p className="font-medium text-content-primary">{title}</p>
-                <p className="text-slate-500 text-xs mt-0.5">{desc}</p>
+                <p className="text-content-muted text-xs mt-0.5">{desc}</p>
               </div>
             </div>
           ))}
@@ -196,7 +196,7 @@ export default function RecoveryPage() {
       {/* Create form */}
       {showCreateForm && (
         <div className="card p-5 space-y-4 border-brand-600/30">
-          <h2 className="font-semibold text-white">Créer un snapshot maintenant</h2>
+          <h2 className="font-semibold text-content-primary">Créer un snapshot maintenant</h2>
           <div>
             <label className="label">Label (optionnel)</label>
             <input
@@ -233,7 +233,7 @@ export default function RecoveryPage() {
         ].map(s => (
           <div key={s.label} className="card p-4 text-center">
             <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
-            <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+            <p className="text-xs text-content-muted mt-1">{s.label}</p>
           </div>
         ))}
       </div>
@@ -246,9 +246,9 @@ export default function RecoveryPage() {
           </div>
         ) : snapshots.length === 0 ? (
           <div className="card p-10 text-center">
-            <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <History className="w-10 h-10 text-content-muted mx-auto mb-3" />
             <p className="text-content-secondary">Aucun snapshot disponible</p>
-            <p className="text-slate-600 text-sm mt-1">
+            <p className="text-content-muted text-sm mt-1">
               Créez un snapshot manuel ou attendez le snapshot automatique de nuit.
             </p>
           </div>
@@ -317,7 +317,7 @@ function SnapshotCard({
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
           snap.type === 'manual'      ? 'bg-brand-600/10'   :
           snap.type === 'pre_restore' ? 'bg-amber-500/10'  :
-          'bg-slate-700'
+          'bg-surface-input'
         }`}>
           {snap.type === 'pre_restore'
             ? <ShieldCheck className="w-5 h-5 text-status-warning" />
@@ -329,12 +329,12 @@ function SnapshotCard({
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-white text-sm truncate">{snap.label}</span>
+            <span className="font-medium text-content-primary text-sm truncate">{snap.label}</span>
             <span className={`px-2 py-0.5 rounded-full text-xs border ${cfg.color}`}>
               {cfg.label}
             </span>
           </div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+          <div className="flex items-center gap-3 mt-1 text-xs text-content-muted">
             <span>{format(new Date(snap.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}</span>
             <span>·</span>
             <span>{formatDistanceToNow(new Date(snap.created_at), { addSuffix: true, locale: fr })}</span>
@@ -356,7 +356,7 @@ function SnapshotCard({
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onPreview}
-            className="p-2 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
+            className="p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
             title="Aperçu du contenu"
           >
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -373,7 +373,7 @@ function SnapshotCard({
           {isOwnerOrAdmin && snap.type !== 'pre_restore' && (
             <button
               onClick={onDelete}
-              className="p-2 rounded-lg text-slate-600 hover:text-status-error hover:bg-red-500/10 transition-colors"
+              className="p-2 rounded-lg text-content-muted hover:text-status-error hover:bg-red-500/10 transition-colors"
               title="Supprimer le snapshot"
             >
               <Trash2 className="w-4 h-4" />
@@ -397,7 +397,7 @@ function SnapshotCard({
               <PreviewStat icon={Tag} label="Coupons" count={previewData.coupons} />
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Impossible de charger l&apos;aperçu</p>
+            <p className="text-sm text-content-muted">Impossible de charger l&apos;aperçu</p>
           )}
         </div>
       )}
@@ -423,12 +423,12 @@ function RestoreModal({
       <div className="card w-full max-w-md space-y-0 overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 border-b border-surface-border">
-          <h2 className="font-semibold text-white flex items-center gap-2">
+          <h2 className="font-semibold text-content-primary flex items-center gap-2">
             <RotateCcw className="w-4 h-4 text-content-brand" />
             Restaurer un snapshot
           </h2>
           <p className="text-sm text-content-secondary mt-0.5 truncate">{snap.label}</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-content-muted mt-0.5">
             {format(new Date(snap.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
           </p>
         </div>
@@ -441,7 +441,7 @@ function RestoreModal({
                 <CheckCircle2 className="w-5 h-5 text-status-success" />
               </div>
               <div>
-                <p className="font-medium text-white">Restauration effectuée</p>
+                <p className="font-medium text-content-primary">Restauration effectuée</p>
                 <p className="text-xs text-content-secondary mt-0.5">
                   Un snapshot de sécurité a été créé avant la restauration.
                 </p>
@@ -476,7 +476,7 @@ function RestoreModal({
 
             {/* Table selection */}
             <div>
-              <p className="text-sm font-medium text-slate-300 mb-3">
+              <p className="text-sm font-medium text-content-primary mb-3">
                 Données à restaurer :
               </p>
               <div className="space-y-2">
@@ -496,7 +496,7 @@ function RestoreModal({
                       className="accent-brand-500"
                     />
                     <div className="min-w-0">
-                      <p className="text-sm text-white">{TABLE_LABELS[t]}</p>
+                      <p className="text-sm text-content-primary">{TABLE_LABELS[t]}</p>
                     </div>
                   </label>
                 ))}
@@ -529,7 +529,7 @@ function RestoreModal({
 
 function CountBadge({ icon: Icon, count, label }: { icon: React.ElementType; count: number; label: string }) {
   return (
-    <span className="flex items-center gap-1 text-xs text-slate-500">
+    <span className="flex items-center gap-1 text-xs text-content-muted">
       <Icon className="w-3 h-3" />
       {count} {label}
     </span>
@@ -539,10 +539,10 @@ function CountBadge({ icon: Icon, count, label }: { icon: React.ElementType; cou
 function PreviewStat({ icon: Icon, label, count }: { icon: React.ElementType; label: string; count: number }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="w-4 h-4 text-slate-500 shrink-0" />
+      <Icon className="w-4 h-4 text-content-muted shrink-0" />
       <div>
-        <p className="text-sm font-medium text-white">{count}</p>
-        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-sm font-medium text-content-primary">{count}</p>
+        <p className="text-xs text-content-muted">{label}</p>
       </div>
     </div>
   );
@@ -552,7 +552,7 @@ function ResultRow({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-surface-border last:border-0">
       <span className="text-content-secondary">{label}</span>
-      <span className="font-medium text-white">{count}</span>
+      <span className="font-medium text-content-primary">{count}</span>
     </div>
   );
 }

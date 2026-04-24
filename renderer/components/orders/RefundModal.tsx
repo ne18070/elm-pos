@@ -63,7 +63,7 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
             <span>Commande</span>
             <span className="font-mono">#{order.id.slice(0, 8).toUpperCase()}</span>
           </div>
-          <div className="flex justify-between text-white font-semibold mt-1">
+          <div className="flex justify-between text-content-primary font-semibold mt-1">
             <span>Total payé</span>
             <span>{formatCurrency(order.total, currency)}</span>
           </div>
@@ -144,3 +144,4 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
     </Modal>
   );
 }
+

@@ -26,9 +26,9 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
 
       {entries.length === 0 ? (
         <div className="card p-8 text-center">
-          <BookOpen className="w-10 h-10 text-slate-600 mx-auto mb-2" />
+          <BookOpen className="w-10 h-10 text-content-muted mx-auto mb-2" />
           <p className="text-content-secondary text-sm">Journal vide pour cette période.</p>
-          <p className="text-slate-500 text-xs mt-1">Cliquez sur <strong className="text-white">Synchroniser</strong> pour importer les ventes et achats.</p>
+          <p className="text-content-primary text-xs mt-1">Cliquez sur <strong className="text-content-primary">Synchroniser</strong> pour importer les ventes et achats.</p>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -56,21 +56,21 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
                     <tr key={e.id}
                       className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
                       onClick={() => setExpandedEntry(isOpen ? null : e.id)}>
-                      <td className="px-3 py-3 text-slate-500">
+                      <td className="px-3 py-3 text-content-primary">
                         {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </td>
                       <td className="px-4 py-3 text-content-secondary whitespace-nowrap font-mono text-xs">{e.entry_date}</td>
-                      <td className="px-4 py-3 text-slate-500 font-mono text-xs hidden sm:table-cell">{e.reference ?? '—'}</td>
-                      <td className="px-4 py-3 text-white max-w-[200px] truncate">{e.description}</td>
+                      <td className="px-4 py-3 text-content-primary font-mono text-xs hidden sm:table-cell">{e.reference ?? '—'}</td>
+                      <td className="px-4 py-3 text-content-primary max-w-[200px] truncate">{e.description}</td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <span className={`inline-flex text-xs px-2 py-0.5 rounded-full border font-medium ${src.color}`}>{src.label}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-white">{formatCurrency(totalDebit, currency)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-white">{formatCurrency(totalCredit, currency)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-content-primary">{formatCurrency(totalDebit, currency)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-sm text-content-primary">{formatCurrency(totalCredit, currency)}</td>
                       <td className="px-3 py-3">
                         {e.source === 'manual' && (
                           <button onClick={(ev) => { ev.stopPropagation(); onDeleteEntry(e.id); }}
-                            className="p-1.5 text-slate-600 hover:text-status-error rounded-lg hover:bg-badge-error">
+                            className="p-1.5 text-content-muted hover:text-status-error rounded-lg hover:bg-badge-error">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -80,12 +80,12 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
                       <tr key={li} className="bg-surface-input/50 border-b border-surface-border">
                         <td></td>
                         <td colSpan={2} className="px-4 py-2 font-mono text-xs text-content-brand">{line.account_code}</td>
-                        <td className="px-4 py-2 text-xs text-slate-300 italic">{line.account_name}</td>
+                        <td className="px-4 py-2 text-xs text-content-primary italic">{line.account_name}</td>
                         <td className="hidden md:table-cell"></td>
-                        <td className="px-4 py-2 text-right font-mono text-xs text-white">
+                        <td className="px-4 py-2 text-right font-mono text-xs text-content-primary">
                           {line.debit > 0 ? formatCurrency(line.debit, currency) : ''}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-xs text-white">
+                        <td className="px-4 py-2 text-right font-mono text-xs text-content-primary">
                           {line.credit > 0 ? formatCurrency(line.credit, currency) : ''}
                         </td>
                         <td></td>
@@ -101,3 +101,5 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
     </div>
   );
 }
+
+
