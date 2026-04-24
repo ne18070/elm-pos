@@ -4,7 +4,7 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import html2canvas from 'html2canvas';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight, ChevronDown } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight, ChevronDown, Car, Scale } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
@@ -22,12 +22,13 @@ import * as LucideIcons from 'lucide-react';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
-const PUBLIC_MODULES = [
-  { key: 'boutique', label: 'Boutique', icon: ShoppingBag },
-  { key: 'location', label: 'Location', icon: Briefcase },
-  { key: 'reservation', label: 'Reservation', icon: BedDouble },
-  { key: 'juridique', label: 'Juridique', icon: MessageCircle },
-] as const;
+const ALL_PUBLIC_MODULES = [
+  { key: 'boutique',    label: 'Boutique',          icon: ShoppingBag, features: ['retail'],    bizTypes: null as string[] | null },
+  { key: 'location',   label: 'Location',           icon: Briefcase,   features: ['rental', 'contrats'], bizTypes: null as string[] | null },
+  { key: 'reservation',label: 'Réservation Hôtel',  icon: BedDouble,   features: ['hotel'],     bizTypes: null as string[] | null },
+  { key: 'voitures',   label: 'Vente de Voitures',  icon: Car,         features: ['voitures'],  bizTypes: null as string[] | null },
+  { key: 'juridique',  label: 'Juridique',          icon: Scale,       features: [],            bizTypes: ['juridique'] as string[] },
+];
 
 function getAppUrl() {
   if (typeof window !== 'undefined') return window.location.origin;
@@ -597,7 +598,13 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {PUBLIC_MODULES.map(({ key, label, icon: Icon }) => {
+                {ALL_PUBLIC_MODULES.filter(({ features, bizTypes }) => {
+                  const bFeatures = business.features ?? [];
+                  const bTypes: string[] = (business as any).types ?? (business.type ? [business.type] : []);
+                  const hasFeature = features.length === 0 || features.some(f => bFeatures.includes(f));
+                  const hasBizType = !bizTypes || bizTypes.some(t => bTypes.includes(t));
+                  return hasFeature || hasBizType;
+                }).map(({ key, label, icon: Icon }) => {
                   const publicRef = buildPublicBusinessRef(business.name, bizForm.public_slug || business.public_slug);
                   const url = `${getAppUrl()}/${key}/${publicRef}`;
 
