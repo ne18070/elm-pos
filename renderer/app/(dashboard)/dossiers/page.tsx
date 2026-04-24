@@ -19,7 +19,6 @@ import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
 import { displayCurrency } from '@/lib/utils';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
-import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { MonitoringDashboard } from '@/components/workflow/MonitoringDashboard';

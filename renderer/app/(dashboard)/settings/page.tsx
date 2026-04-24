@@ -3,6 +3,7 @@ import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import html2canvas from 'html2canvas';
 import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight, ChevronDown } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
@@ -15,10 +16,27 @@ import { canManageSettings, hasRole } from '@/lib/permissions';
 import { getWhatsAppConfig, upsertWhatsAppConfig, regenerateVerifyToken, type WhatsAppConfig, type WhatsAppConfigForm } from '@services/supabase/whatsapp';
 import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
 import { updateOrganization } from '@services/supabase/business';
+import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 import type { Organization } from '@pos-types';
 import * as LucideIcons from 'lucide-react';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
+
+const PUBLIC_MODULES = [
+  { key: 'boutique', label: 'Boutique', icon: ShoppingBag },
+  { key: 'location', label: 'Location', icon: Briefcase },
+  { key: 'reservation', label: 'Reservation', icon: BedDouble },
+  { key: 'juridique', label: 'Juridique', icon: MessageCircle },
+] as const;
+
+function getAppUrl() {
+  if (typeof window !== 'undefined') return window.location.origin;
+  return '';
+}
+
+function qrImageUrl(url: string) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=512x512&margin=16&ecc=H&format=png&data=${encodeURIComponent(url)}`;
+}
 
 export default function SettingsPage() {
   const { business, user, setBusiness } = useAuthStore();
@@ -29,6 +47,7 @@ export default function SettingsPage() {
   const [syncing2, setSyncing2] = useState(false);
   const [logoUrl, setLogoUrl] = useState(business?.logo_url ?? '');
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [downloadingQr, setDownloadingQr] = useState<string | null>(null);
 
   const [bizForm, setBizForm] = useState({
     name:           business?.name ?? '',
@@ -51,6 +70,28 @@ export default function SettingsPage() {
   const [savingUnits, setSavingUnits] = useState(false);
 
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  async function downloadQrPng(moduleKey: string) {
+    const node = document.getElementById(`public-qr-${moduleKey}`);
+    if (!node || !business) return;
+
+    setDownloadingQr(moduleKey);
+    try {
+      const canvas = await html2canvas(node, {
+        backgroundColor: '#ffffff',
+        scale: 3,
+        useCORS: true,
+      });
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${business.public_slug || bizForm.public_slug || 'business'}-${moduleKey}-qr.png`;
+      link.click();
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setDownloadingQr(null);
+    }
+  }
 
   // Organisation (entité légale) — owner uniquement
   const isOwner = hasRole(user?.role, 'owner');
@@ -546,6 +587,97 @@ export default function SettingsPage() {
               Utilisé dans les liens publics. Lettres, chiffres et tirets uniquement.
             </p>
           </div>
+
+          {business && (
+            <div className="space-y-3">
+              <div>
+                <label className="label">QR codes publics</label>
+                <p className="mt-1 text-xs text-content-muted">
+                  Pour imprimer ou afficher les liens publics avec le logo de l&apos;etablissement au centre.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {PUBLIC_MODULES.map(({ key, label, icon: Icon }) => {
+                  const publicRef = buildPublicBusinessRef(business.name, bizForm.public_slug || business.public_slug);
+                  const url = `${getAppUrl()}/${key}/${publicRef}`;
+
+                  return (
+                    <div key={key} className="rounded-2xl border border-surface-border bg-surface-card p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center shrink-0">
+                            <Icon className="w-4 h-4 text-content-brand" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-content-primary">{label}</p>
+                            <p className="text-xs text-content-secondary truncate">{url}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => downloadQrPng(key)}
+                          disabled={downloadingQr === key}
+                          className="btn-secondary h-9 px-3 text-xs shrink-0"
+                        >
+                          {downloadingQr === key ? 'Export...' : 'PNG'}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard.writeText(url).then(() => success('Lien copié'))}
+                          className="btn-secondary h-9 px-3 text-xs flex items-center gap-2"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Copier le lien
+                        </button>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary h-9 px-3 text-xs flex items-center gap-2"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" /> Ouvrir
+                        </a>
+                      </div>
+
+                      <div className="rounded-2xl bg-white p-4 border border-surface-border flex items-center justify-center">
+                        <div
+                          id={`public-qr-${key}`}
+                          className="relative w-[220px] h-[220px] rounded-[28px] bg-white p-3"
+                        >
+                          <img
+                            src={qrImageUrl(url)}
+                            alt={`QR ${label}`}
+                            crossOrigin="anonymous"
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center p-2">
+                              {logoUrl ? (
+                                <img
+                                  src={logoUrl}
+                                  alt={business.name}
+                                  crossOrigin="anonymous"
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              ) : (
+                                <img
+                                  src="/logo.png"
+                                  alt="ELM"
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="label">TVA (%)</label>
