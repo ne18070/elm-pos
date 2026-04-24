@@ -205,11 +205,9 @@ export default function BoutiquePage() {
     if (!businessId) return;
     (async () => {
       try {
-        const [bInfo, bProducts] = await Promise.all([
-          getBoutiqueInfo(businessId),
-          getBoutiqueProducts(businessId),
-        ]);
+        const bInfo = await getBoutiqueInfo(businessId);
         if (!bInfo) { setLoadErr("Cette boutique n'existe pas."); return; }
+        const bProducts = await getBoutiqueProducts(bInfo.id);
         setInfo(bInfo);
         setProducts(bProducts);
       } catch {

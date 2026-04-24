@@ -37,6 +37,7 @@ export type Database = {
         Row: {
           id: string;
           name: string;
+          public_slug: string;
           type: string;
           types: string[];
           features: string[];
@@ -55,6 +56,7 @@ export type Database = {
         Insert: {
           id?: string;
           name: string;
+          public_slug?: string;
           type: string;
           types?: string[];
           features?: string[];

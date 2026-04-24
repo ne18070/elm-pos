@@ -177,12 +177,12 @@ export default function ReservationPage() {
   const nights = nightsBetween(checkIn, checkOut);
 
   async function searchRooms() {
-    if (!businessId || checkOut <= checkIn) return;
+    if (!info?.id || checkOut <= checkIn) return;
     setLoading(true);
     setLoadErr(null);
     setSearched(true);
     try {
-      const available = await getAvailableRooms(businessId, checkIn, checkOut);
+      const available = await getAvailableRooms(info.id, checkIn, checkOut);
       setRooms(available);
     } catch {
       setLoadErr("Impossible de vérifier les disponibilités. Réessayez.");

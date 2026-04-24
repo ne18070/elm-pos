@@ -137,6 +137,7 @@ export async function getMyBusinesses(): Promise<BusinessMembership[]> {
     business: {
       id:                row.id,
       name:              row.name,
+      public_slug:       row.public_slug,
       type:              row.type,
       denomination:      row.denomination,
       rib:               row.rib,

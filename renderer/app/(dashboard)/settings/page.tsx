@@ -32,6 +32,7 @@ export default function SettingsPage() {
 
   const [bizForm, setBizForm] = useState({
     name:           business?.name ?? '',
+    public_slug:    business?.public_slug ?? '',
     denomination:   business?.denomination ?? '',
     rib:            business?.rib ?? '',
     address:        business?.address ?? '',
@@ -218,10 +219,11 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { data: updatedBusiness, error } = await (supabase as any)
         .from('businesses')
         .update({
           name:           bizForm.name,
+          public_slug:    bizForm.public_slug,
           denomination:   bizForm.denomination,
           rib:            bizForm.rib,
           address:        bizForm.address,
@@ -231,20 +233,23 @@ export default function SettingsPage() {
           currency:       bizForm.currency,
           receipt_footer: bizForm.receipt_footer,
         })
-        .eq('id', business.id);
+        .eq('id', business.id)
+        .select('name, public_slug, denomination, rib, address, phone, tax_rate, tax_inclusive, currency, receipt_footer')
+        .single();
 
       if (error) throw new Error(error.message);
       setBusiness({
         ...business,
-        name:           bizForm.name,
-        denomination:   bizForm.denomination,
-        rib:            bizForm.rib,
-        address:        bizForm.address,
-        phone:          bizForm.phone,
-        tax_rate:       parseFloat(bizForm.tax_rate) || 0,
-        tax_inclusive:  bizForm.tax_inclusive,
-        currency:       bizForm.currency,
-        receipt_footer: bizForm.receipt_footer,
+        name:           updatedBusiness.name,
+        public_slug:    updatedBusiness.public_slug,
+        denomination:   updatedBusiness.denomination,
+        rib:            updatedBusiness.rib,
+        address:        updatedBusiness.address,
+        phone:          updatedBusiness.phone,
+        tax_rate:       updatedBusiness.tax_rate,
+        tax_inclusive:  updatedBusiness.tax_inclusive,
+        currency:       updatedBusiness.currency,
+        receipt_footer: updatedBusiness.receipt_footer,
       });
       success('Paramètres enregistrés');
     } catch (err) {
@@ -526,6 +531,20 @@ export default function SettingsPage() {
               onChange={(e) => setBizForm({ ...bizForm, address: e.target.value })}
               className="input"
             />
+          </div>
+
+          <div>
+            <label className="label">Slug public</label>
+            <input
+              type="text"
+              value={bizForm.public_slug}
+              onChange={(e) => setBizForm({ ...bizForm, public_slug: e.target.value })}
+              className="input"
+              placeholder="mon-business"
+            />
+            <p className="mt-1 text-xs text-content-muted">
+              Utilisé dans les liens publics. Lettres, chiffres et tirets uniquement.
+            </p>
           </div>
 
           <div>

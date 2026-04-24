@@ -1,4 +1,5 @@
 import { supabase as _supabase } from './client';
+import { findPublicBusinessByRef } from './public-business-ref';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabase = _supabase as any;
@@ -28,14 +29,10 @@ export interface PublicLegalAppointmentResult {
 }
 
 export async function getPublicLegalInfo(businessId: string): Promise<PublicLegalInfo | null> {
-  const { data, error } = await supabase
-    .from('businesses')
-    .select('id, name, logo_url, phone, address, currency')
-    .eq('id', businessId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  return data ?? null;
+  return findPublicBusinessByRef<PublicLegalInfo>(
+    businessId,
+    'id, name, logo_url, phone, address, currency',
+  );
 }
 
 export async function createPublicLegalAppointment(

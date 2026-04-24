@@ -144,7 +144,7 @@ export function LocationPageClient() {
   const currency = agency?.currency ?? 'XOF';
 
   async function search() {
-    if (!startDate || !endDate || endDate <= startDate) {
+    if (!agency?.id || !startDate || !endDate || endDate <= startDate) {
       setError('Sélectionnez des dates valides.');
       return;
     }
@@ -152,7 +152,7 @@ export function LocationPageClient() {
     setError(null);
     setSearched(true);
     try {
-      const res = await getAvailableVehicles(businessId, startDate, endDate);
+      const res = await getAvailableVehicles(agency.id, startDate, endDate);
       setVehicles(res);
     } catch {
       setError('Impossible de charger les véhicules. Réessayez.');
@@ -162,11 +162,11 @@ export function LocationPageClient() {
   }
 
   async function submitRequest() {
-    if (!selected || !form.client_name.trim() || !form.client_phone.trim()) return;
+    if (!agency?.id || !selected || !form.client_name.trim() || !form.client_phone.trim()) return;
     setSubmitting(true);
     try {
       const result = await createPublicRentalRequest({
-        business_id:      businessId,
+        business_id:      agency.id,
         vehicle_id:       selected.id,
         client_name:      form.client_name.trim(),
         client_phone:     form.client_phone.trim(),

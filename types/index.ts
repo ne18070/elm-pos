@@ -36,6 +36,7 @@ export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juri
 export interface Business {
   id: string;
   name: string;              // Nom de l'établissement
+  public_slug?: string;
   type: BusinessType;
   denomination?: string;
   rib?: string;

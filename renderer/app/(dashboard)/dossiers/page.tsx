@@ -18,6 +18,8 @@ import { useCan } from '@/hooks/usePermission';
 import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
 import { displayCurrency } from '@/lib/utils';
+import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { MonitoringDashboard } from '@/components/workflow/MonitoringDashboard';
@@ -1391,7 +1393,7 @@ export default function DossiersPage() {
             <div className="flex items-center gap-2">
               {business?.id && (
                 <button
-                  onClick={() => window.open(`/juridique/${business.id}`, '_blank', 'noopener,noreferrer')}
+                  onClick={() => window.open(`/juridique/${buildPublicBusinessRef(business.name, business.public_slug)}`, '_blank', 'noopener,noreferrer')}
                   className="bg-surface border border-surface-border text-content-secondary hover:text-content-primary font-black py-3 px-4 rounded-2xl flex items-center gap-2 shadow-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
                   title="Ouvrir la page publique de rendez-vous"
                 >

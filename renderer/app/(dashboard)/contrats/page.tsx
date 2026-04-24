@@ -24,6 +24,7 @@ import {
 } from '@services/supabase/contracts';
 import { generateContractPdf, imageUrlToDataUrl, dataUrlToBlob } from '@/lib/contract-pdf';
 import { getClients, type Client } from '@services/supabase/clients';
+import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1034,11 +1035,11 @@ export default function ContratsPage() {
             </p>
             <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2.5">
               <p className="flex-1 text-xs text-slate-300 truncate font-mono">
-                {getAppUrl()}/location/{business.id}
+                {getAppUrl()}/location/{buildPublicBusinessRef(business.name, business.public_slug)}
               </p>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${getAppUrl()}/location/${business.id}`);
+                  navigator.clipboard.writeText(`${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
@@ -1049,14 +1050,14 @@ export default function ContratsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <a
-                href={`${getAppUrl()}/location/${business.id}`}
+                href={`${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="btn-secondary flex items-center justify-center gap-2 text-sm h-10"
               >
                 <ExternalLink className="w-4 h-4" /> Aperçu
               </a>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Réservez votre véhicule en ligne : ${getAppUrl()}/location/${business.id}`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(`Réservez votre véhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="btn-primary flex items-center justify-center gap-2 text-sm h-10"
               >
