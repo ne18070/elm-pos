@@ -29,7 +29,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.supabase.co",
+      "img-src 'self' data: blob: https://*.supabase.co https://api.qrserver.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "font-src 'self' data:",
       "object-src 'none'",
