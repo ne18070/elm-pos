@@ -34,7 +34,7 @@ function VehicleCard({
   vehicle: PublicVehicle; days: number; currency: string; onSelect: () => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border overflow-hidden">
       {vehicle.image_url ? (
         <img
           src={vehicle.image_url}
@@ -42,14 +42,14 @@ function VehicleCard({
           className="w-full h-44 object-cover"
         />
       ) : (
-        <div className="w-full h-44 bg-slate-100 flex items-center justify-center">
+        <div className="w-full h-44 bg-surface-input flex items-center justify-center">
           <Car className="w-16 h-16 text-content-secondary" />
         </div>
       )}
 
       <div className="p-4 space-y-3">
         <div>
-          <h3 className="font-bold text-slate-900 text-base">{vehicle.name}</h3>
+          <h3 className="font-bold text-content-primary text-base">{vehicle.name}</h3>
           {(vehicle.brand || vehicle.model || vehicle.year) && (
             <p className="text-xs text-content-muted mt-0.5">
               {[vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' · ')}
@@ -59,13 +59,13 @@ function VehicleCard({
 
         <div className="flex flex-wrap gap-2 text-xs">
           {vehicle.color && (
-            <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full text-content-muted">
-              <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+            <span className="flex items-center gap-1 bg-surface-input border border-surface-border px-2 py-0.5 rounded-full text-content-muted">
+              <span className="w-2 h-2 rounded-full bg-content-muted inline-block" />
               {vehicle.color}
             </span>
           )}
           {vehicle.license_plate && (
-            <span className="bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full text-content-muted font-mono">
+            <span className="bg-surface-input border border-surface-border px-2 py-0.5 rounded-full text-content-muted font-mono">
               {vehicle.license_plate}
             </span>
           )}
@@ -75,7 +75,7 @@ function VehicleCard({
           <p className="text-xs text-content-muted line-clamp-2">{vehicle.description}</p>
         )}
 
-        <div className="flex items-end justify-between pt-1 border-t border-slate-50">
+        <div className="flex items-end justify-between pt-1 border-t border-surface-border">
           <div>
             <p className="text-xs text-content-secondary">Total {days} jour{days > 1 ? 's' : ''}</p>
             <p className="font-black text-brand-600 text-xl leading-tight">
@@ -85,7 +85,7 @@ function VehicleCard({
           </div>
           <button
             onClick={onSelect}
-            className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-1.5"
+            className="bg-brand-600 hover:bg-brand-700 text-content-primary px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-1.5"
           >
             Réserver
             <ChevronRight className="w-4 h-4" />
@@ -93,7 +93,7 @@ function VehicleCard({
         </div>
 
         {vehicle.deposit_amount > 0 && (
-          <p className="text-xs text-amber-600 flex items-center gap-1">
+          <p className="text-xs text-status-warning flex items-center gap-1">
             <Info className="w-3 h-3" />
             Caution : {formatCurrency(vehicle.deposit_amount, currency)}
           </p>
@@ -188,14 +188,14 @@ export function LocationPageClient() {
 
   if (pageLoad) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-brand-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
+    <div className="min-h-screen bg-surface pb-16">
 
       {/* Header */}
       <header className="bg-surface-card border-b border-surface-border shadow-sm sticky top-0 z-10">
@@ -228,14 +228,14 @@ export function LocationPageClient() {
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
 
         {/* Hero */}
-        <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-white space-y-1">
+        <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-content-primary space-y-1">
           <h2 className="font-black text-xl">Réservez votre véhicule</h2>
           <p className="text-brand-100 text-sm">Choisissez vos dates et trouvez le véhicule idéal.</p>
         </div>
 
         {/* Date picker */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
-          <h3 className="font-semibold text-slate-700 text-sm flex items-center gap-2">
+        <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-4 space-y-3">
+          <h3 className="font-semibold text-content-secondary text-sm flex items-center gap-2">
             <Calendar className="w-4 h-4 text-brand-500" />
             Période de location
           </h3>
@@ -255,7 +255,7 @@ export function LocationPageClient() {
                   }
                   setSearched(false);
                 }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
             <div>
@@ -265,7 +265,7 @@ export function LocationPageClient() {
                 value={endDate}
                 min={startDate || TODAY}
                 onChange={(e) => { setEndDate(e.target.value); setSearched(false); }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
           </div>
@@ -277,7 +277,7 @@ export function LocationPageClient() {
           <button
             onClick={search}
             disabled={loading || !startDate || !endDate || endDate <= startDate}
-            className="w-full py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-content-primary font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Voir les véhicules disponibles
@@ -285,7 +285,7 @@ export function LocationPageClient() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-center gap-2 text-sm text-red-600">
+          <div className="bg-badge-error border border-status-error/30 rounded-xl p-3 flex items-center gap-2 text-sm text-status-error">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>
@@ -295,7 +295,7 @@ export function LocationPageClient() {
         {searched && !loading && (
           <>
             {vehicles.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center space-y-2">
+              <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-8 text-center space-y-2">
                 <Car className="w-12 h-12 text-content-secondary mx-auto" />
                 <p className="font-semibold text-content-muted">Aucun véhicule disponible</p>
                 <p className="text-sm text-content-secondary">Essayez d'autres dates.</p>
@@ -321,15 +321,15 @@ export function LocationPageClient() {
 
         {/* Contact agence */}
         {agency?.phone && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex items-center justify-between gap-4">
+          <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-4 flex items-center justify-between gap-4">
             <div>
-              <p className="font-semibold text-slate-800 text-sm">Une question ?</p>
+              <p className="font-semibold text-content-primary text-sm">Une question ?</p>
               <p className="text-xs text-content-secondary mt-0.5">{agency.name}</p>
             </div>
             <a
               href={`https://wa.me/${agency.phone.replace(/[^0-9]/g, '')}`}
               target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
+              className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
             >
               <MessageCircle className="w-4 h-4" />
               WhatsApp
@@ -342,38 +342,38 @@ export function LocationPageClient() {
       {showForm && selected && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
-          <div className="relative bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-100 px-5 pt-4 pb-3 flex items-center justify-between rounded-t-3xl">
+          <div className="relative bg-surface-card border border-surface-border rounded-t-3xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-surface-card border-b border-surface-border px-5 pt-4 pb-3 flex items-center justify-between rounded-t-3xl">
               <div>
-                <h3 className="font-bold text-slate-900">Réserver — {selected.name}</h3>
+                <h3 className="font-bold text-content-primary">Réserver — {selected.name}</h3>
                 <p className="text-xs text-content-muted mt-0.5">
                   {fmtDate(startDate)} → {fmtDate(endDate)} · {days} jour{days > 1 ? 's' : ''}
                 </p>
               </div>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-slate-100">
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-surface-hover">
                 <X className="w-5 h-5 text-content-muted" />
               </button>
             </div>
 
             <div className="p-5 space-y-4">
               {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-600 flex items-center gap-2">
+                <div className="bg-badge-error border border-status-error/30 rounded-xl p-3 text-sm text-status-error flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {error}
                 </div>
               )}
 
               {/* Récap véhicule */}
-              <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3">
+              <div className="bg-surface-input rounded-xl p-3 flex items-center gap-3">
                 {selected.image_url ? (
                   <img src={selected.image_url} alt={selected.name} className="w-14 h-10 rounded-lg object-cover shrink-0" />
                 ) : (
-                  <div className="w-14 h-10 bg-slate-200 rounded-lg flex items-center justify-center shrink-0">
+                  <div className="w-14 h-10 bg-surface-hover rounded-lg flex items-center justify-center shrink-0">
                     <Car className="w-5 h-5 text-content-secondary" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-800 text-sm truncate">{selected.name}</p>
+                  <p className="font-bold text-content-primary text-sm truncate">{selected.name}</p>
                   <p className="text-xs text-content-muted">{formatCurrency(selected.price_per_day, currency)}/jour</p>
                 </div>
                 <p className="font-black text-brand-600 shrink-0">
@@ -391,7 +391,7 @@ export function LocationPageClient() {
                     value={form.client_name}
                     onChange={(e) => setForm({ ...form, client_name: e.target.value })}
                     placeholder="Ex: Mamadou Koné"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
 
@@ -402,7 +402,7 @@ export function LocationPageClient() {
                     value={form.client_phone}
                     onChange={(e) => setForm({ ...form, client_phone: e.target.value })}
                     placeholder="+225 07 00 00 00 00"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
 
@@ -414,7 +414,7 @@ export function LocationPageClient() {
                       value={form.client_email}
                       onChange={(e) => setForm({ ...form, client_email: e.target.value })}
                       placeholder="email@exemple.com"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                     />
                   </div>
                   <div>
@@ -424,7 +424,7 @@ export function LocationPageClient() {
                       value={form.client_id_number}
                       onChange={(e) => setForm({ ...form, client_id_number: e.target.value })}
                       placeholder="CI-12345678"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                     />
                   </div>
                 </div>
@@ -436,7 +436,7 @@ export function LocationPageClient() {
                     value={form.client_address}
                     onChange={(e) => setForm({ ...form, client_address: e.target.value })}
                     placeholder="Votre adresse"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
 
@@ -450,7 +450,7 @@ export function LocationPageClient() {
                       value={form.pickup_location}
                       onChange={(e) => setForm({ ...form, pickup_location: e.target.value })}
                       placeholder="Agence / Aéroport"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                     />
                   </div>
                   <div>
@@ -460,7 +460,7 @@ export function LocationPageClient() {
                       value={form.return_location}
                       onChange={(e) => setForm({ ...form, return_location: e.target.value })}
                       placeholder="Agence / Aéroport"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                     />
                   </div>
                 </div>
@@ -472,13 +472,13 @@ export function LocationPageClient() {
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                     placeholder="Siège bébé, GPS..."
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+                    className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
                   />
                 </div>
               </div>
 
               {selected.deposit_amount > 0 && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
+                <div className="bg-badge-warning border border-status-warning/30 rounded-xl p-3 text-xs text-status-warning">
                   Une caution de <strong>{formatCurrency(selected.deposit_amount, currency)}</strong> sera demandée à la prise en charge du véhicule.
                 </div>
               )}
@@ -486,7 +486,7 @@ export function LocationPageClient() {
               <button
                 onClick={submitRequest}
                 disabled={submitting || !form.client_name.trim() || !form.client_phone.trim()}
-                className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-content-primary font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

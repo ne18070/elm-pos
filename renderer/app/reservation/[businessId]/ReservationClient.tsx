@@ -24,11 +24,11 @@ const ROOM_TYPE_LABELS: Record<string, string> = {
 };
 
 const ROOM_TYPE_COLORS: Record<string, string> = {
-  simple:    'bg-blue-50 text-blue-700 border-blue-200',
-  double:    'bg-purple-50 text-purple-700 border-purple-200',
-  twin:      'bg-indigo-50 text-indigo-700 border-indigo-200',
-  suite:     'bg-amber-50 text-amber-700 border-amber-200',
-  familiale: 'bg-green-50 text-green-700 border-green-200',
+  simple:    'bg-badge-info text-status-info border-status-info/30',
+  double:    'bg-surface-input text-content-secondary border-surface-border',
+  twin:      'bg-surface-input text-content-secondary border-surface-border',
+  suite:     'bg-badge-warning text-status-warning border-status-warning/30',
+  familiale: 'bg-badge-success text-status-success border-status-success/30',
 };
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -66,15 +66,15 @@ interface RoomCardProps {
 
 function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border overflow-hidden hover:shadow-md transition-shadow">
       {/* Visuel */}
       <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center relative">
         <BedDouble className="w-14 h-14 text-content-primary" />
-        <span className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full border ${ROOM_TYPE_COLORS[room.type] ?? 'bg-slate-50 text-content-muted border-slate-200'}`}>
+        <span className={`absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full border ${ROOM_TYPE_COLORS[room.type] ?? 'bg-surface-input text-content-muted border-surface-border'}`}>
           {ROOM_TYPE_LABELS[room.type] ?? room.type}
         </span>
         {room.floor && (
-          <span className="absolute top-3 right-3 text-xs text-content-muted bg-white/80 px-2 py-0.5 rounded-full">
+          <span className="absolute top-3 right-3 text-xs text-content-muted bg-surface-card/90 border border-surface-border px-2 py-0.5 rounded-full">
             Étage {room.floor}
           </span>
         )}
@@ -84,7 +84,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
         {/* Titre */}
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-bold text-slate-900">Chambre {room.number}</h3>
+            <h3 className="font-bold text-content-primary">Chambre {room.number}</h3>
             <div className="flex items-center gap-1.5 mt-0.5 text-content-muted text-xs">
               <Users className="w-3.5 h-3.5" />
               <span>{room.capacity} personne{room.capacity > 1 ? 's' : ''} max</span>
@@ -107,7 +107,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
         {room.amenities?.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {room.amenities.slice(0, 5).map((a) => (
-              <span key={a} className="flex items-center gap-1 text-xs text-content-muted bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">
+              <span key={a} className="flex items-center gap-1 text-xs text-content-muted bg-surface-input border border-surface-border px-2 py-0.5 rounded-full">
                 {AMENITY_ICONS[a] ?? <Star className="w-3 h-3" />}
                 {a}
               </span>
@@ -122,7 +122,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
         <div className="flex items-center justify-between pt-1">
           {nights > 1 && (
             <p className="text-xs text-content-muted">
-              {nights} nuits = <span className="font-semibold text-slate-700">{formatCurrency(room.price_per_night * nights, currency)}</span>
+               {nights} nuits = <span className="font-semibold text-content-primary">{formatCurrency(room.price_per_night * nights, currency)}</span>
             </p>
           )}
           <button
@@ -226,7 +226,7 @@ export default function ReservationPage() {
 
   if (!info && !loadErr) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-brand-600" />
       </div>
     );
@@ -234,17 +234,17 @@ export default function ReservationPage() {
 
   if (loadErr && !info) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-sm w-full space-y-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+        <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-8 text-center max-w-sm w-full space-y-4">
           <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
-          <p className="font-semibold text-slate-800">{loadErr}</p>
+          <p className="font-semibold text-content-primary">{loadErr}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
+    <div className="min-h-screen bg-surface pb-16">
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
@@ -277,8 +277,8 @@ export default function ReservationPage() {
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
         {/* ── Sélecteur de dates ─────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
-          <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+        <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-5 space-y-4">
+          <h2 className="font-bold text-content-primary text-lg flex items-center gap-2">
             <Calendar className="w-5 h-5 text-brand-500" />
             Vos dates de séjour
           </h2>
@@ -300,7 +300,7 @@ export default function ReservationPage() {
                   setSearched(false);
                   setRooms([]);
                 }}
-                className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
             <div>
@@ -310,7 +310,7 @@ export default function ReservationPage() {
                 value={checkOut}
                 min={checkIn}
                 onChange={(e) => { setCheckOut(e.target.value); setSearched(false); setRooms([]); }}
-                className="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -336,7 +336,7 @@ export default function ReservationPage() {
 
         {/* ── Erreur ──────────────────────────────────────────────────────── */}
         {loadErr && searched && (
-          <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+          <div className="flex items-center gap-2 p-4 bg-badge-error border border-status-error/30 rounded-xl text-sm text-status-error">
             <AlertCircle className="w-4 h-4 shrink-0" />
             {loadErr}
           </div>
@@ -351,7 +351,7 @@ export default function ReservationPage() {
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="px-3 py-2 bg-surface-card border border-surface-border rounded-xl text-xs font-medium text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="">Tous les types</option>
                   {[...new Set(rooms.map((r) => r.type))].map((t) => (
@@ -361,7 +361,7 @@ export default function ReservationPage() {
                 <select
                   value={capacityFilter}
                   onChange={(e) => setCapacityFilter(Number(e.target.value))}
-                  className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="px-3 py-2 bg-surface-card border border-surface-border rounded-xl text-xs font-medium text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   {[1, 2, 3, 4].map((n) => (
                     <option key={n} value={n}>{n}+ personne{n > 1 ? 's' : ''}</option>
@@ -374,9 +374,9 @@ export default function ReservationPage() {
             )}
 
             {filteredRooms.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center space-y-3">
+              <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-10 text-center space-y-3">
                 <BedDouble className="w-12 h-12 text-content-primary mx-auto" />
-                <p className="font-semibold text-slate-700">
+                <p className="font-semibold text-content-secondary">
                   {rooms.length === 0 ? 'Aucune chambre disponible pour ces dates' : 'Aucune chambre correspond à vos critères'}
                 </p>
                 <p className="text-sm text-content-secondary">Essayez d'autres dates ou modifiez vos filtres.</p>
@@ -410,18 +410,18 @@ export default function ReservationPage() {
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4">
           <div
-            className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden"
+            className="bg-surface-card border border-surface-border w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center gap-3 p-5 border-b border-slate-100">
+            <div className="flex items-center gap-3 p-5 border-b border-surface-border">
               <button
                 onClick={() => setSelectedRoom(null)}
-                className="p-2 rounded-full hover:bg-slate-100"
+                className="p-2 rounded-full hover:bg-surface-hover"
               >
                 <ChevronLeft className="w-5 h-5 text-content-muted" />
               </button>
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-slate-900">Réserver — Chambre {selectedRoom.number}</h2>
+                <h2 className="font-bold text-content-primary">Réserver — Chambre {selectedRoom.number}</h2>
                 <p className="text-xs text-content-secondary mt-0.5">
                   {ROOM_TYPE_LABELS[selectedRoom.type]} · {nights} nuit{nights > 1 ? 's' : ''} · {formatCurrency(selectedRoom.price_per_night * nights, info!.currency)}
                 </p>
@@ -431,7 +431,7 @@ export default function ReservationPage() {
             <form onSubmit={handleReserve} className="flex-1 overflow-y-auto p-5 space-y-4">
 
               {/* Récap chambre */}
-              <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div className="bg-badge-info border border-brand-500/30 rounded-xl p-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-brand-800 text-sm">Chambre {selectedRoom.number}</p>
                   <p className="text-xs text-brand-600 mt-0.5">
@@ -445,7 +445,7 @@ export default function ReservationPage() {
 
               {/* Infos voyageur */}
               <section className="space-y-3">
-                <h3 className="font-semibold text-slate-700 text-sm uppercase tracking-wide">Vos informations</h3>
+                <h3 className="font-semibold text-content-secondary text-sm uppercase tracking-wide">Vos informations</h3>
 
                 <div>
                   <label className="block text-xs font-medium text-content-muted mb-1.5">Nom complet *</label>
@@ -455,7 +455,7 @@ export default function ReservationPage() {
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value)}
                     placeholder="Ex : Amadou Diallo"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
 
@@ -469,7 +469,7 @@ export default function ReservationPage() {
                     value={guestPhone}
                     onChange={(e) => setGuestPhone(e.target.value)}
                     placeholder="+221 77 000 00 00"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
 
@@ -480,7 +480,7 @@ export default function ReservationPage() {
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     placeholder="votre@email.com"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
 
@@ -491,7 +491,7 @@ export default function ReservationPage() {
                   <select
                     value={numGuests}
                     onChange={(e) => setNumGuests(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     {Array.from({ length: selectedRoom.capacity }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>{n} personne{n > 1 ? 's' : ''}</option>
@@ -506,13 +506,13 @@ export default function ReservationPage() {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Arrivée tardive, lit bébé, allergies…"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
               </section>
 
               {submitError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                <div className="flex items-center gap-2 p-3 bg-badge-error border border-status-error/30 rounded-xl text-sm text-status-error">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {submitError}
                 </div>

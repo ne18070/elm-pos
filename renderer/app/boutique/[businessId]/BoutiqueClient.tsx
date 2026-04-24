@@ -57,26 +57,26 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
   return (
     <>
       <div
-        className={`bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col transition-shadow hover:shadow-md ${outOfStock ? 'opacity-60' : ''}`}
+        className={`bg-surface-card rounded-2xl shadow-sm border border-surface-border overflow-hidden flex flex-col transition-shadow hover:shadow-md ${outOfStock ? 'opacity-60' : ''}`}
         onClick={() => hasVariants ? setShowVariants(true) : undefined}
       >
         {/* Image */}
-        <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+        <div className="aspect-square bg-surface-input flex items-center justify-center overflow-hidden">
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
           ) : (
             <Package className="w-10 h-10 text-content-primary" />
           )}
           {outOfStock && (
-            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-              <span className="text-xs font-bold text-status-error bg-red-50 border border-red-200 px-2 py-1 rounded-full">Epuisé</span>
+            <div className="absolute inset-0 bg-surface/80 flex items-center justify-center">
+              <span className="text-xs font-bold text-status-error bg-badge-error border border-status-error/30 px-2 py-1 rounded-full">Epuisé</span>
             </div>
           )}
         </div>
 
         {/* Info */}
         <div className="p-3 flex flex-col gap-2 flex-1">
-          <p className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">{product.name}</p>
+          <p className="font-semibold text-content-primary text-sm leading-snug line-clamp-2">{product.name}</p>
           {product.description && (
             <p className="text-xs text-content-secondary line-clamp-2">{product.description}</p>
           )}
@@ -90,11 +90,11 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
                 <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); onRemove(product); }}
-                    className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                    className="w-7 h-7 rounded-full bg-surface-input hover:bg-surface-hover flex items-center justify-center transition-colors"
                   >
                     <Minus className="w-3 h-3 text-content-muted" />
                   </button>
-                  <span className="text-sm font-bold text-slate-800 min-w-[16px] text-center">{cartQty}</span>
+                  <span className="text-sm font-bold text-content-primary min-w-[16px] text-center">{cartQty}</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onAdd(product); }}
                     className="w-7 h-7 rounded-full bg-brand-600 hover:bg-brand-700 flex items-center justify-center transition-colors"
@@ -115,7 +115,7 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
             {!outOfStock && hasVariants && (
               <button
                 onClick={handleAdd}
-                className="text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-full transition-colors"
+                className="text-xs font-semibold text-status-info bg-badge-info hover:bg-surface-hover px-3 py-1.5 rounded-full transition-colors"
               >
                 {cartQty > 0 ? `${cartQty} au panier` : 'Choisir'}
               </button>
@@ -127,13 +127,13 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
       {/* Modal variantes */}
       {showVariants && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={() => setShowVariants(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          <div className="bg-surface-card rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-surface-border" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-surface-border">
               <div>
-                <h3 className="font-bold text-slate-900">{product.name}</h3>
+                <h3 className="font-bold text-content-primary">{product.name}</h3>
                 <p className="text-xs text-content-muted mt-0.5">Choisissez une option</p>
               </div>
-              <button onClick={() => setShowVariants(false)} className="p-2 rounded-full hover:bg-slate-100">
+              <button onClick={() => setShowVariants(false)} className="p-2 rounded-full hover:bg-surface-hover">
                 <X className="w-4 h-4 text-content-muted" />
               </button>
             </div>
@@ -148,13 +148,13 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
                     onClick={() => { onAdd(product, variant); setShowVariants(false); }}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-colors ${
                       vOutStock
-                        ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-brand-400 hover:bg-brand-50'
+                        ? 'border-surface-border bg-surface-input opacity-50 cursor-not-allowed'
+                        : 'border-surface-border hover:border-brand-500 hover:bg-surface-hover'
                     }`}
                   >
-                    <span className="font-medium text-slate-800">{variant.name}</span>
+                    <span className="font-medium text-content-primary">{variant.name}</span>
                     <div className="flex items-center gap-3">
-                      {vOutStock && <span className="text-xs text-status-error">ﾃ英uisﾃｩ</span>}
+                      {vOutStock && <span className="text-xs text-status-error">Epuisé</span>}
                       <span className="font-bold text-brand-600">{formatCurrency(vPrice, currency)}</span>
                       <Plus className="w-4 h-4 text-brand-600" />
                     </div>
@@ -314,10 +314,10 @@ export default function BoutiquePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="w-10 h-10 animate-spin text-brand-600 mx-auto" />
-          <p className="text-content-muted text-sm">Chargement de la boutique窶ｦ</p>
+          <p className="text-content-muted text-sm">Chargement de la boutique...</p>
         </div>
       </div>
     );
@@ -325,10 +325,10 @@ export default function BoutiquePage() {
 
   if (loadErr || !info) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-sm w-full space-y-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+        <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-8 text-center max-w-sm w-full space-y-4">
           <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
-          <p className="font-semibold text-slate-800">{loadErr ?? "Boutique introuvable"}</p>
+          <p className="font-semibold text-content-primary">{loadErr ?? "Boutique introuvable"}</p>
           <button onClick={() => window.location.reload()} className="w-full py-3 rounded-xl bg-brand-600 text-content-primary font-semibold text-sm hover:bg-brand-700 transition-colors">
             Réessayer
           </button>
@@ -338,7 +338,7 @@ export default function BoutiquePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
+    <div className="min-h-screen bg-surface pb-32">
 
       {/* 笏笏 Header 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
@@ -400,7 +400,7 @@ export default function BoutiquePage() {
             <button
               onClick={() => setActiveCategory(null)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                !activeCategory ? 'bg-brand-600 text-content-primary' : 'bg-slate-100 text-content-muted hover:bg-slate-200'
+                !activeCategory ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-muted hover:bg-surface-hover'
               }`}
             >
               Tout
@@ -410,7 +410,7 @@ export default function BoutiquePage() {
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  activeCategory === cat.id ? 'bg-brand-600 text-content-primary' : 'bg-slate-100 text-content-muted hover:bg-slate-200'
+                  activeCategory === cat.id ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-muted hover:bg-surface-hover'
                 }`}
               >
                 {cat.name}
@@ -463,16 +463,16 @@ export default function BoutiquePage() {
       {showCart && (
         <div className="fixed inset-0 z-40 flex flex-col justify-end sm:items-center sm:justify-center bg-black/50" onClick={() => setShowCart(false)}>
           <div
-            className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
+            className="bg-surface-card border border-surface-border w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+            <div className="flex items-center justify-between p-5 border-b border-surface-border">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-brand-600" />
-                <h2 className="font-bold text-slate-900 text-lg">Mon panier</h2>
+                <h2 className="font-bold text-content-primary text-lg">Mon panier</h2>
               </div>
-              <button onClick={() => setShowCart(false)} className="p-2 rounded-full hover:bg-slate-100">
+              <button onClick={() => setShowCart(false)} className="p-2 rounded-full hover:bg-surface-hover">
                 <X className="w-5 h-5 text-content-muted" />
               </button>
             </div>
@@ -486,9 +486,9 @@ export default function BoutiquePage() {
                 </div>
               ) : (
                 cart.map((item) => (
-                  <div key={item.key} className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
+                  <div key={item.key} className="flex items-center gap-3 bg-surface-input rounded-xl p-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">{item.name}</p>
+                      <p className="font-semibold text-content-primary text-sm leading-snug line-clamp-2">{item.name}</p>
                       <p className="text-xs text-content-muted mt-0.5">{formatCurrency(item.price, info.currency)}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -497,11 +497,11 @@ export default function BoutiquePage() {
                           const prod = products.find((p) => p.id === item.product_id);
                           if (prod) removeFromCart(prod, prod.variants?.find((v) => v.id === item.variant_id));
                         }}
-                        className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-100"
+                        className="w-7 h-7 rounded-full bg-surface-card border border-surface-border flex items-center justify-center hover:bg-surface-hover"
                       >
                         <Minus className="w-3 h-3 text-content-muted" />
                       </button>
-                      <span className="text-sm font-bold text-slate-800 w-5 text-center">{item.quantity}</span>
+                      <span className="text-sm font-bold text-content-primary w-5 text-center">{item.quantity}</span>
                       <button
                         onClick={() => {
                           const prod = products.find((p) => p.id === item.product_id);
@@ -512,7 +512,7 @@ export default function BoutiquePage() {
                         <Plus className="w-3 h-3 text-content-primary" />
                       </button>
                     </div>
-                    <span className="text-sm font-bold text-slate-800 min-w-[64px] text-right">
+                    <span className="text-sm font-bold text-content-primary min-w-[64px] text-right">
                       {formatCurrency(item.price * item.quantity, info.currency)}
                     </span>
                   </div>
@@ -522,16 +522,16 @@ export default function BoutiquePage() {
 
             {/* Footer */}
             {cart.length > 0 && (
-              <div className="p-4 border-t border-slate-100 space-y-3">
+               <div className="p-4 border-t border-surface-border space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-content-muted">Total</span>
-                  <span className="font-bold text-lg text-slate-900">{formatCurrency(cartTotal, info.currency)}</span>
+                  <span className="font-bold text-lg text-content-primary">{formatCurrency(cartTotal, info.currency)}</span>
                 </div>
                 <button
                   onClick={() => { setShowCart(false); setShowCheckout(true); }}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-content-primary font-bold py-4 rounded-xl transition-colors"
                 >
-                  Commander 竊・
+                  Commander
                 </button>
                 <button
                   onClick={clearCart}
@@ -549,17 +549,17 @@ export default function BoutiquePage() {
       {showCheckout && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4">
           <div
-            className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden"
+            className="bg-surface-card border border-surface-border w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center gap-3 p-5 border-b border-slate-100">
+            <div className="flex items-center gap-3 p-5 border-b border-surface-border">
               <button
                 onClick={() => { setShowCheckout(false); setShowCart(true); }}
-                className="p-2 rounded-full hover:bg-slate-100"
+                className="p-2 rounded-full hover:bg-surface-hover"
               >
                 <ChevronLeft className="w-5 h-5 text-content-muted" />
               </button>
-              <h2 className="font-bold text-slate-900 text-lg">Finaliser la commande</h2>
+              <h2 className="font-bold text-content-primary text-lg">Finaliser la commande</h2>
             </div>
 
             {/* Formulaire */}
@@ -567,7 +567,7 @@ export default function BoutiquePage() {
 
               {/* Infos client */}
               <section className="space-y-3">
-                <h3 className="font-semibold text-slate-700 text-sm uppercase tracking-wide">Vos informations</h3>
+                <h3 className="font-semibold text-content-secondary text-sm uppercase tracking-wide">Vos informations</h3>
                 <div>
                   <label className="block text-xs font-medium text-content-muted mb-1.5">Nom complet *</label>
                   <input
@@ -576,12 +576,12 @@ export default function BoutiquePage() {
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Ex : Amadou Diallo"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-content-muted mb-1.5">
-                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" />Numﾃｩro WhatsApp *</span>
+                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" />Numero WhatsApp *</span>
                   </label>
                   <input
                     required
@@ -589,20 +589,20 @@ export default function BoutiquePage() {
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     placeholder="Ex : +221 77 000 00 00"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
               </section>
 
               {/* Mode de rﾃｩcupﾃｩration */}
               <section className="space-y-3">
-                <h3 className="font-semibold text-slate-700 text-sm uppercase tracking-wide">Rﾃｩcupﾃｩration</h3>
+                <h3 className="font-semibold text-content-secondary text-sm uppercase tracking-wide">Recuperation</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setDeliveryType('pickup')}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
-                      deliveryType === 'pickup' ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                      deliveryType === 'pickup' ? 'border-brand-500 bg-badge-info' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
                     }`}
                   >
                     <Store className={`w-6 h-6 ${deliveryType === 'pickup' ? 'text-brand-600' : 'text-content-secondary'}`} />
@@ -614,7 +614,7 @@ export default function BoutiquePage() {
                     type="button"
                     onClick={() => setDeliveryType('delivery')}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
-                      deliveryType === 'delivery' ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                      deliveryType === 'delivery' ? 'border-brand-500 bg-badge-info' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
                     }`}
                   >
                     <Truck className={`w-6 h-6 ${deliveryType === 'delivery' ? 'text-brand-600' : 'text-content-secondary'}`} />
@@ -635,7 +635,7 @@ export default function BoutiquePage() {
                       value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       placeholder="Ex : Rue 10, Dakar"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                 )}
@@ -643,25 +643,25 @@ export default function BoutiquePage() {
 
               {/* Mode de paiement */}
               <section className="space-y-3">
-                <h3 className="font-semibold text-slate-700 text-sm uppercase tracking-wide">Paiement</h3>
+                <h3 className="font-semibold text-content-secondary text-sm uppercase tracking-wide">Paiement</h3>
                 <div className="space-y-2">
                   {[
                     {
                       value: 'cash' as PaymentMethod,
                       icon: <Banknote className="w-5 h-5" />,
-                      label: deliveryType === 'delivery' ? 'ﾃ la livraison' : 'Sur place',
-                      desc:  deliveryType === 'delivery' ? 'Payez en espﾃｨces ﾃ la rﾃｩception' : 'Payez en espﾃｨces en boutique',
+                      label: deliveryType === 'delivery' ? 'A la livraison' : 'Sur place',
+                      desc:  deliveryType === 'delivery' ? 'Payez en especes a la reception' : 'Payez en especes en boutique',
                     },
                     {
                       value: 'mobile_money' as PaymentMethod,
                       icon: <CreditCard className="w-5 h-5" />,
                       label: 'Mobile Money',
-                      desc: deliveryType === 'delivery' ? 'Wave, Orange Money窶ｦ ﾃ la livraison' : 'Wave, Orange Money窶ｦ en boutique',
+                      desc: deliveryType === 'delivery' ? 'Wave, Orange Money... a la livraison' : 'Wave, Orange Money... en boutique',
                     },
                     {
                       value: 'lien_paiement' as PaymentMethod,
                       icon: <MessageCircle className="w-5 h-5" />,
-                      label: 'Lien de paiement sﾃｩcurisﾃｩ',
+                      label: 'Lien de paiement securise',
                       desc: 'Vous recevrez un lien de paiement sur WhatsApp',
                     },
                   ].map(({ value, icon, label, desc }) => (
@@ -670,14 +670,14 @@ export default function BoutiquePage() {
                       type="button"
                       onClick={() => setPaymentMethod(value)}
                       className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-colors ${
-                        paymentMethod === value ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                        paymentMethod === value ? 'border-brand-500 bg-badge-info' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
                       }`}
                     >
                       <div className={`shrink-0 ${paymentMethod === value ? 'text-brand-600' : 'text-content-secondary'}`}>
                         {icon}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold ${paymentMethod === value ? 'text-brand-700' : 'text-slate-700'}`}>
+                        <p className={`text-sm font-semibold ${paymentMethod === value ? 'text-brand-300' : 'text-content-primary'}`}>
                           {label}
                         </p>
                         <p className="text-xs text-content-secondary mt-0.5">{desc}</p>
@@ -697,28 +697,28 @@ export default function BoutiquePage() {
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Instructions spﾃｩciales, allergies, prﾃｩfﾃｩrences窶ｦ"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  placeholder="Instructions speciales, allergies, preferences..."
+                  className="w-full px-4 py-3 bg-surface-input border border-surface-border rounded-xl text-sm text-content-primary resize-none focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </section>
 
               {/* Rﾃｩcapitulatif */}
-              <section className="bg-slate-50 rounded-xl p-4 space-y-2">
-                <h3 className="font-semibold text-slate-700 text-sm">Rﾃｩcapitulatif</h3>
+              <section className="bg-surface-input rounded-xl p-4 space-y-2">
+                <h3 className="font-semibold text-content-secondary text-sm">Recapitulatif</h3>
                 {cart.map((item) => (
                   <div key={item.key} className="flex items-center justify-between text-sm">
-                    <span className="text-content-muted truncate flex-1 mr-2">{item.name} ﾃ・{item.quantity}</span>
-                    <span className="font-medium text-slate-800 shrink-0">{formatCurrency(item.price * item.quantity, info.currency)}</span>
+                    <span className="text-content-muted truncate flex-1 mr-2">{item.name} x {item.quantity}</span>
+                    <span className="font-medium text-content-primary shrink-0">{formatCurrency(item.price * item.quantity, info.currency)}</span>
                   </div>
                 ))}
-                <div className="border-t border-slate-200 pt-2 flex items-center justify-between">
-                  <span className="font-bold text-slate-800">Total</span>
+                <div className="border-t border-surface-border pt-2 flex items-center justify-between">
+                  <span className="font-bold text-content-primary">Total</span>
                   <span className="font-bold text-brand-600 text-lg">{formatCurrency(cartTotal, info.currency)}</span>
                 </div>
               </section>
 
               {submitError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                <div className="flex items-center gap-2 p-3 bg-badge-error border border-status-error/30 rounded-xl text-sm text-status-error">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {submitError}
                 </div>
