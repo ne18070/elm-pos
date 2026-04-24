@@ -13,8 +13,11 @@ import {
   type PublicAgencyInfo, type Voiture,
 } from '@services/supabase/voitures';
 
+const CURRENCY_LABEL: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA' };
+
 function fmtPrice(n: number, currency: string) {
-  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + currency;
+  const label = CURRENCY_LABEL[currency] ?? currency;
+  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + label;
 }
 
 // ─── VoitureCard ──────────────────────────────────────────────────────────────
