@@ -401,7 +401,7 @@ export function LocationPageClient() {
                     type="tel"
                     value={form.client_phone}
                     onChange={(e) => setForm({ ...form, client_phone: e.target.value })}
-                    placeholder="+225 07 00 00 00 00"
+                    placeholder="+221 07 00 00 00 00"
                     className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
