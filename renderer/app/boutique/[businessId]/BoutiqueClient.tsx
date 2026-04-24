@@ -115,7 +115,7 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
             {!outOfStock && hasVariants && (
               <button
                 onClick={handleAdd}
-                className="text-xs font-semibold text-status-info bg-badge-info hover:bg-surface-hover px-3 py-1.5 rounded-full transition-colors"
+                className="text-xs font-semibold text-content-primary bg-brand-500/15 border border-brand-500/30 hover:bg-brand-500/20 px-3 py-1.5 rounded-full transition-colors"
               >
                 {cartQty > 0 ? `${cartQty} au panier` : 'Choisir'}
               </button>
@@ -602,11 +602,11 @@ export default function BoutiquePage() {
                     type="button"
                     onClick={() => setDeliveryType('pickup')}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
-                      deliveryType === 'pickup' ? 'border-brand-500 bg-badge-info' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
+                      deliveryType === 'pickup' ? 'border-brand-500 bg-brand-500/15' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
                     }`}
                   >
                     <Store className={`w-6 h-6 ${deliveryType === 'pickup' ? 'text-brand-600' : 'text-content-secondary'}`} />
-                    <span className={`text-xs font-semibold ${deliveryType === 'pickup' ? 'text-brand-700' : 'text-content-muted'}`}>
+                    <span className={`text-xs font-semibold ${deliveryType === 'pickup' ? 'text-content-primary' : 'text-content-secondary'}`}>
                       En boutique
                     </span>
                   </button>
@@ -614,11 +614,11 @@ export default function BoutiquePage() {
                     type="button"
                     onClick={() => setDeliveryType('delivery')}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${
-                      deliveryType === 'delivery' ? 'border-brand-500 bg-badge-info' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
+                      deliveryType === 'delivery' ? 'border-brand-500 bg-brand-500/15' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
                     }`}
                   >
                     <Truck className={`w-6 h-6 ${deliveryType === 'delivery' ? 'text-brand-600' : 'text-content-secondary'}`} />
-                    <span className={`text-xs font-semibold ${deliveryType === 'delivery' ? 'text-brand-700' : 'text-content-muted'}`}>
+                    <span className={`text-xs font-semibold ${deliveryType === 'delivery' ? 'text-content-primary' : 'text-content-secondary'}`}>
                       Livraison
                     </span>
                   </button>
@@ -670,7 +670,7 @@ export default function BoutiquePage() {
                       type="button"
                       onClick={() => setPaymentMethod(value)}
                       className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-colors ${
-                        paymentMethod === value ? 'border-brand-500 bg-badge-info' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
+                        paymentMethod === value ? 'border-brand-500 bg-brand-500/15' : 'border-surface-border bg-surface-card hover:border-brand-500/30'
                       }`}
                     >
                       <div className={`shrink-0 ${paymentMethod === value ? 'text-brand-600' : 'text-content-secondary'}`}>

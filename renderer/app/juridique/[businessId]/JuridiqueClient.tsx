@@ -135,13 +135,13 @@ export default function JuridiqueClient() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-surface-card rounded-2xl border border-surface-border p-5 space-y-4">
-          <h3 className="font-semibold text-content-secondary text-sm flex items-center gap-2">
+          <h3 className="font-semibold text-content-primary text-sm flex items-center gap-2">
             <Calendar className="w-4 h-4 text-brand-500" />
             Votre demande
           </h3>
 
           <div>
-            <label className="text-xs text-content-secondary font-medium block mb-1">Nom complet *</label>
+            <label className="text-xs text-content-primary font-medium block mb-1">Nom complet *</label>
             <input
               type="text"
               value={form.client_name}
@@ -153,7 +153,7 @@ export default function JuridiqueClient() {
           </div>
 
           <div>
-            <label className="text-xs text-content-secondary font-medium block mb-1">
+            <label className="text-xs text-content-primary font-medium block mb-1">
               <span className="flex items-center gap-1"><Phone className="w-3 h-3" />Numero WhatsApp *</span>
             </label>
             <input
@@ -167,7 +167,7 @@ export default function JuridiqueClient() {
           </div>
 
           <div>
-            <label className="text-xs text-content-secondary font-medium block mb-1">Email</label>
+            <label className="text-xs text-content-primary font-medium block mb-1">Email</label>
             <input
               type="email"
               value={form.client_email}
@@ -178,7 +178,7 @@ export default function JuridiqueClient() {
           </div>
 
           <div>
-            <label className="text-xs text-content-secondary font-medium block mb-1">Motif / type d'affaire *</label>
+            <label className="text-xs text-content-primary font-medium block mb-1">Motif / type d'affaire *</label>
             <input
               type="text"
               value={form.subject}
@@ -190,7 +190,7 @@ export default function JuridiqueClient() {
           </div>
 
           <div>
-            <label className="text-xs text-content-secondary font-medium block mb-1">Date souhaitee *</label>
+            <label className="text-xs text-content-primary font-medium block mb-1">Date souhaitee *</label>
             <input
               type="date"
               min={TODAY}
@@ -202,7 +202,7 @@ export default function JuridiqueClient() {
           </div>
 
           <div>
-            <label className="text-xs text-content-secondary font-medium block mb-1">Notes</label>
+            <label className="text-xs text-content-primary font-medium block mb-1">Notes</label>
             <textarea
               rows={3}
               value={form.notes}

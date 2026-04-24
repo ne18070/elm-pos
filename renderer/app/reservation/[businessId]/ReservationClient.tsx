@@ -24,9 +24,9 @@ const ROOM_TYPE_LABELS: Record<string, string> = {
 };
 
 const ROOM_TYPE_COLORS: Record<string, string> = {
-  simple:    'bg-badge-info text-status-info border-status-info/30',
-  double:    'bg-surface-input text-content-secondary border-surface-border',
-  twin:      'bg-surface-input text-content-secondary border-surface-border',
+  simple:    'bg-brand-500/15 text-content-primary border-brand-500/30',
+  double:    'bg-surface-input text-content-primary border-surface-border',
+  twin:      'bg-surface-input text-content-primary border-surface-border',
   suite:     'bg-badge-warning text-status-warning border-status-warning/30',
   familiale: 'bg-badge-success text-status-success border-status-success/30',
 };
@@ -74,7 +74,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
           {ROOM_TYPE_LABELS[room.type] ?? room.type}
         </span>
         {room.floor && (
-          <span className="absolute top-3 right-3 text-xs text-content-muted bg-surface-card/90 border border-surface-border px-2 py-0.5 rounded-full">
+          <span className="absolute top-3 right-3 text-xs text-content-secondary bg-surface-card/90 border border-surface-border px-2 py-0.5 rounded-full">
             Étage {room.floor}
           </span>
         )}
@@ -85,7 +85,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="font-bold text-content-primary">Chambre {room.number}</h3>
-            <div className="flex items-center gap-1.5 mt-0.5 text-content-muted text-xs">
+            <div className="flex items-center gap-1.5 mt-0.5 text-content-secondary text-xs">
               <Users className="w-3.5 h-3.5" />
               <span>{room.capacity} personne{room.capacity > 1 ? 's' : ''} max</span>
             </div>
@@ -100,14 +100,14 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
 
         {/* Description */}
         {room.description && (
-          <p className="text-xs text-content-muted line-clamp-2">{room.description}</p>
+          <p className="text-xs text-content-secondary line-clamp-2">{room.description}</p>
         )}
 
         {/* Équipements */}
         {room.amenities?.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {room.amenities.slice(0, 5).map((a) => (
-              <span key={a} className="flex items-center gap-1 text-xs text-content-muted bg-surface-input border border-surface-border px-2 py-0.5 rounded-full">
+              <span key={a} className="flex items-center gap-1 text-xs text-content-secondary bg-surface-input border border-surface-border px-2 py-0.5 rounded-full">
                 {AMENITY_ICONS[a] ?? <Star className="w-3 h-3" />}
                 {a}
               </span>
@@ -121,7 +121,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
         {/* Total + CTA */}
         <div className="flex items-center justify-between pt-1">
           {nights > 1 && (
-            <p className="text-xs text-content-muted">
+            <p className="text-xs text-content-secondary">
                {nights} nuits = <span className="font-semibold text-content-primary">{formatCurrency(room.price_per_night * nights, currency)}</span>
             </p>
           )}
@@ -316,7 +316,7 @@ export default function ReservationPage() {
           </div>
 
           {nights > 0 && (
-            <p className="text-xs text-content-muted text-center">
+            <p className="text-xs text-content-secondary text-center">
               {nights} nuit{nights > 1 ? 's' : ''} · {fmtDate(checkIn)} → {fmtDate(checkOut)}
             </p>
           )}
@@ -431,14 +431,14 @@ export default function ReservationPage() {
             <form onSubmit={handleReserve} className="flex-1 overflow-y-auto p-5 space-y-4">
 
               {/* Récap chambre */}
-              <div className="bg-badge-info border border-brand-500/30 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div className="bg-brand-500/15 border border-brand-500/30 rounded-xl p-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-brand-800 text-sm">Chambre {selectedRoom.number}</p>
-                  <p className="text-xs text-brand-600 mt-0.5">
+                  <p className="font-semibold text-content-primary text-sm">Chambre {selectedRoom.number}</p>
+                  <p className="text-xs text-content-secondary mt-0.5">
                     {fmtDate(checkIn)} → {fmtDate(checkOut)} · {nights} nuit{nights > 1 ? 's' : ''}
                   </p>
                 </div>
-                <p className="font-black text-brand-700 text-xl shrink-0">
+                <p className="font-black text-content-primary text-xl shrink-0">
                   {formatCurrency(selectedRoom.price_per_night * nights, info!.currency)}
                 </p>
               </div>

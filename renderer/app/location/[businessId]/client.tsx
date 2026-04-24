@@ -51,7 +51,7 @@ function VehicleCard({
         <div>
           <h3 className="font-bold text-content-primary text-base">{vehicle.name}</h3>
           {(vehicle.brand || vehicle.model || vehicle.year) && (
-            <p className="text-xs text-content-muted mt-0.5">
+            <p className="text-xs text-content-secondary mt-0.5">
               {[vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' · ')}
             </p>
           )}
@@ -59,20 +59,20 @@ function VehicleCard({
 
         <div className="flex flex-wrap gap-2 text-xs">
           {vehicle.color && (
-            <span className="flex items-center gap-1 bg-surface-input border border-surface-border px-2 py-0.5 rounded-full text-content-muted">
+            <span className="flex items-center gap-1 bg-surface-input border border-surface-border px-2 py-0.5 rounded-full text-content-secondary">
               <span className="w-2 h-2 rounded-full bg-content-muted inline-block" />
               {vehicle.color}
             </span>
           )}
           {vehicle.license_plate && (
-            <span className="bg-surface-input border border-surface-border px-2 py-0.5 rounded-full text-content-muted font-mono">
+            <span className="bg-surface-input border border-surface-border px-2 py-0.5 rounded-full text-content-secondary font-mono">
               {vehicle.license_plate}
             </span>
           )}
         </div>
 
         {vehicle.description && (
-          <p className="text-xs text-content-muted line-clamp-2">{vehicle.description}</p>
+          <p className="text-xs text-content-secondary line-clamp-2">{vehicle.description}</p>
         )}
 
         <div className="flex items-end justify-between pt-1 border-t border-surface-border">
@@ -270,7 +270,7 @@ export function LocationPageClient() {
             </div>
           </div>
           {startDate && endDate && endDate > startDate && (
-            <p className="text-xs text-content-muted text-center">
+            <p className="text-xs text-content-secondary text-center">
               {days} jour{days > 1 ? 's' : ''} · du {fmtDate(startDate)} au {fmtDate(endDate)}
             </p>
           )}
@@ -302,7 +302,7 @@ export function LocationPageClient() {
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm text-content-muted font-medium">
+                <p className="text-sm text-content-secondary font-medium">
                   {vehicles.length} véhicule{vehicles.length > 1 ? 's' : ''} disponible{vehicles.length > 1 ? 's' : ''}
                 </p>
                 {vehicles.map((v) => (
@@ -346,7 +346,7 @@ export function LocationPageClient() {
             <div className="sticky top-0 bg-surface-card border-b border-surface-border px-5 pt-4 pb-3 flex items-center justify-between rounded-t-3xl">
               <div>
                 <h3 className="font-bold text-content-primary">Réserver — {selected.name}</h3>
-                <p className="text-xs text-content-muted mt-0.5">
+                <p className="text-xs text-content-secondary mt-0.5">
                   {fmtDate(startDate)} → {fmtDate(endDate)} · {days} jour{days > 1 ? 's' : ''}
                 </p>
               </div>
@@ -374,7 +374,7 @@ export function LocationPageClient() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-content-primary text-sm truncate">{selected.name}</p>
-                  <p className="text-xs text-content-muted">{formatCurrency(selected.price_per_day, currency)}/jour</p>
+                  <p className="text-xs text-content-secondary">{formatCurrency(selected.price_per_day, currency)}/jour</p>
                 </div>
                 <p className="font-black text-brand-600 shrink-0">
                   {formatCurrency(selected.price_per_day * days, currency)}
@@ -382,7 +382,7 @@ export function LocationPageClient() {
               </div>
 
               <div className="space-y-3">
-                <p className="text-xs font-semibold text-content-muted uppercase tracking-wide">Vos informations</p>
+                <p className="text-xs font-semibold text-content-secondary uppercase tracking-wide">Vos informations</p>
 
                 <div>
                   <label className="text-xs text-content-muted block mb-1">Nom complet *</label>
