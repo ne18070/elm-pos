@@ -1387,10 +1387,23 @@ export default function DossiersPage() {
               <p className="text-content-muted text-xs font-bold uppercase tracking-[0.1em] mt-0.5">Espace Juridique & Procédures</p>
             </div>
           </div>
-          {tab === 'dossiers' && can('create_dossier') && (
-            <button onClick={() => setModal('new')} className="bg-brand-500 hover:bg-brand-600 text-content-primary font-black py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
-              <Plus className="w-5 h-5" /> Nouveau Dossier
-            </button>
+          {tab === 'dossiers' && (
+            <div className="flex items-center gap-2">
+              {business?.id && (
+                <button
+                  onClick={() => window.open(`/juridique/${business.id}`, '_blank', 'noopener,noreferrer')}
+                  className="bg-surface border border-surface-border text-content-secondary hover:text-content-primary font-black py-3 px-4 rounded-2xl flex items-center gap-2 shadow-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                  title="Ouvrir la page publique de rendez-vous"
+                >
+                  <ExternalLink className="w-4 h-4" /> Page Publique
+                </button>
+              )}
+              {can('create_dossier') && (
+                <button onClick={() => setModal('new')} className="bg-brand-500 hover:bg-brand-600 text-content-primary font-black py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
+                  <Plus className="w-5 h-5" /> Nouveau Dossier
+                </button>
+              )}
+            </div>
           )}
         </div>
 

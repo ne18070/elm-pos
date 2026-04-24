@@ -5,6 +5,17 @@ const supabase = _supabase as any;
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
+function base64UrlToUint8Array(value: string): Uint8Array {
+  const padding = '='.repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) {
+    output[i] = raw.charCodeAt(i);
+  }
+  return output;
+}
+
 export async function subscribeToPush(userId: string, businessId: string): Promise<boolean> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     return false;
@@ -17,9 +28,12 @@ export async function subscribeToPush(userId: string, businessId: string): Promi
   await navigator.serviceWorker.ready;
 
   const existingSub = await registration.pushManager.getSubscription();
+  const applicationServerKey = VAPID_PUBLIC_KEY
+    ? (base64UrlToUint8Array(VAPID_PUBLIC_KEY) as BufferSource)
+    : undefined;
   const sub = existingSub ?? await registration.pushManager.subscribe({
     userVisibleOnly:      true,
-    applicationServerKey: VAPID_PUBLIC_KEY,
+    applicationServerKey,
   });
 
   const json    = sub.toJSON();

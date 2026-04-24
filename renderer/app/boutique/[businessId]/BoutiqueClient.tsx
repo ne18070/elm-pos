@@ -399,8 +399,8 @@ export default function BoutiquePage() {
           <div className="max-w-2xl mx-auto px-4 pb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setActiveCategory(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                !activeCategory ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-muted hover:bg-surface-hover'
+              className={`px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors ${
+                !activeCategory ? 'bg-brand-600 border-brand-600 text-content-primary' : 'bg-surface-card border-surface-border text-content-primary hover:bg-surface-hover'
               }`}
             >
               Tout
@@ -409,8 +409,8 @@ export default function BoutiquePage() {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  activeCategory === cat.id ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-muted hover:bg-surface-hover'
+                className={`px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors ${
+                  activeCategory === cat.id ? 'bg-brand-600 border-brand-600 text-content-primary' : 'bg-surface-card border-surface-border text-content-primary hover:bg-surface-hover'
                 }`}
               >
                 {cat.name}
