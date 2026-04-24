@@ -77,11 +77,11 @@ function VehicleCard({
 
         <div className="flex items-end justify-between pt-1 border-t border-slate-50">
           <div>
-            <p className="text-xs text-slate-400">Total {days} jour{days > 1 ? 's' : ''}</p>
+            <p className="text-xs text-content-secondary">Total {days} jour{days > 1 ? 's' : ''}</p>
             <p className="font-black text-brand-600 text-xl leading-tight">
               {formatCurrency(vehicle.price_per_day * days, currency)}
             </p>
-            <p className="text-xs text-slate-400">{formatCurrency(vehicle.price_per_day, currency)}/jour</p>
+            <p className="text-xs text-content-secondary">{formatCurrency(vehicle.price_per_day, currency)}/jour</p>
           </div>
           <button
             onClick={onSelect}
@@ -210,7 +210,7 @@ export default function LocationPage() {
           <div>
             <h1 className="font-bold text-slate-900 leading-tight">{agency?.name ?? 'Location'}</h1>
             {agency?.address && (
-              <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+              <p className="text-xs text-content-secondary flex items-center gap-1 mt-0.5">
                 <MapPin className="w-3 h-3" />{agency.address}
               </p>
             )}
@@ -234,7 +234,7 @@ export default function LocationPage() {
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 font-medium block mb-1">Départ</label>
+              <label className="text-xs text-content-secondary font-medium block mb-1">Départ</label>
               <input
                 type="date"
                 value={startDate}
@@ -252,7 +252,7 @@ export default function LocationPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 font-medium block mb-1">Retour</label>
+              <label className="text-xs text-content-secondary font-medium block mb-1">Retour</label>
               <input
                 type="date"
                 value={endDate}
@@ -289,9 +289,9 @@ export default function LocationPage() {
           <>
             {vehicles.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center space-y-2">
-                <Car className="w-12 h-12 text-slate-200 mx-auto" />
+                <Car className="w-12 h-12 text-content-primary mx-auto" />
                 <p className="font-semibold text-slate-600">Aucun véhicule disponible</p>
-                <p className="text-sm text-slate-400">Essayez d'autres dates.</p>
+                <p className="text-sm text-content-secondary">Essayez d'autres dates.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -317,7 +317,7 @@ export default function LocationPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex items-center justify-between gap-4">
             <div>
               <p className="font-semibold text-slate-800 text-sm">Une question ?</p>
-              <p className="text-xs text-slate-400 mt-0.5">{agency.name}</p>
+              <p className="text-xs text-content-secondary mt-0.5">{agency.name}</p>
             </div>
             <a
               href={`https://wa.me/${agency.phone.replace(/[^0-9]/g, '')}`}
@@ -362,7 +362,7 @@ export default function LocationPage() {
                   <img src={selected.image_url} alt={selected.name} className="w-14 h-10 rounded-lg object-cover shrink-0" />
                 ) : (
                   <div className="w-14 h-10 bg-slate-200 rounded-lg flex items-center justify-center shrink-0">
-                    <Car className="w-5 h-5 text-slate-400" />
+                    <Car className="w-5 h-5 text-content-secondary" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -488,7 +488,7 @@ export default function LocationPage() {
                 )}
               </button>
 
-              <p className="text-center text-xs text-slate-400 pb-2">
+              <p className="text-center text-xs text-content-secondary pb-2">
                 Votre demande sera confirmée par l'agence. Règlement à la prise en charge.
               </p>
             </div>

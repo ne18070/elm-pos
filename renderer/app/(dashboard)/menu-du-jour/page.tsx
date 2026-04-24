@@ -194,34 +194,34 @@ export default function MenuDuJourPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-900/30 border border-orange-700/40 flex items-center justify-center">
-            <CalendarDays className="w-5 h-5 text-orange-400" />
+          <div className="w-10 h-10 rounded-xl bg-badge-orange border border-orange-700/40 flex items-center justify-center">
+            <CalendarDays className="w-5 h-5 text-status-orange" />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-white">Menu du jour</h1>
-            <p className="text-xs text-slate-400">Sélectionnez les produits à mettre en avant</p>
+            <p className="text-xs text-content-secondary">Sélectionnez les produits à mettre en avant</p>
           </div>
         </div>
 
         {/* Navigation date */}
         <div className="flex items-center gap-2">
-          <button onClick={() => shiftDate(-1)} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
+          <button onClick={() => shiftDate(-1)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <div className="text-center">
             <p className="text-sm font-medium text-white capitalize">
               {format(new Date(date + 'T12:00:00'), 'EEEE d MMMM', { locale: fr })}
             </p>
-            {isToday && <p className="text-xs text-orange-400">Aujourd&apos;hui</p>}
+            {isToday && <p className="text-xs text-status-orange">Aujourd&apos;hui</p>}
           </div>
-          <button onClick={() => shiftDate(1)} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
+          <button onClick={() => shiftDate(1)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12 text-slate-400">
+        <div className="flex justify-center py-12 text-content-secondary">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : (
@@ -243,7 +243,7 @@ export default function MenuDuJourPage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingImg}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-surface-border hover:border-slate-500 text-slate-400 hover:text-slate-200 transition-colors text-sm disabled:opacity-50"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-surface-border hover:border-slate-500 text-content-secondary hover:text-content-primary transition-colors text-sm disabled:opacity-50"
               >
                 {uploadingImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
                 {uploadingImg ? 'Téléchargement…' : 'Ajouter une image'}
@@ -290,7 +290,7 @@ export default function MenuDuJourPage() {
                     onClick={() => toggleProduct(p.id)}
                     className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
                       isSelected
-                        ? 'border-orange-500/60 bg-orange-900/20'
+                        ? 'border-orange-500/60 bg-badge-orange'
                         : 'border-surface-border hover:border-slate-600 hover:bg-surface-hover'
                     }`}
                   >
@@ -301,7 +301,7 @@ export default function MenuDuJourPage() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{p.name}</p>
-                      <p className="text-xs text-slate-400">{p.price.toLocaleString()} {displayCurrency(business?.currency ?? 'XOF')}</p>
+                      <p className="text-xs text-content-secondary">{p.price.toLocaleString()} {displayCurrency(business?.currency ?? 'XOF')}</p>
                     </div>
                     {isSelected && (
                       <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
@@ -344,7 +344,7 @@ export default function MenuDuJourPage() {
             <button
               onClick={handleClear}
               disabled={saving || broadcasting}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-surface-border text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors text-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-surface-border text-content-secondary hover:text-status-error hover:border-red-500/40 transition-colors text-sm disabled:opacity-50"
             >
               <Trash2 className="w-4 h-4" />
               Effacer
@@ -358,13 +358,13 @@ export default function MenuDuJourPage() {
                 <p className="text-sm font-medium text-white">
                   Historique du jour
                 </p>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-content-secondary">
                   {broadcastLog.length} contact{broadcastLog.length > 1 ? 's' : ''} contacté{broadcastLog.length > 1 ? 's' : ''}
                 </span>
               </div>
               <div className="max-h-32 overflow-y-auto space-y-1">
                 {broadcastLog.map((log) => (
-                  <div key={log.phone} className="flex items-center justify-between text-xs text-slate-400">
+                  <div key={log.phone} className="flex items-center justify-between text-xs text-content-secondary">
                     <span className="font-mono">{log.phone}</span>
                     <span>{format(new Date(log.sent_at), 'HH:mm', { locale: fr })}</span>
                   </div>
@@ -378,23 +378,23 @@ export default function MenuDuJourPage() {
             <div className={`rounded-xl border p-4 space-y-2 ${
               broadcastResult.failed > 0
                 ? 'border-yellow-600/40 bg-yellow-900/20'
-                : 'border-green-600/40 bg-green-900/20'
+                : 'border-green-600/40 bg-badge-success'
             }`}>
               <p className="text-sm font-medium text-white">
                 Résultat du broadcast
               </p>
               <div className="flex items-center gap-4 text-sm flex-wrap">
-                <span className="text-green-400">✓ {broadcastResult.sent} envoyé{broadcastResult.sent > 1 ? 's' : ''}</span>
+                <span className="text-status-success">✓ {broadcastResult.sent} envoyé{broadcastResult.sent > 1 ? 's' : ''}</span>
                 {broadcastResult.skipped > 0 && (
-                  <span className="text-slate-400">⟳ {broadcastResult.skipped} déjà contacté{broadcastResult.skipped > 1 ? 's' : ''}</span>
+                  <span className="text-content-secondary">⟳ {broadcastResult.skipped} déjà contacté{broadcastResult.skipped > 1 ? 's' : ''}</span>
                 )}
                 {broadcastResult.failed > 0 && (
-                  <span className="text-red-400">✗ {broadcastResult.failed} échec{broadcastResult.failed > 1 ? 's' : ''}</span>
+                  <span className="text-status-error">✗ {broadcastResult.failed} échec{broadcastResult.failed > 1 ? 's' : ''}</span>
                 )}
               </div>
               {broadcastResult.errors.length > 0 && (
-                <details className="text-xs text-slate-400">
-                  <summary className="cursor-pointer flex items-center gap-1 text-yellow-400 hover:text-yellow-300">
+                <details className="text-xs text-content-secondary">
+                  <summary className="cursor-pointer flex items-center gap-1 text-status-warning hover:text-yellow-300">
                     <AlertTriangle className="w-3 h-3" /> Voir les erreurs
                   </summary>
                   <ul className="mt-2 space-y-1 pl-4">

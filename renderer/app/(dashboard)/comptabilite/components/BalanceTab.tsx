@@ -24,7 +24,7 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
     return (
       <div className="card p-8 text-center">
         <Scale className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-        <p className="text-slate-400 text-sm">Aucun mouvement pour cette période.</p>
+        <p className="text-content-secondary text-sm">Aucun mouvement pour cette période.</p>
       </div>
     );
   }
@@ -41,12 +41,12 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
               {CLASS_LABELS[cls] ?? `Classe ${cls}`}
             </span>
             <div className="flex items-center gap-6">
-              <span className="text-xs text-slate-400 hidden sm:block">
+              <span className="text-xs text-content-secondary hidden sm:block">
                 D : {formatCurrency(totalDebit, currency)} | C : {formatCurrency(totalCredit, currency)}
               </span>
               {expandedClasses.has(cls)
-                ? <ChevronDown className="w-4 h-4 text-slate-400" />
-                : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                ? <ChevronDown className="w-4 h-4 text-content-secondary" />
+                : <ChevronRight className="w-4 h-4 text-content-secondary" />}
             </div>
           </button>
 
@@ -68,7 +68,7 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
                     const solde = row.total_debit - row.total_credit;
                     return (
                       <tr key={row.account_code} className="border-t border-surface-border hover:bg-surface-hover">
-                        <td className="px-4 py-2 font-mono text-xs text-brand-400">{row.account_code}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-content-brand">{row.account_code}</td>
                         <td className="px-4 py-2 text-slate-300 text-xs">{row.account_name}</td>
                         <td className="px-4 py-2 text-right font-mono text-xs text-white">
                           {row.total_debit > 0 ? formatCurrency(row.total_debit, currency) : ''}
@@ -76,10 +76,10 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
                         <td className="px-4 py-2 text-right font-mono text-xs text-white">
                           {row.total_credit > 0 ? formatCurrency(row.total_credit, currency) : ''}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-xs text-green-400 hidden sm:table-cell">
+                        <td className="px-4 py-2 text-right font-mono text-xs text-status-success hidden sm:table-cell">
                           {solde > 0 ? formatCurrency(solde, currency) : ''}
                         </td>
-                        <td className="px-4 py-2 text-right font-mono text-xs text-red-400 hidden sm:table-cell">
+                        <td className="px-4 py-2 text-right font-mono text-xs text-status-error hidden sm:table-cell">
                           {solde < 0 ? formatCurrency(-solde, currency) : ''}
                         </td>
                       </tr>
@@ -88,7 +88,7 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
                 </tbody>
                 <tfoot className="bg-surface-input border-t-2 border-surface-border">
                   <tr>
-                    <td colSpan={2} className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">
+                    <td colSpan={2} className="px-4 py-2 text-xs font-bold text-content-secondary uppercase">
                       Total Classe {cls}
                     </td>
                     <td className="px-4 py-2 text-right font-bold text-white font-mono text-xs">
@@ -111,13 +111,13 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
           <span className="font-bold text-white">TOTAL GÉNÉRAL</span>
           <div className="flex gap-8">
             <div className="text-right">
-              <p className="text-xs text-slate-400">Total Débit</p>
+              <p className="text-xs text-content-secondary">Total Débit</p>
               <p className="font-bold text-white font-mono">
                 {formatCurrency(byClass.reduce((s, c) => s + c.totalDebit, 0), currency)}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-400">Total Crédit</p>
+              <p className="text-xs text-content-secondary">Total Crédit</p>
               <p className="font-bold text-white font-mono">
                 {formatCurrency(byClass.reduce((s, c) => s + c.totalCredit, 0), currency)}
               </p>

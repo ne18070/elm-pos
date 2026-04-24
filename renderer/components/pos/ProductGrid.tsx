@@ -173,7 +173,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                 )}
                 {state === 'out' && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                    <span className="text-xs font-bold text-red-400">Épuisé</span>
+                    <span className="text-xs font-bold text-status-error">Épuisé</span>
                   </div>
                 )}
                 {state === 'low' && (
@@ -196,7 +196,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
               {/* Prix + stock */}
               <div className="flex items-center justify-between mt-auto">
                 <div>
-                  <span className="text-brand-400 font-bold text-sm">
+                  <span className="text-content-brand font-bold text-sm">
                     {formatCurrency(product.price, business?.currency)}
                   </span>
                   {product.variants?.length > 0 && (
@@ -208,7 +208,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                 </div>
                 {label && (
                   <span className={`text-xs font-medium ${
-                    state === 'out' ? 'text-red-400' : 'text-yellow-400'
+                    state === 'out' ? 'text-status-error' : 'text-status-warning'
                   }`}>
                     {label}
                   </span>
@@ -275,7 +275,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                 )}
                 {label && (
                   <span className={`text-xs font-medium flex items-center gap-0.5 ${
-                    state === 'out' ? 'text-red-400' : 'text-yellow-400'
+                    state === 'out' ? 'text-status-error' : 'text-status-warning'
                   }`}>
                     {state === 'low' && <AlertTriangle className="w-3 h-3" />}
                     {label}
@@ -287,7 +287,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
             {/* Prix + bouton ajouter */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="text-right">
-                <span className="text-brand-400 font-bold text-sm">
+                <span className="text-content-brand font-bold text-sm">
                   {formatCurrency(product.price, business?.currency)}
                 </span>
                 {product.variants?.length > 0 && (

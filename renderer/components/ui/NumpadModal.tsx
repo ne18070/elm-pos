@@ -65,7 +65,7 @@ export function NumpadModal({ value, label, hint, onDigit, onClose }: NumpadModa
               onClick={() => press(k)}
               className={`flex items-center justify-center h-14 text-xl font-semibold transition-colors select-none
                 ${k === '⌫'
-                  ? 'bg-surface-input text-amber-400 hover:bg-amber-900/20'
+                  ? 'bg-surface-input text-status-warning hover:bg-badge-warning'
                   : 'bg-surface-card text-white hover:bg-surface-hover active:bg-surface-input'
                 }`}
             >
@@ -78,7 +78,7 @@ export function NumpadModal({ value, label, hint, onDigit, onClose }: NumpadModa
         <div className="grid grid-cols-2 gap-px bg-surface-border p-px">
           <button
             onClick={onClose}
-            className="h-12 bg-surface-input text-slate-400 hover:bg-surface-hover font-medium transition-colors"
+            className="h-12 bg-surface-input text-content-secondary hover:bg-surface-hover font-medium transition-colors"
           >
             Annuler
           </button>

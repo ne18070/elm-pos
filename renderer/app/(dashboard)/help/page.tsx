@@ -38,7 +38,7 @@ const SECTIONS: Section[] = [
     id: 'productivite',
     icon: LayoutGrid,
     title: 'Productivité & Raccourcis',
-    color: 'text-brand-400',
+    color: 'text-content-brand',
     topics: [
       {
         question: 'Comment utiliser la Palette de Commandes (Ctrl+K) ?',
@@ -121,7 +121,7 @@ const SECTIONS: Section[] = [
     id: 'caisse',
     icon: ShoppingCart,
     title: 'Caisse (POS)',
-    color: 'text-brand-400',
+    color: 'text-content-brand',
     excludeFor: ['juridique'],
     topics: [
       {
@@ -159,9 +159,9 @@ const SECTIONS: Section[] = [
             <p>Allez dans <strong className="text-white">Clôture caisse</strong> pour voir l&apos;état de la session actuelle.</p>
             <p>Vous y verrez le fonds de caisse initial, le total des ventes par mode de paiement et le solde théorique.</p>
             <p>Pour clôturer, cliquez sur <strong className="text-white">Clôturer la session</strong>. Un rapport détaillé est généré.</p>
-            <div className="flex gap-2 p-3 bg-red-900/10 border border-red-800 rounded-lg mt-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-300">Une session ouverte trop longtemps (plus de 24h) déclenchera une alerte dans l&apos;application.</p>
+            <div className="flex gap-2 p-3 bg-badge-error border border-status-error rounded-lg mt-2">
+              <AlertCircle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
+              <p className="text-xs text-status-error">Une session ouverte trop longtemps (plus de 24h) déclenchera une alerte dans l&apos;application.</p>
             </div>
           </div>
         ),
@@ -172,7 +172,7 @@ const SECTIONS: Section[] = [
     id: 'personnel',
     icon: Users,
     title: 'Personnel & Paie',
-    color: 'text-orange-400',
+    color: 'text-status-orange',
     roles: ['owner', 'admin'],
     topics: [
       {
@@ -244,7 +244,7 @@ const SECTIONS: Section[] = [
     id: 'revendeurs',
     icon: Store,
     title: 'Vente en gros & Revendeurs',
-    color: 'text-teal-400',
+    color: 'text-status-teal',
     roles: ['owner', 'admin'],
     excludeFor: ['juridique', 'hotel'],
     topics: [
@@ -263,7 +263,7 @@ const SECTIONS: Section[] = [
     id: 'hotel',
     icon: BedDouble,
     title: 'Hébergement (Hôtel)',
-    color: 'text-sky-400',
+    color: 'text-status-info',
     onlyFor: ['hotel'],
     topics: [
       {
@@ -308,7 +308,7 @@ const SECTIONS: Section[] = [
     id: 'produits',
     icon: Package,
     title: 'Produits & Stock',
-    color: 'text-green-400',
+    color: 'text-status-success',
     roles: ['owner', 'admin'],
     excludeFor: ['juridique'],
     topics: [
@@ -329,7 +329,7 @@ const SECTIONS: Section[] = [
           <div className="space-y-2 text-slate-300">
             <p>Cliquez sur <strong className="text-white">Importer</strong> dans la page Produits. Utilisez un fichier CSV encodé en <strong className="text-white">UTF-8</strong>.</p>
             <div className="bg-surface-input rounded-lg p-3 overflow-x-auto text-[10px]">
-              <code className="text-green-400 whitespace-pre">{`nom,description,prix,categorie,code_barres,sku,stock,suivre_stock,actif
+              <code className="text-status-success whitespace-pre">{`nom,description,prix,categorie,code_barres,sku,stock,suivre_stock,actif
 "Coca-Cola 50cl","Boisson gazeuse",500,"Boissons","123456","CC50",100,oui,oui`}</code>
             </div>
           </div>
@@ -360,7 +360,7 @@ const SECTIONS: Section[] = [
     id: 'dossiers',
     icon: Briefcase,
     title: 'Gestion des Dossiers',
-    color: 'text-purple-400',
+    color: 'text-status-purple',
     onlyFor: ['juridique'],
     topics: [
       {
@@ -379,7 +379,7 @@ const SECTIONS: Section[] = [
         question: 'Comment suivre l\'avancement d\'un dossier ?',
         answer: (
           <div className="space-y-2 text-slate-300">
-            <p>Depuis la liste des dossiers, cliquez sur l&apos;icône <strong className="text-white">Processus</strong> <GitBranch className="w-3.5 h-3.5 inline text-brand-400" /> pour voir les étapes en cours.</p>
+            <p>Depuis la liste des dossiers, cliquez sur l&apos;icône <strong className="text-white">Processus</strong> <GitBranch className="w-3.5 h-3.5 inline text-content-brand" /> pour voir les étapes en cours.</p>
             <p>Vous pouvez lancer un workflow manuellement depuis ce panneau et voir chaque transition de statut.</p>
             <p>Pour partager le suivi avec le client, cliquez sur l&apos;icône téléphone — un lien WhatsApp est généré automatiquement.</p>
           </div>
@@ -400,7 +400,7 @@ const SECTIONS: Section[] = [
     id: 'honoraires',
     icon: Receipt,
     title: 'Honoraires & Finances',
-    color: 'text-emerald-400',
+    color: 'text-status-success',
     onlyFor: ['juridique'],
     roles: ['owner', 'admin'],
     topics: [
@@ -408,7 +408,7 @@ const SECTIONS: Section[] = [
         question: 'Comment enregistrer un honoraire ?',
         answer: (
           <ol className="list-decimal list-inside space-y-2 text-slate-300">
-            <li>Sur la ligne du dossier, cliquez sur l&apos;icône <strong className="text-white">Finances</strong> <Receipt className="w-3.5 h-3.5 inline text-emerald-400" />.</li>
+            <li>Sur la ligne du dossier, cliquez sur l&apos;icône <strong className="text-white">Finances</strong> <Receipt className="w-3.5 h-3.5 inline text-status-success" />.</li>
             <li>Cliquez sur <strong className="text-white">Ajouter</strong> dans le panneau.</li>
             <li>Renseignez le montant, le type (Provision, Honoraire, Consultation, Frais) et une note optionnelle.</li>
             <li>Enregistrez — la ligne apparaît avec le statut <em>Impayé</em>.</li>
@@ -430,7 +430,7 @@ const SECTIONS: Section[] = [
     id: 'audiences',
     icon: Gavel,
     title: 'Audiences & Processus',
-    color: 'text-yellow-400',
+    color: 'text-status-warning',
     onlyFor: ['juridique'],
     topics: [
       {
@@ -448,10 +448,10 @@ const SECTIONS: Section[] = [
           <div className="space-y-2 text-slate-300">
             <p>Allez dans <strong className="text-white">Dossiers → Processus</strong>. Cliquez sur <strong className="text-white">Nouveau Processus</strong> pour ouvrir le constructeur visuel.</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li><strong className="text-brand-400">Losanges</strong> : Points de décision (conditions).</li>
+              <li><strong className="text-content-brand">Losanges</strong> : Points de décision (conditions).</li>
               <li><strong className="text-blue-400">Haut incliné</strong> : Tâches manuelles utilisateur.</li>
-              <li><strong className="text-purple-400">Hexagones</strong> : Actions automatiques du système.</li>
-              <li><strong className="text-amber-400">Documents</strong> : Génération d&apos;actes juridiques.</li>
+              <li><strong className="text-status-purple">Hexagones</strong> : Actions automatiques du système.</li>
+              <li><strong className="text-status-warning">Documents</strong> : Génération d&apos;actes juridiques.</li>
             </ul>
             <p className="text-sm mt-2 font-medium">Vous pouvez lier les étapes par des flèches pour définir l&apos;ordre d&apos;exécution.</p>
           </div>
@@ -472,7 +472,7 @@ const SECTIONS: Section[] = [
           <div className="space-y-2 text-slate-300">
             <p>Allez dans <strong className="text-white">Dossiers → Modèles</strong>. Utilisez l&apos;éditeur "Smart Paper" pour rédiger vos lettres types.</p>
             <p>Le <strong className="text-blue-400 font-bold">Guide des Variables</strong> à gauche vous permet d&apos;insérer en un clic des données dynamiques (Nom du client, Référence, etc.) qui seront remplies automatiquement lors de la génération.</p>
-            <div className="flex gap-2 p-3 bg-blue-900/10 border border-blue-800 rounded-lg mt-2">
+            <div className="flex gap-2 p-3 bg-badge-info border border-blue-800 rounded-lg mt-2">
               <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-xs">Utilisez la barre d&apos;outils flottante pour mettre en forme votre texte (Gras, Listes, Alignement) pour un rendu professionnel.</p>
             </div>
@@ -493,7 +493,7 @@ const SECTIONS: Section[] = [
     id: 'parametres',
     icon: Settings,
     title: 'Paramètres',
-    color: 'text-slate-400',
+    color: 'text-content-secondary',
     topics: [
       {
         question: 'Comment configurer l\'imprimante ?',
@@ -510,8 +510,8 @@ const SECTIONS: Section[] = [
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: any }> = {
   open:        { label: 'Ouvert',      color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', icon: Clock },
-  in_progress: { label: 'En cours',   color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', icon: RefreshCw },
-  resolved:    { label: 'Résolu',      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
+  in_progress: { label: 'En cours',   color: 'text-status-warning bg-amber-500/10 border-amber-500/20', icon: RefreshCw },
+  resolved:    { label: 'Résolu',      color: 'text-status-success bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
   closed:      { label: 'Fermé',      color: 'text-slate-500 bg-slate-500/10 border-slate-500/20', icon: XCircle },
 };
 
@@ -524,7 +524,7 @@ function TopicItem({ topic }: { topic: Topic }) {
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-hover transition-colors"
       >
         <span className="text-sm font-medium text-white pr-4">{topic.question}</span>
-        <ChevronDown className={cn('w-4 h-4 text-slate-400 shrink-0 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('w-4 h-4 text-content-secondary shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-surface-border bg-surface-card/50 text-sm leading-relaxed">
@@ -556,7 +556,7 @@ function SectionCard({ section, userRole }: { section: Section; userRole: string
             <p className="text-xs text-slate-500 mt-0.5">{section.topics.length} rubrique{section.topics.length > 1 ? 's' : ''}</p>
           </div>
         </div>
-        <ChevronDown className={cn('w-5 h-5 text-slate-400 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('w-5 h-5 text-content-secondary transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
@@ -578,9 +578,9 @@ function TicketRow({ ticket, onClick }: { ticket: SupportTicket; onClick: () => 
       className="w-full card p-4 border-surface-border hover:border-brand-500/50 transition-all group flex items-center gap-4 text-left"
     >
       <div className={cn("p-2 rounded-xl bg-surface-input", 
-        ticket.type === 'bug' ? 'text-red-400' : 
-        ticket.type === 'suggestion' ? 'text-amber-400' : 
-        ticket.type === 'question' ? 'text-blue-400' : 'text-emerald-400'
+        ticket.type === 'bug' ? 'text-status-error' : 
+        ticket.type === 'suggestion' ? 'text-status-warning' : 
+        ticket.type === 'question' ? 'text-blue-400' : 'text-status-success'
       )}>
         {ticket.type === 'bug' ? <Bug size={18} /> : 
          ticket.type === 'suggestion' ? <Lightbulb size={18} /> : 
@@ -596,7 +596,7 @@ function TicketRow({ ticket, onClick }: { ticket: SupportTicket; onClick: () => 
         </div>
         <h4 className="text-sm font-bold text-white truncate">{ticket.subject}</h4>
       </div>
-      <ChevronRight className="text-slate-700 group-hover:text-brand-400 transition-colors" size={16} />
+      <ChevronRight className="text-slate-700 group-hover:text-content-brand transition-colors" size={16} />
     </button>
   );
 }
@@ -658,7 +658,7 @@ export default function HelpPage() {
       <div className="p-6 border-b border-surface-border bg-surface-card/30">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-brand-600/20 text-brand-400">
+            <div className="p-2 rounded-xl bg-brand-600/20 text-content-brand">
               <HelpCircle className="w-6 h-6" />
             </div>
             <div>
@@ -685,7 +685,7 @@ export default function HelpPage() {
 
         {activeTab === 'faq' && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
             <input
               type="text"
               placeholder="Rechercher dans l&apos;aide…"
@@ -704,7 +704,7 @@ export default function HelpPage() {
             {!search && (
               <div className="card p-5 bg-brand-600/10 border-brand-700/40 mb-6">
                 <div className="flex gap-3">
-                  <CheckCircle className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
+                  <CheckCircle className="w-5 h-5 text-content-brand shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-white mb-2">Démarrage rapide</p>
                     {isJuridique ? (
@@ -728,7 +728,7 @@ export default function HelpPage() {
             )}
 
             {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-16 text-content-secondary">
                 <HelpCircle className="w-12 h-12 mb-3 opacity-30" />
                 <p className="font-medium">Aucun résultat pour &quot;{search}&quot;</p>
               </div>
@@ -742,7 +742,7 @@ export default function HelpPage() {
           <div className="max-w-3xl mx-auto space-y-4">
             <div className="flex items-center justify-between mb-2 px-1">
                <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Historique des signalements</h2>
-               <button onClick={loadTickets} className="text-brand-400 hover:text-brand-300 transition-colors">
+               <button onClick={loadTickets} className="text-content-brand hover:text-content-brand transition-colors">
                   <RefreshCw size={14} className={loadingTickets ? 'animate-spin' : ''} />
                </button>
             </div>
@@ -781,7 +781,7 @@ export default function HelpPage() {
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
                  <div className="space-y-2">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Votre message</p>
-                    <div className="p-5 rounded-2xl bg-surface-input/50 border border-surface-border text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                    <div className="p-5 rounded-2xl bg-surface-input/50 border border-surface-border text-content-primary text-sm leading-relaxed whitespace-pre-wrap">
                        {selectedTicket.message}
                     </div>
                  </div>
@@ -800,11 +800,11 @@ export default function HelpPage() {
                  )}
 
                  <div className="p-5 rounded-2xl bg-brand-500/5 border border-brand-500/10 space-y-2">
-                    <div className="flex items-center gap-2 text-brand-400">
+                    <div className="flex items-center gap-2 text-content-brand">
                        <Info size={16} />
                        <p className="text-xs font-bold uppercase tracking-widest">Suivi technique</p>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed italic">
+                    <p className="text-[11px] text-content-secondary leading-relaxed italic">
                        {selectedTicket.status === 'open' ? "Votre demande est en attente de prise en charge par notre équipe." : 
                         selectedTicket.status === 'in_progress' ? "Un technicien travaille actuellement sur votre cas." :
                         selectedTicket.status === 'resolved' ? "Ce cas a été marqué comme résolu. Si le problème persiste, n'hésitez pas à nous recontacter." :

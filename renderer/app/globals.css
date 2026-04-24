@@ -36,6 +36,36 @@
     --text-base:        241 245 249;  /* slate-100 */
     --text-secondary:   148 163 184;  /* slate-400 */
     --text-placeholder: 100 116 139;  /* slate-500 */
+
+    /* Status tokens — texte & icônes (dark : couleurs vives) */
+    --color-success:  74 222 128;   /* green-400 */
+    --color-warning:  251 191 36;   /* amber-400 */
+    --color-error:    248 113 113;  /* red-400 */
+    --color-info:     56 189 248;   /* sky-400 */
+
+    /* Badge tokens — fonds de pastilles statut (dark : teintes sombres à 100%) */
+    --badge-success:  27 52 35;
+    --badge-warning:  64 36 12;
+    --badge-error:    57 17 17;
+    --badge-info:     11 42 65;
+
+    /* Surface overlay (fond le plus profond, ex-bg-slate-950) */
+    --surface-overlay: 2 6 23;
+
+    /* Texte de marque adaptatif */
+    --text-brand: 56 189 248;       /* brand-400 */
+
+    /* Status étendu */
+    --color-brand:  56 189 248;     /* brand-400 */
+    --color-teal:   45 212 191;     /* teal-400 */
+    --color-purple: 192 132 252;    /* purple-400 */
+    --color-orange: 251 146 60;     /* orange-400 */
+
+    /* Badge étendu */
+    --badge-brand:  12 74 110;      /* sky-900 */
+    --badge-teal:   19 78 74;       /* teal-900 */
+    --badge-purple: 88 28 135;      /* purple-900 */
+    --badge-orange: 124 45 18;      /* orange-900 */
   }
 
 
@@ -121,6 +151,29 @@
   --text-base:        30 41 59;     /* slate-800 */
   --text-secondary:   71 85 105;    /* slate-600 */
   --text-placeholder: 148 163 184;  /* slate-400 */
+
+  /* Status — versions plus sombres lisibles sur fond blanc */
+  --color-success:  22 163 74;    /* green-600 */
+  --color-warning:  180 83 9;     /* amber-700 */
+  --color-error:    220 38 38;    /* red-600 */
+  --color-info:     2 132 199;    /* sky-600 */
+
+  /* Badge — pastels lisibles sur fond blanc */
+  --badge-success:  220 252 231;  /* green-100 */
+  --badge-warning:  254 243 199;  /* amber-100 */
+  --badge-error:    254 226 226;  /* red-100 */
+  --badge-info:     224 242 254;  /* sky-100 */
+
+  --surface-overlay: 248 250 252;  /* slate-50 */
+  --text-brand:      3 105 161;    /* brand-700 */
+  --color-brand:     3 105 161;
+  --color-teal:      15 118 110;   /* teal-700 */
+  --color-purple:    126 34 206;   /* purple-700 */
+  --color-orange:    194 65 12;    /* orange-700 */
+  --badge-brand:     224 242 254;  /* sky-100 */
+  --badge-teal:      204 251 241;  /* teal-100 */
+  --badge-purple:    233 213 255;  /* purple-100 */
+  --badge-orange:    255 237 213;  /* orange-100 */
 }
 
 /* ── Texte slate (global, sauf sidebar) ─────────────────────────────────── */
@@ -128,7 +181,6 @@
 [data-theme="light"] .text-slate-100 { color: #1e293b !important; }
 [data-theme="light"] .text-slate-200 { color: #334155 !important; }
 [data-theme="light"] .text-slate-300 { color: #475569 !important; }
-[data-theme="light"] .text-slate-400 { color: #64748b !important; }
 [data-theme="light"] .text-slate-500 { color: #475569 !important; }
 [data-theme="light"] .text-slate-600 { color: #334155 !important; }
 [data-theme="light"] .text-slate-700 { color: #1e293b !important; }
@@ -204,36 +256,15 @@
 [data-theme="light"] .bg-slate-800 .text-slate-300,
 [data-theme="light"] .bg-slate-900 .text-slate-300 { color: #cbd5e1 !important; }
 
-[data-theme="light"] .bg-brand-600 .text-slate-400,
-[data-theme="light"] .bg-slate-700 .text-slate-400,
-[data-theme="light"] .bg-slate-800 .text-slate-400,
-[data-theme="light"] .bg-slate-900 .text-slate-400 { color: #94a3b8 !important; }
-
-
-/* ── Couleurs vives → versions sombres lisibles sur fond blanc ───────────── */
+/* ── Couleurs vives non-sémantiques encore utilisées ────────────────────── */
 [data-theme="light"] .text-brand-400   { color: #0369a1 !important; }
 [data-theme="light"] .text-brand-300   { color: #0284c7 !important; }
-[data-theme="light"] .text-green-300   { color: #166534 !important; }
-[data-theme="light"] .text-green-400   { color: #15803d !important; }
-[data-theme="light"] .text-green-500   { color: #166534 !important; }
-[data-theme="light"] .text-emerald-400 { color: #065f46 !important; }
-[data-theme="light"] .text-emerald-500 { color: #064e3b !important; }
 [data-theme="light"] .text-teal-300    { color: #0d9488 !important; }
 [data-theme="light"] .text-teal-400    { color: #0f766e !important; }
 [data-theme="light"] .text-blue-300    { color: #1d4ed8 !important; }
 [data-theme="light"] .text-blue-400    { color: #1d4ed8 !important; }
-[data-theme="light"] .text-sky-400     { color: #0369a1 !important; }
 [data-theme="light"] .text-cyan-400    { color: #0e7490 !important; }
-[data-theme="light"] .text-amber-300   { color: #b45309 !important; }
-[data-theme="light"] .text-amber-400   { color: #92400e !important; }
-[data-theme="light"] .text-amber-500   { color: #78350f !important; }
-[data-theme="light"] .text-yellow-300  { color: #92400e !important; }
-[data-theme="light"] .text-yellow-400  { color: #78350f !important; }
-[data-theme="light"] .text-yellow-500  { color: #713f12 !important; }
 [data-theme="light"] .text-orange-400  { color: #c2410c !important; }
-[data-theme="light"] .text-red-300     { color: #b91c1c !important; }
-[data-theme="light"] .text-red-400     { color: #991b1b !important; }
-[data-theme="light"] .text-red-500     { color: #7f1d1d !important; }
 [data-theme="light"] .text-purple-300  { color: #7e22ce !important; }
 [data-theme="light"] .text-purple-400  { color: #6b21a8 !important; }
 [data-theme="light"] .text-pink-400    { color: #be185d !important; }
@@ -248,39 +279,20 @@
 [data-theme="light"] .bg-amber-600\/60  { background-color: #f59e0b !important; color: #ffffff !important; }
 [data-theme="light"] .bg-orange-900\/20 { background-color: #fff7ed !important; }
 [data-theme="light"] .bg-orange-900\/40 { background-color: #fed7aa !important; }
+[data-theme="light"] .bg-orange-900\/10 { background-color: #fff7ed !important; }
 [data-theme="light"] .bg-purple-900\/20 { background-color: #faf5ff !important; }
 [data-theme="light"] .bg-purple-900\/40 { background-color: #e9d5ff !important; }
 [data-theme="light"] .bg-teal-900\/20   { background-color: #f0fdfa !important; }
 [data-theme="light"] .bg-teal-900\/40   { background-color: #ccfbf1 !important; }
-[data-theme="light"] .bg-green-900\/20  { background-color: #f0fdf4 !important; }
-[data-theme="light"] .bg-green-900\/30  { background-color: #dcfce7 !important; }
-[data-theme="light"] .bg-green-900\/40  { background-color: #bbf7d0 !important; }
-[data-theme="light"] .bg-red-900\/20    { background-color: #fff1f2 !important; }
-[data-theme="light"] .bg-red-900\/30    { background-color: #ffe4e6 !important; }
-[data-theme="light"] .bg-red-900\/40    { background-color: #fecdd3 !important; }
-[data-theme="light"] .bg-blue-900\/20   { background-color: #eff6ff !important; }
-[data-theme="light"] .bg-blue-900\/10   { background-color: #f0f9ff !important; }
-[data-theme="light"] .bg-amber-900\/20  { background-color: #fef3c7 !important; }
-[data-theme="light"] .bg-amber-900\/30  { background-color: #fffbeb !important; }
-[data-theme="light"] .bg-amber-900\/40  { background-color: #fde68a !important; }
 [data-theme="light"] .bg-slate-800\/60  { background-color: #f1f5f9 !important; }
 [data-theme="light"] .bg-slate-800\/40  { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-orange-900\/10 { background-color: #fff7ed !important; }
 [data-theme="light"] .bg-slate-900\/50  { background-color: #f1f5f9 !important; }
 [data-theme="light"] .bg-black\/20      { background-color: #f8fafc !important; }
-[data-theme="light"] .bg-emerald-700\/20 { background-color: #dcfce7 !important; }
 
-/* ── Bordures colorées sur fond clair ───────────────────────────────────── */
-[data-theme="light"] .border-green-800,
-[data-theme="light"] .border-green-800\/50 { border-color: #16a34a !important; }
-[data-theme="light"] .border-green-700  { border-color: #15803d !important; }
-[data-theme="light"] .border-red-700    { border-color: #b91c1c !important; }
-[data-theme="light"] .border-red-800    { border-color: #dc2626 !important; }
+/* ── Bordures colorées non-sémantiques sur fond clair ───────────────────── */
 [data-theme="light"] .border-blue-700   { border-color: #1d4ed8 !important; }
 [data-theme="light"] .border-blue-800   { border-color: #1e40af !important; }
 [data-theme="light"] .border-orange-700 { border-color: #c2410c !important; }
-[data-theme="light"] .border-amber-700  { border-color: #b45309 !important; }
-[data-theme="light"] .border-amber-800\/50 { border-color: #d97706 !important; }
 
 [data-theme="light"] .border-brand-500       { border-color: #0284c7 !important; }
 [data-theme="light"] .border-brand-700,
@@ -297,12 +309,7 @@
 /* ── Subscribe page : fond grille ───────────────────────────────────────── */
 [data-theme="light"] .subscribe-grid-bg { display: none; }
 
-/* ── Fonds haute opacité (cellules présences, boutons statut) ────────────── */
-[data-theme="light"] .bg-green-900\/60   { background-color: #bbf7d0 !important; }
-[data-theme="light"] .bg-red-900\/60     { background-color: #fecaca !important; }
-[data-theme="light"] .bg-amber-900\/60   { background-color: #fde68a !important; }
-[data-theme="light"] .bg-blue-900\/60    { background-color: #bfdbfe !important; }
-[data-theme="light"] .bg-green-950\/20   { background-color: #f0fdf4 !important; }
+/* ── Fonds haute opacité (cellules présences) ───────────────────────────── */
 [data-theme="light"] .bg-slate-900\/20   { background-color: #f8fafc !important; }
 
 /* ── Fonds slate directs (non-sémantiques) ───────────────────────────────── */
@@ -365,11 +372,6 @@
 [data-theme="light"] .theme-dark .hover\:text-white:hover { color: #ffffff !important; }
 [data-theme="light"] .theme-dark .text-brand-400        { color: #38bdf8 !important; }
 [data-theme="light"] .theme-dark .text-brand-300        { color: #7dd3fc !important; }
-[data-theme="light"] .theme-dark .text-green-400        { color: #4ade80 !important; }
-[data-theme="light"] .theme-dark .text-red-400          { color: #f87171 !important; }
-[data-theme="light"] .theme-dark .text-amber-300        { color: #fcd34d !important; }
-[data-theme="light"] .theme-dark .text-amber-400        { color: #fbbf24 !important; }
-[data-theme="light"] .theme-dark .text-yellow-400       { color: #facc15 !important; }
 [data-theme="light"] .theme-dark .text-orange-400       { color: #fb923c !important; }
 [data-theme="light"] .theme-dark .text-teal-400         { color: #2dd4bf !important; }
 [data-theme="light"] .theme-dark .text-purple-400       { color: #c084fc !important; }
@@ -390,8 +392,6 @@
 [data-theme="light"] .theme-dark .bg-black\/20          { background-color: rgba(0,0,0,0.2) !important; }
 [data-theme="light"] .theme-dark .bg-slate-800\/60      { background-color: rgba(30,41,59,0.6) !important; }
 [data-theme="light"] .theme-dark .bg-slate-900\/50      { background-color: rgba(15,23,42,0.5) !important; }
-[data-theme="light"] .theme-dark .bg-green-900\/40      { background-color: rgba(20,83,45,0.4) !important; }
-[data-theme="light"] .theme-dark .bg-red-900\/40        { background-color: rgba(127,29,29,0.4) !important; }
 [data-theme="light"] .theme-dark .bg-orange-900\/40     { background-color: rgba(124,45,18,0.4) !important; }
 [data-theme="light"] .theme-dark .bg-teal-900\/40       { background-color: rgba(19,78,74,0.4) !important; }
 [data-theme="light"] .theme-dark .bg-purple-900\/40     { background-color: rgba(88,28,135,0.4) !important; }

@@ -69,7 +69,7 @@ export default function PlansPage() {
                   </div>
                   <button 
                     onClick={() => setEditing({ ...plan })} 
-                    className="p-2 rounded-xl bg-surface-input text-slate-400 hover:text-white transition-all border border-surface-border shadow-sm"
+                    className="p-2 rounded-xl bg-surface-input text-content-secondary hover:text-white transition-all border border-surface-border shadow-sm"
                   >
                     <Pencil size={16} />
                   </button>
@@ -82,7 +82,7 @@ export default function PlansPage() {
                 </div>
 
                 <div className="space-y-2 flex-1">
-                  <p className="text-[9px] font-black text-brand-400 uppercase tracking-widest">Inclus dans le plan</p>
+                  <p className="text-[9px] font-black text-content-brand uppercase tracking-widest">Inclus dans le plan</p>
                   <ul className="space-y-2">
                     {plan.features.map(f => (
                       <li key={f} className="flex items-start gap-2 text-xs text-slate-300 font-medium">
@@ -98,7 +98,7 @@ export default function PlansPage() {
                       <Clock size={12} /> {plan.duration_days} Jours
                    </div>
                    {!plan.is_active && (
-                     <span className="text-[10px] font-black uppercase bg-red-900/20 text-red-500 px-2 py-0.5 rounded border border-red-900/50">Désactivé</span>
+                     <span className="text-[10px] font-black uppercase bg-badge-error text-status-error px-2 py-0.5 rounded border border-red-900/50">Désactivé</span>
                    )}
                 </div>
               </div>

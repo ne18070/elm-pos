@@ -20,7 +20,7 @@ export function CategoryBar({ businessId, selected, onSelect }: CategoryBarProps
           'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors shrink-0',
           selected === null
             ? 'bg-brand-600 text-white'
-            : 'bg-surface-input text-slate-400 hover:text-white'
+            : 'bg-surface-input text-content-secondary hover:text-white'
         )}
       >
         Tout
@@ -33,7 +33,7 @@ export function CategoryBar({ businessId, selected, onSelect }: CategoryBarProps
             'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors shrink-0',
             selected === cat.id
               ? 'bg-brand-600 text-white'
-              : 'bg-surface-input text-slate-400 hover:text-white'
+              : 'bg-surface-input text-content-secondary hover:text-white'
           )}
           style={cat.color ? { borderLeft: `3px solid ${cat.color}` } : undefined}
         >

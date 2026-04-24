@@ -20,7 +20,7 @@ export function TrialBanner() {
   // Aucun abonnement trouvé → alerte discrète
   if (status === 'none') {
     return (
-      <div className="flex items-center justify-between px-4 py-2 text-xs font-medium bg-slate-800/60 border-b border-slate-700 text-slate-400">
+      <div className="flex items-center justify-between px-4 py-2 text-xs font-medium bg-slate-800/60 border-b border-slate-700 text-content-secondary">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
           Aucun abonnement actif
@@ -46,8 +46,8 @@ export function TrialBanner() {
   return (
     <div className={`flex items-center justify-between px-4 py-2 text-xs font-medium
       ${urgent
-        ? 'bg-red-900/40 border-b border-red-800 text-red-300'
-        : 'bg-amber-900/30 border-b border-amber-800/50 text-amber-300'}`}
+        ? 'bg-badge-error border-b border-status-error text-status-error'
+        : 'bg-badge-warning border-b border-status-warning/50 text-status-warning'}`}
     >
       <div className="flex items-center gap-2">
         <Clock className="w-3.5 h-3.5 shrink-0" />

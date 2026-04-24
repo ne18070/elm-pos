@@ -49,14 +49,14 @@ export function ReservationPanel({
     <div className="absolute inset-y-0 right-0 w-[420px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
         <h3 className="font-semibold text-white">Nouvelle réservation</h3>
-        <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
           <X className="w-4 h-4" />
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {/* Chambre */}
         <div>
-          <label className="label">Chambre <span className="text-red-400">*</span></label>
+          <label className="label">Chambre <span className="text-status-error">*</span></label>
           <select
             className="input"
             value={form.room_id}
@@ -78,8 +78,8 @@ export function ReservationPanel({
         {/* Client */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="label !mb-0">Client <span className="text-red-400">*</span></label>
-            <button type="button" onClick={() => openGuestPanel(null)} className="text-xs text-brand-400 hover:text-brand-300">
+            <label className="label !mb-0">Client <span className="text-status-error">*</span></label>
+            <button type="button" onClick={() => openGuestPanel(null)} className="text-xs text-content-brand hover:text-content-brand">
               + Nouveau client
             </button>
           </div>
@@ -93,7 +93,7 @@ export function ReservationPanel({
               onBlur={() => setTimeout(() => setGuestDropOpen(false), 150)}
             />
             {form.guest_id && (
-              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
                 onClick={() => { onChange({ ...form, guest_id: '' }); setGuestSearch(''); }}>
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -114,14 +114,14 @@ export function ReservationPanel({
                         setGuestSearch(g.full_name + (g.phone ? ` — ${g.phone}` : ''));
                         setGuestDropOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 hover:bg-surface-hover flex items-center gap-2 transition-colors ${form.guest_id === g.id ? 'bg-brand-600/10 text-brand-300' : 'text-white'}`}
+                      className={`w-full text-left px-3 py-2 hover:bg-surface-hover flex items-center gap-2 transition-colors ${form.guest_id === g.id ? 'bg-brand-600/10 text-content-brand' : 'text-white'}`}
                     >
-                      <div className="w-7 h-7 rounded-full bg-brand-600/20 text-brand-300 flex items-center justify-center text-xs font-bold shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-brand-600/20 text-content-brand flex items-center justify-center text-xs font-bold shrink-0">
                         {g.full_name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{g.full_name}</p>
-                        {g.phone && <p className="text-xs text-slate-400">{g.phone}</p>}
+                        {g.phone && <p className="text-xs text-content-secondary">{g.phone}</p>}
                       </div>
                     </button>
                   ))}
@@ -138,7 +138,7 @@ export function ReservationPanel({
 
         {/* Dates */}
         <div>
-          <label className="label">Dates du séjour <span className="text-red-400">*</span></label>
+          <label className="label">Dates du séjour <span className="text-status-error">*</span></label>
           <CalendarPicker
             checkIn={form.check_in}
             checkOut={form.check_out}
@@ -170,7 +170,7 @@ export function ReservationPanel({
         </div>
 
         {resNights > 0 && form.price_per_night && (
-          <div className="p-3 rounded-xl bg-brand-900/20 border border-brand-800 text-sm text-brand-300">
+          <div className="p-3 rounded-xl bg-badge-brand border border-brand-800 text-sm text-content-brand">
             <Calendar className="w-4 h-4 inline mr-1.5" />
             <strong>{resNights} nuit{resNights > 1 ? 's' : ''}</strong> → {fmtMoney(resTotal, currency)}
           </div>
@@ -198,10 +198,10 @@ export function ReservationPanel({
       </div>
 
       {conflictWarning && (
-        <div className="mx-5 mb-3 p-3 rounded-xl bg-amber-900/20 border border-amber-700 text-sm text-amber-300 space-y-2">
+        <div className="mx-5 mb-3 p-3 rounded-xl bg-badge-warning border border-status-warning text-sm text-status-warning space-y-2">
           <p className="flex items-start gap-2"><AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />{conflictWarning.msg}</p>
           <div className="flex gap-2">
-            <button onClick={onClearConflict} className="flex-1 py-1.5 rounded-lg border border-amber-700 hover:bg-amber-900/30 text-xs">Annuler</button>
+            <button onClick={onClearConflict} className="flex-1 py-1.5 rounded-lg border border-status-warning hover:bg-badge-warning text-xs">Annuler</button>
             <button onClick={conflictWarning.onProceed} disabled={saving} className="flex-1 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-600 text-xs font-medium">
               {saving ? 'En cours…' : 'Forcer la réservation'}
             </button>

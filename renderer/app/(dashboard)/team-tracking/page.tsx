@@ -16,10 +16,10 @@ function safeFormatDistance(iso: string): string {
 }
 
 function accuracyColor(accuracy: number | undefined): string {
-  if (accuracy === undefined) return 'text-slate-400';
-  if (accuracy < 50)  return 'text-green-400';
-  if (accuracy < 200) return 'text-yellow-400';
-  return 'text-red-400';
+  if (accuracy === undefined) return 'text-content-secondary';
+  if (accuracy < 50)  return 'text-status-success';
+  if (accuracy < 200) return 'text-status-warning';
+  return 'text-status-error';
 }
 
 export default function TeamTrackingPage() {
@@ -50,7 +50,7 @@ export default function TeamTrackingPage() {
 
         {/* Info banner for Admin/Owner */}
         {isOwner && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-brand-500/10 border border-brand-500/30 rounded-xl text-brand-400 text-sm">
+          <div className="flex items-center gap-3 px-4 py-3 bg-brand-500/10 border border-brand-500/30 rounded-xl text-content-brand text-sm">
             <User className="w-4 h-4 shrink-0" />
             <span>
               <strong>Mode Observateur :</strong> Vous visualisez la position de votre équipe. Votre propre position n'est jamais partagée.
@@ -60,7 +60,7 @@ export default function TeamTrackingPage() {
 
         {/* Disconnected banner */}
         {status !== 'connected' && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-400 text-sm">
+          <div className="flex items-center gap-3 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-status-warning text-sm">
             <WifiOff className="w-4 h-4 shrink-0" />
             <span>
               {status === 'connecting' ? 'Connexion en cours…' : 'Déconnecté — les positions affichées peuvent être obsolètes.'}
@@ -73,7 +73,7 @@ export default function TeamTrackingPage() {
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-3">
               <div className="p-2 bg-brand-600/20 rounded-lg">
-                <MapPin className="w-6 h-6 text-brand-400" />
+                <MapPin className="w-6 h-6 text-content-brand" />
               </div>
               Suivi Terrain en Temps Réel
             </h1>
@@ -143,9 +143,9 @@ export default function TeamTrackingPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 bg-surface-input/30 p-2.5 rounded-lg border border-surface-border/50">
-                  <Globe className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="truncate">Page actuelle : <span className="text-slate-200">{member.pathname}</span></span>
+                <div className="mt-4 flex items-center gap-2 text-xs text-content-secondary bg-surface-input/30 p-2.5 rounded-lg border border-surface-border/50">
+                  <Globe className="w-3.5 h-3.5 text-content-brand" />
+                  <span className="truncate">Page actuelle : <span className="text-content-primary">{member.pathname}</span></span>
                 </div>
               </div>
             ))
@@ -172,7 +172,7 @@ export default function TeamTrackingPage() {
               {otherMembers.map((member) => (
                 <div key={member.terminal_id} className="p-4 flex items-center justify-between hover:bg-surface-hover/30 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-surface-input flex items-center justify-center text-xs font-bold text-slate-400 border border-surface-border">
+                    <div className="w-8 h-8 rounded-lg bg-surface-input flex items-center justify-center text-xs font-bold text-content-secondary border border-surface-border">
                       {member.user_name.charAt(0)}
                     </div>
                     <div>
@@ -182,7 +182,7 @@ export default function TeamTrackingPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] text-slate-500">Connecté</p>
-                    <p className="text-xs text-slate-400 font-medium">
+                    <p className="text-xs text-content-secondary font-medium">
                       {safeFormatDistance(member.joined_at)}
                     </p>
                   </div>

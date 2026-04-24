@@ -108,7 +108,7 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
         className={cn(
           "w-full flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-200 group",
           isTracking
-            ? "bg-brand-600/10 text-brand-400 border border-brand-600/20 shadow-[0_0_15px_rgba(2,132,199,0.1)]"
+            ? "bg-brand-600/10 text-content-brand border border-brand-600/20 shadow-[0_0_15px_rgba(2,132,199,0.1)]"
             : "text-slate-500 hover:text-slate-300 hover:bg-surface-hover border border-transparent",
           isAcquiring && "opacity-75 cursor-wait",
           collapsed ? "justify-center" : ""
@@ -132,7 +132,7 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
           <div className="flex-1 text-left min-w-0">
             <p className={cn(
               "text-[11px] font-bold uppercase tracking-wider leading-none",
-              isTracking ? "text-brand-400" : "text-slate-500"
+              isTracking ? "text-content-brand" : "text-slate-500"
             )}>
               {label}
             </p>
@@ -147,9 +147,9 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
         )}
       </button>
     {permissionDenied && !collapsed && (
-      <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-red-950/40 border border-red-800/30 text-[10px] text-red-400 leading-relaxed space-y-1.5">
+      <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-red-950/40 border border-status-error/30 text-[10px] text-status-error leading-relaxed space-y-1.5">
         <p className="font-semibold">Localisation bloquée</p>
-        <ol className="text-red-400/80 space-y-1 list-decimal list-inside">
+        <ol className="text-status-error/80 space-y-1 list-decimal list-inside">
           <li>
             <strong>Windows</strong> → Paramètres → Confidentialité → Localisation → Activer
           </li>
@@ -161,13 +161,13 @@ export function TeamTracker({ collapsed = false }: { collapsed?: boolean }) {
         <div className="flex gap-3 pt-0.5">
           <button
             onClick={() => window.location.reload()}
-            className="text-[10px] font-semibold text-red-300 hover:text-red-100 underline underline-offset-2"
+            className="text-[10px] font-semibold text-status-error hover:text-red-100 underline underline-offset-2"
           >
             Recharger
           </button>
           <button
             onClick={() => startTracking()}
-            className="text-[10px] font-semibold text-red-400/60 hover:text-red-200 underline underline-offset-2"
+            className="text-[10px] font-semibold text-status-error/60 hover:text-red-200 underline underline-offset-2"
           >
             Réessayer sans recharger
           </button>

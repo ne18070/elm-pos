@@ -179,7 +179,7 @@ export default function ClientsPage() {
             </div>
             <div>
               <p className="text-lg font-bold text-white">Aucun client enregistré</p>
-              <p className="text-sm text-slate-400 mt-1 max-w-sm">
+              <p className="text-sm text-content-secondary mt-1 max-w-sm">
                 Ajoutez vos clients, partenaires et contacts (sociétés, associations, particuliers).
               </p>
             </div>
@@ -196,13 +196,13 @@ export default function ClientsPage() {
             const isEntity = c.type === 'personne_morale' || c.type === 'association';
             return (
               <div key={c.id} className="card p-5 flex items-start gap-4 hover:border-brand-500/30 transition-all group">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isEntity ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isEntity ? 'bg-purple-500/10 border-purple-500/20 text-status-purple' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}>
                   {isEntity ? <Building2 className="w-6 h-6" /> : <UserCircle2 className="w-6 h-6" />}
                 </div>
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-white truncate">{c.name}</p>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-500 uppercase font-black tracking-tighter border border-slate-700">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface-card text-slate-500 uppercase font-black tracking-tighter border border-slate-700">
                       {typesClient.find(t => t.value === c.type)?.label || c.type || 'Inconnu'}
                     </span>
                   </div>
@@ -214,12 +214,12 @@ export default function ClientsPage() {
                   <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
                     {c.phone && <p className="text-[11px] text-slate-500 flex items-center gap-1.5"><Phone className="w-3 h-3" /> {c.phone}</p>}
                     {c.email && <p className="text-[11px] text-slate-500 flex items-center gap-1.5"><Mail className="w-3 h-3" /> {c.email}</p>}
-                    {c.identification_number && <p className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5"><Check className="w-3 h-3 text-brand-400" /> {c.identification_number}</p>}
+                    {c.identification_number && <p className="text-[11px] text-content-secondary font-mono flex items-center gap-1.5"><Check className="w-3 h-3 text-content-brand" /> {c.identification_number}</p>}
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openPanel(c)} className="p-2 rounded-xl bg-slate-900 hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>
-                  <button onClick={() => remove(c.id)} className="p-2 rounded-xl bg-slate-900 hover:text-red-400 transition-all"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => openPanel(c)} className="p-2 rounded-xl bg-surface hover:text-white transition-all"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => remove(c.id)} className="p-2 rounded-xl bg-surface hover:text-status-error transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
             );
@@ -232,15 +232,15 @@ export default function ClientsPage() {
         <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[450px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40 animate-in slide-in-from-right duration-300">
           <div className="flex items-center justify-between px-6 py-5 border-b border-surface-border">
             <h3 className="font-bold text-white text-lg">{panel.item ? 'Modifier le client' : 'Nouveau client'}</h3>
-            <button onClick={() => setPanel(null)} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
+            <button onClick={() => setPanel(null)} className="p-2 rounded-xl hover:bg-surface-card text-content-secondary transition-all"><X className="w-5 h-5" /></button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <div className="space-y-4">
               <div>
-                <label className="label">Type de client <span className="text-red-400">*</span></label>
+                <label className="label">Type de client <span className="text-status-error">*</span></label>
                 <select 
-                  className="input bg-slate-950" 
+                  className="input bg-surface-overlay" 
                   value={form.type || ''} 
                   onChange={(e) => setForm(f => ({ ...f, type: e.target.value }))}
                 >
@@ -250,7 +250,7 @@ export default function ClientsPage() {
               </div>
 
               <div>
-                <label className="label">Nom complet / Raison sociale <span className="text-red-400">*</span></label>
+                <label className="label">Nom complet / Raison sociale <span className="text-status-error">*</span></label>
                 <input className="input" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Cabinet MBAYE ou Jean Dupont" />
               </div>
 

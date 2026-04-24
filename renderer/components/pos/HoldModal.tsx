@@ -32,12 +32,12 @@ export function HoldModal({ onConfirm, onClose }: HoldModalProps) {
         >
           {/* Icône + titre */}
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-brand-900/30 border border-brand-700 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-brand-400" />
+            <div className="w-10 h-10 rounded-xl bg-badge-brand border border-brand-700 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-content-brand" />
             </div>
             <div>
               <h2 className="font-semibold text-white">Mettre en attente</h2>
-              <p className="text-xs text-slate-400">Identifiez cette commande</p>
+              <p className="text-xs text-content-secondary">Identifiez cette commande</p>
             </div>
           </div>
 
@@ -60,7 +60,7 @@ export function HoldModal({ onConfirm, onClose }: HoldModalProps) {
                 key={l}
                 onClick={() => handleConfirm(l)}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-border
-                           text-slate-400 hover:border-brand-500 hover:text-brand-400 transition-colors"
+                           text-content-secondary hover:border-brand-500 hover:text-content-brand transition-colors"
               >
                 {l}
               </button>

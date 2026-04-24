@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
-          <p className="text-slate-400 text-sm mt-1">Politique de confidentialité</p>
+          <p className="text-content-secondary text-sm mt-1">Politique de confidentialité</p>
         </div>
 
         <div className="card p-8 space-y-8 text-slate-300 text-sm leading-relaxed">
@@ -40,10 +40,10 @@ export default function PrivacyPage() {
               ELM APP est une solution de gestion de point de vente (caisse, stocks, commandes, comptabilité)
               destinée aux commerçants, restaurants, hôtels et prestataires de service. L&apos;éditeur de
               l&apos;application est joignable à l&apos;adresse :{' '}
-              <a href="mailto:contact@elm-app.click" className="text-brand-400 hover:text-brand-300">
+              <a href="mailto:contact@elm-app.click" className="text-content-brand hover:text-content-brand">
                 contact@elm-app.click
               </a>{' '}ou sur WhatsApp au{' '}
-              <a href="https://wa.me/33746436801" className="text-brand-400 hover:text-brand-300">
+              <a href="https://wa.me/33746436801" className="text-content-brand hover:text-content-brand">
                 +33 7 46 43 68 01
               </a>.
             </p>
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-3">
               Pour exercer ces droits, contactez-nous à :{' '}
-              <a href="mailto:privacy@elm-app.click" className="text-brand-400 hover:text-brand-300">
+              <a href="mailto:privacy@elm-app.click" className="text-content-brand hover:text-content-brand">
                 privacy@elm-app.click
               </a>
             </p>
@@ -220,7 +220,7 @@ export default function PrivacyPage() {
               <p className="text-white font-medium">ELM APP</p>
               <p>
                 E-mail :{' '}
-                <a href="mailto:privacy@elm-app.click" className="text-brand-400 hover:text-brand-300">
+                <a href="mailto:privacy@elm-app.click" className="text-content-brand hover:text-content-brand">
                   privacy@elm-app.click
                 </a>
               </p>

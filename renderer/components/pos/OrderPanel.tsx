@@ -158,8 +158,8 @@ export function OrderPanel({
             <button
               onClick={onShowHeld}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                         bg-brand-900/30 border border-brand-700 text-brand-400
-                         hover:bg-brand-900/50 transition-colors text-xs font-medium"
+                         bg-badge-brand border border-brand-700 text-content-brand
+                         hover:bg-badge-brand transition-colors text-xs font-medium"
             >
               <Clock className="w-3.5 h-3.5" />
               En attente
@@ -188,7 +188,7 @@ export function OrderPanel({
         <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-2">
           <h2 className="font-semibold text-white shrink-0">
             Commande{' '}
-            <span className="text-brand-400">({itemCount()} article{itemCount() > 1 ? 's' : ''})</span>
+            <span className="text-content-brand">({itemCount()} article{itemCount() > 1 ? 's' : ''})</span>
           </h2>
           <div className="flex items-center gap-2 ml-auto">
             {/* Bouton mode grossiste */}
@@ -196,8 +196,8 @@ export function OrderPanel({
               onClick={() => setShowWholesale(true)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-medium shrink-0
                 ${wholesaleCtx
-                  ? 'border-amber-600 bg-amber-900/20 text-amber-400'
-                  : 'border-surface-border text-slate-400 hover:border-amber-600 hover:text-amber-400'}`}
+                  ? 'border-amber-600 bg-badge-warning text-status-warning'
+                  : 'border-surface-border text-content-secondary hover:border-amber-600 hover:text-status-warning'}`}
             >
               <Store className="w-3.5 h-3.5" />
               {wholesaleCtx ? wholesaleCtx.reseller.name : 'Gros'}
@@ -207,8 +207,8 @@ export function OrderPanel({
               <button
                 onClick={onShowHeld}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg
-                           bg-brand-900/30 border border-brand-700 text-brand-400
-                           hover:bg-brand-900/50 transition-colors text-xs font-medium shrink-0"
+                           bg-badge-brand border border-brand-700 text-content-brand
+                           hover:bg-badge-brand transition-colors text-xs font-medium shrink-0"
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span className="bg-brand-600 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -219,7 +219,7 @@ export function OrderPanel({
             <button
               onClick={() => setShowHoldModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-surface-border
-                         text-slate-400 hover:border-slate-500 hover:text-white transition-colors text-xs font-medium shrink-0"
+                         text-content-secondary hover:border-slate-500 hover:text-white transition-colors text-xs font-medium shrink-0"
             >
               <Clock className="w-3.5 h-3.5" />
               Attente
@@ -229,9 +229,9 @@ export function OrderPanel({
 
         {/* Alerte globale surstock (stock changé en temps réel) */}
         {hasOverStock && (
-          <div className="mx-4 mt-3 flex items-start gap-2 p-3 bg-red-900/20 border border-red-800
-                          rounded-xl text-xs text-red-300">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+          <div className="mx-4 mt-3 flex items-start gap-2 p-3 bg-badge-error border border-status-error
+                          rounded-xl text-xs text-status-error">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-status-error" />
             <span>
               Le stock de certains articles a changé. Veuillez ajuster les quantités avant d'encaisser.
             </span>
@@ -255,18 +255,18 @@ export function OrderPanel({
                 key={`${item.product_id}::${item.variant_id ?? ''}`}
                 className={`rounded-xl p-3 border transition-colors animate-cart-item ${
                   over
-                    ? 'bg-red-900/10 border-red-800'
+                    ? 'bg-badge-error border-status-error'
                     : 'bg-surface-input border-transparent'
                 }`}
               >
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{item.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{fmt(item.price)} / unité</p>
+                    <p className="text-xs text-content-secondary mt-0.5">{fmt(item.price)} / unité</p>
                   </div>
                   <button
                     onClick={() => removeItem(item.product_id, item.variant_id)}
-                    className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                    className="text-slate-500 hover:text-status-error transition-colors shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -277,11 +277,11 @@ export function OrderPanel({
                     <button
                       onClick={() => handleQtyDecrease(item)}
                       className="w-7 h-7 rounded-lg bg-surface-card flex items-center justify-center
-                                 text-slate-400 hover:text-white hover:bg-brand-600 transition-colors"
+                                 text-content-secondary hover:text-white hover:bg-brand-600 transition-colors"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className={`font-semibold w-6 text-center ${over ? 'text-red-400' : 'text-white'}`}>
+                    <span className={`font-semibold w-6 text-center ${over ? 'text-status-error' : 'text-white'}`}>
                       {item.quantity}
                     </span>
                     <button
@@ -290,7 +290,7 @@ export function OrderPanel({
                       className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors
                         ${limited
                           ? 'bg-surface-card text-slate-600 cursor-not-allowed'
-                          : 'bg-surface-card text-slate-400 hover:text-white hover:bg-brand-600'}`}
+                          : 'bg-surface-card text-content-secondary hover:text-white hover:bg-brand-600'}`}
                       title={limited ? `Stock max : ${stock}` : undefined}
                     >
                       <Plus className="w-3 h-3" />
@@ -303,9 +303,9 @@ export function OrderPanel({
                     {item.product?.track_stock && (
                       <span className={`text-xs ${
                         over
-                          ? 'text-red-400 font-medium'
+                          ? 'text-status-error font-medium'
                           : limited
-                          ? 'text-yellow-400'
+                          ? 'text-status-warning'
                           : 'text-slate-500'
                       }`}>
                         {over
@@ -332,8 +332,8 @@ export function OrderPanel({
                   key={c.id}
                   className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium
                     ${c.type === 'free_item'
-                      ? 'bg-amber-900/30 border border-amber-700 text-amber-400'
-                      : 'bg-green-900/30 border border-green-700 text-green-400'}`}
+                      ? 'bg-badge-warning border border-status-warning text-status-warning'
+                      : 'bg-badge-success border border-status-success text-status-success'}`}
                 >
                   {c.type === 'free_item'
                     ? <Gift className="w-3 h-3 shrink-0" />
@@ -364,18 +364,18 @@ export function OrderPanel({
 
         {/* Bannière grossiste active */}
         {wholesaleCtx && (
-          <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-amber-900/20 border border-amber-800 flex items-center justify-between gap-2">
+          <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-badge-warning border border-status-warning flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+              <p className="text-xs font-semibold text-status-warning flex items-center gap-1">
                 <Store className="w-3 h-3" /> Prix de gros — {wholesaleCtx.reseller.name}
               </p>
               {wholesaleCtx.client && (
-                <p className="text-xs text-slate-400 truncate">Client : {wholesaleCtx.client.name}</p>
+                <p className="text-xs text-content-secondary truncate">Client : {wholesaleCtx.client.name}</p>
               )}
             </div>
             <button
               onClick={() => { resetPriceOverrides(); onWholesaleChange?.(null); }}
-              className="p-1 rounded text-amber-500 hover:text-white shrink-0"
+              className="p-1 rounded text-status-warning hover:text-white shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -389,7 +389,7 @@ export function OrderPanel({
           const eligible = cartItem.quantity >= offer.min_qty;
           return (
             <div key={offer.id} className={`mx-4 mb-1 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs
-              ${eligible ? 'bg-green-900/20 border border-green-800 text-green-400' : 'bg-amber-900/10 border border-amber-800/40 text-amber-500'}`}>
+              ${eligible ? 'bg-badge-success border border-status-success text-status-success' : 'bg-badge-warning border border-status-warning/40 text-status-warning'}`}>
               <Gift className="w-3.5 h-3.5 shrink-0" />
               <span>
                 {eligible
@@ -422,10 +422,10 @@ export function OrderPanel({
           )}
 
           {selectedClient ? (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-900/20 border border-brand-700">
-              <User className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-badge-brand border border-brand-700">
+              <User className="w-3.5 h-3.5 text-content-brand shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-brand-300 truncate">{selectedClient.name}</p>
+                <p className="text-xs font-medium text-content-brand truncate">{selectedClient.name}</p>
                 {selectedClient.phone && <p className="text-xs text-slate-500">{selectedClient.phone}</p>}
               </div>
               <button
@@ -439,7 +439,7 @@ export function OrderPanel({
             <div className="relative">
               <button
                 onClick={openClientPicker}
-                className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors py-1"
+                className="flex items-center gap-2 text-xs text-content-secondary hover:text-white transition-colors py-1"
               >
                 <User className="w-3.5 h-3.5" />
                 Associer un client (optionnel)
@@ -475,7 +475,7 @@ export function OrderPanel({
                           }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left"
                         >
-                          <div className="w-7 h-7 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-xs font-bold text-brand-400">
+                          <div className="w-7 h-7 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-xs font-bold text-content-brand">
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
@@ -494,25 +494,25 @@ export function OrderPanel({
 
         {/* Récapitulatif */}
         <div className="px-4 py-3 border-t border-surface-border space-y-1.5">
-          <div className="flex justify-between text-sm text-slate-400">
+          <div className="flex justify-between text-sm text-content-secondary">
             <span>Sous-total</span>
             <span>{fmt(subtotal())}</span>
           </div>
           {discountAmount() > 0 && (
-            <div className="flex justify-between text-sm text-green-400">
+            <div className="flex justify-between text-sm text-status-success">
               <span>Remise</span>
               <span>-{fmt(discountAmount())}</span>
             </div>
           )}
           {taxRate > 0 && (
-            <div className="flex justify-between text-sm text-slate-400">
+            <div className="flex justify-between text-sm text-content-secondary">
               <span>TVA ({taxRate}%{taxInclusive ? ' incluse' : ''})</span>
               <span>{fmt(taxAmount(taxRate, taxInclusive))}</span>
             </div>
           )}
           <div className="flex justify-between text-lg font-bold text-white pt-1 border-t border-surface-border">
             <span>Total</span>
-            <span className="text-brand-400">{fmt(total(taxRate, taxInclusive))}</span>
+            <span className="text-content-brand">{fmt(total(taxRate, taxInclusive))}</span>
           </div>
         </div>
 

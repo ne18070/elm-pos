@@ -59,7 +59,7 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
       <div className="space-y-4">
         {/* Récap commande */}
         <div className="bg-surface-input rounded-xl p-3 text-sm">
-          <div className="flex justify-between text-slate-400">
+          <div className="flex justify-between text-content-secondary">
             <span>Commande</span>
             <span className="font-mono">#{order.id.slice(0, 8).toUpperCase()}</span>
           </div>
@@ -82,8 +82,8 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
                 }}
                 className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
                   ${type === t
-                    ? 'border-purple-500 bg-purple-900/20 text-purple-300'
-                    : 'border-surface-border text-slate-400 hover:border-slate-500'}`}
+                    ? 'border-purple-500 bg-badge-purple text-status-purple'
+                    : 'border-surface-border text-content-secondary hover:border-slate-500'}`}
               >
                 {t === 'full' ? 'Total' : 'Partiel'}
               </button>
@@ -106,7 +106,7 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
               autoFocus
             />
             {parseFloat(amount) > order.total && (
-              <p className="text-xs text-red-400 mt-1">
+              <p className="text-xs text-status-error mt-1">
                 Dépasse le total de la commande
               </p>
             )}
@@ -136,7 +136,7 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
         )}
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl p-3">
+          <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl p-3">
             {error}
           </p>
         )}

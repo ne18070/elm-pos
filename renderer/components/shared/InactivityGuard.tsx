@@ -80,14 +80,14 @@ export function InactivityGuard() {
       <div className="card max-w-sm w-full mx-4 p-6 space-y-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <AlertTriangle className="w-5 h-5 text-status-warning" />
           </div>
           <div>
             <h2 className="font-semibold text-white">Session inactive</h2>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-content-secondary mt-1">
               Vous serez déconnecté automatiquement dans <strong className="text-white">2 heures</strong> en raison d&apos;inactivité.
               {useCashSessionStore.getState().session && (
-                <span className="block mt-1 text-amber-400 text-xs">Une session de caisse est ouverte — la déconnexion est bloquée.</span>
+                <span className="block mt-1 text-status-warning text-xs">Une session de caisse est ouverte — la déconnexion est bloquée.</span>
               )}
             </p>
           </div>

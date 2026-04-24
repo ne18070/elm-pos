@@ -19,8 +19,8 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-green-900/20 text-green-400"><TrendingUp className="w-5 h-5" /></div>
-            <span className="text-xs text-slate-400 uppercase tracking-wide">Chiffre d&apos;affaires</span>
+            <div className="p-2 rounded-xl bg-badge-success text-status-success"><TrendingUp className="w-5 h-5" /></div>
+            <span className="text-xs text-content-secondary uppercase tracking-wide">Chiffre d&apos;affaires</span>
           </div>
           <p className="text-2xl font-bold text-white">{formatCurrency(is.caNet, currency)}</p>
           {is.rrrAccordes > 0 && (
@@ -32,8 +32,8 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
 
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-red-900/20 text-red-400"><TrendingDown className="w-5 h-5" /></div>
-            <span className="text-xs text-slate-400 uppercase tracking-wide">Charges totales</span>
+            <div className="p-2 rounded-xl bg-badge-error text-status-error"><TrendingDown className="w-5 h-5" /></div>
+            <span className="text-xs text-content-secondary uppercase tracking-wide">Charges totales</span>
           </div>
           <p className="text-2xl font-bold text-white">
             {formatCurrency(is.achatsMarchandises + is.autresCharges, currency)}
@@ -43,12 +43,12 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
 
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className={`p-2 rounded-xl ${is.resultatNet >= 0 ? 'bg-brand-900/20 text-brand-400' : 'bg-red-900/20 text-red-400'}`}>
+            <div className={`p-2 rounded-xl ${is.resultatNet >= 0 ? 'bg-badge-brand text-content-brand' : 'bg-badge-error text-status-error'}`}>
               <DollarSign className="w-5 h-5" />
             </div>
-            <span className="text-xs text-slate-400 uppercase tracking-wide">Résultat net</span>
+            <span className="text-xs text-content-secondary uppercase tracking-wide">Résultat net</span>
           </div>
-          <p className={`text-2xl font-bold ${is.resultatNet >= 0 ? 'text-brand-400' : 'text-red-400'}`}>
+          <p className={`text-2xl font-bold ${is.resultatNet >= 0 ? 'text-content-brand' : 'text-status-error'}`}>
             {formatCurrency(is.resultatNet, currency)}
           </p>
           <p className="text-xs text-slate-500 mt-1">Marge brute : {formatCurrency(is.margeBrute, currency)}</p>
@@ -57,7 +57,7 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-cyan-900/20 text-cyan-400"><Wallet className="w-5 h-5" /></div>
-            <span className="text-xs text-slate-400 uppercase tracking-wide">Trésorerie</span>
+            <span className="text-xs text-content-secondary uppercase tracking-wide">Trésorerie</span>
           </div>
           <p className="text-2xl font-bold text-white">{formatCurrency(bs.tresorerie, currency)}</p>
           <p className="text-xs text-slate-500 mt-1">Caisse + Banque + Mobile</p>
@@ -71,12 +71,12 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
         {entries.length === 0 ? (
           <div className="p-8 text-center">
             <BookOpen className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-            <p className="text-slate-400 text-sm">Aucune écriture pour cette période.</p>
+            <p className="text-content-secondary text-sm">Aucune écriture pour cette période.</p>
             <p className="text-slate-500 text-xs mt-1">Cliquez sur <strong className="text-white">Synchroniser</strong> pour importer les ventes et achats.</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="text-xs text-slate-400 uppercase border-b border-surface-border">
+            <thead className="text-xs text-content-secondary uppercase border-b border-surface-border">
               <tr>
                 <th className="px-5 py-3 text-left">Date</th>
                 <th className="px-5 py-3 text-left">Libellé</th>
@@ -90,7 +90,7 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
                 const amt = e.lines?.reduce((s, l) => s + l.debit, 0) ?? 0;
                 return (
                   <tr key={e.id} className="border-b border-surface-border last:border-0 hover:bg-surface-hover">
-                    <td className="px-5 py-3 text-slate-400 whitespace-nowrap">{e.entry_date}</td>
+                    <td className="px-5 py-3 text-content-secondary whitespace-nowrap">{e.entry_date}</td>
                     <td className="px-5 py-3 text-white">
                       {e.reference && <span className="font-mono text-xs text-slate-500 mr-2">{e.reference}</span>}
                       {e.description}

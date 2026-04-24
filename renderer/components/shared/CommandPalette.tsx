@@ -137,7 +137,7 @@ export function CommandPalette() {
                   key={cmd.href}
                   className={cn(
                     "w-full flex items-center gap-4 px-4 py-3 text-left transition-colors",
-                    active ? "bg-brand-600 text-white" : "text-slate-400 hover:bg-surface-hover hover:text-white"
+                    active ? "bg-brand-600 text-white" : "text-content-secondary hover:bg-surface-hover hover:text-white"
                   )}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => handleSelect(cmd.href)}
@@ -173,11 +173,11 @@ export function CommandPalette() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-slate-500">Choisir</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[9px] text-slate-400 font-bold">↑↓</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[9px] text-content-secondary font-bold">↑↓</kbd>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] text-slate-500">Ouvrir</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[9px] text-slate-400 font-bold">↵</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-[9px] text-content-secondary font-bold">↵</kbd>
             </div>
           </div>
         </div>

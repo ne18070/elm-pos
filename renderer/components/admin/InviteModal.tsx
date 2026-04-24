@@ -89,15 +89,15 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
               </p>
               <div className="rounded-xl border border-surface-border bg-surface-card p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Email</span>
+                  <span className="text-content-secondary">Email</span>
                   <span className="text-white font-mono">{form.email}</span>
                 </div>
                 <div className="flex justify-between text-sm items-center">
-                  <span className="text-slate-400">Mot de passe</span>
+                  <span className="text-content-secondary">Mot de passe</span>
                   <div className="flex items-center gap-2">
                     <span className="text-white font-mono">{form.password}</span>
-                    <button onClick={copyPassword} className="text-slate-400 hover:text-white">
-                      {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                    <button onClick={copyPassword} className="text-content-secondary hover:text-white">
+                      {copied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
           />
           <div>
             <p className="text-sm font-medium text-white">Utilisateur existant</p>
-            <p className="text-xs text-slate-400">L'utilisateur a déjà un compte sur un autre établissement</p>
+            <p className="text-xs text-content-secondary">L'utilisateur a déjà un compte sur un autre établissement</p>
           </div>
         </label>
 
@@ -204,7 +204,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
                 key={r.value}
                 className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all
                   ${form.role === r.value
-                    ? 'border-brand-500 bg-brand-900/20'
+                    ? 'border-brand-500 bg-badge-brand'
                     : 'border-surface-border hover:border-slate-500'}`}
               >
                 <input
@@ -217,7 +217,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
                 />
                 <div>
                   <p className="text-sm font-medium text-white">{r.label}</p>
-                  <p className="text-xs text-slate-400">{r.desc}</p>
+                  <p className="text-xs text-content-secondary">{r.desc}</p>
                 </div>
               </label>
             ))}

@@ -18,9 +18,9 @@ import { SideDrawer } from '@/components/ui/SideDrawer';
 const PAGE_SIZE = 25;
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: any }> = {
-  active:  { label: 'Actif',   color: 'text-green-400 bg-green-900/20 border-green-800',  icon: CheckCircle },
-  trial:   { label: 'Essai',   color: 'text-amber-400 bg-amber-900/20 border-amber-800',  icon: Clock       },
-  expired: { label: 'Expiré',  color: 'text-red-400 bg-red-900/20 border-red-800',        icon: XCircle     },
+  active:  { label: 'Actif',   color: 'text-status-success bg-badge-success border-status-success',  icon: CheckCircle },
+  trial:   { label: 'Essai',   color: 'text-status-warning bg-badge-warning border-status-warning',  icon: Clock       },
+  expired: { label: 'Expiré',  color: 'text-status-error bg-badge-error border-status-error',        icon: XCircle     },
 };
 
 function getRowStatus(row: SubscriptionRow): string {
@@ -206,7 +206,7 @@ export default function SubscriptionsPage() {
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {bizList.map((b) => (
-                              <span key={b.id} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">{b.name}</span>
+                              <span key={b.id} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-card text-content-secondary border border-slate-700">{b.name}</span>
                             ))}
                           </div>
                         )}
@@ -218,13 +218,13 @@ export default function SubscriptionsPage() {
                             <Icon className="w-3 h-3" /> {badge.label}
                           </span>
                           {intouchConfigs[row.business_id] && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border border-brand-800/50 bg-brand-900/20 text-brand-400">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border border-brand-800/50 bg-badge-brand text-content-brand">
                               <Smartphone className="w-2.5 h-2.5" /> Mobile-Pay
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-400 text-xs font-medium">
+                      <td className="px-6 py-4 text-content-secondary text-xs font-medium">
                         {st === 'trial' && row.trial_ends_at
                           ? `Fin essai : ${new Date(row.trial_ends_at).toLocaleDateString('fr-FR')}`
                           : row.expires_at
@@ -235,7 +235,7 @@ export default function SubscriptionsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openIntouch(row.business_id)}
-                            className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-brand-400 transition-all border border-slate-700 shadow-sm"
+                            className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-content-brand transition-all border border-slate-700 shadow-sm"
                             title="Configurer Paiements"
                           >
                             <Settings2 className="w-4 h-4" />
@@ -276,7 +276,7 @@ export default function SubscriptionsPage() {
         }
       >
         <div className="space-y-6">
-          <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 text-orange-400 text-xs italic">
+          <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 text-status-orange text-xs italic">
             Ces paramètres écrasent les configurations globales de passerelle pour cet établissement uniquement.
           </div>
           <div>

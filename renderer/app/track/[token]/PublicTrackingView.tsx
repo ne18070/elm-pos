@@ -97,7 +97,7 @@ export default function PublicTrackingView() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center space-y-6">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-500">
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto text-status-error">
             <AlertCircle className="w-10 h-10" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Oups !</h1>
@@ -121,7 +121,7 @@ export default function PublicTrackingView() {
               <Scale className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Espace Suivi Client</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-content-secondary leading-none mb-1">Espace Suivi Client</p>
               <h1 className="text-lg font-bold text-slate-900 leading-none">Cabinet MBAYE</h1>
             </div>
           </div>
@@ -131,7 +131,7 @@ export default function PublicTrackingView() {
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
         {/* Infos Dossier */}
         <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 bg-slate-900 text-white flex justify-between items-start">
+          <div className="p-6 bg-surface text-white flex justify-between items-start">
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Dossier Référence</p>
               <h2 className="text-2xl font-black font-mono tracking-tight">{dossier.reference}</h2>
@@ -142,20 +142,20 @@ export default function PublicTrackingView() {
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-content-secondary">
                 <User className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Client</p>
+                <p className="text-[10px] font-bold text-content-secondary uppercase">Client</p>
                 <p className="font-bold text-slate-900">{dossier.client_name}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-content-secondary">
                 <Calendar className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Ouverture</p>
+                <p className="text-[10px] font-bold text-content-secondary uppercase">Ouverture</p>
                 <p className="font-bold text-slate-900">{new Date(dossier.date_ouverture).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               </div>
             </div>
@@ -191,7 +191,7 @@ export default function PublicTrackingView() {
               </>
             ) : (
               <div className="py-12 space-y-4">
-                <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
+                <CheckCircle2 className="w-16 h-16 text-status-success mx-auto" />
                 <div className="space-y-1">
                   <h4 className="text-xl font-bold text-slate-900">Dossier Ouvert</h4>
                   <p className="text-slate-500 italic">Le processus de traitement va bientôt démarrer.</p>
@@ -203,7 +203,7 @@ export default function PublicTrackingView() {
 
         {/* Footer info */}
         <footer className="pt-8 text-center space-y-4">
-          <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto">
+          <p className="text-xs text-content-secondary font-medium max-w-xs mx-auto">
             Ce lien est personnel et confidentiel. Ne le partagez pas avec des tiers.
           </p>
           <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto" />

@@ -300,7 +300,7 @@ export default function WhatsAppPage() {
   // ── États de chargement / config ──────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-400">
+      <div className="flex items-center justify-center h-full text-content-secondary">
         <Loader2 className="w-6 h-6 animate-spin" />
       </div>
     );
@@ -309,12 +309,12 @@ export default function WhatsAppPage() {
   if (!config?.is_active) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-        <div className="w-16 h-16 rounded-2xl bg-green-900/30 border border-green-700/40 flex items-center justify-center">
-          <MessageCircle className="w-8 h-8 text-green-400" />
+        <div className="w-16 h-16 rounded-2xl bg-badge-success border border-status-success/40 flex items-center justify-center">
+          <MessageCircle className="w-8 h-8 text-status-success" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-white mb-1">WhatsApp Business non configuré</h2>
-          <p className="text-sm text-slate-400 max-w-sm">
+          <p className="text-sm text-content-secondary max-w-sm">
             Configurez votre intégration WhatsApp Business dans les Paramètres pour recevoir et répondre aux messages.
           </p>
         </div>
@@ -332,8 +332,8 @@ export default function WhatsAppPage() {
         <div className="p-4 border-b border-surface-border space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="relative w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-green-400" />
+              <div className="relative w-8 h-8 rounded-xl bg-badge-success flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-status-success" />
                 {totalUnread > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-500 text-white text-[10px] font-bold flex items-center justify-center">
                     {totalUnread > 9 ? '9+' : totalUnread}
@@ -344,11 +344,11 @@ export default function WhatsAppPage() {
                 <h1 className="text-sm font-semibold text-white flex items-center gap-2">
                   WhatsApp
                   {totalUnread > 0 && (
-                    <span className="text-xs font-normal text-green-400">{totalUnread} non lu{totalUnread > 1 ? 's' : ''}</span>
+                    <span className="text-xs font-normal text-status-success">{totalUnread} non lu{totalUnread > 1 ? 's' : ''}</span>
                   )}
                 </h1>
                 {config.display_phone && (
-                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                  <p className="text-xs text-content-secondary flex items-center gap-1">
                     <Phone className="w-3 h-3" />{config.display_phone}
                   </p>
                 )}
@@ -357,7 +357,7 @@ export default function WhatsAppPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowFilters((f) => !f)}
-                className={`relative p-1.5 rounded-lg hover:bg-surface-hover transition-colors ${showFilters ? 'text-brand-400' : 'text-slate-400'}`}
+                className={`relative p-1.5 rounded-lg hover:bg-surface-hover transition-colors ${showFilters ? 'text-content-brand' : 'text-content-secondary'}`}
                 title="Filtres"
               >
                 <Filter className="w-4 h-4" />
@@ -367,7 +367,7 @@ export default function WhatsAppPage() {
                   </span>
                 )}
               </button>
-              <button onClick={handleRefresh} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
+              <button onClick={handleRefresh} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary">
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
@@ -375,7 +375,7 @@ export default function WhatsAppPage() {
 
           {/* Recherche */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-secondary" />
             <input
               type="text"
               placeholder="Nom, téléphone, message, n° commande…"
@@ -386,7 +386,7 @@ export default function WhatsAppPage() {
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -400,8 +400,8 @@ export default function WhatsAppPage() {
                 onClick={() => setUnreadOnly((v) => !v)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                   unreadOnly
-                    ? 'bg-green-900/40 border border-green-700/50 text-green-300'
-                    : 'bg-surface-hover text-slate-400 hover:text-white'
+                    ? 'bg-badge-success border border-status-success/50 text-status-success'
+                    : 'bg-surface-hover text-content-secondary hover:text-white'
                 }`}
               >
                 <span className={`w-2 h-2 rounded-full ${unreadOnly ? 'bg-green-400' : 'bg-slate-600'}`} />
@@ -420,7 +420,7 @@ export default function WhatsAppPage() {
               {(search || unreadOnly) && (
                 <button
                   onClick={() => { setSearch(''); setUnreadOnly(false); }}
-                  className="text-xs text-brand-400 hover:text-brand-300"
+                  className="text-xs text-content-brand hover:text-content-brand"
                 >
                   Effacer les filtres
                 </button>
@@ -442,8 +442,8 @@ export default function WhatsAppPage() {
                         selected?.from_phone === conv.from_phone ? 'bg-surface-hover' : ''
                       }`}
                     >
-                      <div className="relative w-9 h-9 rounded-full bg-green-900/40 border border-green-700/40 flex items-center justify-center shrink-0">
-                        <span className="text-sm font-semibold text-green-400">
+                      <div className="relative w-9 h-9 rounded-full bg-badge-success border border-status-success/40 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-semibold text-status-success">
                           {(conv.from_name ?? conv.from_phone).charAt(0).toUpperCase()}
                         </span>
                         {conv.unread > 0 && (
@@ -459,7 +459,7 @@ export default function WhatsAppPage() {
                           <span className="text-xs text-slate-500 shrink-0 ml-2">{timeStr(conv.last_at)}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-xs truncate ${conv.unread > 0 ? 'text-white' : 'text-slate-400'}`}>
+                          <p className={`text-xs truncate ${conv.unread > 0 ? 'text-white' : 'text-content-secondary'}`}>
                             {conv.last_message ?? '—'}
                           </p>
                           {conv.unread > 0 && (
@@ -481,7 +481,7 @@ export default function WhatsAppPage() {
                   <button
                     onClick={handleLoadMore}
                     disabled={loadingMore}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-slate-400 hover:text-white text-sm transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-content-secondary hover:text-white text-sm transition-colors disabled:opacity-50"
                   >
                     {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     {loadingMore ? 'Chargement…' : 'Charger plus'}
@@ -506,18 +506,18 @@ export default function WhatsAppPage() {
             <div className="p-4 border-b border-surface-border flex items-center gap-3">
               <button
                 onClick={() => setSelected(null)}
-                className="md:hidden p-1.5 rounded-lg hover:bg-surface-hover text-slate-400"
+                className="md:hidden p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <div className="w-9 h-9 rounded-full bg-green-900/40 border border-green-700/40 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-green-400">
+              <div className="w-9 h-9 rounded-full bg-badge-success border border-status-success/40 flex items-center justify-center shrink-0">
+                <span className="text-sm font-semibold text-status-success">
                   {(selected.from_name ?? selected.from_phone).charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="min-w-0">
                 <p className="font-semibold text-white text-sm">{selected.from_name ?? selected.from_phone}</p>
-                <p className="text-xs text-slate-400 flex items-center gap-1">
+                <p className="text-xs text-content-secondary flex items-center gap-1">
                   <Phone className="w-3 h-3" />{selected.from_phone}
                 </p>
               </div>
@@ -526,7 +526,7 @@ export default function WhatsAppPage() {
             {/* Messages avec séparateurs de date */}
             <div ref={msgContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
               {loadingMsg ? (
-                <div className="flex justify-center text-slate-400 py-8">
+                <div className="flex justify-center text-content-secondary py-8">
                   <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
               ) : messageRows.map((row, i) => {
@@ -551,7 +551,7 @@ export default function WhatsAppPage() {
                     <div className={`max-w-[75%] rounded-2xl overflow-hidden transition-all ${
                       msg.direction === 'outbound'
                         ? 'bg-green-700 text-white rounded-br-sm'
-                        : 'bg-slate-700 text-slate-100 rounded-bl-sm'
+                        : 'bg-slate-700 text-content-primary rounded-bl-sm'
                     } ${isHighlighted ? 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-transparent' : ''}`}>
                       {(msg.payload as { image_url?: string } | null)?.image_url && (
                         <img
@@ -590,7 +590,7 @@ export default function WhatsAppPage() {
                         {msg.message_type !== 'location' && (
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
                         )}
-                        <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-slate-400'} text-right`}>
+                        <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-content-secondary'} text-right`}>
                           {timeStr(msg.created_at)}
                         </p>
                       </div>

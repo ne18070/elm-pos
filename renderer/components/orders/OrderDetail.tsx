@@ -32,10 +32,10 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending:   'bg-yellow-900/30 text-yellow-400 border-yellow-700',
-  paid:      'bg-green-900/30 text-green-400 border-green-700',
-  cancelled: 'bg-red-900/30 text-red-400 border-red-700',
-  refunded:  'bg-purple-900/30 text-purple-400 border-purple-700',
+  pending:   'bg-yellow-900/30 text-status-warning border-yellow-700',
+  paid:      'bg-badge-success text-status-success border-status-success',
+  cancelled: 'bg-badge-error text-status-error border-status-error',
+  refunded:  'bg-badge-purple text-status-purple border-purple-700',
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -212,11 +212,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             <p className="font-semibold text-white font-mono text-sm">
               #{order.id.slice(0, 8).toUpperCase()}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-content-secondary">
               {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-content-secondary hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -227,7 +227,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
           <div className="flex items-center justify-between">
             <p className="label">Statut</p>
             {partial ? (
-              <span className="inline-flex px-3 py-1 rounded-lg text-xs font-medium border bg-amber-900/30 text-amber-400 border-amber-700">
+              <span className="inline-flex px-3 py-1 rounded-lg text-xs font-medium border bg-badge-warning text-status-warning border-status-warning">
                 Acompte versé
               </span>
             ) : (
@@ -239,11 +239,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
           {/* Client (acompte) */}
           {order.customer_name && (
-            <div className="bg-amber-900/20 border border-amber-800 rounded-xl px-3 py-2.5 space-y-0.5">
-              <p className="label text-amber-400">Client</p>
+            <div className="bg-badge-warning border border-status-warning rounded-xl px-3 py-2.5 space-y-0.5">
+              <p className="label text-status-warning">Client</p>
               <p className="text-sm font-semibold text-white">{order.customer_name}</p>
               {order.customer_phone && (
-                <p className="text-sm text-slate-400">{order.customer_phone}</p>
+                <p className="text-sm text-content-secondary">{order.customer_phone}</p>
               )}
             </div>
           )}
@@ -272,24 +272,24 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
           {/* Totaux */}
           <div className="bg-surface-input rounded-xl p-3 space-y-1.5">
-            <div className="flex justify-between text-sm text-slate-400">
+            <div className="flex justify-between text-sm text-content-secondary">
               <span>Sous-total</span>
               <span>{fmt(order.subtotal)}</span>
             </div>
             {order.discount_amount > 0 && (
-              <div className="flex justify-between text-sm text-green-400">
+              <div className="flex justify-between text-sm text-status-success">
                 <span>Remise {order.coupon_code && `(${order.coupon_code})`}</span>
                 <span>-{fmt(order.discount_amount)}</span>
               </div>
             )}
             {order.coupon_code && order.discount_amount === 0 && (
-              <div className="flex justify-between text-sm text-amber-400">
+              <div className="flex justify-between text-sm text-status-warning">
                 <span>Offre ({order.coupon_code})</span>
                 <span>{order.coupon_notes ?? 'Article offert'}</span>
               </div>
             )}
             {order.tax_amount > 0 && (
-              <div className="flex justify-between text-sm text-slate-400">
+              <div className="flex justify-between text-sm text-content-secondary">
                 <span>TVA</span>
                 <span>{fmt(order.tax_amount)}</span>
               </div>
@@ -302,11 +302,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             {/* Solde acompte */}
             {partial && (
               <>
-                <div className="flex justify-between text-sm text-brand-400 pt-1 border-t border-surface-border">
+                <div className="flex justify-between text-sm text-content-brand pt-1 border-t border-surface-border">
                   <span>Acompte versé</span>
                   <span className="font-medium">{fmt(paidAmt)}</span>
                 </div>
-                <div className="flex justify-between text-amber-400 font-bold">
+                <div className="flex justify-between text-status-warning font-bold">
                   <span>Reste à régler</span>
                   <span className="text-lg">{fmt(remaining)}</span>
                 </div>
@@ -320,7 +320,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               <p className="label">Paiements reçus</p>
               {order.payments.map((p) => (
                 <div key={p.id} className="flex justify-between text-sm py-1">
-                  <span className="text-slate-400">{METHOD_LABELS[p.method] ?? p.method}</span>
+                  <span className="text-content-secondary">{METHOD_LABELS[p.method] ?? p.method}</span>
                   <span className="text-white">{fmt(p.amount)}</span>
                 </div>
               ))}
@@ -329,8 +329,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
           {/* Formulaire paiement complémentaire (acompte ou WhatsApp) */}
           {(partial || isWhatsAppPending) && showCompleteForm && (
-            <div className="bg-amber-900/20 border border-amber-800 rounded-xl p-3 space-y-3">
-              <p className="text-xs text-amber-400 font-medium uppercase tracking-wider">
+            <div className="bg-badge-warning border border-status-warning rounded-xl p-3 space-y-3">
+              <p className="text-xs text-status-warning font-medium uppercase tracking-wider">
                 Enregistrer le solde ({fmt(remaining)})
               </p>
 
@@ -342,8 +342,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                     onClick={() => setCompleteMethod(m)}
                     className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all ${
                       completeMethod === m
-                        ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                        : 'border-slate-700 text-slate-400 hover:text-white'
+                        ? 'border-brand-500 bg-badge-brand text-content-brand'
+                        : 'border-slate-700 text-content-secondary hover:text-white'
                     }`}
                   >
                     {m === 'cash'         && <Banknote className="w-4 h-4" />}
@@ -356,7 +356,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
               {/* Montant */}
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Montant reçu</label>
+                <label className="text-xs text-content-secondary mb-1 block">Montant reçu</label>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -392,7 +392,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               {refunds.map((r) => (
                 <div key={r.id} className="text-sm py-1.5 border-b border-surface-border last:border-0">
                   <div className="flex justify-between">
-                    <span className="text-purple-400 font-medium">-{fmt(r.amount)}</span>
+                    <span className="text-status-purple font-medium">-{fmt(r.amount)}</span>
                     <span className="text-slate-500 text-xs">
                       {format(new Date(r.refunded_at), 'dd/MM/yyyy HH:mm')}
                     </span>
@@ -405,7 +405,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
           {/* Alerte acompte */}
           {partial && !showCompleteForm && !isWhatsAppPending && (
-            <div className="flex gap-2 p-3 bg-amber-900/20 border border-amber-800 rounded-xl text-xs text-amber-300">
+            <div className="flex gap-2 p-3 bg-badge-warning border border-status-warning rounded-xl text-xs text-status-warning">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>Acompte de <strong>{fmt(paidAmt)}</strong> versé. Reste à régler : <strong>{fmt(remaining)}</strong>.</span>
             </div>
@@ -435,7 +435,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             <button
               onClick={handleWhatsAppShare}
               disabled={sharingWa}
-              className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 transition-colors text-xs font-medium"
+              className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-status-success bg-badge-success text-status-success hover:bg-badge-success transition-colors text-xs font-medium"
               title="Partager via WhatsApp"
             >
               {sharingWa ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
@@ -481,7 +481,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               <button
                 onClick={() => setShowRefundModal(true)}
                 className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl
-                           border border-purple-700 text-purple-400 hover:bg-purple-900/20 transition-colors text-sm font-medium"
+                           border border-purple-700 text-status-purple hover:bg-badge-purple transition-colors text-sm font-medium"
               >
                 <RotateCcw className="w-4 h-4" />
                 Rembourser
@@ -489,7 +489,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               <button
                 onClick={handleCancel}
                 className="flex items-center justify-center gap-2 px-3 h-10 rounded-xl
-                           border border-red-800 text-red-400 hover:bg-red-900/20 transition-colors"
+                           border border-status-error text-status-error hover:bg-badge-error transition-colors"
                 title="Annuler la commande"
               >
                 <XCircle className="w-4 h-4" />

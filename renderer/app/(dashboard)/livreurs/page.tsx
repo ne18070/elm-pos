@@ -108,7 +108,7 @@ export default function LivreursPage() {
             </div>
             <div>
               <p className="text-lg font-semibold text-white">Aucun livreur enregistré</p>
-              <p className="text-sm text-slate-400 mt-1 max-w-sm">
+              <p className="text-sm text-content-secondary mt-1 max-w-sm">
                 Ajoutez vos livreurs pour pouvoir les assigner aux commandes de livraison.
               </p>
             </div>
@@ -122,7 +122,7 @@ export default function LivreursPage() {
           <div className="max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-3">
             {livreurs.map((l) => (
               <div key={l.id} className="card p-4 flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-brand-400">
+                <div className="w-10 h-10 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
                   {l.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
@@ -130,15 +130,15 @@ export default function LivreursPage() {
                     <p className="text-sm font-semibold text-white truncate">{l.name}</p>
                     <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${
                       l.is_active
-                        ? 'text-green-400 bg-green-900/20 border-green-800'
-                        : 'text-slate-400 bg-slate-800/40 border-slate-700'
+                        ? 'text-status-success bg-badge-success border-status-success'
+                        : 'text-content-secondary bg-slate-800/40 border-slate-700'
                     }`}>
                       {l.is_active ? 'Actif' : 'Inactif'}
                     </span>
                   </div>
                   <a
                     href={`tel:${l.phone}`}
-                    className="text-xs text-slate-400 flex items-center gap-1 hover:text-brand-400 transition-colors"
+                    className="text-xs text-content-secondary flex items-center gap-1 hover:text-content-brand transition-colors"
                   >
                     <Phone className="w-3 h-3 shrink-0" /> {l.phone}
                   </a>
@@ -149,13 +149,13 @@ export default function LivreursPage() {
                 <div className="flex gap-1 shrink-0">
                   <button
                     onClick={() => openPanel(l)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => remove(l.id)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -171,13 +171,13 @@ export default function LivreursPage() {
         <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
           <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
             <h3 className="font-semibold text-white">{panel.item ? 'Modifier livreur' : 'Nouveau livreur'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             <div>
-              <label className="label">Nom <span className="text-red-400">*</span></label>
+              <label className="label">Nom <span className="text-status-error">*</span></label>
               <input
                 className="input"
                 value={form.name}
@@ -187,7 +187,7 @@ export default function LivreursPage() {
               />
             </div>
             <div>
-              <label className="label">Téléphone <span className="text-red-400">*</span></label>
+              <label className="label">Téléphone <span className="text-status-error">*</span></label>
               <input
                 className="input"
                 value={form.phone}

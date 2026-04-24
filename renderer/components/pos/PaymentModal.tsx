@@ -407,9 +407,9 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         <div className="space-y-5">
           <div>
             <p className="label">Total à encaisser</p>
-            <p className="text-3xl font-bold text-brand-400">{fmt(total)}</p>
+            <p className="text-3xl font-bold text-content-brand">{fmt(total)}</p>
             {discountAmount > 0 && (
-              <p className="text-xs text-green-400 mt-0.5">Remise appliquée : -{fmt(discountAmount)}</p>
+              <p className="text-xs text-status-success mt-0.5">Remise appliquée : -{fmt(discountAmount)}</p>
             )}
           </div>
 
@@ -422,8 +422,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   onClick={() => setMethode(m)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${methode === m
-                      ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                      : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                      ? 'border-brand-500 bg-badge-brand text-content-brand'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
                     }`}
                 >
                   {m === 'cash'         && <Banknote className="w-6 h-6" />}
@@ -438,7 +438,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${methode === 'room_charge'
                       ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400'
-                      : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
                     }`}
                 >
                   <BedDouble className="w-6 h-6" />
@@ -449,8 +449,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 onClick={() => setMethode('partial')}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                   ${'partial' === methode
-                    ? 'border-amber-500 bg-amber-900/20 text-amber-400'
-                    : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                    ? 'border-amber-500 bg-badge-warning text-status-warning'
+                    : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
                   }`}
               >
                 <SplitSquareHorizontal className="w-6 h-6" />
@@ -477,21 +477,21 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       {step === 'montant' && (
         <div className="space-y-5">
           <div className="bg-surface-input rounded-xl p-3 space-y-1">
-            <div className="flex justify-between text-sm text-slate-400">
+            <div className="flex justify-between text-sm text-content-secondary">
               <span>Sous-total</span><span>{fmt(subtotal)}</span>
             </div>
             {discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-400">
+              <div className="flex justify-between text-sm text-status-success">
                 <span>Remise</span><span>-{fmt(discountAmount)}</span>
               </div>
             )}
             {taxAmount > 0 && (
-              <div className="flex justify-between text-sm text-slate-400">
+              <div className="flex justify-between text-sm text-content-secondary">
                 <span>TVA</span><span>{fmt(taxAmount)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-white pt-1 border-t border-surface-border">
-              <span>Total</span><span className="text-brand-400">{fmt(total)}</span>
+              <span>Total</span><span className="text-content-brand">{fmt(total)}</span>
             </div>
           </div>
 
@@ -509,23 +509,23 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   <button
                     key={v}
                     onClick={() => { setMontantRecu(String(v)); setErreur(''); }}
-                    className={`btn-secondary py-1.5 text-xs ${montantRecuNum === v ? 'border border-brand-500 text-brand-400' : ''}`}
+                    className={`btn-secondary py-1.5 text-xs ${montantRecuNum === v ? 'border border-brand-500 text-content-brand' : ''}`}
                   >
                     {fmt(v)}
                   </button>
                 ))}
               </div>
               {montantRecu && montantRecuNum >= total && (
-                <div className="mt-3 p-3 rounded-xl bg-green-900/20 border border-green-800 text-center">
-                  <p className="text-xs text-slate-400">Monnaie à rendre</p>
-                  <p className="text-2xl font-bold text-green-400">{fmt(rendu)}</p>
+                <div className="mt-3 p-3 rounded-xl bg-badge-success border border-status-success text-center">
+                  <p className="text-xs text-content-secondary">Monnaie à rendre</p>
+                  <p className="text-2xl font-bold text-status-success">{fmt(rendu)}</p>
                 </div>
               )}
             </div>
           )}
 
           {erreur && (
-            <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-3 py-2">{erreur}</p>
+            <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-3 py-2">{erreur}</p>
           )}
 
           <div className="flex gap-3">
@@ -546,8 +546,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       {step === 'partiel' && (
         <div className="space-y-5">
           <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
-            <span className="text-slate-400 text-sm">Total commande</span>
-            <span className="text-2xl font-bold text-brand-400">{fmt(total)}</span>
+            <span className="text-content-secondary text-sm">Total commande</span>
+            <span className="text-2xl font-bold text-content-brand">{fmt(total)}</span>
           </div>
 
           {/* Informations client */}
@@ -556,8 +556,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
             {/* Nom avec autocomplete */}
             <div className="relative" ref={suggestionsRef}>
-              <label className="text-xs text-slate-400 mb-1 block">
-                Nom complet <span className="text-red-400">*</span>
+              <label className="text-xs text-content-secondary mb-1 block">
+                Nom complet <span className="text-status-error">*</span>
               </label>
               <input
                 type="text"
@@ -584,7 +584,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
               {/* Dropdown suggestions */}
               {showSuggestions && (
-                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
                   {customerSuggestions.map((c) => (
                     <button
                       key={c.id}
@@ -596,12 +596,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-700 transition-colors text-left"
                     >
-                      <div className="w-7 h-7 rounded-full bg-brand-900/50 border border-brand-700 flex items-center justify-center shrink-0">
-                        <User className="w-3.5 h-3.5 text-brand-400" />
+                      <div className="w-7 h-7 rounded-full bg-badge-brand border border-brand-700 flex items-center justify-center shrink-0">
+                        <User className="w-3.5 h-3.5 text-content-brand" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-white font-medium truncate">{c.name}</p>
-                        {c.phone && <p className="text-xs text-slate-400">{c.phone}</p>}
+                        {c.phone && <p className="text-xs text-content-secondary">{c.phone}</p>}
                       </div>
                     </button>
                   ))}
@@ -611,7 +611,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
             {/* Téléphone */}
             <div className="relative">
-              <label className="text-xs text-slate-400 mb-1 block">Téléphone</label>
+              <label className="text-xs text-content-secondary mb-1 block">Téléphone</label>
               <input
                 type="tel"
                 inputMode="tel"
@@ -638,7 +638,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               />
 
               {showPhoneSuggestions && (
-                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
                   {customerSuggestions.map((c) => (
                     <button
                       key={c.id}
@@ -650,12 +650,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-700 transition-colors text-left"
                     >
-                      <div className="w-7 h-7 rounded-full bg-brand-900/50 border border-brand-700 flex items-center justify-center shrink-0">
-                        <User className="w-3.5 h-3.5 text-brand-400" />
+                      <div className="w-7 h-7 rounded-full bg-badge-brand border border-brand-700 flex items-center justify-center shrink-0">
+                        <User className="w-3.5 h-3.5 text-content-brand" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-white font-medium truncate">{c.name}</p>
-                        {c.phone && <p className="text-xs text-slate-400">{c.phone}</p>}
+                        {c.phone && <p className="text-xs text-content-secondary">{c.phone}</p>}
                       </div>
                     </button>
                   ))}
@@ -673,8 +673,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   onClick={() => setPartialMethod(m)}
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs transition-all
                     ${partialMethod === m
-                      ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                      : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                      ? 'border-brand-500 bg-badge-brand text-content-brand'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
                     }`}
                 >
                   {m === 'cash'         && <Banknote className="w-5 h-5" />}
@@ -711,24 +711,24 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           {acompteNum > 0 && (
             <div className="bg-slate-800/50 rounded-xl p-4 space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Acompte versé</span>
+                <span className="text-content-secondary">Acompte versé</span>
                 <span className="text-white font-semibold">{fmt(acompteNum)}</span>
               </div>
               <div className="flex justify-between items-center border-t border-slate-700 pt-3">
-                <span className="text-amber-400 font-medium">Reste à régler</span>
-                <span className="text-amber-400 font-bold text-xl tabular-nums">{fmt(resteAPayer)}</span>
+                <span className="text-status-warning font-medium">Reste à régler</span>
+                <span className="text-status-warning font-bold text-xl tabular-nums">{fmt(resteAPayer)}</span>
               </div>
               {renduAcompte > 0 && (
                 <div className="flex justify-between text-sm border-t border-slate-700 pt-3">
-                  <span className="text-green-400">Monnaie à rendre</span>
-                  <span className="text-green-400 font-bold">{fmt(renduAcompte)}</span>
+                  <span className="text-status-success">Monnaie à rendre</span>
+                  <span className="text-status-success font-bold">{fmt(renduAcompte)}</span>
                 </div>
               )}
             </div>
           )}
 
           {erreur && (
-            <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-3 py-2">{erreur}</p>
+            <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-3 py-2">{erreur}</p>
           )}
 
           <div className="flex gap-3">
@@ -767,8 +767,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       {step === 'intouch' && (
         <div className="space-y-5">
           <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
-            <span className="text-slate-400 text-sm">Total à payer</span>
-            <span className="text-2xl font-bold text-brand-400">{fmt(total)}</span>
+            <span className="text-content-secondary text-sm">Total à payer</span>
+            <span className="text-2xl font-bold text-content-brand">{fmt(total)}</span>
           </div>
 
           <div className="space-y-3">
@@ -780,8 +780,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   onClick={() => setIntouchProvider(p)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all
                     ${intouchProvider === p
-                      ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                      : 'border-surface-border text-slate-400 hover:border-slate-500 hover:text-white'
+                      ? 'border-brand-500 bg-badge-brand text-content-brand'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-white'
                     }`}
                 >
                   <span className="text-[10px] font-bold">{p.replace('_', ' ')}</span>
@@ -801,7 +801,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           </div>
 
           {erreur && (
-            <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-3 py-2">{erreur}</p>
+            <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-3 py-2">{erreur}</p>
           )}
 
           <div className="flex gap-3">
@@ -826,18 +826,18 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         <div className="flex flex-col items-center gap-6 py-8 text-center">
           <div className="relative">
             <div className="w-24 h-24 rounded-full border-4 border-brand-900 border-t-brand-400 animate-spin" />
-            <MonitorCheck className="absolute inset-0 m-auto w-10 h-10 text-brand-400" />
+            <MonitorCheck className="absolute inset-0 m-auto w-10 h-10 text-content-brand" />
           </div>
 
           <div>
             <h3 className="text-xl font-semibold text-white">En attente du client</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              Le client vérifie sa facture et appuie sur <strong className="text-brand-400">OK</strong> pour valider
+            <p className="text-sm text-content-secondary mt-1">
+              Le client vérifie sa facture et appuie sur <strong className="text-content-brand">OK</strong> pour valider
             </p>
           </div>
 
           {chargement && (
-            <div className="flex items-center gap-2 text-slate-400 text-sm">
+            <div className="flex items-center gap-2 text-content-secondary text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
               Enregistrement en cours…
             </div>
@@ -897,45 +897,45 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       {step === 'succes' && (
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-            methode === 'partial' ? 'bg-amber-900/30' : 'bg-green-900/30'
+            methode === 'partial' ? 'bg-badge-warning' : 'bg-badge-success'
           }`}>
-            <CheckCircle className={`w-8 h-8 ${methode === 'partial' ? 'text-amber-400' : 'text-green-400'}`} />
+            <CheckCircle className={`w-8 h-8 ${methode === 'partial' ? 'text-status-warning' : 'text-status-success'}`} />
           </div>
 
           <div className="w-full space-y-3">
             {methode === 'partial' ? (
               <>
                 <h3 className="text-xl font-bold text-white">Acompte enregistré !</h3>
-                {ordreId && <p className="text-sm text-slate-400">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
+                {ordreId && <p className="text-sm text-content-secondary">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
                 <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Total commande</span>
+                    <span className="text-content-secondary">Total commande</span>
                     <span className="text-white font-medium">{fmt(totalConfirme)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Acompte reçu</span>
-                    <span className="text-brand-400 font-semibold">{fmt(acompteConfirme)}</span>
+                    <span className="text-content-secondary">Acompte reçu</span>
+                    <span className="text-content-brand font-semibold">{fmt(acompteConfirme)}</span>
                   </div>
                   <div className="flex justify-between border-t border-surface-border pt-2">
-                    <span className="text-amber-400 font-medium">Reste à régler</span>
-                    <span className="text-amber-400 font-bold text-lg">{fmt(totalConfirme - acompteConfirme)}</span>
+                    <span className="text-status-warning font-medium">Reste à régler</span>
+                    <span className="text-status-warning font-bold text-lg">{fmt(totalConfirme - acompteConfirme)}</span>
                   </div>
                 </div>
                 {renduAcompte > 0 && (
-                  <div className="p-3 rounded-xl bg-green-900/20 border border-green-800">
-                    <p className="text-xs text-slate-400">Monnaie à rendre</p>
-                    <p className="text-2xl font-bold text-green-400">{fmt(renduAcompte)}</p>
+                  <div className="p-3 rounded-xl bg-badge-success border border-status-success">
+                    <p className="text-xs text-content-secondary">Monnaie à rendre</p>
+                    <p className="text-2xl font-bold text-status-success">{fmt(renduAcompte)}</p>
                   </div>
                 )}
               </>
             ) : (
               <>
                 <h3 className="text-xl font-bold text-white">Paiement accepté !</h3>
-                {ordreId && <p className="text-sm text-slate-400">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
+                {ordreId && <p className="text-sm text-content-secondary">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
                 {methode === 'cash' && rendu > 0 && (
-                  <div className="p-3 rounded-xl bg-green-900/20 border border-green-800">
-                    <p className="text-xs text-slate-400">Monnaie à rendre</p>
-                    <p className="text-2xl font-bold text-green-400">{fmt(rendu)}</p>
+                  <div className="p-3 rounded-xl bg-badge-success border border-status-success">
+                    <p className="text-xs text-content-secondary">Monnaie à rendre</p>
+                    <p className="text-2xl font-bold text-status-success">{fmt(rendu)}</p>
                   </div>
                 )}
               </>
@@ -963,7 +963,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               <button
                 onClick={handleWhatsApp}
                 disabled={!ordre || sendingWa}
-                className="h-10 flex items-center justify-center gap-1.5 rounded-xl border border-green-800 bg-green-900/20 text-green-400 hover:bg-green-900/30 text-xs font-medium transition-colors"
+                className="h-10 flex items-center justify-center gap-1.5 rounded-xl border border-status-success bg-badge-success text-status-success hover:bg-badge-success text-xs font-medium transition-colors"
               >
                 {sendingWa ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5 shrink-0" />}
                 WhatsApp

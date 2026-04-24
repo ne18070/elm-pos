@@ -313,17 +313,17 @@ export default function RevendeursPage() {
                   key={r.id}
                   onClick={() => setSelected(r)}
                   className={`w-full text-left px-3 py-3 border-b border-surface-border transition-colors flex items-center gap-2
-                    ${selected?.id === r.id ? 'bg-brand-900/30' : 'hover:bg-surface-hover'}`}
+                    ${selected?.id === r.id ? 'bg-badge-brand' : 'hover:bg-surface-hover'}`}
                 >
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold
-                    ${selected?.id === r.id ? 'bg-brand-600 text-white' : 'bg-surface-input text-brand-400'}`}>
+                    ${selected?.id === r.id ? 'bg-brand-600 text-white' : 'bg-surface-input text-content-brand'}`}>
                     {r.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-white truncate">{r.name}</p>
                     {r.phone && <p className="text-xs text-slate-500 truncate">{r.phone}</p>}
                   </div>
-                  {!r.is_active && <span className="text-xs text-amber-500 shrink-0">Inactif</span>}
+                  {!r.is_active && <span className="text-xs text-status-warning shrink-0">Inactif</span>}
                   <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 </button>
               ))}
@@ -356,15 +356,15 @@ export default function RevendeursPage() {
                 <div className="card p-5 flex items-start justify-between gap-4">
                   <div className="space-y-1">
                     <h2 className="text-lg font-bold text-white">{selected.name}</h2>
-                    {selected.phone && <p className="text-sm text-slate-400 flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{selected.phone}</p>}
-                    {selected.address && <p className="text-sm text-slate-400 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{selected.address}</p>}
+                    {selected.phone && <p className="text-sm text-content-secondary flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{selected.phone}</p>}
+                    {selected.address && <p className="text-sm text-content-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{selected.address}</p>}
                     {selected.notes && <p className="text-sm text-slate-500 italic mt-1">{selected.notes}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => openResellerPanel(selected)} className="btn-secondary p-2">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => removeReseller(selected.id)} className="p-2 rounded-xl text-red-400 hover:bg-red-900/20 transition-colors">
+                    <button onClick={() => removeReseller(selected.id)} className="p-2 rounded-xl text-status-error hover:bg-badge-error transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -374,7 +374,7 @@ export default function RevendeursPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                      <Users className="w-4 h-4 text-brand-400" />
+                      <Users className="w-4 h-4 text-content-brand" />
                       Clients ({clients.length})
                     </h3>
                     <div className="flex items-center gap-2">
@@ -382,7 +382,7 @@ export default function RevendeursPage() {
                         <button
                           onClick={removeSelectedClients}
                           disabled={deletingClients}
-                          className="h-8 text-xs px-3 flex items-center gap-1 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                          className="h-8 text-xs px-3 flex items-center gap-1 rounded-lg bg-badge-error text-status-error hover:bg-badge-error transition-colors disabled:opacity-50"
                         >
                           {deletingClients
                             ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -431,7 +431,7 @@ export default function RevendeursPage() {
                       <div
                         key={c.id}
                         onClick={() => toggleClientSelect(c.id)}
-                        className={`card p-3 flex items-center gap-3 cursor-pointer transition-colors ${isChecked ? 'border border-brand-600 bg-brand-900/20' : 'hover:bg-surface-hover'}`}
+                        className={`card p-3 flex items-center gap-3 cursor-pointer transition-colors ${isChecked ? 'border border-brand-600 bg-badge-brand' : 'hover:bg-surface-hover'}`}
                       >
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isChecked ? 'bg-brand-600 border-brand-600' : 'border-slate-600'}`}>
                           {isChecked && <Check className="w-3 h-3 text-white" />}
@@ -445,10 +445,10 @@ export default function RevendeursPage() {
                           {c.address && <p className="text-xs text-slate-500 truncate">{c.address}</p>}
                         </div>
                         <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => openClientPanel(selected, c)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+                          <button onClick={() => openClientPanel(selected, c)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => removeClient(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20">
+                          <button onClick={() => removeClient(c.id)} className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -468,7 +468,7 @@ export default function RevendeursPage() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-content-secondary">
                 Offres automatiques déclenchées selon la quantité achetée
               </p>
               <button
@@ -489,8 +489,8 @@ export default function RevendeursPage() {
 
             {offers.map((o) => (
               <div key={o.id} className={`card p-4 flex items-center gap-4 ${!o.is_active ? 'opacity-50' : ''}`}>
-                <div className="w-10 h-10 rounded-xl bg-amber-900/20 border border-amber-800 flex items-center justify-center shrink-0">
-                  <Gift className="w-5 h-5 text-amber-400" />
+                <div className="w-10 h-10 rounded-xl bg-badge-warning border border-status-warning flex items-center justify-center shrink-0">
+                  <Gift className="w-5 h-5 text-status-warning" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white">
@@ -508,7 +508,7 @@ export default function RevendeursPage() {
                   >
                     <span className={`block w-3.5 h-3.5 bg-white rounded-full shadow transition-transform mx-auto ${o.is_active ? 'translate-x-1.5' : '-translate-x-1.5'}`} />
                   </button>
-                  <button onClick={() => removeOffer(o.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20">
+                  <button onClick={() => removeOffer(o.id)} className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -523,13 +523,13 @@ export default function RevendeursPage() {
         <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
           <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
             <h3 className="font-semibold text-white">{panel.item ? 'Modifier revendeur' : 'Nouveau revendeur'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             <div>
-              <label className="label">Nom <span className="text-red-400">*</span></label>
+              <label className="label">Nom <span className="text-status-error">*</span></label>
               <input className="input" value={rForm.name} onChange={(e) => setRForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Modou Fall" />
             </div>
             <div>
@@ -571,14 +571,14 @@ export default function RevendeursPage() {
         <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
           <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
             <h3 className="font-semibold text-white">{panel.item ? 'Modifier client' : 'Ajouter un client'}</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             <p className="text-xs text-slate-500">Client de <strong className="text-white">{panel.reseller.name}</strong></p>
             <div>
-              <label className="label">Nom <span className="text-red-400">*</span></label>
+              <label className="label">Nom <span className="text-status-error">*</span></label>
               <input className="input" value={cForm.name} onChange={(e) => setCForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Fatou Diop" autoFocus />
             </div>
             <div>
@@ -614,13 +614,13 @@ export default function RevendeursPage() {
         <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
           <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
             <h3 className="font-semibold text-white">Nouvelle offre volume</h3>
-            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+            <button onClick={() => setPanel(null)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             <div>
-              <label className="label">Produit <span className="text-red-400">*</span></label>
+              <label className="label">Produit <span className="text-status-error">*</span></label>
               <select className="input" value={oForm.product_id} onChange={(e) => setOForm((f) => ({ ...f, product_id: e.target.value }))}>
                 <option value="">Choisir un produit…</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -635,7 +635,7 @@ export default function RevendeursPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Seuil (qté min) <span className="text-red-400">*</span></label>
+                <label className="label">Seuil (qté min) <span className="text-status-error">*</span></label>
                 <input className="input" type="number" value={oForm.min_qty} onChange={(e) => setOForm((f) => ({ ...f, min_qty: e.target.value }))} placeholder="100" />
               </div>
               <div>
@@ -648,7 +648,7 @@ export default function RevendeursPage() {
               <input className="input" value={oForm.label} onChange={(e) => setOForm((f) => ({ ...f, label: e.target.value }))} placeholder="Ex : 1 carton offert pour 100 achetés" />
             </div>
             {oForm.product_id && oForm.min_qty && (
-              <div className="p-3 rounded-xl bg-amber-900/10 border border-amber-800 text-sm text-amber-300">
+              <div className="p-3 rounded-xl bg-badge-warning border border-status-warning text-sm text-status-warning">
                 <Gift className="w-4 h-4 inline mr-1.5" />
                 Pour {oForm.min_qty} {products.find((p) => p.id === oForm.product_id)?.name ?? '…'} achetés → <strong>{oForm.bonus_qty} offert{Number(oForm.bonus_qty) > 1 ? 's' : ''}</strong>
               </div>

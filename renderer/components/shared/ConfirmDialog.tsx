@@ -33,7 +33,7 @@ export function useConfirm() {
     return (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
         <div className="card w-full max-w-sm p-6 space-y-5">
-          <p className="text-sm text-slate-200 leading-relaxed">{dlg.message}</p>
+          <p className="text-sm text-content-primary leading-relaxed">{dlg.message}</p>
           <div className="flex justify-end gap-3">
             <button
               onClick={() => setDlg(null)}

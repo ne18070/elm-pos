@@ -73,7 +73,7 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
               "px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all",
               activeFloorId === f.id
                 ? "bg-brand-600 text-white shadow-lg shadow-brand-900/40"
-                : "bg-surface-input text-slate-400 hover:text-white"
+                : "bg-surface-input text-content-secondary hover:text-white"
             )}
           >
             {f.name}
@@ -85,7 +85,7 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
       <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px]">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm z-50">
-            <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
           </div>
         ) : tables.length === 0 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-4">
@@ -116,11 +116,11 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(20,184,166,0.4)]" />
-            <span className="text-brand-400">Occupée</span>
+            <span className="text-content-brand">Occupée</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            <span className="text-amber-500">Réservée</span>
+            <span className="text-status-warning">Réservée</span>
           </div>
         </div>
         <div className="text-slate-500">

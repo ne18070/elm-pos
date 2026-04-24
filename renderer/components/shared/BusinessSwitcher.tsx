@@ -166,7 +166,7 @@ export function BusinessSwitcher({
                 {business?.name ?? 'Mon établissement'}
               </p>
               {business?.organization_name && business.organization_name !== business.name && (
-                <p className="text-[10px] text-brand-400/70 truncate leading-tight font-medium">
+                <p className="text-[10px] text-content-brand/70 truncate leading-tight font-medium">
                   {business.organization_name}
                 </p>
               )}
@@ -175,7 +175,7 @@ export function BusinessSwitcher({
               </p>
             </div>
             <ChevronDown className={cn(
-              "w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200",
+              "w-4 h-4 text-content-secondary shrink-0 transition-transform duration-200",
               open ? 'rotate-180' : ''
             )} />
           </div>
@@ -190,7 +190,7 @@ export function BusinessSwitcher({
 
             {/* En-tête */}
             <div className="px-3 py-2 border-b border-surface-border">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+              <p className="text-xs font-medium text-content-secondary uppercase tracking-wider">
                 Établissements
               </p>
             </div>
@@ -207,7 +207,7 @@ export function BusinessSwitcher({
                     onClick={() => handleSwitch(biz.id)}
                     disabled={!!switching}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left
-                      ${isActive ? 'bg-brand-900/30' : 'hover:bg-surface-hover'}`}
+                      ${isActive ? 'bg-badge-brand' : 'hover:bg-surface-hover'}`}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden
                                     text-sm font-bold p-1
@@ -221,11 +221,11 @@ export function BusinessSwitcher({
 
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium truncate
-                        ${isActive ? 'text-brand-400' : 'text-white'}`}>
+                        ${isActive ? 'text-content-brand' : 'text-white'}`}>
                         {biz.name}
                       </p>
                       {biz.organization_name && biz.organization_name !== biz.name && (
-                        <p className="text-[10px] text-brand-400/60 truncate font-medium">
+                        <p className="text-[10px] text-content-brand/60 truncate font-medium">
                           {biz.organization_name}
                         </p>
                       )}
@@ -235,7 +235,7 @@ export function BusinessSwitcher({
                     </div>
 
                     {isActive && !isLoading && (
-                      <Check className="w-4 h-4 text-brand-400 shrink-0" />
+                      <Check className="w-4 h-4 text-content-brand shrink-0" />
                     )}
                   </button>
                 );
@@ -254,7 +254,7 @@ export function BusinessSwitcher({
                 <button
                   onClick={() => { setOpen(false); setShowCreate(true); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5
-                             text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+                             text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
                 >
                   <div className="w-8 h-8 rounded-lg border border-dashed border-slate-600
                                   flex items-center justify-center shrink-0">

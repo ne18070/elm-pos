@@ -127,7 +127,7 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
               {step === 'done'    && `${okCount} importé${okCount > 1 ? 's' : ''} · ${errCount} erreur${errCount !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-2 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -141,7 +141,7 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
               {/* Explication */}
               <div className="p-4 rounded-xl bg-surface-input border border-surface-border space-y-2 text-sm">
                 <p className="font-medium text-white">Comment ça fonctionne ?</p>
-                <ol className="space-y-1 text-slate-400 text-xs">
+                <ol className="space-y-1 text-content-secondary text-xs">
                   <li className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
                     Téléchargez le modèle CSV ci-dessous
@@ -178,7 +178,7 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
                 onDrop={handleDrop}
                 onClick={() => inputRef.current?.click()}
                 className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl py-12 cursor-pointer transition-colors
-                  ${dragOver ? 'border-brand-400 bg-brand-900/10' : 'border-slate-700 hover:border-slate-500'}`}
+                  ${dragOver ? 'border-brand-400 bg-badge-brand' : 'border-slate-700 hover:border-slate-500'}`}
               >
                 <Upload className="w-10 h-10 text-slate-500" />
                 <div className="text-center">
@@ -202,11 +202,11 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-border bg-surface-input">
-                    <th className="px-4 py-2.5 text-left text-xs text-slate-400 font-medium w-10">#</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-content-secondary font-medium w-10">#</th>
                     {headers.map((h) => (
-                      <th key={h} className="px-4 py-2.5 text-left text-xs text-slate-400 font-medium">{h}</th>
+                      <th key={h} className="px-4 py-2.5 text-left text-xs text-content-secondary font-medium">{h}</th>
                     ))}
-                    <th className="px-4 py-2.5 text-left text-xs text-slate-400 font-medium w-40">Statut</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-content-secondary font-medium w-40">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -215,20 +215,20 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
                     const status = result?.status ?? 'pending';
                     return (
                       <tr key={i} className={`border-b border-surface-border transition-colors
-                        ${status === 'ok'    ? 'bg-green-900/10' :
-                          status === 'error' ? 'bg-red-900/10'   : 'hover:bg-surface-hover'}`}>
+                        ${status === 'ok'    ? 'bg-badge-success' :
+                          status === 'error' ? 'bg-badge-error'   : 'hover:bg-surface-hover'}`}>
                         <td className="px-4 py-2 text-slate-500 text-xs">{i + 1}</td>
                         {headers.map((_, ci) => (
-                          <td key={ci} className="px-4 py-2 text-slate-200 text-xs truncate max-w-[140px]">
+                          <td key={ci} className="px-4 py-2 text-content-primary text-xs truncate max-w-[140px]">
                             {row[ci] ?? ''}
                           </td>
                         ))}
                         <td className="px-4 py-2">
                           {status === 'pending' && !importing && <span className="text-xs text-slate-500">—</span>}
-                          {status === 'pending' &&  importing && <Loader2 className="w-3 h-3 text-slate-400 animate-spin" />}
-                          {status === 'ok'      && <span className="flex items-center gap-1 text-xs text-green-400"><Check className="w-3 h-3" /> Importé</span>}
+                          {status === 'pending' &&  importing && <Loader2 className="w-3 h-3 text-content-secondary animate-spin" />}
+                          {status === 'ok'      && <span className="flex items-center gap-1 text-xs text-status-success"><Check className="w-3 h-3" /> Importé</span>}
                           {status === 'error'   && (
-                            <span className="flex items-center gap-1 text-xs text-red-400">
+                            <span className="flex items-center gap-1 text-xs text-status-error">
                               <AlertTriangle className="w-3 h-3 shrink-0" />
                               <span className="truncate">{result.message ?? 'Erreur'}</span>
                             </span>

@@ -18,16 +18,16 @@ import { SideDrawer } from '@/components/ui/SideDrawer';
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: any }> = {
   open:        { label: 'Ouvert',      color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', icon: Clock },
-  in_progress: { label: 'En cours',   color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', icon: ActivityIcon },
-  resolved:    { label: 'Résolu',      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
+  in_progress: { label: 'En cours',   color: 'text-status-warning bg-amber-500/10 border-amber-500/20', icon: ActivityIcon },
+  resolved:    { label: 'Résolu',      color: 'text-status-success bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
   closed:      { label: 'Fermé',      color: 'text-slate-500 bg-slate-500/10 border-slate-500/20', icon: XCircle },
 };
 
 const TYPE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
-  bug:        { label: 'Bug',        icon: Bug,           color: 'text-red-400' },
-  suggestion: { label: 'Suggestion', icon: Lightbulb,     color: 'text-amber-400' },
+  bug:        { label: 'Bug',        icon: Bug,           color: 'text-status-error' },
+  suggestion: { label: 'Suggestion', icon: Lightbulb,     color: 'text-status-warning' },
   question:   { label: 'Question',   icon: HelpCircle,    color: 'text-blue-400' },
-  feedback:   { label: 'Feedback',   icon: MessageSquare, color: 'text-emerald-400' },
+  feedback:   { label: 'Feedback',   icon: MessageSquare, color: 'text-status-success' },
 };
 
 export default function SupportAdminPage() {
@@ -166,11 +166,11 @@ export default function SupportAdminPage() {
                     </div>
                     <h3 className="text-lg font-black text-white tracking-tight truncate">{ticket.subject}</h3>
                     <div className="flex items-center gap-4 text-xs">
-                      <div className="flex items-center gap-1.5 text-slate-400">
+                      <div className="flex items-center gap-1.5 text-content-secondary">
                         <User size={14} className="text-slate-600" />
                         <span className="font-bold">{ticket.user?.full_name}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-400">
+                      <div className="flex items-center gap-1.5 text-content-secondary">
                         <Building2 size={14} className="text-slate-600" />
                         <span className="font-bold">{ticket.business?.name}</span>
                       </div>
@@ -188,7 +188,7 @@ export default function SupportAdminPage() {
                          </div>
                        )}
                     </div>
-                    <ChevronRight className="text-slate-700 group-hover:text-brand-400 transition-colors" />
+                    <ChevronRight className="text-slate-700 group-hover:text-content-brand transition-colors" />
                   </div>
                 </div>
               );
@@ -220,7 +220,7 @@ export default function SupportAdminPage() {
                <button 
                 onClick={() => handleUpdateStatus(selectedTicket!.id, 'closed')}
                 disabled={updating}
-                className="bg-slate-800 hover:bg-slate-700 text-white flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 rounded-2xl transition-all border border-slate-700"
+                className="bg-surface-card hover:bg-slate-700 text-white flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 rounded-2xl transition-all border border-slate-700"
               >
                 {updating ? <Loader2 className="animate-spin" size={16} /> : <XCircle size={16} />}
                 Fermer le ticket
@@ -258,7 +258,7 @@ export default function SupportAdminPage() {
 
             <div className="space-y-3">
                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Message</p>
-               <div className="p-6 rounded-3xl bg-surface-input border border-surface-border text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+               <div className="p-6 rounded-3xl bg-surface-input border border-surface-border text-content-primary text-sm leading-relaxed whitespace-pre-wrap">
                   {selectedTicket.message}
                </div>
             </div>
@@ -287,7 +287,7 @@ export default function SupportAdminPage() {
 
             <div className="space-y-3">
                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Données Système (Metadata)</p>
-               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 font-mono text-[10px] text-slate-400 overflow-x-auto">
+               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 font-mono text-[10px] text-content-secondary overflow-x-auto">
                   <pre>{JSON.stringify(selectedTicket.metadata, null, 2)}</pre>
                </div>
             </div>

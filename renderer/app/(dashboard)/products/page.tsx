@@ -154,7 +154,7 @@ export default function ProductsPage() {
         <div className="flex gap-3">
           {/* Recherche */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
             <input
               type="text"
               placeholder="Nom, SKU, code-barres…"
@@ -172,7 +172,7 @@ export default function ProductsPage() {
               className={`p-2 rounded-lg transition-colors ${
                 view === 'grid'
                   ? 'bg-brand-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-content-secondary hover:text-white'
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
@@ -183,7 +183,7 @@ export default function ProductsPage() {
               className={`p-2 rounded-lg transition-colors ${
                 view === 'list'
                   ? 'bg-brand-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-content-secondary hover:text-white'
               }`}
             >
               <List className="w-4 h-4" />
@@ -196,10 +196,10 @@ export default function ProductsPage() {
       <div className="flex-1 overflow-y-auto p-6">
         {/* Alertes stock bas */}
         {!loading && lowStock.length > 0 && (
-          <div className="mb-4 rounded-xl border border-amber-800 bg-amber-900/15 p-4">
+          <div className="mb-4 rounded-xl border border-status-warning bg-badge-warning p-4">
             <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <p className="text-sm font-semibold text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-status-warning shrink-0" />
+              <p className="text-sm font-semibold text-status-warning">
                 {lowStock.length} article{lowStock.length > 1 ? 's' : ''} avec stock bas (≤ {LOW_STOCK_THRESHOLD})
               </p>
             </div>
@@ -208,14 +208,14 @@ export default function ProductsPage() {
                 <button
                   key={p.id}
                   onClick={() => setEditProduct(p)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-amber-900/30 ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-badge-warning ${
                     (p.stock ?? 0) === 0
-                      ? 'border-red-800 bg-red-900/20 text-red-300'
-                      : 'border-amber-800 bg-amber-900/20 text-amber-300'
+                      ? 'border-status-error bg-badge-error text-status-error'
+                      : 'border-status-warning bg-badge-warning text-status-warning'
                   }`}
                 >
                   <span>{p.name}</span>
-                  <span className={`font-bold ${(p.stock ?? 0) === 0 ? 'text-red-400' : 'text-amber-400'}`}>
+                  <span className={`font-bold ${(p.stock ?? 0) === 0 ? 'text-status-error' : 'text-status-warning'}`}>
                     {(p.stock ?? 0) === 0 ? 'RUPTURE' : `× ${p.stock}`}
                   </span>
                 </button>
@@ -225,9 +225,9 @@ export default function ProductsPage() {
         )}
 
         {loading ? (
-          <div className="text-slate-400 text-center py-16">Chargement…</div>
+          <div className="text-content-secondary text-center py-16">Chargement…</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 text-content-secondary">
             <Package className="w-12 h-12 mb-3 opacity-30" />
             <p className="font-medium">Aucun produit trouvé</p>
             {!search && (
@@ -263,11 +263,11 @@ export default function ProductsPage() {
                   {product.category && (
                     <p className="text-xs text-slate-500 mt-0.5">{product.category.name}</p>
                   )}
-                  <p className="text-brand-400 font-semibold mt-1 text-sm">
+                  <p className="text-content-brand font-semibold mt-1 text-sm">
                     {formatCurrency(product.price, business?.currency)}
                   </p>
                   {product.track_stock && (
-                    <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-slate-400' : 'text-red-400 font-medium'}`}>
+                    <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-content-secondary' : 'text-status-error font-medium'}`}>
                       Stock : {product.stock ?? 0}
                     </p>
                   )}
@@ -297,7 +297,7 @@ export default function ProductsPage() {
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <table className="w-full">
               <thead className="bg-surface-card border-b border-surface-border">
-                <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
+                <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
                   <th className="px-4 py-3 w-12"></th>
                   <th className="px-4 py-3">Produit</th>
                   <th className="px-4 py-3 hidden md:table-cell">Catégorie</th>
@@ -339,7 +339,7 @@ export default function ProductsPage() {
                     {/* Catégorie */}
                     <td className="px-4 py-3 hidden md:table-cell">
                       {product.category ? (
-                        <span className="text-xs text-slate-400 bg-surface-input px-2 py-1 rounded-lg">
+                        <span className="text-xs text-content-secondary bg-surface-input px-2 py-1 rounded-lg">
                           {product.category.name}
                         </span>
                       ) : (
@@ -351,7 +351,7 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <div className="space-y-0.5">
                         {product.barcode && (
-                          <div className="flex items-center gap-1 text-xs text-slate-400 font-mono">
+                          <div className="flex items-center gap-1 text-xs text-content-secondary font-mono">
                             <Barcode className="w-3 h-3 shrink-0" />
                             {product.barcode}
                           </div>
@@ -370,9 +370,9 @@ export default function ProductsPage() {
                       {product.track_stock ? (
                         <span className={`text-sm font-medium ${
                           (product.stock ?? 0) === 0
-                            ? 'text-red-400'
+                            ? 'text-status-error'
                             : (product.stock ?? 0) <= 5
-                            ? 'text-yellow-400'
+                            ? 'text-status-warning'
                             : 'text-slate-300'
                         }`}>
                           {product.stock ?? 0}
@@ -384,7 +384,7 @@ export default function ProductsPage() {
 
                     {/* Prix */}
                     <td className="px-4 py-3">
-                      <span className="text-brand-400 font-semibold text-sm">
+                      <span className="text-content-brand font-semibold text-sm">
                         {formatCurrency(product.price, business?.currency)}
                       </span>
                     </td>
@@ -393,8 +393,8 @@ export default function ProductsPage() {
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${
                         product.is_active
-                          ? 'bg-green-900/20 text-green-400 border-green-800'
-                          : 'bg-slate-800 text-slate-500 border-slate-700'
+                          ? 'bg-badge-success text-status-success border-status-success'
+                          : 'bg-surface-card text-slate-500 border-slate-700'
                       }`}>
                         {product.is_active ? 'Actif' : 'Inactif'}
                       </span>
@@ -460,17 +460,17 @@ export default function ProductsPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
               <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-brand-400" />
+                <Share2 className="w-5 h-5 text-content-brand" />
                 <h3 className="font-semibold text-white">Partager ma boutique</h3>
               </div>
-              <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+              <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
                 <Trash2 className="w-4 h-4 sr-only" aria-hidden />
-                <span className="text-slate-400 text-lg leading-none">×</span>
+                <span className="text-content-secondary text-lg leading-none">×</span>
               </button>
             </div>
 
             <div className="p-5 space-y-4">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-content-secondary">
                 Partagez ce lien avec vos clients. Ils pourront consulter votre catalogue et passer commande directement.
               </p>
 
@@ -482,7 +482,7 @@ export default function ProductsPage() {
                   onClick={copyShopLink}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     copied
-                      ? 'bg-green-900/30 text-green-400 border border-green-800'
+                      ? 'bg-badge-success text-status-success border border-status-success'
                       : 'bg-brand-600 hover:bg-brand-700 text-white'
                   }`}
                 >

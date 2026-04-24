@@ -176,7 +176,7 @@ function NodeEditor({
     <div className="bg-slate-50 rounded-2xl p-5 space-y-6 border border-slate-200 shadow-xl animate-in slide-in-from-right-4 overflow-y-auto max-h-full scrollbar-thin">
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center gap-2.5"><span className={`p-2 rounded-xl ${cfg.bg} border ${cfg.color} ${cfg.text}`}>{cfg.icon}</span><div><p className="font-bold text-black text-sm leading-none">{cfg.label}</p><p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mt-1">Configuration</p></div></div>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-black transition-colors"><X className="w-4 h-4" /></button>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-200 text-content-secondary hover:text-black transition-colors"><X className="w-4 h-4" /></button>
       </div>
       
       <div className="space-y-4">
@@ -200,7 +200,7 @@ function NodeEditor({
 
             <div className="space-y-3">
               <div>
-                <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Type d&apos;acteur</label>
+                <label className="text-[9px] uppercase font-bold text-content-secondary mb-1 block">Type d&apos;acteur</label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
                     { id: 'SYSTEM',   label: 'Système',  icon: <Cpu className="w-3 h-3" /> },
@@ -221,7 +221,7 @@ function NodeEditor({
 
               {actorType === 'STAFF' && (
                 <div className="animate-in slide-in-from-top-1 duration-200">
-                  <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Sélectionner le membre</label>
+                  <label className="text-[9px] uppercase font-bold text-content-secondary mb-1 block">Sélectionner le membre</label>
                   <select 
                     className={inputStyle} 
                     value={node.assigned_role} 
@@ -283,7 +283,7 @@ function NodeEditor({
                   onChange={e => onUpdate({ date_field: e.target.value } as Partial<WorkflowNode>)} 
                   placeholder="ex: date_audience" 
                 />
-                <p className="text-[9px] text-slate-400 mt-1.5 leading-relaxed">
+                <p className="text-[9px] text-content-secondary mt-1.5 leading-relaxed">
                   Si renseigné, le processus attendra que cette date soit passée.
                 </p>
               </div>
@@ -358,7 +358,7 @@ function NodeEditor({
             <div key={edge.id} className="p-3 bg-slate-100/50 rounded-xl border border-slate-200 space-y-3">
               <div className="flex items-center gap-2">
                 <input className="flex-1 bg-white border border-slate-200 rounded-lg text-[11px] px-2 py-1.5 outline-none focus:border-blue-400 transition-all font-bold text-black" value={edge.label} onChange={e => onUpdateEdge(edge.id, { label: e.target.value })} placeholder="Nom de l'action" />
-                <button onClick={() => setConfirmDelete(edge.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setConfirmDelete(edge.id)} className="p-1.5 text-content-secondary hover:text-status-error transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {EDGE_COLORS.map(c => (
@@ -631,17 +631,17 @@ export function WorkflowBuilder({
         <div className="flex-1 min-w-48"><input className="w-full bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 px-4 py-2.5 shadow-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" value={name} onChange={e => { setName(e.target.value); }} onBlur={takeSnapshot} placeholder="Nom du workflow..." /></div>
         
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-          <button onClick={() => window.print()} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Imprimer le workflow"><Printer className="w-4 h-4" /></button>
+          <button onClick={() => window.print()} className="p-2 rounded-lg text-content-secondary hover:text-slate-600 hover:bg-slate-50 transition-all" title="Imprimer le workflow"><Printer className="w-4 h-4" /></button>
           <div className="w-px h-4 bg-slate-100 mx-1" />
           <button onClick={undo} disabled={historyIndex <= 0} className="p-2 rounded-lg text-black hover:text-slate-600 hover:bg-slate-50 disabled:opacity-20 transition-all" title="Annuler (Ctrl+Z)"><Undo2 className="w-4 h-4" /></button>
           <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2 rounded-lg text-slate-600 hover:text-slate-800 hover:bg-slate-50 disabled:opacity-20 transition-all border-r border-slate-100 mr-1" title="Rétablir (Ctrl+Y)"><Redo2 className="w-4 h-4" /></button>
           <div className="flex items-center border-r border-slate-100 pr-1 mr-1">
-            <button onClick={zoomOut} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom -"><ZoomOut className="w-4 h-4" /></button>
+            <button onClick={zoomOut} className="p-2 rounded-lg text-content-secondary hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom -"><ZoomOut className="w-4 h-4" /></button>
             <span className="text-xs font-bold w-12 text-center text-slate-600 tracking-tighter">{Math.round(zoom * 100)}%</span>
-            <button onClick={zoomIn} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom +"><ZoomIn className="w-4 h-4" /></button>
-            <button onClick={centerDiagram} className="p-2 ml-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Centrer le diagramme"><LocateFixed className="w-4 h-4" /></button>
+            <button onClick={zoomIn} className="p-2 rounded-lg text-content-secondary hover:text-slate-600 hover:bg-slate-50 transition-all" title="Zoom +"><ZoomIn className="w-4 h-4" /></button>
+            <button onClick={centerDiagram} className="p-2 ml-1 rounded-lg text-content-secondary hover:text-blue-600 hover:bg-blue-50 transition-all" title="Centrer le diagramme"><LocateFixed className="w-4 h-4" /></button>
           </div>
-          <button onClick={() => setIsFullscreen(!isFullscreen)} className={`p-2 rounded-lg transition-all ${isFullscreen ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`} title="Plein écran">
+          <button onClick={() => setIsFullscreen(!isFullscreen)} className={`p-2 rounded-lg transition-all ${isFullscreen ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-content-secondary hover:text-slate-600 hover:bg-slate-50'}`} title="Plein écran">
             {isFullscreen ? <Shrink className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
           </button>
         </div>
@@ -673,11 +673,11 @@ export function WorkflowBuilder({
       {/* ── Erreurs ──────────────────────────────────────────────────────── */}
       {errors.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-3 shrink-0">
-          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
           <div className="space-y-1">
             {errors.map((err, i) => <p key={i} className="text-xs text-red-700">{err}</p>)}
           </div>
-          <button onClick={() => setErrors([])} className="ml-auto text-red-400 hover:text-red-600"><X className="w-3.5 h-3.5" /></button>
+          <button onClick={() => setErrors([])} className="ml-auto text-status-error hover:text-red-600"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
 

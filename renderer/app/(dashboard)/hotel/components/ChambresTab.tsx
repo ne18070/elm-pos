@@ -60,10 +60,10 @@ export function ChambresTab({
         </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {[
-            { label: 'Dispo', count: stats.available,   dot: 'bg-emerald-400', num: 'text-emerald-400' },
-            { label: 'Occupées',    count: stats.occupied,    dot: 'bg-brand-400',   num: 'text-brand-400'   },
-            { label: 'Nettoyage',   count: stats.cleaning,    dot: 'bg-amber-400',   num: 'text-amber-400'   },
-            { label: 'Maintenance', count: stats.maintenance, dot: 'bg-slate-400',   num: 'text-slate-400'   },
+            { label: 'Dispo', count: stats.available,   dot: 'bg-emerald-400', num: 'text-status-success' },
+            { label: 'Occupées',    count: stats.occupied,    dot: 'bg-brand-400',   num: 'text-content-brand'   },
+            { label: 'Nettoyage',   count: stats.cleaning,    dot: 'bg-amber-400',   num: 'text-status-warning'   },
+            { label: 'Maintenance', count: stats.maintenance, dot: 'bg-slate-400',   num: 'text-content-secondary'   },
           ].map(({ label, count, dot, num }) => (
             <div key={label} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-card border border-surface-border whitespace-nowrap shadow-sm">
               <span className={cn('w-2 h-2 rounded-full shrink-0', dot)} />
@@ -93,7 +93,7 @@ export function ChambresTab({
             <div className="absolute left-0 top-2 bottom-0 w-1 bg-gradient-to-b from-brand-500/50 to-transparent rounded-full opacity-30" />
             
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400 border border-brand-500/20">
+              <div className="p-2 rounded-lg bg-brand-500/10 text-content-brand border border-brand-500/20">
                 <Layers className="w-4 h-4" />
               </div>
               <h2 className="text-lg font-black text-white tracking-tight uppercase">
@@ -144,13 +144,13 @@ export function ChambresTab({
                       <div className="flex items-start justify-between gap-1 relative z-10">
                         <div>
                           <p className="text-3xl font-black text-white leading-none tracking-tighter">{room.number}</p>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-brand-400/80 mt-1.5">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-content-brand/80 mt-1.5">
                             {ROOM_TYPES.find((t) => t.value === room.type)?.label}
                           </p>
                         </div>
                         {isManagerOrAbove && (
                           <button
-                            className="opacity-0 group-hover:opacity-100 p-2 rounded-xl bg-surface-hover text-slate-400 hover:text-white transition-all shrink-0 shadow-lg"
+                            className="opacity-0 group-hover:opacity-100 p-2 rounded-xl bg-surface-hover text-content-secondary hover:text-white transition-all shrink-0 shadow-lg"
                             onClick={(e) => { e.stopPropagation(); openRoomPanel(room); }}
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -172,16 +172,16 @@ export function ChambresTab({
                         {activeRes && (
                           <div className="rounded-2xl bg-brand-600/10 border border-brand-500/20 p-3 space-y-1 shadow-inner">
                             <p className="text-xs font-black text-white truncate">{activeRes.guest?.full_name}</p>
-                            <p className="text-[10px] font-bold text-brand-400 flex items-center gap-1 uppercase tracking-tighter">
+                            <p className="text-[10px] font-bold text-content-brand flex items-center gap-1 uppercase tracking-tighter">
                               <LogOut className="w-3 h-3 shrink-0" /> Sortie {fmt(activeRes.check_out)}
                             </p>
                           </div>
                         )}
                         {!activeRes && confirmedRes && (
                           <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 space-y-1 shadow-inner">
-                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Réservée</p>
+                            <p className="text-[10px] font-black text-status-warning uppercase tracking-widest">Réservée</p>
                             <p className="text-xs font-bold text-white truncate">{confirmedRes.guest?.full_name}</p>
-                            <p className="text-[10px] font-bold text-amber-500/80 uppercase tracking-tighter">{fmt(confirmedRes.check_in)} → {fmt(confirmedRes.check_out)}</p>
+                            <p className="text-[10px] font-bold text-status-warning/80 uppercase tracking-tighter">{fmt(confirmedRes.check_in)} → {fmt(confirmedRes.check_out)}</p>
                           </div>
                         )}
 
@@ -203,7 +203,7 @@ export function ChambresTab({
 
                         {(room.status === 'cleaning' || room.status === 'maintenance') && (
                           <button
-                            className="mt-3 text-[10px] py-2 rounded-xl border border-surface-border hover:border-brand-500/50 text-slate-400 hover:text-white transition-all font-bold uppercase tracking-widest bg-surface-input/30"
+                            className="mt-3 text-[10px] py-2 rounded-xl border border-surface-border hover:border-brand-500/50 text-content-secondary hover:text-white transition-all font-bold uppercase tracking-widest bg-surface-input/30"
                             onClick={(e) => { e.stopPropagation(); onMarkAvailable(room.id); }}
                           >
                             Rendre disponible

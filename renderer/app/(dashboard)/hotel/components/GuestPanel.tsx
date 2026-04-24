@@ -30,13 +30,13 @@ export function GuestPanel({ item, form, saving, onChange, onSave, onDelete, onC
     <div className="absolute inset-y-0 right-0 w-96 bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
         <h3 className="font-semibold text-white">{item ? 'Modifier client' : 'Nouveau client'}</h3>
-        <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+        <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
           <X className="w-4 h-4" />
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         <div>
-          <label className="label">Nom complet <span className="text-red-400">*</span></label>
+          <label className="label">Nom complet <span className="text-status-error">*</span></label>
           <input className="input" value={form.full_name} onChange={(e) => onChange({ ...form, full_name: e.target.value })} placeholder="Prénom Nom" autoFocus />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -77,7 +77,7 @@ export function GuestPanel({ item, form, saving, onChange, onSave, onDelete, onC
       </div>
       <div className="flex gap-2 px-5 py-4 border-t border-surface-border">
         {item && (
-          <button onClick={() => onDelete(item.id)} className="p-2.5 rounded-xl text-red-400 hover:bg-red-900/20">
+          <button onClick={() => onDelete(item.id)} className="p-2.5 rounded-xl text-status-error hover:bg-badge-error">
             <Trash2 className="w-4 h-4" />
           </button>
         )}

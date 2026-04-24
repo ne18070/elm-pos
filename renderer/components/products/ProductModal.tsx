@@ -174,7 +174,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             {/* Aperçu */}
             <div className="w-20 h-20 rounded-xl bg-surface-input border border-surface-border overflow-hidden shrink-0 flex items-center justify-center">
               {uploadingImage ? (
-                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-content-secondary" />
               ) : form.image_url ? (
                 <img src={form.image_url} alt="Aperçu" className="w-full h-full object-cover" />
               ) : (
@@ -196,7 +196,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                 <button
                   type="button"
                   onClick={() => update('image_url', '')}
-                  className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                  className="text-xs text-status-error hover:text-status-error flex items-center gap-1"
                 >
                   <X className="w-3 h-3" /> Supprimer
                 </button>
@@ -289,14 +289,14 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                 onClick={activateScanMode}
                 title="Cliquez puis scannez le code-barres"
                 className={`btn-secondary px-2.5 shrink-0 ${
-                  scanMode ? 'border-brand-500 text-brand-400' : ''
+                  scanMode ? 'border-brand-500 text-content-brand' : ''
                 }`}
               >
                 <ScanLine className="w-4 h-4" />
               </button>
             </div>
             {scanMode && (
-              <p className="text-xs text-brand-400 mt-1">
+              <p className="text-xs text-content-brand mt-1">
                 Pointez le scanner vers le code-barres…
               </p>
             )}
@@ -434,7 +434,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                   <button
                     type="button"
                     onClick={() => removeVariant(vr.id)}
-                    className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                    className="text-slate-500 hover:text-status-error transition-colors shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

@@ -54,12 +54,12 @@ export const CLASS_LABELS: Record<number, string> = {
 };
 
 export const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
-  order:      { label: 'Vente',      color: 'text-green-400 bg-green-900/20 border-green-800' },
-  stock:      { label: 'Achat',      color: 'text-blue-400 bg-blue-900/20 border-blue-800' },
-  refund:     { label: 'Remb.',      color: 'text-orange-400 bg-orange-900/20 border-orange-800' },
-  manual:     { label: 'Manuel',     color: 'text-purple-400 bg-purple-900/20 border-purple-800' },
-  hotel:      { label: 'Hôtel',      color: 'text-teal-400 bg-teal-900/20 border-teal-700' },
-  adjustment: { label: 'Ajustement', color: 'text-slate-400 bg-slate-800 border-slate-700' },
+  order:      { label: 'Vente',      color: 'text-status-success bg-badge-success border-status-success' },
+  stock:      { label: 'Achat',      color: 'text-blue-400 bg-badge-info border-blue-800' },
+  refund:     { label: 'Remb.',      color: 'text-status-orange bg-badge-orange border-orange-800' },
+  manual:     { label: 'Manuel',     color: 'text-status-purple bg-badge-purple border-purple-800' },
+  hotel:      { label: 'Hôtel',      color: 'text-status-teal bg-badge-teal border-teal-700' },
+  adjustment: { label: 'Ajustement', color: 'text-content-secondary bg-surface-card border-slate-700' },
 };
 
 export const PAY_ACCOUNTS: Record<PaySide, { code: string; name: string }> = {
@@ -69,11 +69,11 @@ export const PAY_ACCOUNTS: Record<PaySide, { code: string; name: string }> = {
 };
 
 export const OP_CATEGORIES = [
-  { id: 'charges',    label: 'Charges',          icon: TrendingDown,   color: 'text-red-400 bg-red-900/20 border-red-800' },
+  { id: 'charges',    label: 'Charges',          icon: TrendingDown,   color: 'text-status-error bg-badge-error border-status-error' },
   { id: 'tresorerie', label: 'Trésorerie',        icon: ArrowLeftRight, color: 'text-cyan-400 bg-cyan-900/20 border-cyan-800' },
-  { id: 'tiers',      label: 'Clients / Fourn.',  icon: Users,          color: 'text-blue-400 bg-blue-900/20 border-blue-800' },
-  { id: 'invest',     label: 'Investissement',    icon: Wrench,         color: 'text-amber-400 bg-amber-900/20 border-amber-800' },
-  { id: 'capital',    label: 'Capital',           icon: Banknote,       color: 'text-green-400 bg-green-900/20 border-green-800' },
+  { id: 'tiers',      label: 'Clients / Fourn.',  icon: Users,          color: 'text-blue-400 bg-badge-info border-blue-800' },
+  { id: 'invest',     label: 'Investissement',    icon: Wrench,         color: 'text-status-warning bg-badge-warning border-status-warning' },
+  { id: 'capital',    label: 'Capital',           icon: Banknote,       color: 'text-status-success bg-badge-success border-status-success' },
 ] as const;
 
 export const OP_TEMPLATES: OpTemplate[] = [

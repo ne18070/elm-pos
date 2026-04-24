@@ -274,8 +274,8 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
       <div className="space-y-5">
 
         {/* ── Instructions ── */}
-        <div className="bg-brand-900/20 border border-brand-800 rounded-xl p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-brand-400 flex items-center gap-2">
+        <div className="bg-badge-brand border border-brand-800 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-content-brand flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4" />
             Comment importer vos produits ?
           </h3>
@@ -286,7 +286,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
             </li>
             <li className="flex gap-2">
               <span className="w-5 h-5 rounded-full bg-brand-700 text-white text-xs flex items-center justify-center shrink-0 font-bold">2</span>
-              <span>Remplissez les lignes en respectant le format : <code className="text-brand-300 bg-brand-900/50 px-1 rounded">nom</code> et <code className="text-brand-300 bg-brand-900/50 px-1 rounded">prix</code> sont obligatoires.</span>
+              <span>Remplissez les lignes en respectant le format : <code className="text-content-brand bg-badge-brand px-1 rounded">nom</code> et <code className="text-content-brand bg-badge-brand px-1 rounded">prix</code> sont obligatoires.</span>
             </li>
             <li className="flex gap-2">
               <span className="w-5 h-5 rounded-full bg-brand-700 text-white text-xs flex items-center justify-center shrink-0 font-bold">3</span>
@@ -307,8 +307,8 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
               { col: 'actif', desc: 'oui (défaut) / non' },
             ].map(({ col, desc }) => (
               <div key={col} className="flex flex-col gap-0.5">
-                <code className="text-brand-300 bg-brand-900/50 px-1.5 py-0.5 rounded text-xs font-mono">{col}</code>
-                <span className="text-slate-400">{desc}</span>
+                <code className="text-content-brand bg-badge-brand px-1.5 py-0.5 rounded text-xs font-mono">{col}</code>
+                <span className="text-content-secondary">{desc}</span>
               </div>
             ))}
           </div>
@@ -328,10 +328,10 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
           <button
             onClick={() => fileRef.current?.click()}
             className="w-full border-2 border-dashed border-surface-border hover:border-brand-600
-                       rounded-xl p-6 flex flex-col items-center gap-2 text-slate-400
+                       rounded-xl p-6 flex flex-col items-center gap-2 text-content-secondary
                        hover:text-white transition-colors group"
           >
-            <Upload className="w-8 h-8 group-hover:text-brand-400 transition-colors" />
+            <Upload className="w-8 h-8 group-hover:text-content-brand transition-colors" />
             <span className="text-sm font-medium">Cliquez pour choisir un fichier CSV</span>
             <span className="text-xs">ou glissez-déposez ici</span>
           </button>
@@ -341,12 +341,12 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
         {rows.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-4 text-sm">
-              <span className="flex items-center gap-1.5 text-green-400">
+              <span className="flex items-center gap-1.5 text-status-success">
                 <CheckCircle2 className="w-4 h-4" />
                 {validRows.length} valide{validRows.length !== 1 ? 's' : ''}
               </span>
               {invalidRows.length > 0 && (
-                <span className="flex items-center gap-1.5 text-red-400">
+                <span className="flex items-center gap-1.5 text-status-error">
                   <AlertCircle className="w-4 h-4" />
                   {invalidRows.length} erreur{invalidRows.length !== 1 ? 's' : ''}
                 </span>
@@ -356,7 +356,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
             <div className="rounded-xl border border-surface-border overflow-hidden max-h-64 overflow-y-auto">
               <table className="w-full text-xs">
                 <thead className="bg-surface-card sticky top-0">
-                  <tr className="text-left text-slate-400 uppercase tracking-wide">
+                  <tr className="text-left text-content-secondary uppercase tracking-wide">
                     <th className="px-3 py-2">Ligne</th>
                     <th className="px-3 py-2">Nom</th>
                     <th className="px-3 py-2">Prix</th>
@@ -369,20 +369,20 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
                     <tr
                       key={row.line}
                       className={`border-t border-surface-border ${
-                        row.errors.length > 0 ? 'bg-red-900/10' : ''
+                        row.errors.length > 0 ? 'bg-badge-error' : ''
                       }`}
                     >
                       <td className="px-3 py-2 text-slate-500">{row.line}</td>
                       <td className="px-3 py-2 text-white font-medium max-w-[150px] truncate">{row.nom || '—'}</td>
-                      <td className="px-3 py-2 text-brand-400">{row.prix || '—'}</td>
-                      <td className="px-3 py-2 text-slate-400">{row.categorie || '—'}</td>
+                      <td className="px-3 py-2 text-content-brand">{row.prix || '—'}</td>
+                      <td className="px-3 py-2 text-content-secondary">{row.categorie || '—'}</td>
                       <td className="px-3 py-2">
                         {row.errors.length === 0 ? (
-                          <span className="text-green-400 flex items-center gap-1">
+                          <span className="text-status-success flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" /> OK
                           </span>
                         ) : (
-                          <span className="text-red-400 flex items-center gap-1" title={row.errors.join(', ')}>
+                          <span className="text-status-error flex items-center gap-1" title={row.errors.join(', ')}>
                             <X className="w-3 h-3" /> {row.errors.join(', ')}
                           </span>
                         )}

@@ -37,7 +37,7 @@ function Nav() {
         </div>
 
         <nav className={`hidden md:flex items-center gap-8 text-sm font-medium transition-colors duration-300
-          ${scrolled ? 'text-slate-600' : 'text-slate-400'}`}>
+          ${scrolled ? 'text-slate-600' : 'text-content-secondary'}`}>
           <a href="#features" className="hover:text-brand-600 transition-colors">Fonctionnalités</a>
           <a href="#secteurs" className="hover:text-brand-600 transition-colors">Secteurs</a>
           <a href="#tarifs"   className="hover:text-brand-600 transition-colors">Tarifs</a>
@@ -52,12 +52,12 @@ function Nav() {
                   : 'text-white bg-white/10 hover:bg-white/15'}`}>
               <UserCircle className="w-3.5 h-3.5" />
               {user.full_name?.split(' ')[0] ?? 'Mon espace'}
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <ChevronRight className="w-3.5 h-3.5 text-content-secondary" />
             </Link>
           ) : (
             <>
               <Link href="/login"
-                className={`text-sm transition-colors duration-300 hidden sm:block ${scrolled ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}>
+                className={`text-sm transition-colors duration-300 hidden sm:block ${scrolled ? 'text-slate-600 hover:text-slate-900' : 'text-content-secondary hover:text-white'}`}>
                 Connexion
               </Link>
               <Link href="/subscribe"
@@ -91,16 +91,16 @@ function Hero() {
 
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold text-brand-400 tracking-widest uppercase mb-6">
+          <p className="text-xs font-semibold text-content-brand tracking-widest uppercase mb-6">
             Logiciel de caisse · Sénégal &amp; Afrique
           </p>
 
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-white leading-[1.1] tracking-tight mb-6">
             Gérez votre activité<br />
-            <span className="text-slate-400">sans vous compliquer la vie.</span>
+            <span className="text-content-secondary">sans vous compliquer la vie.</span>
           </h1>
 
-          <p className="text-lg text-slate-400 leading-relaxed max-w-xl mb-10">
+          <p className="text-lg text-content-secondary leading-relaxed max-w-xl mb-10">
             Caisse, stock, comptabilité, livraisons — tout dans une seule application.
             Conçu pour les PME africaines.
           </p>
@@ -118,7 +118,7 @@ function Hero() {
               { label: 'Hôtellerie', icon: BedDouble },
               { label: 'Dossiers juridiques', icon: Scale },
             ].map((tag) => (
-              <span key={tag.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 whitespace-nowrap hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-brand-400 transition-all cursor-default">
+              <span key={tag.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-slate-300 whitespace-nowrap hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-content-brand transition-all cursor-default">
                 <tag.icon className="w-3 h-3" />
                 {tag.label}
               </span>
@@ -138,7 +138,7 @@ function Hero() {
                   Démarrer gratuitement <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/login"
-                  className="flex items-center gap-2 text-slate-400 hover:text-white border border-white/10 hover:border-white/20 px-6 py-3 rounded-xl transition-colors text-sm">
+                  className="flex items-center gap-2 text-content-secondary hover:text-white border border-white/10 hover:border-white/20 px-6 py-3 rounded-xl transition-colors text-sm">
                   Se connecter
                 </Link>
               </>
@@ -186,8 +186,8 @@ function Features() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.04] rounded-2xl overflow-hidden border border-white/[0.04]">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="group bg-[#080c18] p-8 space-y-4 hover:bg-white/[0.02] transition-colors border-r border-b border-white/[0.02]">
-              <div className="w-10 h-10 rounded-xl bg-brand-900/40 flex items-center justify-center mb-2">
-                <Icon className="w-5 h-5 text-brand-400" />
+              <div className="w-10 h-10 rounded-xl bg-badge-brand flex items-center justify-center mb-2">
+                <Icon className="w-5 h-5 text-content-brand" />
               </div>
               <div>
                 <h3 className="text-white font-bold text-base mb-2">{title}</h3>
@@ -201,12 +201,12 @@ function Features() {
         <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-10">
            <div className="space-y-4">
               <h3 className="text-xl font-bold text-white">Suivi des stocks et inventaire</h3>
-              <p className="text-sm text-slate-400">Gérez vos variantes et vos prix de gros en quelques clics.</p>
+              <p className="text-sm text-content-secondary">Gérez vos variantes et vos prix de gros en quelques clics.</p>
               <img src="/screenshots/10-products-list.png" className="rounded-xl border border-white/5 shadow-xl" loading="lazy" />
            </div>
            <div className="space-y-4">
               <h3 className="text-xl font-bold text-white">Analytique et rapports</h3>
-              <p className="text-sm text-slate-400">Visualisez votre CA et vos marges en temps réel.</p>
+              <p className="text-sm text-content-secondary">Visualisez votre CA et vos marges en temps réel.</p>
               <img src="/screenshots/17-analytics.png" className="rounded-xl border border-white/5 shadow-xl" loading="lazy" />
            </div>
         </div>
@@ -226,9 +226,9 @@ const SECTEURS: {
   desc: string;
 }[] = [
   { icon: Store,        iconColor: 'text-orange-300', iconBg: 'bg-orange-950', border: 'border-orange-900', title: 'Commerce & Distribution', desc: 'Stocks, revendeurs, fournisseurs, prix de gros.' },
-  { icon: ShoppingCart, iconColor: 'text-brand-300',  iconBg: 'bg-brand-950',  border: 'border-brand-900',  title: 'Boutique & Retail',       desc: 'Caisse rapide, codes-barres, variantes, promotions.' },
-  { icon: BedDouble,    iconColor: 'text-teal-300',   iconBg: 'bg-teal-950',   border: 'border-teal-900',   title: 'Hôtellerie',              desc: 'Réservations, check-in/out, services additionnels.' },
-  { icon: Scale,        iconColor: 'text-purple-300', iconBg: 'bg-purple-950', border: 'border-purple-900', title: 'Cabinet juridique',        desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.' },
+  { icon: ShoppingCart, iconColor: 'text-content-brand',  iconBg: 'bg-brand-950',  border: 'border-brand-900',  title: 'Boutique & Retail',       desc: 'Caisse rapide, codes-barres, variantes, promotions.' },
+  { icon: BedDouble,    iconColor: 'text-status-teal',   iconBg: 'bg-teal-950',   border: 'border-teal-900',   title: 'Hôtellerie',              desc: 'Réservations, check-in/out, services additionnels.' },
+  { icon: Scale,        iconColor: 'text-status-purple', iconBg: 'bg-purple-950', border: 'border-purple-900', title: 'Cabinet juridique',        desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.' },
   { icon: Users,        iconColor: 'text-cyan-300',   iconBg: 'bg-cyan-950',   border: 'border-cyan-900',   title: 'Prestation de service',   desc: 'Devis, factures, suivi clients, honoraires et encaissements.' },
 ];
 
@@ -252,8 +252,8 @@ function Secteurs() {
                 <Icon className={`w-4 h-4 ${iconColor}`} />
               </div>
               <div>
-                <p className="text-slate-100 font-medium text-sm mb-1">{title}</p>
-                <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
+                <p className="text-content-primary font-medium text-sm mb-1">{title}</p>
+                <p className="text-xs text-content-secondary leading-relaxed">{desc}</p>
               </div>
             </div>
           ))}
@@ -274,7 +274,7 @@ function MultiEtablissements() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-5">
             Plusieurs boutiques,<br />un seul compte.
           </h2>
-          <p className="text-slate-400 text-sm leading-relaxed mb-8">
+          <p className="text-content-secondary text-sm leading-relaxed mb-8">
             Gérez plusieurs établissements depuis le même compte. Chacun a ses propres données, son équipe et ses stocks. Vous passez de l&apos;un à l&apos;autre en un clic.
           </p>
           <ul className="space-y-3">
@@ -284,8 +284,8 @@ function MultiEtablissements() {
               'Changement de contexte instantané',
               'Synchronisation en temps réel',
             ].map((item) => (
-              <li key={item} className="flex items-center gap-3 text-sm text-slate-400">
-                <Check className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+              <li key={item} className="flex items-center gap-3 text-sm text-content-secondary">
+                <Check className="w-3.5 h-3.5 text-content-brand shrink-0" />
                 {item}
               </li>
             ))}
@@ -302,14 +302,14 @@ function MultiEtablissements() {
             <div key={name}
               className={`flex items-center gap-3.5 p-4 rounded-xl border transition-colors
                 ${active
-                  ? 'bg-brand-900/20 border-brand-700/40'
+                  ? 'bg-badge-brand border-brand-700/40'
                   : 'bg-white/[0.02] border-white/[0.05]'}`}>
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0
                 ${active ? 'bg-brand-600 text-white' : 'bg-white/5 text-slate-500'}`}>
                 {name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${active ? 'text-white' : 'text-slate-400'}`}>{name}</p>
+                <p className={`text-sm font-medium truncate ${active ? 'text-white' : 'text-content-secondary'}`}>{name}</p>
                 <p className="text-xs text-slate-600">{type}</p>
               </div>
               {active && <div className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />}
@@ -333,13 +333,13 @@ function PlanCard({ plan, isPrimary, period }: { plan: Plan; isPrimary: boolean;
       ${isPrimary ? 'bg-[#0d1a2d] border-brand-700/60' : 'bg-[#0c1020] border-white/[0.08]'}`}>
 
       {isPrimary && (
-        <span className="absolute top-4 right-4 text-[10px] font-semibold text-brand-300 bg-brand-900/60 border border-brand-700/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
+        <span className="absolute top-4 right-4 text-[10px] font-semibold text-content-brand bg-badge-brand border border-brand-700/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
           Recommandé
         </span>
       )}
 
       {isAnnual && !isFree && (
-        <span className="absolute top-4 left-4 text-[10px] font-semibold text-green-300 bg-green-900/40 border border-green-800/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
+        <span className="absolute top-4 left-4 text-[10px] font-semibold text-status-success bg-badge-success border border-status-success/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
           1 mois offert
         </span>
       )}
@@ -373,8 +373,8 @@ function PlanCard({ plan, isPrimary, period }: { plan: Plan; isPrimary: boolean;
 
       <ul className="space-y-2.5 flex-1">
         {plan.features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5 text-xs text-slate-400">
-            <Check className="w-3.5 h-3.5 text-brand-400 shrink-0 mt-0.5" />
+          <li key={f} className="flex items-start gap-2.5 text-xs text-content-secondary">
+            <Check className="w-3.5 h-3.5 text-content-brand shrink-0 mt-0.5" />
             {f}
           </li>
         ))}
@@ -431,11 +431,11 @@ function Tarifs() {
                   key={p}
                   onClick={() => setPeriod(p)}
                   className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors
-                    ${period === p ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                    ${period === p ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
                   {p === 'monthly' ? 'Mensuel' : (
                     <span className="flex items-center gap-1.5">
                       Annuel
-                      <span className="text-[10px] font-bold text-green-400">−10%</span>
+                      <span className="text-[10px] font-bold text-status-success">−10%</span>
                     </span>
                   )}
                 </button>
@@ -446,7 +446,7 @@ function Tarifs() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-brand-400 animate-spin" />
+            <Loader2 className="w-6 h-6 text-content-brand animate-spin" />
           </div>
         ) : (
           <div className={`grid grid-cols-1 gap-4
@@ -512,9 +512,9 @@ function Footer() {
           </div>
         </div>
         <div className="flex items-center gap-6 text-xs text-slate-600">
-          <Link href="/privacy" className="hover:text-slate-400 transition-colors">Confidentialité</Link>
-          <a href="https://wa.me/33746436801" className="hover:text-slate-400 transition-colors">WhatsApp</a>
-          <a href="mailto:contact@elm-app.click" className="hover:text-slate-400 transition-colors">Contact</a>
+          <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialité</Link>
+          <a href="https://wa.me/33746436801" className="hover:text-content-secondary transition-colors">WhatsApp</a>
+          <a href="mailto:contact@elm-app.click" className="hover:text-content-secondary transition-colors">Contact</a>
           <span className="flex items-center gap-1.5 text-slate-700">
             <Globe className="w-3 h-3" /> Sénégal · Afrique
           </span>
@@ -531,11 +531,11 @@ function ModuleFeature({ title, subtitle, desc, img, reverse = false }: { title:
   return (
     <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12 lg:gap-20`}>
       <div className="flex-1 space-y-6">
-        <div className="inline-block px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-[10px] font-bold tracking-widest uppercase">
+        <div className="inline-block px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-content-brand text-[10px] font-bold tracking-widest uppercase">
           {subtitle}
         </div>
         <h3 className="text-3xl font-bold text-white tracking-tight">{title}</h3>
-        <p className="text-slate-400 leading-relaxed text-lg">{desc}</p>
+        <p className="text-content-secondary leading-relaxed text-lg">{desc}</p>
       </div>
       <div className="flex-1 w-full relative group">
         <div className="absolute -inset-4 bg-brand-500/5 blur-2xl rounded-[30px] transition-opacity group-hover:opacity-100 opacity-50" />

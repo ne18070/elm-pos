@@ -72,7 +72,7 @@ export default function ReservationConfirmationPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-sm w-full space-y-4">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
+          <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
           <p className="font-semibold text-slate-800">{error}</p>
           <a
             href={`/reservation/${businessId}`}
@@ -120,7 +120,7 @@ export default function ReservationConfirmationPage() {
         {/* Succès */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 text-center space-y-3">
           <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto border-4 border-green-100">
-            <CheckCircle2 className="w-8 h-8 text-green-500" />
+            <CheckCircle2 className="w-8 h-8 text-status-success" />
           </div>
           <div>
             <h2 className="font-black text-xl text-slate-900">Réservation confirmée !</h2>
@@ -130,7 +130,7 @@ export default function ReservationConfirmationPage() {
           </div>
           <div className="flex items-center justify-center gap-3">
             <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-              <BedDouble className="w-4 h-4 text-slate-400" />
+              <BedDouble className="w-4 h-4 text-content-secondary" />
               <span className="font-mono font-bold text-slate-800 text-sm">#{shortId}</span>
             </div>
             <span className={`inline-flex px-3 py-1.5 rounded-xl text-xs font-bold border ${status.color}`}>
@@ -171,7 +171,7 @@ export default function ReservationConfirmationPage() {
               <p className="text-xs text-slate-500 mt-0.5">Check-in à partir de 14h</p>
             </div>
             <div className="p-3 bg-red-50 rounded-xl border border-red-100">
-              <p className="text-xs font-semibold text-red-500 mb-0.5">Départ</p>
+              <p className="text-xs font-semibold text-status-error mb-0.5">Départ</p>
               <p className="font-bold text-slate-800 text-sm leading-snug">{fmtDate(data.check_out)}</p>
               <p className="text-xs text-slate-500 mt-0.5">Check-out avant 12h</p>
             </div>
@@ -213,17 +213,17 @@ export default function ReservationConfirmationPage() {
           <h3 className="font-semibold text-slate-700 text-sm">Vos informations</h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-slate-400">Nom</p>
+              <p className="text-xs text-content-secondary">Nom</p>
               <p className="font-semibold text-slate-800">{data.guest_name}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-400">Téléphone</p>
+              <p className="text-xs text-content-secondary">Téléphone</p>
               <p className="font-semibold text-slate-800">{data.guest_phone ?? '—'}</p>
             </div>
           </div>
           {data.notes && (
             <div className="pt-2 border-t border-slate-100">
-              <p className="text-xs text-slate-400">Demandes spéciales</p>
+              <p className="text-xs text-content-secondary">Demandes spéciales</p>
               <p className="text-sm text-slate-700 mt-0.5">{data.notes}</p>
             </div>
           )}
@@ -231,7 +231,7 @@ export default function ReservationConfirmationPage() {
 
         {/* Paiement */}
         <div className="bg-amber-50 rounded-2xl border border-amber-100 p-5 flex items-center gap-3">
-          <Banknote className="w-6 h-6 text-amber-500 shrink-0" />
+          <Banknote className="w-6 h-6 text-status-warning shrink-0" />
           <div>
             <p className="font-semibold text-amber-800 text-sm">Règlement à l'hôtel</p>
             <p className="text-xs text-amber-700 mt-0.5">
@@ -245,7 +245,7 @@ export default function ReservationConfirmationPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center justify-between gap-4">
             <div>
               <p className="font-semibold text-slate-800 text-sm">Une question ?</p>
-              <p className="text-xs text-slate-400 mt-0.5">Contactez {data.business_name}</p>
+              <p className="text-xs text-content-secondary mt-0.5">Contactez {data.business_name}</p>
             </div>
             <a
               href={`https://wa.me/${data.business_phone.replace(/[^0-9]/g, '')}`}

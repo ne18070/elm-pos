@@ -216,9 +216,9 @@ export default function ContractSignPage() {
     return (
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
-          <AlertTriangle className="w-12 h-12 text-red-400" />
+          <AlertTriangle className="w-12 h-12 text-status-error" />
           <p className="text-lg font-semibold text-white">Erreur</p>
-          <p className="text-slate-400 text-sm">{errorMsg}</p>
+          <p className="text-content-secondary text-sm">{errorMsg}</p>
         </div>
       </MobileShell>
     );
@@ -228,9 +228,9 @@ export default function ContractSignPage() {
     return (
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
-          <AlertTriangle className="w-12 h-12 text-amber-400" />
+          <AlertTriangle className="w-12 h-12 text-status-warning" />
           <p className="text-lg font-semibold text-white">Lien expiré</p>
-          <p className="text-slate-400 text-sm">
+          <p className="text-content-secondary text-sm">
             Ce lien de signature n&apos;est plus valide. Contactez le loueur pour obtenir un nouveau lien.
           </p>
         </div>
@@ -242,9 +242,9 @@ export default function ContractSignPage() {
     return (
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
-          <CheckCircle className="w-12 h-12 text-green-400" />
+          <CheckCircle className="w-12 h-12 text-status-success" />
           <p className="text-lg font-semibold text-white">Contrat déjà signé</p>
-          <p className="text-slate-400 text-sm">
+          <p className="text-content-secondary text-sm">
             Ce contrat a déjà été signé le {contract.signed_at
               ? new Date(contract.signed_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
               : '—'}.
@@ -264,11 +264,11 @@ export default function ContractSignPage() {
     return (
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
-          <div className="w-20 h-20 rounded-full bg-green-900/30 border-2 border-green-500 flex items-center justify-center">
-            <CheckCircle className="w-10 h-10 text-green-400" />
+          <div className="w-20 h-20 rounded-full bg-badge-success border-2 border-green-500 flex items-center justify-center">
+            <CheckCircle className="w-10 h-10 text-status-success" />
           </div>
           <p className="text-xl font-bold text-white">Contrat signé !</p>
-          <p className="text-slate-400 text-sm">
+          <p className="text-content-secondary text-sm">
             Votre signature électronique a bien été enregistrée. Vous recevrez une confirmation.
           </p>
           {contract?.pdf_url && (

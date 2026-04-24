@@ -26,14 +26,14 @@ function getIcon(name: string): React.ComponentType<{ className?: string }> {
 // ─── Accent color map ─────────────────────────────────────────────────────────
 
 const ACCENT_MAP: Record<string, { bg: string; border: string; icon: string }> = {
-  brand:  { bg: 'bg-brand-900/30',  border: 'border-brand-600',  icon: 'text-brand-400 bg-brand-900/50'  },
-  orange: { bg: 'bg-orange-900/20', border: 'border-orange-600', icon: 'text-orange-400 bg-orange-900/40' },
-  purple: { bg: 'bg-purple-900/20', border: 'border-purple-600', icon: 'text-purple-400 bg-purple-900/40' },
-  teal:   { bg: 'bg-teal-900/20',   border: 'border-teal-600',   icon: 'text-teal-400 bg-teal-900/40'   },
-  red:    { bg: 'bg-red-900/20',    border: 'border-red-600',    icon: 'text-red-400 bg-red-900/40'     },
-  green:  { bg: 'bg-green-900/20',  border: 'border-green-600',  icon: 'text-green-400 bg-green-900/40' },
+  brand:  { bg: 'bg-badge-brand',  border: 'border-brand-600',  icon: 'text-content-brand bg-badge-brand'  },
+  orange: { bg: 'bg-badge-orange', border: 'border-orange-600', icon: 'text-status-orange bg-badge-orange' },
+  purple: { bg: 'bg-badge-purple', border: 'border-purple-600', icon: 'text-status-purple bg-badge-purple' },
+  teal:   { bg: 'bg-badge-teal',   border: 'border-teal-600',   icon: 'text-status-teal bg-badge-teal'   },
+  red:    { bg: 'bg-badge-error',    border: 'border-red-600',    icon: 'text-status-error bg-badge-error'     },
+  green:  { bg: 'bg-badge-success',  border: 'border-green-600',  icon: 'text-status-success bg-badge-success' },
 };
-const defaultAccent = { bg: 'bg-surface-card', border: 'border-surface-border', icon: 'text-slate-400 bg-surface-input' };
+const defaultAccent = { bg: 'bg-surface-card', border: 'border-surface-border', icon: 'text-content-secondary bg-surface-input' };
 
 function accent(color: string) {
   return ACCENT_MAP[color] ?? defaultAccent;
@@ -104,7 +104,7 @@ export default function ConfigurePage() {
   if (loadingConfig) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
       </div>
     );
   }
@@ -124,7 +124,7 @@ export default function ConfigurePage() {
         {/* ── En-tête ── */}
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-white">Configuration</h1>
-          <p className="text-slate-400">
+          <p className="text-content-secondary">
             Activez ou désactivez les fonctionnalités disponibles pour votre établissement.
           </p>
         </div>
@@ -181,15 +181,15 @@ export default function ConfigurePage() {
                     className={cn(
                       'w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all',
                       enabled
-                        ? 'border-brand-600 bg-brand-900/20'
+                        ? 'border-brand-600 bg-badge-brand'
                         : 'border-surface-border bg-surface-card hover:border-slate-600'
                     )}
                   >
                     {enabled
-                      ? <ToggleRight className="w-7 h-7 text-brand-400 shrink-0" />
+                      ? <ToggleRight className="w-7 h-7 text-content-brand shrink-0" />
                       : <ToggleLeft  className="w-7 h-7 text-slate-600 shrink-0" />}
                     <div>
-                      <p className={cn('text-sm font-semibold', enabled ? 'text-brand-300' : 'text-slate-300')}>
+                      <p className={cn('text-sm font-semibold', enabled ? 'text-content-brand' : 'text-slate-300')}>
                         {m.label}
                       </p>
                       {m.description && (
@@ -211,7 +211,7 @@ export default function ConfigurePage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {allowedModules.filter((m) => features.includes(m.id)).map((m) => (
-                <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-900/20 border border-green-800 text-green-300">
+                <span key={m.id} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-badge-success border border-status-success text-status-success">
                   <Check className="w-3 h-3" />{m.label}
                 </span>
               ))}

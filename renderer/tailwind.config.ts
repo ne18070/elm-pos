@@ -29,13 +29,33 @@ const config: Config = {
           input:   'rgb(var(--surface-input) / <alpha-value>)',
           border:  'rgb(var(--surface-border) / <alpha-value>)',
           hover:   'rgb(var(--surface-hover) / <alpha-value>)',
+          overlay: 'rgb(var(--surface-overlay) / <alpha-value>)',
         },
-        // Tokens texte sémantiques — s'adaptent automatiquement au thème.
-        // Utilisation : text-content-primary, text-content-secondary, bg-content-primary…
         content: {
           primary:   'rgb(var(--text-base) / <alpha-value>)',
           secondary: 'rgb(var(--text-secondary) / <alpha-value>)',
           muted:     'rgb(var(--text-placeholder) / <alpha-value>)',
+          brand:     'rgb(var(--text-brand) / <alpha-value>)',
+        },
+        status: {
+          success: 'rgb(var(--color-success) / <alpha-value>)',
+          warning: 'rgb(var(--color-warning) / <alpha-value>)',
+          error:   'rgb(var(--color-error) / <alpha-value>)',
+          info:    'rgb(var(--color-info) / <alpha-value>)',
+          brand:   'rgb(var(--color-brand) / <alpha-value>)',
+          teal:    'rgb(var(--color-teal) / <alpha-value>)',
+          purple:  'rgb(var(--color-purple) / <alpha-value>)',
+          orange:  'rgb(var(--color-orange) / <alpha-value>)',
+        },
+        badge: {
+          success: 'rgb(var(--badge-success) / <alpha-value>)',
+          warning: 'rgb(var(--badge-warning) / <alpha-value>)',
+          error:   'rgb(var(--badge-error) / <alpha-value>)',
+          info:    'rgb(var(--badge-info) / <alpha-value>)',
+          brand:   'rgb(var(--badge-brand) / <alpha-value>)',
+          teal:    'rgb(var(--badge-teal) / <alpha-value>)',
+          purple:  'rgb(var(--badge-purple) / <alpha-value>)',
+          orange:  'rgb(var(--badge-orange) / <alpha-value>)',
         },
       },
       fontFamily: {

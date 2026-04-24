@@ -225,7 +225,7 @@ function SidebarContent({
           <BusinessSwitcher collapsed={collapsed} isHovering={isHovering} />
         </div>
         {onClose && (
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors shrink-0">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors shrink-0">
             <X className="w-5 h-5" />
           </button>
         )}
@@ -257,8 +257,8 @@ function SidebarContent({
                     className={cn(
                       'group flex items-center gap-0 rounded-xl transition-all duration-200 relative p-1',
                       active
-                        ? 'bg-brand-500/10 text-brand-400 shadow-sm'
-                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                        ? 'bg-brand-500/10 text-content-brand shadow-sm'
+                        : 'text-content-secondary hover:text-content-primary hover:bg-white/5'
                     )}
                   >
                     {active && (
@@ -267,7 +267,7 @@ function SidebarContent({
                     <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
                       <Icon className={cn(
                         "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
-                        active ? "text-brand-400" : "text-slate-400 group-hover:text-slate-100"
+                        active ? "text-content-brand" : "text-content-secondary group-hover:text-content-primary"
                       )} />
                       {badge > 0 && (
                         <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5
@@ -288,11 +288,11 @@ function SidebarContent({
                     )}>
                       <span className={cn(
                         "text-sm font-medium truncate",
-                        active ? "text-brand-300" : ""
+                        active ? "text-content-brand" : ""
                       )}>{label}</span>
                       {badge > 0 && (
                         <span className="flex items-center justify-center min-w-[20px] h-5 px-1
-                                         rounded-full bg-red-500/20 text-red-400 text-xs font-bold">
+                                         rounded-full bg-red-500/20 text-status-error text-xs font-bold">
                           {badge > 99 ? '99+' : badge}
                         </span>
                       )}
@@ -328,7 +328,7 @@ function SidebarContent({
             title={collapsed ? 'Aide' : undefined}
             className={cn(
               'w-full flex items-center gap-0 rounded-xl transition-all duration-200 group p-1',
-              pathname.startsWith('/help') ? 'bg-brand-500/10 text-brand-400' : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+              pathname.startsWith('/help') ? 'bg-brand-500/10 text-content-brand' : 'text-content-secondary hover:text-content-primary hover:bg-white/5'
             )}
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
@@ -346,11 +346,11 @@ function SidebarContent({
             onClick={() => setIsSupportOpen(true)}
             title="Signaler un problème"
             className={cn(
-              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-white/5 group p-1',
+              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-content-secondary hover:text-white hover:bg-white/5 group p-1',
             )}
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
-              <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform text-amber-500" />
+              <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform text-status-warning" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
@@ -366,7 +366,7 @@ function SidebarContent({
             onClick={handleOpenDisplay}
             title="Ouvrir l'écran client"
             className={cn(
-              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-100 hover:bg-white/5 group p-1',
+              'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-content-secondary hover:text-content-primary hover:bg-white/5 group p-1',
             )}
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
@@ -396,7 +396,7 @@ function SidebarContent({
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
               <div className="w-9 h-9 rounded-lg bg-brand-500/20 overflow-hidden flex items-center justify-center
-                              text-sm font-bold text-brand-400 border border-brand-500/30">
+                              text-sm font-bold text-content-brand border border-brand-500/30">
                 {user?.avatar_url
                   ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                   : user?.full_name?.charAt(0).toUpperCase() ?? '?'}
@@ -408,7 +408,7 @@ function SidebarContent({
               "min-w-0 flex-1 transition-all duration-300",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0 overflow-hidden"
             )}>
-              <p className="text-xs font-bold text-slate-100 truncate leading-tight">{user?.full_name}</p>
+              <p className="text-xs font-bold text-content-primary truncate leading-tight">{user?.full_name}</p>
               <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{getRoleLabel(role)}</p>
             </div>
           </Link>
@@ -420,7 +420,7 @@ function SidebarContent({
             <button
               onClick={cycleTheme}
               title="Changer le thème"
-              className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-brand-500/10 transition-all group"
+              className="flex-1 flex items-center justify-center p-2 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-all group"
             >
               {theme === 'light'  ? <Sun     className="w-4 h-4 group-hover:rotate-45 transition-transform" /> :
                theme === 'dark'   ? <Moon    className="w-4 h-4 group-hover:-rotate-12 transition-transform" /> :
@@ -430,7 +430,7 @@ function SidebarContent({
             <button
               onClick={handleLogout}
               title="Déconnexion"
-              className="flex-1 flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+              className="flex-1 flex items-center justify-center p-2 rounded-lg text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-all group"
             >
               <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
@@ -472,7 +472,7 @@ export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
     >
       <button
         onClick={onMenuOpen}
-        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+        className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -516,7 +516,7 @@ export function MobileBottomNav() {
             href={href}
             className={cn(
               'flex-1 flex flex-col items-center gap-1 py-2.5 px-1 transition-colors relative',
-              active ? 'text-brand-400' : 'text-slate-500 hover:text-slate-300'
+              active ? 'text-content-brand' : 'text-slate-500 hover:text-slate-300'
             )}
           >
             <div className="relative">

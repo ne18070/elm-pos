@@ -28,7 +28,7 @@ function StatCard({
           <p className="text-3xl font-bold text-white mt-1">{value}</p>
           {sublabel && <p className="text-xs text-slate-500 mt-0.5">{sublabel}</p>}
         </div>
-        <div className="text-slate-400">{icon}</div>
+        <div className="text-content-secondary">{icon}</div>
       </div>
     </div>
   );
@@ -37,10 +37,10 @@ function StatCard({
 // ── Badge niveau log ──────────────────────────────────────────────────────────
 function LevelBadge({ level }: { level: WorkflowLog['level'] }) {
   const map: Record<WorkflowLog['level'], string> = {
-    DEBUG: 'bg-slate-800 text-slate-400',
-    INFO:  'bg-blue-900/30 text-blue-300',
-    WARN:  'bg-amber-900/30 text-amber-300',
-    ERROR: 'bg-red-900/30 text-red-400',
+    DEBUG: 'bg-surface-card text-content-secondary',
+    INFO:  'bg-badge-info text-blue-300',
+    WARN:  'bg-badge-warning text-status-warning',
+    ERROR: 'bg-badge-error text-status-error',
   };
   return (
     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${map[level]}`}>
@@ -64,7 +64,7 @@ function BlockedRow({
         <p className="text-sm text-white truncate font-medium">{item.node?.label ?? 'Étape inconnue'}</p>
         <p className="text-xs text-slate-500 truncate">Dossier {item.instance.dossier_id.slice(0, 8)}…</p>
       </div>
-      <span className={`text-xs font-semibold shrink-0 ${isOverdue ? 'text-red-400' : 'text-amber-400'}`}>
+      <span className={`text-xs font-semibold shrink-0 ${isOverdue ? 'text-status-error' : 'text-status-warning'}`}>
         {hours}h
       </span>
     </div>
@@ -113,7 +113,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
       {/* ── En-tête ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5 text-brand-400" />
+          <Activity className="w-5 h-5 text-content-brand" />
           <h2 className="font-semibold text-white">Suivi des processus</h2>
         </div>
         <div className="flex items-center gap-3">
@@ -152,7 +152,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
           sublabel="WAITING > SLA"
         />
         <StatCard
-          label="Échoués" value={stats.failed} color="border-red-700"
+          label="Échoués" value={stats.failed} color="border-status-error"
           icon={<XCircle className="w-6 h-6" />}
         />
         <StatCard
@@ -167,17 +167,17 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
         {/* ── Instances bloquées ── */}
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-amber-400" />
+            <Clock className="w-4 h-4 text-status-warning" />
             <h3 className="font-medium text-white text-sm">Étapes bloquées</h3>
             {stats.blocked_instances.length > 0 && (
-              <span className="ml-auto text-xs font-bold text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded-full">
+              <span className="ml-auto text-xs font-bold text-status-warning bg-badge-warning px-2 py-0.5 rounded-full">
                 {stats.blocked_instances.length}
               </span>
             )}
           </div>
           {stats.blocked_instances.length === 0 ? (
             <p className="text-sm text-slate-500 italic py-4 text-center">
-              <CheckCircle2 className="w-5 h-5 text-green-400 mx-auto mb-1" />
+              <CheckCircle2 className="w-5 h-5 text-status-success mx-auto mb-1" />
               Aucune étape bloquée
             </p>
           ) : (
@@ -197,12 +197,12 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
         {/* ── Erreurs récentes ── */}
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
-            <XCircle className="w-4 h-4 text-red-400" />
+            <XCircle className="w-4 h-4 text-status-error" />
             <h3 className="font-medium text-white text-sm">Erreurs récentes</h3>
           </div>
           {stats.recent_errors.length === 0 ? (
             <p className="text-sm text-slate-500 italic py-4 text-center">
-              <CheckCircle2 className="w-5 h-5 text-green-400 mx-auto mb-1" />
+              <CheckCircle2 className="w-5 h-5 text-status-success mx-auto mb-1" />
               Aucune erreur
             </p>
           ) : (

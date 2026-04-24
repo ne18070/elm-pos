@@ -42,7 +42,7 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">Sélectionner une chambre</h3>
-        <button onClick={onCancel} className="text-slate-400 hover:text-white">
+        <button onClick={onCancel} className="text-content-secondary hover:text-white">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -74,15 +74,15 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
             <button
               key={r.id}
               onClick={() => onSelect(r)}
-              className="w-full flex items-center justify-between p-4 rounded-xl border border-surface-border bg-surface-card hover:border-brand-500 hover:bg-brand-900/10 transition-all text-left"
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-surface-border bg-surface-card hover:border-brand-500 hover:bg-badge-brand transition-all text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-brand-900/50 border border-brand-700 flex items-center justify-center shrink-0">
-                  <BedDouble className="w-5 h-5 text-brand-400" />
+                <div className="w-10 h-10 rounded-lg bg-badge-brand border border-brand-700 flex items-center justify-center shrink-0">
+                  <BedDouble className="w-5 h-5 text-content-brand" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-white font-bold">Chambre {r.room?.number}</p>
-                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                  <p className="text-xs text-content-secondary flex items-center gap-1">
                     <User className="w-3 h-3" /> {r.guest?.full_name}
                   </p>
                 </div>

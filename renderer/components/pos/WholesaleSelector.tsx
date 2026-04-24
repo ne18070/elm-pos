@@ -87,10 +87,10 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
           <div className="flex items-center gap-2">
-            <Store className="w-5 h-5 text-amber-400" />
+            <Store className="w-5 h-5 text-status-warning" />
             <h3 className="font-semibold text-white">Mode Grossiste</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -99,7 +99,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
 
           {/* Sélection revendeur */}
           <div>
-            <label className="label">Revendeur <span className="text-red-400">*</span></label>
+            <label className="label">Revendeur <span className="text-status-error">*</span></label>
             {loading ? (
               <p className="text-sm text-slate-500">Chargement…</p>
             ) : resellers.length === 0 ? (
@@ -108,7 +108,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
               <div className="space-y-2">
                 {/* Barre de recherche */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Rechercher un revendeur…"
@@ -131,7 +131,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
                 </div>
                 {resellerSearch && filteredResellers.length === 0 && (
                   <p className="text-xs text-slate-500 text-center py-1">Aucun revendeur trouvé</p>
@@ -160,7 +160,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                       <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
                 </div>
               )}
             </div>
@@ -170,13 +170,13 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
           {offers.length > 0 && (
             <div>
               <label className="label flex items-center gap-2">
-                <Gift className="w-3.5 h-3.5 text-amber-400" /> Offres volume actives
+                <Gift className="w-3.5 h-3.5 text-status-warning" /> Offres volume actives
               </label>
               <div className="space-y-2">
                 {offers.map((o) => (
-                  <div key={o.id} className="flex items-center gap-3 p-3 rounded-xl bg-amber-900/10 border border-amber-800/50 text-sm">
-                    <Gift className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span className="text-slate-200">
+                  <div key={o.id} className="flex items-center gap-3 p-3 rounded-xl bg-badge-warning border border-status-warning/50 text-sm">
+                    <Gift className="w-4 h-4 text-status-warning shrink-0" />
+                    <span className="text-content-primary">
                       {o.label || `${o.product_name} : pour ${o.min_qty} → ${o.bonus_qty} offert${o.bonus_qty > 1 ? 's' : ''}`}
                     </span>
                   </div>

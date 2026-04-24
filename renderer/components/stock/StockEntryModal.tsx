@@ -101,7 +101,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
           <h2 className="font-semibold text-white text-lg">Nouvel approvisionnement</h2>
-          <button onClick={requestClose} className="text-slate-400 hover:text-white">
+          <button onClick={requestClose} className="text-content-secondary hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -123,7 +123,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 autoComplete="off"
               />
               {showDropdown && filteredProducts.length > 0 && (
-                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
                   {filteredProducts.map((p) => (
                     <button
                       key={p.id}
@@ -142,7 +142,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-white font-medium truncate">{p.name}</p>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-content-secondary">
                           Stock actuel : {p.stock ?? 0} {p.unit ?? 'pièce'}
                         </p>
                       </div>
@@ -154,9 +154,9 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
 
             {/* Produit sélectionné */}
             {selectedProduct && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-brand-900/20 border border-brand-800 rounded-xl text-sm">
-                <Package className="w-4 h-4 text-brand-400 shrink-0" />
-                <span className="text-brand-300 font-medium">{selectedProduct.name}</span>
+              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-badge-brand border border-brand-800 rounded-xl text-sm">
+                <Package className="w-4 h-4 text-content-brand shrink-0" />
+                <span className="text-content-brand font-medium">{selectedProduct.name}</span>
                 <span className="text-slate-500 ml-auto">
                   Stock actuel : <strong className="text-white">{currentStock} {unit}</strong>
                 </span>
@@ -172,8 +172,8 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 onClick={() => setMode('packaging')}
                 className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                   mode === 'packaging'
-                    ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                    : 'border-surface-border text-slate-400 hover:text-white'
+                    ? 'border-brand-500 bg-badge-brand text-content-brand'
+                    : 'border-surface-border text-content-secondary hover:text-white'
                 }`}
               >
                 Par conditionnement
@@ -182,8 +182,8 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 onClick={() => setMode('direct')}
                 className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                   mode === 'direct'
-                    ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                    : 'border-surface-border text-slate-400 hover:text-white'
+                    ? 'border-brand-500 bg-badge-brand text-content-brand'
+                    : 'border-surface-border text-content-secondary hover:text-white'
                 }`}
               >
                 Quantité directe
@@ -197,7 +197,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
               <p className="text-xs text-slate-500">Ex : 20 sacs × 50 kg</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Nb de colis</label>
+                  <label className="text-xs text-content-secondary mb-1 block">Nb de colis</label>
                   <input
                     type="number"
                     inputMode="numeric"
@@ -208,7 +208,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">
+                  <label className="text-xs text-content-secondary mb-1 block">
                     Contenance ({unit}/colis)
                   </label>
                   <input
@@ -221,7 +221,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Type colis</label>
+                  <label className="text-xs text-content-secondary mb-1 block">Type colis</label>
                   <input
                     type="text"
                     value={packUnit}
@@ -235,17 +235,17 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
               {/* Calcul automatique */}
               {totalQty > 0 && (
                 <div className="flex items-center gap-2 p-3 bg-slate-800/60 rounded-xl text-sm">
-                  <Calculator className="w-4 h-4 text-brand-400 shrink-0" />
-                  <span className="text-slate-400">
+                  <Calculator className="w-4 h-4 text-content-brand shrink-0" />
+                  <span className="text-content-secondary">
                     {packQty} {packUnit || 'colis'} × {packSize} {unit} =
                   </span>
-                  <span className="font-bold text-brand-400 ml-1">{totalQty} {unit}</span>
+                  <span className="font-bold text-content-brand ml-1">{totalQty} {unit}</span>
                 </div>
               )}
             </div>
           ) : (
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">
+              <label className="text-xs text-content-secondary mb-1 block">
                 Quantité reçue ({unit})
               </label>
               <input
@@ -267,14 +267,14 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 <p className="text-xs text-slate-500 mb-0.5">Stock actuel</p>
                 <p className="font-bold text-white">{currentStock} {unit}</p>
               </div>
-              <div className="flex items-center justify-center text-brand-400 font-bold text-lg">+</div>
+              <div className="flex items-center justify-center text-content-brand font-bold text-lg">+</div>
               <div>
                 <p className="text-xs text-slate-500 mb-0.5">Reçu</p>
-                <p className="font-bold text-brand-400">{totalQty} {unit}</p>
+                <p className="font-bold text-content-brand">{totalQty} {unit}</p>
               </div>
               <div className="col-span-3 pt-2 border-t border-surface-border">
                 <p className="text-xs text-slate-500 mb-0.5">Nouveau stock</p>
-                <p className="font-bold text-green-400 text-lg">{newStock} {unit}</p>
+                <p className="font-bold text-status-success text-lg">{newStock} {unit}</p>
               </div>
             </div>
           )}
@@ -284,7 +284,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
             <p className="label">Informations achat <span className="text-slate-600 font-normal">(optionnel)</span></p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Fournisseur</label>
+                <label className="text-xs text-content-secondary mb-1 block">Fournisseur</label>
                 <input
                   type="text"
                   value={supplier}
@@ -294,7 +294,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">
+                <label className="text-xs text-content-secondary mb-1 block">
                   Coût / {unit}
                   {business?.currency ? ` (${business.currency})` : ''}
                 </label>
@@ -309,14 +309,14 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
               </div>
             </div>
             {totalCost > 0 && (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-content-secondary">
                 Coût total : <strong className="text-white">
                   {formatCurrency(totalCost, business?.currency)}
                 </strong>
               </p>
             )}
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Notes</label>
+              <label className="text-xs text-content-secondary mb-1 block">Notes</label>
               <input
                 type="text"
                 value={notes}
@@ -345,10 +345,10 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/70 backdrop-blur-sm">
             <div className="bg-surface-card border border-surface-border rounded-2xl p-6 mx-6 space-y-4 shadow-2xl">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-white">Annuler la saisie ?</p>
-                  <p className="text-sm text-slate-400 mt-1">Les informations saisies seront perdues.</p>
+                  <p className="text-sm text-content-secondary mt-1">Les informations saisies seront perdues.</p>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -357,7 +357,7 @@ export function StockEntryModal({ onClose, onSuccess, preselectedProduct }: Stoc
                 </button>
                 <button
                   onClick={() => { setConfirming(false); onClose(); }}
-                  className="flex-1 h-10 px-4 rounded-xl bg-red-900/30 border border-red-800 text-red-400 hover:bg-red-900/50 transition-colors text-sm font-medium"
+                  className="flex-1 h-10 px-4 rounded-xl bg-badge-error border border-status-error text-status-error hover:bg-badge-error transition-colors text-sm font-medium"
                 >
                   Oui, annuler
                 </button>

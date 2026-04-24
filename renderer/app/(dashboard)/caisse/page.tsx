@@ -159,7 +159,7 @@ function ReportModal({ data, onClose }: { data: ReportData; onClose: () => void 
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-surface-border">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-brand-600/20 rounded-lg">
-              <FileText className="w-4 h-4 text-brand-400" />
+              <FileText className="w-4 h-4 text-content-brand" />
             </div>
             <div>
               <h2 className="font-semibold text-white text-base leading-none">
@@ -170,7 +170,7 @@ function ReportModal({ data, onClose }: { data: ReportData; onClose: () => void 
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-content-secondary hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -295,7 +295,7 @@ function OpenModal({
       <div className="card p-6 w-full max-w-sm space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-white text-lg">Ouvrir la caisse</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-content-secondary hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <div>
           <label className="label">Fond de caisse (espèces disponibles)</label>
@@ -351,17 +351,17 @@ function CloseModal({
       <div className="card p-6 w-full max-w-md space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-white text-lg">Clôturer la caisse</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-content-secondary hover:text-white"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
           <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">Résumé de la session</p>
-          <div className="flex justify-between"><span className="text-slate-400">Fond de caisse</span><span className="text-white font-medium">{fmt(session.opening_amount)}</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">Ventes espèces</span><span className="text-green-400 font-medium">+{fmt(summary.total_cash)}</span></div>
-          {summary.total_card > 0 && <div className="flex justify-between"><span className="text-slate-400">Ventes carte</span><span className="text-white">{fmt(summary.total_card)}</span></div>}
-          {summary.total_mobile > 0 && <div className="flex justify-between"><span className="text-slate-400">Ventes mobile money</span><span className="text-white">{fmt(summary.total_mobile)}</span></div>}
-          {summary.total_refunds > 0 && <div className="flex justify-between"><span className="text-slate-400">Remboursements</span><span className="text-red-400">-{fmt(summary.total_refunds)}</span></div>}
-          <div className="flex justify-between font-bold border-t border-surface-border pt-2 mt-1"><span className="text-slate-300">Total ventes</span><span className="text-brand-400">{fmt(summary.total_sales)}</span></div>
+          <div className="flex justify-between"><span className="text-content-secondary">Fond de caisse</span><span className="text-white font-medium">{fmt(session.opening_amount)}</span></div>
+          <div className="flex justify-between"><span className="text-content-secondary">Ventes espèces</span><span className="text-status-success font-medium">+{fmt(summary.total_cash)}</span></div>
+          {summary.total_card > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes carte</span><span className="text-white">{fmt(summary.total_card)}</span></div>}
+          {summary.total_mobile > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes mobile money</span><span className="text-white">{fmt(summary.total_mobile)}</span></div>}
+          {summary.total_refunds > 0 && <div className="flex justify-between"><span className="text-content-secondary">Remboursements</span><span className="text-status-error">-{fmt(summary.total_refunds)}</span></div>}
+          <div className="flex justify-between font-bold border-t border-surface-border pt-2 mt-1"><span className="text-slate-300">Total ventes</span><span className="text-content-brand">{fmt(summary.total_sales)}</span></div>
           <div className="flex justify-between font-semibold"><span className="text-slate-300">Espèces attendues en caisse</span><span className="text-white">{fmt(expectedCash)}</span></div>
         </div>
 
@@ -377,13 +377,13 @@ function CloseModal({
 
         {actualCash && (
           <div className={`rounded-xl p-4 border text-center ${
-            Math.abs(difference) < 1 ? 'bg-green-900/20 border-green-700'
-              : difference > 0       ? 'bg-blue-900/20 border-blue-700'
-                                     : 'bg-red-900/20 border-red-700'
+            Math.abs(difference) < 1 ? 'bg-badge-success border-status-success'
+              : difference > 0       ? 'bg-badge-info border-blue-700'
+                                     : 'bg-badge-error border-status-error'
           }`}>
-            <p className="text-xs text-slate-400 mb-1">Écart</p>
+            <p className="text-xs text-content-secondary mb-1">Écart</p>
             <p className={`text-2xl font-bold ${
-              Math.abs(difference) < 1 ? 'text-green-400' : difference > 0 ? 'text-blue-400' : 'text-red-400'
+              Math.abs(difference) < 1 ? 'text-status-success' : difference > 0 ? 'text-blue-400' : 'text-status-error'
             }`}>
               {difference >= 0 ? '+' : ''}{fmt(difference)}
             </p>
@@ -526,7 +526,7 @@ export default function CaissePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">Clôture de caisse</h1>
-            <p className="text-sm text-slate-400 mt-0.5">
+            <p className="text-sm text-content-secondary mt-0.5">
               {session
                 ? `Session ouverte le ${format(new Date(session.opened_at), 'dd MMM à HH:mm', { locale: fr })}`
                 : 'Aucune session active'}
@@ -581,7 +581,7 @@ export default function CaissePage() {
                 <span className="w-7 h-7 rounded-full bg-brand-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
                 <div>
                   <p className="text-sm font-medium text-white">{title}</p>
-                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{body}</p>
+                  <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">{body}</p>
                 </div>
               </div>
             ))}
@@ -602,7 +602,7 @@ export default function CaissePage() {
             <button
               key={id} onClick={() => setTab(id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${tab === id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
             >
               {label}
             </button>
@@ -619,7 +619,7 @@ export default function CaissePage() {
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-white">Caisse fermée</p>
-                  <p className="text-sm text-slate-400 mt-1">Ouvrez une session pour commencer à encaisser.</p>
+                  <p className="text-sm text-content-secondary mt-1">Ouvrez une session pour commencer à encaisser.</p>
                 </div>
                 <button onClick={() => setShowOpenModal(true)} className="btn-primary flex items-center gap-2 mt-2">
                   <LockOpen className="w-4 h-4" />Ouvrir la caisse
@@ -628,7 +628,7 @@ export default function CaissePage() {
             ) : (
               <>
                 <div className="card p-4 flex items-center gap-3 border-l-4 border-brand-500">
-                  <Banknote className="w-5 h-5 text-brand-400 shrink-0" />
+                  <Banknote className="w-5 h-5 text-content-brand shrink-0" />
                   <div>
                     <p className="text-xs text-slate-500">Fond de caisse initial</p>
                     <p className="text-xl font-bold text-white">{fmt(session.opening_amount)}</p>
@@ -637,29 +637,29 @@ export default function CaissePage() {
 
                 {summary ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <MetricCard label="Total ventes"   value={fmt(summary.total_sales)}              icon={CheckCircle} color="text-brand-400" />
-                    <MetricCard label="Espèces"         value={fmt(summary.total_cash)}              icon={Banknote}    color="text-green-400" />
+                    <MetricCard label="Total ventes"   value={fmt(summary.total_sales)}              icon={CheckCircle} color="text-content-brand" />
+                    <MetricCard label="Espèces"         value={fmt(summary.total_cash)}              icon={Banknote}    color="text-status-success" />
                     <MetricCard label="Carte"           value={fmt(summary.total_card)}              icon={CreditCard}  color="text-blue-400" />
-                    <MetricCard label="Mobile Money"    value={fmt(summary.total_mobile)}            icon={Smartphone}  color="text-purple-400" />
+                    <MetricCard label="Mobile Money"    value={fmt(summary.total_mobile)}            icon={Smartphone}  color="text-status-purple" />
                     <MetricCard label="Transactions"    value={String(summary.total_orders)}         icon={CheckCircle} color="text-slate-300" />
                     {summary.total_refunds > 0 && (
-                      <MetricCard label="Remboursements" value={`-${fmt(summary.total_refunds)}`}   icon={RotateCcw}   color="text-red-400" />
+                      <MetricCard label="Remboursements" value={`-${fmt(summary.total_refunds)}`}   icon={RotateCcw}   color="text-status-error" />
                     )}
                   </div>
                 ) : (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
                   </div>
                 )}
 
                 {summary && (
                   <div className="card p-4 space-y-2 text-sm">
                     <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Espèces attendues en caisse</p>
-                    <div className="flex justify-between"><span className="text-slate-400">Fond initial</span><span className="text-white">{fmt(session.opening_amount)}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-400">+ Ventes espèces</span><span className="text-green-400">+{fmt(summary.total_cash)}</span></div>
+                    <div className="flex justify-between"><span className="text-content-secondary">Fond initial</span><span className="text-white">{fmt(session.opening_amount)}</span></div>
+                    <div className="flex justify-between"><span className="text-content-secondary">+ Ventes espèces</span><span className="text-status-success">+{fmt(summary.total_cash)}</span></div>
                     <div className="flex justify-between font-bold border-t border-surface-border pt-2">
                       <span className="text-white">Total attendu</span>
-                      <span className="text-brand-400">{fmt(session.opening_amount + summary.total_cash)}</span>
+                      <span className="text-content-brand">{fmt(session.opening_amount + summary.total_cash)}</span>
                     </div>
                   </div>
                 )}
@@ -695,14 +695,14 @@ export default function CaissePage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleShowZReport(s)}
-                          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-brand-400 transition-colors px-2 py-1 rounded-lg hover:bg-surface-hover"
+                          className="flex items-center gap-1.5 text-xs text-content-secondary hover:text-content-brand transition-colors px-2 py-1 rounded-lg hover:bg-surface-hover"
                           title="Voir le rapport Z"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           Rapport Z
                         </button>
                         <span className={`text-sm font-bold ${
-                          Math.abs(diff) < 1 ? 'text-green-400' : diff > 0 ? 'text-blue-400' : 'text-red-400'
+                          Math.abs(diff) < 1 ? 'text-status-success' : diff > 0 ? 'text-blue-400' : 'text-status-error'
                         }`}>
                           {diff >= 0 ? '+' : ''}{fmt(diff)}
                         </span>
@@ -726,8 +726,8 @@ export default function CaissePage() {
 
                     {Math.abs(diff) >= 1 && (
                       <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${
-                        diff > 0 ? 'border-blue-800 bg-blue-900/20 text-blue-400'
-                                 : 'border-red-800 bg-red-900/20 text-red-400'
+                        diff > 0 ? 'border-blue-800 bg-badge-info text-blue-400'
+                                 : 'border-status-error bg-badge-error text-status-error'
                       }`}>
                         <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                         {diff > 0 ? 'Excédent' : 'Déficit'} de {fmt(Math.abs(diff))}
@@ -736,11 +736,11 @@ export default function CaissePage() {
                     )}
 
                     <div className="flex gap-3 text-xs text-slate-500">
-                      <span className="text-green-400">Esp. {fmt(s.total_cash ?? 0)}</span>
+                      <span className="text-status-success">Esp. {fmt(s.total_cash ?? 0)}</span>
                       <span>·</span>
                       <span className="text-blue-400">CB {fmt(s.total_card ?? 0)}</span>
                       <span>·</span>
-                      <span className="text-purple-400">Mobile {fmt(s.total_mobile ?? 0)}</span>
+                      <span className="text-status-purple">Mobile {fmt(s.total_mobile ?? 0)}</span>
                       <span>·</span>
                       <span>{s.total_orders ?? 0} ventes</span>
                     </div>

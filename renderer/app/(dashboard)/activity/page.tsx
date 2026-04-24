@@ -34,44 +34,44 @@ interface ActivityLog {
 // ─── Config des actions ───────────────────────────────────────────────────────
 
 const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string }> = {
-  'order.created':           { label: 'Commande créée',       Icon: ShoppingCart, color: 'text-green-400' },
-  'order.cancelled':         { label: 'Commande annulée',     Icon: XCircle,      color: 'text-red-400' },
-  'order.refunded':          { label: 'Remboursement',        Icon: RotateCcw,    color: 'text-purple-400' },
-  'order.payment_completed': { label: 'Solde encaissé',       Icon: CreditCard,   color: 'text-brand-400' },
-  'product.created':         { label: 'Produit ajouté',       Icon: Package,      color: 'text-green-400' },
-  'product.updated':         { label: 'Produit modifié',      Icon: Pencil,       color: 'text-amber-400' },
-  'product.deleted':         { label: 'Produit supprimé',     Icon: Trash2,       color: 'text-red-400' },
+  'order.created':           { label: 'Commande créée',       Icon: ShoppingCart, color: 'text-status-success' },
+  'order.cancelled':         { label: 'Commande annulée',     Icon: XCircle,      color: 'text-status-error' },
+  'order.refunded':          { label: 'Remboursement',        Icon: RotateCcw,    color: 'text-status-purple' },
+  'order.payment_completed': { label: 'Solde encaissé',       Icon: CreditCard,   color: 'text-content-brand' },
+  'product.created':         { label: 'Produit ajouté',       Icon: Package,      color: 'text-status-success' },
+  'product.updated':         { label: 'Produit modifié',      Icon: Pencil,       color: 'text-status-warning' },
+  'product.deleted':         { label: 'Produit supprimé',     Icon: Trash2,       color: 'text-status-error' },
   'stock.entry':             { label: 'Approvisionnement',    Icon: Warehouse,    color: 'text-blue-400' },
-  'user.role_changed':       { label: 'Rôle modifié',         Icon: UserCog,      color: 'text-amber-400' },
-  'user.removed':            { label: 'Membre retiré',        Icon: UserMinus,    color: 'text-red-400' },
-  'user.invited':            { label: 'Invitation envoyée',   Icon: UserPlus,     color: 'text-green-400' },
-  'user.login':              { label: 'Connexion',            Icon: LogIn,        color: 'text-slate-400' },
-  'settings.updated':        { label: 'Paramètres modifiés',  Icon: Settings,     color: 'text-slate-400' },
-  'coupon.created':          { label: 'Coupon créé',          Icon: Tag,          color: 'text-green-400' },
-  'coupon.deleted':          { label: 'Coupon supprimé',      Icon: Tag,          color: 'text-red-400' },
-  'cash_session.opened':     { label: 'Caisse ouverte',       Icon: ShieldAlert,  color: 'text-brand-400' },
-  'cash_session.closed':     { label: 'Caisse clôturée',      Icon: ShieldAlert,  color: 'text-purple-400' },
-  'user.blocked':            { label: 'Utilisateur bloqué',   Icon: UserMinus,    color: 'text-red-400' },
-  'user.unblocked':          { label: 'Utilisateur débloqué', Icon: UserPlus,     color: 'text-green-400' },
-  'user.password_reset':     { label: 'MDP réinitialisé',     Icon: UserCog,      color: 'text-amber-400' },
-  'subscription.activated':  { label: 'Abonnement activé',    Icon: ShieldAlert,  color: 'text-green-400' },
-  'snapshot.created':              { label: 'Snapshot créé',          Icon: History,    color: 'text-brand-400' },
-  'snapshot.restored':             { label: 'Restauration effectuée', Icon: RotateCcw,  color: 'text-amber-400' },
-  'hotel.reservation.created':     { label: 'Réservation hôtel',      Icon: BedDouble,       color: 'text-teal-400' },
-  'hotel.reservation.cancelled':   { label: 'Réservation annulée',    Icon: CalendarX,       color: 'text-red-400' },
-  'hotel.checkin':                 { label: 'Check-in',               Icon: LogIn,           color: 'text-green-400' },
-  'hotel.checkout':                { label: 'Check-out',              Icon: LogOut,          color: 'text-teal-400' },
-  'hotel.payment':                 { label: 'Acompte / Paiement',     Icon: CreditCard,      color: 'text-teal-400' },
-  'dossier.created':               { label: 'Dossier créé',           Icon: Briefcase,       color: 'text-purple-400' },
-  'dossier.updated':               { label: 'Dossier modifié',        Icon: Pencil,          color: 'text-amber-400' },
-  'dossier.archived':              { label: 'Dossier archivé',        Icon: Archive,         color: 'text-slate-400' },
-  'dossier.unarchived':            { label: 'Dossier désarchivé',     Icon: ArchiveRestore,  color: 'text-green-400' },
-  'honoraire.added':               { label: 'Honoraire ajouté',       Icon: Receipt,         color: 'text-emerald-400' },
-  'honoraire.paid':                { label: 'Honoraire encaissé',     Icon: CreditCard,      color: 'text-emerald-400' },
+  'user.role_changed':       { label: 'Rôle modifié',         Icon: UserCog,      color: 'text-status-warning' },
+  'user.removed':            { label: 'Membre retiré',        Icon: UserMinus,    color: 'text-status-error' },
+  'user.invited':            { label: 'Invitation envoyée',   Icon: UserPlus,     color: 'text-status-success' },
+  'user.login':              { label: 'Connexion',            Icon: LogIn,        color: 'text-content-secondary' },
+  'settings.updated':        { label: 'Paramètres modifiés',  Icon: Settings,     color: 'text-content-secondary' },
+  'coupon.created':          { label: 'Coupon créé',          Icon: Tag,          color: 'text-status-success' },
+  'coupon.deleted':          { label: 'Coupon supprimé',      Icon: Tag,          color: 'text-status-error' },
+  'cash_session.opened':     { label: 'Caisse ouverte',       Icon: ShieldAlert,  color: 'text-content-brand' },
+  'cash_session.closed':     { label: 'Caisse clôturée',      Icon: ShieldAlert,  color: 'text-status-purple' },
+  'user.blocked':            { label: 'Utilisateur bloqué',   Icon: UserMinus,    color: 'text-status-error' },
+  'user.unblocked':          { label: 'Utilisateur débloqué', Icon: UserPlus,     color: 'text-status-success' },
+  'user.password_reset':     { label: 'MDP réinitialisé',     Icon: UserCog,      color: 'text-status-warning' },
+  'subscription.activated':  { label: 'Abonnement activé',    Icon: ShieldAlert,  color: 'text-status-success' },
+  'snapshot.created':              { label: 'Snapshot créé',          Icon: History,    color: 'text-content-brand' },
+  'snapshot.restored':             { label: 'Restauration effectuée', Icon: RotateCcw,  color: 'text-status-warning' },
+  'hotel.reservation.created':     { label: 'Réservation hôtel',      Icon: BedDouble,       color: 'text-status-teal' },
+  'hotel.reservation.cancelled':   { label: 'Réservation annulée',    Icon: CalendarX,       color: 'text-status-error' },
+  'hotel.checkin':                 { label: 'Check-in',               Icon: LogIn,           color: 'text-status-success' },
+  'hotel.checkout':                { label: 'Check-out',              Icon: LogOut,          color: 'text-status-teal' },
+  'hotel.payment':                 { label: 'Acompte / Paiement',     Icon: CreditCard,      color: 'text-status-teal' },
+  'dossier.created':               { label: 'Dossier créé',           Icon: Briefcase,       color: 'text-status-purple' },
+  'dossier.updated':               { label: 'Dossier modifié',        Icon: Pencil,          color: 'text-status-warning' },
+  'dossier.archived':              { label: 'Dossier archivé',        Icon: Archive,         color: 'text-content-secondary' },
+  'dossier.unarchived':            { label: 'Dossier désarchivé',     Icon: ArchiveRestore,  color: 'text-status-success' },
+  'honoraire.added':               { label: 'Honoraire ajouté',       Icon: Receipt,         color: 'text-status-success' },
+  'honoraire.paid':                { label: 'Honoraire encaissé',     Icon: CreditCard,      color: 'text-status-success' },
 };
 
 function getActionConfig(action: string) {
-  return ACTION_CONFIG[action] ?? { label: action, Icon: Filter, color: 'text-slate-400' };
+  return ACTION_CONFIG[action] ?? { label: action, Icon: Filter, color: 'text-content-secondary' };
 }
 
 function metaSummary(metadata: Record<string, unknown> | null): string {
@@ -155,7 +155,7 @@ export default function ActivityPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-content-secondary">
         <ShieldAlert className="w-10 h-10 opacity-40" />
         <p>Accès réservé aux administrateurs</p>
       </div>
@@ -193,7 +193,7 @@ export default function ActivityPage() {
         <div className="flex flex-wrap gap-3">
           {/* Recherche */}
           <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
             <input
               type="text"
               placeholder="Rechercher par utilisateur, action, ID…"
@@ -237,16 +237,16 @@ export default function ActivityPage() {
       {/* Tableau */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-slate-400">Chargement…</div>
+          <div className="flex items-center justify-center h-32 text-content-secondary">Chargement…</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+          <div className="flex flex-col items-center justify-center h-32 text-content-secondary">
             <Filter className="w-8 h-8 mb-2 opacity-40" />
             <p>Aucun événement trouvé</p>
           </div>
         ) : (
           <table className="w-full">
             <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
-              <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
+              <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
                 <th className="px-4 py-3 whitespace-nowrap">Date / Heure</th>
                 <th className="px-4 py-3 whitespace-nowrap">Utilisateur</th>
                 <th className="px-4 py-3 whitespace-nowrap">Action</th>
@@ -264,7 +264,7 @@ export default function ActivityPage() {
                     className="border-b border-surface-border hover:bg-surface-hover transition-colors"
                   >
                     {/* Date */}
-                    <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-content-secondary whitespace-nowrap">
                       <p>{format(new Date(log.created_at), 'dd MMM yyyy', { locale: fr })}</p>
                       <p className="text-slate-500">{format(new Date(log.created_at), 'HH:mm:ss')}</p>
                     </td>
@@ -288,7 +288,7 @@ export default function ActivityPage() {
                     {/* Entité */}
                     <td className="px-4 py-3 text-xs hidden md:table-cell">
                       {log.entity_type && (
-                        <span className="px-2 py-0.5 rounded-md bg-surface-input text-slate-400 capitalize">
+                        <span className="px-2 py-0.5 rounded-md bg-surface-input text-content-secondary capitalize">
                           {log.entity_type}
                         </span>
                       )}
@@ -298,7 +298,7 @@ export default function ActivityPage() {
                     </td>
 
                     {/* Détails */}
-                    <td className="px-4 py-3 text-xs text-slate-400 hidden lg:table-cell max-w-xs truncate">
+                    <td className="px-4 py-3 text-xs text-content-secondary hidden lg:table-cell max-w-xs truncate">
                       {metaSummary(log.metadata)}
                     </td>
                   </tr>

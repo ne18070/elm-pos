@@ -139,11 +139,11 @@ export default function DepensesPage() {
       <div className="p-6 border-b border-surface-border flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <TrendingDown className="w-5 h-5 text-red-400" />
+            <TrendingDown className="w-5 h-5 text-status-error" />
             Dépenses
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Ce mois : <span className="text-red-400 font-semibold">{fmtMoney(totalMonth, currency)}</span>
+            Ce mois : <span className="text-status-error font-semibold">{fmtMoney(totalMonth, currency)}</span>
           </p>
         </div>
         <button
@@ -190,7 +190,7 @@ export default function DepensesPage() {
 
               {/* Montant */}
               <div>
-                <label className="label">Montant <span className="text-red-400">*</span></label>
+                <label className="label">Montant <span className="text-status-error">*</span></label>
                 <input
                   type="number"
                   min="0"
@@ -225,7 +225,7 @@ export default function DepensesPage() {
                       className={`flex-1 py-2 rounded-lg border text-sm transition-all ${
                         form.payMethod === v
                           ? 'border-brand-600 bg-brand-600/10 text-white'
-                          : 'border-surface-border text-slate-400 hover:border-slate-600'
+                          : 'border-surface-border text-content-secondary hover:border-slate-600'
                       }`}
                     >
                       {lbl}
@@ -268,7 +268,7 @@ export default function DepensesPage() {
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-border text-xs text-slate-400 uppercase tracking-wide">
+                <tr className="border-b border-surface-border text-xs text-content-secondary uppercase tracking-wide">
                   <th className="px-4 py-3 text-left w-6" />
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Description</th>
@@ -293,12 +293,12 @@ export default function DepensesPage() {
                         <td className="px-3 py-3 text-slate-500">
                           {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{fmtDate(e.entry_date)}</td>
+                        <td className="px-4 py-3 text-content-secondary whitespace-nowrap">{fmtDate(e.entry_date)}</td>
                         <td className="px-4 py-3 text-white">{e.description}</td>
-                        <td className="px-4 py-3 text-slate-400 hidden sm:table-cell text-xs">
+                        <td className="px-4 py-3 text-content-secondary hidden sm:table-cell text-xs">
                           {debitLine?.account_name ?? '—'}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono font-semibold text-red-400">
+                        <td className="px-4 py-3 text-right font-mono font-semibold text-status-error">
                           -{fmtMoney(amount, currency)}
                         </td>
                         {isOwnerOrAdmin && (
@@ -307,8 +307,8 @@ export default function DepensesPage() {
                               onClick={(ev) => { ev.stopPropagation(); handleDelete(e.id); }}
                               className={`p-1.5 rounded-lg transition-colors ${
                                 deletingId === e.id
-                                  ? 'text-red-400 bg-red-900/30'
-                                  : 'text-slate-600 hover:text-red-400 hover:bg-red-900/20'
+                                  ? 'text-status-error bg-badge-error'
+                                  : 'text-slate-600 hover:text-status-error hover:bg-badge-error'
                               }`}
                               title={deletingId === e.id ? 'Confirmer la suppression' : 'Supprimer'}
                             >
@@ -321,7 +321,7 @@ export default function DepensesPage() {
                         <tr key={`${e.id}-detail`} className="bg-surface-input/50">
                           <td />
                           <td colSpan={isOwnerOrAdmin ? 5 : 4} className="px-4 py-3">
-                            <div className="flex gap-8 text-xs text-slate-400">
+                            <div className="flex gap-8 text-xs text-content-secondary">
                               <span>Débit : <span className="text-white font-mono">{debitLine?.account_code} – {debitLine?.account_name}</span></span>
                               <span>Crédit : <span className="text-white font-mono">{creditLine?.account_code} – {creditLine?.account_name}</span></span>
                             </div>

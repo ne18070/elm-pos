@@ -29,15 +29,15 @@ function fmtDate(dateStr: string | null) {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  active:  'text-green-400 bg-green-900/20 border-green-800',
-  trial:   'text-amber-400 bg-amber-900/20 border-amber-800',
-  expired: 'text-red-400 bg-red-900/20 border-red-800',
+  active:  'text-status-success bg-badge-success border-status-success',
+  trial:   'text-status-warning bg-badge-warning border-status-warning',
+  expired: 'text-status-error bg-badge-error border-status-error',
 };
 const STATUS_LABEL: Record<string, string> = { active: 'Actif', trial: 'Essai', expired: 'Expiré' };
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, sub, color = 'text-brand-400' }:
+function StatCard({ icon: Icon, label, value, sub, color = 'text-content-brand' }:
   { icon: React.ElementType; label: string; value: number; sub?: string; color?: string }) {
   return (
     <div className="card p-4 flex items-center gap-4">
@@ -46,7 +46,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'text-brand-400' }:
       </div>
       <div>
         <p className="text-2xl font-bold text-white">{value}</p>
-        <p className="text-xs text-slate-400">{label}</p>
+        <p className="text-xs text-content-secondary">{label}</p>
         {sub && <p className="text-xs text-slate-500">{sub}</p>}
       </div>
     </div>
@@ -109,9 +109,9 @@ function BusinessConfigModal({
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
           <div>
             <p className="text-white font-semibold">{row.business_name}</p>
-            <p className="text-xs text-slate-400 mt-0.5">Type & modules</p>
+            <p className="text-xs text-content-secondary mt-0.5">Type & modules</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -119,7 +119,7 @@ function BusinessConfigModal({
         <div className="overflow-y-auto flex-1 p-4 space-y-4">
           {/* Types */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
               Types d&apos;établissement <span className="text-slate-600 font-normal normal-case">(plusieurs possibles)</span>
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -131,13 +131,13 @@ function BusinessConfigModal({
                     onClick={() => toggleType(t.id)}
                     className={cn(
                       'p-3 rounded-xl border-2 text-left transition-all flex items-center gap-2',
-                      active ? 'border-brand-600 bg-brand-900/20' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
+                      active ? 'border-brand-600 bg-badge-brand' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
                     )}
                   >
                     {active
-                      ? <ToggleRight className="w-4 h-4 text-brand-400 shrink-0" />
+                      ? <ToggleRight className="w-4 h-4 text-content-brand shrink-0" />
                       : <ToggleLeft  className="w-4 h-4 text-slate-600 shrink-0" />}
-                    <p className={cn('text-sm font-medium', active ? 'text-brand-300' : 'text-slate-300')}>
+                    <p className={cn('text-sm font-medium', active ? 'text-content-brand' : 'text-slate-300')}>
                       {t.label}
                     </p>
                   </button>
@@ -148,7 +148,7 @@ function BusinessConfigModal({
 
           {/* Modules */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
               Modules actifs
               <span className="text-slate-600 font-normal normal-case ml-1">— le client verra uniquement ceux activés ici</span>
             </p>
@@ -161,14 +161,14 @@ function BusinessConfigModal({
                     onClick={() => toggleFeature(m.id)}
                     className={cn(
                       'w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all',
-                      enabled ? 'border-brand-600 bg-brand-900/20' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
+                      enabled ? 'border-brand-600 bg-badge-brand' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
                     )}
                   >
                     {enabled
-                      ? <ToggleRight className="w-6 h-6 text-brand-400 shrink-0" />
+                      ? <ToggleRight className="w-6 h-6 text-content-brand shrink-0" />
                       : <ToggleLeft  className="w-6 h-6 text-slate-600 shrink-0" />}
                     <div>
-                      <p className={cn('text-sm font-medium', enabled ? 'text-brand-300' : 'text-slate-400')}>{m.label}</p>
+                      <p className={cn('text-sm font-medium', enabled ? 'text-content-brand' : 'text-content-secondary')}>{m.label}</p>
                       {m.description && <p className="text-xs text-slate-500">{m.description}</p>}
                     </div>
                   </button>
@@ -179,7 +179,7 @@ function BusinessConfigModal({
         </div>
 
         <div className="flex items-center justify-between gap-3 p-4 border-t border-surface-border shrink-0">
-          {err && <p className="text-xs text-red-400 flex-1">{err}</p>}
+          {err && <p className="text-xs text-status-error flex-1">{err}</p>}
           <div className="flex gap-2 ml-auto">
             <button onClick={onClose} className="btn-secondary text-sm">Annuler</button>
             <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">
@@ -249,19 +249,19 @@ function OwnerRow({
   const totalProducts  = group.businesses.reduce((s, b) => s + b.products_count, 0);
 
   return (
-    <div className={cn('rounded-xl border overflow-hidden transition-colors', expiringSoon ? 'border-amber-800 bg-amber-900/5' : 'border-surface-border bg-surface-card')}>
+    <div className={cn('rounded-xl border overflow-hidden transition-colors', expiringSoon ? 'border-status-warning bg-badge-warning' : 'border-surface-border bg-surface-card')}>
       {/* Owner header row */}
       <button
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center gap-4 px-4 py-3 hover:bg-surface-hover transition-colors text-left"
       >
         {/* Expand icon */}
-        <ChevronDown className={cn('w-4 h-4 text-slate-400 shrink-0 transition-transform', expanded && 'rotate-180')} />
+        <ChevronDown className={cn('w-4 h-4 text-content-secondary shrink-0 transition-transform', expanded && 'rotate-180')} />
 
         {/* Owner info */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">
-            {expiringSoon && <AlertTriangle className="w-3.5 h-3.5 text-amber-400 inline mr-1.5 -mt-0.5" />}
+            {expiringSoon && <AlertTriangle className="w-3.5 h-3.5 text-status-warning inline mr-1.5 -mt-0.5" />}
             {group.owner_name ?? '—'}
           </p>
           <p className="text-xs text-slate-500 truncate">{group.owner_email ?? ''}</p>
@@ -269,7 +269,7 @@ function OwnerRow({
 
         {/* Plan + status */}
         <div className="hidden sm:flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-400">{group.plan_label ?? '—'}</span>
+          <span className="text-xs text-content-secondary">{group.plan_label ?? '—'}</span>
           <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs border', STATUS_STYLE[st])}>
             {STATUS_LABEL[st]}
           </span>
@@ -277,7 +277,7 @@ function OwnerRow({
 
         {/* Expiry */}
         <div className="hidden md:block text-xs shrink-0">
-          <span className={expiringSoon ? 'text-amber-400 font-medium' : 'text-slate-500'}>
+          <span className={expiringSoon ? 'text-status-warning font-medium' : 'text-slate-500'}>
             {fmtDate(expiry)}
             {expiringSoon && days !== null && <span className="ml-1">({days}j)</span>}
           </span>
@@ -285,8 +285,8 @@ function OwnerRow({
 
         {/* Quick stats */}
         <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 shrink-0">
-          <span><span className="text-orange-400 font-medium">{totalProducts}</span> produits</span>
-          <span><span className="text-green-400 font-medium">{totalOrders30d}</span> cmd/30j</span>
+          <span><span className="text-status-orange font-medium">{totalProducts}</span> produits</span>
+          <span><span className="text-status-success font-medium">{totalOrders30d}</span> cmd/30j</span>
           <span className="text-slate-600">{group.businesses.length} établ.</span>
         </div>
       </button>
@@ -313,7 +313,7 @@ function OwnerRow({
                 <div className="hidden md:flex flex-wrap gap-1 max-w-[200px]">
                   {biz.features.length > 0
                     ? biz.features.slice(0, 3).map((f) => (
-                        <span key={f} className="text-xs px-1.5 py-0.5 rounded bg-brand-900/30 text-brand-400 border border-brand-800">
+                        <span key={f} className="text-xs px-1.5 py-0.5 rounded bg-badge-brand text-content-brand border border-brand-800">
                           {f}
                         </span>
                       ))
@@ -325,8 +325,8 @@ function OwnerRow({
 
                 {/* Stats */}
                 <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 shrink-0">
-                  <span><span className="text-orange-400">{biz.products_count}</span> prod.</span>
-                  <span><span className="text-green-400">{biz.orders_30d}</span> cmd</span>
+                  <span><span className="text-status-orange">{biz.products_count}</span> prod.</span>
+                  <span><span className="text-status-success">{biz.orders_30d}</span> cmd</span>
                   <span><span className="text-cyan-400">{biz.members_count}</span> mbr</span>
                 </div>
 
@@ -334,7 +334,7 @@ function OwnerRow({
                 <button
                   onClick={() => onConfigClick(biz)}
                   title="Gérer type & modules"
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-900/20 transition-colors shrink-0"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-content-brand hover:bg-badge-brand transition-colors shrink-0"
                 >
                   <Settings className="w-4 h-4" />
                 </button>
@@ -425,16 +425,16 @@ export function MonitoringTab() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={Store}         label="Établissements"  value={rows.length}  color="text-brand-400" />
-        <StatCard icon={Users}         label="Actifs"          value={active}       color="text-green-400" />
-        <StatCard icon={Clock}         label="Essai"           value={trial}        color="text-amber-400" />
-        <StatCard icon={AlertTriangle} label="Expirés"         value={expired}      color="text-red-400"
+        <StatCard icon={Store}         label="Établissements"  value={rows.length}  color="text-content-brand" />
+        <StatCard icon={Users}         label="Actifs"          value={active}       color="text-status-success" />
+        <StatCard icon={Clock}         label="Essai"           value={trial}        color="text-status-warning" />
+        <StatCard icon={AlertTriangle} label="Expirés"         value={expired}      color="text-status-error"
           sub={expiring > 0 ? `⚠ ${expiring} expirent bientôt` : undefined} />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <StatCard icon={TrendingUp}   label="Commandes (30j)"   value={orders30d}     color="text-purple-400" />
+        <StatCard icon={TrendingUp}   label="Commandes (30j)"   value={orders30d}     color="text-status-purple" />
         <StatCard icon={ShoppingCart} label="Commandes (total)"  value={totalOrders}   color="text-cyan-400" />
-        <StatCard icon={Package}      label="Produits actifs"    value={totalProducts} color="text-orange-400" />
+        <StatCard icon={Package}      label="Produits actifs"    value={totalProducts} color="text-status-orange" />
       </div>
 
       {/* Filters + search */}
@@ -449,7 +449,7 @@ export function MonitoringTab() {
           {(['all', 'active', 'trial', 'expired', 'expiring'] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
               className={cn('px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                filter === f ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white')}>
+                filter === f ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white')}>
               {f === 'all' ? 'Tous' : f === 'active' ? 'Actifs' : f === 'trial' ? 'Essai'
                 : f === 'expired' ? 'Expirés' : '⚠ Expirent bientôt'}
             </button>
@@ -460,7 +460,7 @@ export function MonitoringTab() {
       {/* Owner groups */}
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
         </div>
       ) : filteredGroups.length === 0 ? (
         <p className="text-center text-slate-500 py-12">Aucun résultat</p>

@@ -38,20 +38,20 @@ export function ClientsTab({ filteredGuests, search, loading, onSearchChange, op
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl">
         {filteredGuests.map((g) => (
           <div key={g.id} className="card p-4 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-brand-400">
+            <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
               {g.full_name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{g.full_name}</p>
-              {g.phone && <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{g.phone}</p>}
+              {g.phone && <p className="text-xs text-content-secondary flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{g.phone}</p>}
               {g.nationality && <p className="text-xs text-slate-500">{g.nationality}</p>}
               {g.id_number && <p className="text-xs text-slate-500">{g.id_type} {g.id_number}</p>}
             </div>
             <div className="flex gap-1 shrink-0">
-              <button onClick={() => openGuestPanel(g)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+              <button onClick={() => openGuestPanel(g)} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => removeGuest(g.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20">
+              <button onClick={() => removeGuest(g.id)} className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>

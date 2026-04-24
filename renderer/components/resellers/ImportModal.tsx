@@ -188,7 +188,7 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
               {step === 'done' && `${okCount} importé${okCount > 1 ? 's' : ''} · ${errCount} erreur${errCount !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+          <button onClick={onClose} className="p-2 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -219,7 +219,7 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
                 onDrop={handleDrop}
                 onClick={() => inputRef.current?.click()}
                 className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl py-12 cursor-pointer transition-colors
-                  ${dragOver ? 'border-brand-400 bg-brand-900/10' : 'border-slate-700 hover:border-slate-500'}`}
+                  ${dragOver ? 'border-brand-400 bg-badge-brand' : 'border-slate-700 hover:border-slate-500'}`}
               >
                 <Upload className="w-10 h-10 text-slate-500" />
                 <div className="text-center">
@@ -236,7 +236,7 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
               </div>
 
               {type === 'clients' && resellers.length === 0 && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-900/10 border border-amber-800 text-amber-400 text-sm">
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-badge-warning border border-status-warning text-status-warning text-sm">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   Aucun revendeur existant. Importez d'abord les revendeurs.
                 </div>
@@ -250,11 +250,11 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-surface-border bg-surface-input">
-                    <th className="px-4 py-2.5 text-left text-xs text-slate-400 font-medium w-10">#</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-content-secondary font-medium w-10">#</th>
                     {headers.map((h) => (
-                      <th key={h} className="px-4 py-2.5 text-left text-xs text-slate-400 font-medium">{h}</th>
+                      <th key={h} className="px-4 py-2.5 text-left text-xs text-content-secondary font-medium">{h}</th>
                     ))}
-                    <th className="px-4 py-2.5 text-left text-xs text-slate-400 font-medium w-48">Statut</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-content-secondary font-medium w-48">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -263,24 +263,24 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
                     const status = result?.status ?? 'pending';
                     return (
                       <tr key={i} className={`border-b border-surface-border transition-colors
-                        ${status === 'ok'    ? 'bg-green-900/10' :
-                          status === 'error' ? 'bg-red-900/10' : 'hover:bg-surface-hover'}`}>
+                        ${status === 'ok'    ? 'bg-badge-success' :
+                          status === 'error' ? 'bg-badge-error' : 'hover:bg-surface-hover'}`}>
                         <td className="px-4 py-2 text-slate-500 text-xs">{i + 1}</td>
                         {headers.map((_, ci) => (
-                          <td key={ci} className="px-4 py-2 text-slate-200 text-xs truncate max-w-[150px]">
+                          <td key={ci} className="px-4 py-2 text-content-primary text-xs truncate max-w-[150px]">
                             {row[ci] ?? ''}
                           </td>
                         ))}
                         <td className="px-4 py-2">
                           {status === 'pending' && <span className="text-xs text-slate-500">—</span>}
-                          {status === 'ok'      && <span className="flex items-center gap-1 text-xs text-green-400"><Check className="w-3 h-3" /> Importé</span>}
+                          {status === 'ok'      && <span className="flex items-center gap-1 text-xs text-status-success"><Check className="w-3 h-3" /> Importé</span>}
                           {status === 'error'   && (
-                            <span className="flex items-center gap-1 text-xs text-red-400">
+                            <span className="flex items-center gap-1 text-xs text-status-error">
                               <AlertTriangle className="w-3 h-3 shrink-0" />
                               <span className="truncate">{result.message ?? 'Erreur'}</span>
                             </span>
                           )}
-                          {importing && status === 'pending' && <Loader2 className="w-3 h-3 text-slate-400 animate-spin" />}
+                          {importing && status === 'pending' && <Loader2 className="w-3 h-3 text-content-secondary animate-spin" />}
                         </td>
                       </tr>
                     );

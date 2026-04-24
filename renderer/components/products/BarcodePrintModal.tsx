@@ -218,10 +218,10 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-surface-border">
           <div className="flex items-center gap-2">
-            <Barcode className="w-5 h-5 text-brand-400" />
+            <Barcode className="w-5 h-5 text-content-brand" />
             <h2 className="text-white font-semibold">Imprimer codes-barres</h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -236,7 +236,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
               onChange={toggleAll}
               className="w-4 h-4 accent-brand-500"
             />
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-content-secondary">
               Tout sélectionner · {selected.length} sélectionné{selected.length > 1 ? 's' : ''}
             </span>
           </div>
@@ -259,9 +259,9 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{item.product.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-xs font-mono text-slate-400">{item.barcode}</span>
+                    <span className="text-xs font-mono text-content-secondary">{item.barcode}</span>
                     {item.isNew && (
-                      <span className="text-[10px] bg-amber-900/40 text-amber-400 border border-amber-700 px-1 rounded">auto</span>
+                      <span className="text-[10px] bg-badge-warning text-status-warning border border-status-warning px-1 rounded">auto</span>
                     )}
                     <button
                       onClick={() => regenerate(item.product.id)}
@@ -278,7 +278,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
                   <button
                     onClick={() => setQty(item.product.id, -1)}
                     disabled={!item.selected}
-                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-content-secondary hover:text-white disabled:opacity-30 transition-colors"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
@@ -286,7 +286,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
                   <button
                     onClick={() => setQty(item.product.id, +1)}
                     disabled={!item.selected}
-                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+                    className="w-6 h-6 rounded bg-surface-input flex items-center justify-center text-content-secondary hover:text-white disabled:opacity-30 transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                   </button>

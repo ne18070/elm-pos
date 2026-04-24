@@ -28,9 +28,9 @@ const TABLE_LABELS: Record<SnapshotTable, string> = {
 };
 
 const TYPE_CONFIG = {
-  manual:      { label: 'Manuel',           color: 'bg-brand-600/10 text-brand-400 border-brand-600/20' },
-  auto:        { label: 'Automatique',      color: 'bg-slate-700 text-slate-400 border-slate-600' },
-  pre_restore: { label: 'Sécurité',         color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+  manual:      { label: 'Manuel',           color: 'bg-brand-600/10 text-content-brand border-brand-600/20' },
+  auto:        { label: 'Automatique',      color: 'bg-slate-700 text-content-secondary border-slate-600' },
+  pre_restore: { label: 'Sécurité',         color: 'bg-amber-500/10 text-status-warning border-amber-500/20' },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -150,10 +150,10 @@ export default function RecoveryPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <History className="w-6 h-6 text-brand-400" />
+            <History className="w-6 h-6 text-content-brand" />
             Récupération & Sauvegardes
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">
+          <p className="text-content-secondary mt-1 text-sm">
             Restaurez vos données (produits, catégories, coupons) à n&apos;importe quel moment passé.
           </p>
         </div>
@@ -171,7 +171,7 @@ export default function RecoveryPage() {
       {/* Explication */}
       <div className="card p-4 border-brand-600/20 bg-brand-600/5 space-y-3">
         <h2 className="font-semibold text-white flex items-center gap-2 text-sm">
-          <Info className="w-4 h-4 text-brand-400" />
+          <Info className="w-4 h-4 text-content-brand" />
           Comment fonctionne la récupération ?
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
@@ -182,10 +182,10 @@ export default function RecoveryPage() {
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex gap-3">
               <div className="w-8 h-8 rounded-lg bg-surface-hover flex items-center justify-center shrink-0">
-                <Icon className="w-4 h-4 text-brand-400" />
+                <Icon className="w-4 h-4 text-content-brand" />
               </div>
               <div>
-                <p className="font-medium text-slate-200">{title}</p>
+                <p className="font-medium text-content-primary">{title}</p>
                 <p className="text-slate-500 text-xs mt-0.5">{desc}</p>
               </div>
             </div>
@@ -227,9 +227,9 @@ export default function RecoveryPage() {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Manuels',    count: manualCount,  color: 'text-brand-400' },
-          { label: 'Auto',       count: autoCount,    color: 'text-slate-400' },
-          { label: 'Sécurité',   count: safetyCount,  color: 'text-amber-400' },
+          { label: 'Manuels',    count: manualCount,  color: 'text-content-brand' },
+          { label: 'Auto',       count: autoCount,    color: 'text-content-secondary' },
+          { label: 'Sécurité',   count: safetyCount,  color: 'text-status-warning' },
         ].map(s => (
           <div key={s.label} className="card p-4 text-center">
             <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
@@ -242,12 +242,12 @@ export default function RecoveryPage() {
       <div className="space-y-3">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
           </div>
         ) : snapshots.length === 0 ? (
           <div className="card p-10 text-center">
             <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400">Aucun snapshot disponible</p>
+            <p className="text-content-secondary">Aucun snapshot disponible</p>
             <p className="text-slate-600 text-sm mt-1">
               Créez un snapshot manuel ou attendez le snapshot automatique de nuit.
             </p>
@@ -320,10 +320,10 @@ function SnapshotCard({
           'bg-slate-700'
         }`}>
           {snap.type === 'pre_restore'
-            ? <ShieldCheck className="w-5 h-5 text-amber-400" />
+            ? <ShieldCheck className="w-5 h-5 text-status-warning" />
             : snap.type === 'auto'
-            ? <Clock className="w-5 h-5 text-slate-400" />
-            : <History className="w-5 h-5 text-brand-400" />}
+            ? <Clock className="w-5 h-5 text-content-secondary" />
+            : <History className="w-5 h-5 text-content-brand" />}
         </div>
 
         {/* Info */}
@@ -356,7 +356,7 @@ function SnapshotCard({
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onPreview}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+            className="p-2 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
             title="Aperçu du contenu"
           >
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -364,7 +364,7 @@ function SnapshotCard({
           {isOwnerOrAdmin && (
             <button
               onClick={onRestore}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-600/10 text-brand-400
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-600/10 text-content-brand
                          hover:bg-brand-600/20 transition-colors border border-brand-600/20"
             >
               Restaurer
@@ -373,7 +373,7 @@ function SnapshotCard({
           {isOwnerOrAdmin && snap.type !== 'pre_restore' && (
             <button
               onClick={onDelete}
-              className="p-2 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="p-2 rounded-lg text-slate-600 hover:text-status-error hover:bg-red-500/10 transition-colors"
               title="Supprimer le snapshot"
             >
               <Trash2 className="w-4 h-4" />
@@ -386,7 +386,7 @@ function SnapshotCard({
       {isExpanded && (
         <div className="border-t border-surface-border px-4 py-3 bg-surface-hover/30">
           {previewLoading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-400">
+            <div className="flex items-center gap-2 text-sm text-content-secondary">
               <Loader2 className="w-4 h-4 animate-spin" />
               Chargement de l&apos;aperçu…
             </div>
@@ -424,10 +424,10 @@ function RestoreModal({
         {/* Header */}
         <div className="px-6 py-4 border-b border-surface-border">
           <h2 className="font-semibold text-white flex items-center gap-2">
-            <RotateCcw className="w-4 h-4 text-brand-400" />
+            <RotateCcw className="w-4 h-4 text-content-brand" />
             Restaurer un snapshot
           </h2>
-          <p className="text-sm text-slate-400 mt-0.5 truncate">{snap.label}</p>
+          <p className="text-sm text-content-secondary mt-0.5 truncate">{snap.label}</p>
           <p className="text-xs text-slate-500 mt-0.5">
             {format(new Date(snap.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
           </p>
@@ -438,11 +438,11 @@ function RestoreModal({
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <CheckCircle2 className="w-5 h-5 text-status-success" />
               </div>
               <div>
                 <p className="font-medium text-white">Restauration effectuée</p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-content-secondary mt-0.5">
                   Un snapshot de sécurité a été créé avant la restauration.
                 </p>
               </div>
@@ -467,8 +467,8 @@ function RestoreModal({
           <div className="p-6 space-y-5">
             {/* Warning */}
             <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
+              <p className="text-sm text-status-warning">
                 Un snapshot de sécurité de l&apos;état actuel sera créé automatiquement
                 avant toute modification.
               </p>
@@ -551,7 +551,7 @@ function PreviewStat({ icon: Icon, label, count }: { icon: React.ElementType; la
 function ResultRow({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-surface-border last:border-0">
-      <span className="text-slate-400">{label}</span>
+      <span className="text-content-secondary">{label}</span>
       <span className="font-medium text-white">{count}</span>
     </div>
   );

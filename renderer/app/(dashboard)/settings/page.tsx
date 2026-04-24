@@ -374,12 +374,12 @@ export default function SettingsPage() {
                     {selectedTypes.length > 0 ? selectedTypes.map(t => {
                       const Icon = getIcon(t.icon);
                       return (
-                        <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-900/30 border border-brand-800/50">
-                          <Icon className="w-3.5 h-3.5 text-brand-400" />
+                        <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-badge-brand border border-brand-800/50">
+                          <Icon className="w-3.5 h-3.5 text-content-brand" />
                           <span className="text-sm font-semibold text-white">{t.label}</span>
                         </div>
                       );
-                    }) : <p className="text-sm text-slate-400 font-medium italic">Aucun type défini</p>}
+                    }) : <p className="text-sm text-content-secondary font-medium italic">Aucun type défini</p>}
                   </div>
                   <p className="text-xs text-slate-500 mt-3">Détermine les fonctionnalités disponibles dans votre espace de travail.</p>
                 </div>
@@ -454,7 +454,7 @@ export default function SettingsPage() {
             <h2 className="font-semibold text-white flex items-center gap-2">
               Informations de l&apos;établissement
             </h2>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.etablissement ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.etablissement ? 'rotate-180' : ''}`} />
           </button>
           {openSections.etablissement && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
 
@@ -546,7 +546,7 @@ export default function SettingsPage() {
                 className="mt-2 flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
               >
                 {bizForm.tax_inclusive
-                  ? <ToggleRight className="w-5 h-5 text-brand-400" />
+                  ? <ToggleRight className="w-5 h-5 text-content-brand" />
                   : <ToggleLeft  className="w-5 h-5 text-slate-500" />}
                 <span>
                   TVA incluse dans les prix
@@ -602,7 +602,7 @@ export default function SettingsPage() {
                       setLogoUrl('');
                       success('Logo supprimé');
                     }}
-                    className="text-xs text-red-400 hover:text-red-400/80 font-medium flex items-center gap-1 px-1"
+                    className="text-xs text-status-error hover:text-status-error/80 font-medium flex items-center gap-1 px-1"
                   >
                     <X className="w-3 h-3" /> Supprimer le logo
                   </button>
@@ -628,10 +628,10 @@ export default function SettingsPage() {
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('stock')} className="w-full flex items-center justify-between p-5">
             <h2 className="font-semibold text-white flex items-center gap-2">
-              <Package className="w-4 h-4 text-slate-400" />
+              <Package className="w-4 h-4 text-content-secondary" />
               Unités de stock
             </h2>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.stock ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.stock ? 'rotate-180' : ''}`} />
           </button>
           {openSections.stock && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <p className="text-xs text-slate-500">
@@ -649,7 +649,7 @@ export default function SettingsPage() {
                 {unit}
                 <button
                   onClick={() => removeUnit(unit)}
-                  className="text-slate-500 hover:text-red-400 transition-colors"
+                  className="text-slate-500 hover:text-status-error transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -689,10 +689,10 @@ export default function SettingsPage() {
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('facture')} className="w-full flex items-center justify-between p-5">
             <h2 className="font-semibold text-white flex items-center gap-2">
-              <Printer className="w-4 h-4 text-slate-400" />
+              <Printer className="w-4 h-4 text-content-secondary" />
               Modèles de facture
             </h2>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.facture ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.facture ? 'rotate-180' : ''}`} />
           </button>
           {openSections.facture && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <p className="text-xs text-slate-500">
@@ -713,21 +713,21 @@ export default function SettingsPage() {
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('sync')} className="w-full flex items-center justify-between p-5">
             <h2 className="font-semibold text-white">Synchronisation & Mode hors ligne</h2>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.sync ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.sync ? 'rotate-180' : ''}`} />
           </button>
           {openSections.sync && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           <div className={`flex items-center gap-3 p-3 rounded-xl ${
-            isOnline ? 'bg-green-900/20 border border-green-800' : 'bg-yellow-900/20 border border-yellow-800'
+            isOnline ? 'bg-badge-success border border-status-success' : 'bg-yellow-900/20 border border-yellow-800'
           }`}>
             {isOnline
-              ? <Wifi className="w-5 h-5 text-green-400" />
-              : <WifiOff className="w-5 h-5 text-yellow-400" />}
+              ? <Wifi className="w-5 h-5 text-status-success" />
+              : <WifiOff className="w-5 h-5 text-status-warning" />}
             <div>
-              <p className={`text-sm font-medium ${isOnline ? 'text-green-400' : 'text-yellow-400'}`}>
+              <p className={`text-sm font-medium ${isOnline ? 'text-status-success' : 'text-status-warning'}`}>
                 {isOnline ? 'Connecté à Internet' : 'Mode hors ligne'}
               </p>
               {pendingCount > 0 && (
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-content-secondary">
                   {pendingCount} opération(s) en attente de synchronisation
                 </p>
               )}
@@ -749,10 +749,10 @@ export default function SettingsPage() {
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('printer')} className="w-full flex items-center justify-between p-5">
             <h2 className="font-semibold text-white flex items-center gap-2">
-              <Printer className="w-4 h-4 text-slate-400" />
+              <Printer className="w-4 h-4 text-content-secondary" />
               Imprimante thermique
             </h2>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.printer ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.printer ? 'rotate-180' : ''}`} />
           </button>
           {openSections.printer && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
           {/* Mode de connexion */}
@@ -766,7 +766,7 @@ export default function SettingsPage() {
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                     printerConfig.type === type
                       ? 'border-brand-600 bg-brand-600/10 text-white'
-                      : 'border-surface-border text-slate-400 hover:border-slate-600 hover:bg-surface-hover'
+                      : 'border-surface-border text-content-secondary hover:border-slate-600 hover:bg-surface-hover'
                   }`}
                 >
                   {type === 'usb'
@@ -779,7 +779,7 @@ export default function SettingsPage() {
 
           {/* USB */}
           {printerConfig.type === 'usb' && (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-content-secondary">
               L&apos;imprimante est détectée automatiquement.
               Vérifiez qu&apos;elle est bien branchée et allumée.
             </p>
@@ -826,8 +826,8 @@ export default function SettingsPage() {
               {printerTestResult && (
                 <div className={`flex items-start gap-2 p-3 rounded-xl border text-sm ${
                   printerTestResult.connected
-                    ? 'bg-green-900/20 border-green-800 text-green-400'
-                    : 'bg-red-900/20 border-red-800 text-red-400'
+                    ? 'bg-badge-success border-status-success text-status-success'
+                    : 'bg-badge-error border-status-error text-status-error'
                 }`}>
                   {printerTestResult.connected
                     ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
@@ -863,13 +863,13 @@ export default function SettingsPage() {
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('drawer')} className="w-full flex items-center justify-between p-5">
             <h2 className="font-semibold text-white flex items-center gap-2">
-              <Archive className="w-4 h-4 text-slate-400" />
+              <Archive className="w-4 h-4 text-content-secondary" />
               Tiroir-caisse
             </h2>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.drawer ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.drawer ? 'rotate-180' : ''}`} />
           </button>
           {openSections.drawer && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-content-secondary">
             Le tiroir-caisse s&apos;ouvre automatiquement via l&apos;imprimante thermique
             après chaque paiement en espèces.
           </p>
@@ -909,7 +909,7 @@ export default function SettingsPage() {
                   {testingDrawer ? 'Ouverture…' : 'Tester le tiroir'}
                 </button>
               ) : (
-                <p className="text-xs text-amber-400">
+                <p className="text-xs text-status-warning">
                   Test disponible uniquement dans l&apos;application Electron.
                 </p>
               )}
@@ -923,16 +923,16 @@ export default function SettingsPage() {
           <div className="card overflow-hidden">
             <button onClick={() => toggleSection('whatsapp')} className="w-full flex items-center justify-between p-5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-green-900/40 flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-green-400" />
+                <div className="w-8 h-8 rounded-xl bg-badge-success flex items-center justify-center">
+                  <MessageCircle className="w-4 h-4 text-status-success" />
                 </div>
                 <h2 className="font-semibold text-white">WhatsApp Business</h2>
               </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.whatsapp ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-content-secondary transition-transform ${openSections.whatsapp ? 'rotate-180' : ''}`} />
             </button>
             {openSections.whatsapp && <div className="px-5 pb-5 space-y-4 border-t border-surface-border pt-4">
             {!waLoaded ? (
-              <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <div className="flex items-center gap-2 text-content-secondary text-sm">
                 <Loader2 className="w-4 h-4 animate-spin" />Chargement…
               </div>
             ) : (
@@ -941,14 +941,14 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                   <div>
                     <p className="text-sm font-medium text-white">Intégration active</p>
-                    <p className="text-xs text-slate-400">Activez pour recevoir et répondre aux messages</p>
+                    <p className="text-xs text-content-secondary">Activez pour recevoir et répondre aux messages</p>
                   </div>
                   <button
                     onClick={() => setWaForm((f) => ({ ...f, is_active: !f.is_active }))}
-                    className="text-slate-400 hover:text-white transition-colors"
+                    className="text-content-secondary hover:text-white transition-colors"
                   >
                     {waForm.is_active
-                      ? <ToggleRight className="w-7 h-7 text-green-400" />
+                      ? <ToggleRight className="w-7 h-7 text-status-success" />
                       : <ToggleLeft className="w-7 h-7" />}
                   </button>
                 </div>
@@ -982,13 +982,13 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => setShowToken((s) => !s)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
                       >
                         {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Ce token vient de Meta : <span className="text-slate-400">developers.facebook.com → votre App → WhatsApp → Paramètres → Token d&apos;accès permanent</span>
+                      Ce token vient de Meta : <span className="text-content-secondary">developers.facebook.com → votre App → WhatsApp → Paramètres → Token d&apos;accès permanent</span>
                     </p>
                   </div>
 
@@ -1036,12 +1036,12 @@ export default function SettingsPage() {
                           : 'Régénérer'}
                       </button>
                     </div>
-                    <p className="text-xs text-amber-500/80 mt-1">
+                    <p className="text-xs text-status-warning/80 mt-1">
                       ⚠ Régénérer invalide l&apos;ancien token — vous devrez reconfigurer le webhook dans Meta.
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
                       URL du webhook :{' '}
-                      <span className="font-mono text-slate-400 select-all">
+                      <span className="font-mono text-content-secondary select-all">
                         [URL Supabase]/functions/v1/whatsapp-webhook
                       </span>
                     </p>
@@ -1052,14 +1052,14 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                   <div>
                     <p className="text-sm font-medium text-white">Catalogue interactif</p>
-                    <p className="text-xs text-slate-400">Les clients peuvent commander via un menu WhatsApp cliquable</p>
+                    <p className="text-xs text-content-secondary">Les clients peuvent commander via un menu WhatsApp cliquable</p>
                   </div>
                   <button
                     onClick={() => setWaForm((f) => ({ ...f, catalog_enabled: !f.catalog_enabled }))}
-                    className="text-slate-400 hover:text-white transition-colors"
+                    className="text-content-secondary hover:text-white transition-colors"
                   >
                     {waForm.catalog_enabled
-                      ? <ToggleRight className="w-7 h-7 text-brand-400" />
+                      ? <ToggleRight className="w-7 h-7 text-content-brand" />
                       : <ToggleLeft className="w-7 h-7" />}
                   </button>
                 </div>
@@ -1089,7 +1089,7 @@ export default function SettingsPage() {
                       className="input font-mono text-sm"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      Le client envoie ce mot pour voir le catalogue. Par défaut : <span className="font-mono text-slate-400">menu</span>
+                      Le client envoie ce mot pour voir le catalogue. Par défaut : <span className="font-mono text-content-secondary">menu</span>
                     </p>
                   </div>
                   <div>
@@ -1101,7 +1101,7 @@ export default function SettingsPage() {
                       className="input resize-none text-sm"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      Utilisez <span className="font-mono text-slate-400">{'{nom}'}</span> pour le nom de l&apos;établissement.
+                      Utilisez <span className="font-mono text-content-secondary">{'{nom}'}</span> pour le nom de l&apos;établissement.
                     </p>
                   </div>
                   <div>
@@ -1113,9 +1113,9 @@ export default function SettingsPage() {
                       className="input resize-none text-sm font-mono"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      Envoyé automatiquement quand le client tape <span className="font-mono text-slate-400">confirmer</span>.
-                      Placeholders : <span className="font-mono text-slate-400">{'{nom}'}</span> → nom de l&apos;établissement,{' '}
-                      <span className="font-mono text-slate-400">{'{mot_cle}'}</span> → mot-clé du menu.
+                      Envoyé automatiquement quand le client tape <span className="font-mono text-content-secondary">confirmer</span>.
+                      Placeholders : <span className="font-mono text-content-secondary">{'{nom}'}</span> → nom de l&apos;établissement,{' '}
+                      <span className="font-mono text-content-secondary">{'{mot_cle}'}</span> → mot-clé du menu.
                     </p>
                   </div>
                   <div>
@@ -1128,7 +1128,7 @@ export default function SettingsPage() {
                       className="input text-sm font-mono"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      URL de base Wave du marchand (se termine par <span className="font-mono text-slate-400">?</span>).
+                      URL de base Wave du marchand (se termine par <span className="font-mono text-content-secondary">?</span>).
                       Le montant sera ajouté automatiquement à la validation de chaque commande.
                     </p>
                   </div>
@@ -1145,10 +1145,10 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => setWaForm((f) => ({ ...f, enable_pickup: !f.enable_pickup }))}
-                        className="text-slate-400 hover:text-white transition-colors"
+                        className="text-content-secondary hover:text-white transition-colors"
                       >
                         {waForm.enable_pickup
-                          ? <ToggleRight className="w-7 h-7 text-green-400" />
+                          ? <ToggleRight className="w-7 h-7 text-status-success" />
                           : <ToggleLeft className="w-7 h-7" />}
                       </button>
                     </div>
@@ -1161,10 +1161,10 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => setWaForm((f) => ({ ...f, enable_delivery: !f.enable_delivery }))}
-                        className="text-slate-400 hover:text-white transition-colors"
+                        className="text-content-secondary hover:text-white transition-colors"
                       >
                         {waForm.enable_delivery
-                          ? <ToggleRight className="w-7 h-7 text-green-400" />
+                          ? <ToggleRight className="w-7 h-7 text-status-success" />
                           : <ToggleLeft className="w-7 h-7" />}
                       </button>
                     </div>
@@ -1175,10 +1175,10 @@ export default function SettingsPage() {
                   <div className="border border-slate-700 rounded-lg p-4 space-y-4">
                     <h4 className="text-sm font-semibold text-slate-300">Messages automatiques</h4>
                     <p className="text-xs text-slate-500">
-                      Placeholders : <span className="font-mono text-slate-400">{'{nom}'}</span> → établissement,{' '}
-                      <span className="font-mono text-slate-400">{'{mot_cle}'}</span> → mot-clé menu,{' '}
-                      <span className="font-mono text-slate-400">{'{commande}'}</span> → n° commande,{' '}
-                      <span className="font-mono text-slate-400">{'{total}'}</span> → montant.
+                      Placeholders : <span className="font-mono text-content-secondary">{'{nom}'}</span> → établissement,{' '}
+                      <span className="font-mono text-content-secondary">{'{mot_cle}'}</span> → mot-clé menu,{' '}
+                      <span className="font-mono text-content-secondary">{'{commande}'}</span> → n° commande,{' '}
+                      <span className="font-mono text-content-secondary">{'{total}'}</span> → montant.
                     </p>
 
                     <div>
@@ -1224,7 +1224,7 @@ export default function SettingsPage() {
                       />
                       <p className="text-xs text-slate-500 mt-1">
                         Envoyé au client quand la commande est marquée livrée.
-                        Utilisez <span className="font-mono text-slate-400">{'{commande}'}</span> et <span className="font-mono text-slate-400">{'{total}'}</span>.
+                        Utilisez <span className="font-mono text-content-secondary">{'{commande}'}</span> et <span className="font-mono text-content-secondary">{'{total}'}</span>.
                       </p>
                     </div>
                   </div>
@@ -1248,7 +1248,7 @@ export default function SettingsPage() {
         {/* Compte utilisateur */}
         <div className="card p-5 space-y-2">
           <h2 className="font-semibold text-white">Compte</h2>
-          <p className="text-sm text-slate-400">{user?.full_name}</p>
+          <p className="text-sm text-content-secondary">{user?.full_name}</p>
           <p className="text-xs text-slate-500">{user?.email}</p>
           <p className="text-xs text-slate-500 capitalize">Rôle : {user?.role}</p>
         </div>

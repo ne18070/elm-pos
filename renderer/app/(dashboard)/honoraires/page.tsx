@@ -81,7 +81,7 @@ async function syncHonorairesEntry(
 
 function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }) {
   const s = statuts.find((x) => x.value === status);
-  const cls = (s?.metadata?.cls as string) ?? 'bg-slate-800 text-slate-400 border-slate-700';
+  const cls = (s?.metadata?.cls as string) ?? 'bg-surface-card text-content-secondary border-slate-700';
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${cls}`}>
       {s?.label ?? status}
@@ -179,7 +179,7 @@ function HonorairesModal({
           <h2 className="text-white font-semibold">
             {initial ? 'Modifier les honoraires' : 'Nouveaux honoraires'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-content-secondary hover:text-white"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="overflow-y-auto p-5 space-y-4">
@@ -196,7 +196,7 @@ function HonorairesModal({
           </div>
 
           <div>
-            <label className="label">Client <span className="text-red-400">*</span></label>
+            <label className="label">Client <span className="text-status-error">*</span></label>
             <input className="input" value={form.client_name} onChange={(e) => set('client_name', e.target.value)} placeholder="Nom du client" />
           </div>
 
@@ -228,7 +228,7 @@ function HonorairesModal({
 
           {form.montant && (
             <div className={`p-3 rounded-xl border text-sm ${
-              reste === 0 ? 'border-green-800 bg-green-900/20 text-green-400' : 'border-amber-800 bg-amber-900/20 text-amber-400'
+              reste === 0 ? 'border-status-success bg-badge-success text-status-success' : 'border-status-warning bg-badge-warning text-status-warning'
             }`}>
               Reste à payer : <strong>{fmtMoney(reste, 'XOF')}</strong>
             </div>
@@ -331,9 +331,9 @@ export default function HonorairesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-purple-400" /> Honoraires & Facturation
+              <Receipt className="w-5 h-5 text-status-purple" /> Honoraires & Facturation
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">Suivi des prestations et paiements</p>
+            <p className="text-xs text-content-secondary mt-0.5">Suivi des prestations et paiements</p>
           </div>
           <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 text-sm">
             <Plus className="w-4 h-4" /> Nouveaux honoraires
@@ -342,15 +342,15 @@ export default function HonorairesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
-            { icon: TrendingUp,  label: 'Total facturé',       value: fmtMoney(totalFacturé, currency), cls: 'text-purple-400' },
-            { icon: CheckCircle2,label: 'Encaissé',            value: fmtMoney(totalPerçu,   currency), cls: 'text-green-400'  },
-            { icon: AlertCircle, label: 'Reste à percevoir',   value: fmtMoney(totalImpayé,  currency), cls: 'text-red-400'    },
+            { icon: TrendingUp,  label: 'Total facturé',       value: fmtMoney(totalFacturé, currency), cls: 'text-status-purple' },
+            { icon: CheckCircle2,label: 'Encaissé',            value: fmtMoney(totalPerçu,   currency), cls: 'text-status-success'  },
+            { icon: AlertCircle, label: 'Reste à percevoir',   value: fmtMoney(totalImpayé,  currency), cls: 'text-status-error'    },
           ].map(({ icon: Icon, label, value, cls }) => (
             <div key={label} className="card p-4 flex items-center gap-4">
               <div className={`p-3 rounded-xl bg-surface-input ${cls}`}><Icon className="w-5 h-5" /></div>
               <div>
                 <p className={`text-xl font-bold ${cls}`}>{value}</p>
-                <p className="text-xs text-slate-400">{label}</p>
+                <p className="text-xs text-content-secondary">{label}</p>
               </div>
             </div>
           ))}
@@ -364,12 +364,12 @@ export default function HonorairesPage() {
           </div>
           <div className="flex gap-1 bg-surface-input rounded-lg p-1">
             <button onClick={() => setFilterStatus('tous')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === 'tous' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === 'tous' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
               Tous
             </button>
             {statutsPaiement.map((s) => (
               <button key={s.value} onClick={() => setFilterStatus(s.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === s.value ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${filterStatus === s.value ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
                 {s.label}
               </button>
             ))}
@@ -377,18 +377,18 @@ export default function HonorairesPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-status-purple" /></div>
         ) : filtered.length === 0 ? (
           <div className="card p-12 text-center">
             <Receipt className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-            <p className="text-slate-400">Aucun honoraire trouvé</p>
+            <p className="text-content-secondary">Aucun honoraire trouvé</p>
           </div>
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[800px]">
                 <thead className="border-b border-surface-border">
-                  <tr className="text-xs text-slate-400 uppercase tracking-wider">
+                  <tr className="text-xs text-content-secondary uppercase tracking-wider">
                     <th className="text-left px-4 py-3">Date</th>
                     <th className="text-left px-4 py-3">Client</th>
                     <th className="text-left px-4 py-3">Dossier</th>
@@ -406,15 +406,15 @@ export default function HonorairesPage() {
                     const typeLabel = typesPrestation.find((t) => t.value === l.type_prestation)?.label ?? l.type_prestation;
                     return (
                       <tr key={l.id} className="hover:bg-surface-input/40 transition-colors">
-                        <td className="px-4 py-3 text-slate-400 text-xs">{fmtDate(l.date_facture)}</td>
+                        <td className="px-4 py-3 text-content-secondary text-xs">{fmtDate(l.date_facture)}</td>
                         <td className="px-4 py-3 text-white font-medium">{l.client_name}</td>
                         <td className="px-4 py-3">
                           {l.dossier?.reference ? (
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono text-purple-300">{l.dossier.reference}</span>
+                              <span className="text-xs font-mono text-status-purple">{l.dossier.reference}</span>
                               <button 
                                 onClick={() => router.push(`/dossiers?ref=${l.dossier!.reference}`)}
-                                className="p-1 text-slate-500 hover:text-purple-400 transition-all"
+                                className="p-1 text-slate-500 hover:text-status-purple transition-all"
                                 title="Voir le dossier"
                               >
                                 <ExternalLink className="w-3 h-3" />
@@ -426,9 +426,9 @@ export default function HonorairesPage() {
                         </td>
                         <td className="px-4 py-3 text-slate-300 text-xs">{typeLabel}</td>
                         <td className="px-4 py-3 text-right text-white font-medium">{fmtMoney(l.montant, currency)}</td>
-                        <td className="px-4 py-3 text-right text-green-400">{fmtMoney(l.montant_paye, currency)}</td>
+                        <td className="px-4 py-3 text-right text-status-success">{fmtMoney(l.montant_paye, currency)}</td>
                         <td className="px-4 py-3 text-right">
-                          {reste > 0 ? <span className="text-red-400">{fmtMoney(reste, currency)}</span>
+                          {reste > 0 ? <span className="text-status-error">{fmtMoney(reste, currency)}</span>
                                      : <span className="text-slate-600">—</span>}
                         </td>
                         <td className="px-4 py-3"><StatusBadge status={l.status} statuts={statutsPaiement} /></td>
@@ -439,7 +439,7 @@ export default function HonorairesPage() {
                             </button>
                             {canDelete(user?.role ?? 'staff') && (
                               <button onClick={() => handleDelete(l.id)} disabled={deletingId === l.id}
-                                className="p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-900/20 transition-colors disabled:opacity-40">
+                                className="p-1.5 text-slate-500 hover:text-status-error rounded-lg hover:bg-badge-error transition-colors disabled:opacity-40">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}

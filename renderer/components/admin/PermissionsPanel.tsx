@@ -142,7 +142,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
           <button
             onClick={handleResetAll}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-amber-400 border border-amber-500/30 rounded-xl hover:bg-amber-500/10 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-status-warning border border-amber-500/30 rounded-xl hover:bg-amber-500/10 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Réinitialiser ({overrideCount})
@@ -162,7 +162,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                 onClick={() => setCollapsed((p) => ({ ...p, [group]: !p[group] }))}
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-hover/30 transition-colors"
               >
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+                <span className="text-xs font-bold text-content-secondary uppercase tracking-widest">{label}</span>
                 {collapsed[group] ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronUp className="w-4 h-4 text-slate-500" />}
               </button>
 
@@ -186,14 +186,14 @@ export function PermissionsPanel({ businessId, members }: Props) {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-white">{meta.label}</p>
                           {hasOverride && !isImmutable && (
-                            <p className="text-xs text-amber-400 mt-0.5">
+                            <p className="text-xs text-status-warning mt-0.5">
                               Remplacé (défaut rôle: {checkPermission(selectedMember.role, key, {}, business) ? 'Oui' : 'Non'})
                             </p>
                           )}
                         </div>
 
                         <div className="flex items-center gap-3 ml-4 shrink-0">
-                          {isSavingThis && <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-400" />}
+                          {isSavingThis && <Loader2 className="w-3.5 h-3.5 animate-spin text-content-brand" />}
 
                           <button
                             onClick={() => handleToggle(key, effective)}
@@ -215,7 +215,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
 
                           <span className={cn(
                             'text-xs font-medium w-8 text-right',
-                            effective ? 'text-green-400' : 'text-slate-500'
+                            effective ? 'text-status-success' : 'text-slate-500'
                           )}>
                             {effective ? 'Oui' : 'Non'}
                           </span>

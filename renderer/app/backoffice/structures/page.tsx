@@ -28,7 +28,7 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
   };
   return (
     <button onClick={handleCopy} className={cn("p-1 hover:bg-surface-input rounded transition-colors", className)} title="Copier">
-      {copied ? <CheckIcon className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+      {copied ? <CheckIcon className="w-3 h-3 text-status-success" /> : <Copy className="w-3 h-3" />}
     </button>
   );
 }
@@ -36,10 +36,10 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
 const getTypeBadge = (type: string) => {
   switch (type) {
     case 'hotel':      return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-    case 'restaurant': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
-    case 'retail':     return 'bg-green-500/10 text-green-400 border-green-500/20';
-    case 'service':    return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-    default:           return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+    case 'restaurant': return 'bg-orange-500/10 text-status-orange border-orange-500/20';
+    case 'retail':     return 'bg-green-500/10 text-status-success border-green-500/20';
+    case 'service':    return 'bg-purple-500/10 text-status-purple border-purple-500/20';
+    default:           return 'bg-slate-500/10 text-content-secondary border-slate-500/20';
   }
 };
 
@@ -209,11 +209,11 @@ export default function StructuresPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-5 rounded-3xl bg-brand-500/5 border border-brand-500/10 flex gap-4">
           <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center shrink-0">
-            <Layers className="text-brand-400" size={24} />
+            <Layers className="text-content-brand" size={24} />
           </div>
           <div className="space-y-1">
             <p className="text-xs font-black text-white uppercase tracking-widest">Organisations</p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-content-secondary leading-relaxed">
               Représente l'<b>entité légale</b> (Raison sociale). C'est ici qu'est rattaché l'<b>abonnement unique</b> et les informations de facturation (RIB).
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function StructuresPage() {
           </div>
           <div className="space-y-1">
             <p className="text-xs font-black text-white uppercase tracking-widest">Établissements</p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-[11px] text-content-secondary leading-relaxed">
               Unités physiques rattachées (Restaurant, Boutique, Hôtel). Chaque site possède ses propres coordonnées, stocks et terminaux de vente.
             </p>
           </div>
@@ -245,15 +245,15 @@ export default function StructuresPage() {
                 <div className="p-6 flex-1 space-y-4">
                   <div className="flex items-start justify-between relative z-10">
                     <div className="space-y-0.5 min-w-0">
-                      <p className="text-[10px] font-black text-brand-400 uppercase tracking-[0.15em]">Organisation</p>
+                      <p className="text-[10px] font-black text-content-brand uppercase tracking-[0.15em]">Organisation</p>
                       <h3 className="text-lg font-black text-white tracking-tight truncate">{org.legal_name}</h3>
                       {org.denomination && org.denomination !== org.legal_name && (
-                        <p className="text-xs text-slate-400 italic truncate">{org.denomination}</p>
+                        <p className="text-xs text-content-secondary italic truncate">{org.denomination}</p>
                       )}
                     </div>
                     <button
                       onClick={() => setOrgModal(org)}
-                      className="p-2 rounded-lg hover:bg-surface-input text-slate-400 hover:text-white transition-all shrink-0"
+                      className="p-2 rounded-lg hover:bg-surface-input text-content-secondary hover:text-white transition-all shrink-0"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -274,7 +274,7 @@ export default function StructuresPage() {
                     {org.rib && (
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">RIB</span>
-                        <span className="text-[10px] font-mono text-slate-400 bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">
+                        <span className="text-[10px] font-mono text-content-secondary bg-surface-input px-2 py-1 rounded border border-surface-border truncate max-w-[150px]">
                           {org.rib}
                         </span>
                       </div>
@@ -297,7 +297,7 @@ export default function StructuresPage() {
                           <button
                             onClick={() => handleSwitch(biz.id)}
                             disabled={!!switching}
-                            className="p-1.5 rounded-lg hover:bg-brand-500/10 text-brand-400 hover:text-brand-300 transition-all shrink-0"
+                            className="p-1.5 rounded-lg hover:bg-brand-500/10 text-content-brand hover:text-content-brand transition-all shrink-0"
                             title="Accéder"
                           >
                             {switching === biz.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
@@ -312,7 +312,7 @@ export default function StructuresPage() {
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                     {org.businesses.length} établissement{org.businesses.length !== 1 ? 's' : ''}
                   </span>
-                  <span className="text-xs text-green-400 font-bold">✅ {org.owner_name ? 'Assignée' : 'Sans owner'}</span>
+                  <span className="text-xs text-status-success font-bold">✅ {org.owner_name ? 'Assignée' : 'Sans owner'}</span>
                 </div>
               </div>
             ))}
@@ -323,7 +323,7 @@ export default function StructuresPage() {
               <button 
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
-                className="p-2 rounded-xl bg-surface-card border border-surface-border text-slate-400 hover:text-white disabled:opacity-20 transition-all"
+                className="p-2 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-white disabled:opacity-20 transition-all"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -344,7 +344,7 @@ export default function StructuresPage() {
               <button 
                 disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}
-                className="p-2 rounded-xl bg-surface-card border border-surface-border text-slate-400 hover:text-white disabled:opacity-20 transition-all"
+                className="p-2 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-white disabled:opacity-20 transition-all"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -354,9 +354,9 @@ export default function StructuresPage() {
           {filteredUnassigned.length > 0 && (
             <div className="mt-16 space-y-6">
               <div className="flex items-center gap-4">
-                <h2 className="text-lg font-black text-amber-500 uppercase tracking-widest">Établissements orphelins</h2>
+                <h2 className="text-lg font-black text-status-warning uppercase tracking-widest">Établissements orphelins</h2>
                 <div className="h-px flex-1 bg-amber-500/20" />
-                <span className="text-xs font-bold text-amber-500/50">{filteredUnassigned.length} orphelins</span>
+                <span className="text-xs font-bold text-status-warning/50">{filteredUnassigned.length} orphelins</span>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredUnassigned.map((biz: any) => (
@@ -366,16 +366,16 @@ export default function StructuresPage() {
                         <div className="space-y-1">
                           <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
                           <h3 className="text-lg font-black text-white tracking-tight mt-1">{biz.name}</h3>
-                          {biz.denomination && <p className="text-xs text-slate-400 italic">{biz.denomination}</p>}
+                          {biz.denomination && <p className="text-xs text-content-secondary italic">{biz.denomination}</p>}
                         </div>
-                        <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-brand-400 hover:text-brand-300 transition-all shrink-0">
+                        <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-content-brand hover:text-content-brand transition-all shrink-0">
                           {switching === biz.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="px-6 py-4 bg-amber-500/5 border-t border-amber-500/20 flex items-center justify-between">
-                      <span className="text-xs text-amber-400 font-bold">⚠️ Sans organisation</span>
-                      <button onClick={() => setAdminModal(biz)} className="text-[10px] font-black uppercase tracking-widest text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10">
+                      <span className="text-xs text-status-warning font-bold">⚠️ Sans organisation</span>
+                      <button onClick={() => setAdminModal(biz)} className="text-[10px] font-black uppercase tracking-widest text-content-brand hover:text-content-brand transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10">
                         <Plus className="w-3 h-3" /> Créer Admin
                       </button>
                     </div>
@@ -431,7 +431,7 @@ export default function StructuresPage() {
         <form id="admin-form" onSubmit={handleCreateAdmin} className="space-y-6">
           <div className="p-5 rounded-2xl bg-brand-500/5 border border-brand-500/10 flex items-center gap-4 mb-2">
             <div className="w-12 h-12 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
-               <Layers className="text-brand-400" size={24} />
+               <Layers className="text-content-brand" size={24} />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Établissement rattaché</p>

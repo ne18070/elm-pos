@@ -146,7 +146,7 @@ export function CategoryModal({
         {!isEdit && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Wand2 className="w-3.5 h-3.5 text-brand-400" />
+              <Wand2 className="w-3.5 h-3.5 text-content-brand" />
               <label className="label mb-0">Démarrage rapide</label>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -156,8 +156,8 @@ export function CategoryModal({
                   onClick={() => applyTemplate(t)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     form.name === t.name && form.icon === t.icon
-                      ? 'border-brand-500 bg-brand-900/20 text-white'
-                      : 'border-surface-border text-slate-400 hover:text-white hover:border-slate-500'
+                      ? 'border-brand-500 bg-badge-brand text-white'
+                      : 'border-surface-border text-content-secondary hover:text-white hover:border-slate-500'
                   }`}
                 >
                   <span>{t.icon}</span>
@@ -208,7 +208,7 @@ export function CategoryModal({
               onClick={() => update('icon', '')}
               className={`w-9 h-9 rounded-xl border text-xs transition-all ${
                 form.icon === ''
-                  ? 'border-brand-500 bg-brand-900/30 text-brand-400'
+                  ? 'border-brand-500 bg-badge-brand text-content-brand'
                   : 'border-surface-border text-slate-500 hover:border-slate-500'
               }`}
             >
@@ -220,7 +220,7 @@ export function CategoryModal({
                 onClick={() => update('icon', icon)}
                 className={`w-9 h-9 text-xl rounded-xl border transition-all ${
                   form.icon === icon
-                    ? 'border-brand-500 bg-brand-900/30'
+                    ? 'border-brand-500 bg-badge-brand'
                     : 'border-surface-border hover:border-slate-500'
                 }`}
               >

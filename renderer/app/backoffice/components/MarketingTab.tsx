@@ -100,13 +100,13 @@ export function MarketingTab() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-400" /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-content-brand" /></div>;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
-          <Mail className="w-5 h-5 text-brand-400" />
+          <Mail className="w-5 h-5 text-content-brand" />
           <h2 className="font-semibold text-white">Nouvelle Campagne Email</h2>
         </div>
 
@@ -186,14 +186,14 @@ export function MarketingTab() {
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-status-error shrink-0" />
             <p className="text-sm text-red-200">{error}</p>
           </div>
         )}
 
         {success && (
           <div className="bg-green-500/10 border border-green-500/50 rounded-xl p-3 flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+            <CheckCircle className="w-5 h-5 text-status-success shrink-0" />
             <p className="text-sm text-green-200">{success}</p>
           </div>
         )}
@@ -218,14 +218,14 @@ export function MarketingTab() {
       </div>
 
       <div className="card p-6 bg-surface-input/30 border-dashed">
-        <h3 className="text-slate-400 text-sm font-semibold mb-4 uppercase tracking-wider">Aperçu du rendu</h3>
+        <h3 className="text-content-secondary text-sm font-semibold mb-4 uppercase tracking-wider">Aperçu du rendu</h3>
         
         <div className="bg-white rounded-xl overflow-hidden shadow-2xl max-w-md mx-auto">
           {/* Header Mockup */}
           <div className="bg-[#0a0f1e] p-6 text-center">
             <div className="inline-flex items-center gap-2">
               {/* <div className="w-6 h-6 bg-brand-600 rounded-md"></div> */}
-              <span className="text-white font-bold">ELM <span className="text-brand-400">APP</span></span>
+              <span className="text-white font-bold">ELM <span className="text-content-brand">APP</span></span>
             </div>
           </div>
           

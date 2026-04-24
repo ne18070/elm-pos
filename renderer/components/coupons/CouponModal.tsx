@@ -151,8 +151,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                 onClick={() => update('type', t)}
                 className={`py-2.5 px-2 rounded-xl border text-xs font-medium transition-colors flex flex-col items-center gap-1 ${
                   form.type === t
-                    ? 'border-brand-500 bg-brand-900/30 text-brand-400'
-                    : 'border-surface-border text-slate-400 hover:text-white'
+                    ? 'border-brand-500 bg-badge-brand text-content-brand'
+                    : 'border-surface-border text-content-secondary hover:text-white'
                 }`}
               >
                 {t === 'free_item' && <Gift className="w-3.5 h-3.5" />}
@@ -164,8 +164,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
 
         {/* Champs selon le type */}
         {isFreeItem ? (
-          <div className="space-y-3 p-3 bg-amber-900/10 border border-amber-800/40 rounded-xl">
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-medium">
+          <div className="space-y-3 p-3 bg-badge-warning border border-status-warning/40 rounded-xl">
+            <div className="flex items-center gap-2 text-status-warning text-xs font-medium">
               <Gift className="w-3.5 h-3.5" />
               Offre : achat X → article offert
             </div>
@@ -184,7 +184,7 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   autoComplete="off"
                 />
                 {showProductDropdown && filteredProducts.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
                     {filteredProducts.map((p) => (
                       <button
                         key={p.id}
@@ -196,7 +196,7 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                         <div className="min-w-0">
                           <p className="text-sm text-white truncate">{p.name}</p>
                           {p.track_stock && (
-                            <p className="text-xs text-slate-400">Stock : {p.stock ?? 0} {p.unit ?? 'pièce'}</p>
+                            <p className="text-xs text-content-secondary">Stock : {p.stock ?? 0} {p.unit ?? 'pièce'}</p>
                           )}
                         </div>
                       </button>
@@ -205,7 +205,7 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                 )}
               </div>
               {freeProduct && (
-                <p className="text-xs text-brand-400 mt-1">
+                <p className="text-xs text-content-brand mt-1">
                   Stock actuel : {freeProduct.stock ?? 0} {freeProduct.unit ?? 'pièce'}
                 </p>
               )}

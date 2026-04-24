@@ -70,7 +70,7 @@ function genRef(count: number) {
 
 function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }) {
   const s = statuts.find((x) => x.value === status);
-  const cls = (s?.metadata?.cls as string) ?? 'bg-slate-800 text-slate-400 border-slate-700';
+  const cls = (s?.metadata?.cls as string) ?? 'bg-surface-card text-content-secondary border-slate-700';
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${cls}`}>
       {s?.label ?? status}
@@ -162,8 +162,8 @@ function ConfigTab({ businessId, onRefresh }: { businessId: string, onRefresh: (
                     <p className="text-[10px] text-slate-500 font-mono mt-0.5">{item.value}</p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => setEditing(item)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setEditing(item)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-white"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg hover:bg-badge-error text-content-secondary hover:text-status-error"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
@@ -173,21 +173,21 @@ function ConfigTab({ businessId, onRefresh }: { businessId: string, onRefresh: (
 
         <div className="card p-5 space-y-4 h-fit sticky top-6">
           <h3 className="font-bold text-white text-sm flex items-center gap-2 border-b border-slate-800 pb-3">
-            {editing?.id ? <Pencil className="w-4 h-4 text-blue-400" /> : <Plus className="w-4 h-4 text-green-400" />}
+            {editing?.id ? <Pencil className="w-4 h-4 text-blue-400" /> : <Plus className="w-4 h-4 text-status-success" />}
             {editing?.id ? 'Modifier' : 'Ajouter un élément'}
           </h3>
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className="text-[10px] uppercase font-black text-slate-500 mb-1.5 block">Nom (Libellé)</label>
-              <input className="input text-sm bg-slate-950" value={editing?.label ?? ''} onChange={e => setEditing(p => ({ ...p, label: e.target.value }))} placeholder="Ex: Tribunal de Grande Instance" required />
+              <input className="input text-sm bg-surface-overlay" value={editing?.label ?? ''} onChange={e => setEditing(p => ({ ...p, label: e.target.value }))} placeholder="Ex: Tribunal de Grande Instance" required />
             </div>
             <div>
               <label className="text-[10px] uppercase font-black text-slate-500 mb-1.5 block">Code (Clé unique)</label>
-              <input className="input text-sm bg-slate-950 font-mono" value={editing?.value ?? ''} onChange={e => setEditing(p => ({ ...p, value: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} placeholder="ex: tgi_dakar" required disabled={!!editing?.id} />
+              <input className="input text-sm bg-surface-overlay font-mono" value={editing?.value ?? ''} onChange={e => setEditing(p => ({ ...p, value: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} placeholder="ex: tgi_dakar" required disabled={!!editing?.id} />
             </div>
             <div className="flex gap-2 pt-2">
               <button type="submit" className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-bold py-2 rounded-xl text-xs transition-all">{editing?.id ? 'Mettre à jour' : 'Ajouter à la liste'}</button>
-              {editing && <button type="button" onClick={() => setEditing(null)} className="px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs">Annuler</button>}
+              {editing && <button type="button" onClick={() => setEditing(null)} className="px-4 bg-surface-card hover:bg-slate-700 text-white rounded-xl text-xs">Annuler</button>}
             </div>
           </form>
         </div>
@@ -226,10 +226,10 @@ function QuickClientModal({ businessId, onClose, onCreated }: { businessId: stri
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4 backdrop-blur-md">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-surface border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/30">
           <h3 className="text-lg font-black text-white tracking-tight uppercase">Nouveau Client</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl text-slate-500 transition-colors"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-surface-card rounded-xl text-slate-500 transition-colors"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -292,10 +292,10 @@ function QuickRefModal({
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4 backdrop-blur-md">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-surface border border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-800/30">
           <h3 className="text-sm font-black text-white tracking-tight uppercase">Ajouter : {label}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl text-slate-500"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-surface-card rounded-xl text-slate-500"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-6 space-y-4">
           <div>
@@ -477,7 +477,7 @@ function DossierModal({
       <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
           <h2 className="text-white font-bold">{initial ? `Modifier — ${initial.reference}` : 'Nouveau dossier'}</h2>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-card text-content-secondary transition-all"><X className="w-5 h-5" /></button>
         </div>
         <div className="overflow-y-auto p-5 space-y-5 scrollbar-thin">
           <div className="grid grid-cols-2 gap-3">
@@ -485,7 +485,7 @@ function DossierModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="label mb-0">Type d'affaire</label>
-                <button type="button" onClick={() => setQuickRef({ category: 'type_affaire', label: 'Type d\'affaire' })} className="text-[9px] font-black uppercase text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
+                <button type="button" onClick={() => setQuickRef({ category: 'type_affaire', label: 'Type d\'affaire' })} className="text-[9px] font-black uppercase text-content-brand hover:text-content-brand transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
               </div>
               <select className="input" value={form.type_affaire} onChange={(e) => set('type_affaire', e.target.value)}>
                 {localTypesAffaire.map((t) => <option key={t.value} value={t.value} className="bg-gray-900 text-white">{t.label}</option>)}
@@ -494,18 +494,18 @@ function DossierModal({
           </div>
 
           <div className="p-5 bg-slate-900/30 border border-slate-800 rounded-2xl space-y-4">
-            <div className="flex items-center gap-2 text-brand-400 mb-1">
+            <div className="flex items-center gap-2 text-content-brand mb-1">
               <UserCircle2 className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Entité Juridique (Client)</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-content-secondary">Entité Juridique (Client)</span>
             </div>
 
             <div className="relative" ref={searchRef}>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="label mb-0">Nom de l'entité / Client <span className="text-red-400">*</span></label>
+                <label className="label mb-0">Nom de l'entité / Client <span className="text-status-error">*</span></label>
                 <button 
                   type="button" 
                   onClick={() => setShowQuickClient(true)}
-                  className="text-[10px] font-black uppercase tracking-widest text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-all"
+                  className="text-[10px] font-black uppercase tracking-widest text-content-brand hover:text-content-brand flex items-center gap-1 transition-all"
                 >
                   <Plus className="w-3 h-3" /> Nouveau Client
                 </button>
@@ -515,11 +515,11 @@ function DossierModal({
                 <input className="input pl-10 h-11" value={form.client_name || clientSearch} onChange={(e) => { set('client_name', e.target.value); setClientSearch(e.target.value); setShowClientResults(true); }} onFocus={() => setShowClientResults(true)} placeholder="Rechercher ou saisir..." />
               </div>
               {showClientResults && clientSearch.length > 0 && filteredClients.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute z-10 w-full mt-1 bg-surface border border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                   {filteredClients.map(c => (
-                    <button key={c.id} onClick={() => selectClient(c)} className="w-full text-left px-4 py-3 hover:bg-slate-800 border-b border-slate-800 last:border-0 flex items-center justify-between">
+                    <button key={c.id} onClick={() => selectClient(c)} className="w-full text-left px-4 py-3 hover:bg-surface-card border-b border-slate-800 last:border-0 flex items-center justify-between">
                       <div><p className="text-sm text-white font-bold">{c.name}</p><p className="text-[10px] text-slate-500">{c.phone || c.email || '—'}</p></div>
-                      <Plus className="w-3.5 h-3.5 text-brand-400" />
+                      <Plus className="w-3.5 h-3.5 text-content-brand" />
                     </button>
                   ))}
                 </div>
@@ -531,7 +531,7 @@ function DossierModal({
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="label mb-0">Type d'entité</label>
-                  <button type="button" onClick={() => setQuickRef({ category: 'type_client', label: 'Type d\'entité' })} className="text-[9px] font-black uppercase text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
+                  <button type="button" onClick={() => setQuickRef({ category: 'type_client', label: 'Type d\'entité' })} className="text-[9px] font-black uppercase text-content-brand hover:text-content-brand transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
                 </div>
                 <select className="input" value={form.client_type} onChange={(e) => set('client_type', e.target.value)}>
                   <option value="">— Sélectionner —</option>
@@ -562,7 +562,7 @@ function DossierModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="label mb-0">Tribunal / Juridiction</label>
-                <button type="button" onClick={() => setQuickRef({ category: 'tribunal', label: 'Tribunal' })} className="text-[9px] font-black uppercase text-brand-400 hover:text-brand-300 transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
+                <button type="button" onClick={() => setQuickRef({ category: 'tribunal', label: 'Tribunal' })} className="text-[9px] font-black uppercase text-content-brand hover:text-content-brand transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
               </div>
               <select className="input" value={form.tribunal || ''} onChange={(e) => set('tribunal', e.target.value)}>
                 <option value="">— Sélectionner —</option>
@@ -577,8 +577,8 @@ function DossierModal({
           
           {initial ? (
             <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-2xl space-y-2">
-              <div className="flex items-center gap-2 text-slate-400">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <div className="flex items-center gap-2 text-content-secondary">
+                <ShieldCheck className="w-4 h-4 text-status-success" />
                 <span className="text-[10px] font-black uppercase tracking-widest">Processus Verrouillé (Audit)</span>
               </div>
               <p className="text-sm font-bold text-white italic">
@@ -590,8 +590,8 @@ function DossierModal({
             </div>
           ) : workflows.length > 0 && (
             <div className="p-4 bg-brand-500/5 border border-brand-500/20 rounded-2xl space-y-3">
-              <div className="flex items-center gap-2 text-brand-400"><GitBranch className="w-4 h-4" /><span className="text-xs font-bold uppercase">Automatisation</span></div>
-              <select className="input bg-slate-900" value={form.selectedWorkflow} onChange={(e) => set('selectedWorkflow', e.target.value)}>
+              <div className="flex items-center gap-2 text-content-brand"><GitBranch className="w-4 h-4" /><span className="text-xs font-bold uppercase">Automatisation</span></div>
+              <select className="input bg-surface" value={form.selectedWorkflow} onChange={(e) => set('selectedWorkflow', e.target.value)}>
                 <option value="">— Aucun processus au démarrage —</option>
                 {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
@@ -722,13 +722,13 @@ function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dos
               {showAdd ? 'Fermer' : 'Ajouter'}
             </button>
           )}
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 transition-all"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-card text-content-secondary transition-all"><X className="w-4 h-4" /></button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
         {showAdd && (
-          <form onSubmit={handleAdd} className="p-4 bg-slate-900 border border-brand-500/30 rounded-2xl space-y-3 animate-in zoom-in-95 duration-200">
+          <form onSubmit={handleAdd} className="p-4 bg-surface border border-brand-500/30 rounded-2xl space-y-3 animate-in zoom-in-95 duration-200">
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[9px] uppercase font-black text-slate-500 block mb-1">Montant</label>
@@ -762,7 +762,7 @@ function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dos
           </div>
           <div className="card p-3 bg-slate-900/30 border-slate-800">
             <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Reste à payer</p>
-            <p className="text-sm font-bold text-red-400">{new Intl.NumberFormat('fr-FR').format(total - paye)} XOF</p>
+            <p className="text-sm font-bold text-status-error">{new Intl.NumberFormat('fr-FR').format(total - paye)} XOF</p>
           </div>
         </div>
 
@@ -781,10 +781,10 @@ function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dos
                     <p className="text-[10px] text-slate-500 font-medium capitalize">{l.type_prestation}</p>
                   </div>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${
-                    l.status === 'payé' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                    l.status === 'payé' ? 'bg-green-500/10 text-status-success' : 'bg-red-500/10 text-status-error'
                   }`}>{l.status}</span>
                 </div>
-                {l.description && <p className="text-[10px] text-slate-400 italic mt-1 border-t border-slate-800 pt-1">{l.description}</p>}
+                {l.description && <p className="text-[10px] text-content-secondary italic mt-1 border-t border-slate-800 pt-1">{l.description}</p>}
                 <p className="text-[9px] text-slate-600 mt-1">{new Date(l.date_facture).toLocaleDateString()}</p>
               </div>
             ))}
@@ -860,22 +860,22 @@ function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch }: { do
             onClick={handleShareTracking} 
             disabled={sharing}
             title="Partager le lien de suivi WhatsApp"
-            className="p-2 rounded-lg bg-green-600/10 text-green-500 hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
+            className="p-2 rounded-lg bg-green-600/10 text-status-success hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
           >
             {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
           </button>
           <button onClick={() => setShowPicker(!showPicker)} className="bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-lg hover:bg-brand-600 transition-all">Lancer</button>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 transition-all"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-card text-content-secondary transition-all"><X className="w-4 h-4" /></button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
         {showPicker && (
-          <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-4 shadow-xl animate-in fade-in slide-in-from-top-2">
+          <div className="bg-surface-overlay border border-slate-800 rounded-xl overflow-hidden mb-4 shadow-xl animate-in fade-in slide-in-from-top-2">
             {workflows.length === 0 ? (
               <p className="p-4 text-xs text-slate-500 italic text-center">Aucun workflow actif</p>
             ) : (
               workflows.map(wf => (
-                <button key={wf.id} onClick={() => handleTrigger(wf)} className="w-full text-left px-4 py-3 hover:bg-slate-900 text-sm text-white border-b border-slate-800 last:border-0 font-medium transition-colors">{wf.name}</button>
+                <button key={wf.id} onClick={() => handleTrigger(wf)} className="w-full text-left px-4 py-3 hover:bg-surface text-sm text-white border-b border-slate-800 last:border-0 font-medium transition-colors">{wf.name}</button>
               ))
             )}
           </div>
@@ -887,13 +887,13 @@ function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch }: { do
           </div>
         ) : (
           instances.map(inst => (
-            <div key={inst.id} className="card overflow-hidden bg-slate-900/50 hover:bg-slate-900 transition-colors">
+            <div key={inst.id} className="card overflow-hidden bg-slate-900/50 hover:bg-surface transition-colors">
               <button onClick={() => setExpanded(expanded === inst.id ? null : inst.id)} className="w-full flex items-center justify-between px-4 py-3">
                 <div className="flex flex-col items-start gap-0.5">
-                  <span className="text-[10px] text-brand-400 font-black uppercase tracking-widest">{inst.status}</span>
+                  <span className="text-[10px] text-content-brand font-black uppercase tracking-widest">{inst.status}</span>
                   <span className="text-[9px] text-slate-500 font-mono">ID: {inst.id.slice(0,8)}</span>
                 </div>
-                {expanded === inst.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                {expanded === inst.id ? <ChevronDown className="w-4 h-4 text-content-secondary" /> : <ChevronRight className="w-4 h-4 text-content-secondary" />}
               </button>
               {expanded === inst.id && (
                 <div className="p-3 border-t border-slate-800 bg-slate-950/30">
@@ -939,12 +939,12 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
     <div className="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 bg-surface-card border-l border-surface-border flex flex-col z-40 shadow-2xl animate-in slide-in-from-right duration-300">
       <div className="p-4 border-b border-surface-border flex justify-between items-center bg-slate-900/50">
         <p className="text-sm font-bold text-white tracking-tight">Fichiers — {dossier.reference}</p>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 transition-all"><X className="w-4 h-4" /></button>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-card text-content-secondary transition-all"><X className="w-4 h-4" /></button>
       </div>
       <div className="p-4 flex-1 overflow-y-auto space-y-4 scrollbar-thin">
-        <label className="flex flex-col items-center justify-center py-6 px-4 bg-slate-900/50 border-2 border-dashed border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-900 hover:border-brand-500/50 transition-all group">
-          <Upload className="w-6 h-6 text-slate-500 group-hover:text-brand-400 mb-2" />
-          <span className="text-xs font-bold text-slate-400 group-hover:text-white">Déposer des fichiers ici</span>
+        <label className="flex flex-col items-center justify-center py-6 px-4 bg-slate-900/50 border-2 border-dashed border-slate-700 rounded-2xl cursor-pointer hover:bg-surface hover:border-brand-500/50 transition-all group">
+          <Upload className="w-6 h-6 text-slate-500 group-hover:text-content-brand mb-2" />
+          <span className="text-xs font-bold text-content-secondary group-hover:text-white">Déposer des fichiers ici</span>
           <input type="file" multiple onChange={e => handleFiles(e.target.files)} className="hidden" />
         </label>
 
@@ -966,7 +966,7 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
                 </div>
                 <button 
                   onClick={() => getSignedUrl(f.storage_path).then(url => window.open(url, '_blank'))}
-                  className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                  className="p-2 text-slate-500 hover:text-white hover:bg-surface-card rounded-lg transition-all"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </button>
@@ -981,7 +981,7 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
             <span>Stockage Dossiers</span>
             <span>{Math.round(storageInfo.used_pct)}%</span>
           </div>
-          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-surface-card rounded-full overflow-hidden">
             <div className="h-full bg-brand-500 transition-all" style={{ width: `${storageInfo.used_pct}%` }} />
           </div>
           <p className="text-[9px] text-slate-600 mt-2 italic">Limite : {formatBytes(storageInfo.quota_bytes)} par cabinet.</p>
@@ -1125,7 +1125,7 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
     const selected = workflows.find(w => w.id === editingId);
     return (
       <div className="space-y-4 animate-in fade-in duration-500 h-full">
-        <button onClick={() => setEditingId(null)} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors font-bold px-1">
+        <button onClick={() => setEditingId(null)} className="flex items-center gap-2 text-sm text-content-secondary hover:text-white transition-colors font-bold px-1">
           <ChevronLeft className="w-4 h-4" /> Retour à la liste
         </button>
         <WorkflowBuilder businessId={businessId} workflowId={selected?.id} initialName={selected?.name} initialDef={selected?.definition} onSaved={() => { setEditingId(null); load(); }} />
@@ -1146,7 +1146,7 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
               <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" className="hidden" />
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="bg-slate-800 hover:bg-slate-700 text-white font-black py-2.5 px-4 rounded-2xl flex items-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest border border-slate-700"
+                className="bg-surface-card hover:bg-slate-700 text-white font-black py-2.5 px-4 rounded-2xl flex items-center gap-2 transition-all active:scale-95 text-xs uppercase tracking-widest border border-slate-700"
               >
                 <Upload className="w-4 h-4" /> Import
               </button>
@@ -1184,20 +1184,20 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
                         className="flex items-center gap-3 text-left group/name"
                         title="Éditer le design"
                       >
-                        <div className={`p-2 rounded-lg transition-colors ${w.is_active ? 'bg-brand-500/10 text-brand-400 group-hover/name:bg-brand-500/20' : 'bg-slate-800 text-slate-500 group-hover/name:bg-slate-700'}`}>
+                        <div className={`p-2 rounded-lg transition-colors ${w.is_active ? 'bg-brand-500/10 text-content-brand group-hover/name:bg-brand-500/20' : 'bg-surface-card text-slate-500 group-hover/name:bg-slate-700'}`}>
                           <GitBranch className="w-4 h-4" />
                         </div>
-                        <p className="font-bold text-white group-hover/name:text-brand-400 transition-colors">{w.name}</p>
+                        <p className="font-bold text-white group-hover/name:text-content-brand transition-colors">{w.name}</p>
                       </button>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="px-2 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-[10px] font-bold">v{w.version}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/20 text-content-brand font-mono text-[10px] font-bold">v{w.version}</span>
                     </td>
                     <td className="px-6 py-4">
                       <button 
                         onClick={() => handleToggle(w)} 
                         disabled={!isOwnerOrAdmin}
-                        className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${w.is_active ? 'text-green-500' : 'text-slate-500'} ${!isOwnerOrAdmin ? 'cursor-default' : ''}`}
+                        className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${w.is_active ? 'text-status-success' : 'text-slate-500'} ${!isOwnerOrAdmin ? 'cursor-default' : ''}`}
                       >
                         {w.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5 opacity-30" />}
                         {w.is_active ? 'Actif' : 'Désactivé'}
@@ -1210,10 +1210,10 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
                       <div className="flex items-center justify-end gap-1">
                         {isOwnerOrAdmin && (
                           <>
-                            <button onClick={() => loadVersions(w)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-blue-400 transition-all" title="Historique des versions"><History className="w-4 h-4" /></button>
-                            <button onClick={() => handleExport(w)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exporter en JSON"><Download className="w-4 h-4" /></button>
-                            <button onClick={() => setEditingId(w.id)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Éditer le design"><Pencil className="w-4 h-4" /></button>
-                            <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-900/20 text-slate-400 hover:text-red-400 transition-all" title="Supprimer définitivement"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => loadVersions(w)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-blue-400 transition-all" title="Historique des versions"><History className="w-4 h-4" /></button>
+                            <button onClick={() => handleExport(w)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-status-success transition-all" title="Exporter en JSON"><Download className="w-4 h-4" /></button>
+                            <button onClick={() => setEditingId(w.id)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-white transition-all" title="Éditer le design"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-badge-error text-content-secondary hover:text-status-error transition-all" title="Supprimer définitivement"><Trash2 className="w-4 h-4" /></button>
                           </>
                         )}
                         {!isOwnerOrAdmin && <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest px-2">Lecture seule</span>}
@@ -1230,8 +1230,8 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
             <div className="flex items-center justify-between px-2 pt-2">
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Page {page} sur {totalPages}</p>
               <div className="flex gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white disabled:opacity-20 transition-all"><ChevronLeft className="w-4 h-4" /></button>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-white disabled:opacity-20 transition-all"><ChevronRight className="w-4 h-4" /></button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-xl border border-slate-800 text-content-secondary hover:text-white disabled:opacity-20 transition-all"><ChevronLeft className="w-4 h-4" /></button>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-xl border border-slate-800 text-content-secondary hover:text-white disabled:opacity-20 transition-all"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
           )}
@@ -1247,7 +1247,7 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
                 <h2 className="text-white font-bold">Historique : {historyWf.name}</h2>
                 <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">Versions précédentes archivées</p>
               </div>
-              <button onClick={() => setHistoryWf(null)} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 transition-all"><X className="w-5 h-5" /></button>
+              <button onClick={() => setHistoryWf(null)} className="p-2 rounded-xl hover:bg-surface-card text-content-secondary transition-all"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-4 space-y-3 scrollbar-thin">
               {loadingVersions ? (
@@ -1260,22 +1260,22 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold">v{v.version}</span>
-                          <p className="text-xs text-slate-400 italic">{new Date(v.created_at).toLocaleString()}</p>
+                          <span className="px-2 py-0.5 rounded-md bg-surface-card border border-slate-700 text-slate-300 font-mono text-[10px] font-bold">v{v.version}</span>
+                          <p className="text-xs text-content-secondary italic">{new Date(v.created_at).toLocaleString()}</p>
                         </div>
                         <p className="text-[10px] text-slate-500">{v.definition.nodes.length} étapes • {v.definition.edges.length} transitions</p>
                       </div>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => handleExportVersion(v)}
-                          className="opacity-0 group-hover:opacity-100 bg-slate-800 text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg transition-all"
+                          className="opacity-0 group-hover:opacity-100 bg-surface-card text-content-secondary hover:text-status-success p-1.5 rounded-lg transition-all"
                           title="Exporter cette version"
                         >
                           <Download className="w-3.5 h-3.5" />
                         </button>
                         <button 
                           onClick={() => handleRestore(v)}
-                          className="opacity-0 group-hover:opacity-100 bg-brand-500/10 text-brand-400 hover:bg-brand-500 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                          className="opacity-0 group-hover:opacity-100 bg-brand-500/10 text-content-brand hover:bg-brand-500 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
                         >
                           Restaurer
                         </button>
@@ -1379,7 +1379,7 @@ export default function DossiersPage() {
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 shadow-glow">
+            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-status-purple shadow-glow">
               <Scale className="w-6 h-6" />
             </div>
             <div>
@@ -1394,7 +1394,7 @@ export default function DossiersPage() {
           )}
         </div>
 
-        <div className="flex gap-1 p-1 bg-slate-900 border border-slate-800 rounded-2xl w-fit shadow-xl">
+        <div className="flex gap-1 p-1 bg-surface border border-slate-800 rounded-2xl w-fit shadow-xl">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${tab === t.id ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>{t.icon}{t.label}</button>
           ))}
@@ -1404,19 +1404,19 @@ export default function DossiersPage() {
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
               <div className="relative group flex-1">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
-                <input className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un dossier par référence ou client..." value={search} onChange={e => setSearch(e.target.value)} />
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-content-brand transition-colors" />
+                <input className="w-full bg-surface border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un dossier par référence ou client..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
               <button 
                 onClick={() => setShowArchived(!showArchived)}
-                className={`flex items-center gap-2 px-6 py-4 rounded-2xl border font-bold text-xs uppercase tracking-widest transition-all ${showArchived ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'}`}
+                className={`flex items-center gap-2 px-6 py-4 rounded-2xl border font-bold text-xs uppercase tracking-widest transition-all ${showArchived ? 'bg-amber-500/10 border-amber-500/50 text-status-warning' : 'bg-surface border-slate-800 text-content-secondary hover:text-white'}`}
               >
                 {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
                 {showArchived ? 'Voir Dossiers Actifs' : 'Voir l\'Archive'}
               </button>
             </div>
 
-            {loading ? <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div> : filtered.length === 0 ? (
+            {loading ? <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-status-purple" /></div> : filtered.length === 0 ? (
               <div className="card p-24 text-center space-y-4 border-dashed bg-transparent border-slate-800">
                 <Briefcase className="w-12 h-12 text-slate-800 mx-auto" />
                 <p className="text-slate-500 font-bold tracking-tight">Aucun dossier trouvé.</p>
@@ -1428,7 +1428,7 @@ export default function DossiersPage() {
                   <tbody className="divide-y divide-slate-800/50">
                     {filtered.map(d => (
                       <tr key={d.id} className="hover:bg-slate-900/40 transition-colors group">
-                        <td className="px-6 py-4 font-mono text-purple-400 font-bold">{d.reference}</td>
+                        <td className="px-6 py-4 font-mono text-status-purple font-bold">{d.reference}</td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="text-white font-bold tracking-tight">{d.client_name}</span>
@@ -1437,24 +1437,24 @@ export default function DossiersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-0.5">
-                            {d.client_phone && <span className="text-slate-300 text-xs flex items-center gap-1.5"><Phone className="w-3 h-3 text-brand-400" /> {d.client_phone}</span>}
+                            {d.client_phone && <span className="text-slate-300 text-xs flex items-center gap-1.5"><Phone className="w-3 h-3 text-content-brand" /> {d.client_phone}</span>}
                             {d.client_email && <span className="text-slate-500 text-[11px] flex items-center gap-1.5"><Mail className="w-3 h-3" /> {d.client_email}</span>}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-slate-400 font-medium">{d.type_affaire}</td>
+                        <td className="px-6 py-4 text-content-secondary font-medium">{d.type_affaire}</td>
                         <td className="px-6 py-4 text-center"><StatusBadge status={d.status} statuts={statuts} /></td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setFinancesPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Honoraires & Finances"><Receipt className="w-4 h-4" /></button>
-                            <button onClick={() => setWorkflowPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-brand-400 transition-all" title="Suivi Processus"><GitBranch className="w-4 h-4" /></button>
-                            <button onClick={() => setFichiersPanel(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-purple-400 transition-all" title="Pièces Jointes"><Paperclip className="w-4 h-4" /></button>
+                            <button onClick={() => setFinancesPanel(d)} className="p-2.5 rounded-xl hover:bg-surface-card text-content-secondary hover:text-status-success transition-all" title="Honoraires & Finances"><Receipt className="w-4 h-4" /></button>
+                            <button onClick={() => setWorkflowPanel(d)} className="p-2.5 rounded-xl hover:bg-surface-card text-content-secondary hover:text-content-brand transition-all" title="Suivi Processus"><GitBranch className="w-4 h-4" /></button>
+                            <button onClick={() => setFichiersPanel(d)} className="p-2.5 rounded-xl hover:bg-surface-card text-content-secondary hover:text-status-purple transition-all" title="Pièces Jointes"><Paperclip className="w-4 h-4" /></button>
                             {can('edit_dossier') && (
-                              <button onClick={() => setModal(d)} className="p-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all" title="Modifier Dossier"><Pencil className="w-4 h-4" /></button>
+                              <button onClick={() => setModal(d)} className="p-2.5 rounded-xl hover:bg-surface-card text-content-secondary hover:text-white transition-all" title="Modifier Dossier"><Pencil className="w-4 h-4" /></button>
                             )}
                             {can('archive_dossier') && (
                               <button 
                                 onClick={() => handleArchive(d, !showArchived)} 
-                                className={`p-2.5 rounded-xl hover:bg-slate-800 transition-all ${showArchived ? 'text-amber-500 hover:text-amber-400' : 'text-slate-400 hover:text-amber-400'}`}
+                                className={`p-2.5 rounded-xl hover:bg-surface-card transition-all ${showArchived ? 'text-status-warning hover:text-status-warning' : 'text-content-secondary hover:text-status-warning'}`}
                                 title={showArchived ? 'Désarchiver' : 'Archiver'}
                               >
                                 {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}

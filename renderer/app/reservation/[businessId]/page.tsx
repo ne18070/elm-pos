@@ -94,7 +94,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
             <p className="font-black text-brand-600 text-lg leading-none">
               {formatCurrency(room.price_per_night, currency)}
             </p>
-            <p className="text-xs text-slate-400">/ nuit</p>
+            <p className="text-xs text-content-secondary">/ nuit</p>
           </div>
         </div>
 
@@ -113,7 +113,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
               </span>
             ))}
             {room.amenities.length > 5 && (
-              <span className="text-xs text-slate-400">+{room.amenities.length - 5}</span>
+              <span className="text-xs text-content-secondary">+{room.amenities.length - 5}</span>
             )}
           </div>
         )}
@@ -236,7 +236,7 @@ export default function ReservationPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-sm w-full space-y-4">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
+          <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
           <p className="font-semibold text-slate-800">{loadErr}</p>
         </div>
       </div>
@@ -259,7 +259,7 @@ export default function ReservationPage() {
           <div className="min-w-0">
             <h1 className="font-bold text-slate-900 text-base truncate">{info?.name}</h1>
             {info?.address && (
-              <p className="text-xs text-slate-400 truncate flex items-center gap-1">
+              <p className="text-xs text-content-secondary truncate flex items-center gap-1">
                 <MapPin className="w-3 h-3 shrink-0" />{info.address}
               </p>
             )}
@@ -360,7 +360,7 @@ export default function ReservationPage() {
                     <option key={n} value={n}>{n}+ personne{n > 1 ? 's' : ''}</option>
                   ))}
                 </select>
-                <p className="text-xs text-slate-400 ml-auto">
+                <p className="text-xs text-content-secondary ml-auto">
                   {filteredRooms.length} chambre{filteredRooms.length !== 1 ? 's' : ''} disponible{filteredRooms.length !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -368,11 +368,11 @@ export default function ReservationPage() {
 
             {filteredRooms.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center space-y-3">
-                <BedDouble className="w-12 h-12 text-slate-200 mx-auto" />
+                <BedDouble className="w-12 h-12 text-content-primary mx-auto" />
                 <p className="font-semibold text-slate-700">
                   {rooms.length === 0 ? 'Aucune chambre disponible pour ces dates' : 'Aucune chambre correspond à vos critères'}
                 </p>
-                <p className="text-sm text-slate-400">Essayez d'autres dates ou modifiez vos filtres.</p>
+                <p className="text-sm text-content-secondary">Essayez d'autres dates ou modifiez vos filtres.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -392,7 +392,7 @@ export default function ReservationPage() {
 
         {/* Message initial */}
         {!searched && (
-          <div className="text-center py-12 space-y-3 text-slate-400">
+          <div className="text-center py-12 space-y-3 text-content-secondary">
             <Hotel className="w-14 h-14 mx-auto opacity-20" />
             <p className="text-sm">Choisissez vos dates pour voir les chambres disponibles</p>
           </div>
@@ -415,7 +415,7 @@ export default function ReservationPage() {
               </button>
               <div className="flex-1 min-w-0">
                 <h2 className="font-bold text-slate-900">Réserver — Chambre {selectedRoom.number}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-content-secondary mt-0.5">
                   {ROOM_TYPE_LABELS[selectedRoom.type]} · {nights} nuit{nights > 1 ? 's' : ''} · {formatCurrency(selectedRoom.price_per_night * nights, info!.currency)}
                 </p>
               </div>
@@ -523,7 +523,7 @@ export default function ReservationPage() {
                 )}
               </button>
 
-              <p className="text-xs text-slate-400 text-center">
+              <p className="text-xs text-content-secondary text-center">
                 Le règlement se fait à l'hôtel lors de votre arrivée. Votre réservation sera confirmée par WhatsApp.
               </p>
             </form>

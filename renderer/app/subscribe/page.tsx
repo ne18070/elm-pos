@@ -112,10 +112,10 @@ export default function SubscribePage() {
           <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
-          <p className="text-slate-400 text-sm mt-1">Abonnement</p>
+          <p className="text-content-secondary text-sm mt-1">Abonnement</p>
           <p className="text-xs text-slate-500 mt-2">
             Déjà un compte ?{' '}
-            <a href="/login" className="text-brand-400 hover:text-brand-300 transition-colors">
+            <a href="/login" className="text-content-brand hover:text-content-brand transition-colors">
               Se connecter
             </a>
           </p>
@@ -123,18 +123,18 @@ export default function SubscribePage() {
 
         {step === 'sent' ? (
           <div className="card p-10 flex flex-col items-center gap-5 text-center">
-            <div className="w-20 h-20 rounded-full bg-green-900/20 border border-green-700 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-400" />
+            <div className="w-20 h-20 rounded-full bg-badge-success border border-status-success flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-status-success" />
             </div>
             <div>
               <p className="text-xl font-bold text-white">Demande envoyée !</p>
               {isFree(selectedPlan) ? (
-                <p className="text-sm text-slate-400 mt-2 max-w-sm">
+                <p className="text-sm text-content-secondary mt-2 max-w-sm">
                   Votre inscription au plan gratuit a bien été reçue.
                   Votre accès sera activé sous <strong className="text-white">24h</strong>.
                 </p>
               ) : (
-                <p className="text-sm text-slate-400 mt-2 max-w-sm">
+                <p className="text-sm text-content-secondary mt-2 max-w-sm">
                   Nous avons bien reçu votre demande et votre reçu de paiement.
                   Votre accès sera activé sous <strong className="text-white">24h</strong>.
                 </p>
@@ -207,9 +207,9 @@ export default function SubscribePage() {
                             type="button"
                             onClick={() => { setPeriod(p); setSelectedPlan(null); }}
                             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
-                              ${period === p ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                              ${period === p ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
                             {p === 'monthly' ? 'Mensuel' : (
-                              <span className="flex items-center gap-1">Annuel <span className="text-green-400">−10%</span></span>
+                              <span className="flex items-center gap-1">Annuel <span className="text-status-success">−10%</span></span>
                             )}
                           </button>
                         ))}
@@ -223,17 +223,17 @@ export default function SubscribePage() {
                       return (
                         <button key={plan.id} onClick={() => setSelectedPlan(plan)}
                           className={`text-left p-5 rounded-2xl border transition-all relative
-                            ${selectedPlan?.id === plan.id ? 'border-brand-500 bg-brand-900/20' : 'border-surface-border hover:border-slate-500'}`}>
+                            ${selectedPlan?.id === plan.id ? 'border-brand-500 bg-badge-brand' : 'border-surface-border hover:border-slate-500'}`}>
                           {isAnnual && (
-                            <span className="absolute top-3 right-3 text-[10px] font-bold text-green-300 bg-green-900/40 border border-green-800/40 px-1.5 py-0.5 rounded-full">
+                            <span className="absolute top-3 right-3 text-[10px] font-bold text-status-success bg-badge-success border border-status-success/40 px-1.5 py-0.5 rounded-full">
                               1 mois offert
                             </span>
                           )}
                           <p className="font-bold text-white text-base">{plan.label}</p>
-                          <p className="text-2xl font-bold text-brand-400 mt-1">
+                          <p className="text-2xl font-bold text-content-brand mt-1">
                             {plan.price === 0 ? 'Gratuit' : plan.price.toLocaleString('fr-FR')}
                             {plan.price > 0 && (
-                              <span className="text-sm font-normal text-slate-400">
+                              <span className="text-sm font-normal text-content-secondary">
                                 {' '}{displayCurrency(plan.currency)}/{isAnnual ? 'an' : 'mois'}
                               </span>
                             )}
@@ -246,7 +246,7 @@ export default function SubscribePage() {
                           <ul className="mt-3 space-y-1">
                             {plan.features.map((f: string) => (
                               <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
-                                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" /> {f}
+                                <CheckCircle className="w-3.5 h-3.5 text-status-success shrink-0" /> {f}
                               </li>
                             ))}
                           </ul>
@@ -260,12 +260,12 @@ export default function SubscribePage() {
 
             {/* Note paiement */}
             {selectedPlan && !isFree(selectedPlan) && (
-              <div className="rounded-xl bg-brand-900/30 border border-brand-800/50 px-4 py-3 text-sm text-brand-300">
+              <div className="rounded-xl bg-badge-brand border border-brand-800/50 px-4 py-3 text-sm text-content-brand">
                 Notre équipe vous contactera pour finaliser le paiement après réception de votre demande.
               </div>
             )}
 
-            {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+            {submitError && <p className="text-sm text-status-error">{submitError}</p>}
 
             <button
               onClick={handleSubmit}
@@ -281,7 +281,7 @@ export default function SubscribePage() {
         {false && step === 'payment' && (
           /* ── Étape 2 : Paiement + reçu — désactivé temporairement ── */
           <div className="space-y-6">
-            <button onClick={() => setStep('info')} className="text-sm text-slate-400 hover:text-white transition-colors">
+            <button onClick={() => setStep('info')} className="text-sm text-content-secondary hover:text-white transition-colors">
               ← Retour
             </button>
 
@@ -291,7 +291,7 @@ export default function SubscribePage() {
               {/* Récap */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
                 <span className="text-sm text-slate-300">{selectedPlan?.label}</span>
-                <span className="font-bold text-brand-400">
+                <span className="font-bold text-content-brand">
                   {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
                 </span>
               </div>
@@ -313,8 +313,8 @@ export default function SubscribePage() {
               {/* QR Codes */}
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key: 'wave' as const, label: 'Wave',         url: settings?.wave_qr_url, color: 'border-blue-700 bg-blue-900/10' },
-                  { key: 'om'   as const, label: 'Orange Money', url: settings?.om_qr_url,   color: 'border-orange-700 bg-orange-900/10' },
+                  { key: 'wave' as const, label: 'Wave',         url: settings?.wave_qr_url, color: 'border-blue-700 bg-badge-info' },
+                  { key: 'om'   as const, label: 'Orange Money', url: settings?.om_qr_url,   color: 'border-orange-700 bg-badge-orange' },
                 ].map(({ key, label, url, color }) => (
                   <button key={key} onClick={() => url && setShowQr(key)} disabled={!url}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
@@ -343,14 +343,14 @@ export default function SubscribePage() {
                                     border-2 border-dashed border-surface-border rounded-xl
                                     cursor-pointer hover:border-brand-500 transition-colors">
                     <FileImage className="w-8 h-8 text-slate-500" />
-                    <span className="text-sm text-slate-400">Cliquez pour choisir une image</span>
+                    <span className="text-sm text-content-secondary">Cliquez pour choisir une image</span>
                     <span className="text-xs text-slate-600">PNG, JPG, PDF</span>
                     <input type="file" accept="image/*,.pdf" className="hidden"
                       onChange={(e) => e.target.files?.[0] && handleReceiptChange(e.target.files[0])} />
                   </label>
                 )}
 
-                {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+                {submitError && <p className="text-sm text-status-error">{submitError}</p>}
 
                 <button onClick={handleSubmit} disabled={!receiptFile || submitting}
                   className="btn-primary w-full flex items-center justify-center gap-2 h-11">
@@ -367,7 +367,7 @@ export default function SubscribePage() {
       {/* Pied de page */}
       <p className="relative text-center text-xs text-slate-600 mt-8">
         En vous abonnant, vous acceptez notre{' '}
-        <a href="/privacy" className="text-slate-400 hover:text-slate-300 underline underline-offset-2 transition-colors">
+        <a href="/privacy" className="text-content-secondary hover:text-slate-300 underline underline-offset-2 transition-colors">
           Politique de confidentialité
         </a>
       </p>

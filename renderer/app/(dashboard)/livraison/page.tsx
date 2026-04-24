@@ -26,9 +26,9 @@ import { supabase } from '@/lib/supabase';
 import type { Order } from '@pos-types';
 
 const DELIVERY_LABELS = {
-  pending:   { label: 'En attente',  color: 'text-yellow-400 bg-yellow-900/20 border-yellow-800' },
-  picking:   { label: 'En cours',    color: 'text-brand-400 bg-brand-900/20 border-brand-800'   },
-  delivered: { label: 'Livré',       color: 'text-green-400 bg-green-900/20 border-green-800'   },
+  pending:   { label: 'En attente',  color: 'text-status-warning bg-yellow-900/20 border-yellow-800' },
+  picking:   { label: 'En cours',    color: 'text-content-brand bg-badge-brand border-brand-800'   },
+  delivered: { label: 'Livré',       color: 'text-status-success bg-badge-success border-status-success'   },
 };
 
 export default function LivraisonPage() {
@@ -177,7 +177,7 @@ export default function LivraisonPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <Truck className="w-5 h-5 text-brand-400" />
+                <Truck className="w-5 h-5 text-content-brand" />
                 Livraisons
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -193,7 +193,7 @@ export default function LivraisonPage() {
         {/* Liste */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
-            <div className="text-slate-400 text-center py-16 text-sm">Chargement…</div>
+            <div className="text-content-secondary text-center py-16 text-sm">Chargement…</div>
           ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
               <CheckCircle className="w-12 h-12 opacity-30" />
@@ -216,7 +216,7 @@ export default function LivraisonPage() {
                     key={order.id}
                     className={`w-full text-left rounded-xl border transition-all ${
                       isSelected
-                        ? 'border-brand-500 bg-brand-900/10'
+                        ? 'border-brand-500 bg-badge-brand'
                         : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
                     }`}
                   >
@@ -230,7 +230,7 @@ export default function LivraisonPage() {
                             #{order.id.slice(0, 8).toUpperCase()}
                           </p>
                           {order.customer_name && (
-                            <p className="text-xs text-slate-400 truncate">{order.customer_name}</p>
+                            <p className="text-xs text-content-secondary truncate">{order.customer_name}</p>
                           )}
                           {order.cashier && (
                             <p className="text-xs text-slate-500 truncate">{order.cashier.full_name}</p>
@@ -243,7 +243,7 @@ export default function LivraisonPage() {
 
                       <div className="mt-2 space-y-1">
                         {order.items?.slice(0, 2).map((item) => (
-                          <div key={item.id} className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <div key={item.id} className="flex items-center gap-1.5 text-xs text-content-secondary">
                             <Package className="w-3 h-3 shrink-0" />
                             <span className="truncate flex-1">{item.name}</span>
                             <span className="text-slate-500 shrink-0">×{item.quantity}</span>
@@ -263,7 +263,7 @@ export default function LivraisonPage() {
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-slate-500">{itemCount} article{itemCount > 1 ? 's' : ''}</span>
-                          <span className="text-sm font-bold text-brand-400 ml-2">
+                          <span className="text-sm font-bold text-content-brand ml-2">
                             {formatCurrency(order.total, business?.currency)}
                           </span>
                         </div>
@@ -276,8 +276,8 @@ export default function LivraisonPage() {
                           onClick={(e) => { e.stopPropagation(); openAssign(order); }}
                           className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors ${
                             hasLivreur
-                              ? 'border-green-800 text-green-400 bg-green-900/20 hover:bg-green-900/30'
-                              : 'border-surface-border text-slate-400 hover:text-white hover:bg-surface-hover'
+                              ? 'border-status-success text-status-success bg-badge-success hover:bg-badge-success'
+                              : 'border-surface-border text-content-secondary hover:text-white hover:bg-surface-hover'
                           }`}
                         >
                           <UserCheck className="w-3 h-3" />
@@ -321,21 +321,21 @@ export default function LivraisonPage() {
               <h3 className="font-semibold text-white">Assigner un livreur</h3>
               <button
                 onClick={() => setAssigningOrder(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover"
+                className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-content-secondary">
                 Commande <span className="font-mono font-bold text-white">#{assigningOrder.id.slice(0, 8).toUpperCase()}</span>
                 {assigningOrder.customer_name && <> · {assigningOrder.customer_name}</>}
               </p>
 
               {(assigningOrder as any).livreur_id && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-900/20 border border-green-800">
-                  <UserCheck className="w-4 h-4 text-green-400 shrink-0" />
-                  <span className="text-xs text-green-400">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-badge-success border border-status-success">
+                  <UserCheck className="w-4 h-4 text-status-success shrink-0" />
+                  <span className="text-xs text-status-success">
                     Actuellement : {livreurs.find((l) => l.id === (assigningOrder as any).livreur_id)?.name ?? 'Livreur assigné'}
                   </span>
                 </div>

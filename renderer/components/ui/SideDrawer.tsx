@@ -62,7 +62,7 @@ export function SideDrawer({
           </div>
           <button
             onClick={onClose}
-            className="p-3 bg-surface-input/50 sm:bg-transparent hover:bg-surface-input rounded-xl text-slate-400 hover:text-white transition-all shrink-0"
+            className="p-3 bg-surface-input/50 sm:bg-transparent hover:bg-surface-input rounded-xl text-content-secondary hover:text-white transition-all shrink-0"
             aria-label="Fermer"
           >
             <X size={20} className="sm:w-6 sm:h-6" />

@@ -15,9 +15,9 @@ const TABLE_LABELS: Record<string, string> = {
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  INSERT: 'text-green-400',
+  INSERT: 'text-status-success',
   UPDATE: 'text-blue-400',
-  DELETE: 'text-red-400',
+  DELETE: 'text-status-error',
 };
 
 function PageLabel({ pathname }: { pathname: string }) {
@@ -71,7 +71,7 @@ export function TerminalStatus() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-slate-400
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-content-secondary
                    hover:bg-surface-hover transition-colors"
         title="Synchronisation temps réel"
       >
@@ -87,18 +87,18 @@ export function TerminalStatus() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 bg-slate-900 border border-surface-border
+        <div className="absolute bottom-full left-0 mb-2 w-72 bg-surface border border-surface-border
                         rounded-2xl shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-surface-border">
-            <ArrowUpDown className="w-4 h-4 text-brand-400" />
+            <ArrowUpDown className="w-4 h-4 text-content-brand" />
             <span className="font-medium text-sm text-white">Synchronisation temps réel</span>
             <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${
               status === 'connected'
-                ? 'bg-green-500/10 text-green-400'
+                ? 'bg-green-500/10 text-status-success'
                 : status === 'connecting'
-                ? 'bg-amber-500/10 text-amber-400'
-                : 'bg-red-500/10 text-red-400'
+                ? 'bg-amber-500/10 text-status-warning'
+                : 'bg-red-500/10 text-status-error'
             }`}>
               {status === 'connected' ? 'Connecté' : status === 'connecting' ? 'Connexion…' : 'Déconnecté'}
             </span>
@@ -139,7 +139,7 @@ function TerminalRow({ terminal }: { terminal: TerminalInfo }) {
   return (
     <div className="flex items-center gap-2">
       <div className="w-6 h-6 rounded-lg bg-brand-600/20 flex items-center justify-center shrink-0">
-        <Monitor className="w-3 h-3 text-brand-400" />
+        <Monitor className="w-3 h-3 text-content-brand" />
       </div>
       <div className="min-w-0">
         <p className="text-xs text-white truncate">{terminal.user_name}</p>
@@ -155,7 +155,7 @@ function TerminalRow({ terminal }: { terminal: TerminalInfo }) {
 function EventRow({ event }: { event: RealtimeEvent }) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className={`font-medium w-12 shrink-0 ${EVENT_COLORS[event.eventType] ?? 'text-slate-400'}`}>
+      <span className={`font-medium w-12 shrink-0 ${EVENT_COLORS[event.eventType] ?? 'text-content-secondary'}`}>
         {event.eventType === 'INSERT' ? '+ajout'
           : event.eventType === 'UPDATE' ? '~màj'
           : '-suppr'}

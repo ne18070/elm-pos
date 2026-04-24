@@ -49,7 +49,8 @@
       "Bash(sed -i 's/uuid_generate_v4\\(\\)/gen_random_uuid\\(\\)/g' \"c:\\\\Users\\\\pourq\\\\OneDrive\\\\Documents\\\\BUILD\\\\elm-pos\\\\supabase\\\\migrations\\\\015_push_subscriptions.sql\")",
       "Bash(git commit -m 'Web Push notifications for boutique/hotel public orders *)",
       "Bash(git commit -m 'Add web-push dependency for push notifications *)",
-      "Bash(git commit -m 'Public vehicle rental + push notification fixes *)"
+      "Bash(git commit -m 'Public vehicle rental + push notification fixes *)",
+      "Bash(xargs perl -pi -e ' *)"
     ]
   }
 }

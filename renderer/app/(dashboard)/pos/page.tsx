@@ -150,14 +150,14 @@ export default function PosPage() {
                   <button 
                     onClick={() => setLayout('catalog')} 
                     title="Catalogue"
-                    className={`p-2 rounded-lg transition-colors ${layout === 'catalog' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                    className={`p-2 rounded-lg transition-colors ${layout === 'catalog' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
                   >
                     <Utensils className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => setLayout('map')} 
                     title="Plan de salle"
-                    className={`p-2 rounded-lg transition-colors ${layout === 'map' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                    className={`p-2 rounded-lg transition-colors ${layout === 'map' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
                   >
                     <MapIcon className="w-4 h-4" />
                   </button>
@@ -165,11 +165,11 @@ export default function PosPage() {
                 </>
               )}
               <button onClick={() => setView('grid')} title="Vue grille"
-                className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                className={`p-2 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button onClick={() => setView('list')} title="Vue liste"
-                className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
                 <List className="w-4 h-4" />
               </button>
             </div>
@@ -224,11 +224,11 @@ export default function PosPage() {
             />
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
               <button onClick={() => setView('grid')}
-                className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-slate-400'}`}>
+                className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-white' : 'text-content-secondary'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button onClick={() => setView('list')}
-                className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-slate-400'}`}>
+                className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'text-content-secondary'}`}>
                 <List className="w-4 h-4" />
               </button>
             </div>
@@ -258,7 +258,7 @@ export default function PosPage() {
           <div className="px-3 py-2 border-b border-surface-border flex items-center gap-2">
             <button
               onClick={() => setMobileTab('catalog')}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-sm text-content-secondary hover:text-white transition-colors"
             >
               <ShoppingCart className="w-4 h-4" />
               ← Retour au catalogue

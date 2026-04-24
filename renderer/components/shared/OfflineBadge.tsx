@@ -21,7 +21,7 @@ export function OfflineBadge({ compact = false }: { compact?: boolean }) {
     return (
       <div className={cn(
         'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium',
-        hasFailed ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'
+        hasFailed ? 'bg-badge-error text-status-error' : 'bg-yellow-900/40 text-status-warning'
       )}>
         {hasFailed
           ? <AlertTriangle className="w-3.5 h-3.5" />
@@ -38,23 +38,23 @@ export function OfflineBadge({ compact = false }: { compact?: boolean }) {
       className={cn(
         'rounded-xl px-3 py-2 text-xs flex flex-col gap-1',
         hasFailed
-          ? 'bg-red-900/30 border border-red-800'
+          ? 'bg-badge-error border border-status-error'
           : !isOnline
           ? 'bg-yellow-900/30 border border-yellow-800'
-          : 'bg-blue-900/30 border border-blue-800'
+          : 'bg-badge-info border border-blue-800'
       )}
     >
       {/* Ligne principale */}
       <div className="flex items-center gap-2">
         {hasFailed ? (
-          <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+          <AlertTriangle className="w-3.5 h-3.5 text-status-error shrink-0" />
         ) : (
-          <WifiOff className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+          <WifiOff className="w-3.5 h-3.5 text-status-warning shrink-0" />
         )}
         <span
           className={cn(
             'font-medium',
-            hasFailed ? 'text-red-400' : 'text-yellow-400'
+            hasFailed ? 'text-status-error' : 'text-status-warning'
           )}
         >
           {!isOnline ? 'Hors ligne' : 'Synchronisation'}
@@ -63,9 +63,9 @@ export function OfflineBadge({ compact = false }: { compact?: boolean }) {
 
       {/* Détails */}
       {(pending > 0 || failed > 0) && (
-        <div className="text-slate-400 pl-5 space-y-0.5">
+        <div className="text-content-secondary pl-5 space-y-0.5">
           {pending > 0 && <p>{pending} en attente</p>}
-          {failed  > 0 && <p className="text-red-400">{failed} en échec</p>}
+          {failed  > 0 && <p className="text-status-error">{failed} en échec</p>}
         </div>
       )}
 
@@ -84,7 +84,7 @@ export function OfflineBadge({ compact = false }: { compact?: boolean }) {
         {failed > 0 && (
           <button
             onClick={retryFailed}
-            className="flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
+            className="flex items-center gap-1 text-status-error hover:text-status-error transition-colors"
           >
             <RefreshCw className="w-3 h-3" />
             Réessayer

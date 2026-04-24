@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tighter">ELM APP</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-content-secondary text-sm mt-1">
             {isActivation ? 'Activation de votre compte' : 'Réinitialisation du mot de passe'}
           </p>
         </div>
@@ -95,12 +95,12 @@ export default function ResetPasswordPage() {
           {success ? (
             <div className="text-center py-4">
               <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-6 h-6 text-green-400" />
+                <CheckCircle2 className="w-6 h-6 text-status-success" />
               </div>
               <h2 className="text-white font-bold mb-2">
                 {isActivation ? 'Compte activé !' : 'Mot de passe mis à jour'}
               </h2>
-              <p className="text-slate-400 text-sm mb-6">
+              <p className="text-content-secondary text-sm mb-6">
                 {isActivation 
                   ? 'Votre compte est prêt. Vous pouvez maintenant vous connecter à votre interface.'
                   : 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.'}
@@ -114,7 +114,7 @@ export default function ResetPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <p className="text-slate-400 text-sm mb-4">
+              <p className="text-content-secondary text-sm mb-4">
                 {isActivation 
                   ? 'Veuillez choisir un mot de passe pour sécuriser votre accès.'
                   : 'Veuillez saisir votre nouveau mot de passe ci-dessous.'}
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -159,7 +159,7 @@ export default function ResetPasswordPage() {
               </div>
 
               {erreur && (
-                <div className="rounded-xl bg-red-900/30 border border-red-700 px-4 py-3 text-sm text-red-400">
+                <div className="rounded-xl bg-badge-error border border-status-error px-4 py-3 text-sm text-status-error">
                   {erreur}
                 </div>
               )}
@@ -179,7 +179,7 @@ export default function ResetPasswordPage() {
         <p className="text-center text-xs text-slate-600 mt-6">
           <button 
             onClick={() => router.push('/login')}
-            className="hover:text-slate-400 transition-colors"
+            className="hover:text-content-secondary transition-colors"
           >
             Retour à la connexion
           </button>

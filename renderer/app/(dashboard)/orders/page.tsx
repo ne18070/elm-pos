@@ -24,10 +24,10 @@ const TAB_LABELS: Record<FilterTab, string> = {
 };
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending:   'bg-yellow-500/20 text-yellow-400 border-yellow-700',
-  paid:      'bg-green-500/20 text-green-400 border-green-700',
-  cancelled: 'bg-red-500/20 text-red-400 border-red-700',
-  refunded:  'bg-purple-500/20 text-purple-400 border-purple-700',
+  pending:   'bg-yellow-500/20 text-status-warning border-yellow-700',
+  paid:      'bg-green-500/20 text-status-success border-status-success',
+  cancelled: 'bg-red-500/20 text-status-error border-status-error',
+  refunded:  'bg-purple-500/20 text-status-purple border-purple-700',
 };
 
 const TABS: FilterTab[] = ['all', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
@@ -110,7 +110,7 @@ export default function OrdersPage() {
 
           {/* Recherche */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
             <input
               type="text"
               placeholder="Rechercher par ID, caissier, nom client ou téléphone…"
@@ -131,7 +131,7 @@ export default function OrdersPage() {
                     ? t === 'acompte'
                       ? 'bg-amber-600 text-white'
                       : 'bg-brand-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-content-secondary hover:text-white'
                 }`}
               >
                 {TAB_LABELS[t]}
@@ -151,16 +151,16 @@ export default function OrdersPage() {
         {/* Tableau */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center h-32 text-slate-400">Chargement…</div>
+            <div className="flex items-center justify-center h-32 text-content-secondary">Chargement…</div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+            <div className="flex flex-col items-center justify-center h-32 text-content-secondary">
               <Filter className="w-8 h-8 mb-2 opacity-40" />
               <p>Aucune commande trouvée</p>
             </div>
           ) : (
             <table className="w-full">
               <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
-                <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
+                <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
                   <th className="px-4 py-3 whitespace-nowrap">Commande</th>
                   <th className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">Date</th>
                   <th className="px-4 py-3 whitespace-nowrap">Client / Caissier</th>
@@ -189,14 +189,14 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-1.5">
                           {(order as { source?: string }).source === 'whatsapp' && (
                             <span title="Commande WhatsApp">
-                              <MessageCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                              <MessageCircle className="w-3.5 h-3.5 text-status-success shrink-0" />
                             </span>
                           )}
                           #{order.id.slice(0, 8).toUpperCase()}
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">
+                      <td className="px-4 py-3 text-xs text-content-secondary whitespace-nowrap hidden sm:table-cell">
                         {format(new Date(order.created_at), 'dd MMM, HH:mm', { locale: fr })}
                       </td>
 
@@ -205,16 +205,16 @@ export default function OrdersPage() {
                         {order.customer_name ? (
                           <div className="space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <div className="w-4 h-4 rounded-full bg-amber-900/50 border border-amber-700 flex items-center justify-center shrink-0">
-                                <User className="w-2 h-2 text-amber-400" />
+                              <div className="w-4 h-4 rounded-full bg-badge-warning border border-status-warning flex items-center justify-center shrink-0">
+                                <User className="w-2 h-2 text-status-warning" />
                               </div>
                               <p className="text-sm font-semibold text-white truncate">{order.customer_name}</p>
                             </div>
                             {order.customer_phone && (
-                              <p className="text-xs text-amber-400 pl-5 truncate">{order.customer_phone}</p>
+                              <p className="text-xs text-status-warning pl-5 truncate">{order.customer_phone}</p>
                             )}
                             {(order as { source?: string }).source === 'whatsapp'
-                              ? <p className="text-xs text-green-400 pl-5 flex items-center gap-1"><MessageCircle className="w-3 h-3" />WhatsApp</p>
+                              ? <p className="text-xs text-status-success pl-5 flex items-center gap-1"><MessageCircle className="w-3 h-3" />WhatsApp</p>
                               : <p className="text-xs text-slate-500 pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
                             }
                           </div>
@@ -223,7 +223,7 @@ export default function OrdersPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap hidden md:table-cell">
+                      <td className="px-4 py-3 text-sm text-content-secondary whitespace-nowrap hidden md:table-cell">
                         {qty} article{qty !== 1 ? 's' : ''}
                       </td>
 
@@ -235,11 +235,11 @@ export default function OrdersPage() {
                       <td className="px-4 py-3 text-sm hidden lg:table-cell whitespace-nowrap">
                         {partial ? (
                           <div className="space-y-0.5">
-                            <div className="flex items-center gap-1 text-brand-400">
+                            <div className="flex items-center gap-1 text-content-brand">
                               <span className="text-xs text-slate-500">versé</span>
                               <span className="font-medium">{fmt(paidAmt)}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-amber-400 font-semibold">
+                            <div className="flex items-center gap-1 text-status-warning font-semibold">
                               <span className="text-xs text-slate-500">reste</span>
                               <span>{fmt(remaining)}</span>
                             </div>
@@ -252,7 +252,7 @@ export default function OrdersPage() {
                       {/* Statut */}
                       <td className="px-4 py-3">
                         {partial ? (
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/20 text-amber-400 border-amber-700 whitespace-nowrap">
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/20 text-status-warning border-status-warning whitespace-nowrap">
                             Acompte
                           </span>
                         ) : (

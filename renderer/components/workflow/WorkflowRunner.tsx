@@ -31,13 +31,13 @@ interface WorkflowRunnerProps {
 
 // ── Badge de statut ───────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<WorkflowStatus, { label: string; className: string; icon: React.ReactNode }> = {
-  PENDING:   { label: 'En attente',  className: 'border-slate-600 bg-slate-800/50 text-slate-400',    icon: <Clock className="w-3 h-3" /> },
-  RUNNING:   { label: 'En cours',    className: 'border-blue-700 bg-blue-900/20 text-blue-300',       icon: <Loader2 className="w-3 h-3 animate-spin" /> },
-  WAITING:   { label: 'Action req.', className: 'border-amber-700 bg-amber-900/20 text-amber-300',    icon: <Clock className="w-3 h-3" /> },
-  PAUSED:    { label: 'En pause',    className: 'border-purple-700 bg-purple-900/20 text-purple-300', icon: <PauseCircle className="w-3 h-3" /> },
-  COMPLETED: { label: 'Terminé',     className: 'border-green-700 bg-green-900/20 text-green-300',    icon: <CheckCircle2 className="w-3 h-3" /> },
-  FAILED:    { label: 'Échoué',      className: 'border-red-700 bg-red-900/20 text-red-400',          icon: <XCircle className="w-3 h-3" /> },
-  CANCELLED: { label: 'Annulé',      className: 'border-red-800 bg-red-950/20 text-red-500',          icon: <Ban className="w-3 h-3" /> },
+  PENDING:   { label: 'En attente',  className: 'border-slate-600 bg-slate-800/50 text-content-secondary',    icon: <Clock className="w-3 h-3" /> },
+  RUNNING:   { label: 'En cours',    className: 'border-blue-700 bg-badge-info text-blue-300',       icon: <Loader2 className="w-3 h-3 animate-spin" /> },
+  WAITING:   { label: 'Action req.', className: 'border-status-warning bg-badge-warning text-status-warning',    icon: <Clock className="w-3 h-3" /> },
+  PAUSED:    { label: 'En pause',    className: 'border-purple-700 bg-badge-purple text-status-purple', icon: <PauseCircle className="w-3 h-3" /> },
+  COMPLETED: { label: 'Terminé',     className: 'border-status-success bg-badge-success text-status-success',    icon: <CheckCircle2 className="w-3 h-3" /> },
+  FAILED:    { label: 'Échoué',      className: 'border-status-error bg-badge-error text-status-error',          icon: <XCircle className="w-3 h-3" /> },
+  CANCELLED: { label: 'Annulé',      className: 'border-status-error bg-red-950/20 text-status-error',          icon: <Ban className="w-3 h-3" /> },
 };
 
 function StatusBadge({ status }: { status: WorkflowStatus }) {
@@ -117,9 +117,9 @@ function UserTaskPanel({ node, formData, onFieldChange }: {
 }) {
   return (
     <div className="space-y-4">
-      {node.description && <p className="text-sm text-slate-400">{node.description}</p>}
+      {node.description && <p className="text-sm text-content-secondary">{node.description}</p>}
       {node.due_hours && (
-        <div className="flex items-center gap-1.5 text-xs text-amber-400">
+        <div className="flex items-center gap-1.5 text-xs text-status-warning">
           <Clock className="w-3.5 h-3.5" />
           SLA : {node.due_hours}h
         </div>
@@ -129,8 +129,8 @@ function UserTaskPanel({ node, formData, onFieldChange }: {
           {node.form_fields.map(field => (
             <div key={field.key}>
               {field.type !== 'boolean' && (
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  {field.label}{field.required && <span className="text-red-400 ml-1">*</span>}
+                <label className="block text-xs font-medium text-content-secondary mb-1">
+                  {field.label}{field.required && <span className="text-status-error ml-1">*</span>}
                 </label>
               )}
               <FormFieldInput field={field} value={formData[field.key]} onChange={onFieldChange} />
@@ -151,10 +151,10 @@ function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Rec
   return (
     <div className="space-y-4">
       {node.document_name && (
-        <p className="text-xs font-semibold text-brand-400 uppercase tracking-wide">{node.document_name}</p>
+        <p className="text-xs font-semibold text-content-brand uppercase tracking-wide">{node.document_name}</p>
       )}
-      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 max-h-60 overflow-y-auto">
-        <pre className="text-sm text-slate-200 whitespace-pre-wrap font-sans leading-relaxed">{text}</pre>
+      <div className="bg-surface border border-slate-700 rounded-xl p-4 max-h-60 overflow-y-auto">
+        <pre className="text-sm text-content-primary whitespace-pre-wrap font-sans leading-relaxed">{text}</pre>
       </div>
       {waUrl ? (
         <a href={waUrl} target="_blank" rel="noopener noreferrer"
@@ -163,7 +163,7 @@ function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Rec
           Envoyer via WhatsApp
         </a>
       ) : node.share_method === 'WHATSAPP_SHARE' && !phone ? (
-        <p className="text-xs text-amber-400 flex items-center gap-1">
+        <p className="text-xs text-status-warning flex items-center gap-1">
           <AlertTriangle className="w-3.5 h-3.5" />
           Numéro manquant ({node.phone_field ?? 'phone_field non défini'})
         </p>
@@ -179,8 +179,8 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
 
   if (waActions.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
-        <RefreshCw className="w-4 h-4 animate-spin text-brand-400" />
+      <div className="flex items-center gap-2 text-sm text-content-secondary py-2">
+        <RefreshCw className="w-4 h-4 animate-spin text-content-brand" />
         Actions automatisées en cours…
       </div>
     );
@@ -188,7 +188,7 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
 
   return (
     <div className="space-y-4">
-      {node.description && <p className="text-sm text-slate-400">{node.description}</p>}
+      {node.description && <p className="text-sm text-content-secondary">{node.description}</p>}
       {waActions.map((action, i) => {
         const rawPhone = action.to ? context[action.to] : (context['client.phone'] ?? context['phone']);
         const phone    = String(rawPhone ?? '').replace(/\s+/g, '');
@@ -196,12 +196,12 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
         const waUrl    = phone ? buildWhatsAppUrl(phone, message) : null;
         return (
           <div key={i} className="space-y-3">
-            <div className="bg-green-950/30 border border-green-800/40 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-green-400 text-[10px] font-black uppercase tracking-widest mb-3">
+            <div className="bg-badge-success border border-status-success/40 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-status-success text-[10px] font-black uppercase tracking-widest mb-3">
                 <MessageCircle className="w-3.5 h-3.5" />
                 Message WhatsApp prêt
               </div>
-              <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+              <p className="text-sm text-content-primary whitespace-pre-wrap leading-relaxed">
                 {message || <span className="italic text-slate-500">Template non défini</span>}
               </p>
             </div>
@@ -214,7 +214,7 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
                 Ouvrir WhatsApp et envoyer
               </a>
             ) : (
-              <p className="text-xs text-amber-400 flex items-center gap-1.5">
+              <p className="text-xs text-status-warning flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Numéro introuvable dans le contexte ({action.to ?? 'client.phone'})
               </p>
@@ -242,14 +242,14 @@ function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: Wor
 
   return (
     <div className="space-y-3">
-      {node.description && <p className="text-sm text-slate-400">{node.description}</p>}
-      <div className="bg-purple-900/20 border border-purple-700/50 rounded-xl px-4 py-4 space-y-2.5">
-        <div className="flex items-center gap-2 text-purple-300 text-sm font-semibold">
+      {node.description && <p className="text-sm text-content-secondary">{node.description}</p>}
+      <div className="bg-badge-purple border border-purple-700/50 rounded-xl px-4 py-4 space-y-2.5">
+        <div className="flex items-center gap-2 text-status-purple text-sm font-semibold">
           <Radio className="w-4 h-4" />
           {isClientReply ? 'En attente de la réponse client' : `Attente de : ${node.event_key}`}
         </div>
         {isClientReply && (
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <p className="text-xs text-content-secondary leading-relaxed">
             Quand le client répond (par WhatsApp, email ou en personne), cliquez sur le bouton ci-dessous pour enregistrer la réponse et continuer.
           </p>
         )}
@@ -270,8 +270,8 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
 
   return (
     <div className="space-y-4">
-      <div className="bg-purple-900/20 border border-purple-700 rounded-xl px-4 py-3 space-y-2">
-        <div className="flex items-center gap-2 text-purple-300 text-sm font-medium">
+      <div className="bg-badge-purple border border-purple-700 rounded-xl px-4 py-3 space-y-2">
+        <div className="flex items-center gap-2 text-status-purple text-sm font-medium">
           <Timer className="w-4 h-4" />
           {node.delay_label ?? (hours > 0 ? `Délai de ${hours}h` : 'Délai non configuré')}
         </div>
@@ -288,7 +288,7 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
       
       <button 
         onClick={onResume}
-        className="w-full py-2.5 rounded-xl border border-purple-600 bg-purple-900/10 hover:bg-purple-900/30 text-purple-300 text-xs font-bold transition-all flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl border border-purple-600 bg-badge-purple hover:bg-badge-purple text-status-purple text-xs font-bold transition-all flex items-center justify-center gap-2"
       >
         <RefreshCw className="w-3.5 h-3.5" />
         Reprendre manuellement maintenant
@@ -308,15 +308,15 @@ function FeeRequestPanel({ node, context }: { node: any; context: Record<string,
   return (
     <div className="space-y-3">
       <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-xl px-4 py-4 space-y-2.5">
-        <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold">
+        <div className="flex items-center gap-2 text-status-success text-sm font-semibold">
           <Receipt className="w-4 h-4" />
           Génération d&apos;honoraire automatique
         </div>
         <div className="space-y-1">
-          <p className="text-2xl font-black text-white">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-slate-400">XOF</span></p>
+          <p className="text-2xl font-black text-white">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-content-secondary">XOF</span></p>
           <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{node.prestation_type || 'Provision'}</p>
         </div>
-        <p className="text-xs text-slate-400 leading-relaxed italic border-t border-emerald-800/30 pt-2">
+        <p className="text-xs text-content-secondary leading-relaxed italic border-t border-emerald-800/30 pt-2">
           {node.description || node.label}
         </p>
       </div>
@@ -330,9 +330,9 @@ function FeeRequestPanel({ node, context }: { node: any; context: Record<string,
 // ── Panel FAILED ──────────────────────────────────────────────────────────────
 function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetry: () => void }) {
   return (
-    <div className="bg-red-900/20 border border-red-800 rounded-xl px-4 py-3 space-y-3">
+    <div className="bg-badge-error border border-status-error rounded-xl px-4 py-3 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
+        <div className="flex items-center gap-2 text-status-error text-sm font-medium">
           <XCircle className="w-4 h-4" />
           Erreur — Processus en échec
         </div>
@@ -344,7 +344,7 @@ function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetr
         </button>
       </div>
       {instance.last_error && (
-        <pre className="text-xs text-red-300 whitespace-pre-wrap font-mono bg-red-950/30 rounded p-2 max-h-32 overflow-y-auto">
+        <pre className="text-xs text-status-error whitespace-pre-wrap font-mono bg-red-950/30 rounded p-2 max-h-32 overflow-y-auto">
           {instance.last_error}
         </pre>
       )}
@@ -425,22 +425,22 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
   return (
     <div className="space-y-4">
       {/* Header succès */}
-      <div className="bg-gradient-to-br from-green-950/60 to-emerald-900/30 border border-green-700/50 rounded-2xl p-5 text-center space-y-2">
+      <div className="bg-gradient-to-br from-green-950/60 to-emerald-900/30 border border-status-success/50 rounded-2xl p-5 text-center space-y-2">
         <div className="flex justify-center">
           <div className="w-14 h-14 rounded-full bg-green-500/20 border-2 border-green-500/50 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-green-400" />
+            <CheckCircle2 className="w-8 h-8 text-status-success" />
           </div>
         </div>
         <p className="text-lg font-black text-white">Processus terminé avec succès</p>
 
         <div className="flex items-center justify-center gap-4 pt-1">
           {instance.completed_at && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-content-secondary">
               {new Date(instance.completed_at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
           {durationLabel && (
-            <span className="text-xs bg-green-900/40 border border-green-800/50 text-green-300 px-2.5 py-0.5 rounded-full font-bold">
+            <span className="text-xs bg-badge-success border border-status-success/50 text-status-success px-2.5 py-0.5 rounded-full font-bold">
               ⏱ {durationLabel}
             </span>
           )}
@@ -454,8 +454,8 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
           <div className="space-y-1">
             {steps.map((node, i) => (
               <div key={node.id} className="flex items-center gap-3 py-1.5 px-3 rounded-lg bg-slate-900/40">
-                <div className="w-5 h-5 rounded-full bg-green-900/50 border border-green-700/50 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-3 h-3 text-green-400" />
+                <div className="w-5 h-5 rounded-full bg-badge-success border border-status-success/50 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-3 h-3 text-status-success" />
                 </div>
                 <span className="text-xs text-slate-300 font-medium">{node.label}</span>
                 <span className="ml-auto text-[9px] text-slate-600 font-mono">{i + 1}/{steps.length}</span>
@@ -473,7 +473,7 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
             {contextEntries.map(({ label, display }: { label: string; display: string }) => (
               <div key={label} className="flex items-start justify-between gap-4 px-3 py-2">
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide shrink-0">{label}</span>
-                <span className="text-xs text-slate-200 text-right break-all">{display}</span>
+                <span className="text-xs text-content-primary text-right break-all">{display}</span>
               </div>
             ))}
           </div>
@@ -484,7 +484,7 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
       {onRestart && (
         <button
           onClick={onRestart}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-white text-sm font-bold transition-all"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/50 hover:bg-surface-card text-slate-300 hover:text-white text-sm font-bold transition-all"
         >
           <RefreshCw className="w-4 h-4" /> Relancer le processus
         </button>
@@ -633,7 +633,7 @@ export function WorkflowRunner({
 
   if (!currentNode) {
     return (
-      <div className="card p-6 text-red-400 text-sm">
+      <div className="card p-6 text-status-error text-sm">
         Nœud introuvable : <code>{instance.current_node_id}</code>
       </div>
     );
@@ -645,7 +645,7 @@ export function WorkflowRunner({
       {/* ── En-tête ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-brand-900/30 border border-brand-700 text-brand-400">
+          <div className="p-2 rounded-lg bg-badge-brand border border-brand-700 text-content-brand">
             <NodeIcon type={currentNode.type} />
           </div>
           <div>
@@ -659,7 +659,7 @@ export function WorkflowRunner({
               onClick={handleRetry}
               disabled={isPending}
               title="Relancer cette étape"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-900/20 transition-all"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-content-brand hover:bg-badge-brand transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isPending ? 'animate-spin' : ''}`} />
             </button>
@@ -670,7 +670,7 @@ export function WorkflowRunner({
 
       {/* ── Spinner pendant traitement ── */}
       {isPending && (
-        <div className="flex items-center gap-2 text-sm text-slate-400">
+        <div className="flex items-center gap-2 text-sm text-content-secondary">
           <Loader2 className="w-4 h-4 animate-spin" />
           Traitement en cours…
         </div>
@@ -682,9 +682,9 @@ export function WorkflowRunner({
           {/* Instructions détaillées */}
           {currentNode.instructions && (
             <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-1">
-              <Info className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+              <Info className="w-5 h-5 text-status-purple shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">Consignes de l&apos;étape</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-status-purple">Consignes de l&apos;étape</p>
                 <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
                   {currentNode.instructions}
                 </div>
@@ -713,7 +713,7 @@ export function WorkflowRunner({
             <FeeRequestPanel node={currentNode} context={{ ...instance.context, ...formData }} />
           )}
           {instance.status !== 'FAILED' && currentNode.type === 'CONDITION' && (
-            <p className="text-sm text-slate-400 italic py-2">
+            <p className="text-sm text-content-secondary italic py-2">
               Évaluation automatique des conditions…
             </p>
           )}
@@ -722,7 +722,7 @@ export function WorkflowRunner({
 
       {/* ── Erreur ── */}
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-4 py-3">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {error}
         </div>
@@ -730,8 +730,8 @@ export function WorkflowRunner({
 
       {/* ── Confirmation ── */}
       {confirm && (
-        <div className="bg-amber-900/20 border border-amber-700 rounded-xl px-4 py-3 space-y-3">
-          <p className="text-sm text-amber-300 font-medium">
+        <div className="bg-badge-warning border border-status-warning rounded-xl px-4 py-3 space-y-3">
+          <p className="text-sm text-status-warning font-medium">
             Confirmer : <span className="font-bold">"{confirm.label}"</span> ?
           </p>
           <div className="flex gap-2">
@@ -752,7 +752,7 @@ export function WorkflowRunner({
             <button
               key={edge.id}
               onClick={() => handleTransition(edge)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-brand-700 bg-brand-900/20 hover:bg-brand-800/30 text-brand-300 hover:text-white text-sm font-medium transition-all group"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-brand-700 bg-badge-brand hover:bg-brand-800/30 text-content-brand hover:text-white text-sm font-medium transition-all group"
             >
               <span>{edge.label}</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -774,7 +774,7 @@ export function WorkflowRunner({
       {!readOnly && !isPending && instance.status !== 'FAILED' && (
         <button
           onClick={handleCancel}
-          className="w-full text-xs text-slate-600 hover:text-red-400 py-1 transition-colors"
+          className="w-full text-xs text-slate-600 hover:text-status-error py-1 transition-colors"
         >
           Annuler ce workflow
         </button>

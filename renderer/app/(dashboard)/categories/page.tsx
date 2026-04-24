@@ -48,9 +48,9 @@ export default function CategoriesPage() {
       {/* Liste */}
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="text-slate-400 text-center py-16">Chargement...</div>
+          <div className="text-content-secondary text-center py-16">Chargement...</div>
         ) : categories.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 text-content-secondary">
             <LayoutGrid className="w-12 h-12 mb-3 opacity-30" />
             <p className="font-medium">Aucune catégorie</p>
             <p className="text-sm mt-1">Créez une catégorie pour organiser vos produits.</p>

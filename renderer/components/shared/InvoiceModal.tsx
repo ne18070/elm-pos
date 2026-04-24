@@ -116,7 +116,7 @@ export function InvoiceModal({
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-surface-border">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-brand-600/20 text-brand-400">
+              <div className="p-2 rounded-xl bg-brand-600/20 text-content-brand">
                 <Printer className="w-5 h-5" />
               </div>
               <div>
@@ -124,7 +124,7 @@ export function InvoiceModal({
                 <p className="text-xs text-slate-500">Choisissez un modèle</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -149,7 +149,7 @@ export function InvoiceModal({
                     <span className="text-xs text-slate-500">{FORMAT_BADGE[t.format]}{t.copies === 2 ? ' · Duplicata' : ''}</span>
                   </div>
                   {selectedId === t.id && (
-                    <span className="text-xs text-brand-400 font-medium shrink-0">Sélectionné</span>
+                    <span className="text-xs text-content-brand font-medium shrink-0">Sélectionné</span>
                   )}
                 </button>
               ))}
@@ -157,10 +157,10 @@ export function InvoiceModal({
 
             {/* Mini preview */}
             {previewHtml && (
-              <div className="rounded-xl border border-surface-border overflow-hidden bg-slate-800">
+              <div className="rounded-xl border border-surface-border overflow-hidden bg-surface-card">
                 <div className="px-3 py-2 border-b border-surface-border flex items-center gap-2">
-                  <Eye className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-xs text-slate-400">Aperçu — {selected?.name}</span>
+                  <Eye className="w-3.5 h-3.5 text-content-secondary" />
+                  <span className="text-xs text-content-secondary">Aperçu — {selected?.name}</span>
                 </div>
                 <div className="p-2" style={{ height: 140, overflow: 'hidden', position: 'relative' }}>
                   <iframe

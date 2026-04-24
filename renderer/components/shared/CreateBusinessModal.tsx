@@ -89,7 +89,7 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
     >
       <div className="space-y-4">
         <div>
-          <label className="label">Nom de l'établissement <span className="text-red-400">*</span></label>
+          <label className="label">Nom de l'établissement <span className="text-status-error">*</span></label>
           <input
             type="text"
             value={form.name}

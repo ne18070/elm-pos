@@ -59,7 +59,7 @@ export default function ApprovisionnementPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-brand-400" />
+              <TrendingUp className="w-5 h-5 text-content-brand" />
               Approvisionnements
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -86,15 +86,15 @@ export default function ApprovisionnementPage() {
 
         {/* Alerte rupture de stock */}
         {lowStock.length > 0 && (
-          <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-red-800 bg-red-900/15 text-sm">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-status-error bg-badge-error text-sm">
+            <AlertTriangle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-red-300">
+              <p className="font-medium text-status-error">
                 {lowStock.filter((p) => (p.stock ?? 0) === 0).length > 0
                   ? `${lowStock.filter((p) => (p.stock ?? 0) === 0).length} produit(s) en rupture totale`
                   : `${lowStock.length} produit(s) avec stock bas (≤ ${LOW_STOCK_THRESHOLD})`}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-content-secondary mt-0.5">
                 {lowStock.slice(0, 3).map((p) => p.name).join(', ')}
                 {lowStock.length > 3 ? ` et ${lowStock.length - 3} autres…` : ''}
               </p>
@@ -104,7 +104,7 @@ export default function ApprovisionnementPage() {
 
         {/* Recherche */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
           <input
             type="text"
             placeholder="Rechercher par produit, fournisseur, notes…"
@@ -118,7 +118,7 @@ export default function ApprovisionnementPage() {
       {/* Tableau */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-slate-400 text-sm">
+          <div className="flex items-center justify-center h-32 text-content-secondary text-sm">
             Chargement…
           </div>
         ) : filtered.length === 0 ? (
@@ -140,7 +140,7 @@ export default function ApprovisionnementPage() {
         ) : (
           <table className="w-full">
             <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
-              <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
+              <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
                 <th className="px-4 py-3 whitespace-nowrap">Date</th>
                 <th className="px-4 py-3 whitespace-nowrap">Produit</th>
                 <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Conditionnement</th>
@@ -164,7 +164,7 @@ export default function ApprovisionnementPage() {
                     className="border-b border-surface-border hover:bg-surface-hover transition-colors"
                   >
                     {/* Date */}
-                    <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-content-secondary whitespace-nowrap">
                       {format(new Date(entry.created_at), 'dd MMM yy', { locale: fr })}
                       <br />
                       <span className="text-slate-600">
@@ -185,7 +185,7 @@ export default function ApprovisionnementPage() {
                     </td>
 
                     {/* Conditionnement */}
-                    <td className="px-4 py-3 text-sm text-slate-400 hidden lg:table-cell whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-content-secondary hidden lg:table-cell whitespace-nowrap">
                       {hasPackaging ? (
                         <span>
                           {entry.packaging_qty} {entry.packaging_unit ?? 'colis'} × {entry.packaging_size} {unit}
@@ -197,13 +197,13 @@ export default function ApprovisionnementPage() {
 
                     {/* Quantité reçue */}
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-sm font-bold text-green-400">
+                      <span className="text-sm font-bold text-status-success">
                         +{entry.quantity} {unit}
                       </span>
                     </td>
 
                     {/* Fournisseur */}
-                    <td className="px-4 py-3 text-sm text-slate-400 hidden md:table-cell max-w-[140px]">
+                    <td className="px-4 py-3 text-sm text-content-secondary hidden md:table-cell max-w-[140px]">
                       <span className="truncate block">{entry.supplier ?? <span className="text-slate-600">—</span>}</span>
                     </td>
 

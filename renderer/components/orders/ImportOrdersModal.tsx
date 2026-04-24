@@ -351,10 +351,10 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
           <h2 className="font-semibold text-white flex items-center gap-2">
-            <Upload className="w-4 h-4 text-brand-400" />
+            <Upload className="w-4 h-4 text-content-brand" />
             Importer des commandes
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -363,12 +363,12 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
 
           {/* Résultat final */}
           {done && (
-            <div className="p-4 rounded-xl bg-green-900/20 border border-green-800 text-sm text-green-400 flex items-start gap-2">
+            <div className="p-4 rounded-xl bg-badge-success border border-status-success text-sm text-status-success flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">{result.ok} commande(s) importée(s) avec succès.</p>
                 {result.skipped > 0 && (
-                  <p className="text-slate-400 mt-0.5">{result.skipped} ligne(s) ignorée(s) à cause d&apos;erreurs.</p>
+                  <p className="text-content-secondary mt-0.5">{result.skipped} ligne(s) ignorée(s) à cause d&apos;erreurs.</p>
                 )}
               </div>
             </div>
@@ -412,7 +412,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
 
               {/* Format hint */}
               <div className="text-xs text-slate-500 space-y-1 px-1">
-                <p className="font-medium text-slate-400">Colonnes attendues :</p>
+                <p className="font-medium text-content-secondary">Colonnes attendues :</p>
                 <p><span className="font-mono text-slate-300">date</span> (YYYY-MM-DD ou JJ/MM/AAAA) · <span className="font-mono text-slate-300">article</span> · <span className="font-mono text-slate-300">quantite</span> · <span className="font-mono text-slate-300">prix_unitaire</span></p>
                 <p>Optionnel : <span className="font-mono text-slate-300">client_nom</span> · <span className="font-mono text-slate-300">client_telephone</span> · <span className="font-mono text-slate-300">statut</span> (paid/pending/cancelled) · <span className="font-mono text-slate-300">methode_paiement</span> (cash/card/mobile_money) · <span className="font-mono text-slate-300">remise_article</span> · <span className="font-mono text-slate-300">remise_commande</span> · <span className="font-mono text-slate-300">code_promo</span> · <span className="font-mono text-slate-300">revendeur</span> · <span className="font-mono text-slate-300">notes</span></p>
                 <p className="text-slate-600">Plusieurs lignes avec même date + client = une seule commande avec plusieurs articles.</p>
@@ -428,7 +428,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
                   Aperçu — {orders.length} commande(s) détectée(s)
                 </p>
                 {hasErrors && (
-                  <span className="text-xs text-red-400 flex items-center gap-1">
+                  <span className="text-xs text-status-error flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" />
                     {orders.filter(o => o.errors.length > 0).length} avec erreurs (seront ignorées)
                   </span>
@@ -437,7 +437,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
 
               <div className="border border-surface-border rounded-xl overflow-hidden max-h-64 overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-surface-input text-slate-400 sticky top-0">
+                  <thead className="bg-surface-input text-content-secondary sticky top-0">
                     <tr>
                       <th className="text-left px-3 py-2">Date</th>
                       <th className="text-left px-3 py-2">Client</th>
@@ -458,15 +458,15 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
                         </td>
                         <td className="px-3 py-2">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                            o.status === 'paid'      ? 'bg-green-500/20 text-green-400' :
-                            o.status === 'pending'   ? 'bg-yellow-500/20 text-yellow-400' :
-                                                       'bg-red-500/20 text-red-400'
+                            o.status === 'paid'      ? 'bg-green-500/20 text-status-success' :
+                            o.status === 'pending'   ? 'bg-yellow-500/20 text-status-warning' :
+                                                       'bg-red-500/20 text-status-error'
                           }`}>{o.status}</span>
                         </td>
                         <td className="px-3 py-2">
                           {o.errors.length > 0 && (
                             <span title={o.errors.join('\n')}>
-                              <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                              <AlertCircle className="w-3.5 h-3.5 text-status-error" />
                             </span>
                           )}
                         </td>

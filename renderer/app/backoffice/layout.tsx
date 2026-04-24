@@ -116,7 +116,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
                   isActive 
                     ? "bg-brand-600 text-white shadow-lg shadow-brand-500/10" 
-                    : "text-slate-400 hover:text-white hover:bg-surface-input"
+                    : "text-content-secondary hover:text-white hover:bg-surface-input"
                 )}
               >
                 <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300")} />
@@ -139,9 +139,9 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
         <div className="p-4 border-t border-surface-border">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-all group"
           >
-            <LogOut className="w-5 h-5 text-slate-500 group-hover:text-red-400" />
+            <LogOut className="w-5 h-5 text-slate-500 group-hover:text-status-error" />
             {isSidebarOpen && <span className="text-sm font-bold">Déconnexion</span>}
           </button>
         </div>
@@ -171,7 +171,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end mr-2">
               <span className="text-xs font-black text-white leading-none">{user?.full_name}</span>
-              <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest mt-1">Super Admin</span>
+              <span className="text-[10px] font-bold text-content-brand uppercase tracking-widest mt-1">Super Admin</span>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-surface-input border border-surface-border flex items-center justify-center shadow-inner overflow-hidden">
               <span className="text-sm font-black text-slate-500">{user?.full_name?.charAt(0).toUpperCase()}</span>

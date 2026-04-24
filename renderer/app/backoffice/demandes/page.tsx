@@ -20,9 +20,9 @@ import { SideDrawer } from '@/components/ui/SideDrawer';
 const PAGE_SIZE = 25;
 
 const REQ_STATUS: Record<string, { label: string; color: string }> = {
-  pending:  { label: 'En attente', color: 'text-amber-400 bg-amber-900/20 border-amber-800' },
-  approved: { label: 'Approuvée',  color: 'text-green-400 bg-green-900/20 border-green-800' },
-  rejected: { label: 'Rejetée',    color: 'text-red-400 bg-red-900/20 border-red-800'       },
+  pending:  { label: 'En attente', color: 'text-status-warning bg-badge-warning border-status-warning' },
+  approved: { label: 'Approuvée',  color: 'text-status-success bg-badge-success border-status-success' },
+  rejected: { label: 'Rejetée',    color: 'text-status-error bg-badge-error border-status-error'       },
 };
 
 function CopyButton({ text, className = "" }: { text: string; className?: string }) {
@@ -34,7 +34,7 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
   };
   return (
     <button onClick={handleCopy} className={cn("p-1 hover:bg-surface-input rounded transition-colors", className)} title="Copier">
-      {copied ? <CheckIcon className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+      {copied ? <CheckIcon className="w-3 h-3 text-status-success" /> : <Copy className="w-3 h-3" />}
     </button>
   );
 }
@@ -251,14 +251,14 @@ export default function RequestsPage() {
                         {'denomination' in req && (req as PublicSubscriptionRequest).denomination && (
                           <p className="text-[9px] text-slate-500 font-bold uppercase mt-1 tracking-tighter italic">{ (req as PublicSubscriptionRequest).denomination }</p>
                         )}
-                        {req.note && <p className="text-[10px] text-brand-400 italic mt-1">&ldquo;{req.note}&rdquo;</p>}
+                        {req.note && <p className="text-[10px] text-content-brand italic mt-1">&ldquo;{req.note}&rdquo;</p>}
                       </td>
                       <td className="px-6 py-4">
                         {'email' in req ? (
                           <div className="space-y-0.5 group">
-                            <p className="font-bold text-slate-200">{(req as PublicSubscriptionRequest).full_name || '—'}</p>
+                            <p className="font-bold text-content-primary">{(req as PublicSubscriptionRequest).full_name || '—'}</p>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-slate-400 font-medium">{(req as PublicSubscriptionRequest).email}</span>
+                              <span className="text-xs text-content-secondary font-medium">{(req as PublicSubscriptionRequest).email}</span>
                               <CopyButton text={(req as PublicSubscriptionRequest).email} className="opacity-0 group-hover:opacity-100 scale-75" />
                             </div>
                           </div>
@@ -270,14 +270,14 @@ export default function RequestsPage() {
                           <p className="text-[10px] text-slate-500 font-bold">{req.plan_price.toLocaleString()} {displayCurrency(req.plan_currency ?? '')}</p>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
+                      <td className="px-6 py-4 text-content-secondary whitespace-nowrap">
                         <p className="text-xs font-bold text-white/80">{new Date(req.created_at).toLocaleDateString('fr-FR')}</p>
                         <p className="text-[10px] font-medium">{new Date(req.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
                       </td>
                       <td className="px-6 py-4">
                         {req.isPublic 
-                          ? <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-amber-900/50 bg-amber-900/20 text-amber-500">Prospect</span> 
-                          : <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-blue-900/50 bg-blue-900/20 text-blue-500">Compte</span>
+                          ? <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-amber-900/50 bg-badge-warning text-status-warning">Prospect</span> 
+                          : <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-blue-900/50 bg-badge-info text-blue-500">Compte</span>
                         }
                       </td>
                       <td className="px-6 py-4">
@@ -288,19 +288,19 @@ export default function RequestsPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {req.receipt_url && (
-                            <button onClick={() => setPreview(req.receipt_url!)} className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all border border-slate-700 shadow-sm" title="Voir le reçu"><Eye size={16} /></button>
+                            <button onClick={() => setPreview(req.receipt_url!)} className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-white transition-all border border-slate-700 shadow-sm" title="Voir le reçu"><Eye size={16} /></button>
                           )}
                           {req.status === 'pending' && (
                             <div className="flex items-center gap-1">
                               <button 
                                 onClick={() => req.isPublic ? setApprovePublicForm({ req, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' }) : setApproveForm({ requestId: req.id, businessId: req.business_id, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
-                                className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                                className="bg-emerald-500/10 text-status-success hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
                               >
                                 Approuver
                               </button>
                               <button 
                                 onClick={() => setRejectId({ id: req.id, isPublic: req.isPublic })}
-                                className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                                className="bg-red-500/10 text-status-error hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
                               >
                                 Rejeter
                               </button>
@@ -431,7 +431,7 @@ export default function RequestsPage() {
         }
       >
         <div className="space-y-4">
-          <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-500 flex items-center gap-3">
+          <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/10 text-status-error flex items-center gap-3">
              <XCircle size={24} />
              <p className="text-sm font-bold leading-tight">La demande sera marquée comme rejetée et ne pourra plus être modifiée.</p>
           </div>

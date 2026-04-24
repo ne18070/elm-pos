@@ -12,10 +12,10 @@ const ICONS = {
 };
 
 const STYLES = {
-  success: 'bg-green-900/80 border-green-700 text-green-200',
-  error:   'bg-red-900/80 border-red-700 text-red-200',
+  success: 'bg-badge-success border-status-success text-green-200',
+  error:   'bg-badge-error border-status-error text-red-200',
   warning: 'bg-yellow-900/80 border-yellow-700 text-yellow-200',
-  info:    'bg-blue-900/80 border-blue-700 text-blue-200',
+  info:    'bg-badge-info border-blue-700 text-blue-200',
 };
 
 export function NotificationContainer() {

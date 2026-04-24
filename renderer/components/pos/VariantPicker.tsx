@@ -58,9 +58,9 @@ export function VariantPicker({
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white truncate">{product.name}</p>
-            <p className="text-xs text-slate-400">Choisir une variante</p>
+            <p className="text-xs text-content-secondary">Choisir une variante</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white shrink-0">
+          <button onClick={onClose} className="text-content-secondary hover:text-white shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -102,12 +102,12 @@ export function VariantPicker({
                 <div className="flex items-center gap-3 shrink-0">
                   {label && (
                     <span className={`text-xs font-medium ${
-                      label === 'Épuisé' ? 'text-red-400' : 'text-yellow-400'
+                      label === 'Épuisé' ? 'text-status-error' : 'text-status-warning'
                     }`}>
                       {label}
                     </span>
                   )}
-                  <span className="font-bold text-brand-400 text-sm">
+                  <span className="font-bold text-content-brand text-sm">
                     {formatCurrency(finalPrice, currency)}
                   </span>
                 </div>

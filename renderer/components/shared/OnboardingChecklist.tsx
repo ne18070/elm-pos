@@ -45,7 +45,7 @@ export function OnboardingChecklist() {
           </div>
           <div>
             <p className="font-semibold text-white text-sm">Configurez votre espace</p>
-            <p className="text-xs text-brand-300 mt-0.5 font-medium">
+            <p className="text-xs text-content-brand mt-0.5 font-medium">
               {doneCount}/{steps.length} étapes · {progress}%
             </p>
           </div>
@@ -81,7 +81,7 @@ export function OnboardingChecklist() {
               <div className="flex flex-col items-center shrink-0 w-7">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300
                   ${step.done
-                    ? 'bg-green-500/15 border border-green-500/40 text-green-400'
+                    ? 'bg-green-500/15 border border-green-500/40 text-status-success'
                     : isActive
                       ? 'bg-brand-600 border border-brand-400 text-white shadow-[0_0_14px_rgba(37,99,235,0.45)]'
                       : 'bg-surface-input border border-surface-border text-slate-600'}`}
@@ -101,10 +101,10 @@ export function OnboardingChecklist() {
                   /* Active step — expanded card */
                   <div className="bg-brand-950/50 border border-brand-800/60 rounded-xl p-3.5 mb-1.5">
                     <div className="flex items-center gap-2 mb-1">
-                      <Icon className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                      <Icon className="w-3.5 h-3.5 text-content-brand shrink-0" />
                       <p className="text-sm font-semibold text-white">{step.label}</p>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed mb-3">
+                    <p className="text-xs text-content-secondary leading-relaxed mb-3">
                       {step.description}
                     </p>
                     <Link
@@ -117,7 +117,7 @@ export function OnboardingChecklist() {
                 ) : (
                   /* Done or pending step — collapsed row */
                   <div className={`flex items-center gap-2 py-2 ${step.done ? 'opacity-45' : ''}`}>
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${step.done ? 'text-green-400' : 'text-slate-600'}`} />
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${step.done ? 'text-status-success' : 'text-slate-600'}`} />
                     <p className={`text-sm ${step.done ? 'line-through text-slate-500' : 'text-slate-500'}`}>
                       {step.label}
                     </p>

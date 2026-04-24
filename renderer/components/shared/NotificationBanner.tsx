@@ -41,7 +41,7 @@ export function NotificationBanner() {
       >
         Activer
       </button>
-      <button onClick={dismiss} className="text-brand-400 hover:text-brand-600 transition-colors shrink-0">
+      <button onClick={dismiss} className="text-content-brand hover:text-brand-600 transition-colors shrink-0">
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -76,7 +76,7 @@ export function NotificationToggle() {
       onClick={toggle}
       disabled={loading}
       title={subscribed ? 'Désactiver les notifications' : 'Activer les notifications'}
-      className={`p-2 rounded-full transition-colors ${subscribed ? 'text-brand-600 hover:bg-brand-50' : 'text-slate-400 hover:bg-slate-100'}`}
+      className={`p-2 rounded-full transition-colors ${subscribed ? 'text-brand-600 hover:bg-brand-50' : 'text-content-secondary hover:bg-slate-100'}`}
     >
       {subscribed ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
     </button>

@@ -69,7 +69,7 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
           )}
           {outOfStock && (
             <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-              <span className="text-xs font-bold text-red-500 bg-red-50 border border-red-200 px-2 py-1 rounded-full">Épuisé</span>
+              <span className="text-xs font-bold text-status-error bg-red-50 border border-red-200 px-2 py-1 rounded-full">Épuisé</span>
             </div>
           )}
         </div>
@@ -78,7 +78,7 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
         <div className="p-3 flex flex-col gap-2 flex-1">
           <p className="font-semibold text-slate-800 text-sm leading-snug line-clamp-2">{product.name}</p>
           {product.description && (
-            <p className="text-xs text-slate-400 line-clamp-2">{product.description}</p>
+            <p className="text-xs text-content-secondary line-clamp-2">{product.description}</p>
           )}
           <div className="flex items-center justify-between mt-auto pt-1">
             <span className="font-bold text-brand-600 text-sm">
@@ -154,7 +154,7 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
                   >
                     <span className="font-medium text-slate-800">{variant.name}</span>
                     <div className="flex items-center gap-3">
-                      {vOutStock && <span className="text-xs text-red-400">Épuisé</span>}
+                      {vOutStock && <span className="text-xs text-status-error">Épuisé</span>}
                       <span className="font-bold text-brand-600">{formatCurrency(vPrice, currency)}</span>
                       <Plus className="w-4 h-4 text-brand-600" />
                     </div>
@@ -327,7 +327,7 @@ export default function BoutiquePage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-sm w-full space-y-4">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
+          <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
           <p className="font-semibold text-slate-800">{loadErr ?? "Boutique introuvable"}</p>
           <button onClick={() => window.location.reload()} className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors">
             Réessayer
@@ -354,7 +354,7 @@ export default function BoutiquePage() {
             <div className="min-w-0">
               <h1 className="font-bold text-slate-900 text-base truncate">{info.name}</h1>
               {info.address && (
-                <p className="text-xs text-slate-400 truncate flex items-center gap-1">
+                <p className="text-xs text-content-secondary truncate flex items-center gap-1">
                   <MapPin className="w-3 h-3 shrink-0" />{info.address}
                 </p>
               )}
@@ -379,7 +379,7 @@ export default function BoutiquePage() {
         {/* Barre de recherche */}
         <div className="max-w-2xl mx-auto px-4 pb-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
             <input
               type="text"
               placeholder="Rechercher un produit…"
@@ -419,7 +419,7 @@ export default function BoutiquePage() {
       {/* ── Grille produits ──────────────────────────────────────────────────── */}
       <main className="max-w-2xl mx-auto px-4 py-4">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+          <div className="flex flex-col items-center justify-center py-20 text-content-secondary gap-3">
             <Package className="w-12 h-12 opacity-30" />
             <p className="text-sm">Aucun produit trouvé</p>
           </div>
@@ -476,7 +476,7 @@ export default function BoutiquePage() {
             {/* Articles */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+                <div className="flex flex-col items-center justify-center py-12 text-content-secondary gap-3">
                   <ShoppingCart className="w-10 h-10 opacity-30" />
                   <p className="text-sm">Votre panier est vide</p>
                 </div>
@@ -531,7 +531,7 @@ export default function BoutiquePage() {
                 </button>
                 <button
                   onClick={clearCart}
-                  className="w-full text-sm text-slate-400 hover:text-red-500 transition-colors py-1"
+                  className="w-full text-sm text-content-secondary hover:text-status-error transition-colors py-1"
                 >
                   Vider le panier
                 </button>
@@ -601,7 +601,7 @@ export default function BoutiquePage() {
                       deliveryType === 'pickup' ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <Store className={`w-6 h-6 ${deliveryType === 'pickup' ? 'text-brand-600' : 'text-slate-400'}`} />
+                    <Store className={`w-6 h-6 ${deliveryType === 'pickup' ? 'text-brand-600' : 'text-content-secondary'}`} />
                     <span className={`text-xs font-semibold ${deliveryType === 'pickup' ? 'text-brand-700' : 'text-slate-600'}`}>
                       En boutique
                     </span>
@@ -613,7 +613,7 @@ export default function BoutiquePage() {
                       deliveryType === 'delivery' ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <Truck className={`w-6 h-6 ${deliveryType === 'delivery' ? 'text-brand-600' : 'text-slate-400'}`} />
+                    <Truck className={`w-6 h-6 ${deliveryType === 'delivery' ? 'text-brand-600' : 'text-content-secondary'}`} />
                     <span className={`text-xs font-semibold ${deliveryType === 'delivery' ? 'text-brand-700' : 'text-slate-600'}`}>
                       Livraison
                     </span>
@@ -669,14 +669,14 @@ export default function BoutiquePage() {
                         paymentMethod === value ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
-                      <div className={`shrink-0 ${paymentMethod === value ? 'text-brand-600' : 'text-slate-400'}`}>
+                      <div className={`shrink-0 ${paymentMethod === value ? 'text-brand-600' : 'text-content-secondary'}`}>
                         {icon}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-semibold ${paymentMethod === value ? 'text-brand-700' : 'text-slate-700'}`}>
                           {label}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                        <p className="text-xs text-content-secondary mt-0.5">{desc}</p>
                       </div>
                       {paymentMethod === value && (
                         <Check className="w-4 h-4 text-brand-600 shrink-0" />

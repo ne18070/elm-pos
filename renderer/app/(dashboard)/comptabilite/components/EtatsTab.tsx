@@ -12,17 +12,17 @@ interface Props {
 export function EtatsTab({ is, bs, currency }: Props) {
   const plRows: { label: string; val: number; indent: number; style: string; separator?: boolean }[] = [
     { label: 'Ventes & Prestations (70x)',   val: is.ventesGross,         indent: 0, style: 'text-slate-300' },
-    { label: 'RRR accordés (7091)',           val: -is.rrrAccordes,        indent: 1, style: 'text-red-400' },
+    { label: 'RRR accordés (7091)',           val: -is.rrrAccordes,        indent: 1, style: 'text-status-error' },
     { label: "CHIFFRE D'AFFAIRES NET",        val: is.caNet,               indent: 0, style: 'font-bold text-white', separator: true },
-    { label: 'Achats de marchandises (601)',  val: -is.achatsMarchandises, indent: 1, style: 'text-red-400' },
-    { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: `font-semibold ${is.margeBrute >= 0 ? 'text-green-400' : 'text-red-400'}`, separator: true },
-    { label: 'Autres charges (6xx)',          val: -is.autresCharges,      indent: 1, style: 'text-red-400' },
-    { label: "RÉSULTAT D'EXPLOITATION",       val: is.resultatExpl,        indent: 0, style: `font-semibold ${is.resultatExpl >= 0 ? 'text-green-400' : 'text-red-400'}`, separator: true },
+    { label: 'Achats de marchandises (601)',  val: -is.achatsMarchandises, indent: 1, style: 'text-status-error' },
+    { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: `font-semibold ${is.margeBrute >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
+    { label: 'Autres charges (6xx)',          val: -is.autresCharges,      indent: 1, style: 'text-status-error' },
+    { label: "RÉSULTAT D'EXPLOITATION",       val: is.resultatExpl,        indent: 0, style: `font-semibold ${is.resultatExpl >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
     { label: 'Produits financiers',           val: is.produitsFinanciers,  indent: 1, style: 'text-slate-300' },
-    { label: 'Charges financières (661)',     val: -is.chargesFinancieres, indent: 1, style: 'text-red-400' },
-    { label: "RÉSULTAT AVANT IMPÔT",          val: is.resultatAvantImpot,  indent: 0, style: `font-semibold ${is.resultatAvantImpot >= 0 ? 'text-green-400' : 'text-red-400'}`, separator: true },
-    { label: 'Impôts sur résultat (691)',     val: -is.impots,             indent: 1, style: 'text-red-400' },
-    { label: 'RÉSULTAT NET',                  val: is.resultatNet,         indent: 0, style: `font-bold text-lg ${is.resultatNet >= 0 ? 'text-brand-400' : 'text-red-400'}`, separator: true },
+    { label: 'Charges financières (661)',     val: -is.chargesFinancieres, indent: 1, style: 'text-status-error' },
+    { label: "RÉSULTAT AVANT IMPÔT",          val: is.resultatAvantImpot,  indent: 0, style: `font-semibold ${is.resultatAvantImpot >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
+    { label: 'Impôts sur résultat (691)',     val: -is.impots,             indent: 1, style: 'text-status-error' },
+    { label: 'RÉSULTAT NET',                  val: is.resultatNet,         indent: 0, style: `font-bold text-lg ${is.resultatNet >= 0 ? 'text-content-brand' : 'text-status-error'}`, separator: true },
   ];
 
   const actifRows = [
@@ -56,7 +56,7 @@ export function EtatsTab({ is, bs, currency }: Props) {
             <div key={i}>
               {row.separator && <div className="border-t border-surface-border my-2" />}
               <div className={`flex justify-between items-center py-1 ${row.indent ? 'pl-4' : ''}`}>
-                <span className={`text-sm ${row.indent ? 'text-slate-400' : row.style}`}>{row.label}</span>
+                <span className={`text-sm ${row.indent ? 'text-content-secondary' : row.style}`}>{row.label}</span>
                 <span className={`font-mono text-sm ${row.style}`}>
                   {row.val !== 0 ? formatCurrency(row.val, currency) : '—'}
                 </span>
@@ -74,30 +74,30 @@ export function EtatsTab({ is, bs, currency }: Props) {
         </div>
         <div className="p-5 grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">ACTIF</p>
+            <p className="text-xs font-bold text-content-secondary uppercase tracking-wide mb-3">ACTIF</p>
             {actifRows.map((row, i) => (
               <div key={i} className="flex justify-between">
-                <span className="text-xs text-slate-400">{row.label}</span>
+                <span className="text-xs text-content-secondary">{row.label}</span>
                 <span className="text-xs font-mono text-white">{formatCurrency(row.val, currency)}</span>
               </div>
             ))}
             <div className="border-t border-surface-border pt-2 flex justify-between">
               <span className="text-sm font-bold text-white">TOTAL ACTIF</span>
-              <span className="text-sm font-bold font-mono text-brand-400">{formatCurrency(bs.totalActif, currency)}</span>
+              <span className="text-sm font-bold font-mono text-content-brand">{formatCurrency(bs.totalActif, currency)}</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">PASSIF</p>
+            <p className="text-xs font-bold text-content-secondary uppercase tracking-wide mb-3">PASSIF</p>
             {passifRows.map((row, i) => (
               <div key={i} className="flex justify-between">
-                <span className="text-xs text-slate-400">{row.label}</span>
+                <span className="text-xs text-content-secondary">{row.label}</span>
                 <span className="text-xs font-mono text-white">{formatCurrency(row.val, currency)}</span>
               </div>
             ))}
             <div className="border-t border-surface-border pt-2 flex justify-between">
               <span className="text-sm font-bold text-white">TOTAL PASSIF</span>
-              <span className="text-sm font-bold font-mono text-brand-400">{formatCurrency(bs.totalPassif, currency)}</span>
+              <span className="text-sm font-bold font-mono text-content-brand">{formatCurrency(bs.totalPassif, currency)}</span>
             </div>
           </div>
         </div>

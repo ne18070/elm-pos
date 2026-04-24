@@ -46,10 +46,10 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
       <div className="p-4 border-b border-surface-border flex items-center justify-between bg-surface-hover/30">
         <h3 className="text-sm font-bold text-white capitalize">{monthName}</h3>
         <div className="flex gap-1">
-          <button onClick={onPrev} className="p-2 hover:bg-surface-hover rounded-xl text-slate-400 transition-colors">
+          <button onClick={onPrev} className="p-2 hover:bg-surface-hover rounded-xl text-content-secondary transition-colors">
             <ChevronLeft size={18} />
           </button>
-          <button onClick={onNext} className="p-2 hover:bg-surface-hover rounded-xl text-slate-400 transition-colors">
+          <button onClick={onNext} className="p-2 hover:bg-surface-hover rounded-xl text-content-secondary transition-colors">
             <ChevronRight size={18} />
           </button>
         </div>

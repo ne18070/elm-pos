@@ -121,9 +121,9 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
   const count = alerts.length;
 
   const COLOR: Record<Alert['type'], string> = {
-    danger:  'text-red-400 bg-red-900/20 border-red-800',
-    warning: 'text-amber-400 bg-amber-900/20 border-amber-800',
-    info:    'text-brand-400 bg-brand-900/20 border-brand-800',
+    danger:  'text-status-error bg-badge-error border-status-error',
+    warning: 'text-status-warning bg-badge-warning border-status-warning',
+    info:    'text-content-brand bg-badge-brand border-brand-800',
   };
 
   return (
@@ -131,7 +131,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-slate-400 hover:text-white hover:bg-surface-hover",
+          "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-content-secondary hover:text-white hover:bg-surface-hover",
           collapsed ? "justify-center" : ""
         )}
         title={collapsed ? "Notifications" : undefined}
@@ -162,7 +162,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
         )}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
             <p className="text-sm font-semibold text-white">Notifications</p>
-            <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-white">
+            <button onClick={() => setOpen(false)} className="text-content-secondary hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -183,7 +183,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-white leading-tight">{alert.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{alert.description}</p>
+                      <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">{alert.description}</p>
                     </div>
                   </div>
                 );

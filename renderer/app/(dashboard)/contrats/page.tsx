@@ -31,15 +31,15 @@ type Tab = 'contrats' | 'vehicules' | 'modeles';
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft:    { label: 'Brouillon',  color: 'bg-slate-700 text-slate-300' },
-  sent:     { label: 'Envoyé',     color: 'bg-blue-900/50 text-blue-300' },
-  signed:   { label: 'Signé',      color: 'bg-green-900/50 text-green-300' },
-  archived: { label: 'Archivé',    color: 'bg-slate-800 text-slate-500' },
+  sent:     { label: 'Envoyé',     color: 'bg-badge-info text-blue-300' },
+  signed:   { label: 'Signé',      color: 'bg-badge-success text-status-success' },
+  archived: { label: 'Archivé',    color: 'bg-surface-card text-slate-500' },
 };
 
 const PAYMENT_STATUS_CFG = {
-  pending: { label: 'Non payé', color: 'bg-red-900/40 text-red-400'     },
-  partial: { label: 'Acompte',  color: 'bg-amber-900/40 text-amber-400' },
-  paid:    { label: 'Payé',     color: 'bg-green-900/40 text-green-400' },
+  pending: { label: 'Non payé', color: 'bg-badge-error text-status-error'     },
+  partial: { label: 'Acompte',  color: 'bg-badge-warning text-status-warning' },
+  paid:    { label: 'Payé',     color: 'bg-badge-success text-status-success' },
 } as const;
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -405,11 +405,11 @@ export default function ContratsPage() {
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
           <button onClick={() => setDetailContract(null)} className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors">
-            <ChevronLeft className="w-5 h-5 text-slate-400" />
+            <ChevronLeft className="w-5 h-5 text-content-secondary" />
           </button>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white truncate">{c.client_name}</p>
-            <p className="text-xs text-slate-400">{fmtDate(c.start_date)} → {fmtDate(c.end_date)}</p>
+            <p className="text-xs text-content-secondary">{fmtDate(c.start_date)} → {fmtDate(c.end_date)}</p>
           </div>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>{status.label}</span>
           {c.status !== 'archived' && (
@@ -418,7 +418,7 @@ export default function ContratsPage() {
               className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
               title="Modifier le contrat"
             >
-              <Pencil className="w-4 h-4 text-slate-400" />
+              <Pencil className="w-4 h-4 text-content-secondary" />
             </button>
           )}
         </div>
@@ -426,23 +426,23 @@ export default function ContratsPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Infos */}
           <div className="card p-4 space-y-2">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Client</h3>
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Client</h3>
             <p className="text-white font-medium">{c.client_name}</p>
-            {c.client_phone && <p className="text-sm text-slate-400">{c.client_phone}</p>}
-            {c.client_email && <p className="text-sm text-slate-400">{c.client_email}</p>}
-            {c.client_id_number && <p className="text-sm text-slate-400">Pièce : {c.client_id_number}</p>}
-            {c.client_address && <p className="text-sm text-slate-400">{c.client_address}</p>}
+            {c.client_phone && <p className="text-sm text-content-secondary">{c.client_phone}</p>}
+            {c.client_email && <p className="text-sm text-content-secondary">{c.client_email}</p>}
+            {c.client_id_number && <p className="text-sm text-content-secondary">Pièce : {c.client_id_number}</p>}
+            {c.client_address && <p className="text-sm text-content-secondary">{c.client_address}</p>}
           </div>
 
           <div className="card p-4 space-y-2">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Location</h3>
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Location</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div><p className="text-slate-500">Départ</p><p className="text-white">{fmtDate(c.start_date)}</p></div>
               <div><p className="text-slate-500">Retour</p><p className="text-white">{fmtDate(c.end_date)}</p></div>
               {c.pickup_location && <div><p className="text-slate-500">Lieu prise</p><p className="text-white">{c.pickup_location}</p></div>}
               {c.return_location && <div><p className="text-slate-500">Lieu retour</p><p className="text-white">{c.return_location}</p></div>}
               <div><p className="text-slate-500">Prix/jour</p><p className="text-white">{fmtMoney(c.price_per_day, c.currency)}</p></div>
-              <div><p className="text-slate-500">Total</p><p className="text-brand-400 font-semibold">{fmtMoney(c.total_amount, c.currency)}</p></div>
+              <div><p className="text-slate-500">Total</p><p className="text-content-brand font-semibold">{fmtMoney(c.total_amount, c.currency)}</p></div>
               <div><p className="text-slate-500">Caution</p><p className="text-white">{fmtMoney(c.deposit_amount, c.currency)}</p></div>
             </div>
           </div>
@@ -451,7 +451,7 @@ export default function ContratsPage() {
           {c.status !== 'archived' && (
             <div className="card p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
                   <Banknote className="w-4 h-4" /> Paiement encaissé
                 </h3>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
@@ -463,24 +463,24 @@ export default function ContratsPage() {
               {c.amount_paid != null && c.amount_paid > 0 && (
                 <div className="bg-surface-input rounded-xl p-3 text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Montant encaissé</span>
-                    <span className="text-green-400 font-semibold">{fmtMoney(c.amount_paid, c.currency)}</span>
+                    <span className="text-content-secondary">Montant encaissé</span>
+                    <span className="text-status-success font-semibold">{fmtMoney(c.amount_paid, c.currency)}</span>
                   </div>
                   {c.total_amount != null && c.amount_paid < c.total_amount && (
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Reste dû</span>
-                      <span className="text-amber-400 font-semibold">{fmtMoney(c.total_amount - c.amount_paid, c.currency)}</span>
+                      <span className="text-content-secondary">Reste dû</span>
+                      <span className="text-status-warning font-semibold">{fmtMoney(c.total_amount - c.amount_paid, c.currency)}</span>
                     </div>
                   )}
                   {c.payment_date && (
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Date</span>
+                      <span className="text-content-secondary">Date</span>
                       <span className="text-slate-300">{fmtDate(c.payment_date)}</span>
                     </div>
                   )}
                   {c.payment_method && (
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Méthode</span>
+                      <span className="text-content-secondary">Méthode</span>
                       <span className="text-slate-300">{PAYMENT_METHOD_LABELS[c.payment_method]}</span>
                     </div>
                   )}
@@ -544,10 +544,10 @@ export default function ContratsPage() {
           {/* ── Contrat signé : lecture seule ── */}
           {c.status === 'signed' && (
             <div className="card p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-400" /> Signé
+              <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-status-success" /> Signé
               </h3>
-              {c.signed_at && <p className="text-sm text-slate-400">Le {fmtDate(c.signed_at)}</p>}
+              {c.signed_at && <p className="text-sm text-content-secondary">Le {fmtDate(c.signed_at)}</p>}
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center">
                   <p className="text-xs text-slate-500 mb-2">Loueur</p>
@@ -574,7 +574,7 @@ export default function ContratsPage() {
           {/* ── Signature du loueur + envoi (draft) ── */}
           {c.status === 'draft' && (
             <div className="card p-4 space-y-4">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
                 <PenLine className="w-4 h-4" /> Votre signature (loueur)
               </h3>
 
@@ -582,7 +582,7 @@ export default function ContratsPage() {
                 <div className="space-y-2">
                   <img src={c.lessor_signature_image} alt="signature loueur" className="h-16 bg-white rounded-xl p-2 object-contain" />
                   <button onClick={() => { setLessorSigOpen(true); setLessorSigTab('draw'); lessorClearCanvas(); }}
-                          className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+                          className="text-xs text-content-secondary hover:text-white transition-colors flex items-center gap-1">
                     <RotateCcw className="w-3 h-3" /> Remplacer
                   </button>
                 </div>
@@ -593,7 +593,7 @@ export default function ContratsPage() {
                     {(['draw', 'upload'] as const).map((t) => (
                       <button key={t}
                               onClick={() => { setLessorSigTab(t); setLessorSigFile(null); lessorClearCanvas(); }}
-                              className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${lessorSigTab === t ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                              className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${lessorSigTab === t ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}>
                         {t === 'draw' ? 'Dessiner' : 'Uploader'}
                       </button>
                     ))}
@@ -629,7 +629,7 @@ export default function ContratsPage() {
                         />
                       </div>
                       <div className="flex justify-end mt-1">
-                        <button onClick={lessorClearCanvas} className="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+                        <button onClick={lessorClearCanvas} className="text-xs text-content-secondary hover:text-white flex items-center gap-1">
                           <RotateCcw className="w-3 h-3" /> Effacer
                         </button>
                       </div>
@@ -641,7 +641,7 @@ export default function ContratsPage() {
                       <div className="border border-dashed border-slate-600 rounded-xl p-4 text-center hover:border-brand-500 transition-colors">
                         {lessorSigFile
                           ? <img src={lessorSigFile} alt="preview" className="h-16 mx-auto object-contain" />
-                          : <p className="text-xs text-slate-400">Cliquez pour choisir une image (PNG/JPG)</p>}
+                          : <p className="text-xs text-content-secondary">Cliquez pour choisir une image (PNG/JPG)</p>}
                       </div>
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                         const file = e.target.files?.[0]; if (!file) return;
@@ -673,7 +673,7 @@ export default function ContratsPage() {
 
               <div className="border-t border-surface-border pt-3">
                 {!c.lessor_signature_image && (
-                  <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
+                  <p className="text-xs text-status-warning mb-2 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3 shrink-0" /> Signez le contrat avant de l'envoyer
                   </p>
                 )}
@@ -688,11 +688,11 @@ export default function ContratsPage() {
           {/* ── Lien actif (sent) ── */}
           {c.status === 'sent' && (
             <div className="card p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lien de signature</h3>
+              <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Lien de signature</h3>
               <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2">
-                <p className="text-xs text-slate-400 truncate flex-1">{link}</p>
-                <button onClick={() => handleCopyLink(c)} className="shrink-0 text-slate-400 hover:text-white transition-colors">
-                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                <p className="text-xs text-content-secondary truncate flex-1">{link}</p>
+                <button onClick={() => handleCopyLink(c)} className="shrink-0 text-content-secondary hover:text-white transition-colors">
+                  {copied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
               <div className="flex gap-2">
@@ -711,7 +711,7 @@ export default function ContratsPage() {
 
           {/* Contenu du contrat */}
           <div className="card p-4">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Contenu du contrat</h3>
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-3">Contenu du contrat</h3>
             <div
               className="bg-white rounded-xl p-4 text-sm text-gray-800 overflow-auto max-h-96"
               dangerouslySetInnerHTML={{ __html: c.body }}
@@ -766,7 +766,7 @@ export default function ContratsPage() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
-        <FileSignature className="w-5 h-5 text-brand-400 shrink-0" />
+        <FileSignature className="w-5 h-5 text-content-brand shrink-0" />
         <h1 className="font-semibold text-white flex-1">Contrats & Location</h1>
         {business?.id && (
           <button
@@ -806,7 +806,7 @@ export default function ContratsPage() {
             className={`flex items-center gap-2 px-3 py-2 rounded-t-xl text-sm font-medium transition-colors
               ${tab === key
                 ? 'bg-surface-card text-white border border-b-0 border-surface-border'
-                : 'text-slate-400 hover:text-white'}`}
+                : 'text-content-secondary hover:text-white'}`}
           >
             <Icon className="w-4 h-4" />
             <span className="hidden sm:inline">{label}</span>
@@ -834,23 +834,23 @@ export default function ContratsPage() {
                   onClick={() => { setDetailContract(c); setLessorSigOpen(false); setLessorSigFile(null); }}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover transition-colors text-left"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-brand-900/30 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-badge-brand flex items-center justify-center shrink-0">
                     {c.status === 'signed'
-                      ? <CheckCircle className="w-5 h-5 text-green-400" />
+                      ? <CheckCircle className="w-5 h-5 text-status-success" />
                       : c.status === 'sent'
                         ? <Clock className="w-5 h-5 text-blue-400" />
-                        : <FileText className="w-5 h-5 text-brand-400" />}
+                        : <FileText className="w-5 h-5 text-content-brand" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{c.client_name}</p>
-                    <p className="text-xs text-slate-400 truncate">
+                    <p className="text-xs text-content-secondary truncate">
                       {(c as Contract & { rental_vehicles?: { name: string; license_plate: string | null } }).rental_vehicles?.name ?? '—'}
                       {' · '}{fmtDate(c.start_date)} → {fmtDate(c.end_date)}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
-                    <span className="text-xs text-brand-400 font-medium">{fmtMoney(c.total_amount, c.currency)}</span>
+                    <span className="text-xs text-content-brand font-medium">{fmtMoney(c.total_amount, c.currency)}</span>
                     {c.status !== 'archived' && (
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
                         {PAYMENT_STATUS_CFG[paymentStatus(c)].label}
@@ -887,18 +887,18 @@ export default function ContratsPage() {
                 }
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{v.name}</p>
-                  <p className="text-xs text-slate-400 truncate">
+                  <p className="text-xs text-content-secondary truncate">
                     {[v.brand, v.model, v.year].filter(Boolean).join(' · ')}
                     {v.license_plate ? ` — ${v.license_plate}` : ''}
                   </p>
-                  <p className="text-xs text-brand-400 mt-0.5">
+                  <p className="text-xs text-content-brand mt-0.5">
                     {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/jour
                     {v.price_per_hour ? ` · ${v.price_per_hour.toLocaleString('fr-FR')}/h` : ''}
                   </p>
                   {activeContracts.length > 0 && (
                     <button
                       onClick={() => { setTab('contrats'); setDetailContract(activeContracts[0]); }}
-                      className="mt-1 text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                      className="mt-1 text-[10px] text-status-warning hover:text-status-warning flex items-center gap-1"
                     >
                       <FileText className="w-3 h-3" />
                       {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''} actif{activeContracts.length > 1 ? 's' : ''} — {activeContracts[0].client_name}
@@ -915,14 +915,14 @@ export default function ContratsPage() {
                     }}
                     className={`text-xs px-2 py-0.5 rounded-full transition-colors
                       ${v.is_available
-                        ? 'bg-green-900/50 text-green-400 hover:bg-red-900/50 hover:text-red-400'
-                        : 'bg-red-900/50 text-red-400 hover:bg-green-900/50 hover:text-green-400'}`}
+                        ? 'bg-badge-success text-status-success hover:bg-badge-error hover:text-status-error'
+                        : 'bg-badge-error text-status-error hover:bg-badge-success hover:text-status-success'}`}
                   >
                     {v.is_available ? 'Disponible' : 'Indispo'}
                   </button>
                   <button
                     onClick={() => { setEditVehicle(v); setShowVehiclePanel(true); }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -952,7 +952,7 @@ export default function ContratsPage() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => { setEditTemplate(t); setShowTemplatePanel(true); }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -961,7 +961,7 @@ export default function ContratsPage() {
                       if (!confirm('Supprimer ce modèle ?')) return;
                       try { await deleteTemplate(t.id); load(); } catch (e) { notifError(toUserError(e)); }
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-surface-hover transition-colors"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1025,11 +1025,11 @@ export default function ContratsPage() {
           <div className="relative bg-surface-card border border-surface-border rounded-2xl p-5 w-full max-w-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-white">Partager votre catalogue</h3>
-              <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg hover:bg-surface-hover text-slate-400">
+              <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-content-secondary">
               Partagez ce lien avec vos clients pour qu'ils puissent voir vos véhicules disponibles et faire une demande de location.
             </p>
             <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2.5">
@@ -1042,9 +1042,9 @@ export default function ContratsPage() {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="shrink-0 text-slate-400 hover:text-white transition-colors"
+                className="shrink-0 text-content-secondary hover:text-white transition-colors"
               >
-                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -1147,7 +1147,7 @@ function VehiclePanel({
       <div className="space-y-4">
         {/* Image */}
         <label className="block cursor-pointer">
-          <p className="text-xs text-slate-400 mb-1">Photo</p>
+          <p className="text-xs text-content-secondary mb-1">Photo</p>
           {imagePreview
             ? <div className="relative w-fit">
                 <img src={imagePreview} alt="" className="h-32 w-auto rounded-xl object-cover border border-surface-border" />
@@ -1182,7 +1182,7 @@ function VehiclePanel({
           <Field label="Prix/heure" value={form.price_per_hour} onChange={(v) => set('price_per_hour', v)} type="number" />
           <Field label="Caution" value={form.deposit_amount} onChange={(v) => set('deposit_amount', v)} type="number" />
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Devise</label>
+            <label className="text-xs text-content-secondary block mb-1">Devise</label>
             <select value={form.currency} onChange={(e) => set('currency', e.target.value)}
               className="input w-full text-sm">
               <option value="XOF">XOF (FCFA)</option>
@@ -1193,7 +1193,7 @@ function VehiclePanel({
           </div>
         </div>
         <div>
-          <label className="text-xs text-slate-400 block mb-1">Description</label>
+          <label className="text-xs text-content-secondary block mb-1">Description</label>
           <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
             rows={2} className="input w-full text-sm resize-none" placeholder="Climatisé, GPS…" />
         </div>
@@ -1355,9 +1355,9 @@ function TemplatePanel({
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-slate-400 font-medium">Contenu du contrat</label>
+            <label className="text-xs text-content-secondary font-medium">Contenu du contrat</label>
             <button type="button" onClick={() => setPreview(!preview)}
-              className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300">
+              className="flex items-center gap-1 text-xs text-content-brand hover:text-content-brand">
               <Eye className="w-3.5 h-3.5" /> {preview ? 'Éditer' : 'Aperçu'}
             </button>
           </div>
@@ -1368,7 +1368,7 @@ function TemplatePanel({
           ) : (
             <div className="border border-surface-border rounded-xl overflow-hidden">
               {/* Toolbar */}
-              <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-slate-800 border-b border-surface-border">
+              <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-surface-card border-b border-surface-border">
                 {toolbarBtn('Gras', () => fmt('bold'),           <Bold      className="w-3.5 h-3.5" />)}
                 {toolbarBtn('Italique', () => fmt('italic'),     <Italic    className="w-3.5 h-3.5" />)}
                 <div className="w-px h-4 bg-slate-600 mx-1" />
@@ -1379,33 +1379,33 @@ function TemplatePanel({
               </div>
 
               {/* Variables */}
-              <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-slate-900 border-b border-surface-border">
+              <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-surface border-b border-surface-border">
                 <span className="text-[10px] text-slate-500 self-center mr-1">Insérer :</span>
                 {VARIABLES.map(({ key, label }) => (
                   <button
                     key={key}
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); insertVariable(key); }}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-800 hover:bg-blue-800/50 transition-colors font-mono"
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-badge-info text-blue-300 border border-blue-800 hover:bg-blue-800/50 transition-colors font-mono"
                   >
                     {label}
                   </button>
                 ))}
               </div>
               {/* Blocs de signature */}
-              <div className="flex flex-wrap gap-2 px-2 py-1.5 bg-slate-950 border-b border-surface-border">
+              <div className="flex flex-wrap gap-2 px-2 py-1.5 bg-surface-overlay border-b border-surface-border">
                 <span className="text-[10px] text-slate-500 self-center mr-1">Signatures :</span>
                 <button
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); insertSignatureBlock('lessor_signature_block'); }}
-                  className="text-[10px] px-2 py-1 rounded bg-amber-900/40 text-amber-300 border border-amber-700 hover:bg-amber-800/50 transition-colors font-medium flex items-center gap-1"
+                  className="text-[10px] px-2 py-1 rounded bg-badge-warning text-status-warning border border-status-warning hover:bg-amber-800/50 transition-colors font-medium flex items-center gap-1"
                 >
                   <PenLine className="w-3 h-3" /> Zone signature Loueur
                 </button>
                 <button
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); insertSignatureBlock('signature_block'); }}
-                  className="text-[10px] px-2 py-1 rounded bg-green-900/40 text-green-300 border border-green-700 hover:bg-green-800/50 transition-colors font-medium flex items-center gap-1"
+                  className="text-[10px] px-2 py-1 rounded bg-badge-success text-status-success border border-status-success hover:bg-green-800/50 transition-colors font-medium flex items-center gap-1"
                 >
                   <PenLine className="w-3 h-3" /> Zone signature Locataire
                 </button>
@@ -1619,11 +1619,11 @@ function ContractPanel({
 
         {/* Avertissement invalidation */}
         {needsInvalidation && (
-          <div className="flex items-start gap-3 bg-amber-900/30 border border-amber-700 rounded-xl px-4 py-3">
-            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 bg-badge-warning border border-status-warning rounded-xl px-4 py-3">
+            <AlertCircle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-amber-300">Ce contrat sera invalidé</p>
-              <p className="text-xs text-amber-400 mt-0.5">
+              <p className="text-sm font-semibold text-status-warning">Ce contrat sera invalidé</p>
+              <p className="text-xs text-status-warning mt-0.5">
                 {contract?.status === 'signed'
                   ? 'La signature du locataire sera effacée. Le contrat devra être renvoyé et resigné.'
                   : 'Le lien envoyé au locataire deviendra invalide. Un nouveau lien devra être envoyé.'}
@@ -1634,7 +1634,7 @@ function ContractPanel({
 
         {/* Véhicule */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1">Véhicule</label>
+          <label className="text-xs text-content-secondary block mb-1">Véhicule</label>
           {vehicles.length === 0 ? (
             <div className="flex items-center gap-2 input text-sm text-slate-500 cursor-default">
               <Car className="w-4 h-4 shrink-0" />
@@ -1656,7 +1656,7 @@ function ContractPanel({
                 })}
               </select>
               {form.vehicle_id && bookedVehicleIds.has(form.vehicle_id) && (
-                <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-status-error flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   Ce véhicule est déjà réservé sur cette période. Choisissez d'autres dates ou un autre véhicule.
                 </p>
@@ -1667,7 +1667,7 @@ function ContractPanel({
 
         {/* Modèle */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1">Modèle de contrat</label>
+          <label className="text-xs text-content-secondary block mb-1">Modèle de contrat</label>
           <select value={form.template_id} onChange={(e) => set('template_id', e.target.value)}
             className="input w-full text-sm">
             <option value="">— Modèle par défaut —</option>
@@ -1685,9 +1685,9 @@ function ContractPanel({
 
         {/* Récap tarif */}
         {selectedVehicle && (
-          <div className="bg-brand-900/20 border border-brand-800 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
-            <span className="text-slate-400">{days} jour{days > 1 ? 's' : ''} × {pricePerDay.toLocaleString('fr-FR')} {displayCurrency(cur)}/j</span>
-            <span className="font-bold text-brand-400">{totalAmount.toLocaleString('fr-FR')} {displayCurrency(cur)}</span>
+          <div className="bg-badge-brand border border-brand-800 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
+            <span className="text-content-secondary">{days} jour{days > 1 ? 's' : ''} × {pricePerDay.toLocaleString('fr-FR')} {displayCurrency(cur)}/j</span>
+            <span className="font-bold text-content-brand">{totalAmount.toLocaleString('fr-FR')} {displayCurrency(cur)}</span>
           </div>
         )}
 
@@ -1701,12 +1701,12 @@ function ContractPanel({
 
         {/* Client */}
         <div className="pt-2 border-t border-surface-border">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Client</p>
+          <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-3">Client</p>
           <div className="space-y-3">
 
             {/* Search */}
             <div className="relative">
-              <label className="text-xs text-slate-400 block mb-1">Rechercher un client *</label>
+              <label className="text-xs text-content-secondary block mb-1">Rechercher un client *</label>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <input
@@ -1721,7 +1721,7 @@ function ContractPanel({
                   />
                   {clientSelected && (
                     <button type="button" onClick={clearClient}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white">
                       <X className="w-4 h-4" />
                     </button>
                   )}
@@ -1738,12 +1738,12 @@ function ContractPanel({
                       onMouseDown={() => selectClient(c)}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-brand-900/40 flex items-center justify-center shrink-0 text-brand-400 font-bold text-sm">
+                      <div className="w-8 h-8 rounded-lg bg-badge-brand flex items-center justify-center shrink-0 text-content-brand font-bold text-sm">
                         {c.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{c.name}</p>
-                        {c.phone && <p className="text-xs text-slate-400">{c.phone}</p>}
+                        {c.phone && <p className="text-xs text-content-secondary">{c.phone}</p>}
                       </div>
                     </button>
                   ))}
@@ -1769,14 +1769,14 @@ function ContractPanel({
 
         {/* Notes */}
         <div>
-          <label className="text-xs text-slate-400 block mb-1">Notes internes</label>
+          <label className="text-xs text-content-secondary block mb-1">Notes internes</label>
           <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
             rows={2} className="input w-full text-sm resize-none" placeholder="Notes…" />
         </div>
 
         {/* Aperçu */}
         <button type="button" onClick={() => setPreview(!preview)}
-          className="flex items-center gap-2 text-xs text-brand-400 hover:text-brand-300">
+          className="flex items-center gap-2 text-xs text-content-brand hover:text-content-brand">
           <Eye className="w-3.5 h-3.5" /> {preview ? 'Masquer l\'aperçu' : 'Aperçu du contrat'}
         </button>
         {preview && (
@@ -1808,7 +1808,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-xs text-slate-400 block mb-1">{label}</label>
+      <label className="text-xs text-content-secondary block mb-1">{label}</label>
       <input
         type={type}
         value={value}
@@ -1836,7 +1836,7 @@ function SlidePanel({
         <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border shrink-0">
           <h2 className="font-semibold text-white">{title}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors">
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-content-secondary" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-between">

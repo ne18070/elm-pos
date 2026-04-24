@@ -76,10 +76,10 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
   }
 
   const TICKET_TYPES: { value: TicketType; label: string; icon: any; color: string }[] = [
-    { value: 'bug',        label: 'Signaler un Bug', icon: Bug,         color: 'text-red-400 bg-red-500/10 border-red-500/20' },
-    { value: 'suggestion', label: 'Suggestion',      icon: Lightbulb,   color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+    { value: 'bug',        label: 'Signaler un Bug', icon: Bug,         color: 'text-status-error bg-red-500/10 border-red-500/20' },
+    { value: 'suggestion', label: 'Suggestion',      icon: Lightbulb,   color: 'text-status-warning bg-amber-500/10 border-amber-500/20' },
     { value: 'question',   label: 'Question',        icon: HelpCircle,  color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-    { value: 'feedback',   label: 'Retour général',  icon: MessageSquare, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+    { value: 'feedback',   label: 'Retour général',  icon: MessageSquare, color: 'text-status-success bg-emerald-500/10 border-emerald-500/20' },
   ];
 
   return (
@@ -170,7 +170,7 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="w-20 h-20 rounded-xl border-2 border-dashed border-surface-border flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-brand-400 hover:border-brand-500/50 transition-all bg-surface-input/30"
+              className="w-20 h-20 rounded-xl border-2 border-dashed border-surface-border flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-content-brand hover:border-brand-500/50 transition-all bg-surface-input/30"
             >
               {uploading ? <Loader2 className="animate-spin w-5 h-5" /> : <Paperclip size={20} />}
               <span className="text-[8px] font-black uppercase">Ajouter</span>
@@ -188,8 +188,8 @@ export function SupportPanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
         </div>
 
         <div className="p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10 flex items-start gap-3">
-           <CheckCircle2 size={18} className="text-brand-400 shrink-0 mt-0.5" />
-           <p className="text-[11px] text-slate-400 leading-relaxed">
+           <CheckCircle2 size={18} className="text-content-brand shrink-0 mt-0.5" />
+           <p className="text-[11px] text-content-secondary leading-relaxed">
              Votre retour est précieux ! Notre équipe technique analyse chaque message pour rendre ELM plus performant.
            </p>
         </div>

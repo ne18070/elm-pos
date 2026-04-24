@@ -95,7 +95,7 @@ export function StaffOffices({ staffList, onUpdateStaff }: StaffOfficesProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <MapIcon className="w-5 h-5 text-brand-400" />
+            <MapIcon className="w-5 h-5 text-content-brand" />
             Espaces & Localisations
           </h2>
           <p className="text-sm text-slate-500 mt-1">Organisez votre équipe par pays, régions ou bureaux</p>
@@ -112,17 +112,17 @@ export function StaffOffices({ staffList, onUpdateStaff }: StaffOfficesProps) {
                 placeholder="Nom (ex: France, Étage 1...)"
                 className="bg-transparent border-none focus:ring-0 text-sm px-2 w-48 text-white"
               />
-              <button onClick={addOffice} className="p-1.5 hover:bg-brand-500/10 text-brand-400 rounded-md transition-colors">
+              <button onClick={addOffice} className="p-1.5 hover:bg-brand-500/10 text-content-brand rounded-md transition-colors">
                 <Plus className="w-4 h-4" />
               </button>
-              <button onClick={() => setIsAddingOffice(false)} className="p-1.5 hover:bg-red-500/10 text-red-400 rounded-md transition-colors">
+              <button onClick={() => setIsAddingOffice(false)} className="p-1.5 hover:bg-red-500/10 text-status-error rounded-md transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setIsAddingOffice(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-surface-card border border-surface-border hover:border-brand-500/50 text-slate-300 hover:text-brand-400 rounded-xl transition-all text-sm font-semibold shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-surface-card border border-surface-border hover:border-brand-500/50 text-slate-300 hover:text-content-brand rounded-xl transition-all text-sm font-semibold shadow-sm"
             >
               <Plus className="w-4 h-4" />
               Ajouter un espace
@@ -189,7 +189,7 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
       className={cn(
         "flex flex-col min-h-[280px] rounded-2xl border-2 transition-all duration-300 relative group",
         isOver 
-          ? "border-brand-500 bg-brand-900/10 ring-4 ring-brand-500/20 scale-[1.02]" 
+          ? "border-brand-500 bg-badge-brand ring-4 ring-brand-500/20 scale-[1.02]" 
           : isUnassigned
             ? "border-slate-800/50 bg-slate-900/20 border-dashed"
             : "border-surface-border bg-surface-card/50 hover:border-slate-700 hover:bg-surface-card"
@@ -200,18 +200,18 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
         <div className="flex items-center gap-3">
           <div className={cn(
             "p-2 rounded-lg",
-            isUnassigned ? "bg-slate-800 text-slate-500" : "bg-brand-900/20 text-brand-400"
+            isUnassigned ? "bg-surface-card text-slate-500" : "bg-badge-brand text-content-brand"
           )}>
             <Icon className="w-4 h-4" />
           </div>
           <h3 className="font-bold text-white text-sm truncate max-w-[150px]">{name}</h3>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-input text-slate-400">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-input text-content-secondary">
             {staff.length}
           </span>
           {onRemove && (
-            <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-400 transition-all">
+            <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-status-error transition-all">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
@@ -235,7 +235,7 @@ function OfficeZone({ name, id, staff, onDrop, onDragStart, isUnassigned, onRemo
             >
               <GripVertical className="w-3.5 h-3.5 text-slate-500 group-hover/item:text-brand-500 transition-colors" />
               <div className="w-8 h-8 rounded-lg bg-surface-hover flex items-center justify-center shrink-0 border border-surface-border">
-                <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400">
+                <span className="text-[10px] font-bold text-brand-600 dark:text-content-brand">
                   {s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
               </div>

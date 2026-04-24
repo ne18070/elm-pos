@@ -45,11 +45,11 @@ type Tab = 'employes' | 'presences' | 'paie' | 'conges';
 type StaffView = 'list' | 'offices';
 
 const ATTENDANCE_CFG: Record<AttendanceStatus, { label: string; short: string; color: string; bg: string }> = {
-  present:  { label: 'Présent',       short: 'P',  color: 'text-green-300',  bg: 'bg-green-900/60 border-green-700'  },
-  absent:   { label: 'Absent',        short: 'A',  color: 'text-red-300',    bg: 'bg-red-900/60 border-red-700'      },
-  half_day: { label: 'Demi-journée',  short: 'D',  color: 'text-amber-300',  bg: 'bg-amber-900/60 border-amber-700'  },
-  leave:    { label: 'Congé',         short: 'C',  color: 'text-blue-300',   bg: 'bg-blue-900/60 border-blue-700'    },
-  holiday:  { label: 'Férié',         short: 'F',  color: 'text-slate-400',  bg: 'bg-surface-hover border-surface-border' },
+  present:  { label: 'Présent',       short: 'P',  color: 'text-status-success',  bg: 'bg-badge-success border-status-success'  },
+  absent:   { label: 'Absent',        short: 'A',  color: 'text-status-error',    bg: 'bg-badge-error border-status-error'      },
+  half_day: { label: 'Demi-journée',  short: 'D',  color: 'text-status-warning',  bg: 'bg-badge-warning border-status-warning'  },
+  leave:    { label: 'Congé',         short: 'C',  color: 'text-blue-300',   bg: 'bg-badge-info border-blue-700'    },
+  holiday:  { label: 'Férié',         short: 'F',  color: 'text-content-secondary',  bg: 'bg-surface-hover border-surface-border' },
 };
 
 // Cycle on click: empty → present → absent → half_day → leave → holiday → (delete)
@@ -138,7 +138,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
 
   if (loading) return (
     <div className="h-64 flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
+      <Loader2 className="w-8 h-8 animate-spin text-content-brand" />
     </div>
   );
 
@@ -209,21 +209,21 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
             {filteredRequests.map((req) => (
               <div key={req.id} className="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center gap-4 hover:border-slate-700 transition-all">
                 <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
-                  <Users className="text-brand-400" size={20} />
+                  <Users className="text-content-brand" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-white truncate">{req.staff?.name}</h3>
                     <span className={cn(
                       "text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider",
-                      req.status === 'pending' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
-                      req.status === 'approved' ? "bg-green-500/10 text-green-500 border border-green-500/20" :
-                      "bg-red-500/10 text-red-500 border border-red-500/20"
+                      req.status === 'pending' ? "bg-amber-500/10 text-status-warning border border-amber-500/20" :
+                      req.status === 'approved' ? "bg-green-500/10 text-status-success border border-green-500/20" :
+                      "bg-red-500/10 text-status-error border border-red-500/20"
                     )}>
                       {req.status}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-content-secondary">
                     {req.leave_type?.name} · {req.total_days} jours
                   </p>
                   <p className="text-[10px] text-slate-500">
@@ -232,10 +232,10 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                 </div>
                 {req.status === 'pending' && (
                   <div className="flex gap-2">
-                    <button onClick={() => handleAction(req.id, 'rejected')} className="p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20">
+                    <button onClick={() => handleAction(req.id, 'rejected')} className="p-2 rounded-lg bg-red-500/10 text-status-error border border-red-500/20">
                       <X size={16} />
                     </button>
-                    <button onClick={() => handleAction(req.id, 'approved')} className="p-2 rounded-lg bg-green-500/10 text-green-500 border border-green-500/20">
+                    <button onClick={() => handleAction(req.id, 'approved')} className="p-2 rounded-lg bg-green-500/10 text-status-success border border-green-500/20">
                       <CheckCircle size={16} />
                     </button>
                   </div>
@@ -285,7 +285,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
               <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Types de congés</h2>
               <button 
                 onClick={() => setTypeModal({ name: '', yearly_days: 25, is_paid: true, color: '#3b82f6' })}
-                className="text-brand-400 hover:text-brand-300 transition-colors"
+                className="text-content-brand hover:text-content-brand transition-colors"
               >
                 <Plus size={18} />
               </button>
@@ -320,7 +320,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
               <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Jours de pression</h2>
               <button 
                 onClick={() => setPressureModal({ date: new Date().toISOString().split('T')[0], reason: '' })}
-                className="text-brand-400 hover:text-brand-300 transition-colors"
+                className="text-content-brand hover:text-content-brand transition-colors"
               >
                 <Plus size={18} />
               </button>
@@ -330,7 +330,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                 <div key={pd.id} className="p-4 flex items-center justify-between group">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                      <AlertTriangle size={14} className="text-red-500" />
+                      <AlertTriangle size={14} className="text-status-error" />
                     </div>
                     <div>
                       <span className="text-sm font-bold text-white block">{new Date(pd.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>
@@ -344,7 +344,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
                         loadData();
                       }
                     }}
-                    className="p-2 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
+                    className="p-2 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-status-error transition-all"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -414,7 +414,7 @@ function LeaveTypeModal({ type, businessId, onClose, onSaved }: { type: Partial<
         <div className="grid grid-cols-2 gap-4">
           <Field label="Jours / an" type="number" value={String(form.yearly_days || 0)} onChange={v => setForm(f => ({ ...f, yearly_days: parseFloat(v) }))} />
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Couleur</label>
+            <label className="text-xs text-content-secondary block mb-1">Couleur</label>
             <input type="color" value={form.color || '#3b82f6'} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} className="w-full h-11 bg-transparent border-none p-0 cursor-pointer" />
           </div>
         </div>
@@ -423,7 +423,7 @@ function LeaveTypeModal({ type, businessId, onClose, onSaved }: { type: Partial<
           <span className="text-sm text-slate-300">Congé rémunéré</span>
         </div>
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-slate-400 font-bold text-xs uppercase tracking-widest">Annuler</button>
+          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-bold text-xs uppercase tracking-widest">Annuler</button>
           <button onClick={save} disabled={saving} className="flex-1 h-11 rounded-xl btn-primary font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2">
             {saving && <Loader2 size={14} className="animate-spin" />}
             Enregistrer
@@ -450,11 +450,11 @@ function PressureDayModal({ day, businessId, onClose, onSaved }: { day: Partial<
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-surface-card border border-surface-border rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4">
-        <h3 className="font-bold text-white text-lg flex items-center gap-2"><AlertTriangle className="text-red-500" size={20} /> Jour de pression</h3>
+        <h3 className="font-bold text-white text-lg flex items-center gap-2"><AlertTriangle className="text-status-error" size={20} /> Jour de pression</h3>
         <Field label="Date" type="date" value={form.date || ''} onChange={v => setForm(f => ({ ...f, date: v }))} />
         <Field label="Raison" value={form.reason || ''} onChange={v => setForm(f => ({ ...f, reason: v }))} placeholder="ex: Inventaire annuel" />
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-slate-400 font-bold text-xs uppercase tracking-widest">Annuler</button>
+          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-bold text-xs uppercase tracking-widest">Annuler</button>
           <button onClick={save} disabled={saving} className="flex-1 h-11 rounded-xl btn-primary font-bold text-xs uppercase tracking-widest">Enregistrer</button>
         </div>
       </div>
@@ -576,7 +576,7 @@ function AdminLeaveRequestModal({ onClose, onSaved, businessId, staffList = [], 
         <Field label="Motif / Notes" value={reason} onChange={setReason} placeholder="ex: Mariage d'un proche" />
         
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-slate-400 font-bold text-xs uppercase tracking-widest transition-colors hover:text-white">Annuler</button>
+          <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-bold text-xs uppercase tracking-widest transition-colors hover:text-white">Annuler</button>
           <button onClick={save} disabled={saving} className="flex-1 h-11 rounded-xl btn-primary font-bold text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20">
             {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Enregistrer'}
           </button>
@@ -815,7 +815,7 @@ export default function StaffPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface-card shrink-0">
         <div className="flex items-center gap-3">
-          <Users className="w-5 h-5 text-slate-400" />
+          <Users className="w-5 h-5 text-content-secondary" />
           <h1 className="font-bold text-white text-xl tracking-tight">Personnel</h1>
         </div>
         
@@ -843,7 +843,7 @@ export default function StaffPage() {
             onClick={() => setTab(t.id as Tab)}
             className={`flex items-center gap-2.5 px-6 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
               tab === t.id
-                ? 'text-brand-400'
+                ? 'text-content-brand'
                 : 'text-slate-500 hover:text-slate-300'
             }`}
           >
@@ -858,7 +858,7 @@ export default function StaffPage() {
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
+          <Loader2 className="w-8 h-8 animate-spin text-content-brand" />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface">
@@ -916,7 +916,7 @@ export default function StaffPage() {
                 </span>
                 <div className="sm:hidden h-8 w-px bg-surface-border mx-4" />
                 <div className="text-xs text-slate-500">
-                  <span className="text-green-500 font-bold">{activeStaff.length}</span> actifs
+                  <span className="text-status-success font-bold">{activeStaff.length}</span> actifs
                 </div>
               </div>
 
@@ -973,11 +973,11 @@ export default function StaffPage() {
               {/* Bannière explicative sur l'automatisation */}
               <div className="bg-brand-500/5 border border-brand-500/20 rounded-2xl p-4 flex items-start gap-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
-                  <Zap className="w-5 h-5 text-brand-400" />
+                  <Zap className="w-5 h-5 text-content-brand" />
                 </div>
                 <div className="space-y-1 text-left">
-                  <h3 className="text-sm font-bold text-brand-300">Pointage Automatique Activé</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <h3 className="text-sm font-bold text-content-brand">Pointage Automatique Activé</h3>
+                  <p className="text-xs text-content-secondary leading-relaxed">
                     Les présences sont gérées par le système : l'arrivée est enregistrée à la <strong>connexion</strong>, 
                     l'activité est suivie en temps réel, et le départ est validé à la <strong>déconnexion</strong>. 
                     En cas de fermeture brutale, le système retient l'heure de la dernière action.
@@ -987,7 +987,7 @@ export default function StaffPage() {
 
               {/* Month nav - Clean & Functional */}
               <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
-                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">
+                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary transition-colors">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="text-center">
@@ -996,7 +996,7 @@ export default function StaffPage() {
                   </h2>
                   <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{year}</p>
                 </div>
-                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400 transition-colors">
+                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary transition-colors">
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
@@ -1004,9 +1004,9 @@ export default function StaffPage() {
               {/* Attendance stats - Professional Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: 'Présents',      value: attStats.presentDays, icon: UserCheck,  color: 'text-green-500',  border: 'border-green-900/30' },
-                  { label: 'Absents',       value: attStats.absentDays,  icon: UserMinus,  color: 'text-red-500',    border: 'border-red-900/30'   },
-                  { label: 'Demi-j.',       value: attStats.halfDays,    icon: Coffee,     color: 'text-amber-500',  border: 'border-amber-900/30' },
+                  { label: 'Présents',      value: attStats.presentDays, icon: UserCheck,  color: 'text-status-success',  border: 'border-green-900/30' },
+                  { label: 'Absents',       value: attStats.absentDays,  icon: UserMinus,  color: 'text-status-error',    border: 'border-red-900/30'   },
+                  { label: 'Demi-j.',       value: attStats.halfDays,    icon: Coffee,     color: 'text-status-warning',  border: 'border-amber-900/30' },
                   { label: 'Congés',         value: attStats.leaveDays,   icon: Plane,      color: 'text-blue-500',   border: 'border-blue-900/30'  },
                 ].map(({ label, value, icon: Icon, color, border }) => (
                   <div key={label} className={`bg-surface-card border ${border} rounded-xl p-4 flex flex-col items-center justify-center`}>
@@ -1041,12 +1041,12 @@ export default function StaffPage() {
                             return (
                               <th key={d}
                                 onClick={() => bulkMarkAttendance(d)}
-                                className={`px-1 py-3 text-center font-bold w-10 min-w-[36px] cursor-pointer hover:bg-surface-hover transition-colors border-r border-surface-border/50 last:border-r-0 ${isWeekend ? 'text-red-500/40 bg-red-500/5' : 'text-slate-500'}`}>
+                                className={`px-1 py-3 text-center font-bold w-10 min-w-[36px] cursor-pointer hover:bg-surface-hover transition-colors border-r border-surface-border/50 last:border-r-0 ${isWeekend ? 'text-status-error/40 bg-red-500/5' : 'text-slate-500'}`}>
                                 {d}
                               </th>
                             );
                           })}
-                          <th className="px-4 py-3 text-right text-brand-400 font-bold uppercase tracking-tight min-w-[70px]">Total</th>
+                          <th className="px-4 py-3 text-right text-content-brand font-bold uppercase tracking-tight min-w-[70px]">Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1063,7 +1063,7 @@ export default function StaffPage() {
                                   <button
                                     onClick={() => handlePrintAttendanceSheet(s)}
                                     title="Imprimer la feuille de présence"
-                                    className="p-1.5 text-slate-500 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-all"
+                                    className="p-1.5 text-slate-500 hover:text-content-brand hover:bg-brand-500/10 rounded-lg transition-all"
                                   >
                                     <Printer className="w-3.5 h-3.5" />
                                   </button>
@@ -1091,7 +1091,7 @@ export default function StaffPage() {
                                 );
                               })}
                               <td className="px-4 py-2.5 text-right font-bold bg-surface-hover/5">
-                                <p className="text-slate-200">{calc.daysWorked}j</p>
+                                <p className="text-content-primary">{calc.daysWorked}j</p>
                               </td>
                             </tr>
                           );
@@ -1108,13 +1108,13 @@ export default function StaffPage() {
           {tab === 'paie' && (
             <div className="p-4 max-w-7xl mx-auto space-y-6 pb-20 sm:pb-4">
               <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
-                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400">
+                <button onClick={prevMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="text-center font-bold text-white">
                   {MONTH_NAMES[month - 1]} {year}
                 </div>
-                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-slate-400">
+                <button onClick={nextMonth} className="p-3 rounded-lg hover:bg-surface-hover text-content-secondary">
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
@@ -1123,7 +1123,7 @@ export default function StaffPage() {
                 {payrollData.map(({ staff, calc, paid }) => (
                   <div key={staff.id} className="bg-surface-card border border-surface-border rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-6">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-12 h-12 rounded-xl bg-surface-input flex items-center justify-center font-bold text-slate-400 shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-surface-input flex items-center justify-center font-bold text-content-secondary shrink-0">
                         {initials(staff.name)}
                       </div>
                       <div className="min-w-0">
@@ -1135,24 +1135,24 @@ export default function StaffPage() {
                     <div className="grid grid-cols-2 sm:flex items-center gap-8 text-center sm:text-right shrink-0">
                       <div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Présence</p>
-                        <p className="text-sm font-bold text-slate-200">{calc.daysWorked}j {staff.salary_type === 'hourly' && ` / ${calc.hoursWorked}h`}</p>
+                        <p className="text-sm font-bold text-content-primary">{calc.daysWorked}j {staff.salary_type === 'hourly' && ` / ${calc.hoursWorked}h`}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Salaire Base</p>
-                        <p className="text-sm font-bold text-slate-200">{fmtMoney(calc.baseAmount, cur)}</p>
+                        <p className="text-sm font-bold text-content-primary">{fmtMoney(calc.baseAmount, cur)}</p>
                       </div>
                     </div>
 
                     <div className="w-full sm:w-auto flex items-center gap-3 shrink-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-surface-border/50">
                       {paid ? (
-                        <div className="flex-1 sm:flex-none flex items-center justify-between sm:justify-end gap-4 bg-green-900/10 border border-green-800/30 px-4 py-2.5 rounded-xl">
+                        <div className="flex-1 sm:flex-none flex items-center justify-between sm:justify-end gap-4 bg-badge-success border border-status-success/30 px-4 py-2.5 rounded-xl">
                           <div className="text-right">
-                            <p className="text-[9px] font-black text-green-500 uppercase tracking-tighter">
+                            <p className="text-[9px] font-black text-status-success uppercase tracking-tighter">
                               Payé le {paid.payment_date ? new Date(paid.payment_date).toLocaleDateString() : 'N/A'}
                             </p>
-                            <p className="text-sm font-bold text-green-400">{fmtMoney(paid.net_amount, cur)}</p>
+                            <p className="text-sm font-bold text-status-success">{fmtMoney(paid.net_amount, cur)}</p>
                           </div>
-                          <button onClick={() => handlePrintPayslip(staff, paid)} className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-all">
+                          <button onClick={() => handlePrintPayslip(staff, paid)} className="p-2 bg-green-500/20 text-status-success rounded-lg hover:bg-green-500/30 transition-all">
                             <Printer className="w-4 h-4" />
                           </button>
                         </div>
@@ -1276,9 +1276,9 @@ function StaffCard({
         </div>
         
         <div className="flex flex-col items-end shrink-0">
-          <p className="text-sm font-bold text-brand-400">{rate}</p>
+          <p className="text-sm font-bold text-content-brand">{rate}</p>
           <span className={`text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded border ${
-            s.status === 'active' ? 'border-green-900/50 text-green-500 bg-green-950/20' : 'border-slate-800 text-slate-500 bg-slate-900/20'
+            s.status === 'active' ? 'border-green-900/50 text-status-success bg-badge-success' : 'border-slate-800 text-slate-500 bg-slate-900/20'
           }`}>
             {s.status === 'active' ? 'ACTIF' : 'INACTIF'}
           </span>
@@ -1287,19 +1287,19 @@ function StaffCard({
 
       <div className="grid grid-cols-1 gap-2.5 py-4 border-y border-surface-border/50">
         {s.phone && (
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="flex items-center gap-3 text-xs text-content-secondary">
             <Phone className="w-3.5 h-3.5" />
             <span>{s.phone}</span>
           </div>
         )}
         {s.email && (
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="flex items-center gap-3 text-xs text-content-secondary">
             <Mail className="w-3.5 h-3.5" />
             <span className="truncate">{s.email}</span>
           </div>
         )}
         {s.department && (
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+          <div className="flex items-center gap-3 text-xs text-content-secondary">
             <Building2 className="w-3.5 h-3.5" />
             <span>Département : {s.department}</span>
           </div>
@@ -1317,14 +1317,14 @@ function StaffCard({
               </div>
             </div>
             <button onClick={onUnlinkAccount} 
-              className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+              className="p-1.5 text-slate-500 hover:text-status-error transition-colors"
               title="Délier le compte">
               <Unlink className="w-4 h-4" />
             </button>
           </div>
         ) : (
           <button onClick={onLinkAccount}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-slate-700 text-slate-500 hover:text-brand-400 hover:border-brand-500 transition-all text-xs font-semibold">
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-slate-700 text-slate-500 hover:text-content-brand hover:border-brand-500 transition-all text-xs font-semibold">
             <Link2 className="w-4 h-4" /> Activer accès application
           </button>
         )}
@@ -1335,7 +1335,7 @@ function StaffCard({
             <Pencil className="w-3.5 h-3.5" /> Modifier
           </button>
           <button onClick={onDelete}
-            className="px-3 flex items-center justify-center border border-surface-border hover:border-red-900/50 hover:bg-red-950/10 text-slate-500 hover:text-red-500 rounded-lg transition-all">
+            className="px-3 flex items-center justify-center border border-surface-border hover:border-red-900/50 hover:bg-red-950/10 text-slate-500 hover:text-status-error rounded-lg transition-all">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -1421,7 +1421,7 @@ function StaffPanel({
         <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border shrink-0">
           <h2 className="font-semibold text-white">{isEdit ? 'Modifier l\'employé' : 'Nouvel employé'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors">
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-content-secondary" />
           </button>
         </div>
 
@@ -1429,7 +1429,7 @@ function StaffPanel({
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Identité */}
           <section className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Identité</h3>
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Identité</h3>
             <Field label="Nom complet *" value={form.name} onChange={(v) => set('name', v)} placeholder="Jean Dupont" />
             <div className="grid grid-cols-2 gap-3">
               <Field label="Téléphone" value={form.phone} onChange={(v) => set('phone', v)} placeholder="+221 77 000 00 00" />
@@ -1444,9 +1444,9 @@ function StaffPanel({
 
           {/* Salaire */}
           <section className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rémunération</h3>
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Rémunération</h3>
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Type de salaire</label>
+              <label className="text-xs text-content-secondary block mb-1">Type de salaire</label>
               <select value={form.salary_type} onChange={(e) => set('salary_type', e.target.value)}
                 className="input w-full text-sm">
                 {(Object.keys(SALARY_TYPE_LABELS) as SalaryType[]).map((k) => (
@@ -1455,7 +1455,7 @@ function StaffPanel({
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Taux ({salaryUnit})</label>
+              <label className="text-xs text-content-secondary block mb-1">Taux ({salaryUnit})</label>
               <input
                 type="number"
                 min="0"
@@ -1474,15 +1474,15 @@ function StaffPanel({
 
           {/* Statut */}
           <section className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Statut</h3>
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Statut</h3>
             <div className="flex gap-2">
               {(['active', 'inactive'] as const).map((s) => (
                 <button key={s} onClick={() => set('status', s)}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
                     form.status === s
                       ? s === 'active'
-                        ? 'bg-green-900/40 border-green-700 text-green-300'
-                        : 'bg-surface-hover border-surface-border text-slate-400'
+                        ? 'bg-badge-success border-status-success text-status-success'
+                        : 'bg-surface-hover border-surface-border text-content-secondary'
                       : 'border-surface-border text-slate-500 hover:text-slate-300'
                   }`}>
                   {s === 'active' ? 'Actif' : 'Inactif'}
@@ -1493,7 +1493,7 @@ function StaffPanel({
 
           {/* Notes */}
           <section>
-            <label className="text-xs text-slate-400 block mb-1">Notes</label>
+            <label className="text-xs text-content-secondary block mb-1">Notes</label>
             <textarea
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
@@ -1582,27 +1582,27 @@ function PaymentModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
           <div>
             <h2 className="font-semibold text-white">Enregistrer un paiement</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{staff.name} · {MONTH_NAMES[month - 1]} {year}</p>
+            <p className="text-xs text-content-secondary mt-0.5">{staff.name} · {MONTH_NAMES[month - 1]} {year}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover">
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-content-secondary" />
           </button>
         </div>
 
         <div className="p-5 space-y-4">
           {/* Recap */}
           <div className="bg-surface-hover rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-content-secondary">
               <span>Jours travaillés</span>
               <span className="text-white font-medium">{calc.daysWorked}j</span>
             </div>
             {staff.salary_type === 'hourly' && (
-              <div className="flex justify-between text-slate-400">
+              <div className="flex justify-between text-content-secondary">
                 <span>Heures travaillées</span>
                 <span className="text-white font-medium">{calc.hoursWorked}h</span>
               </div>
             )}
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-content-secondary">
               <span>Salaire de base ({SALARY_TYPE_LABELS[staff.salary_type]})</span>
               <span className="text-white font-medium">{fmtMoney(calc.baseAmount, currency)}</span>
             </div>
@@ -1611,27 +1611,27 @@ function PaymentModal({
           {/* Bonuses / Deductions */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Primes / Bonus</label>
+              <label className="text-xs text-content-secondary block mb-1">Primes / Bonus</label>
               <input type="number" min="0" value={bonuses} onChange={(e) => setBonuses(e.target.value)}
                 className="input w-full text-sm" placeholder="0" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Retenues / Avances</label>
+              <label className="text-xs text-content-secondary block mb-1">Retenues / Avances</label>
               <input type="number" min="0" value={deductions} onChange={(e) => setDeductions(e.target.value)}
                 className="input w-full text-sm" placeholder="0" />
             </div>
           </div>
 
           {/* Net */}
-          <div className="bg-brand-900/30 border border-brand-800 rounded-xl p-4 flex justify-between items-center">
+          <div className="bg-badge-brand border border-brand-800 rounded-xl p-4 flex justify-between items-center">
             <span className="text-slate-300 font-medium">Net à payer</span>
-            <span className="text-xl font-bold text-brand-300">{fmtMoney(net, currency)}</span>
+            <span className="text-xl font-bold text-content-brand">{fmtMoney(net, currency)}</span>
           </div>
 
           {/* Payment method + date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Mode de paiement</label>
+              <label className="text-xs text-content-secondary block mb-1">Mode de paiement</label>
               <select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}
                 className="input w-full text-sm">
                 {(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[]).map((k) => (
@@ -1640,7 +1640,7 @@ function PaymentModal({
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Date de paiement</label>
+              <label className="text-xs text-content-secondary block mb-1">Date de paiement</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
                 className="input w-full text-sm" />
             </div>
@@ -1648,7 +1648,7 @@ function PaymentModal({
 
           {/* Notes */}
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Notes</label>
+            <label className="text-xs text-content-secondary block mb-1">Notes</label>
             <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
               placeholder="Observations…" className="input w-full text-sm" />
           </div>
@@ -1756,10 +1756,10 @@ function LinkAccountModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
           <div>
             <h2 className="font-semibold text-white">Compte de connexion</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{staff.name}</p>
+            <p className="text-xs text-content-secondary mt-0.5">{staff.name}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover">
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-content-secondary" />
           </button>
         </div>
 
@@ -1768,13 +1768,13 @@ function LinkAccountModal({
           <div className="flex gap-1 bg-surface-input rounded-xl p-1">
             <button onClick={() => setMode('new')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === 'new' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
+                mode === 'new' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'
               }`}>
               Nouveau compte
             </button>
             <button onClick={() => setMode('existing')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                mode === 'existing' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
+                mode === 'existing' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'
               }`}>
               Compte existant
             </button>
@@ -1782,26 +1782,26 @@ function LinkAccountModal({
 
           {mode === 'new' ? (
             <>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-content-secondary">
                 Un compte Caissier sera créé. L'employé pourra se connecter et accéder à la caisse, aux commandes et aux livraisons.
               </p>
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Adresse e-mail *</label>
+                <label className="text-xs text-content-secondary block mb-1">Adresse e-mail *</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   className="input w-full text-sm" placeholder="employe@exemple.com" autoFocus />
               </div>
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Mot de passe temporaire</label>
+                <label className="text-xs text-content-secondary block mb-1">Mot de passe temporaire</label>
                 <div className="flex gap-2">
                   <input type="text" value={password} onChange={(e) => setPassword(e.target.value)}
                     className="input flex-1 text-sm font-mono" />
                   <button onClick={() => setPassword(generatePassword())}
                     className="p-2 rounded-lg bg-surface-hover hover:bg-surface-border transition-colors" title="Régénérer">
-                    <RefreshCw className="w-4 h-4 text-slate-400" />
+                    <RefreshCw className="w-4 h-4 text-content-secondary" />
                   </button>
                   <button onClick={handleCopyPassword}
                     className="p-2 rounded-lg bg-surface-hover hover:bg-surface-border transition-colors" title="Copier">
-                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                    {copied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4 text-content-secondary" />}
                   </button>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">Copiez ce mot de passe et transmettez-le à l'employé.</p>
@@ -1809,7 +1809,7 @@ function LinkAccountModal({
             </>
           ) : (
             <>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-content-secondary">
                 Liez cet employé à un compte déjà existant dans l'équipe.
               </p>
               {availableMembers.length === 0 ? (
@@ -1822,7 +1822,7 @@ function LinkAccountModal({
                     <label key={m.id}
                       className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                         selectedUserId === m.id
-                          ? 'border-brand-500 bg-brand-900/20'
+                          ? 'border-brand-500 bg-badge-brand'
                           : 'border-surface-border hover:border-slate-500'
                       }`}>
                       <input type="radio" name="existing_user" value={m.id}
@@ -1830,13 +1830,13 @@ function LinkAccountModal({
                         onChange={() => setSelectedUserId(m.id)}
                         className="accent-brand-500" />
                       <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-brand-400">
+                        <span className="text-sm font-bold text-content-brand">
                           {m.full_name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-white truncate">{m.full_name}</p>
-                        <p className="text-xs text-slate-400 truncate">{m.email}</p>
+                        <p className="text-xs text-content-secondary truncate">{m.email}</p>
                       </div>
                     </label>
                   ))}
@@ -1871,7 +1871,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-xs text-slate-400 block mb-1">{label}</label>
+      <label className="text-xs text-content-secondary block mb-1">{label}</label>
       <input
         type={type}
         value={value}

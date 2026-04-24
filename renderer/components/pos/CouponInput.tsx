@@ -69,7 +69,7 @@ export function CouponInput({ businessId, orderTotal, cartItemCount = 0, onApply
           Appliquer
         </button>
       </div>
-      {erreur && <p className="text-xs text-red-400">{erreur}</p>}
+      {erreur && <p className="text-xs text-status-error">{erreur}</p>}
     </div>
   );
 }

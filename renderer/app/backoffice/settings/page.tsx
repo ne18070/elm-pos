@@ -92,7 +92,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="card p-6 space-y-4 col-span-2">
                   <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                     <Smartphone size={16} className="text-brand-400" /> Support Client
+                     <Smartphone size={16} className="text-content-brand" /> Support Client
                   </h3>
                   <div>
                     <label className="label text-[10px] font-black uppercase tracking-widest text-slate-500">Numéro WhatsApp Business</label>
@@ -125,7 +125,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     ) : (
-                      <label className="cursor-pointer flex flex-col items-center gap-2 text-slate-500 hover:text-brand-400 transition-colors">
+                      <label className="cursor-pointer flex flex-col items-center gap-2 text-slate-500 hover:text-content-brand transition-colors">
                         {uploading === type ? <Loader2 size={32} className="animate-spin" /> : <Upload size={32} />}
                         <span className="text-[10px] font-black uppercase tracking-widest">Uploader le QR Code</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(type, e.target.files[0])} />

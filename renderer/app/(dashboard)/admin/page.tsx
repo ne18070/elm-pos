@@ -26,9 +26,9 @@ import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   owner:   { label: 'Propriétaire',   color: 'text-indigo-900 bg-indigo-100 border-indigo-200 dark:text-indigo-400 dark:bg-indigo-900/20 dark:border-indigo-800' },
-  admin:   { label: 'Administrateur', color: 'text-brand-900 bg-brand-100 border-brand-200 dark:text-brand-400 dark:bg-brand-900/20 dark:border-brand-800' },
-  manager: { label: 'Manager',        color: 'text-purple-900 bg-purple-100 border-purple-200 dark:text-purple-400 dark:bg-purple-900/20 dark:border-purple-800' },
-  staff:   { label: 'Caissier',       color: 'text-slate-900 bg-slate-100 border-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700' },
+  admin:   { label: 'Administrateur', color: 'text-brand-900 bg-brand-100 border-brand-200 dark:text-content-brand dark:bg-badge-brand dark:border-brand-800' },
+  manager: { label: 'Manager',        color: 'text-purple-900 bg-purple-100 border-purple-200 dark:text-status-purple dark:bg-badge-purple dark:border-purple-800' },
+  staff:   { label: 'Caissier',       color: 'text-slate-900 bg-slate-100 border-slate-200 dark:text-slate-300 dark:bg-surface-card dark:border-slate-700' },
 };
 
 const ROLE_LEGENDS: Record<string, Record<UserRole, string>> = {
@@ -69,7 +69,7 @@ function RoleLegend({ businessType, allTypes }: { businessType?: string; allType
 
   return (
     <div className="card p-5 space-y-4 mt-6 bg-brand-500/5 border-brand-500/20">
-      <div className="flex items-center gap-2 text-brand-400">
+      <div className="flex items-center gap-2 text-content-brand">
         <Shield className="w-4 h-4" />
         <p className="text-xs font-black uppercase tracking-[0.2em]">Guide des rôles — {typeLabel}</p>
       </div>
@@ -85,7 +85,7 @@ function RoleLegend({ businessType, allTypes }: { businessType?: string; allType
                   {customLabel}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed italic">{text}</p>
+              <p className="text-[11px] text-content-secondary leading-relaxed italic">{text}</p>
             </div>
           );
         })}
@@ -324,7 +324,7 @@ export default function AdminPage() {
               key={id}
               onClick={() => navigate ? router.push(navigate) : setTab(id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${tab === id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white'}`}
             >
               <Icon className="w-4 h-4" />
               {label}
@@ -343,11 +343,11 @@ export default function AdminPage() {
               <div className="relative shrink-0">
                 <div className="w-20 h-20 rounded-2xl bg-surface-input border border-surface-border overflow-hidden flex items-center justify-center">
                   {uploadingAvatar ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                    <Loader2 className="w-6 h-6 animate-spin text-content-secondary" />
                   ) : user?.avatar_url ? (
                     <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl font-bold text-brand-400">
+                    <span className="text-3xl font-bold text-content-brand">
                       {user?.full_name?.charAt(0).toUpperCase() ?? '?'}
                     </span>
                   )}
@@ -356,7 +356,7 @@ export default function AdminPage() {
 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-white truncate">{user?.full_name}</p>
-                <p className="text-sm text-slate-400 truncate">{user?.email}</p>
+                <p className="text-sm text-content-secondary truncate">{user?.email}</p>
                 <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border
                   ${ROLE_LABELS[user?.role ?? 'staff'].color}`}>
                   <Shield className="w-3 h-3" />
@@ -439,12 +439,12 @@ export default function AdminPage() {
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-white flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-slate-400" />
+                  <CreditCard className="w-4 h-4 text-content-secondary" />
                   Abonnement
                 </h2>
                 <button
                   onClick={() => router.push('/billing')}
-                  className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-content-brand hover:text-content-brand transition-colors"
                 >
                   {subStatus === 'active'
                     ? <><ExternalLink className="w-3 h-3" /> Gérer</>
@@ -453,14 +453,14 @@ export default function AdminPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                {subStatus === 'active'  && <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />}
-                {subStatus === 'trial'   && <Clock       className="w-5 h-5 text-amber-400 shrink-0" />}
-                {(subStatus === 'expired' || subStatus === 'none') && <XCircle className="w-5 h-5 text-red-400 shrink-0" />}
+                {subStatus === 'active'  && <CheckCircle className="w-5 h-5 text-status-success shrink-0" />}
+                {subStatus === 'trial'   && <Clock       className="w-5 h-5 text-status-warning shrink-0" />}
+                {(subStatus === 'expired' || subStatus === 'none') && <XCircle className="w-5 h-5 text-status-error shrink-0" />}
 
                 <div>
                   {subStatus === 'active' && (
                     <>
-                      <p className="text-sm font-medium text-green-400">
+                      <p className="text-sm font-medium text-status-success">
                         Actif {activePlan ? `— ${activePlan.label}` : ''}
                       </p>
                       {subscription?.expires_at && (
@@ -472,17 +472,17 @@ export default function AdminPage() {
                   )}
                   {subStatus === 'trial' && (
                     <>
-                      <p className="text-sm font-medium text-amber-400">Période d'essai gratuite</p>
+                      <p className="text-sm font-medium text-status-warning">Période d'essai gratuite</p>
                       <p className="text-xs text-slate-500">
                         {trialDays === 0 ? 'Expire aujourd\'hui' : `${trialDays} jour${trialDays > 1 ? 's' : ''} restant${trialDays > 1 ? 's' : ''}`}
                       </p>
                     </>
                   )}
                   {subStatus === 'expired' && (
-                    <p className="text-sm font-medium text-red-400">Accès expiré</p>
+                    <p className="text-sm font-medium text-status-error">Accès expiré</p>
                   )}
                   {subStatus === 'none' && (
-                    <p className="text-sm font-medium text-slate-400">—</p>
+                    <p className="text-sm font-medium text-content-secondary">—</p>
                   )}
                 </div>
               </div>
@@ -533,7 +533,7 @@ export default function AdminPage() {
             )}
 
             {loadingTeam ? (
-              <div className="text-slate-400 text-center py-12">Chargement…</div>
+              <div className="text-content-secondary text-center py-12">Chargement…</div>
             ) : (
               <div className="space-y-2">
                 {members.map((member) => {
@@ -546,7 +546,7 @@ export default function AdminPage() {
                   return (
                     <div key={member.id} className="card p-4 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-surface-input border border-surface-border
-                                      flex items-center justify-center text-base font-bold text-brand-400 shrink-0 overflow-hidden">
+                                      flex items-center justify-center text-base font-bold text-content-brand shrink-0 overflow-hidden">
                         {member.avatar_url
                           ? <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
                           : member.full_name.charAt(0).toUpperCase()}
@@ -559,7 +559,7 @@ export default function AdminPage() {
                           </p>
                           {isSelf && <span className="text-xs text-slate-500 shrink-0">(vous)</span>}
                           {member.is_blocked && (
-                            <span className="shrink-0 text-xs text-red-400 bg-red-900/20 border border-red-800 px-1.5 py-0.5 rounded-full">
+                            <span className="shrink-0 text-xs text-status-error bg-badge-error border border-status-error px-1.5 py-0.5 rounded-full">
                               Bloqué
                             </span>
                           )}
@@ -590,7 +590,7 @@ export default function AdminPage() {
                       {canOwnerAct && (
                         <button
                           onClick={() => openReset(member)}
-                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-brand-400 hover:bg-brand-900/20 transition-colors"
+                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-content-brand hover:bg-badge-brand transition-colors"
                           title="Réinitialiser le mot de passe"
                         >
                           <Lock className="w-4 h-4" />
@@ -603,8 +603,8 @@ export default function AdminPage() {
                           disabled={blockingId === member.id}
                           className={`shrink-0 p-1.5 rounded-lg transition-colors
                             ${member.is_blocked
-                              ? 'text-red-400 bg-red-900/20 hover:bg-red-900/40'
-                              : 'text-slate-500 hover:text-red-400 hover:bg-red-900/20'}`}
+                              ? 'text-status-error bg-badge-error hover:bg-badge-error'
+                              : 'text-slate-500 hover:text-status-error hover:bg-badge-error'}`}
                           title={member.is_blocked ? 'Débloquer' : 'Bloquer'}
                         >
                           {blockingId === member.id
@@ -616,7 +616,7 @@ export default function AdminPage() {
                       {canManage && (
                         <button
                           onClick={() => handleRemove(member)}
-                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
+                          className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-status-error hover:bg-badge-error transition-colors"
                           title="Retirer de l'équipe"
                         >
                           <UserX className="w-4 h-4" />
@@ -669,10 +669,10 @@ export default function AdminPage() {
                   <div
                     key={biz.id}
                     className={`card p-4 flex items-center gap-4
-                      ${isActive ? 'border-brand-700 bg-brand-900/10' : ''}`}
+                      ${isActive ? 'border-brand-700 bg-badge-brand' : ''}`}
                   >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0
-                      ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-brand-400'}`}>
+                      ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-content-brand'}`}>
                       {biz.name.charAt(0).toUpperCase()}
                     </div>
 
@@ -680,13 +680,13 @@ export default function AdminPage() {
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-white text-sm truncate">{biz.name}</p>
                         {isActive && (
-                          <span className="shrink-0 flex items-center gap-1 text-xs text-brand-400">
+                          <span className="shrink-0 flex items-center gap-1 text-xs text-content-brand">
                             <Check className="w-3 h-3" /> Actif
                           </span>
                         )}
                       </div>
                       {biz.organization_name && biz.organization_name !== biz.name && (
-                        <p className="text-[10px] text-brand-400/70 font-medium truncate">
+                        <p className="text-[10px] text-content-brand/70 font-medium truncate">
                           {biz.organization_name}
                         </p>
                       )}
@@ -720,7 +720,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="card p-6 w-full max-w-sm space-y-4">
             <h2 className="font-semibold text-white">Réinitialiser le mot de passe</h2>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-content-secondary">
               Nouveau mot de passe pour <span className="text-white font-medium">{resetTarget.full_name}</span>
             </p>
             <div>
@@ -743,7 +743,7 @@ export default function AdminPage() {
                   <RefreshCw className="w-4 h-4" />
                 </button>
                 <button onClick={handleCopyReset} className="btn-secondary px-3" title="Copier">
-                  {resetCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  {resetCopied ? <Check className="w-4 h-4 text-status-success" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
             </div>

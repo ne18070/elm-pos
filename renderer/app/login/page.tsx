@@ -160,10 +160,10 @@ export default function LoginPage() {
           <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
-          <p className="text-slate-400 text-sm mt-1">Connectez-vous à votre compte</p>
+          <p className="text-content-secondary text-sm mt-1">Connectez-vous à votre compte</p>
           <p className="text-xs text-slate-500 mt-2">
             Pas encore de compte ?{' '}
-            <a href="/subscribe" className="text-brand-400 hover:text-brand-300 transition-colors">
+            <a href="/subscribe" className="text-content-brand hover:text-content-brand transition-colors">
               S&apos;inscrire
             </a>
           </p>
@@ -193,7 +193,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(true)}
-                  className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                  className="text-xs text-content-brand hover:text-content-brand transition-colors"
                 >
                   Mot de passe oublié ?
                 </button>
@@ -212,7 +212,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-content-secondary hover:text-white"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -220,7 +220,7 @@ export default function LoginPage() {
             </div>
 
             {erreur && (
-              <div className="rounded-xl bg-red-900/30 border border-red-700 px-4 py-3 text-sm text-red-400">
+              <div className="rounded-xl bg-badge-error border border-status-error px-4 py-3 text-sm text-status-error">
                 {erreur}
               </div>
             )}
@@ -245,7 +245,7 @@ export default function LoginPage() {
             ELM APP v{version || '1.0.0'}
           </p>
           <p className="text-xs text-slate-700">
-            <a href="/privacy" className="hover:text-slate-400 transition-colors">
+            <a href="/privacy" className="hover:text-content-secondary transition-colors">
               Politique de confidentialité
             </a>
           </p>
@@ -290,7 +290,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
         {success ? (
           <div className="text-center py-6">
             <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-6 h-6 text-green-400" />
+              <CheckCircle2 className="w-6 h-6 text-status-success" />
             </div>
             <p className="text-slate-300 text-sm mb-6">
               Un e-mail de réinitialisation a été envoyé à <strong>{email}</strong>. 
@@ -300,7 +300,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <form onSubmit={handleReset} className="space-y-4 mt-4">
-            <p className="text-slate-400 text-sm">
+            <p className="text-content-secondary text-sm">
               Saisissez votre adresse e-mail pour recevoir un lien de réinitialisation.
             </p>
             
@@ -318,7 +318,7 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {error && (
-              <div className="text-xs text-red-400 bg-red-900/20 border border-red-800 p-3 rounded-lg">
+              <div className="text-xs text-status-error bg-badge-error border border-status-error p-3 rounded-lg">
                 {error}
               </div>
             )}

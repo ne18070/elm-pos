@@ -40,9 +40,9 @@ function IdleScreen({ state }: { state: DisplayState }) {
       )}
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-white">{state.businessName ?? 'Bienvenue'}</h1>
-        <p className="text-xl text-slate-400">Votre satisfaction, notre priorité</p>
+        <p className="text-xl text-content-secondary">Votre satisfaction, notre priorité</p>
       </div>
-      <p className="text-6xl font-light text-brand-400 tabular-nums">{time}</p>
+      <p className="text-6xl font-light text-content-brand tabular-nums">{time}</p>
     </div>
   );
 }
@@ -80,29 +80,29 @@ function CartScreen({ state }: { state: DisplayState }) {
             className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-3 py-2.5 rounded-xl bg-slate-800/50"
           >
             <span className="text-white font-medium truncate">{item.name}</span>
-            <span className="text-slate-400 text-sm text-right tabular-nums">{fmt(item.price, currency)}</span>
-            <span className="text-slate-400 text-sm text-right tabular-nums">×{item.quantity}</span>
-            <span className="text-brand-400 font-semibold text-right tabular-nums">{fmt(item.total, currency)}</span>
+            <span className="text-content-secondary text-sm text-right tabular-nums">{fmt(item.price, currency)}</span>
+            <span className="text-content-secondary text-sm text-right tabular-nums">×{item.quantity}</span>
+            <span className="text-content-brand font-semibold text-right tabular-nums">{fmt(item.total, currency)}</span>
           </div>
         ))}
       </div>
 
       <div className="bg-slate-800/60 rounded-2xl p-5 space-y-2 border border-slate-700">
         {(state.discount ?? 0) > 0 && (
-          <div className="flex justify-between text-green-400 text-lg">
+          <div className="flex justify-between text-status-success text-lg">
             <span>Remise</span>
             <span>-{fmt(state.discount!, currency)}</span>
           </div>
         )}
         {(state.tax ?? 0) > 0 && (
-          <div className="flex justify-between text-slate-400 text-lg">
+          <div className="flex justify-between text-content-secondary text-lg">
             <span>TVA</span>
             <span>{fmt(state.tax!, currency)}</span>
           </div>
         )}
         <div className="flex justify-between items-center pt-2 border-t border-slate-700">
           <span className="text-2xl font-bold text-white">Total</span>
-          <span className="text-4xl font-black text-brand-400 tabular-nums">{fmt(state.total ?? 0, currency)}</span>
+          <span className="text-4xl font-black text-content-brand tabular-nums">{fmt(state.total ?? 0, currency)}</span>
         </div>
       </div>
     </div>
@@ -126,7 +126,7 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
           <img src={state.logoUrl} alt={state.businessName} className="h-12 w-auto object-contain mx-auto mb-3" />
         )}
         <h1 className="text-3xl font-bold text-white">Votre facture</h1>
-        <p className="text-slate-400 mt-1">Vérifiez et appuyez sur <strong className="text-brand-400">OK</strong> pour valider</p>
+        <p className="text-content-secondary mt-1">Vérifiez et appuyez sur <strong className="text-content-brand">OK</strong> pour valider</p>
       </div>
 
       {/* Liste articles */}
@@ -143,9 +143,9 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
             className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-3 py-2.5 rounded-xl bg-slate-800/50"
           >
             <span className="text-white font-medium truncate">{item.name}</span>
-            <span className="text-slate-400 text-sm text-right tabular-nums">{fmt(item.price, currency)}</span>
-            <span className="text-slate-400 text-sm text-right tabular-nums">×{item.quantity}</span>
-            <span className="text-brand-400 font-semibold text-right tabular-nums">{fmt(item.total, currency)}</span>
+            <span className="text-content-secondary text-sm text-right tabular-nums">{fmt(item.price, currency)}</span>
+            <span className="text-content-secondary text-sm text-right tabular-nums">×{item.quantity}</span>
+            <span className="text-content-brand font-semibold text-right tabular-nums">{fmt(item.total, currency)}</span>
           </div>
         ))}
       </div>
@@ -153,29 +153,29 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
       {/* Totaux */}
       <div className="bg-slate-800/60 rounded-2xl p-5 space-y-2 border border-slate-700">
         {(state.discount ?? 0) > 0 && (
-          <div className="flex justify-between text-green-400 text-lg">
+          <div className="flex justify-between text-status-success text-lg">
             <span>Remise</span>
             <span>-{fmt(state.discount!, currency)}</span>
           </div>
         )}
         {(state.tax ?? 0) > 0 && (
-          <div className="flex justify-between text-slate-400 text-lg">
+          <div className="flex justify-between text-content-secondary text-lg">
             <span>TVA</span>
             <span>{fmt(state.tax!, currency)}</span>
           </div>
         )}
         <div className="flex justify-between items-center pt-2 border-t border-slate-700">
           <span className="text-2xl font-bold text-white">Total</span>
-          <span className="text-4xl font-black text-brand-400 tabular-nums">{fmt(total, currency)}</span>
+          <span className="text-4xl font-black text-content-brand tabular-nums">{fmt(total, currency)}</span>
         </div>
 
         {isPartial && (
           <>
-            <div className="flex justify-between text-brand-400 pt-2 border-t border-slate-700 text-lg">
+            <div className="flex justify-between text-content-brand pt-2 border-t border-slate-700 text-lg">
               <span>Acompte versé</span>
               <span className="font-bold tabular-nums">{fmt(acompte!, currency)}</span>
             </div>
-            <div className="flex justify-between text-amber-400 text-xl font-bold">
+            <div className="flex justify-between text-status-warning text-xl font-bold">
               <span>Reste à régler</span>
               <span className="tabular-nums">{fmt(total - acompte!, currency)}</span>
             </div>
@@ -204,25 +204,25 @@ function PaymentScreen({ state }: { state: DisplayState }) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-10 select-none">
       <div className="relative">
-        <div className="w-40 h-40 bg-green-900/30 rounded-full flex items-center justify-center animate-pulse">
-          <CheckCircle className="w-24 h-24 text-green-400" strokeWidth={1.5} />
+        <div className="w-40 h-40 bg-badge-success rounded-full flex items-center justify-center animate-pulse">
+          <CheckCircle className="w-24 h-24 text-status-success" strokeWidth={1.5} />
         </div>
       </div>
 
       <div className="text-center space-y-3">
         <h1 className="text-5xl font-black text-white">Merci !</h1>
-        <p className="text-2xl text-slate-400">Paiement accepté</p>
+        <p className="text-2xl text-content-secondary">Paiement accepté</p>
       </div>
 
       <div className="bg-slate-800/60 rounded-3xl px-12 py-6 border border-slate-700 text-center space-y-1">
-        <p className="text-slate-400 text-lg">Total</p>
-        <p className="text-4xl font-bold text-brand-400 tabular-nums">{fmt(state.total ?? 0, currency)}</p>
+        <p className="text-content-secondary text-lg">Total</p>
+        <p className="text-4xl font-bold text-content-brand tabular-nums">{fmt(state.total ?? 0, currency)}</p>
       </div>
 
       {change > 0 && (
-        <div className="bg-green-900/20 rounded-3xl px-12 py-6 border border-green-800 text-center space-y-1">
-          <p className="text-slate-400 text-lg">Monnaie à rendre</p>
-          <p className="text-5xl font-black text-green-400 tabular-nums">{fmt(change, currency)}</p>
+        <div className="bg-badge-success rounded-3xl px-12 py-6 border border-status-success text-center space-y-1">
+          <p className="text-content-secondary text-lg">Monnaie à rendre</p>
+          <p className="text-5xl font-black text-status-success tabular-nums">{fmt(change, currency)}</p>
         </div>
       )}
 

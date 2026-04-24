@@ -75,7 +75,7 @@ export function Modal({ title, onClose, children, size = 'md', footer, guard = f
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button
             onClick={requestClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-surface-hover transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-content-secondary hover:text-white hover:bg-surface-hover transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -98,10 +98,10 @@ export function Modal({ title, onClose, children, size = 'md', footer, guard = f
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/70 backdrop-blur-sm">
             <div className="bg-surface-card border border-surface-border rounded-2xl p-6 mx-6 space-y-4 shadow-2xl">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-white">Annuler la saisie ?</p>
-                  <p className="text-sm text-slate-400 mt-1">
+                  <p className="text-sm text-content-secondary mt-1">
                     Les informations saisies seront perdues.
                   </p>
                 </div>
@@ -116,8 +116,8 @@ export function Modal({ title, onClose, children, size = 'md', footer, guard = f
                 </button>
                 <button
                   onClick={() => { setConfirming(false); onClose(); }}
-                  className="flex-1 h-10 px-4 rounded-xl bg-red-900/30 border border-red-800
-                             text-red-400 hover:bg-red-900/50 transition-colors text-sm font-medium"
+                  className="flex-1 h-10 px-4 rounded-xl bg-badge-error border border-status-error
+                             text-status-error hover:bg-badge-error transition-colors text-sm font-medium"
                 >
                   Oui, annuler
                 </button>
@@ -150,13 +150,13 @@ export function ConfirmModal({
         <div className="flex items-start gap-4">
           <div className={cn(
             "p-3 rounded-xl shrink-0",
-            type === 'danger' ? "bg-red-500/10 text-red-500" : "bg-brand-500/10 text-brand-500"
+            type === 'danger' ? "bg-red-500/10 text-status-error" : "bg-brand-500/10 text-brand-500"
           )}>
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-white">{title}</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">{message}</p>
+            <p className="text-sm text-content-secondary leading-relaxed">{message}</p>
           </div>
         </div>
         

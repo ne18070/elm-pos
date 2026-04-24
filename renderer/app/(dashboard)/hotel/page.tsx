@@ -531,10 +531,10 @@ export default function HotelPage() {
           {checkoutsToday.length > 0 && (
             <button
               onClick={() => { setTab('reservations'); setResFilter('today'); }}
-              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-amber-900/20 border border-amber-800/50 text-left hover:bg-amber-900/30 transition-colors"
+              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-badge-warning border border-status-warning/50 text-left hover:bg-badge-warning transition-colors"
             >
-              <LogOut className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-sm text-amber-300 font-medium">
+              <LogOut className="w-4 h-4 text-status-warning shrink-0" />
+              <span className="text-sm text-status-warning font-medium">
                 {checkoutsToday.length} départ{checkoutsToday.length > 1 ? 's' : ''} aujourd&apos;hui
               </span>
             </button>
@@ -542,10 +542,10 @@ export default function HotelPage() {
           {checkinsToday.length > 0 && (
             <button
               onClick={() => { setTab('reservations'); setResFilter('today'); }}
-              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-green-900/20 border border-green-800/50 text-left hover:bg-green-900/30 transition-colors"
+              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-badge-success border border-status-success/50 text-left hover:bg-badge-success transition-colors"
             >
-              <LogIn className="w-4 h-4 text-green-400 shrink-0" />
-              <span className="text-sm text-green-300 font-medium">
+              <LogIn className="w-4 h-4 text-status-success shrink-0" />
+              <span className="text-sm text-status-success font-medium">
                 {checkinsToday.length} arrivée{checkinsToday.length > 1 ? 's' : ''} prévue{checkinsToday.length > 1 ? 's' : ''} aujourd&apos;hui
               </span>
             </button>
@@ -703,13 +703,13 @@ export default function HotelPage() {
           <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
               <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-brand-400" />
+                <Share2 className="w-5 h-5 text-content-brand" />
                 <h3 className="font-semibold text-white">Partager les réservations en ligne</h3>
               </div>
-              <button onClick={() => setShowShare(false)} className="text-slate-400 hover:text-white text-xl leading-none px-1">×</button>
+              <button onClick={() => setShowShare(false)} className="text-content-secondary hover:text-white text-xl leading-none px-1">×</button>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-content-secondary">
                 Partagez ce lien avec vos clients. Ils pourront consulter les chambres disponibles et réserver directement en ligne.
               </p>
               <div className="flex items-center gap-2 bg-surface-input rounded-xl border border-surface-border px-3 py-2.5">
@@ -718,7 +718,7 @@ export default function HotelPage() {
                 <button
                   onClick={copyHotelLink}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                    copied ? 'bg-green-900/30 text-green-400 border border-green-800' : 'bg-brand-600 hover:bg-brand-700 text-white'
+                    copied ? 'bg-badge-success text-status-success border border-status-success' : 'bg-brand-600 hover:bg-brand-700 text-white'
                   }`}
                 >
                   {copied ? <><Check className="w-3 h-3" />Copié !</> : <><Copy className="w-3 h-3" />Copier</>}

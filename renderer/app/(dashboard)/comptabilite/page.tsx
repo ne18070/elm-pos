@@ -354,7 +354,7 @@ export default function ComptabilitePage() {
               key={id}
               onClick={() => setTab(id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                tab === id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white hover:bg-surface-hover'
+                tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-white hover:bg-surface-hover'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -366,7 +366,7 @@ export default function ComptabilitePage() {
 
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="text-slate-400 text-center py-16">Chargement…</div>
+          <div className="text-content-secondary text-center py-16">Chargement…</div>
         ) : (
           <>
             {tab === 'dashboard' && (

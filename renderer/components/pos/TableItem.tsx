@@ -16,9 +16,9 @@ export function TableItem({ table, onSelect, selected }: TableItemProps) {
   const isReserved = table.status === 'reserved';
 
   const statusColors = {
-    free:     'bg-surface-card border-surface-border hover:border-brand-500 text-slate-400',
-    occupied: 'bg-brand-900/20 border-brand-700 text-brand-400',
-    reserved: 'bg-amber-900/20 border-amber-700 text-amber-400',
+    free:     'bg-surface-card border-surface-border hover:border-brand-500 text-content-secondary',
+    occupied: 'bg-badge-brand border-brand-700 text-content-brand',
+    reserved: 'bg-badge-warning border-status-warning text-status-warning',
     cleaning: 'bg-indigo-900/20 border-indigo-700 text-indigo-400',
   };
 
@@ -57,7 +57,7 @@ export function TableItem({ table, onSelect, selected }: TableItemProps) {
       )}
       
       {isCleaning && (
-        <Clock className="absolute -top-1.5 -right-1.5 w-4 h-4 text-indigo-400 bg-slate-950 rounded-full" />
+        <Clock className="absolute -top-1.5 -right-1.5 w-4 h-4 text-indigo-400 bg-surface-overlay rounded-full" />
       )}
     </button>
   );

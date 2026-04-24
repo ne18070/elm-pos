@@ -71,15 +71,15 @@ export function EmailTemplatesTab() {
 
   if (loading) return (
     <div className="flex justify-center py-12">
-      <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
+      <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
     </div>
   );
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-content-secondary">
         Modifiez le corps HTML de chaque template. Utilisez les placeholders{' '}
-        <code className="bg-surface-input px-1 py-0.5 rounded text-brand-300 text-xs">{'{{variable}}'}</code>{' '}
+        <code className="bg-surface-input px-1 py-0.5 rounded text-content-brand text-xs">{'{{variable}}'}</code>{' '}
         listés sur chaque carte.
       </p>
 
@@ -88,18 +88,18 @@ export function EmailTemplatesTab() {
           <div key={tpl.id} className="card p-4 flex items-start gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <Mail className="w-4 h-4 text-brand-400 shrink-0" />
+                <Mail className="w-4 h-4 text-content-brand shrink-0" />
                 <p className="font-medium text-white">{tpl.name}</p>
                 {tpl.is_active
-                  ? <span className="text-xs px-2 py-0.5 rounded-full border border-green-800 text-green-400 bg-green-900/20">Actif</span>
+                  ? <span className="text-xs px-2 py-0.5 rounded-full border border-status-success text-status-success bg-badge-success">Actif</span>
                   : <span className="text-xs px-2 py-0.5 rounded-full border border-slate-700 text-slate-500">Inactif</span>}
               </div>
               <p className="text-xs text-slate-500 mt-0.5 font-mono">{tpl.key}</p>
-              {tpl.description && <p className="text-xs text-slate-400 mt-1">{tpl.description}</p>}
+              {tpl.description && <p className="text-xs text-content-secondary mt-1">{tpl.description}</p>}
               {Array.isArray(tpl.variables) && (tpl.variables as string[]).length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {(tpl.variables as string[]).map((v) => (
-                    <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 bg-surface-input rounded border border-surface-border text-brand-300">
+                    <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 bg-surface-input rounded border border-surface-border text-content-brand">
                       {`{{${v}}}`}
                     </span>
                   ))}
@@ -132,7 +132,7 @@ export function EmailTemplatesTab() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border
                     ${preview
                       ? 'bg-brand-600 border-brand-500 text-white'
-                      : 'border-surface-border text-slate-400 hover:text-white'}`}
+                      : 'border-surface-border text-content-secondary hover:text-white'}`}
                 >
                   {preview ? <Code2 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   {preview ? 'HTML' : 'Aperçu'}
@@ -154,7 +154,7 @@ export function EmailTemplatesTab() {
               <div className="px-5 pt-4 flex flex-wrap gap-1.5 shrink-0">
                 <span className="text-xs text-slate-500 self-center mr-1">Variables :</span>
                 {variables.map((v) => (
-                  <span key={v} className="text-xs font-mono px-2 py-0.5 bg-surface-input rounded border border-surface-border text-brand-300">
+                  <span key={v} className="text-xs font-mono px-2 py-0.5 bg-surface-input rounded border border-surface-border text-content-brand">
                     {`{{${v}}}`}
                   </span>
                 ))}

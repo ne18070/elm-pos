@@ -98,12 +98,12 @@ function FieldConfigModal({
         />
         <div className="flex items-center justify-between gap-3 pt-2">
           {onDelete && (
-            <button onClick={onDelete} className="p-2.5 rounded-xl text-red-500 hover:bg-red-50 transition-colors" title="Supprimer le champ">
+            <button onClick={onDelete} className="p-2.5 rounded-xl text-status-error hover:bg-red-50 transition-colors" title="Supprimer le champ">
               <Trash2 className="w-5 h-5" />
             </button>
           )}
           <div className="flex gap-2 ml-auto">
-            <button onClick={onCancel} className="px-4 py-2 text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors">Annuler</button>
+            <button onClick={onCancel} className="px-4 py-2 text-content-secondary font-bold text-sm hover:text-slate-600 transition-colors">Annuler</button>
             <button 
               onClick={() => onConfirm(val)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-200 transition-all"
@@ -458,16 +458,16 @@ function PretentionCard({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="card group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:bg-slate-900 border-slate-800/50">
+    <div className="card group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:bg-surface border-slate-800/50">
       <div className="p-6 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2 min-w-0">
-            <h3 className="font-bold text-white text-lg truncate group-hover:text-brand-400 transition-colors">
+            <h3 className="font-bold text-white text-lg truncate group-hover:text-content-brand transition-colors">
               {pretention.name}
             </h3>
             <div className="flex items-center gap-2">
               {pretention.category && (
-                <span className="text-[9px] px-2.5 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 font-black uppercase tracking-widest">
+                <span className="text-[9px] px-2.5 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-content-brand font-black uppercase tracking-widest">
                   {pretention.category}
                 </span>
               )}
@@ -476,26 +476,26 @@ function PretentionCard({
           <div className="flex items-center gap-2 shrink-0">
             <button 
               onClick={onDuplicate} 
-              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-emerald-400 hover:border-emerald-500/50 transition-all active:scale-90 shadow-sm"
+              className="p-2.5 rounded-xl bg-surface-overlay border border-slate-800 text-slate-500 hover:text-status-success hover:border-emerald-500/50 transition-all active:scale-90 shadow-sm"
               title="Dupliquer ce modèle"
             >
               <Copy className="w-4 h-4" />
             </button>
             <button 
               onClick={onEdit} 
-              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-white hover:border-brand-500/50 transition-all active:scale-90 shadow-sm"
+              className="p-2.5 rounded-xl bg-surface-overlay border border-slate-800 text-slate-500 hover:text-white hover:border-brand-500/50 transition-all active:scale-90 shadow-sm"
               title="Modifier"
             >
               <Edit2 className="w-4 h-4" />
             </button>
             <button 
               onClick={onDelete} 
-              className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-500 hover:text-red-400 hover:border-red-500/50 transition-all active:scale-90 shadow-sm"
+              className="p-2.5 rounded-xl bg-surface-overlay border border-slate-800 text-slate-500 hover:text-status-error hover:border-red-500/50 transition-all active:scale-90 shadow-sm"
               title="Supprimer"
             >
               <Trash2 className="w-4 h-4" />
             </button>
-            <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-500'}`}>
+            <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-white' : 'bg-surface-overlay border-slate-800 text-slate-500'}`}>
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
@@ -604,8 +604,8 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
       </div>
 
       <div className="relative group">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
-        <input className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un document..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-content-brand transition-colors" />
+        <input className="w-full bg-surface border border-slate-800 rounded-2xl pl-14 pr-6 py-4 text-base text-white placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un document..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {loading ? (
@@ -617,7 +617,7 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
         <div className="card border-dashed border-slate-800 bg-transparent py-24 text-center space-y-6">
           <BookOpen className="w-12 h-12 text-slate-800 mx-auto" />
           <div className="space-y-2">
-            <p className="text-slate-400 font-bold text-lg">Aucun modèle</p>
+            <p className="text-content-secondary font-bold text-lg">Aucun modèle</p>
             <p className="text-slate-600 text-sm max-w-xs mx-auto font-medium">Commencez par créer votre premier modèle de lettre automatisée.</p>
           </div>
         </div>
@@ -627,7 +627,7 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
             <div key={cat} className="space-y-6">
               <div className="flex items-center gap-4">
                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] whitespace-nowrap">{cat}</span>
-                <div className="h-px w-full bg-slate-800" />
+                <div className="h-px w-full bg-surface-card" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {items.map(p => (

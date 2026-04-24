@@ -45,13 +45,13 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
         {/* En-tête */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-surface-border">
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-brand-400" />
+            <Clock className="w-5 h-5 text-content-brand" />
             <h2 className="font-semibold text-white">Commandes en attente</h2>
             <span className="bg-brand-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {heldOrders.length}
             </span>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-content-secondary hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -95,7 +95,7 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDiscard(held.id); }}
-                      className="text-slate-600 hover:text-red-400 transition-colors shrink-0 p-1"
+                      className="text-slate-600 hover:text-status-error transition-colors shrink-0 p-1"
                       title="Supprimer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -109,7 +109,7 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
                         key={`${item.product_id}::${item.variant_id ?? ''}`}
                         className="flex justify-between text-xs"
                       >
-                        <span className="text-slate-400 truncate flex-1">
+                        <span className="text-content-secondary truncate flex-1">
                           {item.quantity > 1 && (
                             <span className="text-slate-500 mr-1">{item.quantity}×</span>
                           )}
@@ -131,7 +131,7 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
                   {(held.coupons ?? []).length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {(held.coupons ?? []).map((c) => (
-                        <span key={c.id} className="text-xs text-green-400 bg-green-900/20 px-2 py-0.5 rounded-lg">
+                        <span key={c.id} className="text-xs text-status-success bg-badge-success px-2 py-0.5 rounded-lg">
                           {c.code}
                         </span>
                       ))}
@@ -140,8 +140,8 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
 
                   {/* Total + bouton rappel */}
                   <div className="flex items-center justify-between pt-2 border-t border-surface-border">
-                    <span className="text-sm font-bold text-brand-400">{fmt(total)}</span>
-                    <div className="flex items-center gap-1 text-xs text-brand-400 group-hover:text-white
+                    <span className="text-sm font-bold text-content-brand">{fmt(total)}</span>
+                    <div className="flex items-center gap-1 text-xs text-content-brand group-hover:text-white
                                     transition-colors font-medium">
                       <RotateCcw className="w-3.5 h-3.5" />
                       Rappeler

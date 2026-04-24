@@ -33,10 +33,10 @@ export function fmtMoney(amount: number, currency = 'XOF'): string {
 
 export function roomStatusStyle(status: RoomStatus): string {
   switch (status) {
-    case 'available':   return 'border-green-700 bg-green-900/20 text-green-300';
-    case 'occupied':    return 'border-brand-700 bg-brand-900/20 text-brand-300';
-    case 'cleaning':    return 'border-amber-700 bg-amber-900/20 text-amber-300';
-    case 'maintenance': return 'border-slate-600 bg-slate-800/40 text-slate-400';
+    case 'available':   return 'border-status-success bg-badge-success text-status-success';
+    case 'occupied':    return 'border-brand-700 bg-badge-brand text-content-brand';
+    case 'cleaning':    return 'border-status-warning bg-badge-warning text-status-warning';
+    case 'maintenance': return 'border-slate-600 bg-slate-800/40 text-content-secondary';
   }
 }
 export function roomStatusLabel(status: RoomStatus): string {
@@ -51,9 +51,9 @@ export function resStatusStyle(status: ReservationStatus): string {
   switch (status) {
     case 'confirmed':   return 'bg-slate-700 text-white';
     case 'checked_in':  return 'bg-brand-700 text-white';
-    case 'checked_out': return 'bg-green-900/40 text-green-300';
-    case 'cancelled':   return 'bg-red-900/40 text-red-300';
-    case 'no_show':     return 'bg-amber-900/40 text-amber-300';
+    case 'checked_out': return 'bg-badge-success text-status-success';
+    case 'cancelled':   return 'bg-badge-error text-status-error';
+    case 'no_show':     return 'bg-badge-warning text-status-warning';
   }
 }
 export function resStatusLabel(status: ReservationStatus): string {

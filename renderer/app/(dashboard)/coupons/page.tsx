@@ -16,10 +16,10 @@ import type { Coupon } from '@pos-types';
 function couponStatusInfo(coupon: Coupon): { label: string; cls: string } {
   const expired = coupon.expires_at ? new Date(coupon.expires_at) < new Date() : false;
   const maxed   = coupon.max_uses != null && coupon.uses_count >= coupon.max_uses;
-  if (!coupon.is_active) return { label: 'Inactif',  cls: 'bg-slate-800 text-slate-400 border-slate-700' };
-  if (expired)           return { label: 'Expiré',   cls: 'bg-red-900/30 text-red-400 border-red-800' };
-  if (maxed)             return { label: 'Épuisé',   cls: 'bg-orange-900/30 text-orange-400 border-orange-800' };
-  return                        { label: 'Actif',    cls: 'bg-green-900/30 text-green-400 border-green-800' };
+  if (!coupon.is_active) return { label: 'Inactif',  cls: 'bg-surface-card text-content-secondary border-slate-700' };
+  if (expired)           return { label: 'Expiré',   cls: 'bg-badge-error text-status-error border-status-error' };
+  if (maxed)             return { label: 'Épuisé',   cls: 'bg-badge-orange text-status-orange border-orange-800' };
+  return                        { label: 'Actif',    cls: 'bg-badge-success text-status-success border-status-success' };
 }
 
 function couponValueLabel(coupon: Coupon, currency: string): string {
@@ -86,7 +86,7 @@ export default function CouponsPage() {
 
         {/* Recherche */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
           <input
             type="text"
             placeholder="Rechercher par code…"
@@ -100,9 +100,9 @@ export default function CouponsPage() {
       {/* Contenu */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-slate-400">Chargement…</div>
+          <div className="flex items-center justify-center h-32 text-content-secondary">Chargement…</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+          <div className="flex flex-col items-center justify-center py-16 text-content-secondary gap-3">
             <Tag className="w-12 h-12 opacity-30" />
             <p className="font-medium">{search ? 'Aucun coupon trouvé' : 'Aucun coupon créé'}</p>
           </div>
@@ -110,7 +110,7 @@ export default function CouponsPage() {
           <div className="rounded-xl border border-surface-border overflow-hidden m-6">
             <table className="w-full">
               <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
-                <tr className="text-left text-xs text-slate-400 uppercase tracking-wide">
+                <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
                   <th className="px-4 py-3">Code</th>
                   <th className="px-4 py-3">Type / Valeur</th>
                   <th className="px-4 py-3 hidden md:table-cell">Conditions</th>
@@ -132,7 +132,7 @@ export default function CouponsPage() {
                     >
                       {/* Code */}
                       <td className="px-4 py-3 max-w-[160px]">
-                        <p className="font-mono font-bold text-brand-400 text-sm truncate">{coupon.code}</p>
+                        <p className="font-mono font-bold text-content-brand text-sm truncate">{coupon.code}</p>
                       </td>
 
                       {/* Type + Valeur */}
@@ -140,8 +140,8 @@ export default function CouponsPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <span className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center
                             ${coupon.type === 'free_item'
-                              ? 'bg-amber-900/30 text-amber-400'
-                              : 'bg-brand-900/30 text-brand-400'}`}
+                              ? 'bg-badge-warning text-status-warning'
+                              : 'bg-badge-brand text-content-brand'}`}
                           >
                             <CouponTypeIcon type={coupon.type} />
                           </span>
@@ -153,7 +153,7 @@ export default function CouponsPage() {
 
                       {/* Conditions */}
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <div className="space-y-0.5 text-xs text-slate-400">
+                        <div className="space-y-0.5 text-xs text-content-secondary">
                           {coupon.min_order_amount != null && (
                             <p className="truncate">Min {formatCurrency(coupon.min_order_amount, currency)}</p>
                           )}
@@ -167,7 +167,7 @@ export default function CouponsPage() {
                       </td>
 
                       {/* Utilisations */}
-                      <td className="px-4 py-3 hidden sm:table-cell text-sm text-slate-400 whitespace-nowrap">
+                      <td className="px-4 py-3 hidden sm:table-cell text-sm text-content-secondary whitespace-nowrap">
                         {coupon.uses_count}
                         {coupon.max_uses != null && (
                           <span className="text-slate-600"> / {coupon.max_uses}</span>
@@ -175,7 +175,7 @@ export default function CouponsPage() {
                       </td>
 
                       {/* Expiration */}
-                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-slate-400 whitespace-nowrap">
+                      <td className="px-4 py-3 hidden lg:table-cell text-sm text-content-secondary whitespace-nowrap">
                         {coupon.expires_at
                           ? format(new Date(coupon.expires_at), 'd MMM yyyy', { locale: fr })
                           : <span className="text-slate-600">—</span>

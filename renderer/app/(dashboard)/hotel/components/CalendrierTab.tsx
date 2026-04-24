@@ -84,12 +84,12 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
           <table className="w-full border-collapse text-xs" style={{ minWidth: `${daysInMonth * 36 + 80}px` }}>
             <thead>
               <tr>
-                <th className="text-left py-2 pr-3 text-slate-400 font-medium w-20 sticky left-0 bg-surface z-10">Chambre</th>
+                <th className="text-left py-2 pr-3 text-content-secondary font-medium w-20 sticky left-0 bg-surface z-10">Chambre</th>
                 {days.map((d) => {
                   const ds = dayStr(d);
                   const isToday = ds === todayFull;
                   return (
-                    <th key={d} className={cn('text-center w-9 py-2 font-medium', isToday ? 'text-brand-400' : 'text-slate-500')}>
+                    <th key={d} className={cn('text-center w-9 py-2 font-medium', isToday ? 'text-content-brand' : 'text-slate-500')}>
                       {d}
                     </th>
                   );
@@ -116,7 +116,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
                       return (
                         <td
                           key={d}
-                          className={cn('h-8 relative', isToday && !activeR ? 'bg-brand-900/10' : '')}
+                          className={cn('h-8 relative', isToday && !activeR ? 'bg-badge-brand' : '')}
                           onClick={() => activeR && openDetail(activeR)}
                         >
                           {activeR && (
@@ -124,7 +124,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
                               'absolute inset-y-1 inset-x-0 cursor-pointer',
                               activeR.status === 'checked_in'  ? 'bg-brand-600/80' :
                               activeR.status === 'confirmed'   ? 'bg-amber-600/60' :
-                              activeR.status === 'checked_out' ? 'bg-green-900/40' :
+                              activeR.status === 'checked_out' ? 'bg-badge-success' :
                               'bg-slate-700/40',
                               isStart ? 'rounded-l-md ml-1' : ''
                             )}>
@@ -143,10 +143,10 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
               })}
             </tbody>
           </table>
-          <div className="flex gap-4 mt-4 text-xs text-slate-400">
+          <div className="flex gap-4 mt-4 text-xs text-content-secondary">
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-600/60 inline-block" />Confirmée</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-600/80 inline-block" />En cours</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-900/40 border border-green-800 inline-block" />Terminée</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-badge-success border border-status-success inline-block" />Terminée</span>
           </div>
         </div>
       )}

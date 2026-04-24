@@ -103,7 +103,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
               <p className="font-mono font-bold text-white text-lg">
                 #{order.id.slice(0, 8).toUpperCase()}
               </p>
-              <p className="text-sm text-slate-400 mt-0.5">
+              <p className="text-sm text-content-secondary mt-0.5">
                 {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
                 {order.cashier && (
                   <span className="ml-2 text-slate-500">· {order.cashier.full_name}</span>
@@ -112,7 +112,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
             </div>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-content-secondary hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -121,13 +121,13 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
           {/* Barre de progression */}
           <div className="mt-4">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-slate-400">
-                <span className={`font-semibold ${allDone ? 'text-green-400' : 'text-white'}`}>
+              <span className="text-content-secondary">
+                <span className={`font-semibold ${allDone ? 'text-status-success' : 'text-white'}`}>
                   {verifiedCount}
                 </span>
                 <span className="text-slate-500"> / {total} article{total > 1 ? 's' : ''} vérifiés</span>
               </span>
-              <span className="text-brand-400 font-bold">{fmt(order.total)}</span>
+              <span className="text-content-brand font-bold">{fmt(order.total)}</span>
             </div>
             <div className="h-2.5 bg-surface-input rounded-full overflow-hidden">
               <div
@@ -143,14 +143,14 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
           {order.coupon_code && (
             <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm border ${
               order.discount_amount > 0
-                ? 'bg-green-900/20 border-green-800 text-green-300'
-                : 'bg-amber-900/20 border-amber-800 text-amber-300'
+                ? 'bg-badge-success border-status-success text-status-success'
+                : 'bg-badge-warning border-status-warning text-status-warning'
             }`}>
               {order.discount_amount > 0
                 ? <Tag className="w-4 h-4 shrink-0" />
                 : <Gift className="w-4 h-4 shrink-0" />}
               <span className="font-medium">{order.coupon_code}</span>
-              <span className="text-slate-400 mx-1">·</span>
+              <span className="text-content-secondary mx-1">·</span>
               {order.discount_amount > 0
                 ? <span>-{fmt(order.discount_amount)}</span>
                 : <span>{order.coupon_notes ?? 'Article offert'}</span>}
@@ -161,8 +161,8 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
           {lastScanned && (
             <div className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border ${
               lastScanned.ok
-                ? 'bg-green-900/20 border-green-800 text-green-300'
-                : 'bg-red-900/20 border-red-800 text-red-300'
+                ? 'bg-badge-success border-status-success text-status-success'
+                : 'bg-badge-error border-status-error text-status-error'
             }`}>
               <ScanLine className="w-4 h-4 shrink-0" />
               {lastScanned.ok ? `✓ ${lastScanned.text}` : lastScanned.text}
@@ -198,7 +198,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
               title={scannerEnabled ? 'Désactiver le scanner (panne / absence)' : 'Activer le scanner'}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                 scannerEnabled
-                  ? 'border-brand-700 bg-brand-900/30 text-brand-400 hover:bg-brand-900/50'
+                  ? 'border-brand-700 bg-badge-brand text-content-brand hover:bg-badge-brand'
                   : 'border-slate-700 bg-surface-input text-slate-500 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
@@ -210,7 +210,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
 
           {/* Bannière mode manuel */}
           {!scannerEnabled && (
-            <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-amber-900/20 border border-amber-800 rounded-xl text-xs text-amber-300">
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-badge-warning border border-status-warning rounded-xl text-xs text-status-warning">
               <WifiOff className="w-3.5 h-3.5 shrink-0" />
               Scanner désactivé — cochage manuel uniquement. Cliquez sur un article pour le valider.
             </div>
@@ -225,7 +225,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                 className={`w-full flex items-center gap-4 p-4 rounded-xl border text-left
                            transition-all duration-150 active:scale-[0.99]
                            ${done
-                             ? 'bg-green-900/15 border-green-800'
+                             ? 'bg-badge-success border-status-success'
                              : 'bg-surface-input border-surface-border hover:border-slate-500'}`}
               >
                 {/* Checkbox visuel */}
@@ -253,7 +253,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                 {/* Infos article */}
                 <div className="flex-1 min-w-0">
                   <p className={`font-medium truncate transition-colors ${
-                    done ? 'text-green-300 line-through decoration-green-600/50' : 'text-white'
+                    done ? 'text-status-success line-through decoration-green-600/50' : 'text-white'
                   }`}>
                     {item.name}
                   </p>
@@ -261,13 +261,13 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                     {item.product?.barcode && (
                       <span className="text-xs text-slate-500 font-mono">{item.product.barcode}</span>
                     )}
-                    <span className="text-xs text-slate-400">{fmt(item.price)} / unité</span>
+                    <span className="text-xs text-content-secondary">{fmt(item.price)} / unité</span>
                   </div>
                 </div>
 
                 {/* Quantité */}
                 <div className="shrink-0 text-right">
-                  <p className={`text-xl font-bold ${done ? 'text-green-400' : 'text-white'}`}>
+                  <p className={`text-xl font-bold ${done ? 'text-status-success' : 'text-white'}`}>
                     ×{item.quantity}
                   </p>
                   <p className="text-xs text-slate-500">{fmt(item.total)}</p>
