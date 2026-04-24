@@ -199,7 +199,8 @@ export function LocationPageClient() {
 
       {/* Header */}
       <header className="bg-surface-card border-b border-surface-border shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-9 h-9 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
             {agency?.logo_url ? (
               <img src={agency.logo_url} alt={agency.name} className="w-full h-full object-cover" />
@@ -216,6 +217,7 @@ export function LocationPageClient() {
                 <MapPin className="w-3 h-3 shrink-0" />{agency.address}
               </p>
             )}
+          </div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
             <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />

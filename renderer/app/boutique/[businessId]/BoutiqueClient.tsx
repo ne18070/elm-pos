@@ -343,7 +343,7 @@ export default function BoutiquePage() {
       {/* 笏笏 Header 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
               {info.logo_url ? (
                 <img src={info.logo_url} alt={info.name} className="w-full h-full object-cover" />
@@ -361,23 +361,25 @@ export default function BoutiquePage() {
                 </p>
               )}
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-content-primary px-4 py-2 rounded-xl font-semibold text-sm transition-colors shadow-sm shrink-0"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span className="hidden sm:inline">Panier</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-content-primary text-xs font-bold rounded-full flex items-center justify-center">
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </button>
             <div className="w-8 h-8 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
               <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />
             </div>
           </div>
-
-          <button
-            onClick={() => setShowCart(true)}
-            className="relative flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-content-primary px-4 py-2 rounded-xl font-semibold text-sm transition-colors shadow-sm shrink-0"
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span className="hidden sm:inline">Panier</span>
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-content-primary text-xs font-bold rounded-full flex items-center justify-center">
-                {cartCount > 9 ? '9+' : cartCount}
-              </span>
-            )}
-          </button>
         </div>
 
         <div className="max-w-2xl mx-auto px-4 pb-3">

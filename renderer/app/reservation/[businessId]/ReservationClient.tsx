@@ -248,7 +248,8 @@ export default function ReservationPage() {
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
             {info?.logo_url ? (
               <img src={info.logo_url} alt={info?.name} className="w-full h-full object-cover" />
@@ -265,6 +266,7 @@ export default function ReservationPage() {
                 <MapPin className="w-3 h-3 shrink-0" />{info.address}
               </p>
             )}
+          </div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
             <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />
