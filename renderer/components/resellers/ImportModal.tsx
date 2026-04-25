@@ -146,7 +146,10 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
             phone:     cell(row, 'telephone') || null,
             email:     cell(row, 'email') || null,
             address:   cell(row, 'adresse') || null,
+            zone:      cell(row, 'zone') || null,
             notes:     cell(row, 'notes') || null,
+            type:      (cell(row, 'type') as any) || 'gros',
+            chef_id:   null,
             is_active: true,
           });
         } else {
