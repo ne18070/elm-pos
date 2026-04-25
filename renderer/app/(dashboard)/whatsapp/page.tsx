@@ -7,7 +7,7 @@ import { fr } from 'date-fns/locale';
 import Link from 'next/link';
 import {
   MessageCircle, Send, RefreshCw, Search, ShoppingCart,
-  ChevronRight, ArrowLeft, Phone, Loader2, Filter, X,
+  ChevronRight, ArrowLeft, Phone, Loader2, Filter, X, Bell,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -94,13 +94,47 @@ export default function WhatsAppPage() {
     }
   }, []);
 
-  // Demander la permission de notification au montage
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+
+  // Vérifier la permission au montage
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
+      setNotifPermission(Notification.permission);
     }
+  }, []);
+
+  async function requestPermission() {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const resp = await Notification.requestPermission();
+      setNotifPermission(resp);
+    }
+  }
+
+  // ── Chargement initial + refresh ───────────────────────────────────────────
+  const loadConversations = useCallback(async (
+    filter: ConversationFilter,
+    append = false,
+  ) => {
+    if (!business?.id) return;
+    try {
+      const [cfg, result] = await Promise.all([
+        append ? Promise.resolve(config) : getWhatsAppConfig(business.id),
+        getConversations(business.id, filter),
+      ]);
+      if (!append && cfg !== config) setConfig(cfg as WhatsAppConfig | null);
+      setConversations((prev) => append ? [...prev, ...result.items] : result.items);
+      setHasMore(result.hasMore);
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [business?.id, config, notifError]);
+
+  // Premier chargement
+  useEffect(() => {
+    loadConversations({ page: 0, pageSize: PAGE_SIZE, unreadOnly });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Realtime — nouveaux messages WhatsApp
@@ -358,6 +392,15 @@ export default function WhatsAppPage() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {notifPermission === 'default' && (
+                <button
+                  onClick={requestPermission}
+                  className="p-1.5 rounded-lg bg-brand-500/10 text-content-brand hover:bg-brand-500/20 transition-colors"
+                  title="Activer les notifications sonores"
+                >
+                  <Bell className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={() => setShowFilters((f) => !f)}
                 className={`relative p-1.5 rounded-lg hover:bg-surface-hover transition-colors ${showFilters ? 'text-content-brand' : 'text-content-secondary'}`}
