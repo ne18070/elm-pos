@@ -4,8 +4,9 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import {
   Plus, Search, Phone, MapPin, Users, Pencil, Trash2,
-  ChevronRight, Check, Gift, Store, Upload, Loader2,
+  ChevronRight, Check, Gift, Store, Upload, Loader2, Crown,
 } from 'lucide-react';
+import type { ResellerType } from '@services/supabase/resellers';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { ImportModal } from '@/components/resellers/ImportModal';
 import { useAuthStore } from '@/store/auth';
@@ -18,6 +19,13 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Reseller, ResellerClient, ResellerOffer } from '@services/supabase/resellers';
 import type { Product } from '@pos-types';
+
+const TYPE_LABELS: Record<ResellerType, string> = { gros: 'Gros', demi_gros: 'Demi-gros', detaillant: 'Détaillant' };
+const TYPE_COLORS: Record<ResellerType, string> = {
+  gros:      'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  demi_gros: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  detaillant:'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+};
 
 type Tab = 'revendeurs' | 'offres';
 type Panel = null | { type: 'reseller'; item: Reseller | null } | { type: 'client'; reseller: Reseller; item: ResellerClient | null };
@@ -41,8 +49,14 @@ export default function RevendeursPage() {
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
 
+  const [zoneFilter, setZoneFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<ResellerType | ''>('');
+
   // Formulaires
-  const [rForm, setRForm] = useState({ name: '', phone: '', email: '', address: '', notes: '', is_active: true });
+  const [rForm, setRForm] = useState<{
+    name: string; phone: string; email: string; address: string;
+    zone: string; notes: string; type: ResellerType; chef_id: string; is_active: boolean;
+  }>({ name: '', phone: '', email: '', address: '', zone: '', notes: '', type: 'gros', chef_id: '', is_active: true });
   const [cForm, setCForm] = useState({ name: '', phone: '', address: '' });
   const [oForm, setOForm] = useState({ product_id: '', reseller_id: '' as string | null, min_qty: '', bonus_qty: '1', label: '', is_active: true });
 
@@ -92,8 +106,8 @@ export default function RevendeursPage() {
 
   function openResellerPanel(item: Reseller | null) {
     setRForm(item
-      ? { name: item.name, phone: item.phone ?? '', email: item.email ?? '', address: item.address ?? '', notes: item.notes ?? '', is_active: item.is_active }
-      : { name: '', phone: '', email: '', address: '', notes: '', is_active: true }
+      ? { name: item.name, phone: item.phone ?? '', email: item.email ?? '', address: item.address ?? '', zone: item.zone ?? '', notes: item.notes ?? '', type: item.type ?? 'gros', chef_id: item.chef_id ?? '', is_active: item.is_active }
+      : { name: '', phone: '', email: '', address: '', zone: '', notes: '', type: 'gros', chef_id: '', is_active: true }
     );
     setPanel({ type: 'reseller', item });
   }
@@ -102,13 +116,14 @@ export default function RevendeursPage() {
     if (!business || !rForm.name.trim()) return;
     setSaving(true);
     try {
+      const payload = { ...rForm, chef_id: rForm.chef_id || null };
       if (panel?.type === 'reseller' && panel.item) {
-        const updated = await updateReseller(panel.item.id, rForm);
+        const updated = await updateReseller(panel.item.id, payload);
         setResellers((prev) => prev.map((r) => r.id === updated.id ? updated : r));
         if (selected?.id === updated.id) setSelected(updated);
         success('Revendeur mis à jour');
       } else {
-        const created = await createReseller(business.id, rForm);
+        const created = await createReseller(business.id, payload);
         setResellers((prev) => [...prev, created]);
         setSelected(created);
         success('Revendeur créé');
@@ -234,10 +249,15 @@ export default function RevendeursPage() {
     } catch (e) { notifError(toUserError(e)); }
   }
 
-  const filteredResellers = resellers.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase()) ||
-    (r.phone ?? '').includes(search)
-  );
+  const zones = [...new Set(resellers.map((r) => r.zone).filter(Boolean))] as string[];
+
+  const filteredResellers = resellers.filter((r) => {
+    const q = search.toLowerCase();
+    const matchSearch = r.name.toLowerCase().includes(q) || (r.phone ?? '').includes(q);
+    const matchZone   = !zoneFilter || r.zone === zoneFilter;
+    const matchType   = !typeFilter || r.type === typeFilter;
+    return matchSearch && matchZone && matchType;
+  });
 
   const filteredClients = clients.filter((c) =>
     c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
@@ -302,6 +322,28 @@ export default function RevendeursPage() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+              <div className="flex gap-1.5">
+                <select
+                  className="input h-7 text-xs flex-1 py-0"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as ResellerType | '')}
+                >
+                  <option value="">Tous types</option>
+                  {(Object.keys(TYPE_LABELS) as ResellerType[]).map((t) => (
+                    <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+                  ))}
+                </select>
+                {zones.length > 0 && (
+                  <select
+                    className="input h-7 text-xs flex-1 py-0"
+                    value={zoneFilter}
+                    onChange={(e) => setZoneFilter(e.target.value)}
+                  >
+                    <option value="">Toutes zones</option>
+                    {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+                  </select>
+                )}
+              </div>
               <button onClick={() => openResellerPanel(null)} className="btn-primary w-full h-8 text-sm flex items-center justify-center gap-1">
                 <Plus className="w-3.5 h-3.5 shrink-0" /> Nouveau revendeur
               </button>
@@ -322,7 +364,13 @@ export default function RevendeursPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-content-primary truncate">{r.name}</p>
-                    {r.phone && <p className="text-xs text-content-muted truncate">{r.phone}</p>}
+                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${TYPE_COLORS[r.type ?? 'gros']}`}>
+                        {TYPE_LABELS[r.type ?? 'gros']}
+                      </span>
+                      {r.zone && <span className="text-[9px] text-content-muted">{r.zone}</span>}
+                      {r.chef_id && <Crown className="w-2.5 h-2.5 text-yellow-500" title="Chef de zone" />}
+                    </div>
                   </div>
                   {!r.is_active && <span className="text-xs text-status-warning shrink-0">Inactif</span>}
                   <ChevronRight className="w-3.5 h-3.5 text-content-muted shrink-0" />
@@ -356,9 +404,20 @@ export default function RevendeursPage() {
                 {/* Info revendeur */}
                 <div className="card p-5 flex items-start justify-between gap-4">
                   <div className="space-y-1">
-                    <h2 className="text-lg font-bold text-content-primary">{selected.name}</h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-lg font-bold text-content-primary">{selected.name}</h2>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${TYPE_COLORS[selected.type ?? 'gros']}`}>
+                        {TYPE_LABELS[selected.type ?? 'gros']}
+                      </span>
+                    </div>
                     {selected.phone && <p className="text-sm text-content-secondary flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{selected.phone}</p>}
+                    {selected.zone && <p className="text-sm text-content-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />Zone : {selected.zone}</p>}
                     {selected.address && <p className="text-sm text-content-secondary flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{selected.address}</p>}
+                    {selected.chef_id && (
+                      <p className="text-sm text-yellow-500 flex items-center gap-1">
+                        <Crown className="w-3.5 h-3.5" />Chef : {resellers.find((r) => r.id === selected.chef_id)?.name ?? '—'}
+                      </p>
+                    )}
                     {selected.notes && <p className="text-sm text-content-muted italic mt-1">{selected.notes}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -536,6 +595,48 @@ export default function RevendeursPage() {
             <label className="label">Nom <span className="text-status-error">*</span></label>
             <input className="input" value={rForm.name} onChange={(e) => setRForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Modou Fall" />
           </div>
+
+          {/* Type de vendeur */}
+          <div>
+            <label className="label">Type de vendeur <span className="text-status-error">*</span></label>
+            <div className="grid grid-cols-3 gap-2">
+              {(Object.entries(TYPE_LABELS) as [ResellerType, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setRForm((f) => ({ ...f, type: key }))}
+                  className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-colors ${
+                    rForm.type === key
+                      ? `${TYPE_COLORS[key]} border-current`
+                      : 'border-surface-border text-content-muted hover:border-surface-hover'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Zone</label>
+            <input className="input" value={rForm.zone} onChange={(e) => setRForm((f) => ({ ...f, zone: e.target.value }))} placeholder="Ex : Médina, Sandaga, Pikine…" list="zone-list" />
+            <datalist id="zone-list">
+              {zones.map((z) => <option key={z} value={z} />)}
+            </datalist>
+          </div>
+
+          <div>
+            <label className="label">Chef / Superviseur</label>
+            <select className="input" value={rForm.chef_id} onChange={(e) => setRForm((f) => ({ ...f, chef_id: e.target.value }))}>
+              <option value="">— Aucun chef assigné —</option>
+              {resellers
+                .filter((r) => !panel || panel.type !== 'reseller' || !panel.item || r.id !== panel.item.id)
+                .map((r) => (
+                  <option key={r.id} value={r.id}>{r.name} ({TYPE_LABELS[r.type ?? 'gros']})</option>
+                ))}
+            </select>
+          </div>
+
           <div>
             <label className="label">Téléphone</label>
             <input className="input" value={rForm.phone} onChange={(e) => setRForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+221 77 000 00 00" />
@@ -545,8 +646,8 @@ export default function RevendeursPage() {
             <input className="input" type="email" value={rForm.email} onChange={(e) => setRForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
           <div>
-            <label className="label">Adresse / Zone</label>
-            <input className="input" value={rForm.address} onChange={(e) => setRForm((f) => ({ ...f, address: e.target.value }))} placeholder="Ex : Marché Sandaga" />
+            <label className="label">Adresse</label>
+            <input className="input" value={rForm.address} onChange={(e) => setRForm((f) => ({ ...f, address: e.target.value }))} placeholder="Ex : Marché Sandaga, stand 12" />
           </div>
           <div>
             <label className="label">Notes</label>

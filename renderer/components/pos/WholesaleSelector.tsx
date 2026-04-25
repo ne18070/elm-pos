@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Store, Users, X, Gift, ChevronDown, Search } from 'lucide-react';
+import { Store, Users, X, Gift, ChevronDown, Search, Tag } from 'lucide-react';
 import {
   getResellers, getResellerClients, getActiveOffersForReseller,
 } from '@services/supabase/resellers';
@@ -23,6 +23,13 @@ export interface WholesaleContext {
   offers: ResellerOffer[];
 }
 
+const TYPE_LABELS = { gros: 'Gros', demi_gros: 'Demi-gros', detaillant: 'Détaillant' } as const;
+const TYPE_COLORS = {
+  gros:       'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  demi_gros:  'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  detaillant: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+} as const;
+
 export function WholesaleSelector({ businessId, onClose, onApplied, onReset, current }: WholesaleSelectorProps) {
   const [resellers, setResellers]       = useState<Reseller[]>([]);
   const [clients, setClients]           = useState<ResellerClient[]>([]);
@@ -32,7 +39,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
   const [loading, setLoading]           = useState(true);
   const [resellerSearch, setResellerSearch]     = useState('');
 
-  const { applyPriceOverrides } = useCartStore();
+  const { applyPriceOverrides, resetPriceOverrides } = useCartStore();
 
   useEffect(() => {
     getResellers(businessId).then((r) => { setResellers(r.filter((x) => x.is_active)); setLoading(false); });
@@ -54,23 +61,31 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
     );
   }, [resellers, resellerSearch]);
 
+  const isDetaillant = selectedReseller?.type === 'detaillant';
+
   async function handleApply() {
     if (!selectedReseller) return;
 
-    const { data: products } = await supabase
-      .from('products')
-      .select('id, wholesale_price')
-      .eq('business_id', businessId)
-      .not('wholesale_price', 'is', null) as unknown as {
-        data: Array<{ id: string; wholesale_price: number | null }> | null;
-      };
+    if (isDetaillant) {
+      // Détaillant → reset any wholesale override, use variant/retail prices
+      resetPriceOverrides();
+    } else {
+      // Gros / demi-gros → apply wholesale price overrides
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, wholesale_price')
+        .eq('business_id', businessId)
+        .not('wholesale_price', 'is', null) as unknown as {
+          data: Array<{ id: string; wholesale_price: number | null }> | null;
+        };
 
-    const overrides: Record<string, number> = {};
-    (products ?? []).forEach((p) => {
-      if (p.wholesale_price != null) overrides[p.id] = p.wholesale_price;
-    });
+      const overrides: Record<string, number> = {};
+      (products ?? []).forEach((p) => {
+        if (p.wholesale_price != null) overrides[p.id] = p.wholesale_price;
+      });
+      applyPriceOverrides(overrides);
+    }
 
-    applyPriceOverrides(overrides);
     onApplied({ reseller: selectedReseller, client: selectedClient, offers });
   }
 
@@ -88,7 +103,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
         <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
           <div className="flex items-center gap-2">
             <Store className="w-5 h-5 text-status-warning" />
-            <h3 className="font-semibold text-content-primary">Mode Grossiste</h3>
+            <h3 className="font-semibold text-content-primary">Vente revendeur</h3>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
             <X className="w-4 h-4" />
@@ -103,10 +118,9 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
             {loading ? (
               <p className="text-sm text-content-primary">Chargement…</p>
             ) : resellers.length === 0 ? (
-              <p className="text-sm text-content-primary text-center py-4">Aucun revendeur actif —créez-en un dans le menu Revendeurs</p>
+              <p className="text-sm text-content-primary text-center py-4">Aucun revendeur actif — créez-en un dans le menu Revendeurs</p>
             ) : (
               <div className="space-y-2">
-                {/* Barre de recherche */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
                   <input
@@ -117,17 +131,16 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                     className="input pl-9"
                   />
                 </div>
-                {/* Select dropdown */}
                 <div className="relative">
                   <select
                     className="input appearance-none pr-8"
                     value={selectedReseller?.id ?? ''}
                     onChange={(e) => handleResellerChange(e.target.value)}
                   >
-                    <option value="">—Choisir un revendeur —</option>
+                    <option value="">— Choisir un revendeur —</option>
                     {filteredResellers.map((r) => (
                       <option key={r.id} value={r.id}>
-                        {r.name}{r.phone ? ` · ${r.phone}` : ''}
+                        [{TYPE_LABELS[r.type ?? 'gros']}] {r.name}{r.zone ? ` · ${r.zone}` : ''}{r.phone ? ` · ${r.phone}` : ''}
                       </option>
                     ))}
                   </select>
@@ -139,6 +152,24 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
               </div>
             )}
           </div>
+
+          {/* Badge type + info prix */}
+          {selectedReseller && (
+            <div className={`flex items-center gap-3 p-3 rounded-xl border ${TYPE_COLORS[selectedReseller.type ?? 'gros']}`}>
+              <Tag className="w-4 h-4 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">
+                  {TYPE_LABELS[selectedReseller.type ?? 'gros']}
+                  {selectedReseller.zone ? ` · Zone ${selectedReseller.zone}` : ''}
+                </p>
+                <p className="text-xs opacity-75 mt-0.5">
+                  {isDetaillant
+                    ? 'Prix détaillant appliqué — les prix de gros sont désactivés'
+                    : 'Prix grossiste appliqué — remplace les prix affichés'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Sélection client du revendeur */}
           {selectedReseller && (
@@ -155,7 +186,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                     value={selectedClient?.id ?? ''}
                     onChange={(e) => setSelectedClient(clients.find((c) => c.id === e.target.value) ?? null)}
                   >
-                    <option value="">—Sans client spécifique —</option>
+                    <option value="">— Sans client spécifique —</option>
                     {clients.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>
                     ))}
@@ -177,7 +208,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                   <div key={o.id} className="flex items-center gap-3 p-3 rounded-xl bg-badge-warning border border-status-warning/50 text-sm">
                     <Gift className="w-4 h-4 text-status-warning shrink-0" />
                     <span className="text-content-primary">
-                      {o.label || `${o.product_name} : pour ${o.min_qty} —${o.bonus_qty} offert${o.bonus_qty > 1 ? 's' : ''}`}
+                      {o.label || `${o.product_name} : pour ${o.min_qty} — ${o.bonus_qty} offert${o.bonus_qty > 1 ? 's' : ''}`}
                     </span>
                   </div>
                 ))}
@@ -199,15 +230,17 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
           <button
             onClick={handleApply}
             disabled={!selectedReseller}
-            className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
-            style={{ background: selectedReseller ? 'rgb(180 83 9)' : undefined }}
+            className={`flex-1 h-11 flex items-center justify-center gap-2 btn-primary ${
+              isDetaillant
+                ? 'bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-amber-700 hover:bg-amber-800'
+            }`}
           >
-            <Store className="w-4 h-4" /> Appliquer prix de gros
+            <Store className="w-4 h-4" />
+            {isDetaillant ? 'Appliquer prix détaillant' : 'Appliquer prix de gros'}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-

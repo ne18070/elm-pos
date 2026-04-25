@@ -7,6 +7,8 @@ const supabase = _supabase as any;
 
 // --- Types --------------------------------------------------------------------
 
+export type ResellerType = 'gros' | 'demi_gros' | 'detaillant';
+
 export interface Reseller {
   id: string;
   business_id: string;
@@ -14,7 +16,10 @@ export interface Reseller {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  zone?: string | null;
   notes?: string | null;
+  type: ResellerType;
+  chef_id?: string | null;
   is_active: boolean;
   created_at: string;
 }
