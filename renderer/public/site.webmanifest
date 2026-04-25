@@ -1,6 +1,6 @@
 {
-  "name": "ElmApp",
-  "short_name": "ElmApp",
+  "name": "ELM APP",
+  "short_name": "ELM",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -17,5 +17,6 @@
   ],
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "display": "standalone",
+  "start_url": "/"
 }
