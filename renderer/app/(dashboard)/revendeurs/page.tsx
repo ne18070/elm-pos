@@ -369,7 +369,7 @@ export default function RevendeursPage() {
                         {TYPE_LABELS[r.type ?? 'gros']}
                       </span>
                       {r.zone && <span className="text-[9px] text-content-muted">{r.zone}</span>}
-                      {r.chef_id && <Crown className="w-2.5 h-2.5 text-yellow-500" title="Chef de zone" />}
+                      {r.chef_id && <Crown className="w-2.5 h-2.5 text-yellow-500" />}
                     </div>
                   </div>
                   {!r.is_active && <span className="text-xs text-status-warning shrink-0">Inactif</span>}
