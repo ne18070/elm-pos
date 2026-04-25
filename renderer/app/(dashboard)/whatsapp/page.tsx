@@ -84,31 +84,23 @@ export default function WhatsAppPage() {
   // Garde selectedRef synchronisé pour les callbacks Realtime (évite stale closure)
   useEffect(() => { selectedRef.current = selected; }, [selected]);
 
-  // ── Chargement initial + refresh ───────────────────────────────────────────
-  const loadConversations = useCallback(async (
-    filter: ConversationFilter,
-    append = false,
-  ) => {
-    if (!business?.id) return;
+  const playNotificationSound = useCallback(() => {
     try {
-      const [cfg, result] = await Promise.all([
-        append ? Promise.resolve(config) : getWhatsAppConfig(business.id),
-        getConversations(business.id, filter),
-      ]);
-      if (!append && cfg !== config) setConfig(cfg as WhatsAppConfig | null);
-      setConversations((prev) => append ? [...prev, ...result.items] : result.items);
-      setHasMore(result.hasMore);
-    } catch (err) {
-      notifError(toUserError(err));
-    } finally {
-      setLoading(false);
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch (e) {
+      console.error('Failed to play sound', e);
     }
-  }, [business?.id, config, notifError]);
+  }, []);
 
-  // Premier chargement
+  // Demander la permission de notification au montage
   useEffect(() => {
-    loadConversations({ page: 0, pageSize: PAGE_SIZE, unreadOnly });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
   }, []);
 
   // Realtime — nouveaux messages WhatsApp
@@ -127,7 +119,18 @@ export default function WhatsAppPage() {
         },
         (payload) => {
           const msg = payload.new as WhatsAppMessage;
+          if (msg.direction !== 'inbound') return;
+
           const msgPhone = msg.from_phone.startsWith('+') ? msg.from_phone : `+${msg.from_phone}`;
+
+          // Son et notification système
+          playNotificationSound();
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification(`WhatsApp: ${msg.from_name || msg.from_phone}`, {
+              body: msg.body || 'Nouveau message reçu',
+              icon: '/logo.png',
+            });
+          }
 
           // Si la conversation est ouverte, ajouter le message directement
           const conv = selectedRef.current;

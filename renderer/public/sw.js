@@ -1,14 +1,19 @@
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {};
+  const options = {
+    body:    data.body  ?? '',
+    icon:    '/logo.png',
+    badge:   '/favicon-96x96.png',
+    tag:     data.tag   ?? 'elm-notification',
+    vibrate: data.vibrate ?? [200, 100, 200],
+    data:    {
+      url: data.url ?? '/',
+    },
+    requireInteraction: true, // Keep notification visible until user acts
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'ElmApp', {
-      body:  data.body  ?? '',
-      icon:  '/web-app-manifest-192x192.png',
-      badge: '/favicon-96x96.png',
-      tag:   data.tag   ?? 'elm-notification',
-      data:  data.url   ? { url: data.url } : undefined,
-      requireInteraction: false,
-    })
+    self.registration.showNotification(data.title ?? 'ElmApp', options)
   );
 });
 

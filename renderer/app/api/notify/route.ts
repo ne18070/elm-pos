@@ -24,6 +24,7 @@ function buildNotification(table: string, record: Record<string, unknown>) {
     return {
       title: 'Nouvelle reservation hotel',
       body: `Chambre reservee du ${record.check_in} au ${record.check_out}`,
+      url: '/hotel',
     };
   }
 
@@ -31,6 +32,7 @@ function buildNotification(table: string, record: Record<string, unknown>) {
     return {
       title: 'Nouvelle demande de location',
       body: `Demande de ${(record.client_name as string) || 'un client'} du ${record.start_date} au ${record.end_date}`,
+      url: '/contrats',
     };
   }
 
@@ -38,12 +40,14 @@ function buildNotification(table: string, record: Record<string, unknown>) {
     return {
       title: 'Nouveau rendez-vous juridique',
       body: `Demande de ${(record.client_name as string) || 'un client'} pour ${(record.type_affaire as string) || 'une consultation'} le ${record.date_audience ?? 'date a confirmer'}`,
+      url: '/dossiers',
     };
   }
 
   return {
     title: 'Nouvelle commande boutique',
     body: `Commande de ${(record.customer_name as string) || 'un client'}`,
+    url: '/orders',
   };
 }
 
@@ -67,7 +71,7 @@ export async function POST(req: NextRequest) {
 
   const businessId = record.business_id as string;
   const table = body.table ?? '';
-  const { title, body: bodyText } = buildNotification(table, record);
+  const { title, body: bodyText, url } = buildNotification(table, record);
 
   const { data: subscriptions } = await supabaseAdmin
     .from('push_subscriptions')
@@ -76,7 +80,12 @@ export async function POST(req: NextRequest) {
 
   if (!subscriptions?.length) return NextResponse.json({ ok: true });
 
-  const payload = JSON.stringify({ title, body: bodyText });
+  const payload = JSON.stringify({ 
+    title, 
+    body: bodyText,
+    url,
+    vibrate: [200, 100, 200],
+  });
   const webpush = await getWebPush();
 
   await Promise.allSettled(

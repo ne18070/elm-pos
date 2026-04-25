@@ -20,13 +20,24 @@ export type RealtimeTable =
   | 'categories'
   | 'coupons'
   | 'cash_sessions'
-  | 'contracts';
+  | 'contracts'
+  | 'whatsapp_messages';
 
 export function dispatchTableChanged(table: RealtimeTable, detail?: unknown) {
   window.dispatchEvent(
     new CustomEvent(`elm-pos:${table}:changed`, { detail })
   );
 }
+
+const playNotificationSound = () => {
+  try {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
+  } catch (e) {
+    console.error('Failed to play sound', e);
+  }
+};
 
 // ─── Master realtime hook ─────────────────────────────────────────────────────
 //
@@ -139,6 +150,28 @@ export function useRealtimeSync() {
               detail: { record: payload.new },
             })
           );
+        }
+      }
+    );
+
+    // ── whatsapp_messages ────────────────────────────────────────────────────
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'whatsapp_messages',
+        filter: `business_id=eq.${businessId}` },
+      (payload) => {
+        addEvent({ table: 'whatsapp_messages', eventType: payload.eventType, at: new Date() });
+        dispatchTableChanged('whatsapp_messages', { eventType: payload.eventType, record: payload.new });
+        
+        const msg = payload.new as any;
+        if (msg.direction === 'inbound') {
+          playNotificationSound();
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification(`WhatsApp: ${msg.from_name || msg.from_phone}`, {
+              body: msg.body || 'Nouveau message reçu',
+              icon: '/logo.png',
+            });
+          }
         }
       }
     );
