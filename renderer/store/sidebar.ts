@@ -10,7 +10,7 @@ interface SidebarState {
 export const useSidebarStore = create<SidebarState>()(
   persist(
     (set) => ({
-      collapsed: true, // Default to true for "hover mode"
+      collapsed: false,
       setCollapsed: (collapsed) => set({ collapsed }),
       toggle: () => set((state) => ({ collapsed: !state.collapsed })),
     }),
