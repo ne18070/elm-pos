@@ -124,6 +124,122 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width:
   </table>
 </div>`;
 
+// ─── Component: Signature Canvas ──────────────────────────────────────────────
+
+function LessorSignatureCanvas({
+  canvasRef, hasStrokesRef, onDrawStart
+}: {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  hasStrokesRef: React.MutableRefObject<boolean>;
+  onDrawStart?: () => void;
+}) {
+  const drawing = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    function getPos(e: MouseEvent | Touch) {
+      const r = canvas!.getBoundingClientRect();
+      const scaleX = canvas!.width / r.width;
+      const scaleY = canvas!.height / r.height;
+      return { x: (e.clientX - r.left) * scaleX, y: (e.clientY - r.top) * scaleY };
+    }
+
+    function start(x: number, y: number) {
+      drawing.current = true;
+      hasStrokesRef.current = true;
+      const ctx = canvas!.getContext('2d');
+      if (!ctx) return;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#1e293b';
+      if (onDrawStart) onDrawStart();
+    }
+
+    function move(x: number, y: number) {
+      if (!drawing.current) return;
+      const ctx = canvas!.getContext('2d');
+      if (!ctx) return;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    function stop() { drawing.current = false; }
+
+    // Native touch listeners (passive: false for e.preventDefault)
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const pos = getPos(e.touches[0]);
+      start(pos.x, pos.y);
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const pos = getPos(e.touches[0]);
+      move(pos.x, pos.y);
+    };
+    const handleTouchEnd = () => stop();
+
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove',  handleTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',   handleTouchEnd);
+
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove',  handleTouchMove);
+      canvas.removeEventListener('touchend',   handleTouchEnd);
+    };
+  }, [canvasRef, hasStrokesRef]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={500}
+      height={150}
+      className="w-full touch-none cursor-crosshair"
+      style={{ display: 'block' }}
+      onMouseDown={(e) => {
+        const pos = {
+          x: (e.clientX - e.currentTarget.getBoundingClientRect().left) * (e.currentTarget.width / e.currentTarget.getBoundingClientRect().width),
+          y: (e.clientY - e.currentTarget.getBoundingClientRect().top) * (e.currentTarget.height / e.currentTarget.getBoundingClientRect().height)
+        };
+        // Re-calculate pos inside to be safe with React event
+        const r = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - r.left) * (e.currentTarget.width / r.width);
+        const y = (e.clientY - r.top) * (e.currentTarget.height / r.height);
+        drawing.current = true;
+        hasStrokesRef.current = true;
+        const ctx = e.currentTarget.getContext('2d');
+        if (ctx) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#1e293b';
+        }
+        if (onDrawStart) onDrawStart();
+      }}
+      onMouseMove={(e) => {
+        if (!drawing.current) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - r.left) * (e.currentTarget.width / r.width);
+        const y = (e.clientY - r.top) * (e.currentTarget.height / r.height);
+        const ctx = e.currentTarget.getContext('2d');
+        if (ctx) {
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }}
+      onMouseUp={() => { drawing.current = false; }}
+      onMouseLeave={() => { drawing.current = false; }}
+    />
+  );
+}
+
 // ─── Page principale ──────────────────────────────────────────────────────────
 
 export default function ContratsPage() {
@@ -161,49 +277,7 @@ export default function ContratsPage() {
   const [lessorSigFile, setLessorSigFile]   = useState<string | null>(null); // data URL
   const [savingLessorSig, setSavingLessorSig] = useState(false);
   const lessorCanvasRef   = useRef<HTMLCanvasElement>(null);
-  const lessorDrawing     = useRef(false);
   const lessorHasStrokes  = useRef(false);
-
-  // Non-passive touch listeners for Samsung Internet / Android WebView
-  // React synthetic touch events are passive by default → preventDefault() is ignored → page scrolls instead of drawing
-  useEffect(() => {
-    if (!lessorSigOpen || lessorSigTab !== 'draw') return;
-    const canvas = lessorCanvasRef.current;
-    if (!canvas) return;
-
-    function scaled(t: Touch) {
-      const r = canvas!.getBoundingClientRect();
-      return { x: (t.clientX - r.left) * canvas!.width / r.width, y: (t.clientY - r.top) * canvas!.height / r.height };
-    }
-
-    function onTouchStart(e: TouchEvent) {
-      e.preventDefault();
-      lessorDrawing.current = true; lessorHasStrokes.current = true;
-      const ctx = canvas!.getContext('2d'); if (!ctx) return;
-      const p = scaled(e.touches[0]);
-      ctx.beginPath(); ctx.moveTo(p.x, p.y);
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      if (!lessorDrawing.current) return;
-      e.preventDefault();
-      const ctx = canvas!.getContext('2d'); if (!ctx) return;
-      const p = scaled(e.touches[0]);
-      ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1e293b';
-      ctx.lineTo(p.x, p.y); ctx.stroke();
-    }
-
-    function onTouchEnd() { lessorDrawing.current = false; }
-
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-    canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
-    canvas.addEventListener('touchend',   onTouchEnd);
-    return () => {
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove',  onTouchMove);
-      canvas.removeEventListener('touchend',   onTouchEnd);
-    };
-  }, [lessorSigOpen, lessorSigTab]);
 
   // ─── Load ────────────────────────────────────────────────────────────────────
 
@@ -603,30 +677,9 @@ export default function ContratsPage() {
                   {lessorSigTab === 'draw' && (
                     <div>
                       <div className="border border-dashed border-slate-600 rounded-xl overflow-hidden bg-white">
-                        <canvas
-                          ref={lessorCanvasRef}
-                          width={500} height={150}
-                          className="w-full touch-none cursor-crosshair"
-                          style={{ display: 'block' }}
-                          onMouseDown={(e) => {
-                            const cv = lessorCanvasRef.current; if (!cv) return;
-                            lessorDrawing.current = true; lessorHasStrokes.current = true;
-                            const r = cv.getBoundingClientRect();
-                            const ctx = cv.getContext('2d');
-                            ctx?.beginPath(); ctx?.moveTo((e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height);
-                          }}
-                          onMouseMove={(e) => {
-                            if (!lessorDrawing.current) return;
-                            const cv = lessorCanvasRef.current; if (!cv) return;
-                            const r = cv.getBoundingClientRect();
-                            const ctx = cv.getContext('2d');
-                            if (!ctx) return;
-                            ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1e293b';
-                            ctx.lineTo((e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height);
-                            ctx.stroke();
-                          }}
-                          onMouseUp={() => { lessorDrawing.current = false; }}
-                          onMouseLeave={() => { lessorDrawing.current = false; }}
+                        <LessorSignatureCanvas
+                          canvasRef={lessorCanvasRef}
+                          hasStrokesRef={lessorHasStrokes}
                         />
                       </div>
                       <div className="flex justify-end mt-1">

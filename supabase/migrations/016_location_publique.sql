@@ -33,7 +33,7 @@ CREATE OR REPLACE FUNCTION get_available_vehicles(
 RETURNS SETOF rental_vehicles
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
   SELECT v.*
   FROM rental_vehicles v
@@ -59,7 +59,7 @@ CREATE OR REPLACE FUNCTION create_public_rental_request(p_data JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_business   RECORD;
@@ -111,7 +111,7 @@ BEGIN
   v_total    := v_days * v_price_day;
 
   -- Générer le token (64 hex chars)
-  v_token  := encode(gen_random_bytes(32), 'hex');
+  v_token  := encode(extensions.gen_random_bytes(32), 'hex');
   v_expires := NOW() + INTERVAL '30 days';
   v_contract_id := gen_random_uuid();
 
@@ -171,7 +171,7 @@ CREATE OR REPLACE FUNCTION get_public_rental_request(p_token TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_c RECORD;

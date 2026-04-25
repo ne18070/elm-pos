@@ -56,6 +56,12 @@ IF v_reset_user IS NOT NULL THEN
     DELETE FROM categories    WHERE business_id = v_reset_biz;
     DELETE FROM coupons           WHERE business_id = v_reset_biz;
     DELETE FROM business_members  WHERE business_id = v_reset_biz;
+    
+    -- Cleanup workflows (which don't always cascade perfectly)
+    DELETE FROM workflow_instances WHERE workflow_id IN (SELECT id FROM workflows WHERE business_id = v_reset_biz);
+    DELETE FROM workflows WHERE business_id = v_reset_biz;
+    DELETE FROM pretentions WHERE business_id = v_reset_biz;
+
     UPDATE users SET business_id = NULL WHERE id = v_reset_user;
     DELETE FROM businesses WHERE id = v_reset_biz;
   END IF;
@@ -77,7 +83,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated',
   'demo@elm-pos.app',
-  crypt('passer123', gen_salt('bf')),
+  extensions.crypt('passer123', extensions.gen_salt('bf')),
   NOW(),
   '{"provider":"email","providers":["email"]}',
   '{"full_name":"Démo ELM APP","role":"owner"}',
@@ -260,7 +266,7 @@ END $$;
 -- Migration 026 : Système d'abonnements avec activation manuelle
 
 -- ── Plans (gérés depuis le back office) ──────────────────────────────────────
-CREATE TABLE plans (
+CREATE TABLE IF NOT EXISTS plans (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   name          text        NOT NULL,
   label         text        NOT NULL,
@@ -273,14 +279,16 @@ CREATE TABLE plans (
   created_at    timestamptz DEFAULT now()
 );
 
-INSERT INTO plans (name, label, price, currency, duration_days, features, sort_order) VALUES
+INSERT INTO plans (name, label, price, currency, duration_days, features, sort_order)
+VALUES
   ('starter', 'Starter', 5000, 'XOF', 30,
    ARRAY['1 établissement', '2 utilisateurs', 'Caisse + Commandes', 'Statistiques de base'], 1),
   ('pro', 'Pro', 12000, 'XOF', 30,
-   ARRAY['Multi-établissements', 'Utilisateurs illimités', 'Toutes fonctionnalités', 'Comptabilité', 'Revendeurs'], 2);
+   ARRAY['Multi-établissements', 'Utilisateurs illimités', 'Toutes fonctionnalités', 'Comptabilité', 'Revendeurs'], 2)
+ON CONFLICT DO NOTHING;
 
 -- ── Paramètres de paiement (singleton, géré depuis le back office) ───────────
-CREATE TABLE payment_settings (
+CREATE TABLE IF NOT EXISTS payment_settings (
   id               int         PRIMARY KEY DEFAULT 1,
   wave_qr_url      text,
   om_qr_url        text,
@@ -290,7 +298,7 @@ CREATE TABLE payment_settings (
 INSERT INTO payment_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
 -- ── Abonnements ───────────────────────────────────────────────────────────────
-CREATE TABLE subscriptions (
+CREATE TABLE IF NOT EXISTS subscriptions (
   id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id     uuid        REFERENCES businesses(id) ON DELETE CASCADE NOT NULL UNIQUE,
   plan_id         uuid        REFERENCES plans(id),
@@ -312,22 +320,31 @@ ALTER TABLE payment_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions    ENABLE ROW LEVEL SECURITY;
 
 -- Plans : lecture publique, écriture superadmin
+DROP POLICY IF EXISTS "plans_select" ON plans;
 CREATE POLICY "plans_select" ON plans FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "plans_admin" ON plans;
 CREATE POLICY "plans_admin"  ON plans FOR ALL    TO authenticated
   USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true));
 
 -- Paramètres paiement : lecture publique, écriture superadmin
+DROP POLICY IF EXISTS "paysettings_select" ON payment_settings;
 CREATE POLICY "paysettings_select" ON payment_settings FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "paysettings_admin" ON payment_settings;
 CREATE POLICY "paysettings_admin"  ON payment_settings FOR ALL    TO authenticated
   USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true));
 
 -- Abonnements : lecture par owner du business OU superadmin
+DROP POLICY IF EXISTS "sub_select" ON subscriptions;
 CREATE POLICY "sub_select" ON subscriptions FOR SELECT TO authenticated
   USING (
     business_id = get_user_business_id()
     OR EXISTS (SELECT 1 FROM business_members WHERE business_id = subscriptions.business_id AND user_id = auth.uid())
     OR EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true)
   );
+
+DROP POLICY IF EXISTS "sub_admin" ON subscriptions;
 CREATE POLICY "sub_admin" ON subscriptions FOR ALL TO authenticated
   USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true));
 
@@ -497,6 +514,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_requests (
 ALTER TABLE public.subscription_requests ENABLE ROW LEVEL SECURITY;
 
 -- Les membres d'un établissement peuvent soumettre une demande
+DROP POLICY IF EXISTS "sr_insert" ON public.subscription_requests;
 CREATE POLICY "sr_insert" ON public.subscription_requests
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -506,6 +524,7 @@ CREATE POLICY "sr_insert" ON public.subscription_requests
   );
 
 -- Lecture : ses propres demandes ou superadmin
+DROP POLICY IF EXISTS "sr_select" ON public.subscription_requests;
 CREATE POLICY "sr_select" ON public.subscription_requests
   FOR SELECT USING (
     EXISTS (
@@ -516,6 +535,7 @@ CREATE POLICY "sr_select" ON public.subscription_requests
   );
 
 -- Mise à jour : superadmin seulement (approbation / rejet)
+DROP POLICY IF EXISTS "sr_update" ON public.subscription_requests;
 CREATE POLICY "sr_update" ON public.subscription_requests
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true)
@@ -533,6 +553,7 @@ BEGIN
 END $$;
 
 -- Politique d'upload des reçus (INSERT dans product-images/receipts/*)
+DROP POLICY IF EXISTS "receipts_insert" ON storage.objects;
 CREATE POLICY "receipts_insert" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'product-images'
@@ -562,10 +583,12 @@ CREATE TABLE IF NOT EXISTS public.public_subscription_requests (
 ALTER TABLE public.public_subscription_requests ENABLE ROW LEVEL SECURITY;
 
 -- Tout le monde (anonyme inclus) peut insérer une demande
+DROP POLICY IF EXISTS "psr_insert_anon" ON public.public_subscription_requests;
 CREATE POLICY "psr_insert_anon" ON public.public_subscription_requests
   FOR INSERT WITH CHECK (true);
 
 -- Seul le superadmin peut lire et modifier
+DROP POLICY IF EXISTS "psr_superadmin" ON public.public_subscription_requests;
 CREATE POLICY "psr_superadmin" ON public.public_subscription_requests
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND is_superadmin = true)
@@ -574,6 +597,7 @@ CREATE POLICY "psr_superadmin" ON public.public_subscription_requests
 -- Permettre à l'utilisateur anonyme d'uploader dans product-images/receipts/
 -- (La politique receipts_insert de la migration 030 couvre déjà les authentifiés ;
 --  on ajoute une politique pour les anonymes sur le sous-dossier public-*)
+DROP POLICY IF EXISTS "receipts_insert_anon" ON storage.objects;
 CREATE POLICY "receipts_insert_anon" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'product-images'
@@ -597,9 +621,11 @@ ALTER TABLE public.public_subscription_requests
 -- Allow anonymous (unauthenticated) users to read plans and payment_settings.
 -- Needed for the public /subscribe page where no user session exists yet.
 
+DROP POLICY IF EXISTS "plans_select_anon" ON public.plans;
 CREATE POLICY "plans_select_anon"
   ON public.plans FOR SELECT TO anon USING (is_active = true);
 
+DROP POLICY IF EXISTS "paysettings_select_anon" ON public.payment_settings;
 CREATE POLICY "paysettings_select_anon"
   ON public.payment_settings FOR SELECT TO anon USING (true);
 
@@ -809,25 +835,31 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER;
 
 -- 1. Businesses
+DROP POLICY IF EXISTS "superadmin_select_all_businesses" ON public.businesses;
 CREATE POLICY "superadmin_select_all_businesses" ON public.businesses
   FOR SELECT TO authenticated USING (public.is_superadmin());
 
+DROP POLICY IF EXISTS "superadmin_update_all_businesses" ON public.businesses;
 CREATE POLICY "superadmin_update_all_businesses" ON public.businesses
   FOR UPDATE TO authenticated USING (public.is_superadmin());
 
 -- 2. Orders
+DROP POLICY IF EXISTS "superadmin_select_all_orders" ON public.orders;
 CREATE POLICY "superadmin_select_all_orders" ON public.orders
   FOR SELECT TO authenticated USING (public.is_superadmin());
 
 -- 3. Business Members
+DROP POLICY IF EXISTS "superadmin_select_all_members" ON public.business_members;
 CREATE POLICY "superadmin_select_all_members" ON public.business_members
   FOR SELECT TO authenticated USING (public.is_superadmin());
 
 -- 4. Products
+DROP POLICY IF EXISTS "superadmin_select_all_products" ON public.products;
 CREATE POLICY "superadmin_select_all_products" ON public.products
   FOR SELECT TO authenticated USING (public.is_superadmin());
 
 -- 5. Subscriptions (déjà géré par get_all_subscriptions RPC mais pour être sûr)
+DROP POLICY IF EXISTS "superadmin_select_all_subscriptions" ON public.subscriptions;
 CREATE POLICY "superadmin_select_all_subscriptions" ON public.subscriptions
   FOR SELECT TO authenticated USING (public.is_superadmin());
 

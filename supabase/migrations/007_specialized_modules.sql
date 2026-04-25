@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS public.hotel_payments (
 
 ALTER TABLE public.hotel_payments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "hp_member_all" ON public.hotel_payments;
 CREATE POLICY "hp_member_all" ON public.hotel_payments
   FOR ALL USING (
     EXISTS (
@@ -239,6 +240,11 @@ CREATE INDEX IF NOT EXISTS idx_hotel_payments_session     ON public.hotel_paymen
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('business-logos', 'business-logos', true, 2097152, ARRAY['image/jpeg','image/png','image/webp','image/gif'])
 ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "logo_read_all"      ON storage.objects;
+DROP POLICY IF EXISTS "logo_upload_member" ON storage.objects;
+DROP POLICY IF EXISTS "logo_update_member" ON storage.objects;
+DROP POLICY IF EXISTS "logo_delete_member" ON storage.objects;
 
 CREATE POLICY "logo_read_all"      ON storage.objects FOR SELECT USING (bucket_id = 'business-logos');
 CREATE POLICY "logo_upload_member" ON storage.objects FOR INSERT
@@ -394,7 +400,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_configs (
   business_id     UUID NOT NULL UNIQUE REFERENCES businesses(id) ON DELETE CASCADE,
   phone_number_id TEXT NOT NULL DEFAULT '',
   access_token    TEXT NOT NULL DEFAULT '',
-  verify_token    TEXT NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex'),
+  verify_token    TEXT NOT NULL DEFAULT encode(extensions.gen_random_bytes(16), 'hex'),
   display_phone   TEXT,
   is_active       BOOLEAN NOT NULL DEFAULT false,
   catalog_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -655,8 +661,17 @@ $$;
 -- File: 057_whatsapp_realtime.sql
 -- Active Supabase Realtime pour whatsapp_messages
 -- Nécessaire pour que les nouvelles conversations/messages s'affichent en temps réel
-
-ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_messages;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'whatsapp_messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_messages;
+  END IF;
+END $$;
 
 
 -- File: 058_whatsapp_realtime_identity.sql
@@ -705,7 +720,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- ── Employés ─────────────────────────────────────────────────
 
-CREATE TABLE staff (
+CREATE TABLE IF NOT EXISTS staff (
   id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id    UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   name           TEXT NOT NULL,
@@ -726,7 +741,7 @@ CREATE TABLE staff (
 
 -- ── Présences ─────────────────────────────────────────────────
 
-CREATE TABLE staff_attendance (
+CREATE TABLE IF NOT EXISTS staff_attendance (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id   UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   staff_id      UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
@@ -743,7 +758,7 @@ CREATE TABLE staff_attendance (
 
 -- ── Paiements ─────────────────────────────────────────────────
 
-CREATE TABLE staff_payments (
+CREATE TABLE IF NOT EXISTS staff_payments (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   business_id     UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   staff_id        UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
@@ -766,12 +781,12 @@ CREATE TABLE staff_payments (
 
 -- ── Indexes ───────────────────────────────────────────────────
 
-CREATE INDEX staff_business_id_idx             ON staff(business_id);
-CREATE INDEX staff_status_idx                  ON staff(business_id, status);
-CREATE INDEX staff_attendance_staff_date_idx   ON staff_attendance(staff_id, date);
-CREATE INDEX staff_attendance_biz_month_idx    ON staff_attendance(business_id, date);
-CREATE INDEX staff_payments_staff_id_idx       ON staff_payments(staff_id);
-CREATE INDEX staff_payments_business_period_idx ON staff_payments(business_id, period_start);
+CREATE INDEX IF NOT EXISTS staff_business_id_idx             ON staff(business_id);
+CREATE INDEX IF NOT EXISTS staff_status_idx                  ON staff(business_id, status);
+CREATE INDEX IF NOT EXISTS staff_attendance_staff_date_idx   ON staff_attendance(staff_id, date);
+CREATE INDEX IF NOT EXISTS staff_attendance_biz_month_idx    ON staff_attendance(business_id, date);
+CREATE INDEX IF NOT EXISTS staff_payments_staff_id_idx       ON staff_payments(staff_id);
+CREATE INDEX IF NOT EXISTS staff_payments_business_period_idx ON staff_payments(business_id, period_start);
 
 -- ── RLS ───────────────────────────────────────────────────────
 
@@ -780,6 +795,11 @@ ALTER TABLE staff_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff_payments   ENABLE ROW LEVEL SECURITY;
 
 -- staff
+DROP POLICY IF EXISTS "staff: members can read"   ON staff;
+DROP POLICY IF EXISTS "staff: members can insert" ON staff;
+DROP POLICY IF EXISTS "staff: members can update" ON staff;
+DROP POLICY IF EXISTS "staff: members can delete" ON staff;
+
 CREATE POLICY "staff: members can read"
   ON staff FOR SELECT
   USING (business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid()));
@@ -797,6 +817,11 @@ CREATE POLICY "staff: members can delete"
   USING (business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid()));
 
 -- staff_attendance
+DROP POLICY IF EXISTS "attendance: members can read"   ON staff_attendance;
+DROP POLICY IF EXISTS "attendance: members can insert" ON staff_attendance;
+DROP POLICY IF EXISTS "attendance: members can update" ON staff_attendance;
+DROP POLICY IF EXISTS "attendance: members can delete" ON staff_attendance;
+
 CREATE POLICY "attendance: members can read"
   ON staff_attendance FOR SELECT
   USING (business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid()));
@@ -814,6 +839,11 @@ CREATE POLICY "attendance: members can delete"
   USING (business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid()));
 
 -- staff_payments
+DROP POLICY IF EXISTS "staff_payments: members can read"   ON staff_payments;
+DROP POLICY IF EXISTS "staff_payments: members can insert" ON staff_payments;
+DROP POLICY IF EXISTS "staff_payments: members can update" ON staff_payments;
+DROP POLICY IF EXISTS "staff_payments: members can delete" ON staff_payments;
+
 CREATE POLICY "staff_payments: members can read"
   ON staff_payments FOR SELECT
   USING (business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid()));
@@ -853,15 +883,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS staff_user_id_unique
 
 -- 1. Link orders to hotel reservations
 ALTER TABLE orders 
-ADD COLUMN hotel_reservation_id UUID REFERENCES hotel_reservations(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS hotel_reservation_id UUID REFERENCES hotel_reservations(id) ON DELETE SET NULL;
 
-CREATE INDEX idx_orders_hotel_reservation ON orders(hotel_reservation_id);
+CREATE INDEX IF NOT EXISTS idx_orders_hotel_reservation ON orders(hotel_reservation_id);
 
 -- 2. Link hotel services to orders (to track source of charge)
 ALTER TABLE hotel_services
-ADD COLUMN order_id UUID REFERENCES orders(id) ON DELETE CASCADE;
+ADD COLUMN IF NOT EXISTS order_id UUID REFERENCES orders(id) ON DELETE CASCADE;
 
-CREATE INDEX idx_hotel_services_order ON hotel_services(order_id);
+CREATE INDEX IF NOT EXISTS idx_hotel_services_order ON hotel_services(order_id);
 
 -- 3. Update payment methods to include room_charge
 ALTER TABLE payments 
@@ -1017,8 +1047,15 @@ CREATE TABLE IF NOT EXISTS restaurant_floors (
 );
 
 -- 2. Tables
-CREATE TYPE table_shape AS ENUM ('square', 'round', 'rectangle');
-CREATE TYPE table_status AS ENUM ('free', 'occupied', 'reserved', 'cleaning');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'table_shape') THEN
+    CREATE TYPE table_shape AS ENUM ('square', 'round', 'rectangle');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'table_status') THEN
+    CREATE TYPE table_status AS ENUM ('free', 'occupied', 'reserved', 'cleaning');
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS restaurant_tables (
   id           UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1045,20 +1082,24 @@ CREATE TABLE IF NOT EXISTS restaurant_tables (
 
 -- 3. Link orders to tables
 ALTER TABLE orders 
-ADD COLUMN table_id UUID REFERENCES restaurant_tables(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS table_id UUID REFERENCES restaurant_tables(id) ON DELETE SET NULL;
 
 -- 4. Indexes
-CREATE INDEX idx_tables_business ON restaurant_tables(business_id);
-CREATE INDEX idx_tables_floor ON restaurant_tables(floor_id);
-CREATE INDEX idx_orders_table ON orders(table_id);
+CREATE INDEX IF NOT EXISTS idx_tables_business ON restaurant_tables(business_id);
+CREATE INDEX IF NOT EXISTS idx_tables_floor ON restaurant_tables(floor_id);
+CREATE INDEX IF NOT EXISTS idx_orders_table ON orders(table_id);
 
 -- 5. RLS
 ALTER TABLE restaurant_floors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE restaurant_tables ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "floors_select" ON restaurant_floors;
+DROP POLICY IF EXISTS "floors_manage" ON restaurant_floors;
 CREATE POLICY "floors_select" ON restaurant_floors FOR SELECT USING (business_id = get_user_business_id());
 CREATE POLICY "floors_manage" ON restaurant_floors FOR ALL USING (business_id = get_user_business_id() AND get_user_role() IN ('admin','owner','manager'));
 
+DROP POLICY IF EXISTS "tables_select" ON restaurant_tables;
+DROP POLICY IF EXISTS "tables_manage" ON restaurant_tables;
 CREATE POLICY "tables_select" ON restaurant_tables FOR SELECT USING (business_id = get_user_business_id());
 CREATE POLICY "tables_manage" ON restaurant_tables FOR ALL USING (business_id = get_user_business_id() AND get_user_role() IN ('admin','owner','manager'));
 
@@ -1075,6 +1116,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tr_update_table_status ON orders;
 CREATE TRIGGER tr_update_table_status
 AFTER INSERT OR UPDATE OF status, table_id ON orders
 FOR EACH ROW EXECUTE FUNCTION update_table_status_on_order();
@@ -1104,7 +1146,7 @@ CREATE TABLE IF NOT EXISTS workflows (
 CREATE TABLE IF NOT EXISTS workflow_instances (
   id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   dossier_id          UUID        NOT NULL,   -- référence externe (dossiers juridiques)
-  workflow_id         UUID        NOT NULL REFERENCES workflows(id),
+  workflow_id         UUID        NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
   workflow_version    INT         NOT NULL,   -- version au moment du démarrage
   workflow_snapshot   JSONB       NOT NULL,   -- copie complète de la définition
   current_node_id     TEXT        NOT NULL,
@@ -1117,6 +1159,20 @@ CREATE TABLE IF NOT EXISTS workflow_instances (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Ensure CASCADE for existing tables
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'workflow_instances_workflow_id_fkey' 
+    AND table_name = 'workflow_instances'
+  ) THEN
+    ALTER TABLE workflow_instances DROP CONSTRAINT workflow_instances_workflow_id_fkey;
+    ALTER TABLE workflow_instances ADD CONSTRAINT workflow_instances_workflow_id_fkey 
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_workflow_instances_dossier   ON workflow_instances(dossier_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_instances_status    ON workflow_instances(status);
@@ -1146,10 +1202,12 @@ RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$;
 
+DROP TRIGGER IF EXISTS workflows_updated_at ON workflows;
 CREATE TRIGGER workflows_updated_at
   BEFORE UPDATE ON workflows
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS workflow_instances_updated_at ON workflow_instances;
 CREATE TRIGGER workflow_instances_updated_at
   BEFORE UPDATE ON workflow_instances
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -1160,6 +1218,7 @@ ALTER TABLE workflow_instances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workflow_history   ENABLE ROW LEVEL SECURITY;
 
 -- Les membres du business peuvent lire les workflows actifs
+DROP POLICY IF EXISTS "read workflows" ON workflows;
 CREATE POLICY "read workflows" ON workflows
   FOR SELECT TO authenticated
   USING (
@@ -1169,6 +1228,7 @@ CREATE POLICY "read workflows" ON workflows
   );
 
 -- Seul un manager/owner peut créer ou modifier
+DROP POLICY IF EXISTS "manage workflows" ON workflows;
 CREATE POLICY "manage workflows" ON workflows
   FOR ALL TO authenticated
   USING (
@@ -1185,6 +1245,7 @@ CREATE POLICY "manage workflows" ON workflows
   );
 
 -- Les membres du business peuvent lire et créer des instances
+DROP POLICY IF EXISTS "read workflow_instances" ON workflow_instances;
 CREATE POLICY "read workflow_instances" ON workflow_instances
   FOR SELECT TO authenticated
   USING (
@@ -1195,6 +1256,7 @@ CREATE POLICY "read workflow_instances" ON workflow_instances
     )
   );
 
+DROP POLICY IF EXISTS "manage workflow_instances" ON workflow_instances;
 CREATE POLICY "manage workflow_instances" ON workflow_instances
   FOR ALL TO authenticated
   USING (
@@ -1212,6 +1274,7 @@ CREATE POLICY "manage workflow_instances" ON workflow_instances
     )
   );
 
+DROP POLICY IF EXISTS "read workflow_history" ON workflow_history;
 CREATE POLICY "read workflow_history" ON workflow_history
   FOR SELECT TO authenticated
   USING (
@@ -1224,6 +1287,7 @@ CREATE POLICY "read workflow_history" ON workflow_history
     )
   );
 
+DROP POLICY IF EXISTS "insert workflow_history" ON workflow_history;
 CREATE POLICY "insert workflow_history" ON workflow_history
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -1350,7 +1414,7 @@ CREATE TABLE IF NOT EXISTS workflow_documents (
 -- ─── client_tracking_tokens : suivi client sécurisé ──────────────────────────
 CREATE TABLE IF NOT EXISTS client_tracking_tokens (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  token        TEXT        NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
+  token        TEXT        NOT NULL UNIQUE DEFAULT encode(extensions.gen_random_bytes(32), 'hex'),
   dossier_id   UUID        NOT NULL,
   instance_id  UUID        REFERENCES workflow_instances(id) ON DELETE SET NULL,
   client_phone TEXT,
@@ -1365,6 +1429,7 @@ CREATE INDEX IF NOT EXISTS idx_tracking_token   ON client_tracking_tokens(token)
 CREATE INDEX IF NOT EXISTS idx_tracking_dossier ON client_tracking_tokens(dossier_id);
 
 -- ─── Trigger updated_at pour pretentions ──────────────────────────────────────
+DROP TRIGGER IF EXISTS pretentions_updated_at ON pretentions;
 CREATE TRIGGER pretentions_updated_at
   BEFORE UPDATE ON pretentions
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -1377,6 +1442,8 @@ ALTER TABLE workflow_documents     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE client_tracking_tokens ENABLE ROW LEVEL SECURITY;
 
 -- workflow_logs
+DROP POLICY IF EXISTS "read workflow_logs"   ON workflow_logs;
+DROP POLICY IF EXISTS "insert workflow_logs" ON workflow_logs;
 CREATE POLICY "read workflow_logs" ON workflow_logs FOR SELECT TO authenticated USING (
   instance_id IN (SELECT id FROM workflow_instances WHERE workflow_id IN (
     SELECT id FROM workflows WHERE business_id IN (
@@ -1393,6 +1460,7 @@ CREATE POLICY "insert workflow_logs" ON workflow_logs FOR INSERT TO authenticate
 );
 
 -- workflow_jobs
+DROP POLICY IF EXISTS "manage workflow_jobs" ON workflow_jobs;
 CREATE POLICY "manage workflow_jobs" ON workflow_jobs FOR ALL TO authenticated
   USING (instance_id IN (SELECT id FROM workflow_instances WHERE workflow_id IN (
     SELECT id FROM workflows WHERE business_id IN (
@@ -1406,6 +1474,8 @@ CREATE POLICY "manage workflow_jobs" ON workflow_jobs FOR ALL TO authenticated
   )));
 
 -- pretentions
+DROP POLICY IF EXISTS "read pretentions"   ON pretentions;
+DROP POLICY IF EXISTS "manage pretentions" ON pretentions;
 CREATE POLICY "read pretentions" ON pretentions FOR SELECT TO authenticated
   USING (business_id IN (SELECT business_id FROM business_members WHERE user_id = auth.uid()));
 CREATE POLICY "manage pretentions" ON pretentions FOR ALL TO authenticated
@@ -1417,6 +1487,7 @@ CREATE POLICY "manage pretentions" ON pretentions FOR ALL TO authenticated
   ));
 
 -- workflow_documents
+DROP POLICY IF EXISTS "read workflow_documents" ON workflow_documents;
 CREATE POLICY "read workflow_documents" ON workflow_documents FOR SELECT TO authenticated USING (
   instance_id IN (SELECT id FROM workflow_instances WHERE workflow_id IN (
     SELECT id FROM workflows WHERE business_id IN (
@@ -1426,6 +1497,8 @@ CREATE POLICY "read workflow_documents" ON workflow_documents FOR SELECT TO auth
 );
 
 -- client_tracking_tokens : lecture publique via token valide
+DROP POLICY IF EXISTS "public view tracking"   ON client_tracking_tokens;
+DROP POLICY IF EXISTS "manage tracking tokens" ON client_tracking_tokens;
 CREATE POLICY "public view tracking" ON client_tracking_tokens
   FOR SELECT USING (expires_at > now());
 CREATE POLICY "manage tracking tokens" ON client_tracking_tokens FOR ALL TO authenticated
