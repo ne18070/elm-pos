@@ -342,6 +342,7 @@ export interface HotelAnalyticsSummary {
   occupancy_rate:         number;
   occupied_rooms:         number;
   room_stats:             HotelRoomStat[];
+  daily_revenue:          Array<{ date: string; total: number }>;
 }
 
 export async function getHotelAnalytics(
@@ -389,18 +390,23 @@ export async function getHotelAnalytics(
   const avg_nights = total_checkouts > 0 ? nightsTotal / total_checkouts : 0;
 
   const roomMap = new Map<string, HotelRoomStat>();
+  const dayMap  = new Map<string, number>();
   for (const r of reservations) {
     const nights = Math.max(1, Math.round((new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 86_400_000));
     const existing = roomMap.get(r.room_id);
     if (existing) { existing.checkouts++; existing.revenue += Number(r.total); existing.nights += nights; }
     else roomMap.set(r.room_id, { room_id: r.room_id, room_number: r.room?.number ?? '?', room_type: r.room?.type ?? '?', checkouts: 1, revenue: Number(r.total), nights });
+    // daily
+    const d = (r as any).actual_check_out?.slice(0, 10) ?? r.check_out?.slice(0, 10);
+    if (d) dayMap.set(d, (dayMap.get(d) ?? 0) + Number(r.total));
   }
-  const room_stats = Array.from(roomMap.values()).sort((a, b) => b.revenue - a.revenue);
+  const room_stats    = Array.from(roomMap.values()).sort((a, b) => b.revenue - a.revenue);
+  const daily_revenue = Array.from(dayMap.entries()).map(([date, total]) => ({ date, total })).sort((a, b) => a.date.localeCompare(b.date));
 
-  return { 
-    total_revenue, total_room_revenue, total_services_revenue, total_checkouts, 
+  return {
+    total_revenue, total_room_revenue, total_services_revenue, total_checkouts,
     avg_stay_value, avg_nights, outstanding_balance, room_stats,
-    occupancy_rate, occupied_rooms
+    occupancy_rate, occupied_rooms, daily_revenue,
   };
 }
 
@@ -564,5 +570,193 @@ export async function getVoituresAnalytics(
     parc_total:      parc.length,
     parc_disponible: parc.filter(v => v.statut === 'disponible').length,
     recent_ventes:   ventes.slice(0, 10),
+  };
+}
+
+// --- Période précédente (comparaison) -----------------------------------------
+
+export interface PrevPeriodCA {
+  total_sales: number;
+  total_fees:  number;
+  total_hotel: number;
+}
+
+export async function getPrevPeriodCA(
+  businessId: string,
+  days: number,
+  hasHotel: boolean,
+  hasJuridique: boolean,
+): Promise<PrevPeriodCA> {
+  const end   = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const start = format(subDays(new Date(), days * 2), 'yyyy-MM-dd');
+  const db    = supabase as any;
+
+  const [ordersRes, feesRes, hotelRes] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('total')
+      .eq('business_id', businessId)
+      .eq('status', 'paid')
+      .gte('created_at', `${start}T00:00:00Z`)
+      .lt('created_at',  `${end}T23:59:59Z`),
+    hasJuridique
+      ? db.from('honoraires_cabinet').select('montant')
+          .eq('business_id', businessId)
+          .gte('date_facture', start).lte('date_facture', end)
+      : Promise.resolve({ data: [] }),
+    hasHotel
+      ? db.from('hotel_reservations').select('total')
+          .eq('business_id', businessId).eq('status', 'checked_out')
+          .gte('actual_check_out', `${start}T00:00:00Z`)
+          .lt('actual_check_out',  `${end}T23:59:59Z`)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  return {
+    total_sales: ((ordersRes.data ?? []) as any[]).reduce((s, o) => s + Number(o.total), 0),
+    total_fees:  ((feesRes.data  ?? []) as any[]).reduce((s, f) => s + Number(f.montant), 0),
+    total_hotel: ((hotelRes.data ?? []) as any[]).reduce((s, r) => s + Number(r.total), 0),
+  };
+}
+
+// --- Revendeurs analytics (KPI summary) ----------------------------------------
+
+export interface RevendeursAnalyticsSummary {
+  total_ca:      number;
+  total_orders:  number;
+  top_resellers: Array<{ id: string; name: string; revenue: number; order_count: number; type: string; zone: string | null }>;
+  by_type:       Array<{ type: string; revenue: number; count: number }>;
+  by_zone:       Array<{ zone: string; revenue: number; count: number }>;
+}
+
+export async function getRevendeursAnalytics(
+  businessId: string,
+  days = 30,
+): Promise<RevendeursAnalyticsSummary> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('total, reseller_id, reseller:resellers!reseller_id(id, name, type, zone)')
+    .eq('business_id', businessId)
+    .eq('status', 'paid')
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .not('reseller_id', 'is', null) as unknown as {
+      data: Array<{
+        total: number;
+        reseller_id: string;
+        reseller: { id: string; name: string; type: string; zone: string | null } | null;
+      }> | null;
+      error: unknown;
+    };
+
+  if (error) throw error;
+
+  const resellerMap = new Map<string, { id: string; name: string; revenue: number; order_count: number; type: string; zone: string | null }>();
+  const typeMap     = new Map<string, { revenue: number; count: number }>();
+  const zoneMap     = new Map<string, { revenue: number; count: number }>();
+  let total_ca = 0, total_orders = 0;
+
+  for (const row of data ?? []) {
+    if (!row.reseller) continue;
+    total_ca += row.total;
+    total_orders++;
+
+    const r = resellerMap.get(row.reseller_id) ?? { id: row.reseller.id, name: row.reseller.name, revenue: 0, order_count: 0, type: row.reseller.type ?? 'gros', zone: row.reseller.zone };
+    r.revenue += row.total; r.order_count++;
+    resellerMap.set(row.reseller_id, r);
+
+    const t = row.reseller.type ?? 'gros';
+    const et = typeMap.get(t) ?? { revenue: 0, count: 0 };
+    et.revenue += row.total; et.count++;
+    typeMap.set(t, et);
+
+    if (row.reseller.zone) {
+      const ez = zoneMap.get(row.reseller.zone) ?? { revenue: 0, count: 0 };
+      ez.revenue += row.total; ez.count++;
+      zoneMap.set(row.reseller.zone, ez);
+    }
+  }
+
+  return {
+    total_ca,
+    total_orders,
+    top_resellers: Array.from(resellerMap.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 10),
+    by_type: Array.from(typeMap.entries()).map(([type, s]) => ({ type, ...s })).sort((a, b) => b.revenue - a.revenue),
+    by_zone: Array.from(zoneMap.entries()).map(([zone, s]) => ({ zone, ...s })).sort((a, b) => b.revenue - a.revenue),
+  };
+}
+
+// --- Approvisionnement analytics -----------------------------------------------
+
+export interface ApprovAnalyticsSummary {
+  total_depense:  number;
+  total_entries:  number;
+  po_received:    number;
+  top_suppliers:  Array<{ name: string; total: number; entries: number }>;
+  top_products:   Array<{ product_id: string; name: string; quantity: number; cost: number }>;
+  monthly:        Array<{ month: string; total: number; entries: number }>;
+}
+
+export async function getApprovisionnementAnalytics(
+  businessId: string,
+  days = 30,
+): Promise<ApprovAnalyticsSummary> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const db        = supabase as any;
+
+  const [entriesRes, poRes] = await Promise.all([
+    db.from('stock_entries')
+      .select('quantity, cost_per_unit, supplier, created_at, product:products(id, name)')
+      .eq('business_id', businessId)
+      .gte('created_at', `${startDate}T00:00:00Z`),
+    db.from('purchase_orders')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('status', 'received')
+      .gte('received_at', `${startDate}T00:00:00Z`),
+  ]);
+
+  if (entriesRes.error) throw new Error(entriesRes.error.message);
+
+  const entries = (entriesRes.data ?? []) as Array<{
+    quantity: number; cost_per_unit: number | null; supplier: string | null;
+    created_at: string; product: { id: string; name: string } | null;
+  }>;
+
+  let total_depense = 0;
+  const supplierMap = new Map<string, { total: number; entries: number }>();
+  const productMap  = new Map<string, { product_id: string; name: string; quantity: number; cost: number }>();
+  const monthMap    = new Map<string, { total: number; entries: number }>();
+
+  for (const e of entries) {
+    const cost = e.cost_per_unit != null ? e.quantity * e.cost_per_unit : 0;
+    total_depense += cost;
+
+    const month = e.created_at.slice(0, 7);
+    const me = monthMap.get(month) ?? { total: 0, entries: 0 };
+    me.total += cost; me.entries++;
+    monthMap.set(month, me);
+
+    if (e.supplier) {
+      const se = supplierMap.get(e.supplier) ?? { total: 0, entries: 0 };
+      se.total += cost; se.entries++;
+      supplierMap.set(e.supplier, se);
+    }
+
+    if (e.product) {
+      const pe = productMap.get(e.product.id) ?? { product_id: e.product.id, name: e.product.name, quantity: 0, cost: 0 };
+      pe.quantity += e.quantity; pe.cost += cost;
+      productMap.set(e.product.id, pe);
+    }
+  }
+
+  return {
+    total_depense,
+    total_entries: entries.length,
+    po_received:   (poRes.data ?? []).length,
+    top_suppliers: Array.from(supplierMap.entries()).map(([name, s]) => ({ name, ...s })).sort((a, b) => b.total - a.total).slice(0, 10),
+    top_products:  Array.from(productMap.values()).sort((a, b) => b.cost - a.cost).slice(0, 10),
+    monthly:       Array.from(monthMap.entries()).map(([month, s]) => ({ month, ...s })).sort((a, b) => a.month.localeCompare(b.month)),
   };
 }

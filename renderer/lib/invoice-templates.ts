@@ -973,6 +973,568 @@ export function generateStaffAttendanceSheet(
 </body></html>`;
 }
 
+// --- Reçu d'honoraires (Juridique) -------------------------------------------
+
+export interface HonorairesReceiptData {
+  id:              string;
+  date:            string;
+  dossier_ref?:    string | null;
+  client_name:     string;
+  client_phone?:   string | null;
+  client_address?: string | null;
+  tribunal?:       string | null;
+  nature?:         string | null;
+  items:           Array<{ label: string; amount: number }>;
+  total:           number;
+  paid:            number;
+  payment_method?: string | null;
+  notes?:          string | null;
+}
+
+export function generateHonorairesReceipt(data: HonorairesReceiptData, business: Business): string {
+  const cur      = business.currency ?? 'XOF';
+  const balance  = Math.max(0, data.total - data.paid);
+  const docNum   = data.id.replace(/-/g, '').toUpperCase().slice(0, 8);
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const itemsRows = data.items.map((item, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${item.label}</td>
+      <td class="r bold">${fmt(item.amount, cur)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Reçu Honoraires ${docNum}</title>
+<style>
+  @page { size: A4 portrait; margin: 18mm 15mm 15mm 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; font-size: 12px; color: #1a202c; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .biz-left { max-width: 220px; }
+  .biz-name { font-size: 16px; font-weight: 700; color: #1a202c; font-family: 'Segoe UI', sans-serif; }
+  .biz-detail { font-size: 10px; color: #718096; margin-top: 2px; line-height: 1.5; }
+  .biz-type { font-size: 10px; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+  .doc-right { text-align: right; }
+  .doc-title { font-size: 22px; font-weight: 800; color: #1a202c; letter-spacing: 0.04em; font-family: 'Segoe UI', sans-serif; }
+  .doc-num { font-size: 12px; color: #718096; margin-top: 4px; }
+  .doc-date { font-size: 11px; color: #4a5568; margin-top: 2px; }
+
+  .divider-dark { border: none; border-top: 2px solid #1a202c; margin: 14px 0; }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .info-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; background: #f8fafc; }
+  .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; font-weight: 700; margin-bottom: 5px; font-family: 'Segoe UI', sans-serif; }
+  .info-val { font-size: 13px; font-weight: 700; color: #1a202c; }
+  .info-sub { font-size: 10px; color: #718096; margin-top: 2px; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-family: 'Segoe UI', sans-serif; }
+  th { background: #1a202c; color: #fff; padding: 7px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+  th.r { text-align: right; }
+  td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; font-size: 11px; }
+  .r { text-align: right; }
+  .bold { font-weight: 700; }
+
+  .totals { width: 260px; margin-left: auto; font-family: 'Segoe UI', sans-serif; }
+  .totals td { padding: 4px 10px; border: none; font-size: 11px; }
+  .totals td:last-child { text-align: right; font-weight: 600; }
+  .total-row { background: #1a202c; color: #fff; }
+  .total-row td { font-size: 13px; font-weight: 800; padding: 7px 10px; }
+  .paid-row td { color: #276749; }
+  .balance-row td { color: #c05621; font-weight: 700; }
+
+  .words { font-size: 11px; font-style: italic; color: #4a5568; margin: 12px 0; line-height: 1.6; }
+  .legal { margin-top: 24px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 9px; color: #718096; line-height: 1.6; font-family: 'Segoe UI', sans-serif; }
+  .signatures { display: flex; gap: 30px; margin-top: 28px; font-family: 'Segoe UI', sans-serif; }
+  .sig-box { flex: 1; }
+  .sig-label { font-size: 10px; font-weight: 600; color: #4a5568; margin-bottom: 3px; }
+  .sig-line { border-bottom: 1px solid #cbd5e0; height: 40px; }
+  .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #a0aec0; border-top: 1px solid #f0f0f0; padding-top: 12px; font-family: 'Segoe UI', sans-serif; }
+  ${balance <= 0 && data.paid > 0 ? `.stamp { display: inline-block; border: 2.5px solid #276749; color: #276749; font-size: 18px; font-weight: 800; letter-spacing: 0.1em; padding: 5px 18px; border-radius: 4px; transform: rotate(-10deg); }` : ''}
+</style>
+</head><body>
+
+<div class="header">
+  <div class="biz-left">
+    ${business.logo_url ? `<img src="${business.logo_url}" style="max-height:50px;max-width:90px;object-fit:contain;display:block;margin-bottom:6px">` : ''}
+    <div class="biz-name">${business.name}</div>
+    ${business.denomination && business.denomination !== business.name ? `<div class="biz-type">${business.denomination}</div>` : ''}
+    ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+    ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
+    ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}
+  </div>
+  <div class="doc-right">
+    <div class="doc-title">REÇU D'HONORAIRES</div>
+    <div class="doc-num">N° ${docNum}</div>
+    <div class="doc-date">Date : ${fmtDate(data.date)}</div>
+    <div class="doc-date">Émis le : ${printDate}</div>
+  </div>
+</div>
+
+<hr class="divider-dark">
+
+<div class="info-grid">
+  <div class="info-box">
+    <div class="info-label">Client</div>
+    <div class="info-val">${data.client_name}</div>
+    ${data.client_phone   ? `<div class="info-sub">Tél : ${data.client_phone}</div>` : ''}
+    ${data.client_address ? `<div class="info-sub">${data.client_address}</div>` : ''}
+  </div>
+  <div class="info-box">
+    <div class="info-label">Dossier</div>
+    ${data.dossier_ref ? `<div class="info-val">${data.dossier_ref}</div>` : '<div class="info-val">—</div>'}
+    ${data.tribunal ? `<div class="info-sub">Tribunal : ${data.tribunal}</div>` : ''}
+    ${data.nature   ? `<div class="info-sub">Nature : ${data.nature}</div>` : ''}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:32px;text-align:left">N°</th>
+      <th style="text-align:left">Désignation des prestations</th>
+      <th class="r" style="width:130px">Montant</th>
+    </tr>
+  </thead>
+  <tbody>${itemsRows}</tbody>
+</table>
+
+<div style="display:flex;justify-content:flex-end">
+  <table class="totals">
+    ${data.total !== data.items.reduce((s, i) => s + i.amount, 0) ? `<tr><td>Sous-total</td><td>${fmt(data.items.reduce((s, i) => s + i.amount, 0), cur)}</td></tr>` : ''}
+    <tr class="total-row"><td>TOTAL HONORAIRES</td><td>${fmt(data.total, cur)}</td></tr>
+    ${data.paid > 0 ? `<tr class="paid-row"><td>Payé (${PAYMENT_LABELS[data.payment_method ?? ''] ?? data.payment_method ?? 'Espèces'})</td><td>-${fmt(data.paid, cur)}</td></tr>` : ''}
+    ${balance > 0.01 ? `<tr class="balance-row"><td>Reste dû</td><td>${fmt(balance, cur)}</td></tr>` : ''}
+  </table>
+</div>
+
+<div class="words">
+  Arrêté le présent reçu à la somme de :<br>
+  <strong>${amountInWords(data.total, cur)}</strong>
+</div>
+
+${balance <= 0 && data.paid > 0 ? '<div style="text-align:right;margin-top:8px"><span class="stamp">SOLDÉ</span></div>' : ''}
+
+${data.notes ? `<div style="margin-top:14px;font-size:10px;font-style:italic;color:#4a5568">Note : ${data.notes}</div>` : ''}
+
+<div class="legal">
+  Le présent reçu tient lieu de quittance pour les honoraires perçus. Conformément aux règles déontologiques de la profession, les honoraires sont librement convenus entre l'avocat et son client.
+  ${business.rib ? `<br><br><strong>Informations bancaires :</strong> ${business.rib}` : ''}
+</div>
+
+<div class="signatures">
+  <div class="sig-box">
+    <div class="sig-label">Signature de l'avocat / conseil</div>
+    <div class="sig-line"></div>
+    <div style="font-size:9px;color:#a0aec0;margin-top:4px;text-align:center">${business.name}</div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">Signature du client</div>
+    <div class="sig-line"></div>
+    <div style="font-size:9px;color:#a0aec0;margin-top:4px;text-align:center">${data.client_name}</div>
+  </div>
+</div>
+
+<div class="footer">
+  ${business.receipt_footer ?? ''}<br>
+  Document généré par ELM APP — ${printDate}
+</div>
+
+</body></html>`;
+}
+
+// --- Bon de vente véhicule (Voitures) ----------------------------------------
+
+export interface VoitureBonVenteData {
+  id:                string;
+  sale_date:         string;
+  marque:            string;
+  modele:            string;
+  annee?:            number | null;
+  couleur?:          string | null;
+  kilometrage?:      number | null;
+  carburant?:        string | null;
+  transmission?:     string | null;
+  description?:      string | null;
+  prix:              number;
+  owner_type:        'owned' | 'third_party';
+  owner_name?:       string | null;
+  owner_phone?:      string | null;
+  commission_type?:  'percent' | 'fixed';
+  commission_value?: number;
+  buyer_name:        string;
+  buyer_phone?:      string | null;
+  buyer_address?:    string | null;
+  payment_method?:   string | null;
+  notes?:            string | null;
+}
+
+const CARBURANT_FR: Record<string, string> = {
+  essence: 'Essence', diesel: 'Diesel', hybride: 'Hybride',
+  electrique: 'Électrique', gpl: 'GPL',
+};
+const TRANSMISSION_FR: Record<string, string> = {
+  manuelle: 'Manuelle', automatique: 'Automatique', semi_auto: 'Semi-automatique',
+};
+
+export function generateVoitureBonVente(data: VoitureBonVenteData, business: Business): string {
+  const cur       = business.currency ?? 'XOF';
+  const docNum    = data.id.replace(/-/g, '').toUpperCase().slice(0, 8);
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const commission = data.owner_type === 'third_party' && data.commission_value
+    ? data.commission_type === 'fixed'
+      ? data.commission_value
+      : data.prix * (data.commission_value / 100)
+    : 0;
+  const aReverser = data.owner_type === 'third_party' ? Math.max(0, data.prix - commission) : 0;
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Bon de vente ${data.marque} ${data.modele} — ${docNum}</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a202c; }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .biz-name { font-size: 17px; font-weight: 800; color: #1a202c; }
+  .biz-detail { font-size: 10px; color: #718096; margin-top: 2px; }
+  .doc-right { text-align: right; }
+  .doc-title { font-size: 20px; font-weight: 800; color: #1a202c; letter-spacing: 0.03em; }
+  .doc-num { font-size: 12px; color: #718096; margin-top: 4px; }
+
+  .divider-dark { border: none; border-top: 2px solid #1a202c; margin: 14px 0; }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+
+  .vehicle-band { background: #1a202c; color: #fff; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; }
+  .vehicle-name { font-size: 22px; font-weight: 800; letter-spacing: 0.02em; }
+  .vehicle-specs { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; }
+  .spec { font-size: 11px; color: #a0aec0; }
+  .spec strong { color: #e2e8f0; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .info-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; background: #f8fafc; }
+  .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; font-weight: 700; margin-bottom: 5px; }
+  .info-val { font-size: 13px; font-weight: 700; color: #1a202c; }
+  .info-sub { font-size: 10px; color: #718096; margin-top: 2px; }
+
+  .price-box { background: #1a202c; color: #fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
+  .price-label { font-size: 11px; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.06em; }
+  .price-val { font-size: 26px; font-weight: 800; }
+  .price-words { font-size: 10px; color: #a0aec0; margin-top: 4px; font-style: italic; }
+
+  .mandate-box { border: 1px solid #f6e05e; background: #fffbeb; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 10px; color: #744210; }
+  .mandate-title { font-weight: 700; font-size: 11px; margin-bottom: 6px; }
+
+  .conditions { font-size: 10px; color: #718096; line-height: 1.7; margin-top: 16px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+  .conditions strong { color: #4a5568; }
+
+  .signatures { display: flex; gap: 24px; margin-top: 28px; }
+  .sig-box { flex: 1; }
+  .sig-label { font-size: 10px; font-weight: 700; color: #4a5568; margin-bottom: 3px; }
+  .sig-sub { font-size: 9px; color: #a0aec0; margin-top: 2px; }
+  .sig-line { border-bottom: 1px solid #cbd5e0; height: 48px; }
+
+  .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #a0aec0; border-top: 1px solid #f0f0f0; padding-top: 12px; }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    ${business.logo_url ? `<img src="${business.logo_url}" style="max-height:50px;max-width:90px;object-fit:contain;display:block;margin-bottom:6px">` : ''}
+    <div class="biz-name">${business.name}</div>
+    ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+    ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
+  </div>
+  <div class="doc-right">
+    <div class="doc-title">BON DE VENTE</div>
+    <div class="doc-num">N° ${docNum}</div>
+    <div class="doc-num" style="color:#4a5568">Date : ${fmtDate(data.sale_date)}</div>
+  </div>
+</div>
+
+<div class="vehicle-band">
+  <div class="vehicle-name">${data.marque} ${data.modele}${data.annee ? ` (${data.annee})` : ''}</div>
+  <div class="vehicle-specs">
+    ${data.couleur     ? `<span class="spec"><strong>Couleur :</strong> ${data.couleur}</span>` : ''}
+    ${data.kilometrage != null ? `<span class="spec"><strong>Kilométrage :</strong> ${data.kilometrage.toLocaleString('fr-FR')} km</span>` : ''}
+    ${data.carburant   ? `<span class="spec"><strong>Carburant :</strong> ${CARBURANT_FR[data.carburant] ?? data.carburant}</span>` : ''}
+    ${data.transmission ? `<span class="spec"><strong>Boîte :</strong> ${TRANSMISSION_FR[data.transmission] ?? data.transmission}</span>` : ''}
+  </div>
+  ${data.description ? `<div style="font-size:10px;color:#a0aec0;margin-top:8px;font-style:italic">${data.description}</div>` : ''}
+</div>
+
+<div class="info-grid">
+  <div class="info-box">
+    <div class="info-label">Vendeur</div>
+    <div class="info-val">${business.name}</div>
+    ${business.phone ? `<div class="info-sub">Tél : ${business.phone}</div>` : ''}
+    ${business.address ? `<div class="info-sub">${business.address}</div>` : ''}
+  </div>
+  <div class="info-box">
+    <div class="info-label">Acheteur</div>
+    <div class="info-val">${data.buyer_name}</div>
+    ${data.buyer_phone   ? `<div class="info-sub">Tél : ${data.buyer_phone}</div>` : ''}
+    ${data.buyer_address ? `<div class="info-sub">${data.buyer_address}</div>` : ''}
+  </div>
+</div>
+
+<div class="price-box">
+  <div>
+    <div class="price-label">Prix de vente</div>
+    <div class="price-val">${fmt(data.prix, cur)}</div>
+    <div class="price-words">${amountInWords(data.prix, cur)}</div>
+  </div>
+  <div style="text-align:right">
+    <div class="price-label">Mode de paiement</div>
+    <div style="font-size:14px;font-weight:700;margin-top:4px">${PAYMENT_LABELS[data.payment_method ?? ''] ?? data.payment_method ?? 'À définir'}</div>
+  </div>
+</div>
+
+${data.owner_type === 'third_party' && data.owner_name ? `
+<div class="mandate-box">
+  <div class="mandate-title">Véhicule en mandat — Propriétaire tiers</div>
+  <div>Propriétaire : <strong>${data.owner_name}</strong>${data.owner_phone ? ` · ${data.owner_phone}` : ''}</div>
+  <div style="margin-top:4px">
+    Commission agence : <strong>${data.commission_type === 'percent' ? `${data.commission_value}% = ${fmt(commission, cur)}` : fmt(commission, cur)}</strong>
+    &nbsp;·&nbsp; À reverser au propriétaire : <strong>${fmt(aReverser, cur)}</strong>
+  </div>
+</div>` : ''}
+
+${data.notes ? `<div style="font-size:10px;font-style:italic;color:#4a5568;margin-bottom:14px">Observations : ${data.notes}</div>` : ''}
+
+<div class="conditions">
+  <strong>Conditions de vente :</strong><br>
+  Le soussigné acheteur reconnaît avoir examiné le véhicule désigné ci-dessus et l'avoir acheté en l'état, après essai. Le transfert de propriété est effectif à la date de signature du présent bon de vente et après règlement intégral du prix convenu. Le vendeur certifie que le véhicule est libre de tout gage, opposition ou nantissement.
+</div>
+
+<div class="signatures">
+  <div class="sig-box">
+    <div class="sig-label">Le vendeur</div>
+    <div class="sig-sub">${business.name}</div>
+    <div class="sig-line"></div>
+    <div style="font-size:9px;color:#a0aec0;margin-top:4px">Date et signature</div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">L'acheteur</div>
+    <div class="sig-sub">${data.buyer_name} — « Lu et approuvé »</div>
+    <div class="sig-line"></div>
+    <div style="font-size:9px;color:#a0aec0;margin-top:4px">Date et signature</div>
+  </div>
+  ${data.owner_type === 'third_party' && data.owner_name ? `
+  <div class="sig-box">
+    <div class="sig-label">Le propriétaire</div>
+    <div class="sig-sub">${data.owner_name}</div>
+    <div class="sig-line"></div>
+    <div style="font-size:9px;color:#a0aec0;margin-top:4px">Date et signature</div>
+  </div>` : ''}
+</div>
+
+<div class="footer">
+  ${business.receipt_footer ?? ''}<br>
+  Document généré par ELM APP — ${printDate}
+</div>
+
+</body></html>`;
+}
+
+// --- Bon de livraison revendeur (Grossiste) -----------------------------------
+
+export interface ResellerBonLivraisonData {
+  id:               string;
+  date:             string;
+  reseller_name:    string;
+  reseller_phone?:  string | null;
+  reseller_address?: string | null;
+  reseller_zone?:   string | null;
+  reseller_type?:   'gros' | 'demi_gros' | 'detaillant';
+  client_name?:     string | null;
+  items: Array<{
+    name:     string;
+    quantity: number;
+    unit?:    string;
+    price:    number;
+    total:    number;
+  }>;
+  subtotal:         number;
+  discount?:        number;
+  total:            number;
+  paid?:            number;
+  payment_method?:  string | null;
+  notes?:           string | null;
+}
+
+const RESELLER_TYPE_FR: Record<string, string> = {
+  gros:       'Grossiste',
+  demi_gros:  'Demi-grossiste',
+  detaillant: 'Détaillant',
+};
+
+export function generateResellerBonLivraison(data: ResellerBonLivraisonData, business: Business): string {
+  const cur       = business.currency ?? 'XOF';
+  const docNum    = data.id.replace(/-/g, '').toUpperCase().slice(0, 8);
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const paid      = data.paid ?? 0;
+  const balance   = Math.max(0, data.total - paid);
+
+  const itemsRows = data.items.map((item, i) => `
+    <tr>
+      <td style="text-align:center;color:#718096">${i + 1}</td>
+      <td>${item.name}</td>
+      <td style="text-align:center">${item.quantity} ${item.unit ?? 'pièce'}</td>
+      <td style="text-align:right">${fmt(item.price, cur)}</td>
+      <td style="text-align:right;font-weight:700">${fmt(item.total, cur)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Bon de livraison ${docNum} — ${data.reseller_name}</title>
+<style>
+  @page { size: A4 portrait; margin: 14mm 14mm 14mm 14mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a202c; }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .biz-name { font-size: 17px; font-weight: 800; color: #1a202c; }
+  .biz-detail { font-size: 10px; color: #718096; margin-top: 2px; }
+  .doc-right { text-align: right; }
+  .doc-title { font-size: 20px; font-weight: 800; color: #1a202c; letter-spacing: 0.03em; }
+  .doc-meta { font-size: 11px; color: #718096; margin-top: 3px; }
+
+  .divider-dark { border: none; border-top: 2px solid #1a202c; margin: 12px 0; }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .info-box { border: 1px solid #e2e8f0; border-radius: 6px; padding: 9px 12px; background: #f8fafc; }
+  .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #718096; font-weight: 700; margin-bottom: 4px; }
+  .info-val { font-size: 13px; font-weight: 700; color: #1a202c; }
+  .info-sub { font-size: 10px; color: #718096; margin-top: 2px; }
+  .badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: #ebf4ff; color: #2b6cb0; border: 1px solid #bee3f8; margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: #1a202c; }
+  th { color: #e2e8f0; padding: 7px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  th:first-child { text-align: center; width: 32px; }
+  tbody tr { border-bottom: 1px solid #edf2f7; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  td { padding: 7px 10px; }
+
+  .totals { width: 240px; margin-left: auto; margin-top: 14px; }
+  .totals td { padding: 4px 8px; font-size: 11px; border: none; }
+  .totals td:last-child { text-align: right; font-weight: 600; }
+  .total-row { background: #1a202c; color: #fff; }
+  .total-row td { font-size: 13px; font-weight: 800; padding: 7px 10px; }
+  .paid-row td { color: #276749; }
+  .balance-row td { color: #c05621; font-weight: 700; }
+
+  .words { font-size: 10px; font-style: italic; color: #4a5568; margin-top: 10px; line-height: 1.6; }
+
+  .signatures { display: flex; gap: 20px; margin-top: 28px; }
+  .sig-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+  .sig-label { font-size: 10px; font-weight: 700; color: #4a5568; margin-bottom: 3px; }
+  .sig-sub { font-size: 9px; color: #a0aec0; margin-bottom: 10px; }
+  .sig-line { border-bottom: 1px solid #cbd5e0; height: 36px; }
+
+  .footer { margin-top: 16px; text-align: center; font-size: 10px; color: #a0aec0; border-top: 1px solid #f0f0f0; padding-top: 10px; }
+
+  @media print {
+    .copy-divider { border: none; border-top: 2px dashed #999; margin: 20px 0; page-break-before: auto; }
+  }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    ${business.logo_url ? `<img src="${business.logo_url}" style="max-height:46px;max-width:80px;object-fit:contain;display:block;margin-bottom:5px">` : ''}
+    <div class="biz-name">${business.name}</div>
+    ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+    ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
+    ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}
+  </div>
+  <div class="doc-right">
+    <div class="doc-title">BON DE LIVRAISON</div>
+    <div class="doc-meta">N° ${docNum}</div>
+    <div class="doc-meta">Date : ${fmtDate(data.date)}</div>
+    <div class="doc-meta">Édité le : ${printDate}</div>
+  </div>
+</div>
+
+<hr class="divider-dark">
+
+<div class="info-grid">
+  <div class="info-box">
+    <div class="info-label">Revendeur</div>
+    <div class="info-val">${data.reseller_name}</div>
+    ${data.reseller_type ? `<span class="badge">${RESELLER_TYPE_FR[data.reseller_type] ?? data.reseller_type}</span>` : ''}
+    ${data.reseller_zone  ? `<div class="info-sub" style="margin-top:4px">Zone : ${data.reseller_zone}</div>` : ''}
+    ${data.reseller_phone ? `<div class="info-sub">Tél : ${data.reseller_phone}</div>` : ''}
+    ${data.reseller_address ? `<div class="info-sub">${data.reseller_address}</div>` : ''}
+  </div>
+  <div class="info-box">
+    <div class="info-label">Livraison</div>
+    <div class="info-val">${fmtDate(data.date)}</div>
+    ${data.client_name ? `<div class="info-sub">Client final : ${data.client_name}</div>` : ''}
+    ${data.payment_method ? `<div class="info-sub">Paiement : ${PAYMENT_LABELS[data.payment_method] ?? data.payment_method}</div>` : ''}
+    ${data.notes ? `<div class="info-sub" style="font-style:italic">${data.notes}</div>` : ''}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th style="text-align:left">Désignation</th>
+      <th style="text-align:center">Quantité</th>
+      <th style="text-align:right">Prix unit.</th>
+      <th style="text-align:right">Total</th>
+    </tr>
+  </thead>
+  <tbody>${itemsRows}</tbody>
+</table>
+
+<div style="display:flex;justify-content:flex-end">
+  <table class="totals">
+    ${data.discount && data.discount > 0 ? `
+    <tr><td>Sous-total</td><td>${fmt(data.subtotal, cur)}</td></tr>
+    <tr><td>Remise</td><td style="color:#c05621">-${fmt(data.discount, cur)}</td></tr>
+    ` : ''}
+    <tr class="total-row"><td>TOTAL</td><td>${fmt(data.total, cur)}</td></tr>
+    ${paid > 0 ? `<tr class="paid-row"><td>Payé</td><td>-${fmt(paid, cur)}</td></tr>` : ''}
+    ${balance > 0.01 ? `<tr class="balance-row"><td>Reste dû</td><td>${fmt(balance, cur)}</td></tr>` : ''}
+  </table>
+</div>
+
+<div class="words">
+  Arrêté à la somme de : <strong>${amountInWords(data.total, cur)}</strong>
+</div>
+
+<div class="signatures">
+  <div class="sig-box">
+    <div class="sig-label">Livreur / Dépôt</div>
+    <div class="sig-sub">${business.name}</div>
+    <div class="sig-line"></div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-label">Revendeur — Reçu conforme</div>
+    <div class="sig-sub">${data.reseller_name}${data.reseller_zone ? ` · Zone ${data.reseller_zone}` : ''}</div>
+    <div class="sig-line"></div>
+  </div>
+</div>
+
+<div class="footer">
+  ${business.receipt_footer ?? ''}<br>
+  Document généré par ELM APP — ${printDate}
+</div>
+
+</body></html>`;
+}
+
 // --- Ouvrir et imprimer -------------------------------------------------------
 
 export function printHtml(html: string): void {

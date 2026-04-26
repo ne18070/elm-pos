@@ -1,5 +1,8 @@
-import { supabase } from './client';
+import { supabase as _supabase } from './client';
 import { addStockEntry } from './stock';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const supabase = _supabase as any;
 
 export type POStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
 

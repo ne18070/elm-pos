@@ -4,7 +4,7 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import {
   Plus, Search, Phone, MapPin, Users, Pencil, Trash2,
-  ChevronRight, Check, Gift, Store, Upload, Loader2, Crown,
+  ChevronRight, Check, Gift, Store, Upload, Loader2, Crown, Printer, X,
 } from 'lucide-react';
 import type { ResellerType } from '@services/supabase/resellers';
 import { SideDrawer } from '@/components/ui/SideDrawer';
@@ -19,6 +19,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Reseller, ResellerClient, ResellerOffer } from '@services/supabase/resellers';
 import type { Product } from '@pos-types';
+import { generateResellerBonLivraison, printHtml } from '@/lib/invoice-templates';
 
 const TYPE_LABELS: Record<ResellerType, string> = { gros: 'Gros', demi_gros: 'Demi-gros', detaillant: 'Détaillant' };
 const TYPE_COLORS: Record<ResellerType, string> = {
@@ -26,6 +27,178 @@ const TYPE_COLORS: Record<ResellerType, string> = {
   demi_gros: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
   detaillant:'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
 };
+
+// --- Bon de livraison modal ---------------------------------------------------
+
+interface BLLine { _id: string; product_id: string; qty: string; price: string }
+function newBLLine(): BLLine { return { _id: Math.random().toString(36).slice(2), product_id: '', qty: '1', price: '' }; }
+
+function BonLivraisonModal({ reseller, products, business, onClose }: {
+  reseller: Reseller;
+  products: Product[];
+  business: { name: string; address?: string; phone?: string; email?: string; logo_url?: string; currency?: string; receipt_footer?: string };
+  onClose:  () => void;
+}) {
+  const [lines, setLines]     = useState<BLLine[]>([newBLLine()]);
+  const [clientName, setClientName] = useState('');
+  const [payment, setPayment] = useState('cash');
+  const [paid, setPaid]       = useState('');
+  const [notes, setNotes]     = useState('');
+  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10));
+
+  function updateLine(id: string, patch: Partial<BLLine>) {
+    setLines(ls => ls.map(l => l._id === id ? { ...l, ...patch } : l));
+  }
+
+  function onProductChange(id: string, productId: string) {
+    const product = products.find(p => p.id === productId);
+    setLines(ls => ls.map(l => l._id === id
+      ? { ...l, product_id: productId, price: product ? String((product as any).wholesale_price ?? product.price ?? '') : l.price }
+      : l
+    ));
+  }
+
+  const validLines = lines.filter(l => l.product_id && parseFloat(l.qty) > 0);
+  const subtotal   = validLines.reduce((s, l) => {
+    const p = products.find(x => x.id === l.product_id);
+    const qty   = parseFloat(l.qty) || 0;
+    const price = parseFloat(l.price) || 0;
+    return s + qty * price;
+  }, 0);
+
+  function handlePrint() {
+    if (validLines.length === 0) return;
+    const items = validLines.map(l => {
+      const p   = products.find(x => x.id === l.product_id)!;
+      const qty = parseFloat(l.qty) || 0;
+      const price = parseFloat(l.price) || 0;
+      return { name: p.name, quantity: qty, unit: (p as any).unit ?? 'pièce', price, total: qty * price };
+    });
+    const paidAmt = parseFloat(paid) || 0;
+    const html = generateResellerBonLivraison({
+      id:               crypto.randomUUID(),
+      date,
+      reseller_name:    reseller.name,
+      reseller_phone:   reseller.phone ?? null,
+      reseller_address: reseller.address ?? null,
+      reseller_zone:    reseller.zone ?? null,
+      reseller_type:    reseller.type ?? 'gros',
+      client_name:      clientName.trim() || null,
+      items,
+      subtotal,
+      total: subtotal,
+      paid:  paidAmt || undefined,
+      payment_method: payment,
+      notes: notes.trim() || null,
+    }, business as any);
+    printHtml(html);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
+          <div>
+            <h2 className="text-content-primary font-semibold">Bon de livraison</h2>
+            <p className="text-xs text-content-secondary mt-0.5">{reseller.name}</p>
+          </div>
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="overflow-y-auto p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Date</label>
+              <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Mode de paiement</label>
+              <select className="input" value={payment} onChange={e => setPayment(e.target.value)}>
+                <option value="cash">Espèces</option>
+                <option value="mobile">Mobile Money</option>
+                <option value="bank">Virement</option>
+                <option value="check">Chèque</option>
+                <option value="partial">Mixte</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Client final (optionnel)</label>
+            <input className="input" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nom du client livré" />
+          </div>
+
+          {/* Lignes produits */}
+          <div>
+            <label className="label">Produits</label>
+            <div className="space-y-2">
+              {lines.map((l) => (
+                <div key={l._id} className="flex gap-2 items-center">
+                  <select
+                    className="input flex-1 text-sm"
+                    value={l.product_id}
+                    onChange={e => onProductChange(l._id, e.target.value)}
+                  >
+                    <option value="">Choisir…</option>
+                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <input
+                    type="number" min="0" className="input w-16 text-sm text-center" placeholder="Qté"
+                    value={l.qty} onChange={e => updateLine(l._id, { qty: e.target.value })}
+                  />
+                  <input
+                    type="number" min="0" className="input w-24 text-sm" placeholder="Prix unit."
+                    value={l.price} onChange={e => updateLine(l._id, { price: e.target.value })}
+                  />
+                  <button onClick={() => setLines(ls => ls.filter(x => x._id !== l._id))}
+                    className="p-1.5 text-content-muted hover:text-status-error shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setLines(ls => [...ls, newBLLine()])}
+              className="mt-2 text-xs text-content-brand hover:text-content-primary flex items-center gap-1">
+              <Plus className="w-3.5 h-3.5" /> Ajouter un produit
+            </button>
+          </div>
+
+          {subtotal > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-surface-input text-center">
+                <p className="text-xs text-content-secondary">Total</p>
+                <p className="font-bold text-content-primary">
+                  {new Intl.NumberFormat('fr-FR').format(subtotal)} {business.currency ?? 'XOF'}
+                </p>
+              </div>
+              <div>
+                <label className="label">Montant payé</label>
+                <input type="number" className="input" value={paid} onChange={e => setPaid(e.target.value)} placeholder="0" />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="label">Notes</label>
+            <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observations…" />
+          </div>
+        </div>
+
+        <div className="flex gap-2 p-4 border-t border-surface-border shrink-0">
+          <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
+          <button
+            onClick={handlePrint}
+            disabled={validLines.length === 0}
+            className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-xl transition-colors text-sm"
+          >
+            <Printer className="w-4 h-4" /> Imprimer le bon
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type Tab = 'revendeurs' | 'offres';
 type Panel = null | { type: 'reseller'; item: Reseller | null } | { type: 'client'; reseller: Reseller; item: ResellerClient | null };
@@ -48,6 +221,7 @@ export default function RevendeursPage() {
   const [deletingClients, setDeletingClients] = useState(false);
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
+  const [showBonLivraison, setShowBonLivraison] = useState(false);
 
   const [zoneFilter, setZoneFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<ResellerType | ''>('');
@@ -421,6 +595,9 @@ export default function RevendeursPage() {
                     {selected.notes && <p className="text-sm text-content-muted italic mt-1">{selected.notes}</p>}
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <button onClick={() => setShowBonLivraison(true)} className="btn-secondary p-2" title="Bon de livraison">
+                      <Printer className="w-4 h-4" />
+                    </button>
                     <button onClick={() => openResellerPanel(selected)} className="btn-secondary p-2">
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -695,6 +872,16 @@ export default function RevendeursPage() {
           </div>
         </div>
       </SideDrawer>
+
+      {/* -- Modal Bon de livraison -- */}
+      {showBonLivraison && selected && (
+        <BonLivraisonModal
+          reseller={selected}
+          products={products}
+          business={business as any}
+          onClose={() => setShowBonLivraison(false)}
+        />
+      )}
 
       {/* -- Modal Import CSV -- */}
       {importType && (

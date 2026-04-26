@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Receipt, Search, Loader2, X, Check, Pencil, Trash2, TrendingUp, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Plus, Receipt, Search, Loader2, X, Check, Pencil, Trash2, TrendingUp, AlertCircle, CheckCircle2, ExternalLink, Printer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { canDelete } from '@/lib/permissions';
 import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
 import { displayCurrency } from '@/lib/utils';
+import { generateHonorairesReceipt, printHtml } from '@/lib/invoice-templates';
 
 // --- Types --------------------------------------------------------------------
 
@@ -293,6 +294,21 @@ export default function HonorairesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  function handlePrint(l: HonoraireLine) {
+    if (!business) return;
+    const typeLabel = typesPrestation.find((t) => t.value === l.type_prestation)?.label ?? l.type_prestation;
+    const html = generateHonorairesReceipt({
+      id:             l.id,
+      date:           l.date_facture,
+      dossier_ref:    l.dossier?.reference ?? null,
+      client_name:    l.client_name,
+      items: [{ label: typeLabel + (l.description ? ` — ${l.description}` : ''), amount: l.montant }],
+      total:          l.montant,
+      paid:           l.montant_paye,
+    }, business as any);
+    printHtml(html);
+  }
+
   async function handleDelete(id: string) {
     if (!confirm('Supprimer ces honoraires ?')) return;
     setDeletingId(id);
@@ -434,6 +450,9 @@ export default function HonorairesPage() {
                         <td className="px-4 py-3"><StatusBadge status={l.status} statuts={statutsPaiement} /></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1 justify-end">
+                            <button onClick={() => handlePrint(l)} className="p-1.5 text-content-muted hover:text-status-purple rounded-lg hover:bg-surface-input transition-colors" title="Imprimer le reçu">
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
                             <button onClick={() => setModal(l)} className="p-1.5 text-content-muted hover:text-content-primary rounded-lg hover:bg-surface-input transition-colors">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>

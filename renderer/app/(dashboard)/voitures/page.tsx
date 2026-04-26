@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Car, Users, Pencil, Trash2, Loader2, X,
   ImagePlus, Search, Share2, Copy, Check,
-  Gauge, Fuel, Settings2, Palette,
+  Gauge, Fuel, Settings2, Palette, Printer,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -21,6 +21,7 @@ import {
   type Voiture, type VoitureLead, type VoitureStatut, type LeadStatut,
   type Carburant, type Transmission,
 } from '@services/supabase/voitures';
+import { generateVoitureBonVente, printHtml } from '@/lib/invoice-templates';
 
 // --- Types --------------------------------------------------------------------
 
@@ -90,6 +91,7 @@ export default function VoituresPage() {
   const [saving, setSaving]         = useState(false);
   const [uploading, setUploading]   = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bonVenteVoiture, setBonVenteVoiture] = useState<Voiture | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!business?.id) return;
@@ -377,6 +379,7 @@ export default function VoituresPage() {
             onDelete={handleDelete}
             deletingId={deletingId}
             onCopyOwnerReport={copyOwnerReportLink}
+            onPrintBonVente={setBonVenteVoiture}
           />
         ) : (
           <LeadsTab
@@ -386,6 +389,15 @@ export default function VoituresPage() {
           />
         )}
       </div>
+
+      {/* Bon de vente modal */}
+      {bonVenteVoiture && (
+        <BonVenteModal
+          voiture={bonVenteVoiture}
+          business={business as any}
+          onClose={() => setBonVenteVoiture(null)}
+        />
+      )}
 
       {/* Add/Edit Drawer */}
       <SideDrawer
@@ -424,10 +436,98 @@ export default function VoituresPage() {
   );
 }
 
+// --- BonVenteModal ------------------------------------------------------------
+
+function BonVenteModal({ voiture, business, onClose }: {
+  voiture:  Voiture;
+  business: { name: string; address?: string; phone?: string; logo_url?: string; currency?: string; receipt_footer?: string };
+  onClose:  () => void;
+}) {
+  const [form, setForm] = useState({ buyer_name: '', buyer_phone: '', buyer_address: '', payment_method: 'cash' });
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  function handlePrint() {
+    if (!form.buyer_name.trim()) return;
+    const html = generateVoitureBonVente({
+      id:               voiture.id,
+      sale_date:        new Date().toISOString().slice(0, 10),
+      marque:           voiture.marque,
+      modele:           voiture.modele,
+      annee:            voiture.annee ?? null,
+      couleur:          voiture.couleur ?? null,
+      kilometrage:      voiture.kilometrage ?? null,
+      carburant:        voiture.carburant ?? null,
+      transmission:     voiture.transmission ?? null,
+      description:      voiture.description ?? null,
+      prix:             voiture.prix,
+      owner_type:       voiture.owner_type ?? 'owned',
+      owner_name:       voiture.owner_name ?? null,
+      owner_phone:      voiture.owner_phone ?? null,
+      commission_type:  voiture.commission_type ?? 'percent',
+      commission_value: voiture.commission_value ?? 0,
+      buyer_name:       form.buyer_name.trim(),
+      buyer_phone:      form.buyer_phone.trim() || null,
+      buyer_address:    form.buyer_address.trim() || null,
+      payment_method:   form.payment_method,
+    }, business as any);
+    printHtml(html);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-sm flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-surface-border">
+          <div>
+            <h2 className="text-content-primary font-semibold">Bon de vente</h2>
+            <p className="text-xs text-content-secondary mt-0.5">{voiture.marque} {voiture.modele}</p>
+          </div>
+          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="label">Acheteur <span className="text-status-error">*</span></label>
+            <input className="input" value={form.buyer_name} onChange={e => set('buyer_name', e.target.value)} placeholder="Nom complet" autoFocus />
+          </div>
+          <div>
+            <label className="label">Téléphone</label>
+            <input className="input" value={form.buyer_phone} onChange={e => set('buyer_phone', e.target.value)} placeholder="+221 77 000 00 00" />
+          </div>
+          <div>
+            <label className="label">Adresse</label>
+            <input className="input" value={form.buyer_address} onChange={e => set('buyer_address', e.target.value)} placeholder="Adresse de l'acheteur" />
+          </div>
+          <div>
+            <label className="label">Mode de paiement</label>
+            <select className="input" value={form.payment_method} onChange={e => set('payment_method', e.target.value)}>
+              <option value="cash">Espèces</option>
+              <option value="bank">Virement bancaire</option>
+              <option value="check">Chèque</option>
+              <option value="mobile">Mobile Money</option>
+              <option value="card">Carte bancaire</option>
+              <option value="partial">Paiement mixte</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-2 p-4 border-t border-surface-border">
+          <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
+          <button
+            onClick={handlePrint}
+            disabled={!form.buyer_name.trim()}
+            className="flex-1 flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-xl transition-colors text-sm"
+          >
+            <Printer className="w-4 h-4" /> Imprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- ParcTab ------------------------------------------------------------------
 
 function ParcTab({
-  voitures, currency, search, onSearch, onEdit, onDelete, deletingId, onCopyOwnerReport,
+  voitures, currency, search, onSearch, onEdit, onDelete, deletingId, onCopyOwnerReport, onPrintBonVente,
 }: {
   voitures:   Voiture[];
   currency:   string;
@@ -437,6 +537,7 @@ function ParcTab({
   onDelete:   (id: string) => void;
   deletingId: string | null;
   onCopyOwnerReport: (v: Voiture) => void;
+  onPrintBonVente:   (v: Voiture) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -522,6 +623,13 @@ function ParcTab({
                           <Copy className="w-3.5 h-3.5" />
                         </button>
                       )}
+                      <button
+                        onClick={() => onPrintBonVente(v)}
+                        className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-input transition-colors"
+                        title="Imprimer bon de vente"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => onEdit(v)}
                         className="p-1.5 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-colors"
