@@ -19,7 +19,7 @@ import {
 } from '@services/supabase/subscriptions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 
-// ── Status badge config ───────────────────────────────────────────────────────
+// -- Status badge config -------------------------------------------------------
 
 const REQ_STATUS: Record<string, { label: string; bg: string; text: string; border: string }> = {
   pending:  { label: 'En attente',  bg: 'bg-badge-warning', text: 'text-status-warning',  border: 'border-status-warning/50'  },
@@ -27,7 +27,7 @@ const REQ_STATUS: Record<string, { label: string; bg: string; text: string; bord
   rejected: { label: 'Rejetée',     bg: 'bg-badge-error',   text: 'text-status-error',    border: 'border-status-error/50'    },
 };
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// -- Page ----------------------------------------------------------------------
 
 export default function BillingPage() {
   const { effectiveStatus, trialDaysRemaining, subscription, setSubscription } = useSubscriptionStore();
@@ -119,7 +119,7 @@ export default function BillingPage() {
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-3xl mx-auto space-y-6">
 
-        {/* ── En-tête ── */}
+        {/* -- En-tête -- */}
         <div>
           <h1 className="text-xl font-bold text-content-primary">Abonnement & Facturation</h1>
           <p className="text-sm text-content-secondary mt-0.5">
@@ -127,7 +127,7 @@ export default function BillingPage() {
           </p>
         </div>
 
-        {/* ── Statut actuel ── */}
+        {/* -- Statut actuel -- */}
         <div className={`rounded-2xl border p-5 space-y-3
           ${status === 'active' ? 'border-status-success/50 bg-badge-success'
           : status === 'trial'  ? 'border-status-warning/50 bg-badge-warning'
@@ -182,7 +182,7 @@ export default function BillingPage() {
           )}
         </div>
 
-        {/* ── Plan actuel (si actif) ── */}
+        {/* -- Plan actuel (si actif) -- */}
         {status === 'active' && activePlan && (
           <div className="card p-5 space-y-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -253,7 +253,7 @@ export default function BillingPage() {
           </div>
         )}
 
-        {/* ── Choix du plan ── */}
+        {/* -- Choix du plan -- */}
         {showPlanSelect && (
           <>
             <div>
@@ -365,7 +365,7 @@ export default function BillingPage() {
           </>
         )}
 
-        {/* ── Confirmation envoi ── */}
+        {/* -- Confirmation envoi -- */}
         {step === 'sent' && (
           <div className="card p-8 flex flex-col items-center gap-4 text-center">
             <div className="w-16 h-16 rounded-full bg-badge-success border border-status-success flex items-center justify-center">
@@ -383,7 +383,7 @@ export default function BillingPage() {
           </div>
         )}
 
-        {/* ── Historique des demandes ── */}
+        {/* -- Historique des demandes -- */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-content-secondary uppercase tracking-wider">

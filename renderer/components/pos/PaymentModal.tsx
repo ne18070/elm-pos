@@ -121,7 +121,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     ? Math.round((acompteRecuNum - acompteNum) * 100) / 100
     : 0;
 
-  // ── BroadcastChannel : écoute la validation du client ────────────────────
+  // -- BroadcastChannel : écoute la validation du client --------------------
   useEffect(() => {
     if (step !== 'attente') return;
     const bc = new BroadcastChannel(BC_CHANNEL);
@@ -134,7 +134,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     return () => bc.close();
   }, [step]);
 
-  // ── Envoi de la facture de confirmation à l'écran client ──────────────────
+  // -- Envoi de la facture de confirmation à l'écran client ------------------
   function sendConfirmToDisplay(amountPaid?: number) {
     const state = {
       screen:       'confirm',
@@ -161,7 +161,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     window.electronAPI?.display?.sendUpdate(state);
   }
 
-  // ── DB : paiement complet ─────────────────────────────────────────────────
+  // -- DB : paiement complet -------------------------------------------------
   async function submitSimple() {
     if (!user || !business) return;
     setChargement(true);
@@ -222,7 +222,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     }
   }
 
-  // ── DB : Intouch ──────────────────────────────────────────────────────────
+  // -- DB : Intouch ----------------------------------------------------------
   async function submitIntouch() {
     if (!user || !business) return;
     if (!intouchPhone.trim()) { setErreur('Numéro de téléphone requis'); return; }
@@ -261,7 +261,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     }
   }
 
-  // ── DB : acompte ──────────────────────────────────────────────────────────
+  // -- DB : acompte ----------------------------------------------------------
   async function submitAcompte() {
     if (!user || !business) return;
     setAcompteConfirme(acompteNum);
@@ -313,7 +313,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     }
   }
 
-  // ── Pré-confirmation : valide, envoie au display, attend le client ────────
+  // -- Pré-confirmation : valide, envoie au display, attend le client --------
   function preConfirmerSimple() {
     if (!user || !business) return;
     setErreur('');
@@ -402,7 +402,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       size="sm"
       guard={step !== 'succes'}
     >
-      {/* ── Étape 1 : méthode ─────────────────────────────────────────────── */}
+      {/* -- Étape 1 : méthode ----------------------------------------------- */}
       {step === 'methode' && (
         <div className="space-y-5">
           <div>
@@ -473,7 +473,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         </div>
       )}
 
-      {/* ── Étape 2a : paiement complet ───────────────────────────────────── */}
+      {/* -- Étape 2a : paiement complet ------------------------------------- */}
       {step === 'montant' && (
         <div className="space-y-5">
           <div className="bg-surface-input rounded-xl p-3 space-y-1">
@@ -542,7 +542,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         </div>
       )}
 
-      {/* ── Étape 2b : acompte / paiement partiel ─────────────────────────── */}
+      {/* -- Étape 2b : acompte / paiement partiel --------------------------- */}
       {step === 'partiel' && (
         <div className="space-y-5">
           <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
@@ -750,7 +750,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         </div>
       )}
 
-      {/* ── Étape 2c : Note de chambre ───────────────────────────────────── */}
+      {/* -- Étape 2c : Note de chambre ------------------------------------- */}
       {step === 'room' && (
         <RoomPicker
           businessId={business?.id!}
@@ -763,7 +763,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         />
       )}
 
-      {/* ── Étape 2d : Intouch ────────────────────────────────────────────── */}
+      {/* -- Étape 2d : Intouch ---------------------------------------------- */}
       {step === 'intouch' && (
         <div className="space-y-5">
           <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
@@ -821,7 +821,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         </div>
       )}
 
-      {/* ── Étape 3 : attente validation client ───────────────────────────── */}
+      {/* -- Étape 3 : attente validation client ----------------------------- */}
       {step === 'attente' && (
         <div className="flex flex-col items-center gap-6 py-8 text-center">
           <div className="relative">
@@ -855,7 +855,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         </div>
       )}
 
-      {/* ── Numpad ────────────────────────────────────────────────────────── */}
+      {/* -- Numpad ---------------------------------------------------------- */}
       {numpad === 'montant' && (
         <NumpadModal
           value={montantRecu}
@@ -893,7 +893,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         />
       )}
 
-      {/* ── Étape 4 : succès ──────────────────────────────────────────────── */}
+      {/* -- Étape 4 : succès ------------------------------------------------ */}
       {step === 'succes' && (
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center ${

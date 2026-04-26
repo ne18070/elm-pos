@@ -15,7 +15,7 @@ import type {
   FormField, UserTaskNode, Business, FeeRequestNode, DelayNode as WorkflowDelayNode
 } from '@pos-types';
 
-// ── Validation des données de formulaire ─────────────────────────────────────
+// -- Validation des données de formulaire -------------------------------------
 function validateFormData(fields: FormField[], data: Record<string, unknown>): string[] {
   return fields.flatMap(f => {
     const value = data[f.key];
@@ -29,7 +29,7 @@ function validateFormData(fields: FormField[], data: Record<string, unknown>): s
   });
 }
 
-// ── Exécution des actions automatisées ────────────────────────────────────────
+// -- Exécution des actions automatisées ----------------------------------------
 async function executeActionNode(
   node: ActionNode,
   instance: WorkflowInstance,
@@ -118,7 +118,7 @@ async function executeActionNode(
   return { ok: true };
 }
 
-// ── Exécution de la génération d'honoraires ──────────────────────────────────
+// -- Exécution de la génération d'honoraires ----------------------------------
 async function executeFeeRequestNode(
   node: FeeRequestNode,
   instance: WorkflowInstance,
@@ -169,7 +169,7 @@ async function executeFeeRequestNode(
   }
 }
 
-// ── Traversée automatique des nœuds non-humains ───────────────────────────────
+// -- Traversée automatique des nœuds non-humains -------------------------------
 async function autoTraverse(
   def: WorkflowDefinition,
   startNodeId: string,
@@ -297,7 +297,7 @@ async function autoTraverse(
   return { nodeId, status: 'RUNNING' as WorkflowStatus, ctx };
 }
 
-// ── Fonction principale ──────────────────────────────────────────────────
+// -- Fonction principale --------------------------------------------------
 export async function transitionToNextStep(
   payload: TransitionPayload
 ): Promise<TransitionResult> {
@@ -364,7 +364,7 @@ export async function transitionToNextStep(
   }
 }
 
-// ── Démarrer un workflow ──────────────────────────────────────────────────────
+// -- Démarrer un workflow ------------------------------------------------------
 export async function triggerWorkflow(
   payload: TriggerWorkflowPayload
 ): Promise<TransitionResult> {
@@ -397,7 +397,7 @@ export async function triggerWorkflow(
   }
 }
 
-// ── Annulation ────────────────────────────────────────────────────────────────
+// -- Annulation ----------------------------------------------------------------
 export async function cancelWorkflowInstance(
   instanceId: string,
   performedBy?: string
@@ -420,7 +420,7 @@ export async function cancelWorkflowInstance(
   }
 }
 
-// ── Réessayer l'étape actuelle ──────────────────────────────────────────────
+// -- Réessayer l'étape actuelle ----------------------------------------------
 export async function retryCurrentStep(
   instanceId: string,
   performedBy?: string
@@ -455,7 +455,7 @@ export async function retryCurrentStep(
   }
 }
 
-// ── Résumer après WAIT_EVENT (reprise) ─────────────────────────────
+// -- Résumer après WAIT_EVENT (reprise) -----------------------------
 export async function resumeFromEvent(
   instanceId: string,
   edgeId: string,

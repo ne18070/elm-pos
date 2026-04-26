@@ -26,7 +26,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
   const [saving, setSaving]     = useState(false);
   const [expertMode, setExpertMode] = useState(false);
 
-  // ── Mode guidé ──
+  // -- Mode guidé --
   const [category, setCategory] = useState<string | null>(null);
   const [op, setOp]             = useState<OpTemplate | null>(null);
   const [amount, setAmount]     = useState('');
@@ -34,7 +34,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
   const [date, setDate]         = useState(new Date().toISOString().slice(0, 10));
   const [desc, setDesc]         = useState('');
 
-  // ── Mode expert ──
+  // -- Mode expert --
   const [expDate, setExpDate] = useState(new Date().toISOString().slice(0, 10));
   const [expRef, setExpRef]   = useState('');
   const [expDesc, setExpDesc] = useState('');

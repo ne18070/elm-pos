@@ -19,7 +19,7 @@ import type {
 
 
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 interface WorkflowRunnerProps {
   instance:      WorkflowInstance;
@@ -29,7 +29,7 @@ interface WorkflowRunnerProps {
   readOnly?:     boolean;
 }
 
-// ── Badge de statut ───────────────────────────────────────────────────────────
+// -- Badge de statut -----------------------------------------------------------
 const STATUS_CONFIG: Record<WorkflowStatus, { label: string; className: string; icon: React.ReactNode }> = {
   PENDING:   { label: 'En attente',  className: 'border-surface-border bg-surface-card/50 text-content-secondary',    icon: <Clock className="w-3 h-3" /> },
   RUNNING:   { label: 'En cours',    className: 'border-blue-700 bg-badge-info text-blue-300',       icon: <Loader2 className="w-3 h-3 animate-spin" /> },
@@ -49,7 +49,7 @@ function StatusBadge({ status }: { status: WorkflowStatus }) {
   );
 }
 
-// ── Icône de nœud ─────────────────────────────────────────────────────────────
+// -- Icône de nœud -------------------------------------------------------------
 function NodeIcon({ type }: { type: WorkflowNode['type'] }) {
   const cls = 'w-4 h-4';
   switch (type) {
@@ -64,7 +64,7 @@ function NodeIcon({ type }: { type: WorkflowNode['type'] }) {
   }
 }
 
-// ── Rendu champ de formulaire ─────────────────────────────────────────────────
+// -- Rendu champ de formulaire -------------------------------------------------
 function FormFieldInput({
   field, value, onChange,
 }: {
@@ -111,7 +111,7 @@ function FormFieldInput({
   );
 }
 
-// ── Panel USER_TASK ───────────────────────────────────────────────────────────
+// -- Panel USER_TASK -----------------------------------------------------------
 function UserTaskPanel({ node, formData, onFieldChange }: {
   node: UserTaskNode; formData: Record<string, unknown>; onFieldChange: (k: string, v: unknown) => void;
 }) {
@@ -142,7 +142,7 @@ function UserTaskPanel({ node, formData, onFieldChange }: {
   );
 }
 
-// ── Panel LEGAL_CLAIM ─────────────────────────────────────────────────────────
+// -- Panel LEGAL_CLAIM ---------------------------------------------------------
 function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Record<string, unknown> }) {
   const text  = interpolate(node.template, context);
   const phone = node.phone_field ? String(context[node.phone_field] ?? '') : '';
@@ -172,7 +172,7 @@ function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Rec
   );
 }
 
-// ── Panel ACTION ─────────────────────────────────────────────────────────────
+// -- Panel ACTION -------------------------------------------------------------
 function ActionPanel({ node, context }: { node: ActionNode; context: Record<string, unknown> }) {
   const waActions   = node.actions?.filter(a => a.type === 'SEND_WHATSAPP') ?? [];
   const otherCount  = (node.actions?.length ?? 0) - waActions.length;
@@ -235,7 +235,7 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
   );
 }
 
-// ── Panel WAIT_EVENT ──────────────────────────────────────────────────────────
+// -- Panel WAIT_EVENT ----------------------------------------------------------
 function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: WorkflowInstance }) {
   const resumeAt = instance.scheduled_resume_at ? new Date(instance.scheduled_resume_at) : null;
   const isClientReply = node.event_key?.toLowerCase().includes('reply') || node.event_key?.toLowerCase().includes('response') || node.event_key?.toLowerCase().includes('reponse');
@@ -263,7 +263,7 @@ function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: Wor
   );
 }
 
-// ── Panel DELAY ───────────────────────────────────────────────────────────────
+// -- Panel DELAY ---------------------------------------------------------------
 function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; instance: WorkflowInstance; onResume: () => void }) {
   const resumeAt = instance.scheduled_resume_at ? new Date(instance.scheduled_resume_at) : null;
   const hours = node.delay_hours ?? 0;
@@ -297,7 +297,7 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
   );
 }
 
-// ── Panel FEE_REQUEST ────────────────────────────────────────────────────────
+// -- Panel FEE_REQUEST --------------------------------------------------------
 function FeeRequestPanel({ node, context }: { node: any; context: Record<string, unknown> }) {
   let amount = node.amount ?? 0;
   if (node.amount_template) {
@@ -327,7 +327,7 @@ function FeeRequestPanel({ node, context }: { node: any; context: Record<string,
   );
 }
 
-// ── Panel FAILED ──────────────────────────────────────────────────────────────
+// -- Panel FAILED --------------------------------------------------------------
 function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetry: () => void }) {
   return (
     <div className="bg-badge-error border border-status-error rounded-xl px-4 py-3 space-y-3">
@@ -355,7 +355,7 @@ function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetr
   );
 }
 
-// ── Panel COMPLETED ───────────────────────────────────────────────────────────
+// -- Panel COMPLETED -----------------------------------------------------------
 function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; onRestart?: () => void }) {
   const definition = instance.workflow_snapshot;
 
@@ -493,7 +493,7 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
   );
 }
 
-// ── Panel CANCELLED ───────────────────────────────────────────────────────────
+// -- Panel CANCELLED -----------------------------------------------------------
 function CancelledPanel({ instance }: { instance: WorkflowInstance }) {
   return (
     <div className="bg-surface/50 border border-surface-border rounded-2xl p-5 text-center space-y-2">
@@ -508,7 +508,7 @@ function CancelledPanel({ instance }: { instance: WorkflowInstance }) {
   );
 }
 
-// ── Composant principal ───────────────────────────────────────────────────────
+// -- Composant principal -------------------------------------------------------
 export function WorkflowRunner({
   instance: initialInstance,
   currentUserId,
@@ -623,7 +623,7 @@ export function WorkflowRunner({
     }
   };
 
-  // ── Terminaux ─────────────────────────────────────────────────────────────
+  // -- Terminaux -------------------------------------------------------------
   if (instance.status === 'COMPLETED') {
     return <div className="card p-4"><CompletedPanel instance={instance} onRestart={onCancel ? undefined : undefined} /></div>;
   }
@@ -642,7 +642,7 @@ export function WorkflowRunner({
   return (
     <div className="card p-5 space-y-5">
 
-      {/* ── En-tête ── */}
+      {/* -- En-tête -- */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-badge-brand border border-brand-700 text-content-brand">
@@ -668,7 +668,7 @@ export function WorkflowRunner({
         </div>
       </div>
 
-      {/* ── Spinner pendant traitement ── */}
+      {/* -- Spinner pendant traitement -- */}
       {isPending && (
         <div className="flex items-center gap-2 text-sm text-content-secondary">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -676,7 +676,7 @@ export function WorkflowRunner({
         </div>
       )}
 
-      {/* ── Contenu du nœud ── */}
+      {/* -- Contenu du nœud -- */}
       {!isPending && (
         <div className="space-y-5">
           {/* Instructions détaillées */}
@@ -720,7 +720,7 @@ export function WorkflowRunner({
         </div>
       )}
 
-      {/* ── Erreur ── */}
+      {/* -- Erreur -- */}
       {error && (
         <div className="flex items-center gap-2 text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-4 py-3">
           <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -728,7 +728,7 @@ export function WorkflowRunner({
         </div>
       )}
 
-      {/* ── Confirmation ── */}
+      {/* -- Confirmation -- */}
       {confirm && (
         <div className="bg-badge-warning border border-status-warning rounded-xl px-4 py-3 space-y-3">
           <p className="text-sm text-status-warning font-medium">
@@ -745,7 +745,7 @@ export function WorkflowRunner({
         </div>
       )}
 
-      {/* ── Boutons d'action ── */}
+      {/* -- Boutons d'action -- */}
       {!readOnly && !confirm && !isPending && eligibleEdges.length > 0 && (
         <div className="space-y-2 pt-1">
           {eligibleEdges.map(edge => (
@@ -761,7 +761,7 @@ export function WorkflowRunner({
         </div>
       )}
 
-      {/* ── Aucune action disponible ── */}
+      {/* -- Aucune action disponible -- */}
       {!readOnly && !confirm && !isPending &&
         (instance.status === 'RUNNING' || instance.status === 'WAITING') &&
         eligibleEdges.length === 0 && (
@@ -770,7 +770,7 @@ export function WorkflowRunner({
         </p>
       )}
 
-      {/* ── Annulation ── */}
+      {/* -- Annulation -- */}
       {!readOnly && !isPending && instance.status !== 'FAILED' && (
         <button
           onClick={handleCancel}

@@ -11,7 +11,7 @@ import { canDelete } from '@/lib/permissions';
 import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
 import { displayCurrency } from '@/lib/utils';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface HonoraireLine {
   id:              string;
@@ -42,7 +42,7 @@ function computeStatus(montant: number, paye: number): string {
   return 'partiel';
 }
 
-// ─── Sync comptabilité honoraires ─────────────────────────────────────────────
+// --- Sync comptabilité honoraires ---------------------------------------------
 
 async function syncHonorairesEntry(
   db: typeof supabase,
@@ -89,7 +89,7 @@ function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+// --- Modal --------------------------------------------------------------------
 
 function HonorairesModal({
   initial, businessId, dossiers, typesPrestation, statutsPaiement, onClose, onSaved,
@@ -252,7 +252,7 @@ function HonorairesModal({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function HonorairesPage() {
   const { business, user } = useAuthStore();

@@ -20,7 +20,7 @@ function fmtPrice(n: number, currency: string) {
   return new Intl.NumberFormat('fr-FR').format(n) + ' ' + label;
 }
 
-// ─── VoitureCard ──────────────────────────────────────────────────────────────
+// --- VoitureCard --------------------------------------------------------------
 
 function VoitureCard({
   v, currency, onContact,
@@ -98,7 +98,7 @@ function VoitureCard({
   );
 }
 
-// ─── ContactModal ─────────────────────────────────────────────────────────────
+// --- ContactModal -------------------------------------------------------------
 
 function ContactModal({
   voiture, businessId, onClose,
@@ -213,7 +213,7 @@ function ContactModal({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// --- Main Component -----------------------------------------------------------
 
 export function VoituresPublicClient() {
   const params     = useParams();

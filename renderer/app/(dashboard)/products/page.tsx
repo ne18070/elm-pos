@@ -235,7 +235,7 @@ export default function ProductsPage() {
             )}
           </div>
         ) : view === 'grid' ? (
-          /* ── Vue Grille ── */
+          /* -- Vue Grille -- */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filtered.map((product) => (
               <div
@@ -293,7 +293,7 @@ export default function ProductsPage() {
             ))}
           </div>
         ) : (
-          /* ── Vue Liste ── */
+          /* -- Vue Liste -- */
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <table className="w-full">
               <thead className="bg-surface-card border-b border-surface-border">
@@ -453,7 +453,7 @@ export default function ProductsPage() {
         />
       )}
 
-      {/* ── Modal partage boutique ─────────────────────────────────────────── */}
+      {/* -- Modal partage boutique ------------------------------------------- */}
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowShare(false)}>
           <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>

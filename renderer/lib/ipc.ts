@@ -12,7 +12,7 @@ const api = typeof window !== 'undefined' && 'electronAPI' in window
 
 export const isElectron = !!api;
 
-// ─── Imprimante ───────────────────────────────────────────────────────────────
+// --- Imprimante ---------------------------------------------------------------
 
 export interface PrinterConfig {
   type: 'usb' | 'network';
@@ -75,7 +75,7 @@ export async function testPrinterConnection(
   return result.data ?? { connected: false };
 }
 
-// ─── Tiroir-caisse ────────────────────────────────────────────────────────────
+// --- Tiroir-caisse ------------------------------------------------------------
 
 export interface CashDrawerConfig {
   enabled: boolean;
@@ -109,7 +109,7 @@ export async function openCashDrawer(): Promise<{ success: boolean; error?: stri
   return result;
 }
 
-// ─── Sync queue ───────────────────────────────────────────────────────────────
+// --- Sync queue ---------------------------------------------------------------
 
 export async function enqueueToSync(operation: string, payload: unknown): Promise<void> {
   if (!api) return;
@@ -139,7 +139,7 @@ export async function getSyncStatus(): Promise<SyncStats> {
   return result.data ?? { pending: 0, failed: 0, synced: 0, syncing: false };
 }
 
-// ─── Événements ───────────────────────────────────────────────────────────────
+// --- Événements ---------------------------------------------------------------
 
 export function onBarcodeScan(callback: (barcode: string) => void): () => void {
   if (!api) return () => {};

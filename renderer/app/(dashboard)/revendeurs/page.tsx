@@ -102,7 +102,7 @@ export default function RevendeursPage() {
     setProducts((data ?? []) as unknown as Product[]);
   }
 
-  // ── CRUD Revendeur ─────────────────────────────────────────────────────────
+  // -- CRUD Revendeur ---------------------------------------------------------
 
   function openResellerPanel(item: Reseller | null) {
     setRForm(item
@@ -143,7 +143,7 @@ export default function RevendeursPage() {
     } catch (e) { notifError(toUserError(e)); }
   }
 
-  // ── CRUD Client ────────────────────────────────────────────────────────────
+  // -- CRUD Client ------------------------------------------------------------
 
   function openClientPanel(reseller: Reseller, item: ResellerClient | null) {
     setCForm(item ? { name: item.name, phone: item.phone ?? '', address: item.address ?? '' } : { name: '', phone: '', address: '' });
@@ -207,7 +207,7 @@ export default function RevendeursPage() {
     }
   }
 
-  // ── CRUD Offre ─────────────────────────────────────────────────────────────
+  // -- CRUD Offre -------------------------------------------------------------
 
   function openOfferPanel() {
     setOForm({ product_id: '', reseller_id: null, min_qty: '', bonus_qty: '1', label: '', is_active: true });
@@ -269,7 +269,7 @@ export default function RevendeursPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Revendeurs</h1>
@@ -306,7 +306,7 @@ export default function RevendeursPage() {
         </div>
       </div>
 
-      {/* ── Tab Revendeurs ── */}
+      {/* -- Tab Revendeurs -- */}
       {tab === 'revendeurs' && (
         <div className="flex flex-1 overflow-hidden">
 
@@ -523,7 +523,7 @@ export default function RevendeursPage() {
         </div>
       )}
 
-      {/* ── Tab Offres volume ── */}
+      {/* -- Tab Offres volume -- */}
       {tab === 'offres' && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-2xl space-y-4">
@@ -578,7 +578,7 @@ export default function RevendeursPage() {
         </div>
       )}
 
-      {/* ── Panneau : Revendeur ── */}
+      {/* -- Panneau : Revendeur -- */}
       <SideDrawer
         isOpen={!!panel && panel.type === 'reseller' && tab === 'revendeurs'}
         onClose={() => setPanel(null)}
@@ -665,7 +665,7 @@ export default function RevendeursPage() {
         </div>
       </SideDrawer>
 
-      {/* ── Panneau : Client revendeur ── */}
+      {/* -- Panneau : Client revendeur -- */}
       <SideDrawer
         isOpen={!!panel && panel.type === 'client'}
         onClose={() => setPanel(null)}
@@ -696,7 +696,7 @@ export default function RevendeursPage() {
         </div>
       </SideDrawer>
 
-      {/* ── Modal Import CSV ── */}
+      {/* -- Modal Import CSV -- */}
       {importType && (
         <ImportModal
           businessId={business?.id ?? ''}
@@ -707,7 +707,7 @@ export default function RevendeursPage() {
         />
       )}
 
-      {/* ── Panneau : Offre volume ── */}
+      {/* -- Panneau : Offre volume -- */}
       <SideDrawer
         isOpen={!!panel && panel.type === 'reseller' && panel.item === null && tab === 'offres'}
         onClose={() => setPanel(null)}

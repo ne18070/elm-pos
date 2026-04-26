@@ -168,7 +168,7 @@ export default function LivraisonPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* ── Colonne gauche : liste des commandes ── */}
+      {/* -- Colonne gauche : liste des commandes -- */}
       <div className={`flex flex-col border-r border-surface-border transition-all ${
         selected ? 'w-80 shrink-0' : 'flex-1'
       }`}>
@@ -296,7 +296,7 @@ export default function LivraisonPage() {
         </div>
       </div>
 
-      {/* ── Panneau vérification ── */}
+      {/* -- Panneau vérification -- */}
       {selected ? (
         <div className="flex-1 flex flex-col overflow-hidden">
           <OrderVerification
@@ -313,7 +313,7 @@ export default function LivraisonPage() {
         </div>
       )}
 
-      {/* ── Modal assignation livreur ── */}
+      {/* -- Modal assignation livreur -- */}
       {assigningOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">

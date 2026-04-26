@@ -22,7 +22,7 @@ import {
   type Carburant, type Transmission,
 } from '@services/supabase/voitures';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 type Tab = 'parc' | 'leads';
 
@@ -69,7 +69,7 @@ function getAppUrl() {
   return typeof window !== 'undefined' ? window.location.origin : '';
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function VoituresPage() {
   const { business }                     = useAuthStore();
@@ -422,7 +422,7 @@ export default function VoituresPage() {
   );
 }
 
-// ─── ParcTab ──────────────────────────────────────────────────────────────────
+// --- ParcTab ------------------------------------------------------------------
 
 function ParcTab({
   voitures, currency, search, onSearch, onEdit, onDelete, deletingId, onCopyOwnerReport,
@@ -547,7 +547,7 @@ function ParcTab({
   );
 }
 
-// ─── LeadsTab ─────────────────────────────────────────────────────────────────
+// --- LeadsTab -----------------------------------------------------------------
 
 function LeadsTab({
   leads, onUpdateStatut, onDelete,
@@ -628,7 +628,7 @@ function LeadsTab({
   );
 }
 
-// ─── VoitureForm ──────────────────────────────────────────────────────────────
+// --- VoitureForm --------------------------------------------------------------
 
 function VoitureForm({
   form, onChange, onImageUpload, uploading,

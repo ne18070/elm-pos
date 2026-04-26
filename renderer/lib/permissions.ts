@@ -1,6 +1,6 @@
 import type { UserRole, Business } from '@pos-types';
 
-// ─── Hiérarchie des rôles ─────────────────────────────────────────────────────
+// --- Hiérarchie des rôles -----------------------------------------------------
 // Plus le rang est élevé, plus le rôle a de permissions.
 
 const ROLE_RANK: Record<UserRole, number> = {
@@ -41,7 +41,7 @@ export function hasFeature(business: Business | null | undefined, feature: strin
   return features.includes(feature);
 }
 
-// ─── Labels lisibles ──────────────────────────────────────────────────────────
+// --- Labels lisibles ----------------------------------------------------------
 
 export const ROLE_LABEL: Record<UserRole, string> = {
   owner:   'Propriétaire',
@@ -54,7 +54,7 @@ export function getRoleLabel(role: UserRole | undefined | null): string {
   return ROLE_LABEL[role ?? 'staff'] ?? 'Caissier';
 }
 
-// ─── Permissions nommées ──────────────────────────────────────────────────────
+// --- Permissions nommées ------------------------------------------------------
 
 /** Peut voir les données financières (balance, états financiers, caisse) */
 export const canViewFinancials    = (r: UserRole | null | undefined) => hasRole(r, 'admin');
@@ -80,7 +80,7 @@ export const canManageTeam        = (r: UserRole | null | undefined) => hasRole(
 /** Peut supprimer des données critiques */
 export const canDelete            = (r: UserRole | null | undefined) => hasRole(r, 'admin');
 
-// ─── Permissions granulaires ──────────────────────────────────────────────────
+// --- Permissions granulaires --------------------------------------------------
 
 import type { PermissionKey } from './permissions-map';
 import { PERMISSIONS, IMMUTABLE_OWNER_PERMISSIONS } from './permissions-map';

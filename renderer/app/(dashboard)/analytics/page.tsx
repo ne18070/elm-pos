@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => { loadAll(); }, [business, period, loadAll]);
 
-  // ── KPIs Consolidés pour Multi-Métiers ──
+  // -- KPIs Consolidés pour Multi-Métiers --
   const getKPIs = () => {
     const totalSales = data?.total_sales ?? 0;
     const totalFees  = juridiqueData?.total_fees ?? 0;
@@ -258,7 +258,7 @@ export default function AnalyticsPage() {
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 sm:space-y-5">
 
-        {/* ── Général ── */}
+        {/* -- Général -- */}
         {tab === 'general' && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -348,7 +348,7 @@ export default function AnalyticsPage() {
           </>
         )}
 
-        {/* ── Juridique (Détails) ── */}
+        {/* -- Juridique (Détails) -- */}
         {tab === 'juridique' && isJuridique && juridiqueData && (
           <div className="space-y-5">
             <div className="card p-6">
@@ -473,7 +473,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* ── Produits ── */}
+        {/* -- Produits -- */}
         {tab === 'produits' && (
           <div className="card p-4">
             <h2 className="text-sm font-semibold text-content-secondary mb-4">Top produits</h2>
@@ -509,12 +509,12 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* ── Grossiste ── */}
+        {/* -- Grossiste -- */}
         {tab === 'grossiste' && business && (
           <GrossisteTab businessId={business.id} days={days} fmt={fmt} />
         )}
 
-        {/* ── Promos ── */}
+        {/* -- Promos -- */}
         {tab === 'promos' && (
           <div className="card p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -552,7 +552,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* ── Hôtel ── */}
+        {/* -- Hôtel -- */}
         {tab === 'hotel' && (
           <div className="space-y-5">
             {loading ? (
@@ -640,7 +640,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* ── Voitures ── */}
+        {/* -- Voitures -- */}
         {tab === 'voitures' && (
           <div className="space-y-5">
             {loading ? (

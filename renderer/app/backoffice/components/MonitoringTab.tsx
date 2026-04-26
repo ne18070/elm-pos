@@ -9,7 +9,7 @@ import { getBusinessMonitoring, updateBusinessConfig, type BusinessMonitorRow } 
 import { getAppModules, getBusinessTypesWithModules, type AppModule, type BusinessTypeWithModules } from '@services/supabase/business-config';
 import { cn } from '@/lib/utils';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function effectiveStatus(row: BusinessMonitorRow): 'active' | 'trial' | 'expired' {
   const now = new Date();
@@ -35,7 +35,7 @@ const STATUS_STYLE: Record<string, string> = {
 };
 const STATUS_LABEL: Record<string, string> = { active: 'Actif', trial: 'Essai', expired: 'Expiré' };
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
+// -- Stat card -----------------------------------------------------------------
 
 function StatCard({ icon: Icon, label, value, sub, color = 'text-content-brand' }:
   { icon: React.ElementType; label: string; value: number; sub?: string; color?: string }) {
@@ -53,7 +53,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'text-content-brand' 
   );
 }
 
-// ── Business config modal ─────────────────────────────────────────────────────
+// -- Business config modal -----------------------------------------------------
 
 function BusinessConfigModal({
   row,
@@ -192,7 +192,7 @@ function BusinessConfigModal({
   );
 }
 
-// ── Owner group ───────────────────────────────────────────────────────────────
+// -- Owner group ---------------------------------------------------------------
 
 interface OwnerGroup {
   owner_id:    string | null;
@@ -347,7 +347,7 @@ function OwnerRow({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// -- Main component ------------------------------------------------------------
 
 export function MonitoringTab() {
   const [rows, setRows]           = useState<BusinessMonitorRow[]>([]);
@@ -375,7 +375,7 @@ export function MonitoringTab() {
 
   useEffect(() => { load(); }, []);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // -- Stats -----------------------------------------------------------------
   const groups     = groupByOwner(rows);
   const active     = rows.filter((r) => effectiveStatus(r) === 'active').length;
   const trial      = rows.filter((r) => effectiveStatus(r) === 'trial').length;
@@ -391,7 +391,7 @@ export function MonitoringTab() {
   const totalProducts = rows.reduce((s, r) => s + r.products_count, 0);
   const totalOrders   = rows.reduce((s, r) => s + r.orders_total, 0);
 
-  // ── Filter groups ──────────────────────────────────────────────────────────
+  // -- Filter groups ----------------------------------------------------------
   const filteredGroups = groups.filter((g) => {
     const st = effectiveStatus(g.businesses[0]);
     if (filter === 'expiring') {

@@ -18,7 +18,7 @@ import {
   type WhatsAppConfig, type WhatsAppMessage, type WhatsAppConversation, type ConversationFilter,
 } from '@services/supabase/whatsapp';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 function dayLabel(dateStr: string): string {
   const d = new Date(dateStr);
@@ -47,7 +47,7 @@ function groupByDay(convos: WhatsAppConversation[]): { label: string; items: Wha
 
 const PAGE_SIZE = 25;
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function WhatsAppPage() {
   const { business, user } = useAuthStore();
@@ -110,7 +110,7 @@ export default function WhatsAppPage() {
     }
   }
 
-  // ── Chargement initial + refresh ───────────────────────────────────────────
+  // -- Chargement initial + refresh -------------------------------------------
   const loadConversations = useCallback(async (
     filter: ConversationFilter,
     append = false,
@@ -236,7 +236,7 @@ export default function WhatsAppPage() {
     loadConversations({ search: search || undefined, unreadOnly, page: 0, pageSize: PAGE_SIZE });
   }
 
-  // ── Conversation ───────────────────────────────────────────────────────────
+  // -- Conversation -----------------------------------------------------------
   async function openConversation(conv: WhatsAppConversation) {
     if (!business?.id) return;
     setSelected(conv);
@@ -318,7 +318,7 @@ export default function WhatsAppPage() {
     }
   }
 
-  // ── Séparateurs de date dans le fil ───────────────────────────────────────
+  // -- Séparateurs de date dans le fil ---------------------------------------
   const messageRows: ({ type: 'separator'; label: string } | { type: 'msg'; msg: WhatsAppMessage })[] = [];
   let lastDay: Date | null = null;
   for (const msg of messages) {
@@ -334,7 +334,7 @@ export default function WhatsAppPage() {
   const groupedConvos  = groupByDay(conversations);
   const activeFilters  = (search ? 1 : 0) + (unreadOnly ? 1 : 0);
 
-  // ── États de chargement / config ──────────────────────────────────────────
+  // -- États de chargement / config ------------------------------------------
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-content-secondary">
@@ -362,7 +362,7 @@ export default function WhatsAppPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* ── Liste des conversations ───────────────────────────────────────── */}
+      {/* -- Liste des conversations ----------------------------------------- */}
       <div className={`w-full md:w-80 shrink-0 border-r border-surface-border flex flex-col ${selected ? 'hidden md:flex' : 'flex'}`}>
 
         {/* Header */}
@@ -539,7 +539,7 @@ export default function WhatsAppPage() {
         </div>
       </div>
 
-      {/* ── Zone de conversation ──────────────────────────────────────────── */}
+      {/* -- Zone de conversation -------------------------------------------- */}
       <div className={`flex-1 flex flex-col min-w-0 ${!selected ? 'hidden md:flex' : 'flex'}`}>
         {!selected ? (
           <div className="flex-1 flex flex-col items-center justify-center text-content-muted gap-2">

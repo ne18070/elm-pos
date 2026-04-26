@@ -42,7 +42,7 @@ import { logAction } from '@services/supabase/logger';
 
 import type { WorkflowInstance, Workflow, WorkflowStatus } from '@pos-types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface Dossier {
   id:             string;
@@ -80,7 +80,7 @@ function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }
   );
 }
 
-// ─── Onglet Configuration ───────────────────────────────────────────────────
+// --- Onglet Configuration ---------------------------------------------------
 
 function ConfigTab({ businessId, onRefresh }: { businessId: string, onRefresh: () => void }) {
   const [category, setCategory] = useState<'type_affaire' | 'tribunal' | 'statut_dossier' | 'type_client'>('type_affaire');
@@ -198,7 +198,7 @@ function ConfigTab({ businessId, onRefresh }: { businessId: string, onRefresh: (
   );
 }
 
-// ─── Modaux ──────────────────────────────────────────────────────────────────
+// --- Modaux ------------------------------------------------------------------
 
 function QuickClientModal({ businessId, onClose, onCreated }: { businessId: string; onClose: () => void; onCreated: (c: any) => void; }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', type: 'personne_physique', identification_number: '' });
@@ -316,7 +316,7 @@ function QuickRefModal({
   );
 }
 
-// ─── Modal Dossier ───────────────────────────────────────────────────────────
+// --- Modal Dossier -----------------------------------------------------------
 
 function DossierModal({
   initial, count, businessId,
@@ -637,9 +637,9 @@ function DossierModal({
   );
 }
 
-// ─── Panneaux Processus & Fichiers ───────────────────────────────────────────
+// --- Panneaux Processus & Fichiers -------------------------------------------
 
-// ─── Panneaux Processus & Fichiers & Finances ────────────────────────────────
+// --- Panneaux Processus & Fichiers & Finances --------------------------------
 
 interface HonoraireLine {
   id:              string;
@@ -992,7 +992,7 @@ function FichiersPanel({ dossier, businessId, storageInfo, onClose, onStorageCha
   );
 }
 
-// ─── Processus Manager ───────────────────────────────────────────────────────
+// --- Processus Manager -------------------------------------------------------
 
 function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: string; isOwnerOrAdmin: boolean; userId?: string }) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -1293,7 +1293,7 @@ function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: 
   );
 }
 
-// ─── Page Principale ─────────────────────────────────────────────────────────
+// --- Page Principale ---------------------------------------------------------
 
 export default function DossiersPage() {
   const { business, user } = useAuthStore();

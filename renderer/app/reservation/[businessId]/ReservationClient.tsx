@@ -13,7 +13,7 @@ import {
 } from '@services/supabase/hotel-public';
 import { formatCurrency } from '@/lib/utils';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 const ROOM_TYPE_LABELS: Record<string, string> = {
   simple:    'Chambre Simple',
@@ -55,7 +55,7 @@ function fmtDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-// ─── Composant RoomCard ───────────────────────────────────────────────────────
+// --- Composant RoomCard -------------------------------------------------------
 
 interface RoomCardProps {
   room:     PublicRoom;
@@ -137,7 +137,7 @@ function RoomCard({ room, currency, nights, onSelect }: RoomCardProps) {
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+// --- Page principale ----------------------------------------------------------
 
 export default function ReservationPage() {
   const { businessId } = useParams<{ businessId: string }>();
@@ -246,7 +246,7 @@ export default function ReservationPage() {
   return (
     <div className="min-h-screen bg-surface pb-16">
 
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* -- Header ---------------------------------------------------------- */}
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -276,7 +276,7 @@ export default function ReservationPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
-        {/* ── Sélecteur de dates ─────────────────────────────────────────── */}
+        {/* -- Sélecteur de dates ------------------------------------------- */}
         <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-5 space-y-4">
           <h2 className="font-bold text-content-primary text-lg flex items-center gap-2">
             <Calendar className="w-5 h-5 text-brand-500" />
@@ -334,7 +334,7 @@ export default function ReservationPage() {
           </button>
         </div>
 
-        {/* ── Erreur ──────────────────────────────────────────────────────── */}
+        {/* -- Erreur -------------------------------------------------------- */}
         {loadErr && searched && (
           <div className="flex items-center gap-2 p-4 bg-badge-error border border-status-error/30 rounded-xl text-sm text-status-error">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -342,7 +342,7 @@ export default function ReservationPage() {
           </div>
         )}
 
-        {/* ── Résultats ─────────────────────────────────────────────────── */}
+        {/* -- Résultats --------------------------------------------------- */}
         {searched && !loading && (
           <>
             {/* Filtres */}
@@ -406,7 +406,7 @@ export default function ReservationPage() {
         )}
       </main>
 
-      {/* ── Modal formulaire réservation ───────────────────────────────────── */}
+      {/* -- Modal formulaire réservation ------------------------------------- */}
       {selectedRoom && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4">
           <div

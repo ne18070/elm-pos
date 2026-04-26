@@ -19,7 +19,7 @@ import {
 } from '@services/supabase/cash-sessions';
 import { logAction } from '@services/supabase/logger';
 
-// ── Report data ───────────────────────────────────────────────────────────────
+// -- Report data ---------------------------------------------------------------
 
 interface ReportData {
   type:          'X' | 'Z';
@@ -74,7 +74,7 @@ function buildReportData(
   };
 }
 
-// ── Print (new window, inline styles — works on thermal + regular printers) ──
+// -- Print (new window, inline styles — works on thermal + regular printers) --
 
 function printReport(data: ReportData) {
   const fmt  = (n: number) => formatCurrency(n, data.currency);
@@ -134,7 +134,7 @@ function printReport(data: ReportData) {
   setTimeout(() => { win.print(); win.close(); }, 300);
 }
 
-// ── ReportModal ───────────────────────────────────────────────────────────────
+// -- ReportModal ---------------------------------------------------------------
 
 function RRow({ label, value, bold = false, color }: {
   label: string; value: string; bold?: boolean; color?: string;
@@ -257,7 +257,7 @@ function ReportModal({ data, onClose }: { data: ReportData; onClose: () => void 
   );
 }
 
-// ── MetricCard ────────────────────────────────────────────────────────────────
+// -- MetricCard ----------------------------------------------------------------
 
 function MetricCard({
   label, value, icon: Icon, color = 'text-content-primary',
@@ -275,7 +275,7 @@ function MetricCard({
   );
 }
 
-// ── OpenModal ─────────────────────────────────────────────────────────────────
+// -- OpenModal -----------------------------------------------------------------
 
 function OpenModal({
   currency,
@@ -324,7 +324,7 @@ function OpenModal({
   );
 }
 
-// ── CloseModal ────────────────────────────────────────────────────────────────
+// -- CloseModal ----------------------------------------------------------------
 
 function CloseModal({
   session, summary, currency, onConfirm, onClose,
@@ -416,7 +416,7 @@ function CloseModal({
   );
 }
 
-// ── Page principale ───────────────────────────────────────────────────────────
+// -- Page principale -----------------------------------------------------------
 
 export default function CaissePage() {
   const { business, user }                      = useAuthStore();
@@ -609,7 +609,7 @@ export default function CaissePage() {
           ))}
         </div>
 
-        {/* ── Onglet Session ── */}
+        {/* -- Onglet Session -- */}
         {tab === 'session' && (
           <>
             {!session ? (
@@ -668,7 +668,7 @@ export default function CaissePage() {
           </>
         )}
 
-        {/* ── Onglet Historique ── */}
+        {/* -- Onglet Historique -- */}
         {tab === 'historique' && (
           <div className="space-y-3">
             {history.filter((s) => s.status === 'closed').length === 0 ? (

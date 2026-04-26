@@ -77,7 +77,7 @@ export const OP_CATEGORIES = [
 ] as const;
 
 export const OP_TEMPLATES: OpTemplate[] = [
-  // ── Charges ──
+  // -- Charges --
   { id: 'loyer',        label: 'Loyer',                     desc: 'Paiement du loyer du local',           icon: TrendingDown, category: 'charges',    defaultDesc: 'Loyer',                        hasPay: true,  debit: { code: '613', name: 'Loyers et charges locatives' },          credit: { code: '571', name: 'Caisse' } },
   { id: 'salaire',      label: 'Salaires',                  desc: 'Paiement des salaires du personnel',   icon: Users,        category: 'charges',    defaultDesc: 'Salaires du personnel',         hasPay: true,  debit: { code: '641', name: 'Rémunérations du personnel' },           credit: { code: '571', name: 'Caisse' } },
   { id: 'cs',           label: 'Charges sociales',          desc: 'Cotisations CNSS / sécurité sociale',  icon: Users,        category: 'charges',    defaultDesc: 'Charges sociales',              hasPay: true,  debit: { code: '646', name: 'Charges sociales' },                     credit: { code: '571', name: 'Caisse' } },
@@ -87,21 +87,21 @@ export const OP_TEMPLATES: OpTemplate[] = [
   { id: 'frais_banque', label: 'Frais bancaires',           desc: 'Commissions et agios bancaires',       icon: TrendingDown, category: 'charges',    defaultDesc: 'Frais bancaires',               hasPay: false, debit: { code: '631', name: 'Frais bancaires' },                      credit: { code: '521', name: 'Banques – comptes courants' } },
   { id: 'impots',       label: 'Impôts / Taxes',            desc: "Paiement d'impôts ou taxes",           icon: TrendingDown, category: 'charges',    defaultDesc: 'Impôts et taxes',               hasPay: true,  debit: { code: '444', name: 'État – impôts et taxes divers' },        credit: { code: '571', name: 'Caisse' } },
   { id: 'autre_charge', label: 'Autre dépense',             desc: 'Toute autre dépense courante',         icon: TrendingDown, category: 'charges',    defaultDesc: 'Autre dépense',                 hasPay: true,  debit: { code: '628', name: 'Divers services extérieurs' },           credit: { code: '571', name: 'Caisse' } },
-  // ── Trésorerie ──
+  // -- Trésorerie --
   { id: 'depot_banque',   label: 'Dépôt en banque',        desc: 'Verser des espèces à la banque',        icon: ArrowLeftRight, category: 'tresorerie', defaultDesc: 'Dépôt espèces en banque',  hasPay: false, debit: { code: '521', name: 'Banques – comptes courants' }, credit: { code: '571', name: 'Caisse' } },
   { id: 'retrait_banque', label: 'Retrait bancaire',        desc: 'Retirer des espèces de la banque',      icon: ArrowLeftRight, category: 'tresorerie', defaultDesc: 'Retrait bancaire',          hasPay: false, debit: { code: '571', name: 'Caisse' },                     credit: { code: '521', name: 'Banques – comptes courants' } },
   { id: 'depot_mobile',   label: 'Dépôt Mobile Money',     desc: 'Verser des espèces en mobile money',    icon: ArrowLeftRight, category: 'tresorerie', defaultDesc: 'Dépôt Mobile Money',        hasPay: false, debit: { code: '576', name: 'Mobile Money' },                credit: { code: '571', name: 'Caisse' } },
   { id: 'retrait_mobile', label: 'Retrait Mobile Money',   desc: 'Recevoir des espèces du mobile money',  icon: ArrowLeftRight, category: 'tresorerie', defaultDesc: 'Retrait Mobile Money',      hasPay: false, debit: { code: '571', name: 'Caisse' },                     credit: { code: '576', name: 'Mobile Money' } },
-  // ── Clients / Fournisseurs ──
+  // -- Clients / Fournisseurs --
   { id: 'paiement_fourn',    label: 'Paiement fournisseur', desc: 'Régler une facture fournisseur',     icon: Users, category: 'tiers', defaultDesc: 'Paiement fournisseur',  hasPay: true,  debit: { code: '401', name: 'Fournisseurs' },                  credit: { code: '571', name: 'Caisse' } },
   { id: 'encaissement_cli',  label: 'Encaissement client',  desc: 'Recevoir un paiement client',        icon: Users, category: 'tiers', defaultDesc: 'Encaissement client',   hasPay: false, debit: { code: '571', name: 'Caisse' },                        credit: { code: '411', name: 'Clients' } },
   { id: 'avance_fourn',      label: 'Avance fournisseur',   desc: "Verser une avance à un fournisseur", icon: Users, category: 'tiers', defaultDesc: 'Avance fournisseur',    hasPay: true,  debit: { code: '481', name: 'Fournisseurs – avances versées' }, credit: { code: '571', name: 'Caisse' } },
-  // ── Investissement ──
+  // -- Investissement --
   { id: 'achat_materiel',  label: 'Achat matériel',         desc: 'Machines, équipements…',          icon: Wrench, category: 'invest', defaultDesc: 'Achat de matériel',           hasPay: true,  debit: { code: '241', name: 'Matériel et outillage industriel' },   credit: { code: '571', name: 'Caisse' } },
   { id: 'achat_mobilier',  label: 'Mobilier / agencement',  desc: 'Tables, chaises, rayonnages…',    icon: Wrench, category: 'invest', defaultDesc: 'Achat mobilier',              hasPay: true,  debit: { code: '245', name: 'Mobilier et agencement' },             credit: { code: '571', name: 'Caisse' } },
   { id: 'achat_info',      label: 'Matériel informatique',  desc: 'Ordinateur, imprimante…',         icon: Wrench, category: 'invest', defaultDesc: 'Achat matériel informatique', hasPay: true,  debit: { code: '244', name: 'Matériel de bureau et informatique' },  credit: { code: '571', name: 'Caisse' } },
   { id: 'achat_vehicule',  label: 'Véhicule',               desc: 'Voiture, moto, camion…',          icon: Wrench, category: 'invest', defaultDesc: 'Achat véhicule',              hasPay: true,  debit: { code: '248', name: 'Matériel de transport' },              credit: { code: '571', name: 'Caisse' } },
-  // ── Capital ──
+  // -- Capital --
   { id: 'apport',   label: 'Apport en capital',     desc: 'Le propriétaire apporte des fonds', icon: Banknote, category: 'capital', defaultDesc: 'Apport en capital',     hasPay: false, debit: { code: '571', name: 'Caisse' },                      credit: { code: '101', name: 'Capital social' } },
   { id: 'emprunt',  label: "Réception d'emprunt",   desc: "Réception d'un prêt bancaire",      icon: Banknote, category: 'capital', defaultDesc: 'Emprunt bancaire',      hasPay: false, debit: { code: '521', name: 'Banques – comptes courants' },  credit: { code: '161', name: 'Emprunts' } },
   { id: 'rembours', label: 'Remboursement emprunt', desc: "Mensualité d'un emprunt",           icon: Banknote, category: 'capital', defaultDesc: 'Remboursement emprunt', hasPay: false, debit: { code: '161', name: 'Emprunts' },                    credit: { code: '521', name: 'Banques – comptes courants' } },

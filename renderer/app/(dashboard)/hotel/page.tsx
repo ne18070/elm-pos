@@ -31,7 +31,7 @@ import { GuestPanel }      from './components/GuestPanel';
 import { ReservationPanel } from './components/ReservationPanel';
 import { DetailPanel }     from './components/DetailPanel';
 
-// ─── Form shapes ──────────────────────────────────────────────────────────────
+// --- Form shapes --------------------------------------------------------------
 
 type RoomForm = {
   number: string; type: RoomType; floor: string; capacity: number;
@@ -69,7 +69,7 @@ const emptyResForm = (): ResForm => ({
 });
 const emptySvcForm = (): SvcForm => ({ label: '', amount: '', service_date: todayStr() });
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function HotelPage() {
   const { user, business } = useAuthStore();
@@ -152,7 +152,7 @@ export default function HotelPage() {
     catch (e) { notifError(toUserError(e)); }
   }
 
-  // ─── CRUD Chambre ──────────────────────────────────────────────────────────
+  // --- CRUD Chambre ----------------------------------------------------------
 
   function openRoomPanel(item: HotelRoom | null) {
     setRoomForm(item ? {
@@ -207,7 +207,7 @@ export default function HotelPage() {
     }));
   }
 
-  // ─── CRUD Client ──────────────────────────────────────────────────────────
+  // --- CRUD Client ----------------------------------------------------------
 
   function openGuestPanel(item: HotelGuest | null) {
     setGuestForm(item ? {
@@ -251,7 +251,7 @@ export default function HotelPage() {
     } catch (e) { notifError(toUserError(e)); }
   }
 
-  // ─── CRUD Réservation ─────────────────────────────────────────────────────
+  // --- CRUD Réservation -----------------------------------------------------
 
   function openReservationPanel(defaultRoomId?: string) {
     const room = defaultRoomId ? rooms.find((r) => r.id === defaultRoomId) : null;
@@ -407,7 +407,7 @@ export default function HotelPage() {
     loadServices(res.id);
   }
 
-  // ─── Données dérivées ──────────────────────────────────────────────────────
+  // --- Données dérivées ------------------------------------------------------
 
   const today = todayStr();
 
@@ -465,7 +465,7 @@ export default function HotelPage() {
     reservations.filter((r) => r.check_in === today && r.status === 'confirmed'),
   [reservations, today]);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // --- Render ---------------------------------------------------------------
 
   return (
     <div className="h-full flex flex-col relative">
@@ -697,7 +697,7 @@ export default function HotelPage() {
         );
       })()}
 
-      {/* ── Modal partage réservations en ligne ─────────────────────────────── */}
+      {/* -- Modal partage réservations en ligne ------------------------------- */}
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowShare(false)}>
           <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>

@@ -60,7 +60,7 @@ const ROLE_LEGENDS: Record<string, Record<UserRole, string>> = {
 
 type Tab = 'profil' | 'equipe' | 'permissions' | 'etablissements' | 'facturation';
 
-// ─── Aide Rôles Dynamique ──────────────────────────────────────────────────
+// --- Aide Rôles Dynamique --------------------------------------------------
 
 function RoleLegend({ businessType, allTypes }: { businessType?: string; allTypes: BusinessTypeRow[] }) {
   const type = businessType || 'retail';
@@ -151,7 +151,7 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // ── Profil ───────────────────────────────────────────────────────────────────
+  // -- Profil -------------------------------------------------------------------
   const [profileForm, setProfileForm] = useState({ full_name: user?.full_name ?? '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -211,7 +211,7 @@ export default function AdminPage() {
     }
   }
 
-  // ── Blocage + reset MDP ───────────────────────────────────────────────────────
+  // -- Blocage + reset MDP -------------------------------------------------------
   const [blockingId, setBlockingId] = useState<string | null>(null);
   const [resetTarget, setResetTarget] = useState<UserType | null>(null);
   const [resetPw, setResetPw] = useState('');
@@ -262,7 +262,7 @@ export default function AdminPage() {
     }
   }
 
-  // ── Équipe ────────────────────────────────────────────────────────────────────
+  // -- Équipe --------------------------------------------------------------------
   async function handleRoleChange(member: UserType, newRole: UserRole) {
     if (member.role === 'owner') return;
     try {
@@ -336,7 +336,7 @@ export default function AdminPage() {
 
       <div className="flex-1 overflow-y-auto p-6">
 
-        {/* ── Onglet Profil ────────────────────────────────────────────────── */}
+        {/* -- Onglet Profil -------------------------------------------------- */}
         {tab === 'profil' && (
           <div className="max-w-lg space-y-6">
             <div className="card p-5 flex items-center gap-5">
@@ -430,7 +430,7 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* ── Abonnement ─────────────────────────────────────────────────── */}
+            {/* -- Abonnement --------------------------------------------------- */}
             <div className={`card p-5 space-y-3 border-l-4
               ${subStatus === 'active'  ? 'border-l-status-success'
               : subStatus === 'trial'   ? 'border-l-status-warning'
@@ -490,7 +490,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── Onglet Équipe ─────────────────────────────────────────────────── */}
+        {/* -- Onglet Équipe --------------------------------------------------- */}
         {tab === 'equipe' && (
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-between">
@@ -636,7 +636,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── Onglet Permissions (admin only) ────────────────────────────── */}
+        {/* -- Onglet Permissions (admin only) ------------------------------ */}
         {tab === 'permissions' && business && (
           <div className="max-w-4xl">
             <PermissionsPanel
@@ -650,7 +650,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── Onglet Établissements (owner only) ────────────────────────────── */}
+        {/* -- Onglet Établissements (owner only) ------------------------------ */}
         {tab === 'etablissements' && isOwner && (
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-between">

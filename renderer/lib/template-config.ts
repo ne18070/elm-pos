@@ -1,6 +1,6 @@
 import type { Order, Business } from '../../types';
 
-// ─── Block types ──────────────────────────────────────────────────────────────
+// --- Block types --------------------------------------------------------------
 
 export type BlockType =
   | 'header'
@@ -49,7 +49,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   'custom-image': 'Image personnalisée',
 };
 
-// ─── TemplateConfig ───────────────────────────────────────────────────────────
+// --- TemplateConfig -----------------------------------------------------------
 
 export interface TemplateConfig {
   id:     string;
@@ -104,7 +104,7 @@ export interface TemplateConfig {
   copy2Color: string;
 }
 
-// ─── Default templates ────────────────────────────────────────────────────────
+// --- Default templates --------------------------------------------------------
 
 export const DEFAULT_THERMAL: TemplateConfig = {
   id: 'thermal-default',
@@ -182,7 +182,7 @@ export const DEFAULT_A4_DUPLICATE: TemplateConfig = {
 
 export const BUILTIN_TEMPLATES: TemplateConfig[] = [DEFAULT_THERMAL, DEFAULT_A4_DUPLICATE];
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
+// --- Storage helpers ----------------------------------------------------------
 
 const storageKey = (businessId: string) => `invoice_templates_${businessId}`;
 
@@ -221,7 +221,7 @@ export function createTemplate(businessId: string, base?: Partial<TemplateConfig
   return tpl;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 const _UNITS = [
   '', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf',
@@ -308,7 +308,7 @@ function fontStack(f: TemplateConfig['fontFamily']): string {
   return "'Segoe UI', Arial, sans-serif";
 }
 
-// ─── Custom block renderers ───────────────────────────────────────────────────
+// --- Custom block renderers ---------------------------------------------------
 
 function renderCustomText(block: TemplateBlock, isThermal: boolean): string {
   const align = block.textAlign ?? 'left';
@@ -333,7 +333,7 @@ function renderCustomImage(block: TemplateBlock, isThermal: boolean): string {
   </div>`;
 }
 
-// ─── Section renderers ────────────────────────────────────────────────────────
+// --- Section renderers --------------------------------------------------------
 
 type RenderCtx = {
   order:     any;
@@ -539,7 +539,7 @@ function renderFooter(ctx: RenderCtx, isThermal: boolean): string {
     ${config.footerText || biz.receipt_footer ? `<div class="footer-text" data-section="footer">${config.footerText || biz.receipt_footer}</div>` : ''}`;
 }
 
-// ─── Core body builder ────────────────────────────────────────────────────────
+// --- Core body builder --------------------------------------------------------
 
 function buildBody(
   order: any, business: any, config: TemplateConfig,
@@ -609,7 +609,7 @@ function buildBody(
     .join('\n');
 }
 
-// ─── CSS builders ─────────────────────────────────────────────────────────────
+// --- CSS builders -------------------------------------------------------------
 
 function thermalCss(config: TemplateConfig): string {
   return `
@@ -686,7 +686,7 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
   `;
 }
 
-// ─── renderTemplate ───────────────────────────────────────────────────────────
+// --- renderTemplate -----------------------------------------------------------
 
 export function renderTemplate(
   order: any, business: any, config: TemplateConfig,

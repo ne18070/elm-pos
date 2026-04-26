@@ -134,7 +134,7 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
 
         <div className="flex-1 overflow-y-auto">
 
-          {/* ── Étape 1 : Upload ── */}
+          {/* -- Étape 1 : Upload -- */}
           {step === 'upload' && (
             <div className="p-6 space-y-5">
 
@@ -196,7 +196,7 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
             </div>
           )}
 
-          {/* ── Étape 2 : Prévisualisation + résultats ── */}
+          {/* -- Étape 2 : Prévisualisation + résultats -- */}
           {(step === 'preview' || step === 'done') && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

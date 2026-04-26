@@ -81,7 +81,7 @@ export function ModulesTab() {
     })));
   }
 
-  // ── Quick toggle active ──
+  // -- Quick toggle active --
   async function toggleTypeActive(t: BusinessTypeRow) {
     await upsertBusinessType({ ...t, is_active: !t.is_active });
     setTypes((prev) => prev.map((x) => x.id === t.id ? { ...x, is_active: !x.is_active } : x));
@@ -92,7 +92,7 @@ export function ModulesTab() {
     setModules((prev) => prev.map((x) => x.id === m.id ? { ...x, is_active: !x.is_active } : x));
   }
 
-  // ── Save type ──
+  // -- Save type --
   async function saveType() {
     if (!editingType?.id || !editingType.label) return;
     setSavingType(true);
@@ -113,7 +113,7 @@ export function ModulesTab() {
     }
   }
 
-  // ── Save module ──
+  // -- Save module --
   async function saveModule() {
     if (!editingModule?.id || !editingModule.label) return;
     setSavingModule(true);
@@ -148,7 +148,7 @@ export function ModulesTab() {
         ))}
       </div>
 
-      {/* ── Types tab ── */}
+      {/* -- Types tab -- */}
       {subTab === 'types' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -263,7 +263,7 @@ export function ModulesTab() {
         </div>
       )}
 
-      {/* ── Modules tab ── */}
+      {/* -- Modules tab -- */}
       {subTab === 'modules' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -374,7 +374,7 @@ export function ModulesTab() {
         </div>
       )}
 
-      {/* ── Matrix tab ── */}
+      {/* -- Matrix tab -- */}
       {subTab === 'matrix' && (
         <div className="space-y-3">
           <div>

@@ -17,7 +17,7 @@ import type {
   NodeType, WorkflowRole, EndNode, FeeRequestNode, DelayNode as WorkflowDelayNode
 } from '@pos-types';
 
-// ── Configuration ───────────────────────────────────────────────────────────
+// -- Configuration -----------------------------------------------------------
 const EDGE_COLORS = [
   { label: 'Défaut', value: '#94a3b8' }, { label: 'Succès', value: '#10b981' },
   { label: 'Erreur', value: '#f43f5e' }, { label: 'Alerte', value: '#f59e0b' },
@@ -53,7 +53,7 @@ const NODE_CONFIG: Record<NodeType, { label: string; color: string; icon: React.
 const NODE_W = 148;
 const NODE_H = 64;
 
-// ── Helpers Formes SVG ───────────────────────────────────────────────────────
+// -- Helpers Formes SVG -------------------------------------------------------
 const SHAPE_PATHS: Record<string, string> = {
   DECISION:     `M ${NODE_W/2} 2 L ${NODE_W-2} ${NODE_H/2} L ${NODE_W/2} ${NODE_H-2} L 2 ${NODE_H/2} Z`,
   TERMINATOR:   `M 24 2 H ${NODE_W-24} A 22 22 0 0 1 ${NODE_W-24} ${NODE_H-2} H 24 A 22 22 0 0 1 24 2 Z`,
@@ -83,7 +83,7 @@ const inputStyle = "w-full bg-surface-input border border-surface-border rounded
 const labelStyle = "text-[10px] uppercase font-bold tracking-widest text-content-muted mb-1.5 block";
 const sectionStyle = "p-4 bg-surface-card border border-surface-border rounded-2xl space-y-3 shadow-sm";
 
-// ── Nœud visuel ──────────────────────────────────────────────────────────────
+// -- Nœud visuel --------------------------------------------------------------
 function CanvasNode({
   node, selected, onSelect, onMouseDown, onStartConnection, onDelete, isInitial, isPotentialTarget, isDragging
 }: {
@@ -151,7 +151,7 @@ function CanvasNode({
   );
 }
 
-// ── Panneau d'édition ────────────────────────────────────────────────────────
+// -- Panneau d'édition --------------------------------------------------------
 function NodeEditor({
   node, isInitial, outgoingEdges, staffList, onUpdate, onSetInitial, onDeleteEdge, onUpdateEdge, onClose,
 }: {
@@ -390,7 +390,7 @@ function NodeEditor({
   );
 }
 
-// ── Composant principal ───────────────────────────────────────────────────────
+// -- Composant principal -------------------------------------------------------
 export function WorkflowBuilder({
   businessId, workflowId, initialName = 'Nouveau workflow', initialDef, onSaved,
 }: {
@@ -420,7 +420,7 @@ export function WorkflowBuilder({
     getStaff(businessId).then(setStaffList).catch(console.error);
   }, [businessId]);
 
-  // ── Gestion de l'historique (Undo/Redo) ───────────────────────────────────
+  // -- Gestion de l'historique (Undo/Redo) -----------------------------------
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUpdatingFromHistory = useRef(false);
@@ -656,7 +656,7 @@ export function WorkflowBuilder({
         <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-content-primary rounded-xl flex items-center gap-2 px-6 py-2.5 text-sm font-bold shadow-lg shadow-brand-200 transition-all disabled:opacity-50 ml-auto">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}{saved ? 'Enregistré' : 'Enregistrer'}</button>
       </div>
 
-      {/* ── Bandeau d'information juridique ── */}
+      {/* -- Bandeau d'information juridique -- */}
       {workflowId && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3 shrink-0 animate-in fade-in slide-in-from-top-2">
           <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0" />
@@ -670,7 +670,7 @@ export function WorkflowBuilder({
         </div>
       )}
 
-      {/* ── Erreurs ──────────────────────────────────────────────────────── */}
+      {/* -- Erreurs -------------------------------------------------------- */}
       {errors.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-3 shrink-0">
           <AlertTriangle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />

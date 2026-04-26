@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ import {
 } from '@services/supabase/boutique';
 import { formatCurrency } from '@/lib/utils';
 
-// 笏笏笏 Types locaux 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Types locaux ----------------------------------------------------------------------------------------------------------------------------
 
 type DeliveryType   = 'pickup' | 'delivery';
 type PaymentMethod  = 'cash' | 'mobile_money' | 'lien_paiement';
@@ -23,7 +23,7 @@ interface CartEntry extends BoutiqueCartItem {
   key: string; // product_id + variant_id
 }
 
-// 笏笏笏 Helpers 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Helpers ------------------------------------------------------------------------------------------------------------------------------------
 
 function cartKey(productId: string, variantId?: string) {
   return variantId ? `${productId}:${variantId}` : productId;
@@ -33,7 +33,7 @@ function getEffectivePrice(product: BoutiqueProduct, variant?: BoutiqueVariant) 
   return product.price + (variant?.price_modifier ?? 0);
 }
 
-// 笏笏笏 Composant ProductCard 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Composant ProductCard --------------------------------------------------------------------------------------------------------
 
 interface ProductCardProps {
   product:     BoutiqueProduct;
@@ -169,28 +169,28 @@ function ProductCard({ product, currency, cartQty, onAdd, onRemove }: ProductCar
   );
 }
 
-// 笏笏笏 Page principale 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Page principale --------------------------------------------------------------------------------------------------------------------
 
 export default function BoutiquePage() {
   const { businessId } = useParams<{ businessId: string }>();
   const router = useRouter();
 
-  // 笏笏 Donnﾃｩes
+  // ---- Données
   const [info,     setInfo]     = useState<BoutiqueInfo | null>(null);
   const [products, setProducts] = useState<BoutiqueProduct[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [loadErr,  setLoadErr]  = useState<string | null>(null);
 
-  // 笏笏 UI state
+  // ---- UI state
   const [search,      setSearch]      = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showCart,    setShowCart]    = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  // 笏笏 Panier
+  // ---- Panier
   const [cart, setCart] = useState<CartEntry[]>([]);
 
-  // 笏笏 Checkout form
+  // ---- Checkout form
   const [customerName,     setCustomerName]     = useState('');
   const [customerPhone,    setCustomerPhone]    = useState('');
   const [deliveryType,     setDeliveryType]     = useState<DeliveryType>('pickup');
@@ -200,7 +200,7 @@ export default function BoutiquePage() {
   const [submitting,       setSubmitting]       = useState(false);
   const [submitError,      setSubmitError]      = useState<string | null>(null);
 
-  // 笏笏 Chargement
+  // ---- Chargement
   useEffect(() => {
     if (!businessId) return;
     (async () => {
@@ -211,14 +211,14 @@ export default function BoutiquePage() {
         setInfo(bInfo);
         setProducts(bProducts);
       } catch {
-        setLoadErr("Impossible de charger la boutique. Rﾃｩessayez.");
+        setLoadErr("Impossible de charger la boutique. Réessayez.");
       } finally {
         setLoading(false);
       }
     })();
   }, [businessId]);
 
-  // 笏笏 Catﾃｩgories disponibles
+  // ---- Catégories disponibles
   const categories = useMemo(() => {
     const seen = new Map<string, { id: string; name: string; color: string | null }>();
     products.forEach((p) => {
@@ -227,7 +227,7 @@ export default function BoutiquePage() {
     return Array.from(seen.values());
   }, [products]);
 
-  // 笏笏 Produits filtrﾃｩs
+  // ---- Produits filtrés
   const filtered = useMemo(() => {
     return products.filter((p) => {
       if (activeCategory && p.category_id !== activeCategory) return false;
@@ -240,15 +240,15 @@ export default function BoutiquePage() {
     });
   }, [products, activeCategory, search]);
 
-  // 笏笏 Totaux panier
+  // ---- Totaux panier
   const cartTotal  = cart.reduce((s, i) => s + i.price * i.quantity, 0);
   const cartCount  = cart.reduce((s, i) => s + i.quantity, 0);
 
-  // 笏笏 Actions panier
+  // ---- Actions panier
   const addToCart = useCallback((product: BoutiqueProduct, variant?: BoutiqueVariant) => {
     const key   = cartKey(product.id, variant?.id);
     const price = getEffectivePrice(product, variant);
-    const name  = variant ? `${product.name} 窶・${variant.name}` : product.name;
+    const name  = variant ? `${product.name} — ${variant.name}` : product.name;
     setCart((prev) => {
       const existing = prev.find((i) => i.key === key);
       if (existing) {
@@ -275,7 +275,7 @@ export default function BoutiquePage() {
     return cart.find((i) => i.key === key)?.quantity ?? 0;
   }
 
-  // 笏笏 Soumission commande
+  // ---- Soumission commande
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!info || cart.length === 0) return;
@@ -302,13 +302,13 @@ export default function BoutiquePage() {
       clearCart();
       router.push(`/boutique/${businessId}/confirmation/${result.payment_token}`);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Une erreur est survenue. Rﾃｩessayez.");
+      setSubmitError(err instanceof Error ? err.message : "Une erreur est survenue. Réessayez.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  // 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
   if (loading) {
     return (
@@ -338,7 +338,7 @@ export default function BoutiquePage() {
   return (
     <div className="min-h-screen bg-surface pb-32">
 
-      {/* 笏笏 Header 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
+      {/* ---- Header ------------------------------------------------------------------------------------------------------------------------ */}
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -392,7 +392,7 @@ export default function BoutiquePage() {
             />
           </div>
         </div>
-        {/* Filtre catﾃｩgories */}
+        {/* Filtre catégories */}
         {categories.length > 0 && (
           <div className="max-w-2xl mx-auto px-4 pb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
             <button
@@ -418,12 +418,12 @@ export default function BoutiquePage() {
         )}
       </header>
 
-      {/* 笏笏 Grille produits 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
+      {/* ---- Grille produits -------------------------------------------------------------------------------------------------------- */}
       <main className="max-w-2xl mx-auto px-4 py-4">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-content-secondary gap-3">
             <Package className="w-12 h-12 opacity-30" />
-            <p className="text-sm">Aucun produit trouvﾃｩ</p>
+            <p className="text-sm">Aucun produit trouvé</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -441,7 +441,7 @@ export default function BoutiquePage() {
         )}
       </main>
 
-      {/* 笏笏 Bouton panier flottant (mobile) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
+      {/* ---- Bouton panier flottant (mobile) ------------------------------------------------------------------------ */}
       {cartCount > 0 && !showCart && (
         <div className="fixed bottom-6 inset-x-0 z-30 flex justify-center px-4">
           <button
@@ -457,7 +457,7 @@ export default function BoutiquePage() {
         </div>
       )}
 
-      {/* 笏笏 Tiroir panier 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
+      {/* ---- Tiroir panier ------------------------------------------------------------------------------------------------------------ */}
       {showCart && (
         <div className="fixed inset-0 z-40 flex flex-col justify-end sm:items-center sm:justify-center bg-black/50" onClick={() => setShowCart(false)}>
           <div
@@ -543,7 +543,7 @@ export default function BoutiquePage() {
         </div>
       )}
 
-      {/* 笏笏 Modal Checkout 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
+      {/* ---- Modal Checkout ---------------------------------------------------------------------------------------------------------- */}
       {showCheckout && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4">
           <div
@@ -592,7 +592,7 @@ export default function BoutiquePage() {
                 </div>
               </section>
 
-              {/* Mode de rﾃｩcupﾃｩration */}
+              {/* Mode de récupération */}
               <section className="space-y-3">
                 <h3 className="font-semibold text-content-secondary text-sm uppercase tracking-wide">Recuperation</h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -700,7 +700,7 @@ export default function BoutiquePage() {
                 />
               </section>
 
-              {/* Rﾃｩcapitulatif */}
+              {/* Récapitulatif */}
               <section className="bg-surface-input rounded-xl p-4 space-y-2">
                 <h3 className="font-semibold text-content-secondary text-sm">Recapitulatif</h3>
                 {cart.map((item) => (
@@ -729,9 +729,9 @@ export default function BoutiquePage() {
                 className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-content-primary font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 {submitting ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> Envoi de la commande窶ｦ</>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Envoi de la commande…</>
                 ) : (
-                  `Confirmer la commande ﾂｷ ${formatCurrency(cartTotal, info.currency)}`
+                  `Confirmer la commande · ${formatCurrency(cartTotal, info.currency)}`
                 )}
               </button>
             </form>

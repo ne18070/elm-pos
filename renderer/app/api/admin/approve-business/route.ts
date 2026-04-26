@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@services/resend';
 
-// ── Auth superadmin via token Bearer ──────────────────────────────────────────
+// -- Auth superadmin via token Bearer ------------------------------------------
 async function requireSuperadmin(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return 'Token manquant';
@@ -23,7 +23,7 @@ async function requireSuperadmin(req: NextRequest): Promise<string | null> {
   return null; // OK
 }
 
-// ── POST /api/admin/approve-business ─────────────────────────────────────────
+// -- POST /api/admin/approve-business -----------------------------------------
 export async function POST(req: NextRequest) {
   const authError = await requireSuperadmin(req);
   if (authError) return NextResponse.json({ error: authError }, { status: 403 });

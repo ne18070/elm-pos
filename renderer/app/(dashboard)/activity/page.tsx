@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { hasRole } from '@/lib/permissions';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface ActivityLog {
   id: string;
@@ -31,7 +31,7 @@ interface ActivityLog {
   users?: { full_name: string } | null;
 }
 
-// ─── Config des actions ───────────────────────────────────────────────────────
+// --- Config des actions -------------------------------------------------------
 
 const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string }> = {
   'order.created':           { label: 'Commande créée',       Icon: ShoppingCart, color: 'text-status-success' },
@@ -112,7 +112,7 @@ const ACTION_FILTERS = [
   { value: 'honoraire.paid',          label: 'Honoraires encaissés' },
 ];
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function ActivityPage() {
   const { business, user } = useAuthStore();

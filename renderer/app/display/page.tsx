@@ -25,7 +25,7 @@ function fmt(amount: number, currency: string) {
   }
 }
 
-// ─── Écran inactif ────────────────────────────────────────────────────────────
+// --- Écran inactif ------------------------------------------------------------
 
 function IdleScreen({ state }: { state: DisplayState }) {
   const time = useClock();
@@ -47,7 +47,7 @@ function IdleScreen({ state }: { state: DisplayState }) {
   );
 }
 
-// ─── Écran panier ─────────────────────────────────────────────────────────────
+// --- Écran panier -------------------------------------------------------------
 
 function CartScreen({ state }: { state: DisplayState }) {
   const currency = state.currency ?? 'XOF';
@@ -109,7 +109,7 @@ function CartScreen({ state }: { state: DisplayState }) {
   );
 }
 
-// ─── Écran confirmation facture (le client valide) ────────────────────────────
+// --- Écran confirmation facture (le client valide) ----------------------------
 
 function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: () => void }) {
   const currency  = state.currency ?? 'XOF';
@@ -195,7 +195,7 @@ function ConfirmScreen({ state, onConfirm }: { state: DisplayState; onConfirm: (
   );
 }
 
-// ─── Écran paiement ───────────────────────────────────────────────────────────
+// --- Écran paiement -----------------------------------------------------------
 
 function PaymentScreen({ state }: { state: DisplayState }) {
   const currency = state.currency ?? 'XOF';
@@ -233,7 +233,7 @@ function PaymentScreen({ state }: { state: DisplayState }) {
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+// --- Page principale ----------------------------------------------------------
 
 export default function DisplayPage() {
   const [displayState, setDisplayState] = useState<DisplayState>({

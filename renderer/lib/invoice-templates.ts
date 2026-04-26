@@ -1,7 +1,7 @@
 import type { Order, Business } from '../../types';
 import type { Staff, StaffPayment, StaffAttendance } from '../../services/supabase/staff';
 
-// ─── Montant en lettres (français) ───────────────────────────────────────────
+// --- Montant en lettres (français) -------------------------------------------
 
 const _UNITS = [
   '', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf',
@@ -59,7 +59,7 @@ function amountInWords(amount: number, currency: string): string {
   return result;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// --- Helpers -----------------------------------------------------------------
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash:    'Espèces',
@@ -103,7 +103,7 @@ function paymentLines(order: Order, currency: string): string {
   ).join('');
 }
 
-// ─── Template 1 : Ticket thermique (80mm) ────────────────────────────────────
+// --- Template 1 : Ticket thermique (80mm) ------------------------------------
 
 export function generateThermalReceipt(order: Order, business: Business): string {
   const cur  = business.currency ?? 'XOF';
@@ -223,7 +223,7 @@ export function generateThermalReceipt(order: Order, business: Business): string
 </body></html>`;
 }
 
-// ─── Template 2 : A4 paysage duplicata ───────────────────────────────────────
+// --- Template 2 : A4 paysage duplicata ---------------------------------------
 
 export function generateA4DuplicateInvoice(order: Order, business: Business): string {
   const cur  = business.currency ?? 'XOF';
@@ -356,7 +356,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
       height: 190mm;
     }
 
-    /* ── Les deux colonnes ── */
+    /* -- Les deux colonnes -- */
     .copy {
       flex: 1;
       padding: 6mm 7mm;
@@ -369,7 +369,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
       border-right: 2px dashed #999;
     }
 
-    /* ── En-tête ── */
+    /* -- En-tête -- */
     .header       { display: flex; justify-content: space-between; align-items: flex-start; }
     .biz-info     { display: flex; align-items: flex-start; gap: 8px; }
     .logo         { max-width: 80px; max-height: 60px; object-fit: contain; }
@@ -380,13 +380,13 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
     .invoice-num  { font-size: 12px; font-weight: 700; color: #2d3748; }
     .invoice-detail { font-size: 9px; color: #718096; }
 
-    /* ── Client ── */
+    /* -- Client -- */
     .client-box   { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 10px; }
     .client-label { color: #718096; }
     .client-name  { font-weight: 600; margin-left: 4px; }
     .client-phone { color: #718096; margin-left: 4px; }
 
-    /* ── Table articles ── */
+    /* -- Table articles -- */
     .items-table   { width: 100%; border-collapse: collapse; font-size: 10px; }
     .items-table thead tr { background: #1e293b; }
     .th           { padding: 4px 6px; color: #94a3b8; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
@@ -399,7 +399,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
     .td-bold      { font-weight: 700; }
     .note         { font-size: 9px; color: #94a3b8; font-style: italic; }
 
-    /* ── Totaux ── */
+    /* -- Totaux -- */
     .totals       { display: flex; justify-content: flex-end; }
     .totals-table { border-collapse: collapse; min-width: 140px; }
     .totals-table td { padding: 2px 6px; font-size: 10px; }
@@ -408,13 +408,13 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
     .total-final td { padding: 5px 8px !important; }
     .payment-line td { color: #2f855a; font-size: 9px; }
 
-    /* ── Signatures ── */
+    /* -- Signatures -- */
     .signatures   { display: flex; gap: 16px; margin-top: auto; }
     .sig-box      { flex: 1; }
     .sig-label    { font-size: 9px; color: #718096; margin-bottom: 2px; }
     .sig-line     { border-bottom: 1px solid #cbd5e0; height: 16px; }
 
-    /* ── Label exemplaire ── */
+    /* -- Label exemplaire -- */
     .copy-label   {
       text-align: center; font-size: 9px; font-weight: 800;
       letter-spacing: .1em; text-transform: uppercase;
@@ -440,7 +440,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
 </body></html>`;
 }
 
-// ─── Facture hôtel ───────────────────────────────────────────────────────────
+// --- Facture hôtel -----------------------------------------------------------
 
 export interface HotelInvoiceData {
   id:              string;
@@ -650,7 +650,7 @@ ${balance <= 0 && res.paid_amount > 0 ? '<div style="text-align:right"><span cla
 </body></html>`;
 }
 
-// ─── Bulletin de paie ────────────────────────────────────────────────────────
+// --- Bulletin de paie --------------------------------------------------------
 
 export function generateStaffPayslip(
   staff: Staff,
@@ -808,7 +808,7 @@ ${payment.notes ? `
 </body></html>`;
 }
 
-// ─── Feuille de présence ─────────────────────────────────────────────────────
+// --- Feuille de présence -----------------------------------------------------
 
 export function generateStaffAttendanceSheet(
   staff: Staff,
@@ -973,7 +973,7 @@ export function generateStaffAttendanceSheet(
 </body></html>`;
 }
 
-// ─── Ouvrir et imprimer ───────────────────────────────────────────────────────
+// --- Ouvrir et imprimer -------------------------------------------------------
 
 export function printHtml(html: string): void {
   const w = window.open('', '_blank', 'width=1000,height=750');

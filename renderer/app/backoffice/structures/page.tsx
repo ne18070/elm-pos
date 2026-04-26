@@ -157,7 +157,7 @@ export default function StructuresPage() {
 
   useEffect(() => { setPage(1); }, [search]);
 
-  // ── Render Drawer Footer ──
+  // -- Render Drawer Footer --
   const renderOrgFooter = () => (
     <div className="flex gap-4">
       <button type="button" onClick={() => setOrgModal(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
@@ -387,7 +387,7 @@ export default function StructuresPage() {
         </>
       )}
 
-      {/* ── SideDrawers ── */}
+      {/* -- SideDrawers -- */}
       <SideDrawer
         isOpen={!!orgModal}
         onClose={() => setOrgModal(null)}

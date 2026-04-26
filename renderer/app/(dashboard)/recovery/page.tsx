@@ -17,7 +17,7 @@ import {
   type SnapshotMeta, type RestorableTable, type RestoreResult,
 } from '@services/supabase/snapshots';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 type SnapshotTable = RestorableTable;
 
@@ -33,7 +33,7 @@ const TYPE_CONFIG = {
   pre_restore: { label: 'Sécurité',         color: 'bg-amber-500/10 text-status-warning border-amber-500/20' },
 };
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function RecoveryPage() {
   const { business, user } = useAuthStore();
@@ -74,7 +74,7 @@ export default function RecoveryPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Create ──────────────────────────────────────────────────────────────────
+  // -- Create ------------------------------------------------------------------
   async function handleCreate() {
     if (!business?.id) return;
     setCreating(true);
@@ -91,7 +91,7 @@ export default function RecoveryPage() {
     }
   }
 
-  // ── Preview ─────────────────────────────────────────────────────────────────
+  // -- Preview -----------------------------------------------------------------
   async function handlePreview(snap: SnapshotMeta) {
     if (previewId === snap.id) { setPreviewId(null); return; }
     setPreviewId(snap.id);
@@ -110,7 +110,7 @@ export default function RecoveryPage() {
     }
   }
 
-  // ── Restore ─────────────────────────────────────────────────────────────────
+  // -- Restore -----------------------------------------------------------------
   async function handleRestore() {
     if (!restoring) return;
     setRestoreLoading(true);
@@ -128,7 +128,7 @@ export default function RecoveryPage() {
     }
   }
 
-  // ── Delete ──────────────────────────────────────────────────────────────────
+  // -- Delete ------------------------------------------------------------------
   async function handleDelete(snap: SnapshotMeta) {
     if (!confirm(`Supprimer le snapshot "${snap.label}" ? Cette action est irréversible.`)) return;
     try {
@@ -291,7 +291,7 @@ export default function RecoveryPage() {
   );
 }
 
-// ─── SnapshotCard ─────────────────────────────────────────────────────────────
+// --- SnapshotCard -------------------------------------------------------------
 
 function SnapshotCard({
   snap, isOwnerOrAdmin, isExpanded, previewLoading, previewData,
@@ -405,7 +405,7 @@ function SnapshotCard({
   );
 }
 
-// ─── RestoreModal ─────────────────────────────────────────────────────────────
+// --- RestoreModal -------------------------------------------------------------
 
 function RestoreModal({
   snap, tables, loading, result, onToggleTable, onConfirm, onClose,
@@ -525,7 +525,7 @@ function RestoreModal({
   );
 }
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+// --- Small helpers ------------------------------------------------------------
 
 function CountBadge({ icon: Icon, count, label }: { icon: React.ElementType; count: number; label: string }) {
   return (

@@ -6,7 +6,7 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 interface ImportRow {
   date:             string;
@@ -56,7 +56,7 @@ interface ImportOrdersModalProps {
   onDone:     () => void;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// --- Constants ----------------------------------------------------------------
 
 const STATUS_MAP: Record<string, 'paid' | 'pending' | 'cancelled'> = {
   paid: 'paid', payée: 'paid', payé: 'paid', confirmée: 'paid',
@@ -77,7 +77,7 @@ const TEMPLATE_CSV =
   `2024-01-15,Jean Dupont,+221771234567,Coca-Cola,1,500,,500,,paid,cash,,,\n` +
   `2024-01-16,Marie Martin,,Burger,1,3500,200,,,pending,,Diallo Distribution,Moussa Traoré,\n`;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ------------------------------------------------------------------
 
 function normalizeKey(k: string): string {
   return k.trim().toLowerCase()
@@ -203,7 +203,7 @@ function groupIntoOrders(rows: ImportRow[]): ParsedOrder[] {
   return orders;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// --- Component ----------------------------------------------------------------
 
 export function ImportOrdersModal({ businessId, userId, onClose, onDone }: ImportOrdersModalProps) {
   const fileRef = useRef<HTMLInputElement>(null);

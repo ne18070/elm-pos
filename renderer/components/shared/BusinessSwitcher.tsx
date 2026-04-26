@@ -138,7 +138,7 @@ export function BusinessSwitcher({
     <>
       <div ref={ref} className="relative">
 
-        {/* ── Bouton déclencheur ── */}
+        {/* -- Bouton déclencheur -- */}
         <button
           onClick={() => setOpen((o) => !o)}
           className={cn(
@@ -181,7 +181,7 @@ export function BusinessSwitcher({
           </div>
         </button>
 
-        {/* ── Dropdown ── */}
+        {/* -- Dropdown -- */}
         {open && (
           <div className={cn(
             "absolute left-0 top-full mt-1.5 z-50 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden w-72",

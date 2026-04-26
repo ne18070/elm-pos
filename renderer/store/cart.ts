@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { CartItem, Coupon, Product, ProductVariant } from '@pos-types';
 import { calculateDiscount } from '../../services/pricing';
 
-// ─── Commande en attente ───────────────────────────────────────────────────────
+// --- Commande en attente -------------------------------------------------------
 
 export interface HeldOrder {
   id: string;
@@ -14,14 +14,14 @@ export interface HeldOrder {
   heldAt: string;
 }
 
-// ─── Résultat d'ajout au panier ───────────────────────────────────────────────
+// --- Résultat d'ajout au panier -----------------------------------------------
 
 export interface AddItemResult {
   ok: boolean;
   reason?: string;
 }
 
-// ─── Store ────────────────────────────────────────────────────────────────────
+// --- Store --------------------------------------------------------------------
 
 interface CartState {
   items: CartItem[];
@@ -89,7 +89,7 @@ export const useCartStore = create<CartState>()(
   notes:       '',
   heldOrders:  [],
 
-  // ── Mise en attente ──────────────────────────────────────────────────────────
+  // -- Mise en attente ----------------------------------------------------------
 
   holdCurrentOrder: (label) => {
     const { items, coupons, notes } = get();
@@ -123,7 +123,7 @@ export const useCartStore = create<CartState>()(
     set((state) => ({ heldOrders: state.heldOrders.filter((h) => h.id !== id) }));
   },
 
-  // ── Ajout avec vérification stock ────────────────────────────────────────────
+  // -- Ajout avec vérification stock --------------------------------------------
 
   addItem: (product, variant) => {
     const key = itemKey(product.id, variant?.id);
@@ -205,7 +205,7 @@ export const useCartStore = create<CartState>()(
     }));
   },
 
-  // ── Changement de quantité avec vérification stock ───────────────────────────
+  // -- Changement de quantité avec vérification stock ---------------------------
 
   updateQuantity: (productId, variantId, qty) => {
     const key = itemKey(productId, variantId);
@@ -242,7 +242,7 @@ export const useCartStore = create<CartState>()(
     return { ok: true };
   },
 
-  // ── Sync stock Realtime → met à jour le produit dans les lignes du panier ───
+  // -- Sync stock Realtime → met à jour le produit dans les lignes du panier ---
 
   syncProductStock: (productId, newStock, isActive) => {
     set((state) => ({

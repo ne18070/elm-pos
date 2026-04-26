@@ -123,7 +123,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     );
   }
 
-  // ── Helpers de stock ─────────────────────────────────────────────────────────
+  // -- Helpers de stock ---------------------------------------------------------
 
   function stockState(product: Product) {
     if (!product.track_stock) return 'ok' as const;
@@ -143,7 +143,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     return null;
   }
 
-  /* ── Vue Grille ── */
+  /* -- Vue Grille -- */
   if (view === 'grid') {
     return (
       <>
@@ -231,7 +231,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     );
   }
 
-  /* ── Vue Liste ── */
+  /* -- Vue Liste -- */
   return (
     <>
     <div className="flex flex-col gap-1.5">

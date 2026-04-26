@@ -31,7 +31,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
     const printerConfigured = !!localStorage.getItem('printer_config');
     let newSteps: OnboardingStep[];
 
-    // ── Hôtel ─────────────────────────────────────────────────────────────────
+    // -- Hôtel -----------------------------------------------------------------
     if (businessType === 'hotel') {
       const [
         { count: roomCount },
@@ -83,7 +83,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         },
       ];
 
-    // ── Restaurant / Café ──────────────────────────────────────────────────────
+    // -- Restaurant / Café ------------------------------------------------------
     } else if (businessType === 'restaurant') {
       const [
         { count: catCount },
@@ -135,7 +135,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         },
       ];
 
-    // ── Cabinet Juridique ──────────────────────────────────────────────────────
+    // -- Cabinet Juridique ------------------------------------------------------
     } else if (businessType === 'juridique') {
       const [
         { count: clientCount },
@@ -180,7 +180,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         },
       ];
 
-    // ── Retail / Commerce (défaut) ─────────────────────────────────────────────
+    // -- Retail / Commerce (défaut) ---------------------------------------------
     } else {
       const [
         { count: catCount },

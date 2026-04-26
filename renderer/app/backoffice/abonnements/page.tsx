@@ -258,7 +258,7 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* ── SideDrawers ── */}
+      {/* -- SideDrawers -- */}
 
       {/* Intouch */}
       <SideDrawer

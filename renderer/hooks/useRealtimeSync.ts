@@ -9,7 +9,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
 import type { RealtimeChannel } from '@supabase/realtime-js';
 
-// ─── Typed CustomEvent helpers ────────────────────────────────────────────────
+// --- Typed CustomEvent helpers ------------------------------------------------
 //
 // These events are dispatched on `window` so any hook can listen without
 // being passed a callback.  Each event carries the minimal payload needed.
@@ -39,7 +39,7 @@ const playNotificationSound = () => {
   }
 };
 
-// ─── Master realtime hook ─────────────────────────────────────────────────────
+// --- Master realtime hook -----------------------------------------------------
 //
 // Mount this ONCE in the dashboard layout.  It creates a single multiplexed
 // Supabase Realtime channel `pos:{businessId}` that handles:
@@ -62,7 +62,7 @@ export function useRealtimeSync() {
   const prevIsTrackingRef = useRef<boolean>(false);
   const prevPathnameRef   = useRef<string>('');
 
-  // ── Channel lifecycle (recreate only when business/user changes) ────────────
+  // -- Channel lifecycle (recreate only when business/user changes) ------------
   useEffect(() => {
     if (!business?.id || !user) return;
 
@@ -75,7 +75,7 @@ export function useRealtimeSync() {
 
     channelRef.current = channel;
 
-    // ── orders ──────────────────────────────────────────────────────────────
+    // -- orders --------------------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'orders',
@@ -86,7 +86,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── products ─────────────────────────────────────────────────────────────
+    // -- products -------------------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'products',
@@ -97,7 +97,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── categories ───────────────────────────────────────────────────────────
+    // -- categories -----------------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'categories',
@@ -108,7 +108,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── coupons ──────────────────────────────────────────────────────────────
+    // -- coupons --------------------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'coupons',
@@ -119,7 +119,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── cash_sessions ────────────────────────────────────────────────────────
+    // -- cash_sessions --------------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'cash_sessions',
@@ -135,7 +135,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── contracts ────────────────────────────────────────────────────────────
+    // -- contracts ------------------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'contracts',
@@ -154,7 +154,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── whatsapp_messages ────────────────────────────────────────────────────
+    // -- whatsapp_messages ----------------------------------------------------
     channel.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'whatsapp_messages',
@@ -176,7 +176,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── businesses (features / config changée par l'admin) ───────────────────
+    // -- businesses (features / config changée par l'admin) -------------------
     channel.on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'businesses',
@@ -195,7 +195,7 @@ export function useRealtimeSync() {
       }
     );
 
-    // ── Presence ─────────────────────────────────────────────────────────────
+    // -- Presence -------------------------------------------------------------
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<{
         user_name:   string;
@@ -220,7 +220,7 @@ export function useRealtimeSync() {
       setTerminals(terminals);
     });
 
-    // ── Subscribe ─────────────────────────────────────────────────────────────
+    // -- Subscribe -------------------------------------------------------------
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setStatus('connected');
@@ -253,7 +253,7 @@ export function useRealtimeSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id, user?.id]);
 
-  // ── Update presence on route change, tracking toggle or new location ───────
+  // -- Update presence on route change, tracking toggle or new location -------
   const { isTracking, location, status } = useRealtimeStore();
 
   useEffect(() => {

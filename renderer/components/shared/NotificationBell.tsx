@@ -41,7 +41,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
 
   const alerts: Alert[] = [];
 
-  // ── Stock faible ──────────────────────────────────────────────────────────
+  // -- Stock faible ----------------------------------------------------------
   if (lowStock.length > 0) {
     alerts.push({
       id: 'low-stock',
@@ -54,7 +54,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     });
   }
 
-  // ── Abonnement ────────────────────────────────────────────────────────────
+  // -- Abonnement ------------------------------------------------------------
   const status = effectiveStatus();
   const days   = trialDaysRemaining();
 
@@ -101,7 +101,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     });
   }
 
-  // ── Caisse non clôturée (session ouverte depuis hier) ─────────────────────
+  // -- Caisse non clôturée (session ouverte depuis hier) ---------------------
   if (session?.opened_at) {
     const openedDate = new Date(session.opened_at);
     const today = new Date();

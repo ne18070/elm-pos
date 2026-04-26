@@ -34,7 +34,7 @@ const TOMORROW = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
 const DEFAULT_START_TIME = '09:00';
 const DEFAULT_END_TIME = '18:00';
 
-// ─── VehicleCard ──────────────────────────────────────────────────────────────
+// --- VehicleCard --------------------------------------------------------------
 
 function VehicleCard({
   vehicle, days, currency, onSelect,
@@ -111,7 +111,7 @@ function VehicleCard({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export function LocationPageClient() {
   const { businessId } = useParams<{ businessId: string }>();

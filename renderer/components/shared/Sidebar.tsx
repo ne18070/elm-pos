@@ -93,7 +93,7 @@ export const NAV_SECTIONS: {
 
 export const NAV_ITEMS = NAV_SECTIONS.flatMap(section => section.items);
 
-// ─── Bottom nav (mobile) ── 5 items max ───────────────────────────────────────
+// --- Bottom nav (mobile) -- 5 items max ---------------------------------------
 
 const BOTTOM_NAV = [
   { href: '/pos',     icon: ShoppingCart,  label: 'Caisse'     },
@@ -102,7 +102,7 @@ const BOTTOM_NAV = [
   { href: '/analytics',icon: BarChart2,   label: 'Stats'      },
 ] as const;
 
-// ─── Sidebar content (shared between drawer and desktop) ─────────────────────
+// --- Sidebar content (shared between drawer and desktop) ---------------------
 
 function SidebarContent({
   collapsed,
@@ -475,7 +475,7 @@ function SidebarContent({
   );
 }
 
-// ─── Mobile top bar ───────────────────────────────────────────────────────────
+// --- Mobile top bar -----------------------------------------------------------
 
 export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const { business } = useAuthStore();
@@ -498,7 +498,7 @@ export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   );
 }
 
-// ─── Mobile bottom nav ────────────────────────────────────────────────────────
+// --- Mobile bottom nav --------------------------------------------------------
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -554,7 +554,7 @@ export function MobileBottomNav() {
   );
 }
 
-// ─── Main Sidebar export ──────────────────────────────────────────────────────
+// --- Main Sidebar export ------------------------------------------------------
 
 export function Sidebar() {
   const collapsed = useSidebarStore((s) => s.collapsed);
@@ -569,7 +569,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
+      {/* -- Desktop sidebar -- */}
       <aside 
         onMouseEnter={() => collapsed && setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
@@ -584,7 +584,7 @@ export function Sidebar() {
         />
       </aside>
 
-      {/* ── Mobile drawer overlay ── */}
+      {/* -- Mobile drawer overlay -- */}
       {drawerOpen && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/60"
@@ -592,7 +592,7 @@ export function Sidebar() {
         />
       )}
 
-      {/* ── Mobile drawer ── */}
+      {/* -- Mobile drawer -- */}
       <aside className={cn(
         'theme-dark md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-card border-r border-surface-border flex flex-col',
         'transition-transform duration-250',
@@ -604,14 +604,14 @@ export function Sidebar() {
         />
       </aside>
 
-      {/* ── Expose open fn via data attr for MobileTopBar ── */}
+      {/* -- Expose open fn via data attr for MobileTopBar -- */}
       <div id="sidebar-drawer-trigger" className="hidden" data-open={String(drawerOpen)}
         onClick={() => setDrawerOpen(true)} />
     </>
   );
 }
 
-// ─── Hook to open drawer from outside ────────────────────────────────────────
+// --- Hook to open drawer from outside ----------------------------------------
 
 export function useOpenSidebar() {
   return () => {

@@ -145,7 +145,7 @@ export default function SubscribePage() {
             </div>
           </div>
         ) : step === 'info' ? (
-          /* ── Étape 1 : Informations ── */
+          /* -- Étape 1 : Informations -- */
           <div className="space-y-6">
             <div className="card p-6 space-y-4">
               <h2 className="font-bold text-content-primary text-lg">Vos informations</h2>
@@ -279,7 +279,7 @@ export default function SubscribePage() {
         ) : null /* PAYMENT STEP BYPASSED */}
 
         {false && step === 'payment' && (
-          /* ── Étape 2 : Paiement + reçu — désactivé temporairement ── */
+          /* -- Étape 2 : Paiement + reçu — désactivé temporairement -- */
           <div className="space-y-6">
             <button onClick={() => setStep('info')} className="text-sm text-content-secondary hover:text-content-primary transition-colors">
               ← Retour

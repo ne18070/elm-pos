@@ -47,7 +47,7 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-// ─── Aliases acceptés pour chaque champ ──────────────────────────────────────
+// --- Aliases acceptés pour chaque champ --------------------------------------
 
 const FIELD_ALIASES: Record<keyof Omit<ParsedRow, 'line' | 'errors'>, string[]> = {
   nom:          ['nom', 'name', 'produit', 'product', 'libelle', 'libellé', 'designation', 'désignation', 'article'],
@@ -273,7 +273,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
     >
       <div className="space-y-5">
 
-        {/* ── Instructions ── */}
+        {/* -- Instructions -- */}
         <div className="bg-badge-brand border border-brand-800 rounded-xl p-4 space-y-3">
           <h3 className="text-sm font-semibold text-content-brand flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4" />
@@ -322,7 +322,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
           </button>
         </div>
 
-        {/* ── Upload ── */}
+        {/* -- Upload -- */}
         <div>
           <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFile} />
           <button
@@ -337,7 +337,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
           </button>
         </div>
 
-        {/* ── Résultat parsing ── */}
+        {/* -- Résultat parsing -- */}
         {rows.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-4 text-sm">

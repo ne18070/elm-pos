@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { updateProduct } from '@services/supabase/products';
 import { useNotificationStore } from '@/store/notifications';
 
-// ─── Génération EAN-13 (préfixe 200 = usage interne GS1) ─────────────────────
+// --- Génération EAN-13 (préfixe 200 = usage interne GS1) ---------------------
 
 function ean13CheckDigit(digits12: string): number {
   let sum = 0;
@@ -24,7 +24,7 @@ function generateEAN13(): string {
   return base + ean13CheckDigit(base);
 }
 
-// ─── Rendu barcode dans un <svg> via JsBarcode ────────────────────────────────
+// --- Rendu barcode dans un <svg> via JsBarcode --------------------------------
 
 function BarcodeImage({ value, height = 50 }: { value: string; height?: number }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -60,7 +60,7 @@ function BarcodeImage({ value, height = 50 }: { value: string; height?: number }
   return <svg ref={svgRef} />;
 }
 
-// ─── Item de sélection ────────────────────────────────────────────────────────
+// --- Item de sélection --------------------------------------------------------
 
 interface SelectionItem {
   product:  Product;
@@ -70,7 +70,7 @@ interface SelectionItem {
   isNew:    boolean; // barcode généré localement (pas encore sauvegardé)
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// --- Props --------------------------------------------------------------------
 
 interface Props {
   products: Product[];
@@ -79,7 +79,7 @@ interface Props {
   onRefetch?: () => void;
 }
 
-// ─── Composant principal ──────────────────────────────────────────────────────
+// --- Composant principal ------------------------------------------------------
 
 export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Props) {
   const { success, error: notifError } = useNotificationStore();
@@ -121,7 +121,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
     ));
   }
 
-  // ── Sauvegarder les nouveaux codes en base ────────────────────────────────
+  // -- Sauvegarder les nouveaux codes en base --------------------------------
 
   async function saveNewBarcodes() {
     const toSave = selected.filter((i) => i.isNew);
@@ -141,7 +141,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
     }
   }
 
-  // ── Impression ─────────────────────────────────────────────────────────────
+  // -- Impression -------------------------------------------------------------
 
   const [printing, setPrinting] = useState(false);
 
@@ -209,7 +209,7 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
     }
   }
 
-  // ─── UI ────────────────────────────────────────────────────────────────────
+  // --- UI --------------------------------------------------------------------
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">

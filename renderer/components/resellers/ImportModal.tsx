@@ -5,7 +5,7 @@ import { Upload, X, Check, AlertTriangle, Download, Loader2, FileText } from 'lu
 import { createReseller, createResellerClient } from '@services/supabase/resellers';
 import type { Reseller } from '@services/supabase/resellers';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types --------------------------------------------------------------------
 
 type ImportType = 'resellers' | 'clients';
 
@@ -39,7 +39,7 @@ interface ImportModalProps {
   onDone: () => void;           // refresh parent
 }
 
-// ─── CSV helpers ─────────────────────────────────────────────────────────────
+// --- CSV helpers -------------------------------------------------------------
 
 function parseCSV(text: string): string[][] {
   return text
@@ -59,7 +59,7 @@ function downloadTemplate(type: ImportType) {
   a.click();
 }
 
-// ─── Composant ───────────────────────────────────────────────────────────────
+// --- Composant ---------------------------------------------------------------
 
 export function ImportModal({ businessId, resellers, type, onClose, onDone }: ImportModalProps) {
   const [step, setStep]         = useState<'upload' | 'preview' | 'done'>('upload');
@@ -198,7 +198,7 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
 
         <div className="flex-1 overflow-y-auto">
 
-          {/* ── Étape 1 : Upload ── */}
+          {/* -- Étape 1 : Upload -- */}
           {step === 'upload' && (
             <div className="p-6 space-y-5">
               {/* Template download */}
@@ -247,7 +247,7 @@ export function ImportModal({ businessId, resellers, type, onClose, onDone }: Im
             </div>
           )}
 
-          {/* ── Étape 2 : Prévisualisation ── */}
+          {/* -- Étape 2 : Prévisualisation -- */}
           {(step === 'preview' || step === 'done') && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

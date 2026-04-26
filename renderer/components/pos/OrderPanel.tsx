@@ -60,7 +60,7 @@ export function OrderPanel({
   const { warning } = useNotificationStore();
   const [showWholesale, setShowWholesale] = useState(false);
 
-  // ── Sélecteur client ─────────────────────────────────────────────────────────
+  // -- Sélecteur client ---------------------------------------------------------
   const [clientSearch, setClientSearch]   = useState('');
   const [clientList, setClientList]       = useState<Client[]>([]);
   const [showClientDrop, setShowClientDrop] = useState(false);
@@ -147,7 +147,7 @@ export function OrderPanel({
     return totalConsumption(item, item.quantity) > (item.product.stock ?? 0);
   }
 
-  // ── Panier vide ──────────────────────────────────────────────────────────────
+  // -- Panier vide --------------------------------------------------------------
 
   if (items.length === 0) {
     return (
@@ -177,7 +177,7 @@ export function OrderPanel({
     );
   }
 
-  // ── Panier avec articles ─────────────────────────────────────────────────────
+  // -- Panier avec articles -----------------------------------------------------
 
   const hasOverStock = items.some(overStock);
 
@@ -400,7 +400,7 @@ export function OrderPanel({
           );
         })}
 
-        {/* ── Sélecteur client ── */}
+        {/* -- Sélecteur client -- */}
         <div className="px-4 py-2 border-t border-surface-border space-y-2">
           {/* Table Selector */}
           {selectedTable ? (

@@ -117,7 +117,7 @@ export default function PosPage() {
       <OfflineBanner />
       <BarcodeListener onScan={handleBarcodeScanned} />
 
-      {/* ── Desktop layout ── */}
+      {/* -- Desktop layout -- */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Gauche : catalogue */}
         <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-border">
@@ -210,7 +210,7 @@ export default function PosPage() {
         </div>
       </div>
 
-      {/* ── Mobile layout ── */}
+      {/* -- Mobile layout -- */}
       <div className="flex md:hidden flex-col flex-1 overflow-hidden relative">
         {/* Catalogue (visible quand mobileTab === 'catalog') */}
         <div className={`flex-1 flex flex-col overflow-hidden ${mobileTab === 'catalog' ? '' : 'hidden'}`}>

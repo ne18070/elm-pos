@@ -39,7 +39,7 @@ import {
 } from '@services/supabase/leave';
 import { Palmtree, Paperclip, FileIcon, ExternalLink } from 'lucide-react';
 
-// ─── Types & constants ────────────────────────────────────────────────────────
+// --- Types & constants --------------------------------------------------------
 
 type Tab = 'employes' | 'presences' | 'paie' | 'conges';
 type StaffView = 'list' | 'offices';
@@ -72,7 +72,7 @@ import { LeaveCalendar } from '@/components/admin/LeaveCalendar';
 
 // ... (rest of imports)
 
-// ─── Leave Management Content ────────────────────────────────────────────────
+// --- Leave Management Content ------------------------------------------------
 
 function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
   const { business, user } = useAuthStore();
@@ -391,7 +391,7 @@ function LeaveManagementContent({ staffList }: { staffList: Staff[] }) {
   );
 }
 
-// ─── Sub-Modals ──────────────────────────────────────────────────────────────
+// --- Sub-Modals --------------------------------------------------------------
 
 function LeaveTypeModal({ type, businessId, onClose, onSaved }: { type: Partial<LeaveType>, businessId: string, onClose: () => void, onSaved: () => void }) {
   const [form, setForm] = useState(type);
@@ -586,7 +586,7 @@ function AdminLeaveRequestModal({ onClose, onSaved, businessId, staffList = [], 
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function StaffPage() {
   const { business } = useAuthStore();
@@ -616,7 +616,7 @@ export default function StaffPage() {
 
   const { askConfirm, ConfirmDialog } = useConfirm();
 
-  // ── Load ────────────────────────────────────────────────────────────────────
+  // -- Load --------------------------------------------------------------------
 
   async function loadStaff() {
     if (!business) return;
@@ -669,7 +669,7 @@ export default function StaffPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, business?.id]);
 
-  // ── Month nav ────────────────────────────────────────────────────────────────
+  // -- Month nav ----------------------------------------------------------------
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear((y) => y - 1); }
@@ -680,7 +680,7 @@ export default function StaffPage() {
     else setMonth((m) => m + 1);
   }
 
-  // ── Attendance ───────────────────────────────────────────────────────────────
+  // -- Attendance ---------------------------------------------------------------
 
   function getAttendanceRecord(staffId: string, day: number): StaffAttendance | undefined {
     const d = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -762,7 +762,7 @@ export default function StaffPage() {
     printHtml(html);
   }
 
-  // ── Staff actions ────────────────────────────────────────────────────────────
+  // -- Staff actions ------------------------------------------------------------
 
   async function handleDeleteStaff(s: Staff) {
     askConfirm(`Supprimer ${s.name} ? Cette action est irréversible.`, async () => {
@@ -774,7 +774,7 @@ export default function StaffPage() {
     });
   }
 
-  // ── Payroll ──────────────────────────────────────────────────────────────────
+  // -- Payroll ------------------------------------------------------------------
 
   const payrollData = useMemo(() => {
     return staffList
@@ -786,7 +786,7 @@ export default function StaffPage() {
       }));
   }, [staffList, attendance, payments, year, month]);
 
-  // ── Derived ──────────────────────────────────────────────────────────────────
+  // -- Derived ------------------------------------------------------------------
 
   const activeStaff = staffList.filter((s) => s.status === 'active');
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -808,7 +808,7 @@ export default function StaffPage() {
     return { presentDays, absentDays, halfDays, leaveDays };
   }, [attendance]);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // -- Render -------------------------------------------------------------------
 
   return (
     <div className="h-full flex flex-col bg-surface">
@@ -862,7 +862,7 @@ export default function StaffPage() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-surface">
-          {/* ─── Tab: Employés ────────────────────────────────── */}
+          {/* --- Tab: Employés ---------------------------------- */}
           {tab === 'employes' && (
             <div className="p-4 max-w-7xl mx-auto space-y-4">
               {/* Search + filter bar */}
@@ -967,7 +967,7 @@ export default function StaffPage() {
             </div>
           )}
 
-          {/* ─── Tab: Présences ───────────────────────────────── */}
+          {/* --- Tab: Présences --------------------------------- */}
           {tab === 'presences' && (
             <div className="p-4 max-w-7xl mx-auto space-y-6">
               {/* Bannière explicative sur l'automatisation */}
@@ -1104,7 +1104,7 @@ export default function StaffPage() {
             </div>
           )}
 
-          {/* ─── Tab: Paie ────────────────────────────────────── */}
+          {/* --- Tab: Paie -------------------------------------- */}
           {tab === 'paie' && (
             <div className="p-4 max-w-7xl mx-auto space-y-6 pb-20 sm:pb-4">
               <div className="flex items-center justify-between bg-surface-card px-2 py-2 rounded-xl border border-surface-border shadow-sm">
@@ -1171,14 +1171,14 @@ export default function StaffPage() {
             </div>
           )}
 
-          {/* ─── Tab: Congés ──────────────────────────────────── */}
+          {/* --- Tab: Congés ------------------------------------ */}
           {tab === 'conges' && (
             <LeaveManagementContent staffList={staffList} />
           )}
         </div>
       )}
 
-      {/* ─── Staff panel ─────────────────────────────────────── */}
+      {/* --- Staff panel --------------------------------------- */}
       {staffPanel && (
         <StaffPanel
           staff={staffPanel.item}
@@ -1197,7 +1197,7 @@ export default function StaffPage() {
         />
       )}
 
-      {/* ─── Payment modal ────────────────────────────────────── */}
+      {/* --- Payment modal -------------------------------------- */}
       {payModal && (
         <PaymentModal
           staff={payModal.staff}
@@ -1216,7 +1216,7 @@ export default function StaffPage() {
         />
       )}
 
-      {/* ─── Link account modal ───────────────────────────────── */}
+      {/* --- Link account modal --------------------------------- */}
       {linkModal && (
         <LinkAccountModal
           staff={linkModal.staff}
@@ -1240,7 +1240,7 @@ export default function StaffPage() {
   );
 }
 
-// ─── StaffCard ────────────────────────────────────────────────────────────────
+// --- StaffCard ----------------------------------------------------------------
 
 function StaffCard({
   staff: s, currency, teamMember, onEdit, onDelete, onLinkAccount, onUnlinkAccount,
@@ -1344,7 +1344,7 @@ function StaffCard({
   );
 }
 
-// ─── StaffPanel ───────────────────────────────────────────────────────────────
+// --- StaffPanel ---------------------------------------------------------------
 
 function StaffPanel({
   staff, onClose, onSaved, businessId, notifError,
@@ -1518,7 +1518,7 @@ function StaffPanel({
   );
 }
 
-// ─── PaymentModal ─────────────────────────────────────────────────────────────
+// --- PaymentModal -------------------------------------------------------------
 
 function PaymentModal({
   staff, attendance, year, month, currency, businessId, onClose, onSaved, notifError,
@@ -1668,7 +1668,7 @@ function PaymentModal({
   );
 }
 
-// ─── LinkAccountModal ─────────────────────────────────────────────────────────
+// --- LinkAccountModal ---------------------------------------------------------
 
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
@@ -1861,7 +1861,7 @@ function LinkAccountModal({
   );
 }
 
-// ─── Field helper ─────────────────────────────────────────────────────────────
+// --- Field helper -------------------------------------------------------------
 
 function Field({
   label, value, onChange, placeholder = '', type = 'text',

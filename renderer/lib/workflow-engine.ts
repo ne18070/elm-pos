@@ -1,4 +1,4 @@
-// ─── Workflow Engine v2 ───────────────────────────────────────────────────────
+// --- Workflow Engine v2 -------------------------------------------------------
 // Moteur de règles sécurisé sans eval().
 // Supporte: AND/OR/NONE imbriqués, 12 opérateurs, interpolation, WhatsApp.
 
@@ -12,7 +12,7 @@ import type {
   ActionConfig,
 } from '@pos-types';
 
-// ── Résolution dot-notation ───────────────────────────────────────────────────
+// -- Résolution dot-notation ---------------------------------------------------
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export function resolvePath(ctx: Record<string, unknown>, path: string): unknown {
@@ -25,7 +25,7 @@ export function resolvePath(ctx: Record<string, unknown>, path: string): unknown
   }, ctx);
 }
 
-// ── Évaluation d'une règle atomique ──────────────────────────────────────────
+// -- Évaluation d'une règle atomique ------------------------------------------
 function evalRule(rule: ConditionRule, ctx: Record<string, unknown>): boolean {
   const fact  = resolvePath(ctx, rule.fact);
   const { operator, value } = rule;
@@ -53,7 +53,7 @@ function evalRule(rule: ConditionRule, ctx: Record<string, unknown>): boolean {
   }
 }
 
-// ── Évaluation récursive d'un groupe ─────────────────────────────────────────
+// -- Évaluation récursive d'un groupe -----------------------------------------
 export function evaluateConditionGroup(
   group: ConditionGroup,
   ctx: Record<string, unknown>
@@ -72,7 +72,7 @@ export function evaluateConditionGroup(
   return true; // groupe vide = toujours vrai
 }
 
-// ── Edges éligibles depuis un nœud ───────────────────────────────────────────
+// -- Edges éligibles depuis un nœud -------------------------------------------
 export function getEligibleEdges(
   def: WorkflowDefinition,
   nodeId: string,
@@ -83,7 +83,7 @@ export function getEligibleEdges(
     .filter(e => !e.condition || evaluateConditionGroup(e.condition, ctx));
 }
 
-// ── Résolution auto pour nœud CONDITION ───────────────────────────────────────
+// -- Résolution auto pour nœud CONDITION ---------------------------------------
 // Retourne le premier edge éligible, ou l'edge is_default en fallback.
 export function resolveConditionEdge(
   def: WorkflowDefinition,
@@ -98,7 +98,7 @@ export function resolveConditionEdge(
   return outgoing.find(e => e.is_default) ?? null;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 export function getNode(def: WorkflowDefinition, id: string): WorkflowNode | undefined {
   return def.nodes.find(n => n.id === id);
 }
@@ -111,7 +111,7 @@ export function getOutgoingEdges(def: WorkflowDefinition, nodeId: string): Workf
   return def.edges.filter(e => e.from === nodeId);
 }
 
-// ── Interpolation de template ──────────────────────────────────────────────────
+// -- Interpolation de template --------------------------------------------------
 // Remplace {{variable}} et {{nested.key}} par les valeurs du contexte.
 // Les valeurs manquantes restent sous forme {{key}} pour débogage.
 export function interpolate(template: string, ctx: Record<string, unknown>): string {
@@ -122,14 +122,14 @@ export function interpolate(template: string, ctx: Record<string, unknown>): str
   });
 }
 
-// ── Génération lien wa.me ─────────────────────────────────────────────────────
+// -- Génération lien wa.me -----------------------------------------------------
 export function buildWhatsAppUrl(phone: string, message: string): string {
   const clean   = phone.replace(/[^\d+]/g, '');
   const encoded = encodeURIComponent(message);
   return `https://wa.me/${clean}?text=${encoded}`;
 }
 
-// ── Résolution d'une action UPDATE_CONTEXT ────────────────────────────────────
+// -- Résolution d'une action UPDATE_CONTEXT ------------------------------------
 export function applyContextUpdates(
   ctx: Record<string, unknown>,
   updates: ActionConfig['updates'] = []
@@ -142,7 +142,7 @@ export function applyContextUpdates(
   return result;
 }
 
-// ── Validation de la définition ───────────────────────────────────────────────
+// -- Validation de la définition -----------------------------------------------
 export interface ValidationError {
   nodeId?: string;
   edgeId?: string;

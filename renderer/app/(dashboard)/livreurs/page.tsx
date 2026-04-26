@@ -79,7 +79,7 @@ export default function LivreursPage() {
   return (
     <div className="h-full flex flex-col">
 
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Livreurs</h1>
@@ -95,7 +95,7 @@ export default function LivreursPage() {
         </button>
       </div>
 
-      {/* ── Corps ── */}
+      {/* -- Corps -- */}
       <div className="flex-1 overflow-y-auto p-6">
 
         {loading && (
@@ -167,7 +167,7 @@ export default function LivreursPage() {
         )}
       </div>
 
-      {/* ── Panneau latéral ── */}
+      {/* -- Panneau latéral -- */}
       <SideDrawer
         isOpen={!!panel}
         onClose={() => setPanel(null)}

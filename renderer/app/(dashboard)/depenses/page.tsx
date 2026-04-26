@@ -11,7 +11,7 @@ import { getVehicles, type RentalVehicle } from '@services/supabase/contracts';
 import { getVoitures, type Voiture } from '@services/supabase/voitures';
 import { canDelete } from '@/lib/permissions';
 
-// ─── Catégories de dépenses ───────────────────────────────────────────────────
+// --- Catégories de dépenses ---------------------------------------------------
 
 const EXPENSE_TYPES = [
   { id: 'loyer',        label: 'Loyer',                  debit: { code: '613', name: 'Loyers et charges locatives' },           credit: { code: '571', name: 'Caisse' } },
@@ -40,7 +40,7 @@ function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function DepensesPage() {
   const { business, user } = useAuthStore();
@@ -173,7 +173,7 @@ export default function DepensesPage() {
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
-        {/* ── Formulaire ── */}
+        {/* -- Formulaire -- */}
         {showForm && (
           <div className="card p-5 space-y-4 border-brand-700/50">
             <h2 className="font-semibold text-content-primary">Enregistrer une dépense</h2>
@@ -296,7 +296,7 @@ export default function DepensesPage() {
           </div>
         )}
 
-        {/* ── Liste ── */}
+        {/* -- Liste -- */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-content-primary" />

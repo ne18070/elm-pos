@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency } from '@/lib/utils';
 
@@ -28,23 +28,23 @@ import { generateContractPdf, imageUrlToDataUrl, dataUrlToBlob } from '@/lib/con
 import { getClients, type Client } from '@services/supabase/clients';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 
-// 笏笏笏 Helpers 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Helpers ------------------------------------------------------------------------------------------------------------------------------------
 
 type Tab = 'contrats' | 'vehicules' | 'modeles';
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft:    { label: 'Brouillon',  color: 'bg-slate-700 text-slate-300' },
-  sent:     { label: 'Envoyﾃｩ',     color: 'bg-badge-info text-blue-300' },
-  signed:   { label: 'Signﾃｩ',      color: 'bg-badge-success text-status-success' },
+  sent:     { label: 'Envoyé',     color: 'bg-badge-info text-blue-300' },
+  signed:   { label: 'Signé',      color: 'bg-badge-success text-status-success' },
   active:   { label: 'En cours',   color: 'bg-badge-warning text-status-warning' },
-  archived: { label: 'Archivﾃｩ',    color: 'bg-surface-card text-slate-500' },
-  cancelled:{ label: 'Annulﾃｩ',     color: 'bg-badge-error text-status-error' },
+  archived: { label: 'Archivé',    color: 'bg-surface-card text-slate-500' },
+  cancelled:{ label: 'Annulé',     color: 'bg-badge-error text-status-error' },
 };
 
 const PAYMENT_STATUS_CFG = {
-  pending: { label: 'Non payﾃｩ', color: 'bg-badge-error text-status-error'     },
+  pending: { label: 'Non payé', color: 'bg-badge-error text-status-error'     },
   partial: { label: 'Acompte',  color: 'bg-badge-warning text-status-warning' },
-  paid:    { label: 'Payﾃｩ',     color: 'bg-badge-success text-status-success' },
+  paid:    { label: 'Payé',     color: 'bg-badge-success text-status-success' },
 } as const;
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -100,52 +100,52 @@ function isClosedContract(c: Contract): boolean {
   return c.status === 'archived' || c.status === 'cancelled';
 }
 
-// 笏笏笏 Default contract template 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Default contract template ------------------------------------------------------------------------------------------------
 
 const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333;">
-  <h1 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">CONTRAT DE LOCATION DE Vﾃ羽ICULE</h1>
+  <h1 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">CONTRAT DE LOCATION DE VÉHICULE</h1>
 
-  <h2>ENTRE LES SOUSSIGNﾃ唄 :</h2>
+  <h2>ENTRE LES SOUSSIGNÉS :</h2>
 
   <p><strong>LE LOUEUR :</strong><br>
   {{business_name}}<br>
-  Reprﾃｩsentﾃｩ par : {{owner_name}}</p>
+  Représenté par : {{owner_name}}</p>
 
   <p><strong>LE LOCATAIRE :</strong><br>
-  Nom et Prﾃｩnom : {{client_name}}<br>
+  Nom et Prénom : {{client_name}}<br>
   Adresse : {{client_address}}<br>
-  Piﾃｨce d'identitﾃｩ nﾂｰ : {{client_id_number}}<br>
-  Tﾃｩlﾃｩphone : {{client_phone}}</p>
+  Pièce d'identité n° : {{client_id_number}}<br>
+  Téléphone : {{client_phone}}</p>
 
   <h2>OBJET DU CONTRAT :</h2>
 
-  <p>Le loueur met ﾃ disposition du locataire le vﾃｩhicule suivant :</p>
-  <p><strong>Vﾃｩhicule :</strong> {{vehicle_name}}<br>
+  <p>Le loueur met à disposition du locataire le véhicule suivant :</p>
+  <p><strong>Véhicule :</strong> {{vehicle_name}}<br>
   <strong>Immatriculation :</strong> {{license_plate}}</p>
 
   <h2>CONDITIONS DE LOCATION :</h2>
   <ul>
-    <li><strong>Date de prise en charge :</strong> {{start_date}} ﾃ {{start_time}}</li>
-    <li><strong>Date de restitution :</strong> {{end_date}} ﾃ {{end_time}}</li>
+    <li><strong>Date de prise en charge :</strong> {{start_date}} à {{start_time}}</li>
+    <li><strong>Date de restitution :</strong> {{end_date}} à {{end_time}}</li>
     <li><strong>Lieu de prise en charge :</strong> {{pickup_location}}</li>
     <li><strong>Lieu de restitution :</strong> {{return_location}}</li>
     <li><strong>Tarif journalier :</strong> {{price_per_day}} {{currency}}</li>
-    <li><strong>Durﾃｩe :</strong> {{duration_days}} jours</li>
+    <li><strong>Durée :</strong> {{duration_days}} jours</li>
     <li><strong>Montant total :</strong> {{total_amount}} {{currency}}</li>
     <li><strong>Caution :</strong> {{deposit_amount}} {{currency}}</li>
   </ul>
 
-  <h2>CONDITIONS Gﾃ丑ﾃ嘘ALES :</h2>
-  <p>Le locataire s'engage ﾃ :</p>
+  <h2>CONDITIONS GÉNÉRALES :</h2>
+  <p>Le locataire s'engage à :</p>
   <ul>
-    <li>Utiliser le vﾃｩhicule conformﾃｩment ﾃ sa destination</li>
-    <li>Ne pas sous-louer le vﾃｩhicule</li>
-    <li>Restituer le vﾃｩhicule dans l'ﾃｩtat oﾃｹ il l'a reﾃｧu</li>
-    <li>Signaler immﾃｩdiatement tout sinistre ou dommage</li>
+    <li>Utiliser le véhicule conformément à sa destination</li>
+    <li>Ne pas sous-louer le véhicule</li>
+    <li>Restituer le véhicule dans l'état où il l'a reçu</li>
+    <li>Signaler immédiatement tout sinistre ou dommage</li>
     <li>Respecter le code de la route</li>
   </ul>
 
-  <p>En cas de sinistre causﾃｩ par la faute du locataire, celui-ci sera tenu responsable des dommages au-delﾃ de la caution versﾃｩe.</p>
+  <p>En cas de sinistre causé par la faute du locataire, celui-ci sera tenu responsable des dommages au-delà de la caution versée.</p>
 
   <table style="width: 100%; margin-top: 60px; border-collapse: collapse;">
     <tr>
@@ -155,14 +155,14 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width:
       </td>
       <td style="width: 50%; text-align: center; vertical-align: top; padding: 10px;">
         <p style="margin: 0 0 4px 0;"><strong>Le Locataire</strong></p>
-        <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">Lu et approuvﾃｩ</p>
+        <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">Lu et approuvé</p>
         <div style="height: 80px; border-top: 1px solid #ccc; margin-top: 8px;">{{signature_block}}</div>
       </td>
     </tr>
   </table>
 </div>`;
 
-// 笏笏笏 Component: Signature Canvas 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Component: Signature Canvas --------------------------------------------------------------------------------------------
 
 function LessorSignatureCanvas({
   canvasRef, hasStrokesRef, onDrawStart
@@ -278,7 +278,7 @@ function LessorSignatureCanvas({
   );
 }
 
-// 笏笏笏 Page principale 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Page principale --------------------------------------------------------------------------------------------------------------------
 
 function InspectionSummary({
   title,
@@ -398,7 +398,7 @@ export default function ContratsPage() {
   const lessorCanvasRef   = useRef<HTMLCanvasElement>(null);
   const lessorHasStrokes  = useRef(false);
 
-  // 笏笏笏 Load 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ------ Load ----------------------------------------------------------------------------------------------------------------------------------------
 
   async function load() {
     if (!business) return;
@@ -421,16 +421,16 @@ export default function ContratsPage() {
 
   useEffect(() => { load(); }, [business?.id]);
 
-  // 笏笏笏 Realtime: notification quand un locataire signe 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ------ Realtime: notification quand un locataire signe ------------------------------------------
 
   useEffect(() => {
     if (!business?.id) return;
 
-    // Rafraﾃｮchissement gﾃｩnﾃｩral (INSERT/UPDATE sur contracts)
+    // Rafraîchissement général (INSERT/UPDATE sur contracts)
     const handleChanged = () => { load(); };
     window.addEventListener('elm-pos:contracts:changed', handleChanged);
 
-    // Notification spﾃｩciale : contrat signﾃｩ par le locataire
+    // Notification spéciale : contrat signé par le locataire
     const handleSigned = (e: Event) => {
       const record = (e as CustomEvent<{ record: Record<string, unknown> }>).detail?.record;
       const clientName = (record?.client_name as string) ?? 'le locataire';
@@ -446,12 +446,12 @@ export default function ContratsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id]);
 
-  // 笏笏笏 Contract actions 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ------ Contract actions ----------------------------------------------------------------------------------------------------------
 
   async function handleSend(c: Contract) {
     try {
       await sendContract(c.id);
-      notifSuccess('Contrat envoyﾃｩ 窶・lien de signature actif 7 jours');
+      notifSuccess('Contrat envoyé — lien de signature actif 7 jours');
       const [v, t, freshContracts] = await Promise.all([
         getVehicles(business!.id),
         getTemplates(business!.id),
@@ -472,7 +472,7 @@ export default function ContratsPage() {
   async function handleArchive(c: Contract) {
     try {
       await archiveContract(c.id);
-      notifSuccess('Contrat archivﾃｩ');
+      notifSuccess('Contrat archivé');
       load();
       if (detailContract?.id === c.id) setDetailContract(null);
     } catch (e) {
@@ -494,7 +494,7 @@ export default function ContratsPage() {
 
     try {
       await cancelContract(c.id, reason);
-      notifSuccess('Contrat annulﾃｩ');
+      notifSuccess('Contrat annulé');
       load();
       setDetailContract({
         ...c,
@@ -519,7 +519,7 @@ export default function ContratsPage() {
   }
 
   function handleWhatsApp(c: Contract) {
-    if (!c.client_phone) { notifError('Numﾃｩro de tﾃｩlﾃｩphone client manquant'); return; }
+    if (!c.client_phone) { notifError('Numéro de téléphone client manquant'); return; }
     const link = buildWhatsAppLink(c.client_phone, contractLink(c), c.client_name);
     window.open(link, '_blank');
   }
@@ -535,7 +535,7 @@ export default function ContratsPage() {
         payment_date:   paymentForm.payment_date,
         payment_method: paymentForm.payment_method,
       }, { client_name: c.client_name, total_amount: c.total_amount });
-      notifSuccess('Paiement enregistrﾃｩ et ﾃｩcriture comptable crﾃｩﾃｩe');
+      notifSuccess('Paiement enregistré et écriture comptable créée');
       load();
       setDetailContract({
         ...c,
@@ -561,7 +561,7 @@ export default function ContratsPage() {
       const updated = { ...c, documents };
       setDetailContract(updated);
       setContracts((prev) => prev.map((x) => x.id === c.id ? updated : x));
-      notifSuccess(files.length > 1 ? 'Documents ajoutﾃｩs au contrat' : 'Document ajoutﾃｩ au contrat');
+      notifSuccess(files.length > 1 ? 'Documents ajoutés au contrat' : 'Document ajouté au contrat');
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -576,7 +576,7 @@ export default function ContratsPage() {
       const url  = await uploadLessorSignature(c.id, blob);
       await saveLessorSignature(c.id, url);
 
-      // Regﾃｩnﾃｩrer le PDF avec les deux signatures
+      // Regénérer le PDF avec les deux signatures
       try {
         const clientSrc = c.signature_image
           ? await imageUrlToDataUrl(c.signature_image)
@@ -601,7 +601,7 @@ export default function ContratsPage() {
 
       setLessorSigOpen(false);
       lessorHasStrokes.current = false;
-      notifSuccess('Signature du loueur enregistrﾃｩe');
+      notifSuccess('Signature du loueur enregistrée');
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -658,7 +658,7 @@ export default function ContratsPage() {
   }
 
 
-  // 笏笏笏 Loading 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ------ Loading ----------------------------------------------------------------------------------------------------------------------------
 
   if (loading) {
     return (
@@ -668,7 +668,7 @@ export default function ContratsPage() {
     );
   }
 
-  // 笏笏笏 Detail panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ------ Detail panel ------------------------------------------------------------------------------------------------------------------------
 
   if (detailContract) {
     const c = detailContract;
@@ -707,15 +707,15 @@ export default function ContratsPage() {
             <p className="text-white font-medium">{c.client_name}</p>
             {c.client_phone && <p className="text-sm text-content-secondary">{c.client_phone}</p>}
             {c.client_email && <p className="text-sm text-content-secondary">{c.client_email}</p>}
-            {c.client_id_number && <p className="text-sm text-content-secondary">Piﾃｨce : {c.client_id_number}</p>}
+            {c.client_id_number && <p className="text-sm text-content-secondary">Pièce : {c.client_id_number}</p>}
             {c.client_address && <p className="text-sm text-content-secondary">{c.client_address}</p>}
           </div>
 
           <div className="card p-4 space-y-2">
             <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Location</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div><p className="text-slate-500">Dﾃｩpart</p><p className="text-white">{fmtDate(c.start_date)} ﾃ {fmtTime(c.start_time)}</p></div>
-              <div><p className="text-slate-500">Retour</p><p className="text-white">{fmtDate(c.end_date)} ﾃ {fmtTime(c.end_time)}</p></div>
+              <div><p className="text-slate-500">Départ</p><p className="text-white">{fmtDate(c.start_date)} à {fmtTime(c.start_time)}</p></div>
+              <div><p className="text-slate-500">Retour</p><p className="text-white">{fmtDate(c.end_date)} à {fmtTime(c.end_time)}</p></div>
               {c.pickup_location && <div><p className="text-slate-500">Lieu prise</p><p className="text-white">{c.pickup_location}</p></div>}
               {c.return_location && <div><p className="text-slate-500">Lieu retour</p><p className="text-white">{c.return_location}</p></div>}
               <div><p className="text-slate-500">Prix/jour</p><p className="text-white">{fmtMoney(c.price_per_day, c.currency)}</p></div>
@@ -826,28 +826,28 @@ export default function ContratsPage() {
             )}
           </div>
 
-          {/* 笏笏 Paiement 笏笏 */}
+          {/* ---- Paiement ---- */}
           {!isClosedContract(c) && (
             <div className="card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
-                  <Banknote className="w-4 h-4" /> Paiement encaissﾃｩ
+                  <Banknote className="w-4 h-4" /> Paiement encaissé
                 </h3>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
                   {PAYMENT_STATUS_CFG[paymentStatus(c)].label}
                 </span>
               </div>
 
-              {/* Rﾃｩsumﾃｩ si dﾃｩjﾃ payﾃｩ */}
+              {/* Résumé si déjà payé */}
               {c.amount_paid != null && c.amount_paid > 0 && (
                 <div className="bg-surface-input rounded-xl p-3 text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-content-secondary">Montant encaissﾃｩ</span>
+                    <span className="text-content-secondary">Montant encaissé</span>
                     <span className="text-status-success font-semibold">{fmtMoney(c.amount_paid, c.currency)}</span>
                   </div>
                   {c.total_amount != null && c.amount_paid < c.total_amount && (
                     <div className="flex justify-between">
-                      <span className="text-content-secondary">Reste dﾃｻ</span>
+                      <span className="text-content-secondary">Reste dû</span>
                       <span className="text-status-warning font-semibold">{fmtMoney(c.total_amount - c.amount_paid, c.currency)}</span>
                     </div>
                   )}
@@ -859,7 +859,7 @@ export default function ContratsPage() {
                   )}
                   {c.payment_method && (
                     <div className="flex justify-between">
-                      <span className="text-content-secondary">Mﾃｩthode</span>
+                      <span className="text-content-secondary">Méthode</span>
                       <span className="text-slate-300">{PAYMENT_METHOD_LABELS[c.payment_method]}</span>
                     </div>
                   )}
@@ -870,7 +870,7 @@ export default function ContratsPage() {
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="label text-xs">Montant encaissﾃｩ</label>
+                    <label className="label text-xs">Montant encaissé</label>
                     <input
                       type="number"
                       className="input text-sm h-9"
@@ -890,7 +890,7 @@ export default function ContratsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="label text-xs">Mﾃｩthode de paiement</label>
+                  <label className="label text-xs">Méthode de paiement</label>
                   <select
                     className="input text-sm h-10"
                     value={paymentForm.payment_method}
@@ -908,12 +908,12 @@ export default function ContratsPage() {
                 >
                   {savingPayment
                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <><Banknote className="w-4 h-4" />{c.amount_paid ? 'Mettre ﾃ jour le paiement' : 'Enregistrer le paiement'}</>}
+                    : <><Banknote className="w-4 h-4" />{c.amount_paid ? 'Mettre à jour le paiement' : 'Enregistrer le paiement'}</>}
                 </button>
                 {c.amount_paid != null && c.amount_paid > 0 && (
                   <p className="text-[11px] text-slate-500 text-center flex items-center justify-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    Une ﾃｩcriture comptable est automatiquement crﾃｩﾃｩe / mise ﾃ jour
+                    Une écriture comptable est automatiquement créée / mise à jour
                   </p>
                 )}
               </div>
@@ -923,7 +923,7 @@ export default function ContratsPage() {
           {c.status === 'cancelled' && (
             <div className="card p-4 space-y-2 border-status-error/40">
               <h3 className="text-xs font-semibold text-status-error uppercase tracking-wider flex items-center gap-2">
-                <XCircle className="w-4 h-4" /> Contrat annulﾃｩ
+                <XCircle className="w-4 h-4" /> Contrat annulé
               </h3>
               {c.cancelled_at && <p className="text-sm text-content-secondary">Le {fmtDate(c.cancelled_at)}</p>}
               {c.cancellation_reason && (
@@ -932,11 +932,11 @@ export default function ContratsPage() {
             </div>
           )}
 
-          {/* 笏笏 Contrat signﾃｩ : lecture seule 笏笏 */}
+          {/* ---- Contrat signé : lecture seule ---- */}
           {c.status === 'signed' && (
             <div className="card p-4 space-y-3">
               <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-status-success" /> Signﾃｩ
+                <CheckCircle className="w-4 h-4 text-status-success" /> Signé
               </h3>
               {c.signed_at && <p className="text-sm text-content-secondary">Le {fmtDate(c.signed_at)}</p>}
               <div className="grid grid-cols-2 gap-3">
@@ -944,25 +944,25 @@ export default function ContratsPage() {
                   <p className="text-xs text-slate-500 mb-2">Loueur</p>
                   {c.lessor_signature_image
                     ? <img src={c.lessor_signature_image} alt="signature loueur" className="h-14 bg-white rounded-xl p-2 object-contain mx-auto" />
-                    : <p className="text-xs text-slate-600 italic">Non signﾃｩ</p>}
+                    : <p className="text-xs text-slate-600 italic">Non signé</p>}
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-slate-500 mb-2">Locataire</p>
                   {c.signature_image
                     ? <img src={c.signature_image} alt="signature locataire" className="h-14 bg-white rounded-xl p-2 object-contain mx-auto" />
-                    : <p className="text-xs text-slate-600 italic">Non signﾃｩ</p>}
+                    : <p className="text-xs text-slate-600 italic">Non signé</p>}
                 </div>
               </div>
               {c.pdf_url && (
                 <a href={c.pdf_url} target="_blank" rel="noreferrer"
                    className="btn-secondary text-sm flex items-center gap-2 w-full justify-center">
-                  <Download className="w-4 h-4" /> Tﾃｩlﾃｩcharger PDF
+                  <Download className="w-4 h-4" /> Télécharger PDF
                 </a>
               )}
             </div>
           )}
 
-          {/* 笏笏 Signature du loueur + envoi (draft) 笏笏 */}
+          {/* ---- Signature du loueur + envoi (draft) ---- */}
           {c.status === 'draft' && (
             <div className="card p-4 space-y-4">
               <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
@@ -1055,7 +1055,7 @@ export default function ContratsPage() {
             </div>
           )}
 
-          {/* 笏笏 Lien actif (sent) 笏笏 */}
+          {/* ---- Lien actif (sent) ---- */}
           {c.status === 'sent' && (
             <div className="card p-4 space-y-3">
               <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Lien de signature</h3>
@@ -1069,7 +1069,7 @@ export default function ContratsPage() {
                 <button onClick={() => handleWhatsApp(c)} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm h-10">
                   <Share2 className="w-4 h-4" /> WhatsApp
                 </button>
-                <button onClick={() => handleSend(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-3" title="Regﾃｩnﾃｩrer le lien (nouveau token, 7 jours)">
+                <button onClick={() => handleSend(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-3" title="Regénérer le lien (nouveau token, 7 jours)">
                   <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
@@ -1107,7 +1107,7 @@ export default function ContratsPage() {
         )}
       </div>
 
-      {/* Overlay d'ﾃｩdition 窶・doit ﾃｪtre dans ce return pour ﾃｪtre au-dessus du detail */}
+      {/* Overlay d'édition — doit être dans ce return pour être au-dessus du detail */}
       {showContractPanel && (
         <ContractPanel
           vehicles={vehicles}
@@ -1133,7 +1133,7 @@ export default function ContratsPage() {
     );
   }
 
-  // 笏笏笏 Main view 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+  // ------ Main view --------------------------------------------------------------------------------------------------------------------------------
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -1145,7 +1145,7 @@ export default function ContratsPage() {
           <button
             onClick={() => setShowShare(true)}
             className="btn-secondary flex items-center gap-2 text-sm h-9 px-3"
-            title="Partager le catalogue vﾃｩhicules"
+            title="Partager le catalogue véhicules"
           >
             <Share2 className="w-4 h-4" />
             <span className="hidden sm:inline">Partager</span>
@@ -1161,7 +1161,7 @@ export default function ContratsPage() {
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">
-            {tab === 'vehicules' ? 'Vﾃｩhicule' : tab === 'modeles' ? 'Modﾃｨle' : 'Contrat'}
+            {tab === 'vehicules' ? 'Véhicule' : tab === 'modeles' ? 'Modèle' : 'Contrat'}
           </span>
         </button>
       </div>
@@ -1170,8 +1170,8 @@ export default function ContratsPage() {
       <div className="flex gap-1 px-4 pt-3 pb-0 shrink-0">
         {([
           { key: 'contrats',  label: 'Contrats',  icon: FileText },
-          { key: 'vehicules', label: 'Vﾃｩhicules',  icon: Car },
-          { key: 'modeles',   label: 'Modﾃｨles',    icon: FileSignature },
+          { key: 'vehicules', label: 'Véhicules',  icon: Car },
+          { key: 'modeles',   label: 'Modèles',    icon: FileSignature },
         ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -1190,13 +1190,13 @@ export default function ContratsPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto bg-surface-card border border-surface-border rounded-b-xl mx-4 mb-4">
 
-        {/* 笏笏 Contrats tab 笏笏 */}
+        {/* ---- Contrats tab ---- */}
         {tab === 'contrats' && (
           <div className="divide-y divide-surface-border">
             {contracts.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
                 <FileText className="w-10 h-10" />
-                <p className="text-sm">Aucun contrat 窶・crﾃｩez-en un</p>
+                <p className="text-sm">Aucun contrat — créez-en un</p>
               </div>
             )}
             {contracts.map((c) => {
@@ -1220,7 +1220,7 @@ export default function ContratsPage() {
                     <p className="text-sm font-medium text-white truncate">{c.client_name}</p>
                     <p className="text-xs text-content-secondary truncate">
                       {(c as Contract & { rental_vehicles?: { name: string; license_plate: string | null } }).rental_vehicles?.name ?? '-'} 
-                      {' ﾂｷ '}{fmtDate(c.start_date)} {fmtTime(c.start_time)} 竊・{fmtDate(c.end_date)} {fmtTime(c.end_time)}
+                      {' · '}{fmtDate(c.start_date)} {fmtTime(c.start_time)} 竊・{fmtDate(c.end_date)} {fmtTime(c.end_time)}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1238,17 +1238,17 @@ export default function ContratsPage() {
           </div>
         )}
 
-        {/* 笏笏 Vﾃｩhicules tab 笏笏 */}
+        {/* ---- Véhicules tab ---- */}
         {tab === 'vehicules' && (
           <div className="divide-y divide-surface-border">
             {vehicles.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
                 <Car className="w-10 h-10" />
-                <p className="text-sm">Aucun vﾃｩhicule enregistrﾃｩ</p>
+                <p className="text-sm">Aucun véhicule enregistré</p>
               </div>
             )}
             {vehicles.map((v) => {
-              // Contrats actifs liﾃｩs ﾃ ce vﾃｩhicule
+              // Contrats actifs liés à ce véhicule
               const activeContracts = contracts.filter(
                 (c) => c.vehicle_id === v.id && (c.status === 'sent' || c.status === 'signed' || c.status === 'active')
               );
@@ -1263,16 +1263,16 @@ export default function ContratsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{v.name}</p>
                   <p className="text-xs text-content-secondary truncate">
-                    {[v.brand, v.model, v.year].filter(Boolean).join(' ﾂｷ ')}
-                    {v.license_plate ? ` 窶・${v.license_plate}` : ''}
+                    {[v.brand, v.model, v.year].filter(Boolean).join(' · ')}
+                    {v.license_plate ? ` — ${v.license_plate}` : ''}
                   </p>
                   <p className="text-xs text-content-brand mt-0.5">
                     {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/jour
-                    {v.price_per_hour ? ` ﾂｷ ${v.price_per_hour.toLocaleString('fr-FR')}/h` : ''}
+                    {v.price_per_hour ? ` · ${v.price_per_hour.toLocaleString('fr-FR')}/h` : ''}
                   </p>
                   {v.owner_type === 'third_party' && (
                     <p className="text-[10px] text-status-warning mt-0.5">
-                      Mandat: {v.owner_name ?? 'propriﾃｩtaire tiers'} ﾂｷ commission {v.commission_type === 'percent' ? `${v.commission_value}%` : `${v.commission_value.toLocaleString('fr-FR')} ${displayCurrency(v.currency)}`}
+                      Mandat: {v.owner_name ?? 'propriétaire tiers'} · commission {v.commission_type === 'percent' ? `${v.commission_value}%` : `${v.commission_value.toLocaleString('fr-FR')} ${displayCurrency(v.currency)}`}
                     </p>
                   )}
                   {activeContracts.length > 0 && (
@@ -1281,7 +1281,7 @@ export default function ContratsPage() {
                       className="mt-1 text-[10px] text-status-warning hover:text-status-warning flex items-center gap-1"
                     >
                       <FileText className="w-3 h-3" />
-                      {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''} actif{activeContracts.length > 1 ? 's' : ''} 窶・{activeContracts[0].client_name}
+                      {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''} actif{activeContracts.length > 1 ? 's' : ''} — {activeContracts[0].client_name}
                     </button>
                   )}
                 </div>
@@ -1325,13 +1325,13 @@ export default function ContratsPage() {
           </div>
         )}
 
-        {/* 笏笏 Modﾃｨles tab 笏笏 */}
+        {/* ---- Modèles tab ---- */}
         {tab === 'modeles' && (
           <div className="divide-y divide-surface-border">
             {templates.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
                 <FileSignature className="w-10 h-10" />
-                <p className="text-sm">Aucun modﾃｨle de contrat</p>
+                <p className="text-sm">Aucun modèle de contrat</p>
               </div>
             )}
             {templates.map((t) => (
@@ -1339,7 +1339,7 @@ export default function ContratsPage() {
                 <FileText className="w-5 h-5 text-slate-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white">{t.name}</p>
-                  <p className="text-xs text-slate-500">Modifiﾃｩ le {fmtDate(t.updated_at)}</p>
+                  <p className="text-xs text-slate-500">Modifié le {fmtDate(t.updated_at)}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
@@ -1350,7 +1350,7 @@ export default function ContratsPage() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!confirm('Supprimer ce modﾃｨle ?')) return;
+                      if (!confirm('Supprimer ce modèle ?')) return;
                       try { await deleteTemplate(t.id); load(); } catch (e) { notifError(toUserError(e)); }
                     }}
                     className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
@@ -1364,7 +1364,7 @@ export default function ContratsPage() {
         )}
       </div>
 
-      {/* 笏笏 Panels 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
+      {/* ---- Panels ------------------------------------------------------------------------------------------------------------------------------ */}
       {showVehiclePanel && (
         <VehiclePanel
           vehicle={editVehicle}
@@ -1422,7 +1422,7 @@ export default function ContratsPage() {
               </button>
             </div>
             <p className="text-sm text-content-secondary">
-              Partagez ce lien avec vos clients pour qu'ils puissent voir vos vﾃｩhicules disponibles et faire une demande de location.
+              Partagez ce lien avec vos clients pour qu'ils puissent voir vos véhicules disponibles et faire une demande de location.
             </p>
             <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2.5">
               <p className="flex-1 text-xs text-slate-300 truncate font-mono">
@@ -1445,10 +1445,10 @@ export default function ContratsPage() {
                 target="_blank" rel="noopener noreferrer"
                 className="btn-secondary flex items-center justify-center gap-2 text-sm h-10"
               >
-                <ExternalLink className="w-4 h-4" /> Aperﾃｧu
+                <ExternalLink className="w-4 h-4" /> Aperçu
               </a>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Rﾃｩservez votre vﾃｩhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(`Réservez votre véhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="btn-primary flex items-center justify-center gap-2 text-sm h-10"
               >
@@ -1462,7 +1462,7 @@ export default function ContratsPage() {
   );
 }
 
-// 笏笏笏 Vehicle Panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Vehicle Panel ------------------------------------------------------------------------------------------------------------------------
 
 function VehiclePanel({
   vehicle, businessId, currency, onClose, onSaved, notifError, notifSuccess,
@@ -1502,7 +1502,7 @@ function VehiclePanel({
   function set(k: string, v: string | boolean) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function save() {
-    if (!form.name.trim()) { notifError('Nom du vﾃｩhicule requis'); return; }
+    if (!form.name.trim()) { notifError('Nom du véhicule requis'); return; }
     setSaving(true);
     try {
       let imageUrl = vehicle?.image_url ?? null;
@@ -1531,10 +1531,10 @@ function VehiclePanel({
       };
       if (vehicle) {
         await updateVehicle(vehicle.id, payload);
-        notifSuccess('Vﾃｩhicule mis ﾃ jour');
+        notifSuccess('Véhicule mis à jour');
       } else {
         await createVehicle(businessId, payload);
-        notifSuccess('Vﾃｩhicule ajoutﾃｩ');
+        notifSuccess('Véhicule ajouté');
       }
       onSaved();
     } catch (e) {
@@ -1545,7 +1545,7 @@ function VehiclePanel({
   }
 
   return (
-    <SlidePanel title={vehicle ? 'Modifier le vﾃｩhicule' : 'Nouveau vﾃｩhicule'} onClose={onClose}>
+    <SlidePanel title={vehicle ? 'Modifier le véhicule' : 'Nouveau véhicule'} onClose={onClose}>
       <div className="space-y-4">
         {/* Image */}
         <label className="block cursor-pointer">
@@ -1574,8 +1574,8 @@ function VehiclePanel({
         <Field label="Nom *" value={form.name} onChange={(v) => set('name', v)} placeholder="Toyota Corolla" />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Marque" value={form.brand} onChange={(v) => set('brand', v)} placeholder="Toyota" />
-          <Field label="Modﾃｨle" value={form.model} onChange={(v) => set('model', v)} placeholder="Corolla" />
-          <Field label="Annﾃｩe" value={form.year} onChange={(v) => set('year', v)} placeholder="2022" type="number" />
+          <Field label="Modèle" value={form.model} onChange={(v) => set('model', v)} placeholder="Corolla" />
+          <Field label="Année" value={form.year} onChange={(v) => set('year', v)} placeholder="2022" type="number" />
           <Field label="Couleur" value={form.color} onChange={(v) => set('color', v)} placeholder="Blanc" />
         </div>
         <Field label="Immatriculation" value={form.license_plate} onChange={(v) => set('license_plate', v)} placeholder="AB-123-CD" />
@@ -1597,23 +1597,23 @@ function VehiclePanel({
         <div>
           <label className="text-xs text-content-secondary block mb-1">Description</label>
           <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
-            rows={2} className="input w-full text-sm resize-none" placeholder="Climatisﾃｩ, GPS窶ｦ" />
+            rows={2} className="input w-full text-sm resize-none" placeholder="Climatisé, GPS…" />
         </div>
         <div className="pt-3 border-t border-surface-border space-y-3">
-          <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Propriﾃｩtﾃｩ & commission</p>
+          <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Propriété & commission</p>
           <div>
-            <label className="text-xs text-content-secondary block mb-1">Propriﾃｩtaire du vﾃｩhicule</label>
+            <label className="text-xs text-content-secondary block mb-1">Propriétaire du véhicule</label>
             <select value={form.owner_type as string} onChange={(e) => set('owner_type', e.target.value)}
               className="input w-full text-sm">
-              <option value="owned">Vﾃｩhicule propre ﾃ l'entreprise</option>
-              <option value="third_party">Vﾃｩhicule confiﾃｩ par un tiers</option>
+              <option value="owned">Véhicule propre à l'entreprise</option>
+              <option value="third_party">Véhicule confié par un tiers</option>
             </select>
           </div>
           {form.owner_type === 'third_party' && (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Nom propriﾃｩtaire" value={form.owner_name as string} onChange={(v) => set('owner_name', v)} />
-                <Field label="Tﾃｩlﾃｩphone propriﾃｩtaire" value={form.owner_phone as string} onChange={(v) => set('owner_phone', v)} />
+                <Field label="Nom propriétaire" value={form.owner_name as string} onChange={(v) => set('owner_name', v)} />
+                <Field label="Téléphone propriétaire" value={form.owner_phone as string} onChange={(v) => set('owner_phone', v)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1638,7 +1638,7 @@ function VehiclePanel({
           <input type="checkbox" checked={form.is_available}
             onChange={(e) => set('is_available', e.target.checked)}
             className="rounded border-surface-border" />
-          <span className="text-sm text-slate-300">Disponible ﾃ la location</span>
+          <span className="text-sm text-slate-300">Disponible à la location</span>
         </label>
       </div>
 
@@ -1646,34 +1646,34 @@ function VehiclePanel({
         <button onClick={onClose} className="btn-secondary flex-1 h-10 text-sm">Annuler</button>
         <button onClick={save} disabled={saving} className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-2">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {vehicle ? 'Mettre ﾃ jour' : 'Ajouter'}
+          {vehicle ? 'Mettre à jour' : 'Ajouter'}
         </button>
       </div>
     </SlidePanel>
   );
 }
 
-// 笏笏笏 Template Panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Template Panel ----------------------------------------------------------------------------------------------------------------------
 
 const VARIABLES = [
   { key: 'client_name',      label: 'Nom client' },
-  { key: 'client_phone',     label: 'Tﾃｩl client' },
-  { key: 'client_id_number', label: 'Piﾃｨce identitﾃｩ' },
+  { key: 'client_phone',     label: 'Tél client' },
+  { key: 'client_id_number', label: 'Pièce identité' },
   { key: 'client_address',   label: 'Adresse client' },
-  { key: 'vehicle_name',     label: 'Vﾃｩhicule' },
+  { key: 'vehicle_name',     label: 'Véhicule' },
   { key: 'license_plate',    label: 'Immatriculation' },
-  { key: 'start_date',       label: 'Date dﾃｩpart' },
-  { key: 'start_time',       label: 'Heure dﾃｩpart' },
+  { key: 'start_date',       label: 'Date départ' },
+  { key: 'start_time',       label: 'Heure départ' },
   { key: 'end_date',         label: 'Date retour' },
   { key: 'end_time',         label: 'Heure retour' },
-  { key: 'duration_days',    label: 'Durﾃｩe (jours)' },
+  { key: 'duration_days',    label: 'Durée (jours)' },
   { key: 'pickup_location',  label: 'Lieu prise' },
   { key: 'return_location',  label: 'Lieu retour' },
   { key: 'price_per_day',    label: 'Prix/jour' },
   { key: 'total_amount',     label: 'Total' },
   { key: 'deposit_amount',   label: 'Caution' },
   { key: 'currency',         label: 'Devise' },
-  { key: 'business_name',    label: 'ﾃ液ablissement' },
+  { key: 'business_name',    label: 'Établissement' },
 ];
 
 function TemplatePanel({
@@ -1691,7 +1691,7 @@ function TemplatePanel({
   const [preview, setPreview] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Initialise le contenu de l'ﾃｩditeur
+  // Initialise le contenu de l'éditeur
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = template?.body ?? DEFAULT_TEMPLATE;
@@ -1761,16 +1761,16 @@ function TemplatePanel({
 
   async function save() {
     const body = getBody();
-    if (!name.trim()) { notifError('Nom du modﾃｨle requis'); return; }
-    if (!body.trim()) { notifError('Contenu du modﾃｨle requis'); return; }
+    if (!name.trim()) { notifError('Nom du modèle requis'); return; }
+    if (!body.trim()) { notifError('Contenu du modèle requis'); return; }
     setSaving(true);
     try {
       if (template) {
         await updateTemplate(template.id, name.trim(), body.trim());
-        notifSuccess('Modﾃｨle mis ﾃ jour');
+        notifSuccess('Modèle mis à jour');
       } else {
         await createTemplate(businessId, name.trim(), body.trim());
-        notifSuccess('Modﾃｨle crﾃｩﾃｩ');
+        notifSuccess('Modèle créé');
       }
       onSaved();
     } catch (e) {
@@ -1788,16 +1788,16 @@ function TemplatePanel({
   );
 
   return (
-    <SlidePanel title={template ? 'Modifier le modﾃｨle' : 'Nouveau modﾃｨle'} onClose={onClose} wide>
+    <SlidePanel title={template ? 'Modifier le modèle' : 'Nouveau modèle'} onClose={onClose} wide>
       <div className="space-y-4 flex-1">
-        <Field label="Nom du modﾃｨle *" value={name} onChange={setName} placeholder="Contrat standard" />
+        <Field label="Nom du modèle *" value={name} onChange={setName} placeholder="Contrat standard" />
 
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-content-secondary font-medium">Contenu du contrat</label>
             <button type="button" onClick={() => setPreview(!preview)}
               className="flex items-center gap-1 text-xs text-content-brand hover:text-content-brand">
-              <Eye className="w-3.5 h-3.5" /> {preview ? 'ﾃ嬰iter' : 'Aperﾃｧu'}
+              <Eye className="w-3.5 h-3.5" /> {preview ? 'Éditer' : 'Aperçu'}
             </button>
           </div>
 
@@ -1814,12 +1814,12 @@ function TemplatePanel({
                 {toolbarBtn('Titre', () => fmt('formatBlock', 'h2'), <Heading2  className="w-3.5 h-3.5" />)}
                 {toolbarBtn('Paragraphe', () => fmt('formatBlock', 'p'), <Type className="w-3.5 h-3.5" />)}
                 {toolbarBtn('Liste', () => fmt('insertUnorderedList'), <List className="w-3.5 h-3.5" />)}
-                {toolbarBtn('Sﾃｩparateur', insertSeparator,      <Minus     className="w-3.5 h-3.5" />)}
+                {toolbarBtn('Séparateur', insertSeparator,      <Minus     className="w-3.5 h-3.5" />)}
               </div>
 
               {/* Variables */}
               <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-surface border-b border-surface-border">
-                <span className="text-[10px] text-slate-500 self-center mr-1">Insﾃｩrer :</span>
+                <span className="text-[10px] text-slate-500 self-center mr-1">Insérer :</span>
                 {VARIABLES.map(({ key, label }) => (
                   <button
                     key={key}
@@ -1868,14 +1868,14 @@ function TemplatePanel({
         <button onClick={onClose} className="btn-secondary flex-1 h-10 text-sm">Annuler</button>
         <button onClick={save} disabled={saving} className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-2">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {template ? 'Mettre ﾃ jour' : 'Crﾃｩer'}
+          {template ? 'Mettre à jour' : 'Créer'}
         </button>
       </div>
     </SlidePanel>
   );
 }
 
-// 笏笏笏 Contract Panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Contract Panel ----------------------------------------------------------------------------------------------------------------------
 
 function ContractPanel({
   vehicles, templates, contracts: allContracts, businessId, userId, businessName, currency, onClose, onSaved, notifError, notifSuccess,
@@ -1920,7 +1920,7 @@ function ContractPanel({
     contract?.required_documents ?? []
   );
 
-  // Vﾃｩhicules dﾃｩjﾃ rﾃｩservﾃｩs pour la pﾃｩriode sﾃｩlectionnﾃｩe
+  // Véhicules déjà réservés pour la période sélectionnée
   const bookedVehicleIds = useMemo(() => {
     if (!form.start_date || !form.end_date || !form.start_time || !form.end_time) return new Set<string>();
     const selectedStart = toRentalDateTime(form.start_date, form.start_time, DEFAULT_START_TIME);
@@ -2021,11 +2021,11 @@ function ContractPanel({
     if (!form.client_name.trim()) { notifError('Nom du client requis'); return; }
     if (!form.start_date || !form.end_date || !form.start_time || !form.end_time) { notifError('Date et heure requises'); return; }
     if (!isValidRentalPeriod(form.start_date, form.start_time, form.end_date, form.end_time)) {
-      notifError('La restitution doit ﾃｪtre aprﾃｨs la prise en charge');
+      notifError('La restitution doit être après la prise en charge');
       return;
     }
     if (form.vehicle_id && bookedVehicleIds.has(form.vehicle_id)) {
-      notifError('Ce vﾃｩhicule est dﾃｩjﾃ rﾃｩservﾃｩ pour cette pﾃｩriode. Choisissez d\'autres dates ou un autre vﾃｩhicule.');
+      notifError('Ce véhicule est déjà réservé pour cette période. Choisissez d\'autres dates ou un autre véhicule.');
       return;
     }
 
@@ -2057,12 +2057,12 @@ function ContractPanel({
       if (isEdit && contract) {
         const updated = await updateContract(contract.id, input, needsInvalidation);
         notifSuccess(needsInvalidation
-          ? 'Contrat modifiﾃｩ 窶・signature invalidﾃｩe, ﾃ refaire signer'
-          : 'Contrat modifiﾃｩ');
+          ? 'Contrat modifié — signature invalidée, à refaire signer'
+          : 'Contrat modifié');
         onSaved(updated);
       } else {
         const created = await createContract(businessId, userId, input);
-        notifSuccess('Contrat crﾃｩﾃｩ');
+        notifSuccess('Contrat créé');
         onSaved(created);
       }
     } catch (e) {
@@ -2081,23 +2081,23 @@ function ContractPanel({
           <div className="flex items-start gap-3 bg-badge-warning border border-status-warning rounded-xl px-4 py-3">
             <AlertCircle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-status-warning">Ce contrat sera invalidﾃｩ</p>
+              <p className="text-sm font-semibold text-status-warning">Ce contrat sera invalidé</p>
               <p className="text-xs text-status-warning mt-0.5">
                 {contract?.status === 'signed'
-                  ? 'La signature du locataire sera effacﾃｩe. Le contrat devra ﾃｪtre renvoyﾃｩ et resignﾃｩ.'
-                  : 'Le lien envoyﾃｩ au locataire deviendra invalide. Un nouveau lien devra ﾃｪtre envoyﾃｩ.'}
+                  ? 'La signature du locataire sera effacée. Le contrat devra être renvoyé et resigné.'
+                  : 'Le lien envoyé au locataire deviendra invalide. Un nouveau lien devra être envoyé.'}
               </p>
             </div>
           </div>
         )}
 
-        {/* Vﾃｩhicule */}
+        {/* Véhicule */}
         <div>
-          <label className="text-xs text-content-secondary block mb-1">Vﾃｩhicule</label>
+          <label className="text-xs text-content-secondary block mb-1">Véhicule</label>
           {vehicles.length === 0 ? (
             <div className="flex items-center gap-2 input text-sm text-slate-500 cursor-default">
               <Car className="w-4 h-4 shrink-0" />
-              Aucun vﾃｩhicule 窶・ajoutez-en un dans l'onglet Vﾃｩhicules
+              Aucun véhicule — ajoutez-en un dans l'onglet Véhicules
             </div>
           ) : (
             <>
@@ -2108,8 +2108,8 @@ function ContractPanel({
                   const booked = bookedVehicleIds.has(v.id);
                   return (
                     <option key={v.id} value={v.id} disabled={booked}>
-                      {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} 窶・{v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
-                      {booked ? ' 白 Dﾃｩjﾃ louﾃｩ sur cette pﾃｩriode' : (!v.is_available ? ' 笞 Indisponible' : '')}
+                      {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} — {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
+                      {booked ? ' ✓ Déjà loué sur cette période' : (!v.is_available ? ' ✗ Indisponible' : '')}
                     </option>
                   );
                 })}
@@ -2117,16 +2117,16 @@ function ContractPanel({
               {form.vehicle_id && bookedVehicleIds.has(form.vehicle_id) && (
                 <p className="mt-1.5 text-xs text-status-error flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  Ce vﾃｩhicule est dﾃｩjﾃ rﾃｩservﾃｩ sur cette pﾃｩriode. Choisissez d'autres dates ou un autre vﾃｩhicule.
+                  Ce véhicule est déjà réservé sur cette période. Choisissez d'autres dates ou un autre véhicule.
                 </p>
               )}
             </>
           )}
         </div>
 
-        {/* Modﾃｨle */}
+        {/* Modèle */}
         <div>
-          <label className="text-xs text-content-secondary block mb-1">Modﾃｨle de contrat</label>
+          <label className="text-xs text-content-secondary block mb-1">Modèle de contrat</label>
           <select value={form.template_id} onChange={(e) => set('template_id', e.target.value)}
             className="input w-full text-sm">
             <option value="">Modele par defaut</option>
@@ -2138,16 +2138,16 @@ function ContractPanel({
 
         {/* Dates et heures */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date de dﾃｩpart *" value={form.start_date} onChange={(v) => set('start_date', v)} type="date" />
-          <Field label="Heure de dﾃｩpart *" value={form.start_time} onChange={(v) => set('start_time', v)} type="time" />
+          <Field label="Date de départ *" value={form.start_date} onChange={(v) => set('start_date', v)} type="date" />
+          <Field label="Heure de départ *" value={form.start_time} onChange={(v) => set('start_time', v)} type="time" />
           <Field label="Date de retour *" value={form.end_date} onChange={(v) => set('end_date', v)} type="date" />
           <Field label="Heure de retour *" value={form.end_time} onChange={(v) => set('end_time', v)} type="time" />
         </div>
 
-        {/* Rﾃｩcap tarif */}
+        {/* Récap tarif */}
         {selectedVehicle && (
           <div className="bg-badge-brand border border-brand-800 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
-            <span className="text-content-secondary">{days} jour{days > 1 ? 's' : ''} ﾃ・{pricePerDay.toLocaleString('fr-FR')} {displayCurrency(cur)}/j</span>
+            <span className="text-content-secondary">{days} jour{days > 1 ? 's' : ''} à {pricePerDay.toLocaleString('fr-FR')} {displayCurrency(cur)}/j</span>
             <span className="font-bold text-content-brand">{totalAmount.toLocaleString('fr-FR')} {displayCurrency(cur)}</span>
           </div>
         )}
@@ -2192,7 +2192,7 @@ function ContractPanel({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-content-secondary mt-2">Aucun document obligatoire. Le client pourra signer sans upload prﾃｩalable.</p>
+            <p className="text-xs text-content-secondary mt-2">Aucun document obligatoire. Le client pourra signer sans upload préalable.</p>
           )}
         </div>
 
@@ -2212,7 +2212,7 @@ function ContractPanel({
                     onChange={(e) => { setClientQuery(e.target.value); setClientSelected(false); setShowDropdown(true); set('client_name', e.target.value); }}
                     onFocus={() => setShowDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                    placeholder="Nom ou tﾃｩlﾃｩphone窶ｦ"
+                    placeholder="Nom ou téléphone…"
                     className="input w-full text-sm pr-8"
                     autoComplete="off"
                   />
@@ -2249,17 +2249,17 @@ function ContractPanel({
 
               {showDropdown && clientQuery.length >= 1 && filteredClients.length === 0 && (
                 <div className="absolute z-20 left-0 right-0 mt-1 bg-surface-card border border-surface-border rounded-xl px-3 py-2.5 text-xs text-slate-500">
-                  Aucun client trouvﾃｩ 窶・vous pouvez saisir manuellement ci-dessous
+                  Aucun client trouvé — vous pouvez saisir manuellement ci-dessous
                 </div>
               )}
             </div>
 
-            {/* Champs prﾃｩremplis ou manuels */}
+            {/* Champs préremplis ou manuels */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Tﾃｩlﾃｩphone" value={form.client_phone} onChange={(v) => set('client_phone', v)} placeholder="+221 77 000 00 00" />
+              <Field label="Téléphone" value={form.client_phone} onChange={(v) => set('client_phone', v)} placeholder="+221 77 000 00 00" />
               <Field label="Email" value={form.client_email} onChange={(v) => set('client_email', v)} type="email" />
             </div>
-            <Field label="Nﾂｰ piﾃｨce d'identitﾃｩ" value={form.client_id_number} onChange={(v) => set('client_id_number', v)} />
+            <Field label="N° pièce d'identité" value={form.client_id_number} onChange={(v) => set('client_id_number', v)} />
             <Field label="Adresse" value={form.client_address} onChange={(v) => set('client_address', v)} />
           </div>
         </div>
@@ -2268,13 +2268,13 @@ function ContractPanel({
         <div>
           <label className="text-xs text-content-secondary block mb-1">Notes internes</label>
           <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
-            rows={2} className="input w-full text-sm resize-none" placeholder="Notes窶ｦ" />
+            rows={2} className="input w-full text-sm resize-none" placeholder="Notes…" />
         </div>
 
-        {/* Aperﾃｧu */}
+        {/* Aperçu */}
         <button type="button" onClick={() => setPreview(!preview)}
           className="flex items-center gap-2 text-xs text-content-brand hover:text-content-brand">
-          <Eye className="w-3.5 h-3.5" /> {preview ? 'Masquer l\'aperﾃｧu' : 'Aperﾃｧu du contrat'}
+          <Eye className="w-3.5 h-3.5" /> {preview ? 'Masquer l\'aperçu' : 'Aperçu du contrat'}
         </button>
         {preview && (
           <div className="bg-white rounded-xl p-4 text-sm text-gray-800 overflow-auto max-h-72"
@@ -2288,14 +2288,14 @@ function ContractPanel({
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {isEdit
             ? (needsInvalidation ? 'Modifier et invalider' : 'Enregistrer les modifications')
-            : 'Crﾃｩer le contrat'}
+            : 'Créer le contrat'}
         </button>
       </div>
     </SlidePanel>
   );
 }
 
-// 笏笏笏 Shared Components 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ------ Shared Components ----------------------------------------------------------------------------------------------------------------
 
 function Field({
   label, value, onChange, placeholder = '', type = 'text',

@@ -1,9 +1,9 @@
 import type { UserRole } from '@pos-types';
 
-// ── Permission keys ───────────────────────────────────────────────────────────
+// -- Permission keys -----------------------------------------------------------
 
 export type PermissionKey =
-  // ── Navigation screens ──────────────────────────────────────────────────────
+  // -- Navigation screens ------------------------------------------------------
   | 'view_pos'
   | 'view_cash_session'
   | 'view_livraisons'
@@ -30,7 +30,7 @@ export type PermissionKey =
   | 'view_menu_du_jour'
   | 'view_whatsapp'
   | 'view_settings'
-  // ── Action permissions ───────────────────────────────────────────────────────
+  // -- Action permissions -------------------------------------------------------
   | 'view_financials'
   | 'manage_team'
   | 'manage_settings'
@@ -38,7 +38,7 @@ export type PermissionKey =
   | 'manage_rooms'
   | 'manage_expenses'
   | 'delete_data'
-  // ── Legal action permissions ────────────────────────────────────────────────
+  // -- Legal action permissions ------------------------------------------------
   | 'create_dossier'
   | 'edit_dossier'
   | 'manage_workflows'
@@ -56,7 +56,7 @@ export interface PermissionMeta {
   feature?:     string; // Feature required to enable this permission
 }
 
-// ── Permissions table ─────────────────────────────────────────────────────────
+// -- Permissions table ---------------------------------------------------------
 // defaultRoles: roles that have this permission by default (and above via hasRole).
 // The highest defaultRole determines the minimum role required.
 

@@ -128,7 +128,7 @@ export default function ClientsPage() {
   return (
     <div className="h-full flex flex-col">
 
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-3 flex-wrap bg-surface">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Clients</h1>
@@ -170,7 +170,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* ── Corps ── */}
+      {/* -- Corps -- */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-surface">
 
         {!loading && clients.length === 0 && (
@@ -228,7 +228,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* ── Panneau latéral ── */}
+      {/* -- Panneau latéral -- */}
       <SideDrawer
         isOpen={!!panel}
         onClose={() => setPanel(null)}

@@ -16,7 +16,7 @@ interface PretentionsLibraryProps {
   businessId: string;
 }
 
-// ── Variables Système (Guide) ────────────────────────────────────────────────
+// -- Variables Système (Guide) ------------------------------------------------
 const SYSTEM_VARIABLES = [
   { group: 'Dossier', vars: [
     { key: 'reference', label: 'Référence Dossier', hint: 'DOS-2024-001' },
@@ -39,7 +39,7 @@ const SYSTEM_VARIABLES = [
   ]},
 ];
 
-// ── Helpers de conversion ───────────────────────────────────────────────────
+// -- Helpers de conversion ---------------------------------------------------
 
 function templateToHtml(text: string): string {
   if (!text) return '';
@@ -61,7 +61,7 @@ function htmlToTemplate(html: string): string {
   return div.innerText.replace(/\n\n/g, '\n').trim();
 }
 
-// ── Petit Modal de configuration de champ ───────────────────────────────────
+// -- Petit Modal de configuration de champ -----------------------------------
 function FieldConfigModal({ 
   initialValue, 
   onConfirm, 
@@ -117,7 +117,7 @@ function FieldConfigModal({
   );
 }
 
-// ── Barre d'outils de formatage ─────────────────────────────────────────────
+// -- Barre d'outils de formatage ---------------------------------------------
 function FormattingToolbar() {
   const exec = (cmd: string, val?: string) => {
     document.execCommand(cmd, false, val);
@@ -140,7 +140,7 @@ function FormattingToolbar() {
   );
 }
 
-// ── Sidebar de Guide des Variables ──────────────────────────────────────────
+// -- Sidebar de Guide des Variables ------------------------------------------
 function VariableSidebar({ onInsert }: { onInsert: (key: string, label: string) => void }) {
   return (
     <div className="w-72 bg-slate-100 border-r border-slate-300 flex flex-col h-full overflow-hidden">
@@ -188,7 +188,7 @@ function VariableSidebar({ onInsert }: { onInsert: (key: string, label: string) 
   );
 }
 
-// ── Éditeur "Smart Paper" V3 ──────────────────────────────────────────────────
+// -- Éditeur "Smart Paper" V3 --------------------------------------------------
 function PretentionEditor({
   initial,
   businessId,
@@ -314,7 +314,7 @@ function PretentionEditor({
   return (
     <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col animate-in fade-in duration-300">
       
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-4 flex-1 mr-8">
           <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
@@ -349,10 +349,10 @@ function PretentionEditor({
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* ── Sidebar Gauche (Variables) ── */}
+        {/* -- Sidebar Gauche (Variables) -- */}
         <VariableSidebar onInsert={insertVariable} />
 
-        {/* ── Zone Centrale (Papier) ── */}
+        {/* -- Zone Centrale (Papier) -- */}
         <div className="flex-1 bg-slate-200/50 overflow-y-auto p-12 flex flex-col items-center gap-8 scrollbar-thin">
           
           <FormattingToolbar />
@@ -443,7 +443,7 @@ function PretentionEditor({
   );
 }
 
-// ── Carte prétention ──────────────────────────────────────────────────────────
+// -- Carte prétention ----------------------------------------------------------
 function PretentionCard({
   pretention,
   onEdit,
@@ -513,7 +513,7 @@ function PretentionCard({
   );
 }
 
-// ── Composant principal ───────────────────────────────────────────────────────
+// -- Composant principal -------------------------------------------------------
 export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
   const [pretentions, setPretentions]   = useState<Pretention[]>([]);
   const [loading, setLoading]           = useState(true);

@@ -16,14 +16,14 @@ import {
   type BusinessTypeRow, type AppModule,
 } from '@services/supabase/business-config';
 
-// ─── Icon resolver ────────────────────────────────────────────────────────────
+// --- Icon resolver ------------------------------------------------------------
 
 function getIcon(name: string): React.ComponentType<{ className?: string }> {
   return (LucideIcons as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }>
     ?? LucideIcons.Package;
 }
 
-// ─── Accent color map ─────────────────────────────────────────────────────────
+// --- Accent color map ---------------------------------------------------------
 
 const ACCENT_MAP: Record<string, { bg: string; border: string; icon: string }> = {
   brand:  { bg: 'bg-badge-brand',  border: 'border-brand-600',  icon: 'text-content-brand bg-badge-brand'  },
@@ -39,7 +39,7 @@ function accent(color: string) {
   return ACCENT_MAP[color] ?? defaultAccent;
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---------------------------------------------------------------------
 
 export default function ConfigurePage() {
   const router = useRouter();
@@ -121,7 +121,7 @@ export default function ConfigurePage() {
     <div className="h-full overflow-y-auto">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
 
-        {/* ── En-tête ── */}
+        {/* -- En-tête -- */}
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-content-primary">Configuration</h1>
           <p className="text-content-secondary">
@@ -129,7 +129,7 @@ export default function ConfigurePage() {
           </p>
         </div>
 
-        {/* ── Types assignés (read-only) ── */}
+        {/* -- Types assignés (read-only) -- */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-content-primary">Type d&apos;établissement</h2>
@@ -163,7 +163,7 @@ export default function ConfigurePage() {
           )}
         </div>
 
-        {/* ── Fonctionnalités (toggleable) ── */}
+        {/* -- Fonctionnalités (toggleable) -- */}
         {allowedModules.length === 0 ? (
           <p className="text-sm text-content-primary italic">
             Aucun module disponible —contactez l&apos;administrateur.
@@ -203,7 +203,7 @@ export default function ConfigurePage() {
           </div>
         )}
 
-        {/* ── Résumé ── */}
+        {/* -- Résumé -- */}
         {allowedModules.length > 0 && (
           <div className={cn('card p-5 border', ac.border)}>
             <p className="text-sm font-semibold text-content-primary mb-3">
@@ -224,7 +224,7 @@ export default function ConfigurePage() {
           </div>
         )}
 
-        {/* ── Actions ── */}
+        {/* -- Actions -- */}
         <div className="flex items-center justify-between gap-4 pb-6">
           <button
             onClick={() => router.back()}

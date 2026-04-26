@@ -13,7 +13,7 @@ interface MonitoringDashboardProps {
   refreshInterval?: number; // ms, défaut 30000
 }
 
-// ── Carte statistique ─────────────────────────────────────────────────────────
+// -- Carte statistique ---------------------------------------------------------
 function StatCard({
   label, value, icon, color, sublabel,
 }: {
@@ -34,7 +34,7 @@ function StatCard({
   );
 }
 
-// ── Badge niveau log ──────────────────────────────────────────────────────────
+// -- Badge niveau log ----------------------------------------------------------
 function LevelBadge({ level }: { level: WorkflowLog['level'] }) {
   const map: Record<WorkflowLog['level'], string> = {
     DEBUG: 'bg-surface-card text-content-secondary',
@@ -49,7 +49,7 @@ function LevelBadge({ level }: { level: WorkflowLog['level'] }) {
   );
 }
 
-// ── Ligne instance bloquée ────────────────────────────────────────────────────
+// -- Ligne instance bloquée ----------------------------------------------------
 function BlockedRow({
   item,
 }: {
@@ -71,7 +71,7 @@ function BlockedRow({
   );
 }
 
-// ── Dashboard principal ───────────────────────────────────────────────────────
+// -- Dashboard principal -------------------------------------------------------
 export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: MonitoringDashboardProps) {
   const [stats, setStats]   = useState<WorkflowMonitoringStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +110,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
   return (
     <div className="space-y-6">
 
-      {/* ── En-tête ── */}
+      {/* -- En-tête -- */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-content-brand" />
@@ -132,7 +132,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
         </div>
       </div>
 
-      {/* ── Cartes KPI ── */}
+      {/* -- Cartes KPI -- */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <StatCard
           label="Actifs" value={stats.total_active} color="border-blue-500"
@@ -164,7 +164,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* ── Instances bloquées ── */}
+        {/* -- Instances bloquées -- */}
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-status-warning" />
@@ -194,7 +194,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
           )}
         </div>
 
-        {/* ── Erreurs récentes ── */}
+        {/* -- Erreurs récentes -- */}
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
             <XCircle className="w-4 h-4 text-status-error" />

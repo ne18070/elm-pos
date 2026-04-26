@@ -12,7 +12,7 @@ import {
 } from '@/lib/template-config';
 import { useNotificationStore } from '@/store/notifications';
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// --- Mock data ----------------------------------------------------------------
 
 const MOCK_ORDER = {
   id: 'abc12345-demo-0000-0000-000000000000',
@@ -46,7 +46,7 @@ const MOCK_BUSINESS = {
   logo_url: null, currency: 'XOF', receipt_footer: 'Merci de votre visite !',
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// --- Constants ----------------------------------------------------------------
 
 const PRIMARY_PRESETS = ['#1e293b', '#1a1a2e', '#0f172a', '#1c1917', '#052e16', '#1e1b4b'];
 const ACCENT_PRESETS  = ['#22c55e', '#4f46e5', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
@@ -68,7 +68,7 @@ const HIGHLIGHT_CSS = (s: string) =>
 
 const BUILTIN_BLOCK_TYPES: BlockType[] = ['header', 'receipt-info', 'items', 'totals', 'payment', 'footer'];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// --- Sub-components -----------------------------------------------------------
 
 function Section({ title, children, defaultOpen = false, sectionKey, onActivate }: {
   title: string; children: React.ReactNode; defaultOpen?: boolean;
@@ -136,7 +136,7 @@ function SubGroup({ sectionKey, onActivate, label, children }: {
   );
 }
 
-// ─── Block row in the Blocs panel ─────────────────────────────────────────────
+// --- Block row in the Blocs panel ---------------------------------------------
 
 function BlockRow({ block, index, total, isEditing, onDragStart, onDragOver, onDrop, onToggle, onEdit, onDelete }: {
   block:       TemplateBlock;
@@ -192,7 +192,7 @@ function BlockRow({ block, index, total, isEditing, onDragStart, onDragOver, onD
   );
 }
 
-// ─── Custom block inline editor ───────────────────────────────────────────────
+// --- Custom block inline editor -----------------------------------------------
 
 function CustomBlockEditor({ block, onChange }: { block: TemplateBlock; onChange: (patch: Partial<TemplateBlock>) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -297,7 +297,7 @@ function CustomBlockEditor({ block, onChange }: { block: TemplateBlock; onChange
   return null;
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// --- Main component -----------------------------------------------------------
 
 export function TemplateManager({ businessId, onClose }: { businessId: string; onClose: () => void }) {
   const { success, error: notifError } = useNotificationStore();
@@ -320,7 +320,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
   const selected = templates.find((t) => t.id === selectedId) ?? templates[0];
   const blocks   = selected?.blocks ?? DEFAULT_BLOCKS;
 
-  // ── Preview rebuild ───────────────────────────────────────────────────────
+  // -- Preview rebuild -------------------------------------------------------
   const refreshBase = useCallback((config: TemplateConfig) => {
     setBaseHtml(renderTemplate(MOCK_ORDER, MOCK_BUSINESS, config));
   }, []);
@@ -332,7 +332,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [selected, refreshBase]);
 
-  // ── Highlight injection ────────────────────────────────────────────────────
+  // -- Highlight injection ----------------------------------------------------
   function applyHighlight(section: string | null) {
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
@@ -343,7 +343,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
   useEffect(() => { applyHighlight(activeSection); }, [activeSection]);
   function handleIframeLoad() { applyHighlight(activeSection); }
 
-  // ── Template mutations ─────────────────────────────────────────────────────
+  // -- Template mutations -----------------------------------------------------
   function updateSelected(patch: Partial<TemplateConfig>) {
     if (!selected) return;
     setTemplates((prev) => prev.map((t) => t.id === selected.id ? { ...t, ...patch } : t));
@@ -367,7 +367,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     if (editingBlockId === blockId) setEditingBlockId(null);
   }
 
-  // ── Drag & drop ────────────────────────────────────────────────────────────
+  // -- Drag & drop ------------------------------------------------------------
   function handleDragOver(e: React.DragEvent, targetIdx: number) {
     e.preventDefault();
   }
@@ -380,7 +380,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     dragIdx.current = null;
   }
 
-  // ── Save / Add / Delete templates ─────────────────────────────────────────
+  // -- Save / Add / Delete templates -----------------------------------------
   function handleSave() { saveTemplates(businessId, templates); success('Modèle enregistré'); }
 
   function handleAdd() {
@@ -399,7 +399,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     }
   }
 
-  // ── Export ─────────────────────────────────────────────────────────────────
+  // -- Export -----------------------------------------------------------------
   function handleExport() {
     if (!selected) return;
     const blob = new Blob([JSON.stringify(selected, null, 2)], { type: 'application/json' });
@@ -409,7 +409,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     URL.revokeObjectURL(url);
   }
 
-  // ── Import ─────────────────────────────────────────────────────────────────
+  // -- Import -----------------------------------------------------------------
   function handleImportFile(file: File) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -444,7 +444,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     <div className="fixed inset-0 z-50 flex bg-black/70 backdrop-blur-sm">
       <div className="flex w-full h-full bg-surface-card overflow-hidden">
 
-        {/* ── 1. Template list ── */}
+        {/* -- 1. Template list -- */}
         <div className="w-56 flex-shrink-0 border-r border-surface-border flex flex-col">
           <div className="flex items-center justify-between px-4 py-4 border-b border-surface-border">
             <h2 className="font-bold text-content-primary text-sm">Modèles</h2>
@@ -486,11 +486,11 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
           </div>
         </div>
 
-        {/* ── 2. Editor + Preview ── */}
+        {/* -- 2. Editor + Preview -- */}
         {selected ? (
           <div className="flex-1 flex overflow-hidden min-w-0">
 
-            {/* ── Editor panel ── */}
+            {/* -- Editor panel -- */}
             <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-border min-w-0">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-border shrink-0 gap-2">
                 <h3 className="font-bold text-content-primary text-sm truncate">{selected.name}</h3>
@@ -506,7 +506,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
-                {/* ── Blocs & ordre ── */}
+                {/* -- Blocs & ordre -- */}
                 <Section title="Blocs & ordre" defaultOpen>
                   <div className="space-y-1.5">
                     {blocks.map((block, i) => (
@@ -541,7 +541,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   </div>
                 </Section>
 
-                {/* ── Général ── */}
+                {/* -- Général -- */}
                 <Section title="Général" sectionKey="general" onActivate={setActiveSection}>
                   <div>
                     <label className="label">Nom du modèle</label>
@@ -574,7 +574,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   )}
                 </Section>
 
-                {/* ── Style ── */}
+                {/* -- Style -- */}
                 <Section title="Style" sectionKey="style" onActivate={setActiveSection}>
                   <ColorField label="Couleur principale (en-tête tableau)" value={selected.primaryColor}
                     onChange={(v) => updateSelected({ primaryColor: v })} presets={PRIMARY_PRESETS} />
@@ -593,7 +593,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   </div>
                 </Section>
 
-                {/* ── Contenu ── */}
+                {/* -- Contenu -- */}
                 <Section title="Contenu" sectionKey="header" onActivate={setActiveSection}>
                   <SubGroup sectionKey="header" onActivate={setActiveSection} label="En-tête établissement">
                     <Toggle label="Logo"      checked={selected.showLogo}    onChange={(v) => updateSelected({ showLogo: v })} />
@@ -630,7 +630,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   </SubGroup>
                 </Section>
 
-                {/* ── Pied de page ── */}
+                {/* -- Pied de page -- */}
                 <Section title="Pied de page" sectionKey="footer" onActivate={setActiveSection}>
                   <Toggle label="Signatures"                  checked={selected.showSignatures} onChange={(v) => updateSelected({ showSignatures: v })} />
                   <Toggle label="QR Code (requiert Internet)" checked={selected.showQRCode}     onChange={(v) => updateSelected({ showQRCode: v })} />
@@ -641,7 +641,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   </div>
                 </Section>
 
-                {/* ── Copies ── */}
+                {/* -- Copies -- */}
                 {selected.copies === 2 && (
                   <Section title="Copies" sectionKey="copies" onActivate={setActiveSection}>
                     <div className="grid grid-cols-2 gap-4">
@@ -668,7 +668,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
               </div>
             </div>
 
-            {/* ── Preview panel ── */}
+            {/* -- Preview panel -- */}
             <div className="flex-1 flex flex-col overflow-hidden bg-surface min-w-0">
               <div className="flex items-center justify-between px-4 py-3.5 border-b border-surface-border shrink-0">
                 <div className="flex items-center gap-2">

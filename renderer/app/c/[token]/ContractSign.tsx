@@ -14,7 +14,7 @@ import {
 } from '@services/supabase/contracts';
 import { generateContractPdf, imageUrlToDataUrl } from '@/lib/contract-pdf';
 
-// ─── Page publique de signature de contrat ────────────────────────────────────
+// --- Page publique de signature de contrat ------------------------------------
 
 type Stage = 'loading' | 'error' | 'already_signed' | 'expired' | 'reading' | 'signing' | 'done';
 
@@ -35,7 +35,7 @@ export default function ContractSignPage() {
   const drawing    = useRef(false);
   const hasStrokes = useRef(false);
 
-  // ─── Load ──────────────────────────────────────────────────────────────────
+  // --- Load ------------------------------------------------------------------
 
   useEffect(() => {
     document.documentElement.style.overflow = 'auto';
@@ -65,7 +65,7 @@ export default function ContractSignPage() {
       });
   }, [token]);
 
-  // ─── Canvas drawing ────────────────────────────────────────────────────────
+  // --- Canvas drawing --------------------------------------------------------
   //
   // Touch handlers are registered as native non-passive listeners so that
   // e.preventDefault() actually works on Samsung Internet (and Android WebView).
@@ -187,7 +187,7 @@ export default function ContractSignPage() {
     }
   }
 
-  // ─── Submit ────────────────────────────────────────────────────────────────
+  // --- Submit ----------------------------------------------------------------
 
   async function handleSubmit() {
     const canvas = canvasRef.current;
@@ -230,7 +230,7 @@ export default function ContractSignPage() {
     }
   }
 
-  // ─── Stages ───────────────────────────────────────────────────────────────
+  // --- Stages ---------------------------------------------------------------
 
   if (stage === 'loading') {
     return (
@@ -313,7 +313,7 @@ export default function ContractSignPage() {
     );
   }
 
-  // ─── Reading + Signing ─────────────────────────────────────────────────────
+  // --- Reading + Signing -----------------------------------------------------
 
   return (
     <MobileShell>
@@ -430,7 +430,7 @@ export default function ContractSignPage() {
   );
 }
 
-// ─── Mobile shell (light, public page) ───────────────────────────────────────
+// --- Mobile shell (light, public page) ---------------------------------------
 
 function MobileShell({ children }: { children: React.ReactNode }) {
   return (

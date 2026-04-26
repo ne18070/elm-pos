@@ -6,7 +6,7 @@ export function toUserError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   const msg = raw.toLowerCase();
 
-  // ── Réseau / connectivité ─────────────────────────────────────────────────
+  // -- Réseau / connectivité -------------------------------------------------
   if (msg.includes('failed to fetch') || msg.includes('networkerror') ||
       msg.includes('network request failed') || msg.includes('load failed')) {
     return 'Erreur de connexion. Vérifiez votre réseau et réessayez.';
@@ -15,7 +15,7 @@ export function toUserError(err: unknown): string {
     return 'La requête a pris trop de temps. Réessayez.';
   }
 
-  // ── Base de données ───────────────────────────────────────────────────────
+  // -- Base de données -------------------------------------------------------
   if (msg.includes('duplicate key') || msg.includes('unique constraint') ||
       msg.includes('already exists')) {
     return 'Cet élément existe déjà.';
@@ -36,12 +36,12 @@ export function toUserError(err: unknown): string {
     return 'Session expirée. Veuillez vous reconnecter.';
   }
 
-  // ── Stockage / fichiers ───────────────────────────────────────────────────
+  // -- Stockage / fichiers ---------------------------------------------------
   if (msg.includes('storage') || msg.includes('upload') || msg.includes('file')) {
     return "Erreur lors de l'envoi du fichier. Vérifiez le format et la taille.";
   }
 
-  // ── Validation ────────────────────────────────────────────────────────────
+  // -- Validation ------------------------------------------------------------
   if (msg.includes('invalid') && (msg.includes('email') || msg.includes('password'))) {
     return 'Email ou mot de passe invalide.';
   }
@@ -49,14 +49,14 @@ export function toUserError(err: unknown): string {
     return 'Trop de tentatives. Attendez quelques instants avant de réessayer.';
   }
 
-  // ── Erreurs JavaScript brutes ─────────────────────────────────────────────
+  // -- Erreurs JavaScript brutes ---------------------------------------------
   if (msg.includes('cannot read') || msg.includes('is not a function') ||
       msg.includes('undefined') || msg.includes('null') ||
       msg.includes('typeerror') || msg.includes('referenceerror')) {
     return 'Une erreur inattendue s\'est produite.';
   }
 
-  // ── Message applicatif déjà propre (court, sans jargon technique) ─────────
+  // -- Message applicatif déjà propre (court, sans jargon technique) ---------
   if (raw.length < 120 && !msg.includes('supabase') && !msg.includes('http') &&
       !msg.includes('sql') && !msg.includes('fetch') && !msg.includes('socket') &&
       !msg.includes('electron') && !msg.includes('ipc') && !msg.includes('error:')) {
