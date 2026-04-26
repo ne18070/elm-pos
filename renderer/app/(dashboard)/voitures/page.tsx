@@ -317,18 +317,20 @@ export default function VoituresPage() {
       </div>
 
       {/* Stats */}
-      <div className="px-4 sm:px-8 py-4 grid grid-cols-2 lg:grid-cols-6 gap-3 shrink-0">
+      <div className="px-4 sm:px-8 py-4 grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 shrink-0">
         {[
-          { label: 'Total',       value: stats.total,      color: 'text-content-primary' },
-          { label: 'Disponible',  value: stats.disponible, color: 'text-status-success' },
-          { label: 'Réservé',     value: stats.reserve,    color: 'text-status-warning' },
-          { label: 'Vendu',       value: stats.vendu,      color: 'text-status-error' },
-          { label: 'Mandats',     value: stats.mandats,    color: 'text-content-brand' },
-          { label: 'A reverser',  value: fmtPrice(stats.aReverser, currency), color: 'text-status-warning' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-surface-card rounded-2xl border border-surface-border p-4 text-center">
-            <p className={`text-2xl font-black ${color}`}>{value}</p>
-            <p className="text-[11px] text-content-muted font-medium mt-0.5 uppercase tracking-wide">{label}</p>
+          { label: 'Total',       value: stats.total,      color: 'text-content-primary',  isPrice: false },
+          { label: 'Disponible',  value: stats.disponible, color: 'text-status-success',   isPrice: false },
+          { label: 'Réservé',     value: stats.reserve,    color: 'text-status-warning',   isPrice: false },
+          { label: 'Vendu',       value: stats.vendu,      color: 'text-status-error',     isPrice: false },
+          { label: 'Mandats',     value: stats.mandats,    color: 'text-content-brand',    isPrice: false },
+          { label: 'À reverser',  value: fmtPrice(stats.aReverser, currency), color: 'text-status-warning', isPrice: true },
+        ].map(({ label, value, color, isPrice }) => (
+          <div key={label} className="bg-surface-card rounded-xl sm:rounded-2xl border border-surface-border p-2 sm:p-4 text-center">
+            <p className={`font-black leading-tight ${color} ${isPrice ? 'text-xs sm:text-base lg:text-xl' : 'text-xl sm:text-2xl'}`}>
+              {value}
+            </p>
+            <p className="text-[9px] sm:text-[11px] text-content-muted font-medium mt-0.5 uppercase tracking-wide">{label}</p>
           </div>
         ))}
       </div>
@@ -464,14 +466,14 @@ function ParcTab({
                 className="bg-surface-card rounded-2xl border border-surface-border overflow-hidden flex"
               >
                 {v.image_principale ? (
-                  <img src={v.image_principale} alt="" className="w-24 h-24 object-cover shrink-0" />
+                  <img src={v.image_principale} alt="" className="w-20 sm:w-28 h-20 sm:h-28 object-cover shrink-0" />
                 ) : (
-                  <div className="w-24 h-24 bg-surface-input flex items-center justify-center shrink-0">
-                    <Car className="w-8 h-8 text-content-muted" />
+                  <div className="w-20 sm:w-28 h-20 sm:h-28 bg-surface-input flex items-center justify-center shrink-0">
+                    <Car className="w-7 h-7 sm:w-9 sm:h-9 text-content-muted" />
                   </div>
                 )}
-                <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
-                  <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 p-2.5 sm:p-3 min-w-0 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
                     <div className="min-w-0">
                       <p className="font-bold text-content-primary text-sm truncate">
                         {v.marque} {v.modele} {v.annee ? `(${v.annee})` : ''}
