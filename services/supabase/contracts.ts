@@ -6,7 +6,7 @@ const supabase = _supabase as any;
 
 // --- Types --------------------------------------------------------------------
 
-export type ContractStatus = 'draft' | 'sent' | 'signed' | 'archived';
+export type ContractStatus = 'draft' | 'sent' | 'signed' | 'active' | 'archived' | 'cancelled';
 
 export interface RentalVehicle {
   id:             string;
@@ -24,6 +24,12 @@ export interface RentalVehicle {
   description:    string | null;
   image_url:      string | null;
   is_available:   boolean;
+  owner_type:      'owned' | 'third_party';
+  owner_name:      string | null;
+  owner_phone:     string | null;
+  commission_type: 'percent' | 'fixed';
+  commission_value:number;
+  owner_report_token: string | null;
   created_at:     string;
 }
 
@@ -34,6 +40,28 @@ export interface ContractTemplate {
   body:        string;
   created_at:  string;
   updated_at:  string;
+}
+
+export interface ContractDocument {
+  name:        string;
+  url:         string;
+  type:        string;
+  category?:   string;
+  uploaded_at: string;
+}
+
+export interface RequiredContractDocument {
+  key:   string;
+  label: string;
+}
+
+export interface ContractInspection {
+  mileage: number | null;
+  fuel_level: string | null;
+  condition: string | null;
+  notes: string | null;
+  charges?: number | null;
+  done_at: string;
 }
 
 export interface Contract {
@@ -47,7 +75,9 @@ export interface Contract {
   client_id_number: string | null;
   client_address:   string | null;
   start_date:       string;
+  start_time:       string | null;
   end_date:         string;
+  end_time:         string | null;
   pickup_location:  string | null;
   return_location:  string | null;
   price_per_day:    number | null;
@@ -59,9 +89,16 @@ export interface Contract {
   token_expires_at: string;
   status:           ContractStatus;
   signed_at:        string | null;
+  cancelled_at:     string | null;
+  cancellation_reason: string | null;
   signature_image:  string | null;
   pdf_url:                  string | null;
   lessor_signature_image:   string | null;
+  documents:                ContractDocument[];
+  required_documents:       RequiredContractDocument[];
+  pickup_inspection:         ContractInspection | null;
+  return_inspection:         ContractInspection | null;
+  extra_charges:             number | null;
   notes:                    string | null;
   created_by:       string | null;
   created_at:       string;
@@ -116,7 +153,7 @@ export async function getVehicles(businessId: string): Promise<RentalVehicle[]> 
 
 export async function createVehicle(
   businessId: string,
-  v: Omit<RentalVehicle, 'id' | 'business_id' | 'created_at'>
+  v: Omit<RentalVehicle, 'id' | 'business_id' | 'created_at' | 'owner_report_token'>
 ): Promise<RentalVehicle> {
   const { data, error } = await supabase
     .from('rental_vehicles')
@@ -129,7 +166,7 @@ export async function createVehicle(
 
 export async function updateVehicle(
   id: string,
-  v: Partial<Omit<RentalVehicle, 'id' | 'business_id' | 'created_at'>>
+  v: Partial<Omit<RentalVehicle, 'id' | 'business_id' | 'created_at' | 'owner_report_token'>>
 ): Promise<void> {
   const { error } = await supabase
     .from('rental_vehicles')
@@ -201,7 +238,7 @@ export async function deleteTemplate(id: string): Promise<void> {
 export async function getContracts(businessId: string): Promise<Contract[]> {
   const { data, error } = await supabase
     .from('contracts')
-    .select('*, rental_vehicles(name, license_plate)')
+    .select('*, rental_vehicles(*)')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -217,7 +254,9 @@ export interface CreateContractInput {
   client_id_number: string;
   client_address:   string;
   start_date:       string;
+  start_time:       string;
   end_date:         string;
+  end_time:         string;
   pickup_location:  string;
   return_location:  string;
   price_per_day:    number;
@@ -225,6 +264,7 @@ export interface CreateContractInput {
   total_amount:     number;
   currency:         string;
   body:             string;
+  required_documents: RequiredContractDocument[];
   notes:            string;
 }
 
@@ -267,7 +307,9 @@ export async function updateContract(
     client_id_number: input.client_id_number || null,
     client_address:   input.client_address || null,
     start_date:       input.start_date,
+    start_time:       input.start_time || null,
     end_date:         input.end_date,
+    end_time:         input.end_time || null,
     pickup_location:  input.pickup_location || null,
     return_location:  input.return_location || null,
     price_per_day:    input.price_per_day,
@@ -275,6 +317,7 @@ export async function updateContract(
     total_amount:     input.total_amount,
     currency:         input.currency,
     body:             input.body,
+    required_documents: input.required_documents,
     notes:            input.notes || null,
   };
 
@@ -341,7 +384,7 @@ export async function archiveContract(id: string): Promise<void> {
       .from('contracts')
       .select('id', { count: 'exact', head: true })
       .eq('vehicle_id', data.vehicle_id)
-      .in('status', ['sent', 'signed']);
+      .in('status', ['sent', 'signed', 'active']);
 
     if ((count ?? 0) === 0) {
       await supabase
@@ -350,6 +393,90 @@ export async function archiveContract(id: string): Promise<void> {
         .eq('id', data.vehicle_id);
     }
   }
+}
+
+export async function cancelContract(id: string, reason: string | null): Promise<void> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason: reason?.trim() || null,
+    })
+    .eq('id', id)
+    .select('vehicle_id')
+    .single();
+  if (error) throw new Error(error.message);
+
+  // Remettre le véhicule disponible si aucun contrat actif ne l'utilise.
+  if (data?.vehicle_id) {
+    const { count } = await supabase
+      .from('contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('vehicle_id', data.vehicle_id)
+      .in('status', ['sent', 'signed', 'active']);
+
+    if ((count ?? 0) === 0) {
+      await supabase
+        .from('rental_vehicles')
+        .update({ is_available: true })
+        .eq('id', data.vehicle_id);
+    }
+  }
+}
+
+export async function saveContractInspection(
+  contractId: string,
+  type: 'pickup' | 'return',
+  inspection: Omit<ContractInspection, 'done_at'>,
+): Promise<Contract> {
+  const payload: ContractInspection = {
+    ...inspection,
+    done_at: new Date().toISOString(),
+  };
+
+  const { data: current, error: readErr } = await supabase
+    .from('contracts')
+    .select('id, vehicle_id, total_amount, extra_charges')
+    .eq('id', contractId)
+    .single();
+  if (readErr) throw new Error(readErr.message);
+
+  const charges = Number(inspection.charges ?? 0);
+  const patch: Record<string, unknown> = type === 'pickup'
+    ? { pickup_inspection: payload, status: 'active' }
+    : {
+        return_inspection: payload,
+        extra_charges: charges,
+        total_amount: Number(current.total_amount ?? 0) - Number(current.extra_charges ?? 0) + charges,
+        status: 'archived',
+      };
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .update(patch)
+    .eq('id', contractId)
+    .select('*, rental_vehicles(*)')
+    .single();
+  if (error) throw new Error(error.message);
+
+  if (current.vehicle_id) {
+    if (type === 'pickup') {
+      await supabase.from('rental_vehicles').update({ is_available: false }).eq('id', current.vehicle_id);
+    } else {
+      const { count } = await supabase
+        .from('contracts')
+        .select('id', { count: 'exact', head: true })
+        .eq('vehicle_id', current.vehicle_id)
+        .in('status', ['sent', 'signed', 'active']);
+
+      if ((count ?? 0) === 0) {
+        await supabase.from('rental_vehicles').update({ is_available: true }).eq('id', current.vehicle_id);
+      }
+    }
+  }
+
+  return data;
 }
 
 export async function updateContractPdf(id: string, pdf_url: string): Promise<void> {
@@ -433,6 +560,41 @@ export async function saveLessorSignature(contractId: string, imageUrl: string):
   if (error) throw new Error(error.message);
 }
 
+export async function uploadContractDocument(
+  contractId: string,
+  file: File,
+  currentDocuments: ContractDocument[],
+  category?: string,
+): Promise<ContractDocument[]> {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `documents/${contractId}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage
+    .from('contracts')
+    .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+  if (error) throw new Error(error.message);
+
+  const { data } = supabase.storage.from('contracts').getPublicUrl(path);
+  const document: ContractDocument = {
+    name: file.name,
+    url: data.publicUrl,
+    type: file.type || 'application/octet-stream',
+    category,
+    uploaded_at: new Date().toISOString(),
+  };
+  const previousDocuments = currentDocuments ?? [];
+  const documents = category
+    ? [...previousDocuments.filter((doc) => doc.category !== category), document]
+    : [...previousDocuments, document];
+
+  const { error: updateErr } = await supabase
+    .from('contracts')
+    .update({ documents })
+    .eq('id', contractId);
+  if (updateErr) throw new Error(updateErr.message);
+
+  return documents;
+}
+
 // --- Upload image véhicule ----------------------------------------------------
 
 export async function uploadVehicleImage(businessId: string, file: File): Promise<string> {
@@ -510,10 +672,23 @@ export async function recordPayment(
     .eq('source', 'rental')
     .eq('source_id', contractId);
 
+  const { data: freshContract } = await supabase
+    .from('contracts')
+    .select('client_name, total_amount, vehicle:rental_vehicles(*)')
+    .eq('id', contractId)
+    .maybeSingle();
+
   // 3. Créer la nouvelle écriture comptable
-  const total       = contract.total_amount ?? 0;
+  const vehicle = (freshContract?.vehicle ?? null) as RentalVehicle | null;
+  const total       = Number(freshContract?.total_amount ?? contract.total_amount ?? 0);
   const paid        = input.amount_paid;
   const outstanding = Math.max(0, total - paid);
+  const commission = vehicle?.owner_type === 'third_party'
+    ? computeVehicleCommission(total, vehicle.commission_type, vehicle.commission_value)
+    : total;
+  const ownerShare = vehicle?.owner_type === 'third_party'
+    ? Math.max(0, total - commission)
+    : 0;
 
   const debitAccount = input.payment_method === 'card'
     ? { code: '521', name: 'Banque / Carte' }
@@ -522,14 +697,17 @@ export async function recordPayment(
   const lines: { account_code: string; account_name: string; debit: number; credit: number }[] = [];
   if (paid > 0)           lines.push({ account_code: debitAccount.code, account_name: debitAccount.name, debit: paid,        credit: 0 });
   if (outstanding > 0.01) lines.push({ account_code: '411',            account_name: 'Clients',          debit: outstanding, credit: 0 });
-  lines.push(              { account_code: '706',            account_name: 'Location de véhicule',debit: 0,           credit: total });
+  if (ownerShare > 0.01)   lines.push({ account_code: '467',            account_name: `Propriétaire véhicule - ${vehicle?.owner_name ?? 'tiers'}`, debit: 0, credit: ownerShare });
+  lines.push(              { account_code: '706',            account_name: vehicle?.owner_type === 'third_party' ? 'Commission location véhicule' : 'Location de véhicule', debit: 0, credit: commission });
 
   const { data: entry, error: entryErr } = await (supabase as any)
     .from('journal_entries')
     .insert({
       business_id: businessId,
       entry_date:  input.payment_date,
-      description: `Location - ${contract.client_name}`,
+      description: vehicle?.owner_type === 'third_party'
+        ? `Location mandat - ${freshContract?.client_name ?? contract.client_name} - ${vehicle.owner_name ?? 'propriétaire tiers'}`
+        : `Location - ${freshContract?.client_name ?? contract.client_name}`,
       source:      'rental',
       source_id:   contractId,
     })
@@ -542,3 +720,9 @@ export async function recordPayment(
     .insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
   if (linesErr) throw new Error(linesErr.message);
 }
+
+function computeVehicleCommission(total: number, type: 'percent' | 'fixed' | null | undefined, value: number | null | undefined): number {
+  const raw = type === 'fixed' ? Number(value ?? 0) : total * (Number(value ?? 0) / 100);
+  return Math.min(total, Math.max(0, raw));
+}
+

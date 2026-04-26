@@ -15,8 +15,14 @@ function fmtDate(d: string) {
   });
 }
 
-function daysBetween(from: string, to: string) {
-  return Math.max(1, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000));
+function fmtTime(t?: string | null) {
+  return t ? t.slice(0, 5) : '—';
+}
+
+function daysBetween(from: string, to: string, fromTime = '09:00', toTime = '18:00') {
+  const start = new Date(`${from}T${fromTime}:00`);
+  const end = new Date(`${to}T${toTime}:00`);
+  return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -24,6 +30,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   sent:     { label: 'En cours',     color: 'bg-blue-50 border-blue-200 text-blue-700'      },
   signed:   { label: 'Confirmée',    color: 'bg-green-50 border-green-200 text-green-700'   },
   archived: { label: 'Terminée',     color: 'bg-slate-50 border-slate-200 text-content-muted'   },
+  cancelled:{ label: 'Annulée',      color: 'bg-red-50 border-red-200 text-status-error'    },
 };
 
 export function LocationConfirmationClient() {
@@ -69,7 +76,7 @@ export function LocationConfirmationClient() {
     );
   }
 
-  const days     = daysBetween(data.start_date, data.end_date);
+  const days     = daysBetween(data.start_date, data.end_date, data.start_time ?? '09:00', data.end_time ?? '18:00');
   const currency = data.currency;
   const status   = STATUS_CONFIG[data.status] ?? STATUS_CONFIG['draft'];
   const shortId  = data.id.slice(0, 8).toUpperCase();
@@ -156,6 +163,9 @@ export function LocationConfirmationClient() {
             <div className="p-3 bg-green-50 rounded-xl border border-green-100">
               <p className="text-xs font-semibold text-green-600 mb-0.5">Départ</p>
               <p className="font-bold text-slate-800 text-sm leading-snug">{fmtDate(data.start_date)}</p>
+              <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1">
+                <Clock className="w-3 h-3" />{fmtTime(data.start_time)}
+              </p>
               {data.pickup_location && (
                 <p className="text-xs text-content-muted mt-0.5 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />{data.pickup_location}
@@ -165,6 +175,9 @@ export function LocationConfirmationClient() {
             <div className="p-3 bg-red-50 rounded-xl border border-red-100">
               <p className="text-xs font-semibold text-status-error mb-0.5">Retour</p>
               <p className="font-bold text-slate-800 text-sm leading-snug">{fmtDate(data.end_date)}</p>
+              <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1">
+                <Clock className="w-3 h-3" />{fmtTime(data.end_time)}
+              </p>
               {data.return_location && (
                 <p className="text-xs text-content-muted mt-0.5 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />{data.return_location}

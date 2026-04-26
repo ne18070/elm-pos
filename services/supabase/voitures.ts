@@ -25,6 +25,12 @@ export interface Voiture {
   description:      string | null;
   image_principale: string | null;
   statut:           VoitureStatut;
+  owner_type:        'owned' | 'third_party';
+  owner_name:        string | null;
+  owner_phone:       string | null;
+  commission_type:   'percent' | 'fixed';
+  commission_value:  number;
+  owner_report_token:string | null;
   created_at:       string;
   updated_at:       string;
 }
@@ -88,7 +94,7 @@ export async function getVoitures(businessId: string): Promise<Voiture[]> {
 
 export async function createVoiture(
   businessId: string,
-  v: Omit<Voiture, 'id' | 'business_id' | 'created_at' | 'updated_at'>,
+  v: Omit<Voiture, 'id' | 'business_id' | 'created_at' | 'updated_at' | 'owner_report_token'>,
 ): Promise<Voiture> {
   const { data, error } = await supabase
     .from('voitures')
@@ -101,7 +107,7 @@ export async function createVoiture(
 
 export async function updateVoiture(
   id: string,
-  v: Partial<Omit<Voiture, 'id' | 'business_id' | 'created_at' | 'updated_at'>>,
+  v: Partial<Omit<Voiture, 'id' | 'business_id' | 'created_at' | 'updated_at' | 'owner_report_token'>>,
 ): Promise<void> {
   const { error } = await supabase
     .from('voitures')
@@ -187,10 +193,16 @@ export async function createLead(
 
 export async function recordVoitureVente(
   businessId: string,
-  voiture: Pick<Voiture, 'id' | 'marque' | 'modele' | 'annee' | 'prix'>,
+  voiture: Pick<Voiture, 'id' | 'marque' | 'modele' | 'annee' | 'prix'> & Partial<Pick<Voiture, 'owner_type' | 'owner_name' | 'commission_type' | 'commission_value'>>,
 ): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
   const label = `${voiture.marque} ${voiture.modele}${voiture.annee ? ` (${voiture.annee})` : ''}`;
+  const commission = voiture.owner_type === 'third_party'
+    ? computeVehicleCommission(voiture.prix, voiture.commission_type, voiture.commission_value)
+    : voiture.prix;
+  const ownerShare = voiture.owner_type === 'third_party'
+    ? Math.max(0, voiture.prix - commission)
+    : 0;
 
   const { data: entry, error: entryErr } = await supabase
     .from('journal_entries')
@@ -206,9 +218,48 @@ export async function recordVoitureVente(
     .single();
   if (entryErr) throw new Error(entryErr.message);
 
-  const { error: linesErr } = await supabase.from('journal_lines').insert([
+  const lines = buildVoitureSaleLines(entry.id, voiture, commission, ownerShare);
+  const { error: linesErr } = await supabase.from('journal_lines').insert(lines);
+  if (linesErr) throw new Error(linesErr.message);
+}
+
+function buildVoitureSaleLines(
+  entryId: string,
+  voiture: Pick<Voiture, 'prix'> & Partial<Pick<Voiture, 'owner_type' | 'owner_name'>>,
+  commission: number,
+  ownerShare: number,
+): { entry_id: string; account_code: string; account_name: string; debit: number; credit: number }[] {
+  const lines: { entry_id: string; account_code: string; account_name: string; debit: number; credit: number }[] = [
+    { entry_id: entryId, account_code: '411', account_name: 'Clients', debit: voiture.prix, credit: 0 },
+  ];
+  if (ownerShare > 0.01) {
+    lines.push({
+      entry_id: entryId,
+      account_code: '467',
+      account_name: `Propriétaire véhicule - ${voiture.owner_name ?? 'tiers'}`,
+      debit: 0,
+      credit: ownerShare,
+    });
+  }
+  lines.push({
+    entry_id: entryId,
+    account_code: '701',
+    account_name: voiture.owner_type === 'third_party' ? 'Commission vente de véhicules' : 'Ventes de véhicules',
+    debit: 0,
+    credit: commission,
+  });
+  return lines;
+}
+
+function computeVehicleCommission(total: number, type: 'percent' | 'fixed' | null | undefined, value: number | null | undefined): number {
+  const raw = type === 'fixed' ? Number(value ?? 0) : total * (Number(value ?? 0) / 100);
+  return Math.min(total, Math.max(0, raw));
+}
+
+/*
     { entry_id: entry.id, account_code: '411', account_name: 'Clients',              debit: voiture.prix, credit: 0 },
     { entry_id: entry.id, account_code: '701', account_name: 'Ventes de véhicules',  debit: 0, credit: voiture.prix },
   ]);
   if (linesErr) throw new Error(linesErr.message);
 }
+*/

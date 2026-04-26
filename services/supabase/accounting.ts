@@ -56,6 +56,7 @@ export interface CreateEntryInput {
   businessId: string;
   entry_date: string;
   reference?: string;
+  source_id?: string | null;
   description: string;
   lines: { account_code: string; account_name: string; debit: number; credit: number }[];
 }
@@ -109,6 +110,7 @@ export async function createManualEntry(input: CreateEntryInput): Promise<Journa
       reference:   input.reference ?? null,
       description: input.description,
       source:      'manual',
+      source_id:   input.source_id ?? null,
     })
     .select()
     .single();

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency } from '@/lib/utils';
 
@@ -8,51 +8,85 @@ import {
   Send, Archive, Share2, CheckCircle, Clock, FileSignature,
   ChevronLeft, Eye, Download, Copy, Check, Bold, Italic,
   List, Heading2, Minus, Type, Banknote, AlertCircle, RefreshCw,
-  PenLine, RotateCcw, ExternalLink,
+  PenLine, RotateCcw, ExternalLink, XCircle, Upload,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import {
   getVehicles, createVehicle, updateVehicle, deleteVehicle, toggleVehicleAvailability,
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
-  getContracts, createContract, updateContract, sendContract, archiveContract, savePdfUrl,
-  buildWhatsAppLink, daysCount, fillTemplate, uploadVehicleImage, uploadContractPdf,
+  getContracts, createContract, updateContract, sendContract, archiveContract, cancelContract, savePdfUrl,
+  saveContractInspection,
+  buildWhatsAppLink, fillTemplate, uploadVehicleImage, uploadContractPdf,
   recordPayment, uploadLessorSignature, saveLessorSignature,
+  uploadContractDocument,
   PAYMENT_METHOD_LABELS,
-  type RentalVehicle, type ContractTemplate, type Contract, type CreateContractInput,
-  type PaymentMethod,
+  type RentalVehicle, type ContractTemplate, type Contract, type ContractInspection, type CreateContractInput,
+  type PaymentMethod, type RequiredContractDocument,
 } from '@services/supabase/contracts';
 import { generateContractPdf, imageUrlToDataUrl, dataUrlToBlob } from '@/lib/contract-pdf';
 import { getClients, type Client } from '@services/supabase/clients';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// 笏笏笏 Helpers 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 type Tab = 'contrats' | 'vehicules' | 'modeles';
 
 const STATUS_CFG: Record<string, { label: string; color: string }> = {
   draft:    { label: 'Brouillon',  color: 'bg-slate-700 text-slate-300' },
-  sent:     { label: 'Envoyé',     color: 'bg-badge-info text-blue-300' },
-  signed:   { label: 'Signé',      color: 'bg-badge-success text-status-success' },
-  archived: { label: 'Archivé',    color: 'bg-surface-card text-slate-500' },
+  sent:     { label: 'Envoyﾃｩ',     color: 'bg-badge-info text-blue-300' },
+  signed:   { label: 'Signﾃｩ',      color: 'bg-badge-success text-status-success' },
+  active:   { label: 'En cours',   color: 'bg-badge-warning text-status-warning' },
+  archived: { label: 'Archivﾃｩ',    color: 'bg-surface-card text-slate-500' },
+  cancelled:{ label: 'Annulﾃｩ',     color: 'bg-badge-error text-status-error' },
 };
 
 const PAYMENT_STATUS_CFG = {
-  pending: { label: 'Non payé', color: 'bg-badge-error text-status-error'     },
+  pending: { label: 'Non payﾃｩ', color: 'bg-badge-error text-status-error'     },
   partial: { label: 'Acompte',  color: 'bg-badge-warning text-status-warning' },
-  paid:    { label: 'Payé',     color: 'bg-badge-success text-status-success' },
+  paid:    { label: 'Payﾃｩ',     color: 'bg-badge-success text-status-success' },
 } as const;
 
 const TODAY = new Date().toISOString().split('T')[0];
 const TOMORROW = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+const DEFAULT_START_TIME = '09:00';
+const DEFAULT_END_TIME = '18:00';
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function fmtMoney(amount: number | null, currency: string) {
-  if (amount == null) return '—';
+  if (amount == null) return '-';
   return `${amount.toLocaleString('fr-FR')} ${displayCurrency(currency)}`;
+}
+
+function fmtTime(t?: string | null) {
+  return t ? t.slice(0, 5) : '-';
+}
+
+function toRentalDateTime(date: string, time: string | null | undefined, fallback: string) {
+  return new Date(`${date}T${(time || fallback).slice(0, 5)}:00`);
+}
+
+function rentalDaysCount(startDate: string, startTime: string, endDate: string, endTime: string): number {
+  const start = toRentalDateTime(startDate, startTime, DEFAULT_START_TIME);
+  const end = toRentalDateTime(endDate, endTime, DEFAULT_END_TIME);
+  return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
+}
+
+function isValidRentalPeriod(startDate: string, startTime: string, endDate: string, endTime: string): boolean {
+  return toRentalDateTime(endDate, endTime, DEFAULT_END_TIME).getTime() >
+    toRentalDateTime(startDate, startTime, DEFAULT_START_TIME).getTime();
+}
+
+function makeRequiredDocument(label: string): RequiredContractDocument {
+  const key = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || `document_${Date.now()}`;
+  return { key: `${key}_${Date.now()}`, label: label.trim() };
 }
 
 function getAppUrl(): string {
@@ -62,52 +96,56 @@ function getAppUrl(): string {
   return '';
 }
 
-// ─── Default contract template ────────────────────────────────────────────────
+function isClosedContract(c: Contract): boolean {
+  return c.status === 'archived' || c.status === 'cancelled';
+}
+
+// 笏笏笏 Default contract template 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333;">
-  <h1 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">CONTRAT DE LOCATION DE VÉHICULE</h1>
+  <h1 style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px;">CONTRAT DE LOCATION DE Vﾃ羽ICULE</h1>
 
-  <h2>ENTRE LES SOUSSIGNÉS :</h2>
+  <h2>ENTRE LES SOUSSIGNﾃ唄 :</h2>
 
   <p><strong>LE LOUEUR :</strong><br>
   {{business_name}}<br>
-  Représenté par : {{owner_name}}</p>
+  Reprﾃｩsentﾃｩ par : {{owner_name}}</p>
 
   <p><strong>LE LOCATAIRE :</strong><br>
-  Nom et Prénom : {{client_name}}<br>
+  Nom et Prﾃｩnom : {{client_name}}<br>
   Adresse : {{client_address}}<br>
-  Pièce d'identité n° : {{client_id_number}}<br>
-  Téléphone : {{client_phone}}</p>
+  Piﾃｨce d'identitﾃｩ nﾂｰ : {{client_id_number}}<br>
+  Tﾃｩlﾃｩphone : {{client_phone}}</p>
 
   <h2>OBJET DU CONTRAT :</h2>
 
-  <p>Le loueur met à disposition du locataire le véhicule suivant :</p>
-  <p><strong>Véhicule :</strong> {{vehicle_name}}<br>
+  <p>Le loueur met ﾃ disposition du locataire le vﾃｩhicule suivant :</p>
+  <p><strong>Vﾃｩhicule :</strong> {{vehicle_name}}<br>
   <strong>Immatriculation :</strong> {{license_plate}}</p>
 
   <h2>CONDITIONS DE LOCATION :</h2>
   <ul>
-    <li><strong>Date de prise en charge :</strong> {{start_date}}</li>
-    <li><strong>Date de restitution :</strong> {{end_date}}</li>
+    <li><strong>Date de prise en charge :</strong> {{start_date}} ﾃ {{start_time}}</li>
+    <li><strong>Date de restitution :</strong> {{end_date}} ﾃ {{end_time}}</li>
     <li><strong>Lieu de prise en charge :</strong> {{pickup_location}}</li>
     <li><strong>Lieu de restitution :</strong> {{return_location}}</li>
     <li><strong>Tarif journalier :</strong> {{price_per_day}} {{currency}}</li>
-    <li><strong>Durée :</strong> {{duration_days}} jours</li>
+    <li><strong>Durﾃｩe :</strong> {{duration_days}} jours</li>
     <li><strong>Montant total :</strong> {{total_amount}} {{currency}}</li>
     <li><strong>Caution :</strong> {{deposit_amount}} {{currency}}</li>
   </ul>
 
-  <h2>CONDITIONS GÉNÉRALES :</h2>
-  <p>Le locataire s'engage à :</p>
+  <h2>CONDITIONS Gﾃ丑ﾃ嘘ALES :</h2>
+  <p>Le locataire s'engage ﾃ :</p>
   <ul>
-    <li>Utiliser le véhicule conformément à sa destination</li>
-    <li>Ne pas sous-louer le véhicule</li>
-    <li>Restituer le véhicule dans l'état où il l'a reçu</li>
-    <li>Signaler immédiatement tout sinistre ou dommage</li>
+    <li>Utiliser le vﾃｩhicule conformﾃｩment ﾃ sa destination</li>
+    <li>Ne pas sous-louer le vﾃｩhicule</li>
+    <li>Restituer le vﾃｩhicule dans l'ﾃｩtat oﾃｹ il l'a reﾃｧu</li>
+    <li>Signaler immﾃｩdiatement tout sinistre ou dommage</li>
     <li>Respecter le code de la route</li>
   </ul>
 
-  <p>En cas de sinistre causé par la faute du locataire, celui-ci sera tenu responsable des dommages au-delà de la caution versée.</p>
+  <p>En cas de sinistre causﾃｩ par la faute du locataire, celui-ci sera tenu responsable des dommages au-delﾃ de la caution versﾃｩe.</p>
 
   <table style="width: 100%; margin-top: 60px; border-collapse: collapse;">
     <tr>
@@ -117,14 +155,14 @@ const DEFAULT_TEMPLATE = `<div style="font-family: Arial, sans-serif; max-width:
       </td>
       <td style="width: 50%; text-align: center; vertical-align: top; padding: 10px;">
         <p style="margin: 0 0 4px 0;"><strong>Le Locataire</strong></p>
-        <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">Lu et approuvé</p>
+        <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">Lu et approuvﾃｩ</p>
         <div style="height: 80px; border-top: 1px solid #ccc; margin-top: 8px;">{{signature_block}}</div>
       </td>
     </tr>
   </table>
 </div>`;
 
-// ─── Component: Signature Canvas ──────────────────────────────────────────────
+// 笏笏笏 Component: Signature Canvas 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 function LessorSignatureCanvas({
   canvasRef, hasStrokesRef, onDrawStart
@@ -240,7 +278,78 @@ function LessorSignatureCanvas({
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+// 笏笏笏 Page principale 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+
+function InspectionSummary({
+  title,
+  inspection,
+  actionLabel,
+  disabled,
+  onEdit,
+}: {
+  title: string;
+  inspection: ContractInspection | null;
+  actionLabel: string;
+  disabled: boolean;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="rounded-xl bg-surface-input p-3 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-white">{title}</p>
+        <button type="button" onClick={onEdit} disabled={disabled}
+          className="text-xs px-2 py-1 rounded-lg border border-surface-border text-content-secondary hover:text-white hover:bg-surface-hover disabled:opacity-40">
+          {actionLabel}
+        </button>
+      </div>
+      {inspection ? (
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <p><span className="text-content-muted">Km:</span> {inspection.mileage?.toLocaleString('fr-FR') ?? '-'}</p>
+          <p><span className="text-content-muted">Carburant:</span> {inspection.fuel_level ?? '-'}</p>
+          <p><span className="text-content-muted">Etat:</span> {inspection.condition ?? '-'}</p>
+          <p><span className="text-content-muted">Date:</span> {fmtDate(inspection.done_at)}</p>
+          {inspection.notes && <p className="col-span-2 text-content-secondary">{inspection.notes}</p>}
+        </div>
+      ) : (
+        <p className="text-xs text-content-muted">Non renseigne.</p>
+      )}
+    </div>
+  );
+}
+
+function InspectionForm({
+  form,
+  onChange,
+  showCharges,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  form: { mileage: string; fuel_level: string; condition: string; notes: string; charges: string };
+  onChange: (patch: Partial<{ mileage: string; fuel_level: string; condition: string; notes: string; charges: string }>) => void;
+  showCharges: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-surface-border p-3 space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div><label className="label text-xs">Kilometrage</label><input type="number" className="input text-sm h-9" value={form.mileage} onChange={(e) => onChange({ mileage: e.target.value })} /></div>
+        <div><label className="label text-xs">Carburant</label><select className="input text-sm h-9" value={form.fuel_level} onChange={(e) => onChange({ fuel_level: e.target.value })}><option value="full">Plein</option><option value="three_quarters">3/4</option><option value="half">1/2</option><option value="quarter">1/4</option><option value="empty">Vide</option></select></div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div><label className="label text-xs">Etat</label><select className="input text-sm h-9" value={form.condition} onChange={(e) => onChange({ condition: e.target.value })}><option value="ok">Bon etat</option><option value="dirty">Sale</option><option value="damaged">Dommage constate</option><option value="mechanical_issue">Probleme mecanique</option></select></div>
+        {showCharges && <div><label className="label text-xs">Frais retour</label><input type="number" className="input text-sm h-9" value={form.charges} onChange={(e) => onChange({ charges: e.target.value })} /></div>}
+      </div>
+      <div><label className="label text-xs">Notes</label><textarea className="input text-sm resize-none" rows={2} value={form.notes} onChange={(e) => onChange({ notes: e.target.value })} /></div>
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel} className="btn-secondary flex-1 h-9 text-sm">Annuler</button>
+        <button type="button" onClick={onSave} disabled={saving} className="btn-primary flex-1 h-9 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}Enregistrer</button>
+      </div>
+    </div>
+  );
+}
 
 export default function ContratsPage() {
   const { business, user } = useAuthStore();
@@ -270,6 +379,16 @@ export default function ContratsPage() {
     amount_paid: string; payment_date: string; payment_method: PaymentMethod;
   }>({ amount_paid: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'cash' });
   const [savingPayment, setSavingPayment] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [savingInspection, setSavingInspection] = useState(false);
+  const [inspectionEditor, setInspectionEditor] = useState<'pickup' | 'return' | null>(null);
+  const [inspectionForm, setInspectionForm] = useState({
+    mileage: '',
+    fuel_level: 'full',
+    condition: 'ok',
+    notes: '',
+    charges: '',
+  });
 
   // Signature loueur
   const [lessorSigOpen, setLessorSigOpen]   = useState(false);
@@ -279,7 +398,7 @@ export default function ContratsPage() {
   const lessorCanvasRef   = useRef<HTMLCanvasElement>(null);
   const lessorHasStrokes  = useRef(false);
 
-  // ─── Load ────────────────────────────────────────────────────────────────────
+  // 笏笏笏 Load 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
   async function load() {
     if (!business) return;
@@ -302,20 +421,20 @@ export default function ContratsPage() {
 
   useEffect(() => { load(); }, [business?.id]);
 
-  // ─── Realtime: notification quand un locataire signe ─────────────────────
+  // 笏笏笏 Realtime: notification quand un locataire signe 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
   useEffect(() => {
     if (!business?.id) return;
 
-    // Rafraîchissement général (INSERT/UPDATE sur contracts)
+    // Rafraﾃｮchissement gﾃｩnﾃｩral (INSERT/UPDATE sur contracts)
     const handleChanged = () => { load(); };
     window.addEventListener('elm-pos:contracts:changed', handleChanged);
 
-    // Notification spéciale : contrat signé par le locataire
+    // Notification spﾃｩciale : contrat signﾃｩ par le locataire
     const handleSigned = (e: Event) => {
       const record = (e as CustomEvent<{ record: Record<string, unknown> }>).detail?.record;
       const clientName = (record?.client_name as string) ?? 'le locataire';
-      notifSuccess(`Contrat signé par ${clientName} ✓`);
+      notifSuccess(`Contrat signe par ${clientName}`);
       load();
     };
     window.addEventListener('elm-pos:contracts:signed', handleSigned);
@@ -327,12 +446,12 @@ export default function ContratsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id]);
 
-  // ─── Contract actions ─────────────────────────────────────────────────────
+  // 笏笏笏 Contract actions 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
   async function handleSend(c: Contract) {
     try {
       await sendContract(c.id);
-      notifSuccess('Contrat envoyé — lien de signature actif 7 jours');
+      notifSuccess('Contrat envoyﾃｩ 窶・lien de signature actif 7 jours');
       const [v, t, freshContracts] = await Promise.all([
         getVehicles(business!.id),
         getTemplates(business!.id),
@@ -353,9 +472,36 @@ export default function ContratsPage() {
   async function handleArchive(c: Contract) {
     try {
       await archiveContract(c.id);
-      notifSuccess('Contrat archivé');
+      notifSuccess('Contrat archivﾃｩ');
       load();
       if (detailContract?.id === c.id) setDetailContract(null);
+    } catch (e) {
+      notifError(toUserError(e));
+    }
+  }
+
+  async function handleCancel(c: Contract) {
+    const reason = window.prompt(
+      'Motif d\'annulation du contrat',
+      'Non-respect des conditions de location'
+    );
+    if (reason === null) return;
+
+    const confirmed = window.confirm(
+      'Annuler ce contrat ? Le vehicule sera remis disponible si aucun autre contrat actif ne l\'utilise.'
+    );
+    if (!confirmed) return;
+
+    try {
+      await cancelContract(c.id, reason);
+      notifSuccess('Contrat annulﾃｩ');
+      load();
+      setDetailContract({
+        ...c,
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason: reason.trim() || null,
+      });
     } catch (e) {
       notifError(toUserError(e));
     }
@@ -373,7 +519,7 @@ export default function ContratsPage() {
   }
 
   function handleWhatsApp(c: Contract) {
-    if (!c.client_phone) { notifError('Numéro de téléphone client manquant'); return; }
+    if (!c.client_phone) { notifError('Numﾃｩro de tﾃｩlﾃｩphone client manquant'); return; }
     const link = buildWhatsAppLink(c.client_phone, contractLink(c), c.client_name);
     window.open(link, '_blank');
   }
@@ -389,7 +535,7 @@ export default function ContratsPage() {
         payment_date:   paymentForm.payment_date,
         payment_method: paymentForm.payment_method,
       }, { client_name: c.client_name, total_amount: c.total_amount });
-      notifSuccess('Paiement enregistré et écriture comptable créée');
+      notifSuccess('Paiement enregistrﾃｩ et ﾃｩcriture comptable crﾃｩﾃｩe');
       load();
       setDetailContract({
         ...c,
@@ -404,6 +550,25 @@ export default function ContratsPage() {
     }
   }
 
+  async function handleUploadDocuments(c: Contract, files: FileList | null | undefined) {
+    if (!files || files.length === 0) return;
+    setUploadingDocument(true);
+    try {
+      let documents = c.documents ?? [];
+      for (const file of Array.from(files)) {
+        documents = await uploadContractDocument(c.id, file, documents);
+      }
+      const updated = { ...c, documents };
+      setDetailContract(updated);
+      setContracts((prev) => prev.map((x) => x.id === c.id ? updated : x));
+      notifSuccess(files.length > 1 ? 'Documents ajoutﾃｩs au contrat' : 'Document ajoutﾃｩ au contrat');
+    } catch (e) {
+      notifError(toUserError(e));
+    } finally {
+      setUploadingDocument(false);
+    }
+  }
+
   async function handleSaveLessorSignature(c: Contract, sigDataUrl: string) {
     setSavingLessorSig(true);
     try {
@@ -411,7 +576,7 @@ export default function ContratsPage() {
       const url  = await uploadLessorSignature(c.id, blob);
       await saveLessorSignature(c.id, url);
 
-      // Regénérer le PDF avec les deux signatures
+      // Regﾃｩnﾃｩrer le PDF avec les deux signatures
       try {
         const clientSrc = c.signature_image
           ? await imageUrlToDataUrl(c.signature_image)
@@ -436,7 +601,7 @@ export default function ContratsPage() {
 
       setLessorSigOpen(false);
       lessorHasStrokes.current = false;
-      notifSuccess('Signature du loueur enregistrée');
+      notifSuccess('Signature du loueur enregistrﾃｩe');
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -457,8 +622,43 @@ export default function ContratsPage() {
     return 'partial';
   }
 
+  function fillInspectionForm(c: Contract, type: 'pickup' | 'return') {
+    const inspection = type === 'pickup' ? c.pickup_inspection : c.return_inspection;
+    setInspectionForm({
+      mileage: inspection?.mileage?.toString() ?? '',
+      fuel_level: inspection?.fuel_level ?? 'full',
+      condition: inspection?.condition ?? 'ok',
+      notes: inspection?.notes ?? '',
+      charges: inspection?.charges?.toString() ?? '',
+    });
+  }
 
-  // ─── Loading ──────────────────────────────────────────────────────────────
+  async function handleSaveInspection(c: Contract, type: 'pickup' | 'return') {
+    const parsedMileage = inspectionForm.mileage ? parseInt(inspectionForm.mileage, 10) : null;
+    const charges = type === 'return' && inspectionForm.charges ? parseFloat(inspectionForm.charges) : 0;
+    setSavingInspection(true);
+    try {
+      const updated = await saveContractInspection(c.id, type, {
+        mileage: Number.isFinite(parsedMileage) ? parsedMileage : null,
+        fuel_level: inspectionForm.fuel_level || null,
+        condition: inspectionForm.condition || null,
+        notes: inspectionForm.notes.trim() || null,
+        charges,
+      });
+      setDetailContract(updated);
+      setContracts((prev) => prev.map((x) => x.id === updated.id ? updated : x));
+      await load();
+      notifSuccess(type === 'pickup' ? 'Etat de depart enregistre' : 'Retour enregistre et contrat archive');
+      setInspectionEditor(null);
+    } catch (e) {
+      notifError(toUserError(e));
+    } finally {
+      setSavingInspection(false);
+    }
+  }
+
+
+  // 笏笏笏 Loading 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
   if (loading) {
     return (
@@ -468,7 +668,7 @@ export default function ContratsPage() {
     );
   }
 
-  // ─── Detail panel ────────────────────────────────────────────────────────────
+  // 笏笏笏 Detail panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
   if (detailContract) {
     const c = detailContract;
@@ -484,10 +684,12 @@ export default function ContratsPage() {
           </button>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white truncate">{c.client_name}</p>
-            <p className="text-xs text-content-secondary">{fmtDate(c.start_date)} → {fmtDate(c.end_date)}</p>
+            <p className="text-xs text-content-secondary">
+              {fmtDate(c.start_date)} {fmtTime(c.start_time)} 竊・{fmtDate(c.end_date)} {fmtTime(c.end_time)}
+            </p>
           </div>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>{status.label}</span>
-          {c.status !== 'archived' && (
+          {!isClosedContract(c) && (
             <button
               onClick={() => { setEditContract(c); setShowContractPanel(true); }}
               className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
@@ -505,45 +707,147 @@ export default function ContratsPage() {
             <p className="text-white font-medium">{c.client_name}</p>
             {c.client_phone && <p className="text-sm text-content-secondary">{c.client_phone}</p>}
             {c.client_email && <p className="text-sm text-content-secondary">{c.client_email}</p>}
-            {c.client_id_number && <p className="text-sm text-content-secondary">Pièce : {c.client_id_number}</p>}
+            {c.client_id_number && <p className="text-sm text-content-secondary">Piﾃｨce : {c.client_id_number}</p>}
             {c.client_address && <p className="text-sm text-content-secondary">{c.client_address}</p>}
           </div>
 
           <div className="card p-4 space-y-2">
             <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Location</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div><p className="text-slate-500">Départ</p><p className="text-white">{fmtDate(c.start_date)}</p></div>
-              <div><p className="text-slate-500">Retour</p><p className="text-white">{fmtDate(c.end_date)}</p></div>
+              <div><p className="text-slate-500">Dﾃｩpart</p><p className="text-white">{fmtDate(c.start_date)} ﾃ {fmtTime(c.start_time)}</p></div>
+              <div><p className="text-slate-500">Retour</p><p className="text-white">{fmtDate(c.end_date)} ﾃ {fmtTime(c.end_time)}</p></div>
               {c.pickup_location && <div><p className="text-slate-500">Lieu prise</p><p className="text-white">{c.pickup_location}</p></div>}
               {c.return_location && <div><p className="text-slate-500">Lieu retour</p><p className="text-white">{c.return_location}</p></div>}
               <div><p className="text-slate-500">Prix/jour</p><p className="text-white">{fmtMoney(c.price_per_day, c.currency)}</p></div>
               <div><p className="text-slate-500">Total</p><p className="text-content-brand font-semibold">{fmtMoney(c.total_amount, c.currency)}</p></div>
               <div><p className="text-slate-500">Caution</p><p className="text-white">{fmtMoney(c.deposit_amount, c.currency)}</p></div>
+              {c.extra_charges != null && c.extra_charges > 0 && (
+                <div><p className="text-slate-500">Frais retour</p><p className="text-status-warning">{fmtMoney(c.extra_charges, c.currency)}</p></div>
+              )}
             </div>
           </div>
 
-          {/* ── Paiement ── */}
-          {c.status !== 'archived' && (
+          <div className="card p-4 space-y-4">
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Etat du vehicule</h3>
+
+            <InspectionSummary
+              title="Depart"
+              inspection={c.pickup_inspection}
+              actionLabel={c.pickup_inspection ? 'Modifier depart' : 'Faire le check-in'}
+              disabled={isClosedContract(c) || (c.status !== 'signed' && c.status !== 'active')}
+              onEdit={() => {
+                fillInspectionForm(c, 'pickup');
+                setInspectionEditor(inspectionEditor === 'pickup' ? null : 'pickup');
+              }}
+            />
+            {inspectionEditor === 'pickup' && (
+              <InspectionForm
+                form={inspectionForm}
+                onChange={(patch) => setInspectionForm((f) => ({ ...f, ...patch }))}
+                showCharges={false}
+                saving={savingInspection}
+                onCancel={() => setInspectionEditor(null)}
+                onSave={() => handleSaveInspection(c, 'pickup')}
+              />
+            )}
+
+            <InspectionSummary
+              title="Retour"
+              inspection={c.return_inspection}
+              actionLabel={c.return_inspection ? 'Modifier retour' : 'Faire le check-out'}
+              disabled={isClosedContract(c) || !c.pickup_inspection}
+              onEdit={() => {
+                fillInspectionForm(c, 'return');
+                setInspectionEditor(inspectionEditor === 'return' ? null : 'return');
+              }}
+            />
+            {inspectionEditor === 'return' && (
+              <InspectionForm
+                form={inspectionForm}
+                onChange={(patch) => setInspectionForm((f) => ({ ...f, ...patch }))}
+                showCharges
+                saving={savingInspection}
+                onCancel={() => setInspectionEditor(null)}
+                onSave={() => handleSaveInspection(c, 'return')}
+              />
+            )}
+          </div>
+
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Documents joints</h3>
+              {!isClosedContract(c) && (
+                <label className="btn-secondary h-8 px-3 text-xs flex items-center gap-2 cursor-pointer">
+                  {uploadingDocument ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  Ajouter
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    multiple
+                    className="hidden"
+                    disabled={uploadingDocument}
+                    onChange={(e) => {
+                      handleUploadDocuments(c, e.target.files);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {c.required_documents && c.required_documents.length > 0 && (
+              <div className="rounded-xl bg-surface-input px-3 py-2">
+                <p className="text-xs text-content-secondary mb-1">Requis avant signature</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {c.required_documents.map((doc) => (
+                    <span key={doc.key} className="rounded-full bg-surface-card border border-surface-border px-2 py-0.5 text-[11px] text-slate-300">
+                      {doc.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {c.documents && c.documents.length > 0 ? (
+              <div className="space-y-2">
+                {c.documents.map((doc, idx) => (
+                  <a
+                    key={`${doc.url}-${idx}`}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between gap-3 rounded-xl bg-surface-input px-3 py-2 text-sm hover:bg-surface-hover"
+                  >
+                    <span className="text-white truncate">{doc.name}</span>
+                    <ExternalLink className="w-4 h-4 text-content-secondary shrink-0" />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-content-secondary">Aucun document joint. Vous pouvez ajouter une CNI, un permis ou un justificatif.</p>
+            )}
+          </div>
+
+          {/* 笏笏 Paiement 笏笏 */}
+          {!isClosedContract(c) && (
             <div className="card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
-                  <Banknote className="w-4 h-4" /> Paiement encaissé
+                  <Banknote className="w-4 h-4" /> Paiement encaissﾃｩ
                 </h3>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
                   {PAYMENT_STATUS_CFG[paymentStatus(c)].label}
                 </span>
               </div>
 
-              {/* Résumé si déjà payé */}
+              {/* Rﾃｩsumﾃｩ si dﾃｩjﾃ payﾃｩ */}
               {c.amount_paid != null && c.amount_paid > 0 && (
                 <div className="bg-surface-input rounded-xl p-3 text-sm space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-content-secondary">Montant encaissé</span>
+                    <span className="text-content-secondary">Montant encaissﾃｩ</span>
                     <span className="text-status-success font-semibold">{fmtMoney(c.amount_paid, c.currency)}</span>
                   </div>
                   {c.total_amount != null && c.amount_paid < c.total_amount && (
                     <div className="flex justify-between">
-                      <span className="text-content-secondary">Reste dû</span>
+                      <span className="text-content-secondary">Reste dﾃｻ</span>
                       <span className="text-status-warning font-semibold">{fmtMoney(c.total_amount - c.amount_paid, c.currency)}</span>
                     </div>
                   )}
@@ -555,7 +859,7 @@ export default function ContratsPage() {
                   )}
                   {c.payment_method && (
                     <div className="flex justify-between">
-                      <span className="text-content-secondary">Méthode</span>
+                      <span className="text-content-secondary">Mﾃｩthode</span>
                       <span className="text-slate-300">{PAYMENT_METHOD_LABELS[c.payment_method]}</span>
                     </div>
                   )}
@@ -566,7 +870,7 @@ export default function ContratsPage() {
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="label text-xs">Montant encaissé</label>
+                    <label className="label text-xs">Montant encaissﾃｩ</label>
                     <input
                       type="number"
                       className="input text-sm h-9"
@@ -586,7 +890,7 @@ export default function ContratsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="label text-xs">Méthode de paiement</label>
+                  <label className="label text-xs">Mﾃｩthode de paiement</label>
                   <select
                     className="input text-sm h-10"
                     value={paymentForm.payment_method}
@@ -604,23 +908,35 @@ export default function ContratsPage() {
                 >
                   {savingPayment
                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <><Banknote className="w-4 h-4" />{c.amount_paid ? 'Mettre à jour le paiement' : 'Enregistrer le paiement'}</>}
+                    : <><Banknote className="w-4 h-4" />{c.amount_paid ? 'Mettre ﾃ jour le paiement' : 'Enregistrer le paiement'}</>}
                 </button>
                 {c.amount_paid != null && c.amount_paid > 0 && (
                   <p className="text-[11px] text-slate-500 text-center flex items-center justify-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    Une écriture comptable est automatiquement créée / mise à jour
+                    Une ﾃｩcriture comptable est automatiquement crﾃｩﾃｩe / mise ﾃ jour
                   </p>
                 )}
               </div>
             </div>
           )}
 
-          {/* ── Contrat signé : lecture seule ── */}
+          {c.status === 'cancelled' && (
+            <div className="card p-4 space-y-2 border-status-error/40">
+              <h3 className="text-xs font-semibold text-status-error uppercase tracking-wider flex items-center gap-2">
+                <XCircle className="w-4 h-4" /> Contrat annulﾃｩ
+              </h3>
+              {c.cancelled_at && <p className="text-sm text-content-secondary">Le {fmtDate(c.cancelled_at)}</p>}
+              {c.cancellation_reason && (
+                <p className="text-sm text-white whitespace-pre-wrap">{c.cancellation_reason}</p>
+              )}
+            </div>
+          )}
+
+          {/* 笏笏 Contrat signﾃｩ : lecture seule 笏笏 */}
           {c.status === 'signed' && (
             <div className="card p-4 space-y-3">
               <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-status-success" /> Signé
+                <CheckCircle className="w-4 h-4 text-status-success" /> Signﾃｩ
               </h3>
               {c.signed_at && <p className="text-sm text-content-secondary">Le {fmtDate(c.signed_at)}</p>}
               <div className="grid grid-cols-2 gap-3">
@@ -628,25 +944,25 @@ export default function ContratsPage() {
                   <p className="text-xs text-slate-500 mb-2">Loueur</p>
                   {c.lessor_signature_image
                     ? <img src={c.lessor_signature_image} alt="signature loueur" className="h-14 bg-white rounded-xl p-2 object-contain mx-auto" />
-                    : <p className="text-xs text-slate-600 italic">Non signé</p>}
+                    : <p className="text-xs text-slate-600 italic">Non signﾃｩ</p>}
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-slate-500 mb-2">Locataire</p>
                   {c.signature_image
                     ? <img src={c.signature_image} alt="signature locataire" className="h-14 bg-white rounded-xl p-2 object-contain mx-auto" />
-                    : <p className="text-xs text-slate-600 italic">Non signé</p>}
+                    : <p className="text-xs text-slate-600 italic">Non signﾃｩ</p>}
                 </div>
               </div>
               {c.pdf_url && (
                 <a href={c.pdf_url} target="_blank" rel="noreferrer"
                    className="btn-secondary text-sm flex items-center gap-2 w-full justify-center">
-                  <Download className="w-4 h-4" /> Télécharger PDF
+                  <Download className="w-4 h-4" /> Tﾃｩlﾃｩcharger PDF
                 </a>
               )}
             </div>
           )}
 
-          {/* ── Signature du loueur + envoi (draft) ── */}
+          {/* 笏笏 Signature du loueur + envoi (draft) 笏笏 */}
           {c.status === 'draft' && (
             <div className="card p-4 space-y-4">
               <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider flex items-center gap-2">
@@ -739,7 +1055,7 @@ export default function ContratsPage() {
             </div>
           )}
 
-          {/* ── Lien actif (sent) ── */}
+          {/* 笏笏 Lien actif (sent) 笏笏 */}
           {c.status === 'sent' && (
             <div className="card p-4 space-y-3">
               <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Lien de signature</h3>
@@ -753,7 +1069,7 @@ export default function ContratsPage() {
                 <button onClick={() => handleWhatsApp(c)} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm h-10">
                   <Share2 className="w-4 h-4" /> WhatsApp
                 </button>
-                <button onClick={() => handleSend(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-3" title="Regénérer le lien (nouveau token, 7 jours)">
+                <button onClick={() => handleSend(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-3" title="Regﾃｩnﾃｩrer le lien (nouveau token, 7 jours)">
                   <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
@@ -774,13 +1090,16 @@ export default function ContratsPage() {
         </div>
 
         {/* Footer actions */}
-        {c.status !== 'archived' && (
+        {!isClosedContract(c) && (
           <div className="shrink-0 p-4 border-t border-surface-border flex gap-2">
             {c.status === 'sent' && (
               <button onClick={() => handleWhatsApp(c)} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm h-10">
                 <Share2 className="w-4 h-4" /> WhatsApp
               </button>
             )}
+            <button onClick={() => handleCancel(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-4 text-status-error">
+              <XCircle className="w-4 h-4" /> Annuler
+            </button>
             <button onClick={() => handleArchive(c)} className="btn-secondary flex items-center justify-center gap-2 text-sm h-10 px-4">
               <Archive className="w-4 h-4" /> Archiver
             </button>
@@ -788,7 +1107,7 @@ export default function ContratsPage() {
         )}
       </div>
 
-      {/* Overlay d'édition — doit être dans ce return pour être au-dessus du detail */}
+      {/* Overlay d'ﾃｩdition 窶・doit ﾃｪtre dans ce return pour ﾃｪtre au-dessus du detail */}
       {showContractPanel && (
         <ContractPanel
           vehicles={vehicles}
@@ -814,7 +1133,7 @@ export default function ContratsPage() {
     );
   }
 
-  // ─── Main view ────────────────────────────────────────────────────────────────
+  // 笏笏笏 Main view 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -826,7 +1145,7 @@ export default function ContratsPage() {
           <button
             onClick={() => setShowShare(true)}
             className="btn-secondary flex items-center gap-2 text-sm h-9 px-3"
-            title="Partager le catalogue véhicules"
+            title="Partager le catalogue vﾃｩhicules"
           >
             <Share2 className="w-4 h-4" />
             <span className="hidden sm:inline">Partager</span>
@@ -842,7 +1161,7 @@ export default function ContratsPage() {
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">
-            {tab === 'vehicules' ? 'Véhicule' : tab === 'modeles' ? 'Modèle' : 'Contrat'}
+            {tab === 'vehicules' ? 'Vﾃｩhicule' : tab === 'modeles' ? 'Modﾃｨle' : 'Contrat'}
           </span>
         </button>
       </div>
@@ -851,8 +1170,8 @@ export default function ContratsPage() {
       <div className="flex gap-1 px-4 pt-3 pb-0 shrink-0">
         {([
           { key: 'contrats',  label: 'Contrats',  icon: FileText },
-          { key: 'vehicules', label: 'Véhicules',  icon: Car },
-          { key: 'modeles',   label: 'Modèles',    icon: FileSignature },
+          { key: 'vehicules', label: 'Vﾃｩhicules',  icon: Car },
+          { key: 'modeles',   label: 'Modﾃｨles',    icon: FileSignature },
         ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -871,13 +1190,13 @@ export default function ContratsPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto bg-surface-card border border-surface-border rounded-b-xl mx-4 mb-4">
 
-        {/* ── Contrats tab ── */}
+        {/* 笏笏 Contrats tab 笏笏 */}
         {tab === 'contrats' && (
           <div className="divide-y divide-surface-border">
             {contracts.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
                 <FileText className="w-10 h-10" />
-                <p className="text-sm">Aucun contrat — créez-en un</p>
+                <p className="text-sm">Aucun contrat 窶・crﾃｩez-en un</p>
               </div>
             )}
             {contracts.map((c) => {
@@ -893,19 +1212,21 @@ export default function ContratsPage() {
                       ? <CheckCircle className="w-5 h-5 text-status-success" />
                       : c.status === 'sent'
                         ? <Clock className="w-5 h-5 text-blue-400" />
-                        : <FileText className="w-5 h-5 text-content-brand" />}
+                        : c.status === 'cancelled'
+                          ? <XCircle className="w-5 h-5 text-status-error" />
+                          : <FileText className="w-5 h-5 text-content-brand" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{c.client_name}</p>
                     <p className="text-xs text-content-secondary truncate">
-                      {(c as Contract & { rental_vehicles?: { name: string; license_plate: string | null } }).rental_vehicles?.name ?? '—'}
-                      {' · '}{fmtDate(c.start_date)} → {fmtDate(c.end_date)}
+                      {(c as Contract & { rental_vehicles?: { name: string; license_plate: string | null } }).rental_vehicles?.name ?? '-'} 
+                      {' ﾂｷ '}{fmtDate(c.start_date)} {fmtTime(c.start_time)} 竊・{fmtDate(c.end_date)} {fmtTime(c.end_time)}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
                     <span className="text-xs text-content-brand font-medium">{fmtMoney(c.total_amount, c.currency)}</span>
-                    {c.status !== 'archived' && (
+                    {!isClosedContract(c) && (
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PAYMENT_STATUS_CFG[paymentStatus(c)].color}`}>
                         {PAYMENT_STATUS_CFG[paymentStatus(c)].label}
                       </span>
@@ -917,19 +1238,19 @@ export default function ContratsPage() {
           </div>
         )}
 
-        {/* ── Véhicules tab ── */}
+        {/* 笏笏 Vﾃｩhicules tab 笏笏 */}
         {tab === 'vehicules' && (
           <div className="divide-y divide-surface-border">
             {vehicles.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
                 <Car className="w-10 h-10" />
-                <p className="text-sm">Aucun véhicule enregistré</p>
+                <p className="text-sm">Aucun vﾃｩhicule enregistrﾃｩ</p>
               </div>
             )}
             {vehicles.map((v) => {
-              // Contrats actifs liés à ce véhicule
+              // Contrats actifs liﾃｩs ﾃ ce vﾃｩhicule
               const activeContracts = contracts.filter(
-                (c) => c.vehicle_id === v.id && (c.status === 'sent' || c.status === 'signed')
+                (c) => c.vehicle_id === v.id && (c.status === 'sent' || c.status === 'signed' || c.status === 'active')
               );
               return (
               <div key={v.id} className="flex items-center gap-3 px-4 py-3">
@@ -942,24 +1263,41 @@ export default function ContratsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{v.name}</p>
                   <p className="text-xs text-content-secondary truncate">
-                    {[v.brand, v.model, v.year].filter(Boolean).join(' · ')}
-                    {v.license_plate ? ` — ${v.license_plate}` : ''}
+                    {[v.brand, v.model, v.year].filter(Boolean).join(' ﾂｷ ')}
+                    {v.license_plate ? ` 窶・${v.license_plate}` : ''}
                   </p>
                   <p className="text-xs text-content-brand mt-0.5">
                     {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/jour
-                    {v.price_per_hour ? ` · ${v.price_per_hour.toLocaleString('fr-FR')}/h` : ''}
+                    {v.price_per_hour ? ` ﾂｷ ${v.price_per_hour.toLocaleString('fr-FR')}/h` : ''}
                   </p>
+                  {v.owner_type === 'third_party' && (
+                    <p className="text-[10px] text-status-warning mt-0.5">
+                      Mandat: {v.owner_name ?? 'propriﾃｩtaire tiers'} ﾂｷ commission {v.commission_type === 'percent' ? `${v.commission_value}%` : `${v.commission_value.toLocaleString('fr-FR')} ${displayCurrency(v.currency)}`}
+                    </p>
+                  )}
                   {activeContracts.length > 0 && (
                     <button
                       onClick={() => { setTab('contrats'); setDetailContract(activeContracts[0]); }}
                       className="mt-1 text-[10px] text-status-warning hover:text-status-warning flex items-center gap-1"
                     >
                       <FileText className="w-3 h-3" />
-                      {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''} actif{activeContracts.length > 1 ? 's' : ''} — {activeContracts[0].client_name}
+                      {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''} actif{activeContracts.length > 1 ? 's' : ''} 窶・{activeContracts[0].client_name}
                     </button>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {v.owner_type === 'third_party' && v.owner_report_token && (
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(`${getAppUrl()}/proprietaire/vehicule/${v.owner_report_token}`);
+                        notifSuccess('Lien proprietaire copie');
+                      }}
+                      className="p-1.5 rounded-lg text-content-secondary hover:text-status-success hover:bg-green-500/10 transition-colors"
+                      title="Copier le lien proprietaire"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={async () => {
                       try {
@@ -987,13 +1325,13 @@ export default function ContratsPage() {
           </div>
         )}
 
-        {/* ── Modèles tab ── */}
+        {/* 笏笏 Modﾃｨles tab 笏笏 */}
         {tab === 'modeles' && (
           <div className="divide-y divide-surface-border">
             {templates.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
                 <FileSignature className="w-10 h-10" />
-                <p className="text-sm">Aucun modèle de contrat</p>
+                <p className="text-sm">Aucun modﾃｨle de contrat</p>
               </div>
             )}
             {templates.map((t) => (
@@ -1001,7 +1339,7 @@ export default function ContratsPage() {
                 <FileText className="w-5 h-5 text-slate-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white">{t.name}</p>
-                  <p className="text-xs text-slate-500">Modifié le {fmtDate(t.updated_at)}</p>
+                  <p className="text-xs text-slate-500">Modifiﾃｩ le {fmtDate(t.updated_at)}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
@@ -1012,7 +1350,7 @@ export default function ContratsPage() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!confirm('Supprimer ce modèle ?')) return;
+                      if (!confirm('Supprimer ce modﾃｨle ?')) return;
                       try { await deleteTemplate(t.id); load(); } catch (e) { notifError(toUserError(e)); }
                     }}
                     className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
@@ -1026,7 +1364,7 @@ export default function ContratsPage() {
         )}
       </div>
 
-      {/* ── Panels ─────────────────────────────────────────────────────────────── */}
+      {/* 笏笏 Panels 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */}
       {showVehiclePanel && (
         <VehiclePanel
           vehicle={editVehicle}
@@ -1084,7 +1422,7 @@ export default function ContratsPage() {
               </button>
             </div>
             <p className="text-sm text-content-secondary">
-              Partagez ce lien avec vos clients pour qu'ils puissent voir vos véhicules disponibles et faire une demande de location.
+              Partagez ce lien avec vos clients pour qu'ils puissent voir vos vﾃｩhicules disponibles et faire une demande de location.
             </p>
             <div className="flex items-center gap-2 bg-surface-input rounded-xl px-3 py-2.5">
               <p className="flex-1 text-xs text-slate-300 truncate font-mono">
@@ -1107,10 +1445,10 @@ export default function ContratsPage() {
                 target="_blank" rel="noopener noreferrer"
                 className="btn-secondary flex items-center justify-center gap-2 text-sm h-10"
               >
-                <ExternalLink className="w-4 h-4" /> Aperçu
+                <ExternalLink className="w-4 h-4" /> Aperﾃｧu
               </a>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Réservez votre véhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(`Rﾃｩservez votre vﾃｩhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="btn-primary flex items-center justify-center gap-2 text-sm h-10"
               >
@@ -1124,7 +1462,7 @@ export default function ContratsPage() {
   );
 }
 
-// ─── Vehicle Panel ────────────────────────────────────────────────────────────
+// 笏笏笏 Vehicle Panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 function VehiclePanel({
   vehicle, businessId, currency, onClose, onSaved, notifError, notifSuccess,
@@ -1154,12 +1492,17 @@ function VehiclePanel({
     currency:       vehicle?.currency ?? currency,
     description:    vehicle?.description ?? '',
     is_available:   vehicle?.is_available ?? true,
+    owner_type:      vehicle?.owner_type ?? 'owned',
+    owner_name:      vehicle?.owner_name ?? '',
+    owner_phone:     vehicle?.owner_phone ?? '',
+    commission_type: vehicle?.commission_type ?? 'percent',
+    commission_value: vehicle?.commission_value?.toString() ?? '0',
   });
 
   function set(k: string, v: string | boolean) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function save() {
-    if (!form.name.trim()) { notifError('Nom du véhicule requis'); return; }
+    if (!form.name.trim()) { notifError('Nom du vﾃｩhicule requis'); return; }
     setSaving(true);
     try {
       let imageUrl = vehicle?.image_url ?? null;
@@ -1180,13 +1523,18 @@ function VehiclePanel({
         description:    form.description || null,
         image_url:      imageUrl,
         is_available:   form.is_available,
+        owner_type:      form.owner_type as 'owned' | 'third_party',
+        owner_name:      form.owner_type === 'third_party' ? form.owner_name.trim() || null : null,
+        owner_phone:     form.owner_type === 'third_party' ? form.owner_phone.trim() || null : null,
+        commission_type: form.commission_type as 'percent' | 'fixed',
+        commission_value: parseFloat(form.commission_value) || 0,
       };
       if (vehicle) {
         await updateVehicle(vehicle.id, payload);
-        notifSuccess('Véhicule mis à jour');
+        notifSuccess('Vﾃｩhicule mis ﾃ jour');
       } else {
         await createVehicle(businessId, payload);
-        notifSuccess('Véhicule ajouté');
+        notifSuccess('Vﾃｩhicule ajoutﾃｩ');
       }
       onSaved();
     } catch (e) {
@@ -1197,7 +1545,7 @@ function VehiclePanel({
   }
 
   return (
-    <SlidePanel title={vehicle ? 'Modifier le véhicule' : 'Nouveau véhicule'} onClose={onClose}>
+    <SlidePanel title={vehicle ? 'Modifier le vﾃｩhicule' : 'Nouveau vﾃｩhicule'} onClose={onClose}>
       <div className="space-y-4">
         {/* Image */}
         <label className="block cursor-pointer">
@@ -1226,8 +1574,8 @@ function VehiclePanel({
         <Field label="Nom *" value={form.name} onChange={(v) => set('name', v)} placeholder="Toyota Corolla" />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Marque" value={form.brand} onChange={(v) => set('brand', v)} placeholder="Toyota" />
-          <Field label="Modèle" value={form.model} onChange={(v) => set('model', v)} placeholder="Corolla" />
-          <Field label="Année" value={form.year} onChange={(v) => set('year', v)} placeholder="2022" type="number" />
+          <Field label="Modﾃｨle" value={form.model} onChange={(v) => set('model', v)} placeholder="Corolla" />
+          <Field label="Annﾃｩe" value={form.year} onChange={(v) => set('year', v)} placeholder="2022" type="number" />
           <Field label="Couleur" value={form.color} onChange={(v) => set('color', v)} placeholder="Blanc" />
         </div>
         <Field label="Immatriculation" value={form.license_plate} onChange={(v) => set('license_plate', v)} placeholder="AB-123-CD" />
@@ -1249,13 +1597,48 @@ function VehiclePanel({
         <div>
           <label className="text-xs text-content-secondary block mb-1">Description</label>
           <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
-            rows={2} className="input w-full text-sm resize-none" placeholder="Climatisé, GPS…" />
+            rows={2} className="input w-full text-sm resize-none" placeholder="Climatisﾃｩ, GPS窶ｦ" />
+        </div>
+        <div className="pt-3 border-t border-surface-border space-y-3">
+          <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Propriﾃｩtﾃｩ & commission</p>
+          <div>
+            <label className="text-xs text-content-secondary block mb-1">Propriﾃｩtaire du vﾃｩhicule</label>
+            <select value={form.owner_type as string} onChange={(e) => set('owner_type', e.target.value)}
+              className="input w-full text-sm">
+              <option value="owned">Vﾃｩhicule propre ﾃ l'entreprise</option>
+              <option value="third_party">Vﾃｩhicule confiﾃｩ par un tiers</option>
+            </select>
+          </div>
+          {form.owner_type === 'third_party' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Nom propriﾃｩtaire" value={form.owner_name as string} onChange={(v) => set('owner_name', v)} />
+                <Field label="Tﾃｩlﾃｩphone propriﾃｩtaire" value={form.owner_phone as string} onChange={(v) => set('owner_phone', v)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-content-secondary block mb-1">Type commission</label>
+                  <select value={form.commission_type as string} onChange={(e) => set('commission_type', e.target.value)}
+                    className="input w-full text-sm">
+                    <option value="percent">Pourcentage</option>
+                    <option value="fixed">Montant fixe</option>
+                  </select>
+                </div>
+                <Field
+                  label={form.commission_type === 'percent' ? 'Commission (%)' : 'Commission fixe'}
+                  value={form.commission_value as string}
+                  onChange={(v) => set('commission_value', v)}
+                  type="number"
+                />
+              </div>
+            </>
+          )}
         </div>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={form.is_available}
             onChange={(e) => set('is_available', e.target.checked)}
             className="rounded border-surface-border" />
-          <span className="text-sm text-slate-300">Disponible à la location</span>
+          <span className="text-sm text-slate-300">Disponible ﾃ la location</span>
         </label>
       </div>
 
@@ -1263,32 +1646,34 @@ function VehiclePanel({
         <button onClick={onClose} className="btn-secondary flex-1 h-10 text-sm">Annuler</button>
         <button onClick={save} disabled={saving} className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-2">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {vehicle ? 'Mettre à jour' : 'Ajouter'}
+          {vehicle ? 'Mettre ﾃ jour' : 'Ajouter'}
         </button>
       </div>
     </SlidePanel>
   );
 }
 
-// ─── Template Panel ───────────────────────────────────────────────────────────
+// 笏笏笏 Template Panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 const VARIABLES = [
   { key: 'client_name',      label: 'Nom client' },
-  { key: 'client_phone',     label: 'Tél client' },
-  { key: 'client_id_number', label: 'Pièce identité' },
+  { key: 'client_phone',     label: 'Tﾃｩl client' },
+  { key: 'client_id_number', label: 'Piﾃｨce identitﾃｩ' },
   { key: 'client_address',   label: 'Adresse client' },
-  { key: 'vehicle_name',     label: 'Véhicule' },
+  { key: 'vehicle_name',     label: 'Vﾃｩhicule' },
   { key: 'license_plate',    label: 'Immatriculation' },
-  { key: 'start_date',       label: 'Date départ' },
+  { key: 'start_date',       label: 'Date dﾃｩpart' },
+  { key: 'start_time',       label: 'Heure dﾃｩpart' },
   { key: 'end_date',         label: 'Date retour' },
-  { key: 'duration_days',    label: 'Durée (jours)' },
+  { key: 'end_time',         label: 'Heure retour' },
+  { key: 'duration_days',    label: 'Durﾃｩe (jours)' },
   { key: 'pickup_location',  label: 'Lieu prise' },
   { key: 'return_location',  label: 'Lieu retour' },
   { key: 'price_per_day',    label: 'Prix/jour' },
   { key: 'total_amount',     label: 'Total' },
   { key: 'deposit_amount',   label: 'Caution' },
   { key: 'currency',         label: 'Devise' },
-  { key: 'business_name',    label: 'Établissement' },
+  { key: 'business_name',    label: 'ﾃ液ablissement' },
 ];
 
 function TemplatePanel({
@@ -1306,7 +1691,7 @@ function TemplatePanel({
   const [preview, setPreview] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Initialise le contenu de l'éditeur
+  // Initialise le contenu de l'ﾃｩditeur
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = template?.body ?? DEFAULT_TEMPLATE;
@@ -1369,23 +1754,23 @@ function TemplatePanel({
       `<div data-sigblock="${type}" contenteditable="false"
            style="display:block;border:2px dashed ${border};background:${bg};text-align:center;padding:14px 10px;margin:8px 0;border-radius:6px;">
          <span style="font-family:monospace;font-size:11px;color:${color};">{{${type}}}</span>
-         <p style="margin:4px 0 0;font-size:11px;color:${color};">✏️ ${label}</p>
+         <p style="margin:4px 0 0;font-size:11px;color:${color};">笨擾ｸ・${label}</p>
        </div>`
     );
   }
 
   async function save() {
     const body = getBody();
-    if (!name.trim()) { notifError('Nom du modèle requis'); return; }
-    if (!body.trim()) { notifError('Contenu du modèle requis'); return; }
+    if (!name.trim()) { notifError('Nom du modﾃｨle requis'); return; }
+    if (!body.trim()) { notifError('Contenu du modﾃｨle requis'); return; }
     setSaving(true);
     try {
       if (template) {
         await updateTemplate(template.id, name.trim(), body.trim());
-        notifSuccess('Modèle mis à jour');
+        notifSuccess('Modﾃｨle mis ﾃ jour');
       } else {
         await createTemplate(businessId, name.trim(), body.trim());
-        notifSuccess('Modèle créé');
+        notifSuccess('Modﾃｨle crﾃｩﾃｩ');
       }
       onSaved();
     } catch (e) {
@@ -1403,16 +1788,16 @@ function TemplatePanel({
   );
 
   return (
-    <SlidePanel title={template ? 'Modifier le modèle' : 'Nouveau modèle'} onClose={onClose} wide>
+    <SlidePanel title={template ? 'Modifier le modﾃｨle' : 'Nouveau modﾃｨle'} onClose={onClose} wide>
       <div className="space-y-4 flex-1">
-        <Field label="Nom du modèle *" value={name} onChange={setName} placeholder="Contrat standard" />
+        <Field label="Nom du modﾃｨle *" value={name} onChange={setName} placeholder="Contrat standard" />
 
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-content-secondary font-medium">Contenu du contrat</label>
             <button type="button" onClick={() => setPreview(!preview)}
               className="flex items-center gap-1 text-xs text-content-brand hover:text-content-brand">
-              <Eye className="w-3.5 h-3.5" /> {preview ? 'Éditer' : 'Aperçu'}
+              <Eye className="w-3.5 h-3.5" /> {preview ? 'ﾃ嬰iter' : 'Aperﾃｧu'}
             </button>
           </div>
 
@@ -1429,12 +1814,12 @@ function TemplatePanel({
                 {toolbarBtn('Titre', () => fmt('formatBlock', 'h2'), <Heading2  className="w-3.5 h-3.5" />)}
                 {toolbarBtn('Paragraphe', () => fmt('formatBlock', 'p'), <Type className="w-3.5 h-3.5" />)}
                 {toolbarBtn('Liste', () => fmt('insertUnorderedList'), <List className="w-3.5 h-3.5" />)}
-                {toolbarBtn('Séparateur', insertSeparator,      <Minus     className="w-3.5 h-3.5" />)}
+                {toolbarBtn('Sﾃｩparateur', insertSeparator,      <Minus     className="w-3.5 h-3.5" />)}
               </div>
 
               {/* Variables */}
               <div className="flex flex-wrap gap-1 px-2 py-1.5 bg-surface border-b border-surface-border">
-                <span className="text-[10px] text-slate-500 self-center mr-1">Insérer :</span>
+                <span className="text-[10px] text-slate-500 self-center mr-1">Insﾃｩrer :</span>
                 {VARIABLES.map(({ key, label }) => (
                   <button
                     key={key}
@@ -1463,7 +1848,7 @@ function TemplatePanel({
                 >
                   <PenLine className="w-3 h-3" /> Zone signature Locataire
                 </button>
-                <span className="text-[10px] text-slate-600 self-center">← cliquer positionne le curseur, puis cliquer le bouton</span>
+                <span className="text-[10px] text-slate-600 self-center">竊・cliquer positionne le curseur, puis cliquer le bouton</span>
               </div>
 
               {/* Editor area */}
@@ -1483,14 +1868,14 @@ function TemplatePanel({
         <button onClick={onClose} className="btn-secondary flex-1 h-10 text-sm">Annuler</button>
         <button onClick={save} disabled={saving} className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-2">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {template ? 'Mettre à jour' : 'Créer'}
+          {template ? 'Mettre ﾃ jour' : 'Crﾃｩer'}
         </button>
       </div>
     </SlidePanel>
   );
 }
 
-// ─── Contract Panel ───────────────────────────────────────────────────────────
+// 笏笏笏 Contract Panel 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 function ContractPanel({
   vehicles, templates, contracts: allContracts, businessId, userId, businessName, currency, onClose, onSaved, notifError, notifSuccess,
@@ -1522,28 +1907,35 @@ function ContractPanel({
     client_id_number: contract?.client_id_number ?? '',
     client_address:   contract?.client_address ?? '',
     start_date:       contract?.start_date ?? TODAY,
+    start_time:       contract?.start_time?.slice(0, 5) ?? DEFAULT_START_TIME,
     end_date:         contract?.end_date ?? TOMORROW,
+    end_time:         contract?.end_time?.slice(0, 5) ?? DEFAULT_END_TIME,
     pickup_location:  contract?.pickup_location ?? '',
     return_location:  contract?.return_location ?? '',
     deposit_amount:   contract?.deposit_amount?.toString() ?? '',
+    required_document_label: '',
     notes:            contract?.notes ?? '',
   });
+  const [requiredDocuments, setRequiredDocuments] = useState<RequiredContractDocument[]>(
+    contract?.required_documents ?? []
+  );
 
-  // Véhicules déjà réservés pour la période sélectionnée
+  // Vﾃｩhicules dﾃｩjﾃ rﾃｩservﾃｩs pour la pﾃｩriode sﾃｩlectionnﾃｩe
   const bookedVehicleIds = useMemo(() => {
-    if (!form.start_date || !form.end_date) return new Set<string>();
+    if (!form.start_date || !form.end_date || !form.start_time || !form.end_time) return new Set<string>();
+    const selectedStart = toRentalDateTime(form.start_date, form.start_time, DEFAULT_START_TIME);
+    const selectedEnd = toRentalDateTime(form.end_date, form.end_time, DEFAULT_END_TIME);
     return new Set(
       allContracts
-        .filter((c) =>
-          c.vehicle_id &&
-          (c.status === 'sent' || c.status === 'signed') &&
-          c.id !== contract?.id &&        // exclure le contrat courant en édition
-          c.start_date < form.end_date && // chevauchement : A.start < B.end
-          c.end_date > form.start_date    //               & A.end  > B.start
-        )
+        .filter((c) => {
+          if (!c.vehicle_id || (c.status !== 'sent' && c.status !== 'signed' && c.status !== 'active') || c.id === contract?.id) return false;
+          const contractStart = toRentalDateTime(c.start_date, c.start_time, DEFAULT_START_TIME);
+          const contractEnd = toRentalDateTime(c.end_date, c.end_time, DEFAULT_END_TIME);
+          return contractStart < selectedEnd && contractEnd > selectedStart;
+        })
         .map((c) => c.vehicle_id as string)
     );
-  }, [allContracts, form.start_date, form.end_date, contract?.id]);
+  }, [allContracts, form.start_date, form.start_time, form.end_date, form.end_time, contract?.id]);
   const [preview, setPreview] = useState(false);
 
   // Client search
@@ -1584,10 +1976,21 @@ function ContractPanel({
     setClientSelected(false);
   }
 
+  function addRequiredDocument() {
+    const label = form.required_document_label.trim();
+    if (!label) return;
+    setRequiredDocuments((prev) => [...prev, makeRequiredDocument(label)]);
+    set('required_document_label', '');
+  }
+
+  function removeRequiredDocument(key: string) {
+    setRequiredDocuments((prev) => prev.filter((doc) => doc.key !== key));
+  }
+
   const selectedVehicle = vehicles.find((v) => v.id === form.vehicle_id) ?? null;
   const selectedTemplate = templates.find((t) => t.id === form.template_id) ?? null;
 
-  const days = daysCount(form.start_date, form.end_date);
+  const days = rentalDaysCount(form.start_date, form.start_time, form.end_date, form.end_time);
   const pricePerDay = selectedVehicle?.price_per_day ?? 0;
   const totalAmount = pricePerDay * days;
   const depositAmount = parseFloat(form.deposit_amount) || (selectedVehicle?.deposit_amount ?? 0);
@@ -1602,12 +2005,8 @@ function ContractPanel({
       client_email:     form.client_email,
       client_id_number: form.client_id_number,
       client_address:   form.client_address,
-      vehicle_name:     selectedVehicle?.name ?? '—',
-      license_plate:    selectedVehicle?.license_plate ?? '—',
-      start_date:       fmtDate(form.start_date),
-      end_date:         fmtDate(form.end_date),
-      pickup_location:  form.pickup_location,
-      return_location:  form.return_location,
+      vehicle_name:     selectedVehicle?.name ?? '-',
+      license_plate:    selectedVehicle?.license_plate ?? '-',
       price_per_day:    pricePerDay.toLocaleString('fr-FR'),
       duration_days:    days.toString(),
       total_amount:     totalAmount.toLocaleString('fr-FR'),
@@ -1620,10 +2019,13 @@ function ContractPanel({
 
   async function save() {
     if (!form.client_name.trim()) { notifError('Nom du client requis'); return; }
-    if (!form.start_date || !form.end_date) { notifError('Dates requises'); return; }
-    if (form.end_date <= form.start_date) { notifError('La date de fin doit être après la date de début'); return; }
+    if (!form.start_date || !form.end_date || !form.start_time || !form.end_time) { notifError('Date et heure requises'); return; }
+    if (!isValidRentalPeriod(form.start_date, form.start_time, form.end_date, form.end_time)) {
+      notifError('La restitution doit ﾃｪtre aprﾃｨs la prise en charge');
+      return;
+    }
     if (form.vehicle_id && bookedVehicleIds.has(form.vehicle_id)) {
-      notifError('Ce véhicule est déjà réservé pour cette période. Choisissez d\'autres dates ou un autre véhicule.');
+      notifError('Ce vﾃｩhicule est dﾃｩjﾃ rﾃｩservﾃｩ pour cette pﾃｩriode. Choisissez d\'autres dates ou un autre vﾃｩhicule.');
       return;
     }
 
@@ -1638,7 +2040,9 @@ function ContractPanel({
         client_id_number: form.client_id_number.trim(),
         client_address:   form.client_address.trim(),
         start_date:       form.start_date,
+        start_time:       form.start_time,
         end_date:         form.end_date,
+        end_time:         form.end_time,
         pickup_location:  form.pickup_location.trim(),
         return_location:  form.return_location.trim(),
         price_per_day:    pricePerDay,
@@ -1646,18 +2050,19 @@ function ContractPanel({
         total_amount:     totalAmount,
         currency:         cur,
         body:             buildBody(),
+        required_documents: requiredDocuments,
         notes:            form.notes.trim(),
       };
 
       if (isEdit && contract) {
         const updated = await updateContract(contract.id, input, needsInvalidation);
         notifSuccess(needsInvalidation
-          ? 'Contrat modifié — signature invalidée, à refaire signer'
-          : 'Contrat modifié');
+          ? 'Contrat modifiﾃｩ 窶・signature invalidﾃｩe, ﾃ refaire signer'
+          : 'Contrat modifiﾃｩ');
         onSaved(updated);
       } else {
         const created = await createContract(businessId, userId, input);
-        notifSuccess('Contrat créé');
+        notifSuccess('Contrat crﾃｩﾃｩ');
         onSaved(created);
       }
     } catch (e) {
@@ -1676,35 +2081,35 @@ function ContractPanel({
           <div className="flex items-start gap-3 bg-badge-warning border border-status-warning rounded-xl px-4 py-3">
             <AlertCircle className="w-5 h-5 text-status-warning shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-status-warning">Ce contrat sera invalidé</p>
+              <p className="text-sm font-semibold text-status-warning">Ce contrat sera invalidﾃｩ</p>
               <p className="text-xs text-status-warning mt-0.5">
                 {contract?.status === 'signed'
-                  ? 'La signature du locataire sera effacée. Le contrat devra être renvoyé et resigné.'
-                  : 'Le lien envoyé au locataire deviendra invalide. Un nouveau lien devra être envoyé.'}
+                  ? 'La signature du locataire sera effacﾃｩe. Le contrat devra ﾃｪtre renvoyﾃｩ et resignﾃｩ.'
+                  : 'Le lien envoyﾃｩ au locataire deviendra invalide. Un nouveau lien devra ﾃｪtre envoyﾃｩ.'}
               </p>
             </div>
           </div>
         )}
 
-        {/* Véhicule */}
+        {/* Vﾃｩhicule */}
         <div>
-          <label className="text-xs text-content-secondary block mb-1">Véhicule</label>
+          <label className="text-xs text-content-secondary block mb-1">Vﾃｩhicule</label>
           {vehicles.length === 0 ? (
             <div className="flex items-center gap-2 input text-sm text-slate-500 cursor-default">
               <Car className="w-4 h-4 shrink-0" />
-              Aucun véhicule — ajoutez-en un dans l'onglet Véhicules
+              Aucun vﾃｩhicule 窶・ajoutez-en un dans l'onglet Vﾃｩhicules
             </div>
           ) : (
             <>
               <select value={form.vehicle_id} onChange={(e) => set('vehicle_id', e.target.value)}
                 className="input w-full text-sm">
-                <option value="">— Sans véhicule spécifique —</option>
+                <option value="">Sans vehicule specifique</option>
                 {vehicles.map((v) => {
                   const booked = bookedVehicleIds.has(v.id);
                   return (
                     <option key={v.id} value={v.id} disabled={booked}>
-                      {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} — {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
-                      {booked ? ' 🔒 Déjà loué sur cette période' : (!v.is_available ? ' ⚠ Indisponible' : '')}
+                      {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} 窶・{v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
+                      {booked ? ' 白 Dﾃｩjﾃ louﾃｩ sur cette pﾃｩriode' : (!v.is_available ? ' 笞 Indisponible' : '')}
                     </option>
                   );
                 })}
@@ -1712,35 +2117,37 @@ function ContractPanel({
               {form.vehicle_id && bookedVehicleIds.has(form.vehicle_id) && (
                 <p className="mt-1.5 text-xs text-status-error flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  Ce véhicule est déjà réservé sur cette période. Choisissez d'autres dates ou un autre véhicule.
+                  Ce vﾃｩhicule est dﾃｩjﾃ rﾃｩservﾃｩ sur cette pﾃｩriode. Choisissez d'autres dates ou un autre vﾃｩhicule.
                 </p>
               )}
             </>
           )}
         </div>
 
-        {/* Modèle */}
+        {/* Modﾃｨle */}
         <div>
-          <label className="text-xs text-content-secondary block mb-1">Modèle de contrat</label>
+          <label className="text-xs text-content-secondary block mb-1">Modﾃｨle de contrat</label>
           <select value={form.template_id} onChange={(e) => set('template_id', e.target.value)}
             className="input w-full text-sm">
-            <option value="">— Modèle par défaut —</option>
+            <option value="">Modele par defaut</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
         </div>
 
-        {/* Dates */}
+        {/* Dates et heures */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date de départ *" value={form.start_date} onChange={(v) => set('start_date', v)} type="date" />
+          <Field label="Date de dﾃｩpart *" value={form.start_date} onChange={(v) => set('start_date', v)} type="date" />
+          <Field label="Heure de dﾃｩpart *" value={form.start_time} onChange={(v) => set('start_time', v)} type="time" />
           <Field label="Date de retour *" value={form.end_date} onChange={(v) => set('end_date', v)} type="date" />
+          <Field label="Heure de retour *" value={form.end_time} onChange={(v) => set('end_time', v)} type="time" />
         </div>
 
-        {/* Récap tarif */}
+        {/* Rﾃｩcap tarif */}
         {selectedVehicle && (
           <div className="bg-badge-brand border border-brand-800 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
-            <span className="text-content-secondary">{days} jour{days > 1 ? 's' : ''} × {pricePerDay.toLocaleString('fr-FR')} {displayCurrency(cur)}/j</span>
+            <span className="text-content-secondary">{days} jour{days > 1 ? 's' : ''} ﾃ・{pricePerDay.toLocaleString('fr-FR')} {displayCurrency(cur)}/j</span>
             <span className="font-bold text-content-brand">{totalAmount.toLocaleString('fr-FR')} {displayCurrency(cur)}</span>
           </div>
         )}
@@ -1751,6 +2158,42 @@ function ContractPanel({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Lieu de prise en charge" value={form.pickup_location} onChange={(v) => set('pickup_location', v)} />
           <Field label="Lieu de restitution" value={form.return_location} onChange={(v) => set('return_location', v)} />
+        </div>
+
+        <div className="pt-2 border-t border-surface-border">
+          <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-3">Documents requis avant signature</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.required_document_label}
+              onChange={(e) => set('required_document_label', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addRequiredDocument();
+                }
+              }}
+              placeholder="Ex: CNI, permis, passeport, justificatif..."
+              className="input flex-1 text-sm"
+            />
+            <button type="button" onClick={addRequiredDocument} className="btn-secondary h-10 px-3 text-sm">
+              Ajouter
+            </button>
+          </div>
+          {requiredDocuments.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {requiredDocuments.map((doc) => (
+                <span key={doc.key} className="inline-flex items-center gap-1.5 rounded-full bg-surface-input border border-surface-border px-3 py-1 text-xs text-white">
+                  {doc.label}
+                  <button type="button" onClick={() => removeRequiredDocument(doc.key)} className="text-content-secondary hover:text-status-error">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-content-secondary mt-2">Aucun document obligatoire. Le client pourra signer sans upload prﾃｩalable.</p>
+          )}
         </div>
 
         {/* Client */}
@@ -1769,7 +2212,7 @@ function ContractPanel({
                     onChange={(e) => { setClientQuery(e.target.value); setClientSelected(false); setShowDropdown(true); set('client_name', e.target.value); }}
                     onFocus={() => setShowDropdown(true)}
                     onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                    placeholder="Nom ou téléphone…"
+                    placeholder="Nom ou tﾃｩlﾃｩphone窶ｦ"
                     className="input w-full text-sm pr-8"
                     autoComplete="off"
                   />
@@ -1806,17 +2249,17 @@ function ContractPanel({
 
               {showDropdown && clientQuery.length >= 1 && filteredClients.length === 0 && (
                 <div className="absolute z-20 left-0 right-0 mt-1 bg-surface-card border border-surface-border rounded-xl px-3 py-2.5 text-xs text-slate-500">
-                  Aucun client trouvé — vous pouvez saisir manuellement ci-dessous
+                  Aucun client trouvﾃｩ 窶・vous pouvez saisir manuellement ci-dessous
                 </div>
               )}
             </div>
 
-            {/* Champs préremplis ou manuels */}
+            {/* Champs prﾃｩremplis ou manuels */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Téléphone" value={form.client_phone} onChange={(v) => set('client_phone', v)} placeholder="+221 77 000 00 00" />
+              <Field label="Tﾃｩlﾃｩphone" value={form.client_phone} onChange={(v) => set('client_phone', v)} placeholder="+221 77 000 00 00" />
               <Field label="Email" value={form.client_email} onChange={(v) => set('client_email', v)} type="email" />
             </div>
-            <Field label="N° pièce d'identité" value={form.client_id_number} onChange={(v) => set('client_id_number', v)} />
+            <Field label="Nﾂｰ piﾃｨce d'identitﾃｩ" value={form.client_id_number} onChange={(v) => set('client_id_number', v)} />
             <Field label="Adresse" value={form.client_address} onChange={(v) => set('client_address', v)} />
           </div>
         </div>
@@ -1825,13 +2268,13 @@ function ContractPanel({
         <div>
           <label className="text-xs text-content-secondary block mb-1">Notes internes</label>
           <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
-            rows={2} className="input w-full text-sm resize-none" placeholder="Notes…" />
+            rows={2} className="input w-full text-sm resize-none" placeholder="Notes窶ｦ" />
         </div>
 
-        {/* Aperçu */}
+        {/* Aperﾃｧu */}
         <button type="button" onClick={() => setPreview(!preview)}
           className="flex items-center gap-2 text-xs text-content-brand hover:text-content-brand">
-          <Eye className="w-3.5 h-3.5" /> {preview ? 'Masquer l\'aperçu' : 'Aperçu du contrat'}
+          <Eye className="w-3.5 h-3.5" /> {preview ? 'Masquer l\'aperﾃｧu' : 'Aperﾃｧu du contrat'}
         </button>
         {preview && (
           <div className="bg-white rounded-xl p-4 text-sm text-gray-800 overflow-auto max-h-72"
@@ -1845,14 +2288,14 @@ function ContractPanel({
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {isEdit
             ? (needsInvalidation ? 'Modifier et invalider' : 'Enregistrer les modifications')
-            : 'Créer le contrat'}
+            : 'Crﾃｩer le contrat'}
         </button>
       </div>
     </SlidePanel>
   );
 }
 
-// ─── Shared Components ────────────────────────────────────────────────────────
+// 笏笏笏 Shared Components 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 function Field({
   label, value, onChange, placeholder = '', type = 'text',
@@ -1900,3 +2343,6 @@ function SlidePanel({
     </div>
   );
 }
+
+
+

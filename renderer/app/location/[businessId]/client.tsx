@@ -19,12 +19,20 @@ function fmtDate(d: string) {
   });
 }
 
-function daysBetween(from: string, to: string) {
-  return Math.max(1, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000));
+function daysWithTime(startDate: string, startTime: string, endDate: string, endTime: string) {
+  const start = new Date(`${startDate}T${startTime}:00`);
+  const end = new Date(`${endDate}T${endTime}:00`);
+  return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
+}
+
+function isValidPeriod(startDate: string, startTime: string, endDate: string, endTime: string) {
+  return new Date(`${endDate}T${endTime}:00`).getTime() > new Date(`${startDate}T${startTime}:00`).getTime();
 }
 
 const TODAY    = new Date().toISOString().split('T')[0];
 const TOMORROW = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
+const DEFAULT_START_TIME = '09:00';
+const DEFAULT_END_TIME = '18:00';
 
 // ─── VehicleCard ──────────────────────────────────────────────────────────────
 
@@ -117,7 +125,11 @@ export function LocationPageClient() {
   const [searched,  setSearched]  = useState(false);
 
   const [startDate, setStartDate] = useState(TODAY);
+  const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
   const [endDate,   setEndDate]   = useState(TOMORROW);
+  const [endTime,   setEndTime]   = useState(DEFAULT_END_TIME);
+  const [vehicleQuery, setVehicleQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'name'>('price_asc');
 
   const [selected,  setSelected]  = useState<PublicVehicle | null>(null);
   const [showForm,  setShowForm]  = useState(false);
@@ -140,19 +152,37 @@ export function LocationPageClient() {
       .finally(() => setPageLoad(false));
   }, [businessId]);
 
-  const days     = daysBetween(startDate, endDate);
+  const days     = daysWithTime(startDate, startTime, endDate, endTime);
   const currency = agency?.currency ?? 'XOF';
+  const filteredVehicles = useMemo(() => {
+    const q = vehicleQuery.trim().toLowerCase();
+    const list = q
+      ? vehicles.filter((v) =>
+          [v.name, v.brand, v.model, v.license_plate, v.color]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(q)
+        )
+      : vehicles;
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'price_desc') return b.price_per_day - a.price_per_day;
+      return a.price_per_day - b.price_per_day;
+    });
+  }, [vehicles, vehicleQuery, sortBy]);
 
   async function search() {
-    if (!agency?.id || !startDate || !endDate || endDate <= startDate) {
-      setError('Sélectionnez des dates valides.');
+    if (!agency?.id || !startDate || !endDate || !startTime || !endTime || !isValidPeriod(startDate, startTime, endDate, endTime)) {
+      setError('Sélectionnez une période valide.');
       return;
     }
     setLoading(true);
     setError(null);
     setSearched(true);
     try {
-      const res = await getAvailableVehicles(agency.id, startDate, endDate);
+      const res = await getAvailableVehicles(agency.id, startDate, endDate, startTime, endTime);
       setVehicles(res);
     } catch {
       setError('Impossible de charger les véhicules. Réessayez.');
@@ -174,7 +204,9 @@ export function LocationPageClient() {
         client_id_number: form.client_id_number.trim(),
         client_address:   form.client_address.trim(),
         start_date:       startDate,
+        start_time:       startTime,
         end_date:         endDate,
+        end_time:         endTime,
         pickup_location:  form.pickup_location.trim(),
         return_location:  form.return_location.trim(),
         notes:            form.notes.trim(),
@@ -239,44 +271,64 @@ export function LocationPageClient() {
             <Calendar className="w-4 h-4 text-brand-500" />
             Période de location
           </h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-xs text-content-secondary font-medium block mb-1">Départ</label>
-              <input
-                type="date"
-                value={startDate}
-                min={TODAY}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  if (e.target.value >= endDate) {
-                    const next = new Date(e.target.value);
-                    next.setDate(next.getDate() + 1);
-                    setEndDate(next.toISOString().split('T')[0]);
-                  }
-                  setSearched(false);
-                }}
-                className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
-              />
+          <div className="space-y-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 sm:gap-3">
+              <div className="min-w-0">
+                <label className="text-xs text-content-secondary font-medium block mb-1">Départ</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  min={TODAY}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (e.target.value > endDate) {
+                      setEndDate(e.target.value);
+                    }
+                    setSearched(false);
+                  }}
+                  className="w-full min-w-0 border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="text-xs text-content-secondary font-medium block mb-1">Heure</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => { setStartTime(e.target.value); setSearched(false); }}
+                  className="w-full min-w-0 border border-surface-border bg-surface-input rounded-xl px-2 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-content-secondary font-medium block mb-1">Retour</label>
-              <input
-                type="date"
-                value={endDate}
-                min={startDate || TODAY}
-                onChange={(e) => { setEndDate(e.target.value); setSearched(false); }}
-                className="w-full border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
-              />
+            <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 sm:gap-3">
+              <div className="min-w-0">
+                <label className="text-xs text-content-secondary font-medium block mb-1">Retour</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate || TODAY}
+                  onChange={(e) => { setEndDate(e.target.value); setSearched(false); }}
+                  className="w-full min-w-0 border border-surface-border bg-surface-input rounded-xl px-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="text-xs text-content-secondary font-medium block mb-1">Heure</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => { setEndTime(e.target.value); setSearched(false); }}
+                  className="w-full min-w-0 border border-surface-border bg-surface-input rounded-xl px-2 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </div>
             </div>
           </div>
-          {startDate && endDate && endDate > startDate && (
-            <p className="text-xs text-content-secondary text-center">
-              {days} jour{days > 1 ? 's' : ''} · du {fmtDate(startDate)} au {fmtDate(endDate)}
+          {startDate && endDate && isValidPeriod(startDate, startTime, endDate, endTime) && (
+            <p className="text-xs text-content-secondary text-center leading-relaxed">
+              {days} jour{days > 1 ? 's' : ''} · du {fmtDate(startDate)} à {startTime} au {fmtDate(endDate)} à {endTime}
             </p>
           )}
           <button
             onClick={search}
-            disabled={loading || !startDate || !endDate || endDate <= startDate}
+            disabled={loading || !startDate || !endDate || !isValidPeriod(startDate, startTime, endDate, endTime)}
             className="w-full py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-content-primary font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -302,10 +354,40 @@ export function LocationPageClient() {
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm text-content-secondary font-medium">
-                  {vehicles.length} véhicule{vehicles.length > 1 ? 's' : ''} disponible{vehicles.length > 1 ? 's' : ''}
-                </p>
-                {vehicles.map((v) => (
+                <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-content-secondary absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="search"
+                        value={vehicleQuery}
+                        onChange={(e) => setVehicleQuery(e.target.value)}
+                        placeholder="Rechercher modèle, marque, plaque..."
+                        className="w-full border border-surface-border bg-surface-input rounded-xl pl-9 pr-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
+                      />
+                    </div>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                      className="border border-surface-border bg-surface-input rounded-xl px-2 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
+                    >
+                      <option value="price_asc">Prix +</option>
+                      <option value="price_desc">Prix -</option>
+                      <option value="name">Nom</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-content-secondary">
+                    {filteredVehicles.length} sur {vehicles.length} véhicule{vehicles.length > 1 ? 's' : ''} disponible{vehicles.length > 1 ? 's' : ''}
+                  </p>
+                </div>
+
+                {filteredVehicles.length === 0 && (
+                  <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-6 text-center">
+                    <p className="text-sm text-content-secondary">Aucun véhicule disponible ne correspond à cette recherche.</p>
+                  </div>
+                )}
+
+                {filteredVehicles.map((v) => (
                   <VehicleCard
                     key={v.id}
                     vehicle={v}
@@ -347,7 +429,7 @@ export function LocationPageClient() {
               <div>
                 <h3 className="font-bold text-content-primary">Réserver — {selected.name}</h3>
                 <p className="text-xs text-content-secondary mt-0.5">
-                  {fmtDate(startDate)} → {fmtDate(endDate)} · {days} jour{days > 1 ? 's' : ''}
+                  {fmtDate(startDate)} {startTime} → {fmtDate(endDate)} {endTime} · {days} jour{days > 1 ? 's' : ''}
                 </p>
               </div>
               <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-surface-hover">

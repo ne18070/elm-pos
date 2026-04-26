@@ -41,7 +41,9 @@ export interface CreatePublicRentalInput {
   client_id_number?: string;
   client_address?:  string;
   start_date:       string;
+  start_time?:      string;
   end_date:         string;
+  end_time?:        string;
   pickup_location?: string;
   return_location?: string;
   notes?:           string;
@@ -58,7 +60,9 @@ export interface PublicRentalDetail {
   id:              string;
   status:          string;
   start_date:      string;
+  start_time:      string | null;
   end_date:        string;
+  end_time:        string | null;
   client_name:     string;
   client_phone:    string | null;
   client_email:    string | null;
@@ -95,11 +99,15 @@ export async function getAvailableVehicles(
   businessId: string,
   startDate:  string,
   endDate:    string,
+  startTime = '09:00',
+  endTime = '18:00',
 ): Promise<PublicVehicle[]> {
   const { data, error } = await supabase.rpc('get_available_vehicles', {
     p_business_id: businessId,
     p_start_date:  startDate,
     p_end_date:    endDate,
+    p_start_time:  startTime,
+    p_end_time:    endTime,
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as PublicVehicle[];
@@ -118,7 +126,9 @@ export async function createPublicRentalRequest(
       client_id_number: input.client_id_number ?? '',
       client_address:   input.client_address  ?? '',
       start_date:       input.start_date,
+      start_time:       input.start_time ?? '',
       end_date:         input.end_date,
+      end_time:         input.end_time ?? '',
       pickup_location:  input.pickup_location ?? '',
       return_location:  input.return_location ?? '',
       notes:            input.notes           ?? '',

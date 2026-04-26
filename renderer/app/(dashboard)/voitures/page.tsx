@@ -38,12 +38,18 @@ interface VoitureForm {
   description:      string;
   image_principale: string;
   statut:           VoitureStatut;
+  owner_type:        'owned' | 'third_party';
+  owner_name:        string;
+  owner_phone:       string;
+  commission_type:   'percent' | 'fixed';
+  commission_value:  string;
 }
 
 const emptyForm = (): VoitureForm => ({
   marque: '', modele: '', annee: '', prix: '', kilometrage: '',
   carburant: '', transmission: '', couleur: '', description: '',
   image_principale: '', statut: 'disponible',
+  owner_type: 'owned', owner_name: '', owner_phone: '', commission_type: 'percent', commission_value: '0',
 });
 
 function fmtPrice(n: number, currency: string) {
@@ -52,6 +58,11 @@ function fmtPrice(n: number, currency: string) {
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function vehicleCommission(total: number, type: 'percent' | 'fixed', value: number) {
+  const amount = type === 'fixed' ? value : total * (value / 100);
+  return Math.min(total, Math.max(0, amount));
 }
 
 function getAppUrl() {
@@ -119,6 +130,11 @@ export default function VoituresPage() {
       description:      v.description ?? '',
       image_principale: v.image_principale ?? '',
       statut:           v.statut,
+      owner_type:        v.owner_type ?? 'owned',
+      owner_name:        v.owner_name ?? '',
+      owner_phone:       v.owner_phone ?? '',
+      commission_type:   v.commission_type ?? 'percent',
+      commission_value:  v.commission_value?.toString() ?? '0',
     });
     setDrawerOpen(true);
   }
@@ -157,6 +173,11 @@ export default function VoituresPage() {
         description:      form.description.trim() || null,
         image_principale: form.image_principale || null,
         statut:           form.statut,
+        owner_type:        form.owner_type,
+        owner_name:        form.owner_type === 'third_party' ? form.owner_name.trim() || null : null,
+        owner_phone:       form.owner_type === 'third_party' ? form.owner_phone.trim() || null : null,
+        commission_type:   form.commission_type,
+        commission_value:  parseFloat(form.commission_value) || 0,
       };
       const becomesVendu = form.statut === 'vendu' && editing?.statut !== 'vendu';
       const label = `${payload.marque} ${payload.modele}`;
@@ -165,7 +186,7 @@ export default function VoituresPage() {
         await updateVoiture(editing.id, payload);
         logAction({ business_id: business.id, action: 'voiture.updated', entity_type: 'voiture', entity_id: editing.id, metadata: { label, statut: payload.statut } });
         if (becomesVendu) {
-          await recordVoitureVente(business.id, { id: editing.id, marque: payload.marque, modele: payload.modele, annee: payload.annee, prix: payload.prix });
+          await recordVoitureVente(business.id, { id: editing.id, marque: payload.marque, modele: payload.modele, annee: payload.annee, prix: payload.prix, owner_type: payload.owner_type, owner_name: payload.owner_name, commission_type: payload.commission_type, commission_value: payload.commission_value });
           logAction({ business_id: business.id, action: 'voiture.vendu', entity_type: 'voiture', entity_id: editing.id, metadata: { label, prix: payload.prix } });
         }
         success('Véhicule mis à jour');
@@ -173,7 +194,7 @@ export default function VoituresPage() {
         const created = await createVoiture(business.id, payload);
         logAction({ business_id: business.id, action: 'voiture.created', entity_type: 'voiture', entity_id: created.id, metadata: { label, statut: payload.statut } });
         if (becomesVendu) {
-          await recordVoitureVente(business.id, { id: created.id, marque: payload.marque, modele: payload.modele, annee: payload.annee, prix: payload.prix });
+          await recordVoitureVente(business.id, { id: created.id, marque: payload.marque, modele: payload.modele, annee: payload.annee, prix: payload.prix, owner_type: payload.owner_type, owner_name: payload.owner_name, commission_type: payload.commission_type, commission_value: payload.commission_value });
           logAction({ business_id: business.id, action: 'voiture.vendu', entity_type: 'voiture', entity_id: created.id, metadata: { label, prix: payload.prix } });
         }
         success('Véhicule ajouté');
@@ -233,6 +254,13 @@ export default function VoituresPage() {
     });
   }
 
+  async function copyOwnerReportLink(v: Voiture) {
+    if (!v.owner_report_token) return;
+    const url = `${getAppUrl()}/proprietaire/vehicule/${v.owner_report_token}`;
+    await navigator.clipboard.writeText(url);
+    success('Lien proprietaire copie');
+  }
+
   const filteredVoitures = voitures.filter(v => {
     const q = search.toLowerCase();
     return !q ||
@@ -247,6 +275,13 @@ export default function VoituresPage() {
     reserve:    voitures.filter(v => v.statut === 'reserve').length,
     vendu:      voitures.filter(v => v.statut === 'vendu').length,
     newLeads:   leads.filter(l => l.statut === 'nouveau').length,
+    mandats:    voitures.filter(v => v.owner_type === 'third_party').length,
+    commissions: voitures
+      .filter(v => v.owner_type === 'third_party' && v.statut === 'vendu')
+      .reduce((sum, v) => sum + vehicleCommission(v.prix, v.commission_type, v.commission_value), 0),
+    aReverser: voitures
+      .filter(v => v.owner_type === 'third_party' && v.statut === 'vendu')
+      .reduce((sum, v) => sum + Math.max(0, v.prix - vehicleCommission(v.prix, v.commission_type, v.commission_value)), 0),
   };
 
   return (
@@ -282,12 +317,14 @@ export default function VoituresPage() {
       </div>
 
       {/* Stats */}
-      <div className="px-4 sm:px-8 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
+      <div className="px-4 sm:px-8 py-4 grid grid-cols-2 lg:grid-cols-6 gap-3 shrink-0">
         {[
           { label: 'Total',       value: stats.total,      color: 'text-content-primary' },
           { label: 'Disponible',  value: stats.disponible, color: 'text-status-success' },
           { label: 'Réservé',     value: stats.reserve,    color: 'text-status-warning' },
           { label: 'Vendu',       value: stats.vendu,      color: 'text-status-error' },
+          { label: 'Mandats',     value: stats.mandats,    color: 'text-content-brand' },
+          { label: 'A reverser',  value: fmtPrice(stats.aReverser, currency), color: 'text-status-warning' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-surface-card rounded-2xl border border-surface-border p-4 text-center">
             <p className={`text-2xl font-black ${color}`}>{value}</p>
@@ -337,6 +374,7 @@ export default function VoituresPage() {
             onEdit={openEdit}
             onDelete={handleDelete}
             deletingId={deletingId}
+            onCopyOwnerReport={copyOwnerReportLink}
           />
         ) : (
           <LeadsTab
@@ -387,7 +425,7 @@ export default function VoituresPage() {
 // ─── ParcTab ──────────────────────────────────────────────────────────────────
 
 function ParcTab({
-  voitures, currency, search, onSearch, onEdit, onDelete, deletingId,
+  voitures, currency, search, onSearch, onEdit, onDelete, deletingId, onCopyOwnerReport,
 }: {
   voitures:   Voiture[];
   currency:   string;
@@ -396,6 +434,7 @@ function ParcTab({
   onEdit:     (v: Voiture) => void;
   onDelete:   (id: string) => void;
   deletingId: string | null;
+  onCopyOwnerReport: (v: Voiture) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -459,6 +498,11 @@ function ParcTab({
                           </span>
                         )}
                       </div>
+                      {v.owner_type === 'third_party' && (
+                        <p className="text-[10px] text-content-brand font-bold mt-1 truncate">
+                          Mandat: {v.owner_name ?? 'proprietaire tiers'} - commission {v.commission_type === 'percent' ? `${v.commission_value}%` : fmtPrice(v.commission_value, currency)}
+                        </p>
+                      )}
                     </div>
                     <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.color}`}>
                       {cfg.label}
@@ -467,6 +511,15 @@ function ParcTab({
                   <div className="flex items-center justify-between mt-2">
                     <p className="font-black text-content-primary text-sm">{fmtPrice(v.prix, currency)}</p>
                     <div className="flex items-center gap-1">
+                      {v.owner_type === 'third_party' && v.owner_report_token && (
+                        <button
+                          onClick={() => onCopyOwnerReport(v)}
+                          className="p-1.5 rounded-lg text-content-secondary hover:text-status-success hover:bg-green-500/10 transition-colors"
+                          title="Copier le lien proprietaire"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onEdit(v)}
                         className="p-1.5 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-colors"
@@ -730,6 +783,69 @@ function VoitureForm({
           rows={3}
           placeholder="Détails, équipements, état général..."
         />
+      </div>
+
+      <div className="pt-3 border-t border-surface-border space-y-3">
+        <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Proprietaire & commission</p>
+        <div>
+          <label className="label">Proprietaire du vehicule</label>
+          <select
+            value={form.owner_type}
+            onChange={(e) => onChange({ owner_type: e.target.value as 'owned' | 'third_party' })}
+            className="input w-full mt-1.5"
+          >
+            <option value="owned">Vehicule propre</option>
+            <option value="third_party">Vehicule confie par un proprietaire</option>
+          </select>
+        </div>
+        {form.owner_type === 'third_party' && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Nom proprietaire</label>
+                <input
+                  value={form.owner_name}
+                  onChange={(e) => onChange({ owner_name: e.target.value })}
+                  className="input w-full mt-1.5"
+                  placeholder="Nom complet"
+                />
+              </div>
+              <div>
+                <label className="label">Telephone</label>
+                <input
+                  value={form.owner_phone}
+                  onChange={(e) => onChange({ owner_phone: e.target.value })}
+                  className="input w-full mt-1.5"
+                  placeholder="+221..."
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Type commission</label>
+                <select
+                  value={form.commission_type}
+                  onChange={(e) => onChange({ commission_type: e.target.value as 'percent' | 'fixed' })}
+                  className="input w-full mt-1.5"
+                >
+                  <option value="percent">Pourcentage</option>
+                  <option value="fixed">Montant fixe</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Commission</label>
+                <input
+                  type="number"
+                  value={form.commission_value}
+                  onChange={(e) => onChange({ commission_value: e.target.value })}
+                  className="input w-full mt-1.5"
+                  min="0"
+                  placeholder={form.commission_type === 'percent' ? '10' : '50000'}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Statut */}

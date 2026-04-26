@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { getJournalEntries, createManualEntry, deleteManualEntry } from '@services/supabase/accounting';
 import type { JournalEntry } from '@services/supabase/accounting';
+import { getVehicles, type RentalVehicle } from '@services/supabase/contracts';
+import { getVoitures, type Voiture } from '@services/supabase/voitures';
 import { canDelete } from '@/lib/permissions';
 
 // ─── Catégories de dépenses ───────────────────────────────────────────────────
@@ -46,6 +48,8 @@ export default function DepensesPage() {
   const currency = business?.currency ?? 'XOF';
 
   const [entries, setEntries]     = useState<JournalEntry[]>([]);
+  const [rentalVehicles, setRentalVehicles] = useState<RentalVehicle[]>([]);
+  const [saleVehicles, setSaleVehicles] = useState<Voiture[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [showForm, setShowForm]   = useState(false);
@@ -58,6 +62,7 @@ export default function DepensesPage() {
     date:        todayStr(),
     description: '',
     payMethod:   'cash' as 'cash' | 'card' | 'mobile',
+    vehicleId:   '',
   });
 
   const isOwnerOrAdmin = canDelete(user?.role);
@@ -81,6 +86,16 @@ export default function DepensesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!business?.id) return;
+    Promise.all([getVehicles(business.id), getVoitures(business.id)])
+      .then(([rental, sale]) => {
+        setRentalVehicles(rental);
+        setSaleVehicles(sale);
+      })
+      .catch(() => {});
+  }, [business?.id]);
+
   async function handleSave() {
     if (!business?.id) return;
     const amount = parseFloat(form.amount);
@@ -100,6 +115,7 @@ export default function DepensesPage() {
       await createManualEntry({
         businessId:  business.id,
         entry_date:  form.date,
+        source_id:   form.vehicleId || null,
         description,
         lines: [
           { account_code: tpl.debit.code, account_name: tpl.debit.name, debit: amount, credit: 0 },
@@ -107,7 +123,7 @@ export default function DepensesPage() {
         ],
       });
       success('Dépense enregistrée');
-      setForm({ type: EXPENSE_TYPES[0].id, amount: '', date: todayStr(), description: '', payMethod: 'cash' });
+      setForm({ type: EXPENSE_TYPES[0].id, amount: '', date: todayStr(), description: '', payMethod: 'cash', vehicleId: '' });
       setShowForm(false);
       await load();
     } catch (err) {
@@ -186,6 +202,35 @@ export default function DepensesPage() {
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="label">Vehicule lie <span className="text-content-primary font-normal">(optionnel)</span></label>
+                <select
+                  className="input"
+                  value={form.vehicleId}
+                  onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value }))}
+                >
+                  <option value="">Aucun vehicule</option>
+                  {rentalVehicles.length > 0 && (
+                    <optgroup label="Location">
+                      {rentalVehicles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}{v.license_plate ? ` - ${v.license_plate}` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {saleVehicles.length > 0 && (
+                    <optgroup label="Vente">
+                      {saleVehicles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.marque} {v.modele}{v.annee ? ` (${v.annee})` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
               </div>
 
               {/* Montant */}

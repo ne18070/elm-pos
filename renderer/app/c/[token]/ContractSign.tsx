@@ -5,10 +5,12 @@ import { useParams } from 'next/navigation';
 import DOMPurify from 'dompurify';
 import {
   Loader2, CheckCircle, AlertTriangle, PenLine, RotateCcw, Send, Download,
+  Upload, FileText,
 } from 'lucide-react';
 import {
   getContractByToken, signContract, savePdfUrl, uploadContractPdf,
-  type Contract,
+  uploadContractDocument,
+  type Contract, type RequiredContractDocument,
 } from '@services/supabase/contracts';
 import { generateContractPdf, imageUrlToDataUrl } from '@/lib/contract-pdf';
 
@@ -25,6 +27,8 @@ export default function ContractSignPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [docError, setDocError] = useState('');
 
   // Canvas signature
   const canvasRef  = useRef<HTMLCanvasElement>(null);
@@ -160,11 +164,38 @@ export default function ContractSignPage() {
     hasStrokes.current = false;
   }
 
+  const uploadedRequiredKeys = new Set(
+    (contract?.documents ?? [])
+      .map((doc) => doc.category)
+      .filter((category): category is string => Boolean(category))
+  );
+  const requiredDocuments = contract?.required_documents ?? [];
+  const missingRequiredDocs = requiredDocuments.filter((doc) => !uploadedRequiredKeys.has(doc.key));
+  const requiredDocsReady = missingRequiredDocs.length === 0;
+
+  async function handleRequiredDocumentUpload(category: string, file: File | undefined) {
+    if (!contract || !file) return;
+    setUploadingDoc(category);
+    setDocError('');
+    try {
+      const documents = await uploadContractDocument(contract.id, file, contract.documents ?? [], category);
+      setContract({ ...contract, documents });
+    } catch (e: unknown) {
+      setDocError(e instanceof Error ? e.message : 'Impossible d\'ajouter le document.');
+    } finally {
+      setUploadingDoc(null);
+    }
+  }
+
   // ─── Submit ────────────────────────────────────────────────────────────────
 
   async function handleSubmit() {
     const canvas = canvasRef.current;
     if (!canvas || !contract) return;
+    if (!requiredDocsReady) {
+      setSubmitError('Veuillez ajouter les documents requis avant de signer.');
+      return;
+    }
     if (!hasStrokes.current) { setSubmitError('Veuillez apposer votre signature avant de valider.'); return; }
 
     setSubmitting(true);
@@ -313,19 +344,40 @@ export default function ContractSignPage() {
           <div className="space-y-4">
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
               <p className="font-semibold mb-1">Avant de signer</p>
-              <p>Veuillez lire attentivement le contrat ci-dessus. En signant, vous acceptez les conditions.</p>
+              <p>Veuillez lire attentivement le contrat ci-dessus et ajouter les documents requis.</p>
             </div>
+
+            <RequiredDocumentsBlock
+              contract={contract}
+              uploadingDoc={uploadingDoc}
+              docError={docError}
+              onUpload={handleRequiredDocumentUpload}
+            />
+
             <button
               onClick={() => setStage('signing')}
-              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold py-4 rounded-2xl transition-colors text-base"
+              disabled={!requiredDocsReady}
+              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-content-primary font-semibold py-4 rounded-2xl transition-colors text-base"
             >
               <PenLine className="w-5 h-5" /> Signer ce contrat
             </button>
+            {!requiredDocsReady && (
+              <p className="text-xs text-red-600 text-center">
+                Ajoutez {missingRequiredDocs.map((doc) => doc.label).join(' et ')} avant de signer.
+              </p>
+            )}
           </div>
         )}
 
         {stage === 'signing' && (
           <div className="space-y-4">
+            <RequiredDocumentsBlock
+              contract={contract}
+              uploadingDoc={uploadingDoc}
+              docError={docError}
+              onUpload={handleRequiredDocumentUpload}
+            />
+
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <PenLine className="w-4 h-4" /> Apposez votre signature ci-dessous
@@ -393,6 +445,85 @@ function MobileShell({ children }: { children: React.ReactNode }) {
       <div className="px-4 py-6 text-center text-xs text-gray-400 border-t border-gray-100">
         Propulsé par <span className="font-semibold text-brand-500">Elm App</span>
       </div>
+    </div>
+  );
+}
+
+function RequiredDocumentsBlock({
+  contract,
+  uploadingDoc,
+  docError,
+  onUpload,
+}: {
+  contract: Contract | null;
+  uploadingDoc: string | null;
+  docError: string;
+  onUpload: (category: string, file: File | undefined) => void;
+}) {
+  const documents = contract?.documents ?? [];
+  const requiredDocuments = contract?.required_documents ?? [];
+
+  if (requiredDocuments.length === 0) {
+    return (
+      <div className="border border-gray-200 rounded-2xl p-4">
+        <p className="text-sm font-semibold text-gray-800">Documents requis</p>
+        <p className="text-xs text-gray-500 mt-0.5">Aucun document n'est requis pour ce contrat.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-2xl p-4 space-y-3">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">Documents requis</p>
+        <p className="text-xs text-gray-500 mt-0.5">Ajoutez les pièces demandées avant la signature.</p>
+      </div>
+
+      <div className="space-y-2">
+        {requiredDocuments.map((required: RequiredContractDocument) => {
+          const existing = documents.find((doc) => doc.category === required.key);
+          const isUploading = uploadingDoc === required.key;
+
+          return (
+            <div key={required.key} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{required.label}</p>
+                  {existing ? (
+                    <a
+                      href={existing.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 flex items-center gap-1 text-xs text-brand-600 truncate"
+                    >
+                      <FileText className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{existing.name}</span>
+                    </a>
+                  ) : (
+                    <p className="text-xs text-red-600 mt-1">Document manquant</p>
+                  )}
+                </div>
+                <label className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:border-brand-400">
+                  {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {existing ? 'Remplacer' : 'Ajouter'}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    disabled={Boolean(uploadingDoc)}
+                    onChange={(e) => {
+                      onUpload(required.key, e.target.files?.[0]);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {docError && <p className="text-xs text-red-600 text-center">{docError}</p>}
     </div>
   );
 }
