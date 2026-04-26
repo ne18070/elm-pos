@@ -230,6 +230,7 @@ export default function BoutiquePage() {
   // ---- Produits filtrés
   const filtered = useMemo(() => {
     return products.filter((p) => {
+      if (p.track_stock && (p.stock ?? 0) <= 0) return false;
       if (activeCategory && p.category_id !== activeCategory) return false;
       if (search) {
         const q = search.toLowerCase();
