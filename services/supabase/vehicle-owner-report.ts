@@ -23,6 +23,7 @@ export interface VehicleOwnerReport {
   kind: 'rental' | 'sale';
   business_name: string;
   business_phone: string | null;
+  business_logo: string | null;
   currency: string;
   vehicle: {
     name: string;

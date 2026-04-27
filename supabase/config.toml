@@ -1,5 +1,5 @@
 [project]
-id = "elm-pos"
+id = "elm-app"
 
 [api]
 enabled = true

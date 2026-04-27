@@ -1220,8 +1220,7 @@ export default function ContratsPage() {
                     <p className="text-sm font-medium text-content-primary truncate">{c.client_name}</p>
                     <p className="text-xs text-content-secondary truncate">
                       {(c as Contract & { rental_vehicles?: { name: string; license_plate: string | null } }).rental_vehicles?.name ?? '-'} 
-                      {' · '}{fmtDate(c.start_date)} {fmtTime(c.start_time)} 竊・{fmtDate(c.end_date)} {fmtTime(c.end_time)}
-                    </p>
+                      {' · '}{fmtDate(c.start_date)} {fmtTime(c.start_time)} → {fmtDate(c.end_date)} {fmtTime(c.end_time)}                    </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
@@ -1754,8 +1753,7 @@ function TemplatePanel({
       `<div data-sigblock="${type}" contenteditable="false"
            style="display:block;border:2px dashed ${border};background:${bg};text-align:center;padding:14px 10px;margin:8px 0;border-radius:6px;">
          <span style="font-family:monospace;font-size:11px;color:${color};">{{${type}}}</span>
-         <p style="margin:4px 0 0;font-size:11px;color:${color};">笨擾ｸ・${label}</p>
-       </div>`
+         <p style="margin:4px 0 0;font-size:11px;color:${color};">✍️ ${label}</p>       </div>`
     );
   }
 
@@ -2109,7 +2107,7 @@ function ContractPanel({
                   return (
                     <option key={v.id} value={v.id} disabled={booked}>
                       {v.name}{v.license_plate ? ` (${v.license_plate})` : ''} — {v.price_per_day.toLocaleString('fr-FR')} {displayCurrency(v.currency)}/j
-                      {booked ? ' ✓ Déjà loué sur cette période' : (!v.is_available ? ' ✗ Indisponible' : '')}
+                      {booked ? ' ✓ Déjà loué sur cette période' : (!v.is_available ? ' ✗ Indisponible' : '')}
                     </option>
                   );
                 })}

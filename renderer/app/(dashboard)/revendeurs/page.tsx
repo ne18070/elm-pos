@@ -11,6 +11,7 @@ import { SideDrawer } from '@/components/ui/SideDrawer';
 import { ImportModal } from '@/components/resellers/ImportModal';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { displayCurrency } from '@/lib/utils';
 import {
   getResellers, createReseller, updateReseller, deleteReseller,
   getResellerClients, createResellerClient, updateResellerClient, deleteResellerClient,
@@ -169,7 +170,7 @@ function BonLivraisonModal({ reseller, products, business, onClose }: {
               <div className="p-3 rounded-xl bg-surface-input text-center">
                 <p className="text-xs text-content-secondary">Total</p>
                 <p className="font-bold text-content-primary">
-                  {new Intl.NumberFormat('fr-FR').format(subtotal)} {business.currency ?? 'XOF'}
+                  {new Intl.NumberFormat('fr-FR').format(subtotal)} {displayCurrency(business.currency ?? 'XOF')}
                 </p>
               </div>
               <div>

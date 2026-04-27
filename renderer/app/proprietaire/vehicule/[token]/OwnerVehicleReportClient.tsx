@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Car, Download, Loader2, Phone, ReceiptText } from 'lucide-react';
 import { getVehicleOwnerReport, type VehicleOwnerReport } from '@services/supabase/vehicle-owner-report';
+import { displayCurrency } from '@/lib/utils';
 
 function money(value: number | null | undefined, currency: string) {
-  return `${new Intl.NumberFormat('fr-FR').format(Number(value ?? 0))} ${currency}`;
+  return `${new Intl.NumberFormat('fr-FR').format(Number(value ?? 0))} ${displayCurrency(currency)}`;
 }
 
 function date(value: string | null | undefined) {
@@ -53,26 +54,40 @@ export default function OwnerVehicleReportClient({ token }: { token: string }) {
     <main className="min-h-screen bg-surface text-content-primary">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-surface-border pb-5">
-          <div className="min-w-0">
-            <p className="text-xs text-content-muted uppercase tracking-widest font-bold">{report.business_name}</p>
-            <h1 className="text-2xl sm:text-3xl font-black mt-1">{report.vehicle.name}</h1>
-            <p className="text-sm text-content-secondary mt-1">
-              {report.vehicle.year ? `${report.vehicle.year} · ` : ''}
-              {report.vehicle.plate ?? (report.kind === 'rental' ? 'Plaque non renseignee' : 'Vehicule en vente')}
-            </p>
-            {report.business_phone && (
-              <a href={`tel:${report.business_phone}`} className="inline-flex items-center gap-1.5 text-sm text-content-brand mt-2">
-                <Phone className="w-4 h-4" /> {report.business_phone}
-              </a>
+          <div className="flex gap-4">
+            {report.business_logo && (
+              <img
+                src={report.business_logo}
+                alt={report.business_name}
+                className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl object-contain bg-surface-input border border-surface-border p-1 shrink-0"
+              />
             )}
+            <div className="min-w-0">
+              <p className="text-xs text-content-muted uppercase tracking-widest font-bold">{report.business_name}</p>
+              <h1 className="text-2xl sm:text-3xl font-black mt-1">{report.vehicle.name}</h1>
+              <p className="text-sm text-content-secondary mt-1">
+                {report.vehicle.year ? `${report.vehicle.year} · ` : ''}
+                {report.vehicle.plate ?? (report.kind === 'rental' ? 'Plaque non renseignee' : 'Vehicule en vente')}
+              </p>
+              {report.business_phone && (
+                <a href={`tel:${report.business_phone}`} className="inline-flex items-center gap-1.5 text-sm text-content-brand mt-2">
+                  <Phone className="w-4 h-4" /> {report.business_phone}
+                </a>
+              )}
+            </div>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold print:hidden"
-          >
-            <Download className="w-4 h-4" />
-            PDF
-          </button>
+          <div className="flex items-center gap-3 print:hidden">
+            <div className="w-14 h-10 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
+              <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />
+            </div>
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold"
+            >
+              <Download className="w-4 h-4" />
+              PDF
+            </button>
+          </div>
         </header>
 
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">

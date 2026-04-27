@@ -10,6 +10,7 @@ import type { JournalEntry } from '@services/supabase/accounting';
 import { getVehicles, type RentalVehicle } from '@services/supabase/contracts';
 import { getVoitures, type Voiture } from '@services/supabase/voitures';
 import { canDelete } from '@/lib/permissions';
+import { displayCurrency } from '@/lib/utils';
 
 // --- Catégories de dépenses ---------------------------------------------------
 
@@ -33,7 +34,7 @@ function todayStr() {
 }
 
 function fmtMoney(n: number, currency: string) {
-  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + currency;
+  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + displayCurrency(currency);
 }
 
 function fmtDate(d: string) {

@@ -4,6 +4,7 @@ import {
 } from '@services/supabase/workflows';
 import { getBusiness } from '@services/supabase/business';
 import { supabase } from '@/lib/supabase'; // Import direct pour insertion honoraires
+import { displayCurrency } from '@/lib/utils';
 import {
   getNode, getEdge, getEligibleEdges,
   resolveConditionEdge, interpolate, applyContextUpdates,
@@ -141,6 +142,7 @@ async function executeFeeRequestNode(
     }
 
     const workflow = await getWorkflow(instance.workflow_id);
+    const business = await getBusiness(workflow.business_id);
 
     const payload = {
       business_id:     workflow.business_id,
@@ -159,7 +161,7 @@ async function executeFeeRequestNode(
 
     await log({
       instance_id: instance.id, event_type: 'FEE_CREATED',
-      to_node_id: node.id, message: `Honoraire créé automatique : ${amount.toLocaleString('fr-FR')} XOF (${payload.type_prestation})`,
+      to_node_id: node.id, message: `Honoraire créé automatique : ${amount.toLocaleString('fr-FR')} ${displayCurrency(business.currency ?? 'XOF')} (${payload.type_prestation})`,
       context_snapshot: ctx,
     });
 

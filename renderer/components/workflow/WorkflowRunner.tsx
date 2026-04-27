@@ -11,6 +11,8 @@ import { transitionToNextStep, cancelWorkflowInstance, retryCurrentStep } from '
 import {
   getNode, getEligibleEdges, interpolate, buildWhatsAppUrl,
 } from '@/lib/workflow-engine';
+import { displayCurrency } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth';
 import type {
   WorkflowInstance, WorkflowNode, WorkflowEdge,
   UserTaskNode, LegalClaimNode, WaitEventNode, DelayNode as WorkflowDelayNode, ActionNode,
@@ -299,6 +301,8 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
 
 // -- Panel FEE_REQUEST --------------------------------------------------------
 function FeeRequestPanel({ node, context }: { node: any; context: Record<string, unknown> }) {
+  const { business } = useAuthStore();
+  const currency = business?.currency ?? 'XOF';
   let amount = node.amount ?? 0;
   if (node.amount_template) {
     const interpolated = interpolate(node.amount_template, context);
@@ -313,7 +317,7 @@ function FeeRequestPanel({ node, context }: { node: any; context: Record<string,
           Génération d&apos;honoraire automatique
         </div>
         <div className="space-y-1">
-          <p className="text-2xl font-black text-content-primary">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-content-secondary">XOF</span></p>
+          <p className="text-2xl font-black text-content-primary">{amount.toLocaleString('fr-FR')} <span className="text-sm font-normal text-content-secondary">{displayCurrency(currency)}</span></p>
           <p className="text-[10px] text-content-muted uppercase font-bold tracking-widest">{node.prestation_type || 'Provision'}</p>
         </div>
         <p className="text-xs text-content-secondary leading-relaxed italic border-t border-status-success/30 pt-2">

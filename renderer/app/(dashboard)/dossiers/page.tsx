@@ -654,6 +654,8 @@ interface HonoraireLine {
 }
 
 function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dossier; businessId: string; onClose: () => void; canEdit: boolean; }) {
+  const { business } = useAuthStore();
+  const currency = business?.currency ?? 'XOF';
   const [lines, setLines] = useState<HonoraireLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -757,11 +759,11 @@ function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dos
         <div className="grid grid-cols-2 gap-3">
           <div className="card p-3 bg-surface/30 border-surface-border">
             <p className="text-[9px] font-black text-content-muted uppercase tracking-widest mb-1">Total Facturé</p>
-            <p className="text-sm font-bold text-content-primary">{new Intl.NumberFormat('fr-FR').format(total)} XOF</p>
+            <p className="text-sm font-bold text-content-primary">{new Intl.NumberFormat('fr-FR').format(total)} {displayCurrency(currency)}</p>
           </div>
           <div className="card p-3 bg-surface/30 border-surface-border">
             <p className="text-[9px] font-black text-content-muted uppercase tracking-widest mb-1">Reste à payer</p>
-            <p className="text-sm font-bold text-status-error">{new Intl.NumberFormat('fr-FR').format(total - paye)} XOF</p>
+            <p className="text-sm font-bold text-status-error">{new Intl.NumberFormat('fr-FR').format(total - paye)} {displayCurrency(currency)}</p>
           </div>
         </div>
 
@@ -776,7 +778,7 @@ function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dos
               <div key={l.id} className="p-3 bg-surface/50 border border-surface-border rounded-xl hover:border-surface-border transition-all group">
                 <div className="flex justify-between items-start mb-1">
                   <div>
-                    <p className="text-xs font-bold text-content-primary">{new Intl.NumberFormat('fr-FR').format(l.montant)} XOF</p>
+                    <p className="text-xs font-bold text-content-primary">{new Intl.NumberFormat('fr-FR').format(l.montant)} {displayCurrency(currency)}</p>
                     <p className="text-[10px] text-content-muted font-medium capitalize">{l.type_prestation}</p>
                   </div>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase ${

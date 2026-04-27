@@ -10,7 +10,8 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { SideDrawer } from '@/components/ui/SideDrawer';
-import { cn } from '@/lib/utils';
+import { cn, displayCurrency } from '@/lib/utils';
+// ... (omitting some imports for clarity in the tool call if needed, but I should provide enough context)
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 import { logAction } from '@services/supabase/logger';
 import {
@@ -54,7 +55,7 @@ const emptyForm = (): VoitureForm => ({
 });
 
 function fmtPrice(n: number, currency: string) {
-  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + currency;
+  return new Intl.NumberFormat('fr-FR').format(n) + ' ' + displayCurrency(currency);
 }
 
 function fmtDate(d: string) {
