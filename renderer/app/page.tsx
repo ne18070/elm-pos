@@ -20,6 +20,8 @@ import {
   UserCircle,
   Loader2,
   ChevronRight,
+  Car,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
@@ -121,7 +123,7 @@ function Hero() {
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold text-brand-300 tracking-widest uppercase mb-6">
-            Logiciel de caisse - Senegal & Afrique
+            Gestion complete pour les PME — Senegal & Afrique
           </p>
 
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-content-primary leading-[1.1] tracking-tight mb-6">
@@ -131,8 +133,7 @@ function Hero() {
           </h1>
 
           <p className="text-lg text-content-secondary leading-relaxed max-w-xl mb-10">
-            Caisse, stock, comptabilite, livraisons: tout dans une seule application.
-            Concu pour les PME africaines.
+            Caisse, stocks, comptabilite OHADA, location de vehicules, reservations, dossiers juridiques, livraisons : tout dans une seule application. Concu pour les PME africaines.
           </p>
 
           <div className="flex flex-wrap gap-2 mb-12 max-w-2xl">
@@ -140,6 +141,8 @@ function Hero() {
               { label: 'Caisse tactile', icon: ShoppingCart },
               { label: 'Gestion des stocks', icon: Package },
               { label: 'Comptabilite OHADA', icon: Receipt },
+              { label: 'Location vehicules', icon: Car },
+              { label: 'Reservations', icon: CalendarCheck },
               { label: 'Livraisons', icon: Truck },
               { label: 'WhatsApp', icon: MessageCircle },
               { label: 'Mode hors ligne', icon: WifiOff },
@@ -234,14 +237,19 @@ const FEATURES = [
     desc: 'Gerez plusieurs boutiques ou points de vente depuis un seul compte centralise.',
   },
   {
+    icon: Car,
+    title: 'Location de vehicules',
+    desc: 'Contrats numeriques, signature electronique, suivi des disponibilites et encaissement.',
+  },
+  {
     icon: BedDouble,
-    title: 'Hotellerie',
-    desc: 'Gestion des chambres, des reservations et facturation unifiee.',
+    title: 'Hotellerie & Reservations',
+    desc: 'Gestion des chambres, check-in/out, reservations en ligne et facturation unifiee.',
   },
   {
     icon: Scale,
     title: 'Dossiers juridiques',
-    desc: "Suivi des procedures, gestion documentaire et facturation d'honoraires.",
+    desc: "Suivi des procedures OHADA, gestion documentaire et facturation d'honoraires.",
   },
 ];
 
@@ -321,6 +329,14 @@ const SECTEURS: {
     border: 'border-surface-border',
     title: 'Boutique & Retail',
     desc: 'Caisse rapide, codes-barres, variantes, promotions.',
+  },
+  {
+    icon: Car,
+    iconColor: 'text-status-warning',
+    iconBg: 'bg-badge-warning',
+    border: 'border-surface-border',
+    title: 'Location de vehicules',
+    desc: 'Contrats, signature electronique, disponibilites et encaissements.',
   },
   {
     icon: BedDouble,
@@ -415,6 +431,7 @@ function MultiEtablissements() {
           {[
             { name: 'Boutique Dakar Plateau', type: 'Commerce', active: true },
             { name: 'Restaurant Almadies', type: 'Restauration', active: false },
+            { name: 'Agence Location Thiès', type: 'Location véhicules', active: false },
             { name: 'Cabinet Me. Diallo', type: 'Juridique', active: false },
           ].map(({ name, type, active }) => (
             <div
@@ -785,11 +802,18 @@ function ModulesShowcase() {
         />
 
         <ModuleFeature
+          subtitle="Location de vehicules"
+          title="Contrats & signature en ligne"
+          desc="Creez des contrats de location en quelques secondes, envoyez le lien de signature par WhatsApp et encaissez en ligne. Suivez la disponibilite de votre flotte en temps reel."
+          img="/screenshots/20-contrats-location.png"
+          reverse
+        />
+
+        <ModuleFeature
           subtitle="Services juridiques"
           title="Suivi de dossiers et honoraires"
           desc="Specialement concu pour les cabinets d'avocats et notaires au Senegal. Gerez l'ouverture des dossiers, le suivi des procedures OHADA et la facturation precise des honoraires."
           img="/screenshots/15-dossiers-clients.png"
-          reverse
         />
 
         <ModuleFeature
@@ -797,6 +821,7 @@ function ModulesShowcase() {
           title="Gestion hoteliere integree"
           desc="Activez le module PMS pour gerer vos chambres, vos reservations et vos consommations bar/restaurant sur une seule facture client. Une solution vraiment tout-en-un."
           img="/screenshots/14-hotel-management.png"
+          reverse
         />
       </div>
     </section>
