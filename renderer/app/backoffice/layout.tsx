@@ -92,8 +92,8 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
       >
         <div className="p-6 flex items-center justify-between">
           <div className={cn("flex items-center gap-3 overflow-hidden transition-all", !isSidebarOpen && "w-0")}>
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/20">
-              <span className="text-content-primary font-black text-xs">ELM</span>
+            <div className="w-14 h-14 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/20">
+              <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
             </div>
             <span className="text-content-primary font-black tracking-tight text-sm whitespace-nowrap">BACKOFFICE</span>
           </div>
