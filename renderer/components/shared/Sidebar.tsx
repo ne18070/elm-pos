@@ -211,7 +211,7 @@ function SidebarContent({
         <div className="w-10 flex items-center justify-center shrink-0">
           <div className={cn(
             "rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md border border-white/20 transition-all duration-300 overflow-hidden p-1",
-            collapsed ? "w-10 h-10" : "w-20 h-8"
+            collapsed ? "w-10 h-10" : "w-14 h-14"
           )}>
             <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
           </div>

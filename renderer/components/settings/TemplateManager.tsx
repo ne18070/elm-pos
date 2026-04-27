@@ -644,7 +644,8 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                 {/* -- Copies -- */}
                 {selected.copies === 2 && (
                   <Section title="Copies" sectionKey="copies" onActivate={setActiveSection}>
-                    <div className="grid grid-cols-2 gap-4">
+                    <Toggle label="Label exemplaire" checked={selected.showCopyLabel} onChange={(v) => updateSelected({ showCopyLabel: v })} />
+                    <div className={`grid grid-cols-2 gap-4 ${!selected.showCopyLabel ? 'opacity-40 pointer-events-none' : ''}`}>
                       {([1, 2] as const).map((n) => (
                         <div key={n} className="space-y-3">
                           <p className="text-xs text-content-muted font-semibold">Exemplaire {n}</p>

@@ -10,11 +10,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM APP — Logiciel de caisse et gestion pour les PME',
+    default: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
     template: '%s | ELM APP',
   },
   description:
-    'ELM APP : caisse tactile, gestion des stocks, comptabilité OHADA, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels, cabinets juridiques et prestataires de services au Sénégal et en Afrique. Essai gratuit 7 jours.',
+    'ELM APP : caisse tactile, gestion des stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels, cabinets juridiques et prestataires de services au Sénégal et en Afrique. Essai gratuit 7 jours.',
   applicationName: 'ELM APP',
   keywords: [
     // Fonctionnalités core
@@ -38,10 +38,16 @@ export const metadata: Metadata = {
     'multi-établissements', 'gestion plusieurs boutiques',
     // Équipe
     'gestion équipe', 'rôles employés', 'accès employés',
+    // Location véhicules
+    'location voiture Sénégal', 'contrat location véhicule', 'gestion flotte',
+    // Réservations
+    'réservation hôtel Sénégal', 'gestion réservations', 'logiciel hôtellerie',
+    // Juridique
+    'logiciel cabinet juridique', 'gestion dossiers juridiques', 'honoraires avocat',
+    'dossiers juridiques OHADA', 'suivi affaires juridiques',
     // Secteurs
     'logiciel restaurant Sénégal', 'logiciel boutique retail',
     'logiciel hôtellerie Afrique', 'gestion hôtel Sénégal',
-    'logiciel cabinet juridique', 'dossiers juridiques OHADA',
     'logiciel prestation service', 'honoraires',
     'commerce distribution', 'revendeurs grossistes',
     // Géo
@@ -70,9 +76,9 @@ export const metadata: Metadata = {
     locale: 'fr_SN',
     url: BASE_URL,
     siteName: 'ELM APP',
-    title: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · Livraisons · WhatsApp',
+    title: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
     description:
-      'Tout-en-un : caisse tactile, stocks temps réel, comptabilité OHADA, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels et cabinets au Sénégal. Essai 7 jours gratuit.',
+      'Tout-en-un : caisse tactile, stocks temps réel, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels et cabinets au Sénégal. Essai 7 jours gratuit.',
     images: [
       {
         url: '/og-image.png',
@@ -85,9 +91,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: 'summary_large_image',
-    title: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · WhatsApp · Livraisons',
+    title: 'ELM APP — Caisse · Stocks · Compta OHADA · Location · Réservations · Juridique',
     description:
-      'Caisse tactile, stocks, comptabilité OHADA, livraisons, WhatsApp natif, hors-ligne, multi-établissements. Pour restaurants, boutiques, hôtels & cabinets au Sénégal.',
+      'Caisse tactile, stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, hors-ligne. Pour restaurants, boutiques, hôtels & cabinets au Sénégal.',
     images: ['/og-image.png'],
     creator: '@elmapp',
   },

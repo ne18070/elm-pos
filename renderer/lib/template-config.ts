@@ -98,6 +98,7 @@ export interface TemplateConfig {
   footerText:     string;
 
   // Copies config
+  showCopyLabel: boolean;
   copy1Label: string;
   copy2Label: string;
   copy1Color: string;
@@ -137,6 +138,7 @@ export const DEFAULT_THERMAL: TemplateConfig = {
   showSignatures: false,
   showQRCode: false,
   footerText: 'Merci de votre visite !',
+  showCopyLabel: true,
   copy1Label: '✦ EXEMPLAIRE CLIENT ✦',
   copy2Label: '✦ EXEMPLAIRE BOUTIQUE ✦',
   copy1Color: '#22c55e',
@@ -174,6 +176,7 @@ export const DEFAULT_A4_DUPLICATE: TemplateConfig = {
   showSignatures: true,
   showQRCode: false,
   footerText: '',
+  showCopyLabel: true,
   copy1Label: '✦ EXEMPLAIRE CLIENT ✦',
   copy2Label: '✦ EXEMPLAIRE BOUTIQUE ✦',
   copy1Color: '#22c55e',
@@ -187,8 +190,11 @@ export const BUILTIN_TEMPLATES: TemplateConfig[] = [DEFAULT_THERMAL, DEFAULT_A4_
 const storageKey = (businessId: string) => `invoice_templates_${businessId}`;
 
 function migrateConfig(config: TemplateConfig): TemplateConfig {
-  if (config.blocks && config.blocks.length > 0) return config;
-  return { ...config, blocks: DEFAULT_BLOCKS.map(b => ({ ...b })) };
+  return {
+    ...config,
+    blocks: config.blocks && config.blocks.length > 0 ? config.blocks : DEFAULT_BLOCKS.map(b => ({ ...b })),
+    showCopyLabel: config.showCopyLabel ?? true,
+  };
 }
 
 export function getTemplates(businessId: string): TemplateConfig[] {
@@ -700,10 +706,10 @@ export function renderTemplate(
   if (isThermal) {
     bodyContent = buildBody(order, business, config, extra);
   } else if (isTwoCols) {
-    const copy1 = buildBody(order, business, config, extra) + `
-      <div class="copy-label" style="color:${config.copy1Color};border-color:${config.copy1Color}">${config.copy1Label}</div>`;
-    const copy2 = buildBody(order, business, config, extra) + `
-      <div class="copy-label" style="color:${config.copy2Color};border-color:${config.copy2Color}">${config.copy2Label}</div>`;
+    const label1 = config.showCopyLabel ? `\n      <div class="copy-label" style="color:${config.copy1Color};border-color:${config.copy1Color}">${config.copy1Label}</div>` : '';
+    const label2 = config.showCopyLabel ? `\n      <div class="copy-label" style="color:${config.copy2Color};border-color:${config.copy2Color}">${config.copy2Label}</div>` : '';
+    const copy1 = buildBody(order, business, config, extra) + label1;
+    const copy2 = buildBody(order, business, config, extra) + label2;
     bodyContent = `<div class="copy">${copy1}</div><div class="copy">${copy2}</div>`;
   } else {
     bodyContent = `<div class="single-copy">${buildBody(order, business, config, extra)}</div>`;

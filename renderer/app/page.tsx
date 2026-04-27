@@ -46,7 +46,7 @@ function Nav() {
       <div className="max-w-6xl mx-auto px-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className={`w-24 h-8 rounded-xl bg-white overflow-hidden flex items-center justify-center p-1.5 transition-all duration-300 ${
+            className={`w-14 h-14 rounded-xl bg-white overflow-hidden flex items-center justify-center p-1.5 transition-all duration-300 ${
               scrolled ? 'border border-surface-border shadow-md' : 'border border-surface-border shadow-2xl'
             }`}
           >
@@ -639,7 +639,7 @@ function Footer() {
     <footer className="border-t border-surface-border bg-surface py-10 px-5">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2">
-          <div className="w-24 h-8 bg-white rounded-lg flex items-center justify-center p-1.5 overflow-hidden shadow-sm border border-surface-border">
+          <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center p-1.5 overflow-hidden shadow-sm border border-surface-border">
             <img src="/logo.png" alt="ELM" className="max-w-full max-h-full object-contain" />
           </div>
         </div>
