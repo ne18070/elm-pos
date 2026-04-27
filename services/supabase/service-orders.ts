@@ -5,7 +5,13 @@ const db = _supabase as any;
 
 export type ServiceOrderStatus = 'attente' | 'en_cours' | 'termine' | 'paye' | 'annule';
 
-export type ServiceCategory = 'lavage' | 'vidange' | 'mecanique' | 'autre';
+export interface ServiceCategory {
+  id:          string;
+  business_id: string;
+  name:        string;
+  color:       string;
+  sort_order:  number;
+}
 
 // Types de sujets — libres, exemples courants fournis mais non limitatifs
 export type SubjectType = 'vehicule' | 'appareil' | 'billet' | 'client' | 'autre';
@@ -14,7 +20,8 @@ export interface ServiceCatalogItem {
   id:           string;
   business_id:  string;
   name:         string;
-  category:     ServiceCategory;
+  category_id:  string | null;
+  category?:    string; // champ texte legacy
   price:        number;
   duration_min: number | null;
   is_active:    boolean;
@@ -67,6 +74,38 @@ export interface ServiceOrder {
 
 // ── Catalogue ────────────────────────────────────────────────────────────────
 
+export async function getServiceCategories(businessId: string): Promise<ServiceCategory[]> {
+  const { data, error } = await db
+    .from('service_categories')
+    .select('*')
+    .eq('business_id', businessId)
+    .order('sort_order')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function upsertServiceCategory(
+  businessId: string,
+  input: { id?: string; name: string; color?: string; sort_order?: number }
+): Promise<ServiceCategory> {
+  const payload: any = {
+    business_id: businessId,
+    name:        input.name.trim(),
+    color:       input.color || 'bg-slate-500/20 text-slate-300',
+    sort_order:  input.sort_order ?? 0,
+  };
+  if (input.id) payload.id = input.id;
+  const { data, error } = await db.from('service_categories').upsert(payload).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteServiceCategory(id: string): Promise<void> {
+  const { error } = await db.from('service_categories').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function getServiceCatalog(businessId: string): Promise<ServiceCatalogItem[]> {
   const { data, error } = await db
     .from('service_catalog')
@@ -92,12 +131,12 @@ export async function getAllServiceCatalog(businessId: string): Promise<ServiceC
 
 export async function upsertServiceCatalogItem(
   businessId: string,
-  input: { id?: string; name: string; category: ServiceCategory; price: number; duration_min?: number | null; sort_order?: number }
+  input: { id?: string; name: string; category_id: string | null; price: number; duration_min?: number | null; sort_order?: number }
 ): Promise<ServiceCatalogItem> {
   const payload: any = {
     business_id:  businessId,
     name:         input.name.trim(),
-    category:     input.category,
+    category_id:  input.category_id,
     price:        input.price,
     duration_min: input.duration_min ?? null,
     sort_order:   input.sort_order ?? 0,

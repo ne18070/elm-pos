@@ -9,18 +9,18 @@ export const CURRENCY_LABEL: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA'
 export function displayCurrency(code: string): string { return CURRENCY_LABEL[code] ?? code; }
 const CURRENCY_DECIMALS: Record<string, number> = { XOF: 0, XAF: 0, JPY: 0 };
 
-export function formatCurrency(amount: number, currency = 'USD'): string {
-  const decimals = CURRENCY_DECIMALS[currency] ?? 2;
+export function formatCurrency(amount: number, currency = 'XOF'): string {
+  const decimals = CURRENCY_DECIMALS[currency] ?? (['XOF', 'XAF'].includes(currency) ? 0 : 2);
   const label    = CURRENCY_LABEL[currency] ?? currency;
   const number   = new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(amount);
+  }).format(amount || 0);
   return `${number}\u00a0${label}`;
 }
 
 export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('fr-FR', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

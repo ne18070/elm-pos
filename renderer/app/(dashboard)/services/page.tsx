@@ -6,15 +6,16 @@ import {
   Clock, CheckCircle2, XCircle, Edit2, Trash2, Play,
   Square, CreditCard, Package2, ChevronDown, ChevronUp,
   RefreshCw, User, Phone, History, MessageCircle, Bell,
-  ExternalLink, Copy, Share2
+  ExternalLink, Copy, Share2, LayoutGrid
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import {
   getServiceOrders, getServiceCatalog, getAllServiceCatalog, getSubjects,
   createServiceOrder, updateServiceOrderStatus, payServiceOrder,
   updateServiceOrder, cancelServiceOrder,
+  getServiceCategories, upsertServiceCategory, deleteServiceCategory,
   upsertServiceCatalogItem, toggleServiceCatalogItem, deleteServiceCatalogItem,
   searchSubjects, getSubjectHistory,
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
@@ -43,13 +44,6 @@ const SUBJECT_TYPES: { value: SubjectType; label: string; refLabel: string; info
   { value: 'autre',     label: 'Autre',      refLabel: 'Référence',       infoLabel: 'Description'         },
 ];
 
-const CATEGORIES: { value: ServiceCategory; label: string; color: string }[] = [
-  { value: 'lavage',    label: 'Lavage',    color: 'bg-blue-500/20 text-blue-300'    },
-  { value: 'vidange',   label: 'Vidange',   color: 'bg-orange-500/20 text-orange-300' },
-  { value: 'mecanique', label: 'Mécan.',    color: 'bg-red-500/20 text-red-300'      },
-  { value: 'autre',     label: 'Autre',     color: 'bg-slate-500/20 text-slate-300'  },
-];
-
 const PAY_METHODS = [
   { value: 'cash',   label: 'Espèces'      },
   { value: 'mobile', label: 'Mobile Money' },
@@ -57,10 +51,6 @@ const PAY_METHODS = [
   { value: 'bank',   label: 'Virement'     },
   { value: 'check',  label: 'Chèque'       },
 ];
-
-function fmtMoney(n: number, currency = 'XOF') {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' ' + currency;
-}
 
 function subjectTypeCfg(type: string | null | undefined) {
   return SUBJECT_TYPES.find(t => t.value === type) ?? SUBJECT_TYPES[4];
@@ -278,7 +268,7 @@ function NewOTModal({
                 {catalog.map(item => (
                   <button key={item.id} onClick={() => addFromCatalog(item)}
                     className="text-xs px-3 py-1.5 rounded-full border border-surface-border bg-surface-hover hover:bg-brand-500/20 hover:border-brand-500/50 hover:text-content-brand text-content-secondary transition-colors">
-                    {item.name} — {fmtMoney(item.price)}
+                    {item.name} — {formatCurrency(item.price)}
                   </button>
                 ))}
               </div>
@@ -319,7 +309,7 @@ function NewOTModal({
 
         {/* Footer */}
         <div className="flex items-center justify-between p-5 border-t border-surface-border bg-surface-card sticky bottom-0">
-          <div className="text-content-primary font-bold text-lg">Total : {fmtMoney(total)}</div>
+          <div className="text-content-primary font-bold text-lg">Total : {formatCurrency(total)}</div>
           <div className="flex gap-3">
             <button onClick={onClose} className="px-4 py-2 rounded-xl border border-surface-border text-content-secondary hover:bg-surface-hover text-sm font-medium">Annuler</button>
             <button onClick={handleSubmit} disabled={saving || lines.every(l => !l.name.trim())}
@@ -360,7 +350,7 @@ function PayModal({ order, currency, onClose, onPaid }: {
         <div className="p-5 space-y-4">
           <div className="rounded-xl bg-surface-hover p-4 flex justify-between items-center">
             <span className="text-content-muted text-sm">Montant dû</span>
-            <span className="text-content-primary font-bold text-lg">{fmtMoney(balance, currency)}</span>
+            <span className="text-content-primary font-bold text-lg">{formatCurrency(balance, currency)}</span>
           </div>
           <div>
             <label className="text-xs text-content-muted font-medium mb-1 block">Montant reçu</label>
@@ -608,9 +598,9 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                   <div key={item.id} className="flex items-center justify-between px-4 py-3">
                     <div>
                       <p className="text-sm text-content-primary font-medium">{item.name}</p>
-                      {item.quantity > 1 && <p className="text-xs text-content-muted">{item.quantity} × {fmtMoney(item.price, currency)}</p>}
+                      {item.quantity > 1 && <p className="text-xs text-content-muted">{item.quantity} × {formatCurrency(item.price, currency)}</p>}
                     </div>
-                    <span className="text-sm font-semibold text-content-primary">{fmtMoney(item.total, currency)}</span>
+                    <span className="text-sm font-semibold text-content-primary">{formatCurrency(item.total, currency)}</span>
                   </div>
                 ))}
               </div>
@@ -635,18 +625,18 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <div className="flex justify-between px-4 py-3">
               <span className="text-content-muted text-sm">Total</span>
-              <span className="font-bold text-content-primary">{fmtMoney(order.total, currency)}</span>
+              <span className="font-bold text-content-primary">{formatCurrency(order.total, currency)}</span>
             </div>
             {order.paid_amount > 0 && (
               <div className="flex justify-between px-4 py-3 border-t border-surface-border">
                 <span className="text-emerald-400 text-sm">Payé</span>
-                <span className="font-semibold text-emerald-400">-{fmtMoney(order.paid_amount, currency)}</span>
+                <span className="font-semibold text-emerald-400">-{formatCurrency(order.paid_amount, currency)}</span>
               </div>
             )}
             {balance > 0 && (
               <div className="flex justify-between px-4 py-3 border-t border-surface-border bg-red-500/10">
                 <span className="text-status-error text-sm font-semibold">Reste dû</span>
-                <span className="font-bold text-status-error">{fmtMoney(balance, currency)}</span>
+                <span className="font-bold text-status-error">{formatCurrency(balance, currency)}</span>
               </div>
             )}
           </div>
@@ -691,7 +681,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
               </div>
               {order.status === 'paye' && (
                 <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-sm border border-emerald-500/20 mb-2">
-                  <Check className="w-4 h-4" />Soldé — {fmtMoney(order.paid_amount, currency)}
+                  <Check className="w-4 h-4" />Soldé — {formatCurrency(order.paid_amount, currency)}
                 </div>
               )}
 
@@ -728,20 +718,28 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
 function CatalogModal({ businessId, item, onClose, onSaved }: {
   businessId: string; item?: ServiceCatalogItem; onClose: () => void; onSaved: () => void;
 }) {
-  const [name,     setName]     = useState(item?.name ?? '');
-  const [category, setCategory] = useState<ServiceCategory>(item?.category ?? 'autre');
-  const [price,    setPrice]    = useState(String(item?.price ?? ''));
-  const [duration, setDuration] = useState(String(item?.duration_min ?? ''));
-  const [saving,   setSaving]   = useState(false);
+  const [name,       setName]       = useState(item?.name ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(item?.category_id ?? null);
+  const [price,      setPrice]      = useState(String(item?.price ?? ''));
+  const [duration,   setDuration]   = useState(String(item?.duration_min ?? ''));
+  const [saving,     setSaving]     = useState(false);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+
+  useEffect(() => {
+    getServiceCategories(businessId).then(setCategories);
+  }, [businessId]);
 
   async function handleSave() {
     if (!name.trim() || !price) return;
     setSaving(true);
     try {
       await upsertServiceCatalogItem(businessId, {
-        id: item?.id, name: name.trim(), category,
-        price: parseFloat(price), duration_min: duration ? parseInt(duration) : null,
-        sort_order: item?.sort_order ?? 0,
+        id:           item?.id,
+        name:         name.trim(),
+        category_id:  categoryId,
+        price:        parseFloat(price) || 0,
+        duration_min: duration ? parseInt(duration) : null,
+        sort_order:   item?.sort_order ?? 0,
       });
       onSaved();
     } catch (e: any) { alert(e.message); }
@@ -763,16 +761,13 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
           </div>
           <div>
             <label className="text-xs text-content-muted font-medium mb-1 block">Catégorie</label>
-            <div className="grid grid-cols-2 gap-2">
-              {CATEGORIES.map(c => (
-                <button key={c.value} onClick={() => setCategory(c.value)}
-                  className={cn('py-2 rounded-xl border text-xs font-semibold transition-colors', category === c.value
-                    ? 'bg-brand-500/20 border-brand-500/50 text-content-brand'
-                    : 'border-surface-border text-content-muted hover:bg-surface-hover')}>
-                  {c.label}
-                </button>
+            <select value={categoryId || ''} onChange={e => setCategoryId(e.target.value || null)}
+              className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm appearance-none">
+              <option value="">Aucune catégorie</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </div>
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -793,6 +788,88 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
             className="flex-1 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold disabled:opacity-40">
             {saving ? 'Sauvegarde…' : 'Enregistrer'}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Category Manager Modal ───────────────────────────────────────────────────
+
+function CategoryManagerModal({ businessId, onClose, onSaved }: {
+  businessId: string; onClose: () => void; onSaved: () => void;
+}) {
+  const [cats, setCats] = useState<ServiceCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const r = await getServiceCategories(businessId);
+    setCats(r);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [businessId]);
+
+  async function handleAdd() {
+    if (!newName.trim()) return;
+    setBusy(true);
+    try {
+      await upsertServiceCategory(businessId, { name: newName.trim() });
+      setNewName('');
+      load();
+      onSaved();
+    } catch (e: any) { alert(e.message); }
+    finally { setBusy(false); }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Supprimer cette catégorie ? Les prestations liées ne seront pas supprimées.')) return;
+    try {
+      await deleteServiceCategory(id);
+      load();
+      onSaved();
+    } catch (e: any) { alert(e.message); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-surface-card rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden border border-surface-border">
+        <div className="flex items-center justify-between p-6 border-b border-surface-border">
+          <h3 className="text-xl font-bold text-content-primary">Gérer les catégories</h3>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-hover"><X className="w-5 h-5" /></button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          <div className="flex gap-2">
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nouvelle catégorie..."
+              className="flex-1 px-4 py-3 rounded-2xl bg-surface-hover border border-surface-border focus:bg-surface-card focus:border-brand-500 outline-none transition-all text-sm font-medium" />
+            <button onClick={handleAdd} disabled={busy || !newName.trim()}
+              className="p-3 rounded-2xl bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-40 shadow-lg shadow-brand-500/20">
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {loading ? <div className="text-center py-4"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-content-muted" /></div> :
+             cats.length === 0 ? <p className="text-center py-4 text-sm text-content-muted italic">Aucune catégorie</p> :
+             cats.map(c => (
+               <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface-hover border border-surface-border">
+                 <span className="text-sm font-bold text-content-primary ml-1">{c.name}</span>
+                 <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg text-content-muted hover:text-status-error hover:bg-red-500/10 transition-colors">
+                   <Trash2 className="w-4 h-4" />
+                 </button>
+               </div>
+             ))}
+          </div>
+        </div>
+
+        <div className="p-6 bg-surface-hover border-t border-surface-border">
+           <button onClick={onClose} className="w-full py-4 rounded-2xl bg-surface-card border border-surface-border text-content-primary font-bold hover:bg-surface-hover transition-all">
+             Fermer
+           </button>
         </div>
       </div>
     </div>
@@ -880,7 +957,7 @@ function SubjectsTab({ businessId, currency }: { businessId: string; currency: s
                   <StatusBadge status={o.status} />
                 </div>
                 <p className="text-xs text-content-muted">{new Date(o.created_at).toLocaleDateString('fr-FR')}</p>
-                <p className="text-sm font-semibold text-content-primary mt-1">{fmtMoney(o.total, currency)}</p>
+                <p className="text-sm font-semibold text-content-primary mt-1">{formatCurrency(o.total, currency)}</p>
                 {(o.items ?? []).slice(0, 2).map(i => <p key={i.id} className="text-xs text-content-muted">· {i.name}</p>)}
               </div>
             ))}
@@ -905,6 +982,7 @@ export default function ServicesPage() {
   const [orders,       setOrders]       = useState<ServiceOrder[]>([]);
   const [catalog,      setCatalog]      = useState<ServiceCatalogItem[]>([]);
   const [allCatalog,   setAllCatalog]   = useState<ServiceCatalogItem[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [statusFilter, setStatusFilter] = useState<ServiceOrderStatus | 'all'>('all');
   const [search,       setSearch]       = useState('');
@@ -912,6 +990,7 @@ export default function ServicesPage() {
   const [showNewOT,    setShowNewOT]    = useState(false);
   const [selectedOrder,  setSelectedOrder]  = useState<ServiceOrder | null>(null);
   const [catalogModal, setCatalogModal] = useState<{ item?: ServiceCatalogItem } | null>(null);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   function copyPublicLink() {
     if (!business) return;
@@ -926,12 +1005,13 @@ export default function ServicesPage() {
     if (!businessId) return;
     setLoading(true);
     try {
-      const [o, c, ac] = await Promise.all([
+      const [o, c, ac, cats] = await Promise.all([
         getServiceOrders(businessId, { date: dateFilter || undefined }),
         getServiceCatalog(businessId),
         getAllServiceCatalog(businessId),
+        getServiceCategories(businessId),
       ]);
-      setOrders(o); setCatalog(c); setAllCatalog(ac);
+      setOrders(o); setCatalog(c); setAllCatalog(ac); setServiceCategories(cats);
     } catch (e: any) { notifError(e.message); }
     finally { setLoading(false); }
   }
@@ -1125,9 +1205,9 @@ export default function ServicesPage() {
 
                           <div className="mt-3 flex items-center justify-between">
                             <div>
-                              <span className="text-base font-bold text-content-primary">{fmtMoney(order.total, currency)}</span>
+                              <span className="text-base font-bold text-content-primary">{formatCurrency(order.total, currency)}</span>
                               {balance > 0 && balance < order.total && (
-                                <span className="ml-2 text-xs text-status-error">reste {fmtMoney(balance, currency)}</span>
+                                <span className="ml-2 text-xs text-status-error">reste {formatCurrency(balance, currency)}</span>
                               )}
                             </div>
                             <span className="text-xs text-content-muted">{new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
@@ -1176,10 +1256,16 @@ export default function ServicesPage() {
             <div className="max-w-2xl">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-content-primary">Catalogue des prestations</h2>
-                <button onClick={() => setCatalogModal({})}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-500/15 hover:bg-brand-500/25 text-content-brand text-sm font-medium">
-                  <Plus className="w-4 h-4" />Nouvelle prestation
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowCategoryManager(true)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover">
+                    <LayoutGrid className="w-4 h-4" />Catégories
+                  </button>
+                  <button onClick={() => setCatalogModal({})}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-500/15 hover:bg-brand-500/25 text-content-brand text-sm font-medium">
+                    <Plus className="w-4 h-4" />Nouvelle prestation
+                  </button>
+                </div>
               </div>
 
               {allCatalog.length === 0 ? (
@@ -1189,14 +1275,16 @@ export default function ServicesPage() {
                   <button onClick={() => setCatalogModal({})} className="text-xs text-content-brand hover:underline">Ajouter une prestation</button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {CATEGORIES.map(cat => {
-                    const items = allCatalog.filter(i => i.category === cat.value);
+                <div className="space-y-6">
+                  {/* Groupement par catégories dynamiques */}
+                  {(serviceCategories.length > 0 ? serviceCategories : [{ id: null, name: 'Autres' } as any]).map(cat => {
+                    const items = allCatalog.filter(i => (i.category_id === cat.id) || (!i.category_id && !cat.id));
                     if (items.length === 0) return null;
                     return (
-                      <div key={cat.value}>
-                        <p className="text-xs font-semibold text-content-muted uppercase tracking-wider mb-2">
-                          <span className={cn('px-2 py-0.5 rounded-full text-[10px]', cat.color)}>{cat.label}</span>
+                      <div key={cat.id || 'none'}>
+                        <p className="text-xs font-bold text-content-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                          <span className="w-1 h-3 bg-brand-500 rounded-full" />
+                          {cat.name}
                         </p>
                         <div className="space-y-1">
                           {items.map(item => (
@@ -1206,7 +1294,7 @@ export default function ServicesPage() {
                                 <p className={cn('text-sm font-semibold', item.is_active ? 'text-content-primary' : 'text-content-muted line-through')}>{item.name}</p>
                                 {item.duration_min && <p className="text-xs text-content-muted">{item.duration_min} min</p>}
                               </div>
-                              <span className="font-bold text-content-primary text-sm">{fmtMoney(item.price, currency)}</span>
+                              <span className="font-bold text-content-primary text-sm">{formatCurrency(item.price, currency)}</span>
                               <div className="flex items-center gap-1">
                                 <button onClick={() => toggleCatalog(item.id, !item.is_active)}
                                   className={cn('p-1.5 rounded-lg transition-colors', item.is_active ? 'text-green-400 hover:bg-green-500/10' : 'text-content-muted hover:bg-surface-hover')}>
@@ -1248,6 +1336,11 @@ export default function ServicesPage() {
       {catalogModal !== null && (
         <CatalogModal businessId={businessId} item={catalogModal.item} onClose={() => setCatalogModal(null)}
           onSaved={() => { setCatalogModal(null); loadOrders(); success('Catalogue mis à jour'); }} />
+      )}
+
+      {showCategoryManager && (
+        <CategoryManagerModal businessId={businessId} onClose={() => setShowCategoryManager(false)}
+          onSaved={() => { loadOrders(); }} />
       )}
     </div>
   );

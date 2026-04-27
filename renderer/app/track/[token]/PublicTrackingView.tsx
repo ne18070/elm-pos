@@ -46,9 +46,9 @@ export default function PublicTrackingView() {
       if (!token) return;
       try {
         // 1. Récupérer le token et les IDs liés
-        const { data: tokenData, error: tokenError } = await supabase
+        const { data: tokenData, error: tokenError } = await (supabase
           .from('client_tracking_tokens')
-          .select('dossier_id, service_order_id, instance_id, expires_at')
+          .select('dossier_id, service_order_id, instance_id, expires_at') as any)
           .eq('token', String(token))
           .single();
 

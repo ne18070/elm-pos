@@ -603,7 +603,9 @@ export type Database = {
         Row: {
           id: string;
           token: string;
-          dossier_id: string;
+          business_id: string;
+          dossier_id: string | null;
+          service_order_id: string | null;
           instance_id: string | null;
           client_phone: string | null;
           client_email: string | null;
@@ -615,7 +617,9 @@ export type Database = {
         Insert: {
           id?: string;
           token?: string;
-          dossier_id: string;
+          business_id: string;
+          dossier_id?: string | null;
+          service_order_id?: string | null;
           instance_id?: string | null;
           client_phone?: string | null;
           client_email?: string | null;

@@ -253,7 +253,7 @@ export default function PublicServiceOrderPage() {
             <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">{cartItems.length} service(s) sélectionné(s)</p>
-                <p className="text-2xl font-black text-brand-600">{formatCurrency(total, info?.currency ?? 'XOF')}</p>
+                <p className="text-2xl font-black text-brand-600">{formatCurrency(total, info?.currency)}</p>
               </div>
               <button onClick={handleSubmit} disabled={submitting || !clientName || !clientPhone}
                 className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-brand-500/20 transition-all flex items-center gap-2">
