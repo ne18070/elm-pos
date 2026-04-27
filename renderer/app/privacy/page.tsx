@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       <div className="relative max-w-3xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="flex flex-col items-center mb-10">
-          <div className="w-40 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
+          <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <p className="text-content-secondary text-sm mt-1">Politique de confidentialité</p>
