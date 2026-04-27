@@ -54,12 +54,16 @@ export const CLASS_LABELS: Record<number, string> = {
 };
 
 export const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
-  order:      { label: 'Vente',      color: 'text-status-success bg-badge-success border-status-success' },
-  stock:      { label: 'Achat',      color: 'text-blue-400 bg-badge-info border-blue-800' },
-  refund:     { label: 'Remb.',      color: 'text-status-orange bg-badge-orange border-orange-800' },
-  manual:     { label: 'Manuel',     color: 'text-status-purple bg-badge-purple border-purple-800' },
-  hotel:      { label: 'Hôtel',      color: 'text-status-teal bg-badge-teal border-teal-700' },
-  adjustment: { label: 'Ajustement', color: 'text-content-secondary bg-surface-card border-slate-700' },
+  order:         { label: 'Vente',       color: 'text-status-success bg-badge-success border-status-success'   },
+  stock:         { label: 'Achat',       color: 'text-blue-400 bg-badge-info border-blue-800'                  },
+  refund:        { label: 'Remb.',       color: 'text-status-orange bg-badge-orange border-orange-800'         },
+  manual:        { label: 'Manuel',      color: 'text-status-purple bg-badge-purple border-purple-800'         },
+  hotel:         { label: 'Hôtel',       color: 'text-status-teal bg-badge-teal border-teal-700'               },
+  adjustment:    { label: 'Ajustement',  color: 'text-content-secondary bg-surface-card border-slate-700'      },
+  voiture:       { label: 'Véhicule',    color: 'text-yellow-400 bg-yellow-900/20 border-yellow-700'           },
+  honoraires:    { label: 'Honoraires',  color: 'text-violet-400 bg-violet-900/20 border-violet-700'           },
+  service_order: { label: 'Prestation',  color: 'text-cyan-400 bg-cyan-900/20 border-cyan-700'                 },
+  rental:        { label: 'Location',    color: 'text-rose-400 bg-rose-900/20 border-rose-700'                 },
 };
 
 export const PAY_ACCOUNTS: Record<PaySide, { code: string; name: string }> = {

@@ -9,6 +9,7 @@ import { canViewFinancials } from '@/lib/permissions';
 import {
   getJournalEntries, syncAccounting, syncHotelAccounting, getTrialBalance,
   deleteManualEntry, getAccounts, computeIncomeStatement, computeBalanceSheet,
+  syncHonorairesAccounting, syncServiceOrdersAccounting,
 } from '@services/supabase/accounting';
 import type { JournalEntry, TrialBalanceLine, Account } from '@services/supabase/accounting';
 
@@ -75,16 +76,22 @@ export default function ComptabilitePage() {
     if (!business?.id) return;
     setSyncing(true);
     try {
-      const [posCount, hotelCount] = await Promise.all([
+      const features = (business as any)?.features ?? [];
+      const results = await Promise.allSettled([
         syncAccounting(business.id),
-        business.type === 'hotel' ? syncHotelAccounting(business.id) : Promise.resolve(0),
+        business.type === 'hotel' || features.includes('hotel') ? syncHotelAccounting(business.id) : Promise.resolve(0),
+        features.includes('honoraires') || features.includes('dossiers') ? syncHonorairesAccounting(business.id) : Promise.resolve(0),
+        features.includes('services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
       ]);
-      const total = posCount + hotelCount;
+
+      const total = results.reduce((s, r) => s + (r.status === 'fulfilled' ? (r.value as number) : 0), 0);
+      const errors = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message ?? 'Erreur');
+      if (errors.length > 0) notifErr(errors.join(' / '));
       if (total > 0) {
         success(`${total} écriture${total > 1 ? 's' : ''} synchronisée${total > 1 ? 's' : ''}`);
         await load();
-      } else {
-        success('Journal à jour —aucune nouvelle écriture');
+      } else if (errors.length === 0) {
+        success('Journal à jour — aucune nouvelle écriture');
       }
     } catch (err) {
       notifErr(String(err));

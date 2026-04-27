@@ -4,7 +4,7 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import html2canvas from 'html2canvas';
-import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight, ChevronDown, Car, Scale, FileText, Search } from 'lucide-react';
+import { Save, Printer, Wifi, WifiOff, Loader2, Plus, X, Package, Palette, CheckCircle2, XCircle, Network, Archive, ShoppingBag, Utensils, Briefcase, BedDouble, ArrowRight, Upload, ImageIcon, MessageCircle, Eye, EyeOff, Copy, ToggleLeft, ToggleRight, ChevronDown, Car, Scale, FileText, Search, Wrench } from 'lucide-react';
 import { TemplateManager } from '@/components/settings/TemplateManager';
 import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, type PrinterConfig, loadCashDrawerConfig, saveCashDrawerConfig, openCashDrawer, isElectron, type CashDrawerConfig } from '@/lib/ipc';
 import { useAuthStore } from '@/store/auth';
@@ -24,6 +24,7 @@ const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sac
 
 const ALL_PUBLIC_MODULES = [
   { key: 'boutique',    label: 'Boutique / Catalogue', icon: ShoppingBag, features: ['retail'],    bizTypes: null as string[] | null },
+  { key: 'services',    label: 'Prestations de service', icon: Wrench,     features: ['services'],  bizTypes: null as string[] | null },
   { key: 'location',   label: 'Location',           icon: Briefcase,   features: ['rental'],    bizTypes: null as string[] | null },
   { key: 'reservation',label: 'Réservation Hôtel',  icon: BedDouble,   features: ['hotel'],     bizTypes: null as string[] | null },
   { key: 'voitures',   label: 'Vente de Voitures',  icon: Car,         features: ['voitures'],  bizTypes: null as string[] | null },

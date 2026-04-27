@@ -35,7 +35,7 @@ export interface JournalEntry {
   entry_date: string;
   reference: string | null;
   description: string;
-  source: 'manual' | 'order' | 'stock' | 'refund' | 'adjustment' | 'hotel' | 'rental' | 'honoraires' | 'voiture';
+  source: 'manual' | 'order' | 'stock' | 'refund' | 'adjustment' | 'hotel' | 'rental' | 'honoraires' | 'voiture' | 'service_order';
   source_id: string | null;
   created_at: string;
   lines: JournalLine[];
@@ -399,4 +399,116 @@ export function computeBalanceSheet(balance: TrialBalanceLine[]): BalanceSheet {
     capitaux, dettesLT, dettesFF, dettesFiscales, dettesSociales,
     autresDettesCT, totalPassif,
   };
+}
+
+// --- Synchronisation honoraires ----------------------------------------------
+//
+// Synce les honoraires_cabinet payés (status = 'payé' | 'partiel').
+// Écriture :
+//   Débit  571 (Caisse)   : montant_paye
+//   Crédit 7061 (Honoraires) : montant_paye
+
+export async function syncHonorairesAccounting(businessId: string): Promise<number> {
+  const { data: existing } = await db('journal_entries')
+    .select('source_id')
+    .eq('business_id', businessId)
+    .eq('source', 'honoraires');
+  const synced = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+
+  const { data: rows, error } = await (supabase as any)
+    .from('honoraires_cabinet')
+    .select('id, client_name, type_prestation, date_facture, montant_paye, status')
+    .eq('business_id', businessId)
+    .in('status', ['payé', 'partiel'])
+    .gt('montant_paye', 0);
+  if (error) throw new Error(error.message);
+
+  let count = 0;
+  for (const h of (rows ?? []) as {
+    id: string; client_name: string; type_prestation: string;
+    date_facture: string; montant_paye: number; status: string;
+  }[]) {
+    if (synced.has(h.id)) continue;
+
+    const { data: entry, error: eErr } = await db('journal_entries')
+      .insert({
+        business_id: businessId,
+        entry_date:  h.date_facture,
+        reference:   `HON-${h.id.slice(0, 8).toUpperCase()}`,
+        description: `Honoraires — ${h.client_name} (${h.type_prestation})`,
+        source:      'honoraires',
+        source_id:   h.id,
+      })
+      .select('id').single();
+    if (eErr) throw new Error(eErr.message);
+
+    const { error: lErr } = await db('journal_lines').insert([
+      { entry_id: entry.id, account_code: '571',  account_name: 'Caisse',       debit: Number(h.montant_paye), credit: 0 },
+      { entry_id: entry.id, account_code: '7061', account_name: 'Honoraires',   debit: 0, credit: Number(h.montant_paye) },
+    ]);
+    if (lErr) throw new Error(lErr.message);
+    count++;
+  }
+  return count;
+}
+
+// --- Synchronisation ordres de service (prestations) -------------------------
+//
+// Synce les service_orders avec status = 'paye'.
+// Écriture :
+//   Débit  571/576/521 (Caisse selon méthode) : paid_amount
+//   Crédit 7065 (Prestations de services)     : paid_amount
+
+export async function syncServiceOrdersAccounting(businessId: string): Promise<number> {
+  const { data: existing } = await db('journal_entries')
+    .select('source_id')
+    .eq('business_id', businessId)
+    .eq('source', 'service_order');
+  const synced = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+
+  const { data: rows, error } = await (supabase as any)
+    .from('service_orders')
+    .select('id, order_number, paid_amount, payment_method, paid_at, subject_ref, client_name')
+    .eq('business_id', businessId)
+    .eq('status', 'paye')
+    .gt('paid_amount', 0);
+  if (error) throw new Error(error.message);
+
+  let count = 0;
+  for (const o of (rows ?? []) as {
+    id: string; order_number: number; paid_amount: number;
+    payment_method: string | null; paid_at: string | null;
+    subject_ref: string | null; client_name: string | null;
+  }[]) {
+    if (synced.has(o.id)) continue;
+
+    const entryDate = (o.paid_at ?? new Date().toISOString()).slice(0, 10);
+    const debitAccount = o.payment_method === 'mobile' || o.payment_method === 'mobile_money'
+      ? { code: '576', name: 'Mobile Money' }
+      : o.payment_method === 'card' || o.payment_method === 'bank'
+      ? { code: '521', name: 'Banques — comptes courants' }
+      : { code: '571', name: 'Caisse' };
+
+    const desc = `Prestation OT-${String(o.order_number).padStart(4, '0')}${o.subject_ref ? ` — ${o.subject_ref}` : ''}${o.client_name ? ` / ${o.client_name}` : ''}`;
+
+    const { data: entry, error: eErr } = await db('journal_entries')
+      .insert({
+        business_id: businessId,
+        entry_date:  entryDate,
+        reference:   `OT-${String(o.order_number).padStart(4, '0')}`,
+        description: desc,
+        source:      'service_order',
+        source_id:   o.id,
+      })
+      .select('id').single();
+    if (eErr) throw new Error(eErr.message);
+
+    const { error: lErr } = await db('journal_lines').insert([
+      { entry_id: entry.id, account_code: debitAccount.code, account_name: debitAccount.name, debit: Number(o.paid_amount), credit: 0 },
+      { entry_id: entry.id, account_code: '7065', account_name: 'Prestations de services', debit: 0, credit: Number(o.paid_amount) },
+    ]);
+    if (lErr) throw new Error(lErr.message);
+    count++;
+  }
+  return count;
 }

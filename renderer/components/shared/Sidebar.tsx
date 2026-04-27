@@ -6,7 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, CalendarDays, UserCheck,
-  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin, MessageSquareShare, Car, ChevronUp
+  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin, MessageSquareShare, Car, ChevronUp, Wrench
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -40,6 +40,7 @@ export const NAV_SECTIONS: {
       { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
       { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'],           bizTypes: null           },
       { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
+      { href: '/services',          icon: Wrench,        label: 'Prestations',        permission: null,                     feature: 'services',                    bizTypes: null           },
       { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',                    bizTypes: ['service']    },
       { href: '/voitures',          icon: Car,           label: 'Vente de Voitures',  permission: 'view_voitures',          feature: 'voitures',                    bizTypes: null           },
       { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },

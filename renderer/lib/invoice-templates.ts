@@ -1535,6 +1535,113 @@ export function generateResellerBonLivraison(data: ResellerBonLivraisonData, bus
 </body></html>`;
 }
 
+// --- Bon de travail (Prestation de service) -----------------------------------
+
+export interface ServiceReceiptData {
+  id:              string;
+  order_number:    number;
+  created_at:      string;
+  subject_ref?:     string | null;
+  subject_info?:    string | null;
+  client_name?:     string | null;
+  client_phone?:    string | null;
+  status:           string;
+  notes?:           string | null;
+  items:            Array<{ name: string; price: number; quantity: number; total: number }>;
+  total:            number;
+  paid_amount:      number;
+  payment_method?:  string | null;
+}
+
+export function generateServiceOrderReceipt(data: ServiceReceiptData, business: Business): string {
+  const cur = business.currency ?? 'XOF';
+  const balance = Math.max(0, data.total - data.paid_amount);
+  const otNum = 'OT-' + String(data.order_number).padStart(4, '0');
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const printTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const orderDate = fmtDate(data.created_at);
+
+  const itemsRows = data.items.map(i => `
+    <tr>
+      <td style="padding:3px 0">${i.name}${i.quantity > 1 ? ` × ${i.quantity}` : ''}</td>
+      <td style="text-align:right;font-weight:600;white-space:nowrap">${fmt(i.total, cur)}</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<title>${otNum}</title>
+<style>
+  @page { size: 80mm auto; margin: 4mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; width: 72mm; }
+  .center { text-align: center; }
+  .biz-name { font-size: 15px; font-weight: bold; }
+  .ot-num { font-size: 20px; font-weight: bold; letter-spacing: 3px; margin: 6px 0; }
+  hr { border: none; border-top: 1px dashed #888; margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 2px 0; vertical-align: top; }
+  .label { color: #555; font-size: 10px; }
+  .val { font-weight: 600; }
+  .total-row td { font-size: 13px; font-weight: 800; border-top: 1px solid #000; padding-top: 5px; margin-top: 4px; }
+  .paid-row td { color: #16a34a; }
+  .balance-row td { color: #dc2626; font-weight: 700; }
+  .stamp { display: inline-block; border: 3px solid #16a34a; color: #16a34a; font-size: 16px; font-weight: 900; padding: 2px 12px; transform: rotate(-4deg); letter-spacing: 3px; margin: 8px 0; }
+  .footer { font-size: 9px; color: #666; margin-top: 8px; }
+</style>
+</head><body>
+
+<div class="center">
+  <div class="biz-name">${business.name}</div>
+  ${business.address ? `<div class="label">${business.address}</div>` : ''}
+  ${(business as any).phone ? `<div class="label">${(business as any).phone}</div>` : ''}
+  <hr>
+  <div class="ot-num">${otNum}</div>
+  <div class="label">${orderDate} — ${printTime}</div>
+</div>
+
+<hr>
+
+${data.subject_ref ? `
+<table>
+  <tr><td class="label">Référence</td><td class="val" style="text-align:right;font-size:13px">${data.subject_ref}</td></tr>
+  ${data.subject_info ? `<tr><td colspan="2" style="text-align:center;font-size:10px">${data.subject_info}</td></tr>` : ''}
+</table>
+<hr>
+` : ''}
+
+${data.client_name ? `
+<table>
+  <tr><td class="label">Client</td><td style="text-align:right">${data.client_name}</td></tr>
+  ${data.client_phone ? `<tr><td class="label">Tél</td><td style="text-align:right">${data.client_phone}</td></tr>` : ''}
+</table>
+<hr>
+` : ''}
+
+<table>${itemsRows}</table>
+
+<hr>
+
+<table>
+  <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${fmt(data.total, cur)}</td></tr>
+  ${data.paid_amount > 0 ? `<tr class="paid-row"><td>Payé${data.payment_method ? ` (${PAYMENT_LABELS[data.payment_method] ?? data.payment_method})` : ''}</td><td style="text-align:right">-${fmt(data.paid_amount, cur)}</td></tr>` : ''}
+  ${balance > 0 ? `<tr class="balance-row"><td>Reste dû</td><td style="text-align:right">${fmt(balance, cur)}</td></tr>` : ''}
+</table>
+
+${data.status === 'paye' ? '<div class="center"><span class="stamp">PAYÉ</span></div>' : ''}
+
+${data.notes ? `<hr><div class="label" style="font-style:italic">Note : ${data.notes}</div>` : ''}
+
+<hr>
+<div class="footer center">
+  ${business.receipt_footer ? `<p>${business.receipt_footer}</p>` : ''}
+  <p>Merci de votre confiance</p>
+  <p>Imprimé le ${printDate} à ${printTime} · ELM</p>
+</div>
+
+</body></html>`;
+}
+
 // --- Ouvrir et imprimer -------------------------------------------------------
 
 export function printHtml(html: string): void {

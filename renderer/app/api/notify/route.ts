@@ -28,6 +28,14 @@ function buildNotification(table: string, record: Record<string, unknown>) {
     };
   }
 
+  if (table === 'service_orders' || ('order_number' in record && 'subject_ref' in record)) {
+    return {
+      title: 'Nouvel ordre de travail',
+      body: `Prestation pour ${(record.client_name as string) || 'un client'}${record.subject_ref ? ` (${record.subject_ref})` : ''}`,
+      url: '/services',
+    };
+  }
+
   if (table === 'contracts' || ('token' in record && 'client_name' in record)) {
     return {
       title: 'Nouvelle demande de location',
