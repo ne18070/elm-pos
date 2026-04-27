@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { 
-  Loader2, CheckCircle, Clock, XCircle, RefreshCw, 
+import {
+  Loader2, CheckCircle, Clock, XCircle, RefreshCw,
   Search, Eye, X, Copy, Check as CheckIcon,
-  ChevronLeft, ChevronRight, Check
+  ChevronLeft, ChevronRight, Check, Send
 } from 'lucide-react';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
@@ -78,7 +78,8 @@ export default function RequestsPage() {
     req: any; planId: string;
     days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage]       = useState(1);
+  const [resending, setResending] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -148,6 +149,24 @@ export default function RequestsPage() {
       await load();
     } catch (e) { alert(toUserError(e)); }
     finally { setProcessing(null); }
+  };
+
+  const onResendEmail = async (req: PublicSubscriptionRequest) => {
+    setResending(req.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/resend-approvals', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ email: req.email, business_name: req.business_name, plan_label: req.plan_label }),
+      });
+      if (!res.ok) throw new Error('Erreur lors du renvoi');
+      alert(`✅ Email renvoyé à ${req.email}`);
+    } catch (e) { alert(toUserError(e)); }
+    finally { setResending(null); }
   };
 
   const onReject = async () => {
@@ -297,15 +316,25 @@ export default function RequestsPage() {
                           {req.receipt_url && (
                             <button onClick={() => setPreview(req.receipt_url!)} className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-content-primary transition-all border border-surface-border shadow-sm" title="Voir le reçu"><Eye size={16} /></button>
                           )}
+                          {req.status === 'approved' && req.isPublic && (
+                            <button
+                              onClick={() => onResendEmail(req as PublicSubscriptionRequest)}
+                              disabled={resending === req.id}
+                              className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-brand-500 transition-all border border-surface-border shadow-sm disabled:opacity-40"
+                              title="Renvoyer l'email d'accès"
+                            >
+                              {resending === req.id ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                            </button>
+                          )}
                           {req.status === 'pending' && (
                             <div className="flex items-center gap-1">
-                              <button 
+                              <button
                                 onClick={() => req.isPublic ? setApprovePublicForm({ req, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' }) : setApproveForm({ requestId: req.id, businessId: req.business_id, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
                                 className="bg-badge-success text-status-success hover:bg-status-success hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
                               >
                                 Approuver
                               </button>
-                              <button 
+                              <button
                                 onClick={() => setRejectId({ id: req.id, isPublic: req.isPublic })}
                                 className="bg-badge-error text-status-error hover:bg-status-error hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
                               >

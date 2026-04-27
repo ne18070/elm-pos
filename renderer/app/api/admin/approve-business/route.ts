@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendEmail } from '@services/resend';
 
 // -- Auth superadmin via token Bearer ------------------------------------------
 async function requireSuperadmin(req: NextRequest): Promise<string | null> {
@@ -126,6 +125,27 @@ export async function POST(req: NextRequest) {
       .from('public_subscription_requests')
       .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
       .eq('id', requestId);
+
+    // 8. Envoyer l'email de confirmation (non-bloquant)
+    // Appel direct à l'Edge Function avec le token de la requête entrante.
+    // L'Edge Function construit validity_text à partir de expires_at.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const bearerToken = req.headers.get('authorization') ?? '';
+    fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': bearerToken },
+      body: JSON.stringify({
+        type:    'subscription_approved',
+        to:      email,
+        subject: '✅ Votre accès ELM APP est activé',
+        data: {
+          business_name: businessName,
+          email,
+          plan_label:    planLabel ?? 'Pro',
+          expires_at:    expiresAt.toISOString(),
+        },
+      }),
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true, businessId, userId });
   } catch (err) {

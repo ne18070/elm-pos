@@ -9,7 +9,7 @@ Bienvenue dans le manuel officiel de ELM POS. Ce guide a été conçu pour vous 
 2. [Gestion des Ventes (POS)](#2-gestion-des-ventes-pos)
 3. [Catalogue et Stocks](#3-gestion-du-catalogue-et-des-stocks)
 4. [Logistique et Livraisons](#4-logistique-et-livraisons)
-5. [Modules Métiers (Hôtel, Juridique)](#5-modules-métiers-spécialisés)
+5. [Modules Métiers (Hôtel, Juridique, Location)](#5-modules-métiers-spécialisés)
 6. [Finance et Comptabilité](#6-finance-et-comptabilité)
 7. [Équipe et Sécurité](#7-gestion-déquipe-et-sécurité)
 8. [Configuration et Support](#8-configuration-et-support)
@@ -97,7 +97,18 @@ Gérez vos chambres, le planning des réservations, les check-ins et la facturat
 ![Dossiers](../renderer/public/screenshots/15-dossiers-clients.png) | ![Honoraires](../renderer/public/screenshots/16-honoraires.png)
 Dédié aux cabinets : suivez l'avancement des dossiers clients et facturez vos prestations de services avec précision.
 
-### 5.3 Menu du Jour (Restauration)
+### 5.3 Contrats & Location de Véhicules
+![Contrats Location](../renderer/public/screenshots/20-contrats-location.png)
+Dédié aux agences de location : créez des contrats en 2 minutes, envoyez le lien de signature par WhatsApp, et laissez le client signer depuis son téléphone. La disponibilité de votre flotte est mise à jour en temps réel.
+
+*   **Flotte** : Enregistrez chaque véhicule avec sa fiche (marque, modèle, immatriculation, prix/jour, caution).
+*   **Contrat numérique** : Remplissez les infos client, les dates et le tarif — le contrat PDF se génère automatiquement.
+*   **Signature électronique** : Le locataire signe depuis son téléphone via un lien sécurisé.
+*   **Paiement** : Enregistrez les encaissements (acompte, solde) directement sur le contrat. Une écriture comptable est créée automatiquement.
+
+---
+
+### 5.4 Menu du Jour (Restauration)
 ![Menu](../renderer/public/screenshots/06-menu-du-jour.png)
 Mettez en avant vos plats spéciaux et suggestions quotidiennes sur l'interface de caisse.
 

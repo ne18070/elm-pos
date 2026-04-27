@@ -218,20 +218,70 @@ export async function approveSubscriptionRequest(
   days:       number,
   note?:      string,
 ): Promise<void> {
+  // Fetch owner email + business name + plan label before approving
+  const [{ data: bizData }, { data: planData }] = await Promise.all([
+    db.from('businesses').select('name, owner_id').eq('id', businessId).single(),
+    db.from('plans').select('label').eq('id', planId).single(),
+  ]);
+  const { data: userData } = bizData?.owner_id
+    ? await db.from('users').select('email, full_name').eq('id', bizData.owner_id).single()
+    : { data: null };
+
   await activateSubscription(businessId, planId, days, note);
+
   const { error } = await db
     .from('subscription_requests')
     .update({ status: 'approved', processed_at: new Date().toISOString() })
     .eq('id', requestId);
   if (error) throw new Error(error.message);
+
+  // Send confirmation email (non-blocking)
+  if (userData?.email) {
+    const expiresAt = new Date(Date.now() + days * 86_400_000);
+    const { sendEmail } = await import('../resend');
+    sendEmail({
+      type:    'subscription_approved',
+      to:      userData.email,
+      subject: '✅ Votre accès ELM APP est activé',
+      data: {
+        business_name: bizData?.name ?? '',
+        email:         userData.email,
+        plan_label:    planData?.label ?? 'Pro',
+        expires_at:    expiresAt.toISOString(),
+      },
+    }).catch(() => {});
+  }
 }
 
 export async function rejectSubscriptionRequest(requestId: string, note?: string): Promise<void> {
+  // Fetch business info to notify owner (before update so we have context)
+  const { data: reqData } = await db
+    .from('subscription_requests')
+    .select('business_id, businesses(name, owner_id)')
+    .eq('id', requestId)
+    .single();
+  const biz      = (reqData as any)?.businesses;
+  const ownerId  = biz?.owner_id;
+  const { data: userData } = ownerId
+    ? await db.from('users').select('email').eq('id', ownerId).single()
+    : { data: null };
+
   const { error } = await db
     .from('subscription_requests')
     .update({ status: 'rejected', processed_at: new Date().toISOString(), note: note ?? null })
     .eq('id', requestId);
   if (error) throw new Error(error.message);
+
+  // Send rejection email (non-blocking)
+  if (userData?.email) {
+    const { sendEmail } = await import('../resend');
+    sendEmail({
+      type:    'subscription_rejected',
+      to:      userData.email,
+      subject: 'Votre demande ELM APP',
+      data: { business_name: biz?.name ?? '', note },
+    }).catch(() => {});
+  }
 }
 
 // -- Demandes publiques --------------------------------------------------------
