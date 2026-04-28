@@ -293,7 +293,7 @@ export default function VoituresPage() {
       <div className="px-4 sm:px-8 py-5 border-b border-surface-border flex flex-col sm:flex-row sm:items-center gap-3 bg-surface-card shrink-0">
         <div className="flex-1">
           <h1 className="text-xl font-black text-content-primary uppercase tracking-tight">Vente de Voitures</h1>
-          <p className="text-xs text-content-muted mt-0.5 font-medium uppercase tracking-widest">Parc automobile & contacts</p>
+          <p className="text-xs text-content-muted mt-0.5 font-medium uppercase tracking-widest">Gérez votre parc, suivez les leads et publiez des annonces en ligne</p>
         </div>
         <div className="flex items-center gap-2">
           <button

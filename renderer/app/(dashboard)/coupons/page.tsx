@@ -68,12 +68,10 @@ export default function CouponsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Coupons & Remises</h1>
-            {!loading && (
-              <p className="text-xs text-content-primary mt-0.5">
-                {filtered.length} coupon{filtered.length !== 1 ? 's' : ''}
-                {search && ` · filtrés sur ${coupons.length}`}
-              </p>
-            )}
+            <p className="text-xs text-content-secondary mt-0.5">
+              Codes promo saisis en caisse — remise %, montant fixe ou article offert
+              {!loading && ` · ${filtered.length} coupon${filtered.length !== 1 ? 's' : ''}${search ? ` filtrés sur ${coupons.length}` : ''}`}
+            </p>
           </div>
           <button
             onClick={() => setShowCreate(true)}

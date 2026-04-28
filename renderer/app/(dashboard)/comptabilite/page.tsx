@@ -330,7 +330,7 @@ export default function ComptabilitePage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Comptabilité OHADA</h1>
-            <p className="text-xs text-content-primary mt-0.5">SYSCOHADA Révisé -Journal général et états financiers</p>
+            <p className="text-xs text-content-secondary mt-0.5">Tableau de bord · Journal · Balance · États financiers — SYSCOHADA Révisé</p>
           </div>
           <div className="flex items-center gap-2">
             <select value={period} onChange={(e) => setPeriod(e.target.value as Period)} className="input py-1.5 text-sm">

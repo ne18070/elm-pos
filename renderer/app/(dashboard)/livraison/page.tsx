@@ -180,7 +180,8 @@ export default function LivraisonPage() {
                 <Truck className="w-5 h-5 text-content-brand" />
                 Livraisons
               </h1>
-              <p className="text-xs text-content-muted mt-0.5">
+              <p className="text-xs text-content-secondary mt-0.5">Commandes en attente d'expédition — assignez un livreur et suivez l'état</p>
+              <p className="text-xs text-content-muted">
                 {orders.length} commande{orders.length !== 1 ? 's' : ''} à traiter
               </p>
             </div>

@@ -159,6 +159,9 @@ export default function DepensesPage() {
             <TrendingDown className="w-5 h-5 text-status-error" />
             Dépenses
           </h1>
+          <p className="text-xs text-content-secondary mt-0.5">
+            Charges opérationnelles hors ventes — loyer, salaires, transport…
+          </p>
           <p className="text-xs text-content-primary mt-0.5">
             Ce mois : <span className="text-status-error font-semibold">{fmtMoney(totalMonth, currency)}</span>
           </p>

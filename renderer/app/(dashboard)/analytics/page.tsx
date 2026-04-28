@@ -289,7 +289,10 @@ export default function AnalyticsPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-surface-border flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <h1 className="text-lg font-bold text-content-primary">Statistiques</h1>
+        <div>
+          <h1 className="text-lg font-bold text-content-primary">Statistiques</h1>
+          <p className="text-xs text-content-secondary mt-0.5">Chiffres clés de votre activité — ventes, achats, marges et tendances par période</p>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={exportCSV} disabled={!data} className="btn-secondary p-2" title="Exporter CSV">
             <Download className="w-4 h-4" />

@@ -95,7 +95,10 @@ export default function OrdersPage() {
         {/* Header */}
         <div className="px-4 py-3 sm:p-6 border-b border-surface-border space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg sm:text-xl font-bold text-content-primary">Commandes</h1>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-content-primary">Commandes</h1>
+              <p className="text-xs text-content-secondary mt-0.5">Historique de toutes les ventes · "Acompte" = commande partiellement payée</p>
+            </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <Upload className="w-4 h-4" />

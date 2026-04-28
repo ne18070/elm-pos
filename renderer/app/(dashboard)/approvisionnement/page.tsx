@@ -287,25 +287,31 @@ export default function ApprovisionnementPage() {
         {/* Tabs */}
         <div className="flex gap-1 border-b -mb-4 border-surface-border">
           {([
-            { id: 'historique', label: 'Historique', badge: 0 },
-            { id: 'commandes',  label: 'Commandes',  badge: pendingOrders },
-          ] as const).map(({ id, label, badge }) => (
+            { id: 'historique', icon: Package,      label: 'Historique', desc: 'Entrées de stock reçues',           badge: 0 },
+            { id: 'commandes',  icon: ClipboardList, label: 'Commandes',  desc: 'Bons de commande fournisseur', badge: pendingOrders },
+          ] as const).map(({ id, icon: Icon, label, desc, badge }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'relative px-4 py-2.5 text-sm font-bold transition-colors flex items-center gap-2',
+                'relative px-4 py-2.5 text-left transition-colors flex items-start gap-2.5',
                 activeTab === id
                   ? 'text-content-brand border-b-2 border-brand-500'
                   : 'text-content-secondary hover:text-content-primary'
               )}
             >
-              {label}
-              {badge > 0 && (
-                <span className="bg-brand-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                  {badge}
-                </span>
-              )}
+              <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold leading-tight flex items-center gap-1.5">
+                  {label}
+                  {badge > 0 && (
+                    <span className="bg-brand-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                      {badge}
+                    </span>
+                  )}
+                </p>
+                <p className="text-[11px] opacity-60 leading-tight mt-0.5 hidden sm:block">{desc}</p>
+              </div>
             </button>
           ))}
         </div>
@@ -314,8 +320,15 @@ export default function ApprovisionnementPage() {
       {/* --- Historique tab --- */}
       {activeTab === 'historique' && (
         <>
+          {/* Context hint */}
+          <div className="px-4 sm:px-6 pt-3 pb-0 shrink-0">
+            <p className="text-[11px] text-content-secondary flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 flex-shrink-0" />
+              Chaque ligne est un approvisionnement reçu. Le stock produit est mis à jour automatiquement à chaque entrée.
+            </p>
+          </div>
           {/* Filters */}
-          <div className="px-4 sm:px-6 pt-4 pb-3 flex flex-col sm:flex-row gap-2 shrink-0">
+          <div className="px-4 sm:px-6 pt-3 pb-3 flex flex-col sm:flex-row gap-2 shrink-0">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
               <input type="text" placeholder="Produit, fournisseur, notes…"
@@ -474,6 +487,16 @@ export default function ApprovisionnementPage() {
       {/* --- Commandes tab --- */}
       {activeTab === 'commandes' && (
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+          <p className="text-[11px] text-content-secondary flex items-center gap-1 flex-wrap mb-4">
+            <ClipboardList className="w-3.5 h-3.5 flex-shrink-0" />
+            Flux&nbsp;:
+            <span className="text-content-secondary font-semibold">Brouillon</span>
+            <span>→</span>
+            <span className="text-content-brand font-semibold">Commandé</span>
+            <span>→</span>
+            <span className="text-status-success font-semibold">Reçu</span>
+            <span className="opacity-50 ml-1">· La réception met le stock à jour automatiquement</span>
+          </p>
           {loading ? (
             <div className="flex items-center justify-center h-32 text-content-secondary text-sm">Chargement…</div>
           ) : orders.length === 0 ? (

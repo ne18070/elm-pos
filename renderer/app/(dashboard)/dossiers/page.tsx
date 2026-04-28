@@ -1387,7 +1387,7 @@ export default function DossiersPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-content-primary tracking-tight">Gestion des Dossiers</h1>
-              <p className="text-content-muted text-xs font-bold uppercase tracking-[0.1em] mt-0.5">Espace Juridique & Procédures</p>
+              <p className="text-content-secondary text-xs mt-0.5">Créez et suivez vos dossiers juridiques — prétentions, procédures et rendez-vous clients</p>
             </div>
           </div>
           {tab === 'dossiers' && (

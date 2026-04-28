@@ -1140,7 +1140,10 @@ export default function ContratsPage() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
         <FileSignature className="w-5 h-5 text-content-brand shrink-0" />
-        <h1 className="font-semibold text-content-primary flex-1">Contrats & Location</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-semibold text-content-primary">Contrats & Location</h1>
+          <p className="text-xs text-content-secondary">Baux, locations de véhicules et modèles de contrats réutilisables</p>
+        </div>
         {business?.id && (
           <button
             onClick={() => setShowShare(true)}

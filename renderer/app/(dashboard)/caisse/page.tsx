@@ -526,7 +526,10 @@ export default function CaissePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Clôture de caisse</h1>
-            <p className="text-sm text-content-secondary mt-0.5">
+            <p className="text-xs text-content-secondary mt-0.5">
+              Suivez les encaissements de la session et clôturez en fin de journée pour valider les comptes
+            </p>
+            <p className="text-xs text-content-muted mt-0.5">
               {session
                 ? `Session ouverte le ${format(new Date(session.opened_at), 'dd MMM à HH:mm', { locale: fr })}`
                 : 'Aucune session active'}

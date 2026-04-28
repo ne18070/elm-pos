@@ -448,7 +448,8 @@ export default function RevendeursPage() {
       <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Revendeurs</h1>
-          <p className="text-xs text-content-muted">{resellers.length} vendeur{resellers.length !== 1 ? 's' : ''} marché</p>
+          <p className="text-xs text-content-secondary">Gérez vos vendeurs terrain — commandes, versements et catalogue dédié</p>
+          <p className="text-xs text-content-muted">{resellers.length} vendeur{resellers.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button

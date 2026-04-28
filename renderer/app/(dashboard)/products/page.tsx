@@ -100,12 +100,10 @@ export default function ProductsPage() {
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Produits</h1>
-            {!loading && (
-              <p className="text-xs text-content-muted mt-0.5">
-                {filtered.length} produit{filtered.length !== 1 ? 's' : ''}
-                {search && ` · filtrés sur ${products.length}`}
-              </p>
-            )}
+            <p className="text-xs text-content-muted mt-0.5">
+              Catalogue complet — prix, stock, code-barres et catégories
+              {!loading && ` · ${filtered.length} produit${filtered.length !== 1 ? 's' : ''}${search ? ` filtrés sur ${products.length}` : ''}`}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button

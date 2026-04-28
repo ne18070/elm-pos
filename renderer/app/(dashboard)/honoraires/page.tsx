@@ -349,7 +349,7 @@ export default function HonorairesPage() {
             <h1 className="text-xl font-bold text-content-primary flex items-center gap-2">
               <Receipt className="w-5 h-5 text-status-purple" /> Honoraires & Facturation
             </h1>
-            <p className="text-xs text-content-secondary mt-0.5">Suivi des prestations et paiements</p>
+            <p className="text-xs text-content-secondary mt-0.5">Émettez des factures d'honoraires, suivez les paiements et relancez vos clients</p>
           </div>
           <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 text-sm">
             <Plus className="w-4 h-4" /> Nouveaux honoraires

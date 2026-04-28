@@ -76,7 +76,10 @@ export default function LeaveManagementPage() {
       <div className="px-6 py-4 border-b border-surface-border bg-surface-card flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <Palmtree className="w-5 h-5 text-content-brand" />
-          <h1 className="text-xl font-bold text-content-primary tracking-tight">Congés & Absences</h1>
+          <div>
+            <h1 className="text-xl font-bold text-content-primary tracking-tight">Congés & Absences</h1>
+            <p className="text-xs text-content-secondary mt-0.5">Gérez les demandes, validez les congés et consultez le planning de l'équipe</p>
+          </div>
         </div>
         <div className="flex bg-surface-input p-1 rounded-xl border border-surface-border">
           {[

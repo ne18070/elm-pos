@@ -83,6 +83,7 @@ export default function LivreursPage() {
       <div className="px-6 py-4 border-b border-surface-border flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Livreurs</h1>
+          <p className="text-xs text-content-secondary">Équipe de livraison — assignez des commandes et suivez les performances</p>
           <p className="text-xs text-content-muted">
             {total} livreur{total !== 1 ? 's' : ''} · {actifs} actif{actifs !== 1 ? 's' : ''}
           </p>

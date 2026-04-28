@@ -473,6 +473,7 @@ export default function HotelPage() {
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-surface-border flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-bold text-content-primary">Hôtel</h1>
+          <p className="text-xs text-content-secondary">Chambres, réservations et check-in/check-out</p>
           <p className="text-xs text-content-muted truncate">
             {stats.available} dispo · {stats.occupied} occupée{stats.occupied !== 1 ? 's' : ''} · {stats.total} chambre{stats.total !== 1 ? 's' : ''}
           </p>

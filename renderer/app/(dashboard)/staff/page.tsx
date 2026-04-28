@@ -816,7 +816,10 @@ export default function StaffPage() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface-card shrink-0">
         <div className="flex items-center gap-3">
           <Users className="w-5 h-5 text-content-secondary" />
-          <h1 className="font-bold text-content-primary text-xl tracking-tight">Personnel</h1>
+          <div>
+            <h1 className="font-bold text-content-primary text-xl tracking-tight">Personnel</h1>
+            <p className="text-xs text-content-secondary mt-0.5">Équipe, présences, paie et congés — tout en un seul endroit</p>
+          </div>
         </div>
         
         {tab === 'employes' && (

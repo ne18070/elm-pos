@@ -132,7 +132,7 @@ export default function ClientsPage() {
       <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-3 flex-wrap bg-surface">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Clients</h1>
-          <p className="text-xs text-content-secondary">{clients.length} client{clients.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-content-secondary">Carnet de contacts — historique d'achats, fidélité et coordonnées · {clients.length} client{clients.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">

@@ -35,6 +35,7 @@ export default function CategoriesPage() {
       <div className="p-6 border-b border-surface-border">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-content-primary">Catégories</h1>
+          <p className="text-xs text-content-secondary mt-0.5">Organisez vos produits par catégorie — affiché en caisse et dans le catalogue</p>
           <button
             onClick={() => setShowCreate(true)}
             className="btn-primary flex items-center gap-2"
