@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  ShoppingCart, QrCode, CheckCircle, Loader2,
+  QrCode, CheckCircle, Loader2,
   Send, X, FileImage,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +41,73 @@ export default function SubscribePage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Validation
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [checking,    setChecking]    = useState<Record<string, boolean>>({});
+
+  function setFieldError(field: string, msg: string) {
+    setFieldErrors(prev => ({ ...prev, [field]: msg }));
+  }
+  function clearFieldError(field: string) {
+    setFieldErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
+  }
+
+  async function validateEmail(val: string) {
+    const trimmed = val.trim().toLowerCase();
+    if (!trimmed) { setFieldError('email', 'L\'email est requis.'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+      setFieldError('email', 'Adresse email invalide.');
+      return false;
+    }
+    // Vérifier si l'email existe déjà dans auth.users
+    setChecking(prev => ({ ...prev, email: true }));
+    try {
+      const { data } = await db.rpc('check_email_exists', { p_email: trimmed });
+      if (data) {
+        setFieldError('email', 'Un compte existe déjà avec cet email. Connectez-vous.');
+        return false;
+      }
+    } catch { /* ignore – ne pas bloquer si la requête échoue */ }
+    finally { setChecking(prev => ({ ...prev, email: false })); }
+    clearFieldError('email');
+    return true;
+  }
+
+  async function checkUnique(field: 'businessName' | 'denomination', value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    setChecking(prev => ({ ...prev, [field]: true }));
+    try {
+      const col = field === 'businessName' ? 'name' : 'denomination';
+      const reqCol = field === 'businessName' ? 'business_name' : 'denomination';
+
+      const [{ data: bizData }, { data: reqData }] = await Promise.all([
+        db.from('businesses').select('id').ilike(col, trimmed).limit(1),
+        db.from('public_subscription_requests')
+          .select('id').ilike(reqCol, trimmed)
+          .not('status', 'eq', 'rejected').limit(1),
+      ]);
+
+      const label = field === 'businessName' ? 'Ce nom d\'établissement' : 'Cette raison sociale';
+      if ((bizData && bizData.length > 0) || (reqData && reqData.length > 0)) {
+        setFieldError(field, `${label} est déjà utilisé.`);
+      } else {
+        clearFieldError(field);
+      }
+    } catch {
+      clearFieldError(field);
+    } finally {
+      setChecking(prev => ({ ...prev, [field]: false }));
+    }
+  }
+
+  function canSubmit() {
+    if (!businessName.trim() || !fullName.trim() || !email.trim() || !selectedPlan) return false;
+    if (fieldErrors.email || fieldErrors.businessName || fieldErrors.denomination) return false;
+    if (checking.businessName || checking.denomination || checking.email) return false;
+    return true;
+  }
 
   useEffect(() => {
     Promise.all([
@@ -153,13 +220,27 @@ export default function SubscribePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">Nom de l'établissement *</label>
-                  <input type="text" value={businessName} onChange={(e) => setBusinessName(e.target.value)}
-                    className="input" placeholder="Ex : Restaurant Le Soleil" />
+                  <div className="relative">
+                    <input type="text" value={businessName}
+                      onChange={(e) => { setBusinessName(e.target.value); clearFieldError('businessName'); }}
+                      onBlur={(e) => checkUnique('businessName', e.target.value)}
+                      className={`input pr-8 ${fieldErrors.businessName ? 'border-status-error focus:ring-status-error' : ''}`}
+                      placeholder="Ex : Restaurant Le Soleil" />
+                    {checking.businessName && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-content-secondary" />}
+                  </div>
+                  {fieldErrors.businessName && <p className="text-xs text-status-error mt-1">{fieldErrors.businessName}</p>}
                 </div>
                 <div>
-                  <label className="label">Raison sociale légale <span className="text-content-muted font-normal">(SARL, SA… si différente)</span></label>
-                  <input type="text" value={denomination} onChange={(e) => setDenomination(e.target.value)}
-                    className="input" placeholder="Ex : SARL Le Soleil Afrique" />
+                  <label className="label">Raison sociale légale <span className="text-content-secondary font-normal normal-case tracking-normal">(SARL, SA… si différente)</span></label>
+                  <div className="relative">
+                    <input type="text" value={denomination}
+                      onChange={(e) => { setDenomination(e.target.value); clearFieldError('denomination'); }}
+                      onBlur={(e) => { if (e.target.value.trim()) checkUnique('denomination', e.target.value); }}
+                      className={`input pr-8 ${fieldErrors.denomination ? 'border-status-error focus:ring-status-error' : ''}`}
+                      placeholder="Ex : SARL Le Soleil Afrique" />
+                    {checking.denomination && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-content-secondary" />}
+                  </div>
+                  {fieldErrors.denomination && <p className="text-xs text-status-error mt-1">{fieldErrors.denomination}</p>}
                 </div>
               </div>
 
@@ -173,8 +254,22 @@ export default function SubscribePage() {
                   </div>
                   <div>
                     <label className="label">Email *</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                      className="input" placeholder="vous@exemple.com" />
+                    <div className="relative">
+                      <input type="email" value={email}
+                        onChange={(e) => { setEmail(e.target.value); clearFieldError('email'); }}
+                        onBlur={(e) => validateEmail(e.target.value)}
+                        className={`input pr-8 ${fieldErrors.email ? 'border-status-error focus:ring-status-error' : ''}`}
+                        placeholder="vous@exemple.com" />
+                      {checking.email && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-content-secondary" />}
+                    </div>
+                    {fieldErrors.email && (
+                      <p className="text-xs text-status-error mt-1 flex items-center gap-1">
+                        {fieldErrors.email}
+                        {fieldErrors.email.includes('Connectez-vous') && (
+                          <a href="/login" className="underline font-semibold">→ Login</a>
+                        )}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="label">Téléphone</label>
@@ -269,7 +364,7 @@ export default function SubscribePage() {
 
             <button
               onClick={handleSubmit}
-              disabled={!businessName.trim() || !email.trim() || !selectedPlan || submitting}
+              disabled={!canSubmit() || submitting}
               className="btn-primary w-full h-12 text-base flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

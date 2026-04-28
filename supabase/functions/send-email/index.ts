@@ -8,6 +8,8 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
 const FROM_EMAIL = 'ELM APP <contact@elm-app.click>';
 const PUBLIC_EMAIL_TYPES = ['subscription_received'];
+const PUBLIC_SITE_URL = (Deno.env.get('PUBLIC_SITE_URL') || Deno.env.get('APP_URL') || 'https://www.elm-app.click').replace(/\/$/, '');
+const LOGO_URL = `${PUBLIC_SITE_URL}/logo.png`;
 
 function baseLayout(content: string) {
   return `<!DOCTYPE html>
@@ -21,12 +23,10 @@ function baseLayout(content: string) {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 0;">
     <tr><td align="center">
       <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;">
-        <tr><td style="background:#0a0f1e;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center;">
-          <div style="display:inline-flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:#2563eb;border-radius:10px;display:inline-block;vertical-align:middle;"></div>
-            <span style="color:#ffffff;font-size:20px;font-weight:800;vertical-align:middle;margin-left:8px;">
-              ELM <span style="color:#38bdf8;">APP</span>
-            </span>
+        <tr><td style="background:#0a0f1e;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
+          <img src="${LOGO_URL}" width="96" height="96" alt="ELM APP" style="display:block;width:96px;height:96px;object-fit:contain;margin:0 auto 12px;" />
+          <div style="color:#ffffff;font-size:20px;font-weight:800;line-height:1;">
+            ELM <span style="color:#38bdf8;">APP</span>
           </div>
         </td></tr>
         <tr><td style="background:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
@@ -80,8 +80,13 @@ function buildVars(type: string, data: Record<string, any>): Record<string, stri
     const btnLabel = data.button_label;
     const btnUrl = data.button_url;
     const safeUrl = btnUrl && /^https?:\/\//.test(btnUrl) ? btnUrl : '';
+    const content = str(data.content)
+      .split(/\n{2,}/)
+      .map((part) => `<p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">${escapeHtml(part).replace(/\n/g, '<br/>')}</p>`)
+      .join('');
     return {
       ...base,
+      content,
       button_block: btnLabel && safeUrl
         ? `<p style="text-align:center;margin:32px 0 24px;"><a href="${escapeHtml(safeUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:12px;text-decoration:none;">${escapeHtml(btnLabel)}</a></p>`
         : '',

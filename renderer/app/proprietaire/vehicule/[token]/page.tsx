@@ -1,5 +1,9 @@
 import OwnerVehicleReportClient from './OwnerVehicleReportClient';
 
+export function generateStaticParams(): Array<{ token: string }> {
+  return [{ token: 'view' }];
+}
+
 export default async function OwnerVehicleReportPage({
   params,
 }: {

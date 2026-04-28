@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// -- Auth superadmin via token Bearer ------------------------------------------
+function siteUrl() {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '');
+}
+
 async function requireSuperadmin(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return 'Token manquant';
 
   const token = auth.slice(7);
-  const url    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon   = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const client = createClient(url, anon, { auth: { persistSession: false } });
 
   const { data: { user }, error } = await client.auth.getUser(token);
@@ -17,29 +20,63 @@ async function requireSuperadmin(req: NextRequest): Promise<string | null> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const { data: profile } = await admin.from('users').select('is_superadmin').eq('id', user.id).single();
-  if (!profile?.is_superadmin) return 'Accès superadmin requis';
+  if (!profile?.is_superadmin) return 'Acces superadmin requis';
 
-  return null; // OK
+  return null;
 }
 
-// -- POST /api/admin/approve-business -----------------------------------------
+async function sendActivationEmail(input: {
+  supabaseUrl: string;
+  authorization: string;
+  to: string;
+  fullName?: string;
+  businessName: string;
+  planLabel?: string;
+  expiresAt: Date;
+  activationUrl: string;
+}) {
+  const res = await fetch(`${input.supabaseUrl}/functions/v1/send-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': input.authorization },
+    body: JSON.stringify({
+      type: 'marketing',
+      to: input.to,
+      subject: 'Votre acces ELM APP est active',
+      data: {
+        title: 'Votre compte ELM APP est pret',
+        content: [
+          `Bonjour ${input.fullName || input.businessName},`,
+          `Votre abonnement ${input.planLabel ?? 'Pro'} pour ${input.businessName} est active.`,
+          'Cliquez sur le bouton ci-dessous pour choisir votre mot de passe et activer votre acces.',
+          `Votre acces est valide jusqu'au ${input.expiresAt.toLocaleDateString('fr-FR')}.`,
+        ].join('\n\n'),
+        button_label: 'Activer mon compte',
+        button_url: input.activationUrl,
+      },
+    }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `Erreur envoi email (${res.status})`);
+}
+
 export async function POST(req: NextRequest) {
   const authError = await requireSuperadmin(req);
   if (authError) return NextResponse.json({ error: authError }, { status: 403 });
 
-  const url        = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
   let body: {
     requestId: string;
-    email:     string;
+    email: string;
     fullName?: string;
     businessName: string;
     denomination?: string;
-    planId:    string;
-    days:      number;
-    note?:     string;
+    planId: string;
+    days: number;
+    note?: string;
     planLabel?: string;
   };
 
@@ -55,101 +92,95 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Inviter l'utilisateur (Ceci crée l'utilisateur dans auth.users et envoie l'email d'invitation)
-    // L'email contiendra un lien vers /reset-password avec un access_token
-    const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click'}/reset-password`,
-      data: {
-        full_name: fullName || businessName,
-      }
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'invite',
+      email,
+      options: {
+        redirectTo: `${siteUrl()}/reset-password?type=invite`,
+        data: { full_name: fullName || businessName },
+      },
     });
-    
-    if (authError) throw new Error(authError.message);
-    const userId = authData.user!.id;
+    if (linkError) throw new Error(linkError.message);
 
-    // 2. Créer le profil utilisateur
+    const userId = linkData.user.id;
+    const activationUrl = linkData.properties?.action_link;
+    if (!activationUrl) throw new Error("Lien d'activation introuvable");
+
     const { error: userErr } = await admin.from('users').upsert({
-      id: userId, email, full_name: fullName || businessName, role: 'owner',
+      id: userId,
+      email,
+      full_name: fullName || businessName,
+      role: 'owner',
     }, { onConflict: 'id' });
     if (userErr) throw new Error(userErr.message);
 
-    // 3. Créer l'organization (entité légale)
     const { data: orgData, error: orgError } = await admin
       .from('organizations')
       .insert({
-        legal_name:   denomination?.trim() || businessName,
+        legal_name: denomination?.trim() || businessName,
         denomination: denomination?.trim() || null,
-        owner_id:     userId,
-        currency:     'XOF',
+        owner_id: userId,
+        currency: 'XOF',
       })
       .select('id')
       .single();
     if (orgError) throw new Error(orgError.message);
-    const organizationId = orgData.id;
 
-    // 4. Créer le business (établissement) lié à l'org
     const { data: bizData, error: bizError } = await admin
       .from('businesses')
       .insert({
-        name:            businessName,
-        denomination:    denomination || null,
-        owner_id:        userId,
-        type:            'retail',
-        organization_id: organizationId,
+        name: businessName,
+        denomination: denomination || null,
+        owner_id: userId,
+        type: 'retail',
+        organization_id: orgData.id,
       })
       .select('id')
       .single();
     if (bizError) throw new Error(bizError.message);
+
     const businessId = bizData.id;
+    const { error: memberError } = await admin
+      .from('business_members')
+      .insert({ business_id: businessId, user_id: userId, role: 'owner' });
+    if (memberError) throw new Error(memberError.message);
 
-    // 5. Ajouter membre
-    await admin.from('business_members').insert({ business_id: businessId, user_id: userId, role: 'owner' });
-    await admin.from('users').update({ business_id: businessId }).eq('id', userId);
+    const { error: businessUserError } = await admin.from('users').update({ business_id: businessId }).eq('id', userId);
+    if (businessUserError) throw new Error(businessUserError.message);
 
-    // 6. Activer l'abonnement
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + days);
     const { error: subError } = await admin.from('subscriptions').upsert({
-      business_id:  businessId,
-      owner_id:     userId,
-      plan_id:      planId,
-      status:       'active',
-      expires_at:   expiresAt.toISOString(),
+      business_id: businessId,
+      owner_id: userId,
+      plan_id: planId,
+      status: 'active',
+      expires_at: expiresAt.toISOString(),
       activated_at: new Date().toISOString(),
       payment_note: note ?? null,
     }, { onConflict: 'owner_id' });
     if (subError) throw new Error(subError.message);
 
-    // 7. Marquer la demande comme approuvée
-    await admin
+    const { error: requestError } = await admin
       .from('public_subscription_requests')
       .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
       .eq('id', requestId);
+    if (requestError) throw new Error(requestError.message);
 
-    // 8. Envoyer l'email de confirmation (non-bloquant)
-    // Appel direct à l'Edge Function avec le token de la requête entrante.
-    // L'Edge Function construit validity_text à partir de expires_at.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const bearerToken = req.headers.get('authorization') ?? '';
-    fetch(`${supabaseUrl}/functions/v1/send-email`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': bearerToken },
-      body: JSON.stringify({
-        type:    'subscription_approved',
-        to:      email,
-        subject: '✅ Votre accès ELM APP est activé',
-        data: {
-          business_name: businessName,
-          email,
-          plan_label:    planLabel ?? 'Pro',
-          expires_at:    expiresAt.toISOString(),
-        },
-      }),
-    }).catch(() => {});
+    await sendActivationEmail({
+      supabaseUrl: url,
+      authorization: req.headers.get('authorization') ?? '',
+      to: email,
+      fullName,
+      businessName,
+      planLabel,
+      expiresAt,
+      activationUrl,
+    });
 
     return NextResponse.json({ ok: true, businessId, userId });
   } catch (err) {
     console.error('[approve-business]', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

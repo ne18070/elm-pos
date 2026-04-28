@@ -26,8 +26,8 @@ export function getPublicSiteUrl(): string {
   return DEFAULT_PUBLIC_SITE_URL;
 }
 
-export function buildPublicDocumentUrl(storagePath: string): string {
-  return `${getPublicSiteUrl()}/d/${encodeStoragePath(storagePath)}`;
+export function buildPublicDocumentUrl(storagePath: string, bucket = 'product-images'): string {
+  return buildSupabasePublicStorageUrl(bucket, storagePath);
 }
 
 export function buildSupabasePublicStorageUrl(bucket: string, storagePath: string): string {

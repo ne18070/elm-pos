@@ -20,7 +20,9 @@ export async function sendEmail(opts: SendEmailOpts): Promise<void> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL not set');
 
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (anonKey) headers['apikey'] = anonKey;
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   // Call Supabase Edge Function instead of Next.js API route

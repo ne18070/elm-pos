@@ -12,7 +12,7 @@ import { getMyPermissions } from '@services/supabase/permissions';
 import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
 
-const PUBLIC_PATHS = ['/', '/login', '/display', '/subscribe', '/privacy', '/c', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire'];
+const PUBLIC_PATHS = ['/', '/login', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
