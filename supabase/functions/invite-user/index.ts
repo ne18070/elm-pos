@@ -72,22 +72,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    const appUrl = Deno.env.get('APP_URL') ?? 'https://www.elm-app.click';
+
     // Envoyer l'invitation par email
-    const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(
+    let { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(
       email,
       {
-        data: {
-          full_name: full_name ?? email.split('@')[0],
-          role,
-          business_id,
-        },
-        redirectTo: `${Deno.env.get('APP_URL') ?? 'https://www.elm-app.click'}/login`,
+        data: { full_name: full_name ?? email.split('@')[0], role, business_id },
+        redirectTo: `${appUrl}/reset-password?type=invite`,
       }
     );
 
+    // Si l'utilisateur existe déjà, envoyer un lien de récupération à la place
+    if (inviteErr?.message?.includes('already been registered')) {
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo: `${appUrl}/reset-password?type=invite` },
+      });
+      if (linkErr) throw linkErr;
+      inviteData = linkData as any;
+      inviteErr = null;
+    }
+
     if (inviteErr) throw inviteErr;
 
-    // Pré-créer le profil si l'utilisateur n'existe pas encore
+    // Pré-créer/mettre à jour le profil
     if (inviteData?.user) {
       await adminClient.from('users').upsert({
         id: inviteData.user.id,

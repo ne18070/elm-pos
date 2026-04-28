@@ -18,19 +18,30 @@ export default function ResetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Vérifier si c'est une activation de compte (invitation) via l'URL
-    const hash = window.location.hash;
     const searchParams = new URLSearchParams(window.location.search);
-    if (hash.includes('type=invite') || hash.includes('type=signup') || hash.includes('type=recovery') || searchParams.get('type') === 'invite') {
-      setIsActivation(true);
+    const hash = window.location.hash;
+    const type = searchParams.get('type') || (hash.match(/[#&]type=([^&]+)/) || [])[1];
+    const code = searchParams.get('code');
+
+    if (type === 'invite' || type === 'signup') setIsActivation(true);
+
+    if (code) {
+      // PKCE flow: exchanged explicitly to avoid missing the event fired before listener registration
+      supabase.auth.exchangeCodeForSession(code)
+        .then(({ error }) => {
+          if (error) setErreur(error.message);
+        })
+        .catch((err) => setErreur(err.message))
+        .finally(() => setIsInitializing(false));
+      return;
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Legacy implicit flow (hash-based tokens)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setIsInitializing(false);
       } else {
-        // Laisser un petit délai pour la détection de session via hash
-        setTimeout(() => setIsInitializing(false), 1000);
+        setTimeout(() => setIsInitializing(false), 1500);
       }
     });
 
@@ -85,7 +96,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-64 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
+          <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-black text-content-primary tracking-tighter">ELM APP</h1>

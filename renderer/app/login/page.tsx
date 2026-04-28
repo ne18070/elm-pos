@@ -31,6 +31,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErreur('');
     setChargement(true);
+    console.log('[Login] Starting login for:', email);
 
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -39,37 +40,46 @@ export default function LoginPage() {
       });
 
       if (authError) {
+        console.error('[Login] Auth error:', authError);
         setErreur(authError.message);
-        setChargement(false); // Réinitialiser ici car erreur
+        setChargement(false);
         return;
       }
 
       if (!data.user) {
         setErreur("Échec de l'authentification");
-        setChargement(false); // Réinitialiser ici car erreur
+        setChargement(false);
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profileRows, error: profileError } = await (supabase as any)
-        .rpc('get_or_create_profile');
+      console.log('[Login] Auth success, loading profile...');
+
+      // Timeout pour le RPC profile
+      const profilePromise = (supabase as any).rpc('get_or_create_profile');
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout profile')), 10000));
+      
+      const { data: profileRows, error: profileError } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
       const profile = profileRows?.[0] ?? null;
 
       if (profileError || !profile) {
+        console.error('[Login] Profile error:', profileError);
         setErreur('Impossible de charger le profil utilisateur');
-        setChargement(false); // Réinitialiser ici car erreur
+        setChargement(false);
         return;
       }
+
+      console.log('[Login] Profile loaded:', profile.full_name, 'is_superadmin:', profile.is_superadmin);
 
       if ((profile as { is_blocked?: boolean }).is_blocked) {
         await supabase.auth.signOut();
         setErreur('Votre compte a été bloqué. Contactez votre administrateur.');
-        setChargement(false); // Réinitialiser ici car erreur
+        setChargement(false);
         return;
       }
 
       if ((profile as { is_superadmin?: boolean }).is_superadmin) {
+        console.log('[Login] Redirecting superadmin to /backoffice');
         setUser(profile as never);
         setLoaded(true);
         router.replace('/backoffice');
@@ -79,67 +89,77 @@ export default function LoginPage() {
 
       setUser(profile as never);
 
-      let activeBusiness: { features?: string[] } | null = null;
-      if (profile.business_id) {
-        const { data: business } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('id', profile.business_id)
-          .single();
-        if (business) {
-          setBusiness(business as never);
-          activeBusiness = business as { features?: string[] };
-        }
-      }
-
-      // Charger tous les établissements avant la redirection
+      // Le reste du chargement (business, sub, etc.)
       try {
-        const memberships = await getMyBusinesses();
+        let activeBusiness: { features?: string[] } | null = null;
+        if (profile.business_id) {
+          const { data: business } = await supabase
+            .from('businesses')
+            .select('*')
+            .eq('id', profile.business_id)
+            .single();
+          if (business) {
+            setBusiness(business as never);
+            activeBusiness = business as { features?: string[] };
+          }
+        }
+
+        const memberships = await getMyBusinesses().catch(() => []);
         setBusinesses(memberships);
         if (!activeBusiness && memberships.length > 0) {
           activeBusiness = memberships[0].business;
         }
-      } catch { /* migration pas encore appliquée */ }
 
-      // Charger l'abonnement avant la redirection
-      const activeBizId = profile.business_id as string | null;
-      if (activeBizId) {
-        try {
+        const activeBizId = profile.business_id as string | null;
+        if (activeBizId) {
           const [sub, plans, paySettings, cashSession] = await Promise.all([
-            getSubscription(data.user.id, activeBizId),
-            getPlans(),
-            getPaymentSettings(),
-            getCurrentSession(activeBizId),
+            getSubscription(data.user.id, activeBizId).catch(() => null),
+            getPlans().catch(() => []),
+            getPaymentSettings().catch(() => null),
+            getCurrentSession(activeBizId).catch(() => null),
           ]);
           setSubscription(sub);
           setPlans(plans);
           setPaymentSettings(paySettings);
           setCashSession(cashSession);
-        } catch { /* non critique */ }
+          autoRecordPresence(activeBizId, data.user.id).catch(() => {});
+        }
+        
+        setLoaded(true);
+        setCashLoaded(true);
+        console.log('[Login] Redirecting user to default route');
+        router.replace(getDefaultRoute(activeBusiness?.features ?? []));
+      } catch (innerErr) {
+        console.error('[Login] Inner loading error (non-blocking):', innerErr);
+        router.replace('/orders'); // Fallback
       }
-      setLoaded(true);
-      setCashLoaded(true);
-
-      // Pointage automatique si l'utilisateur est lié à un compte staff
-      if (activeBizId) {
-        autoRecordPresence(activeBizId, data.user.id).catch(() => {});
-      }
-
-      router.replace(getDefaultRoute(activeBusiness?.features ?? []));
-      // Note: On laisse l'état 'chargement' à true ici car le routeur Next.js
-      // est en train de charger la nouvelle page.
-    } catch {
-      setErreur("Une erreur inattendue s'est produite");
-      setChargement(false); // Réinitialiser ici car erreur
+    } catch (err: any) {
+      console.error('[Login] Unexpected error:', err);
+      setErreur(err.message === 'Timeout profile' ? "Le serveur met trop de temps à répondre. Réessayez." : "Une erreur inattendue s'est produite");
+      setChargement(false);
     }
   }
 
   const [version, setVersion] = useState<string>('');
 
   useEffect(() => {
-    if (window.electronAPI?.app?.getVersion) {
-      window.electronAPI.app.getVersion().then(setVersion);
-    }
+    // AuthProvider handles session cleanup on redirect to /login — no signOut needed here.
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const getVersion = async () => {
+      try {
+        if (window.electronAPI?.app?.getVersion) {
+          const v = await window.electronAPI.app.getVersion();
+          if (isMounted) setVersion(v);
+        }
+      } catch (err) {
+        console.warn('IPC Version error:', err);
+      }
+    };
+    getVersion();
+    return () => { isMounted = false; };
   }, []);
 
   return (
