@@ -24,7 +24,6 @@ export async function getOrCreateTrackingToken(
   const { error } = await (supabase as any)
     .from('client_tracking_tokens')
     .insert({
-      business_id:      businessId,
       service_order_id: serviceOrderId,
       token,
       client_phone:     clientPhone || null,

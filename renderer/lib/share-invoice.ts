@@ -9,6 +9,7 @@ import { generateThermalReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
 import { getWhatsAppConfig, sendWhatsAppDocument } from '@services/supabase/whatsapp';
 import { supabase } from './supabase';
+import { buildPublicDocumentUrl } from './public-links';
 import type { Order, Business } from '@pos-types';
 
 /** Normalise un numéro de téléphone pour wa.me (chiffres uniquement, sans +) */
@@ -72,11 +73,7 @@ export async function generateInvoiceLink(
 
   if (uploadError) throw uploadError;
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('product-images')
-    .getPublicUrl(filePath);
-
-  return publicUrl;
+  return buildPublicDocumentUrl(filePath);
 }
 
 /**

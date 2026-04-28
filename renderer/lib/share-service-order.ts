@@ -4,6 +4,7 @@ import { htmlToPdfBlob } from './pdf-utils';
 import { getWhatsAppConfig, sendWhatsAppDocument, sendWhatsAppMessage } from '@services/supabase/whatsapp';
 import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
 import { supabase } from './supabase';
+import { buildPublicDocumentUrl } from './public-links';
 import type { Business } from '@pos-types';
 import type { ServiceOrder } from '@services/supabase/service-orders';
 
@@ -58,11 +59,7 @@ export async function generateServiceOrderLink(
 
   if (uploadError) throw uploadError;
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('product-images')
-    .getPublicUrl(filePath);
-
-  return publicUrl;
+  return buildPublicDocumentUrl(filePath);
 }
 
 /** Partage de l'OT ou du reçu via WhatsApp */

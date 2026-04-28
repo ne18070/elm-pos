@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { cn, formatCurrency } from '@/lib/utils';
+import { toUserError } from '@/lib/user-error';
 import {
   getServiceOrders, getServiceCatalog, getAllServiceCatalog, getSubjects,
   createServiceOrder, updateServiceOrderStatus, payServiceOrder,
@@ -28,11 +29,11 @@ import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<ServiceOrderStatus, { label: string; color: string; dot: string }> = {
-  attente:  { label: 'En attente', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', dot: 'bg-yellow-400'  },
-  en_cours: { label: 'En cours',   color: 'bg-blue-500/20 text-blue-300 border-blue-500/30',       dot: 'bg-blue-400'    },
-  termine:  { label: 'Terminé',    color: 'bg-green-500/20 text-green-300 border-green-500/30',    dot: 'bg-green-400'   },
-  paye:     { label: 'Payé',       color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', dot: 'bg-emerald-400' },
-  annule:   { label: 'Annulé',     color: 'bg-red-500/20 text-red-300 border-red-500/30',          dot: 'bg-red-400'     },
+  attente:  { label: 'En attente', color: 'bg-badge-warning  text-status-warning  border-status-warning/30',  dot: 'bg-status-warning'  },
+  en_cours: { label: 'En cours',   color: 'bg-badge-info     text-status-info     border-status-info/30',     dot: 'bg-status-info'     },
+  termine:  { label: 'Terminé',    color: 'bg-badge-success  text-status-success  border-status-success/30',  dot: 'bg-status-success'  },
+  paye:     { label: 'Payé',       color: 'bg-badge-success  text-status-success  border-status-success/30',  dot: 'bg-status-success'  },
+  annule:   { label: 'Annulé',     color: 'bg-badge-error    text-status-error    border-status-error/30',    dot: 'bg-status-error'    },
 };
 
 // Types de sujets — libres mais avec des étiquettes intelligentes
@@ -69,13 +70,13 @@ function StatusBadge({ status }: { status: ServiceOrderStatus }) {
 }
 
 function OTNumber({ n }: { n: number }) {
-  return <span className="font-mono font-bold text-content-muted text-xs">OT-{String(n).padStart(4, '0')}</span>;
+  return <span className="font-mono font-bold text-content-primary text-xs">OT-{String(n).padStart(4, '0')}</span>;
 }
 
 function SubjectTypePill({ type }: { type: string | null | undefined }) {
   const cfg = subjectTypeCfg(type);
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-hover text-content-muted border border-surface-border">
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-hover text-content-secondary border border-surface-border">
       {cfg.label}
     </span>
   );
@@ -97,6 +98,7 @@ function NewOTModal({
   onClose: () => void;
   onCreated: (o: ServiceOrder) => void;
 }) {
+  const { error: notifError } = useNotificationStore();
   const [subjectType, setSubjectType] = useState<SubjectType>('vehicule');
   const [subjectRef,  setSubjectRef]  = useState('');
   const [subjectInfo, setSubjectInfo] = useState('');
@@ -168,7 +170,7 @@ function NewOTModal({
         })),
       });
       onCreated(order);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -177,7 +179,7 @@ function NewOTModal({
       <div className="bg-surface-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-surface-border sticky top-0 bg-surface-card z-10">
           <h2 className="text-lg font-bold text-content-primary">Nouvel ordre de travail</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-5 space-y-5">
@@ -196,13 +198,13 @@ function NewOTModal({
               <div className="p-4 space-y-3">
                 {/* Type selector */}
                 <div>
-                  <label className="text-xs text-content-muted font-medium mb-2 block">Type de sujet</label>
+                  <label className="text-xs text-content-secondary font-medium mb-2 block">Type de sujet</label>
                   <div className="flex flex-wrap gap-2">
                     {SUBJECT_TYPES.map(t => (
                       <button key={t.value} onClick={() => setSubjectType(t.value)}
                         className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors', subjectType === t.value
                           ? 'bg-brand-500/20 border-brand-500/50 text-content-brand'
-                          : 'border-surface-border text-content-muted hover:bg-surface-hover')}>
+                          : 'border-surface-border text-content-secondary hover:bg-surface-hover')}>
                         {t.label}
                       </button>
                     ))}
@@ -211,7 +213,7 @@ function NewOTModal({
 
                 {/* Reference with autocomplete */}
                 <div className="relative">
-                  <label className="text-xs text-content-muted font-medium mb-1 block">{typeCfg.refLabel}</label>
+                  <label className="text-xs text-content-secondary font-medium mb-1 block">{typeCfg.refLabel}</label>
                   <input
                     value={subjectRef}
                     onChange={e => handleRefChange(e.target.value)}
@@ -227,7 +229,7 @@ function NewOTModal({
                           <SubjectTypePill type={s.type_sujet} />
                           <div>
                             <p className="font-semibold text-content-primary">{s.reference}</p>
-                            {s.designation && <p className="text-content-muted text-xs">{s.designation}</p>}
+                            {s.designation && <p className="text-content-secondary text-xs">{s.designation}</p>}
                           </div>
                         </button>
                       ))}
@@ -237,7 +239,7 @@ function NewOTModal({
 
                 {/* Description */}
                 <div>
-                  <label className="text-xs text-content-muted font-medium mb-1 block">{typeCfg.infoLabel}</label>
+                  <label className="text-xs text-content-secondary font-medium mb-1 block">{typeCfg.infoLabel}</label>
                   <input value={subjectInfo} onChange={e => setSubjectInfo(e.target.value)}
                     placeholder={subjectType === 'vehicule' ? 'ex: Toyota Corolla blanche' : subjectType === 'billet' ? 'ex: Air Sénégal DKR → CDG' : subjectType === 'appareil' ? 'ex: iPhone 14 Pro noir' : 'Description…'}
                     className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
@@ -249,12 +251,12 @@ function NewOTModal({
           {/* Client info */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-content-muted font-medium mb-1 block flex items-center gap-1"><User className="w-3 h-3" />Nom client</label>
+              <label className="text-xs text-content-secondary font-medium mb-1 block flex items-center gap-1"><User className="w-3 h-3" />Nom client</label>
               <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nom du client"
                 className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
             </div>
             <div>
-              <label className="text-xs text-content-muted font-medium mb-1 block flex items-center gap-1"><Phone className="w-3 h-3" />Téléphone</label>
+              <label className="text-xs text-content-secondary font-medium mb-1 block flex items-center gap-1"><Phone className="w-3 h-3" />Téléphone</label>
               <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="+221 77 000 00 00"
                 className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
             </div>
@@ -263,7 +265,7 @@ function NewOTModal({
           {/* Catalog quick-add */}
           {catalog.length > 0 && (
             <div>
-              <p className="text-xs text-content-muted font-semibold mb-2 uppercase tracking-wider">Prestations catalogue</p>
+              <p className="text-xs text-content-secondary font-semibold mb-2 uppercase tracking-wider">Prestations catalogue</p>
               <div className="flex flex-wrap gap-2">
                 {catalog.map(item => (
                   <button key={item.id} onClick={() => addFromCatalog(item)}
@@ -277,7 +279,7 @@ function NewOTModal({
 
           {/* Line items */}
           <div>
-            <p className="text-xs text-content-muted font-semibold mb-2 uppercase tracking-wider">Détail des prestations</p>
+            <p className="text-xs text-content-secondary font-semibold mb-2 uppercase tracking-wider">Détail des prestations</p>
             <div className="space-y-2">
               {lines.map(line => (
                 <div key={line._id} className="flex gap-2 items-center">
@@ -287,7 +289,7 @@ function NewOTModal({
                     className="w-24 px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
                   <input value={line.quantity} onChange={e => updateLine(line._id, 'quantity', parseInt(e.target.value) || 1)} type="number" min={1}
                     className="w-14 px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm text-center" />
-                  <button onClick={() => removeLine(line._id)} className="p-2 rounded-lg hover:bg-red-500/20 text-content-muted hover:text-status-error">
+                  <button onClick={() => removeLine(line._id)} className="p-2 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -301,7 +303,7 @@ function NewOTModal({
 
           {/* Notes */}
           <div>
-            <label className="text-xs text-content-muted font-medium mb-1 block">Notes internes</label>
+            <label className="text-xs text-content-secondary font-medium mb-1 block">Notes internes</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Observations, remarques…"
               className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm resize-none" />
           </div>
@@ -328,6 +330,7 @@ function NewOTModal({
 function PayModal({ order, currency, onClose, onPaid }: {
   order: ServiceOrder; currency: string; onClose: () => void; onPaid: () => void;
 }) {
+  const { error: notifError } = useNotificationStore();
   const balance = order.total - order.paid_amount;
   const [amount, setAmount] = useState(String(balance));
   const [method, setMethod] = useState('cash');
@@ -336,7 +339,7 @@ function PayModal({ order, currency, onClose, onPaid }: {
   async function handlePay() {
     setSaving(true);
     try { await payServiceOrder(order.id, parseFloat(amount) || 0, method); onPaid(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -345,26 +348,26 @@ function PayModal({ order, currency, onClose, onPaid }: {
       <div className="bg-surface-card rounded-2xl w-full max-w-sm shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-surface-border">
           <h2 className="text-base font-bold text-content-primary">Encaisser le paiement</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div className="rounded-xl bg-surface-hover p-4 flex justify-between items-center">
-            <span className="text-content-muted text-sm">Montant dû</span>
+            <span className="text-content-secondary text-sm">Montant dû</span>
             <span className="text-content-primary font-bold text-lg">{formatCurrency(balance, currency)}</span>
           </div>
           <div>
-            <label className="text-xs text-content-muted font-medium mb-1 block">Montant reçu</label>
+            <label className="text-xs text-content-secondary font-medium mb-1 block">Montant reçu</label>
             <input value={amount} onChange={e => setAmount(e.target.value)} type="number" min={0}
               className="w-full px-3 py-2.5 rounded-xl bg-surface-input border border-surface-border text-content-primary text-lg font-bold" />
           </div>
           <div>
-            <label className="text-xs text-content-muted font-medium mb-2 block">Mode de paiement</label>
+            <label className="text-xs text-content-secondary font-medium mb-2 block">Mode de paiement</label>
             <div className="grid grid-cols-3 gap-2">
               {PAY_METHODS.map(m => (
                 <button key={m.value} onClick={() => setMethod(m.value)}
                   className={cn('py-2 rounded-xl border text-xs font-semibold transition-colors', method === m.value
                     ? 'bg-brand-500/20 border-brand-500/50 text-content-brand'
-                    : 'border-surface-border text-content-muted hover:bg-surface-hover')}>
+                    : 'border-surface-border text-content-secondary hover:bg-surface-hover')}>
                   {m.label}
                 </button>
               ))}
@@ -374,7 +377,7 @@ function PayModal({ order, currency, onClose, onPaid }: {
         <div className="flex gap-3 p-5 border-t border-surface-border">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-surface-border text-content-secondary text-sm font-medium">Annuler</button>
           <button onClick={handlePay} disabled={saving}
-            className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold disabled:opacity-40">
+            className="flex-1 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold disabled:opacity-40">
             {saving ? 'Enregistrement…' : 'Confirmer'}
           </button>
         </div>
@@ -390,7 +393,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
   businessId: string; onClose: () => void; onRefresh: () => void;
 }) {
   const { business, user } = useAuthStore();
-  const { success } = useNotificationStore();
+  const { success, error: notifError } = useNotificationStore();
   const [showPay, setShowPay] = useState(false);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -410,8 +413,21 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
 
   async function transition(newStatus: ServiceOrderStatus) {
     setBusy(true);
-    try { await updateServiceOrderStatus(order.id, newStatus); onRefresh(); onClose(); }
-    catch (e: any) { alert(e.message); }
+    try {
+      await updateServiceOrderStatus(order.id, newStatus);
+      fetch('/api/client-push/notify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceOrderId: order.id,
+          status:         newStatus,
+          orderRef:       `OT-${String(order.order_number).padStart(4, '0')}`,
+          businessName:   business?.name ?? '',
+        }),
+      }).catch(() => {});
+      onRefresh(); onClose();
+    }
+    catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
 
@@ -419,7 +435,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
     if (!confirm('Annuler cet ordre de travail ?')) return;
     setBusy(true);
     try { await cancelServiceOrder(order.id); onRefresh(); onClose(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
 
@@ -443,7 +459,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
       });
       setEditing(false);
       onRefresh(); onClose();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
 
@@ -457,7 +473,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
       });
       if (res.success) success('Message WhatsApp envoyé');
       else throw new Error(res.error);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
 
@@ -484,7 +500,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
       <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-lg bg-surface-card border-l border-surface-border shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 p-4 border-b border-surface-border shrink-0">
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><X className="w-5 h-5" /></button>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <OTNumber n={order.order_number} />
@@ -494,9 +510,9 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
             {order.subject_ref && <p className="text-sm font-mono font-bold text-content-primary mt-0.5">{order.subject_ref}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrint} className="p-2 rounded-xl hover:bg-surface-hover text-content-muted" title="Imprimer"><Printer className="w-4 h-4" /></button>
+            <button onClick={handlePrint} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary" title="Imprimer"><Printer className="w-4 h-4" /></button>
             {order.status !== 'paye' && order.status !== 'annule' && (
-              <button onClick={() => setEditing(v => !v)} className={cn('p-2 rounded-xl hover:bg-surface-hover', editing ? 'text-brand-400 bg-brand-500/10' : 'text-content-muted')}><Edit2 className="w-4 h-4" /></button>
+              <button onClick={() => setEditing(v => !v)} className={cn('p-2 rounded-xl hover:bg-surface-hover', editing ? 'text-brand-400 bg-brand-500/10' : 'text-content-secondary')}><Edit2 className="w-4 h-4" /></button>
             )}
           </div>
         </div>
@@ -506,7 +522,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           {/* Subject */}
           {(order.subject_ref || editing) && (
             <div className="rounded-xl bg-surface-hover p-4 space-y-3">
-              <p className="text-xs text-content-muted font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider flex items-center gap-1.5">
                 <Wrench className="w-3.5 h-3.5" />{order.subject_type ? typeCfg.label : 'Sujet'}
               </p>
               {editing ? (
@@ -516,17 +532,17 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                       <button key={t.value} onClick={() => setEditType(t.value)}
                         className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors', editType === t.value
                           ? 'bg-brand-500/20 border-brand-500/50 text-content-brand'
-                          : 'border-surface-border text-content-muted hover:bg-surface-hover')}>
+                          : 'border-surface-border text-content-secondary hover:bg-surface-hover')}>
                         {t.label}
                       </button>
                     ))}
                   </div>
                   <div>
-                    <label className="text-[10px] text-content-muted">{subjectTypeCfg(editType).refLabel}</label>
+                    <label className="text-[10px] text-content-secondary">{subjectTypeCfg(editType).refLabel}</label>
                     <input value={editRef} onChange={e => setEditRef(e.target.value)} className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-content-muted">{subjectTypeCfg(editType).infoLabel}</label>
+                    <label className="text-[10px] text-content-secondary">{subjectTypeCfg(editType).infoLabel}</label>
                     <input value={editInfo} onChange={e => setEditInfo(e.target.value)} className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" />
                   </div>
                 </div>
@@ -542,18 +558,18 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           {/* Client */}
           {(order.client_name || editing) && (
             <div className="rounded-xl bg-surface-hover p-4 space-y-3">
-              <p className="text-xs text-content-muted font-semibold uppercase tracking-wider flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Client</p>
+              <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Client</p>
               {editing ? (
                 <div className="grid grid-cols-2 gap-2">
-                  <div><label className="text-[10px] text-content-muted">Nom</label>
+                  <div><label className="text-[10px] text-content-secondary">Nom</label>
                     <input value={editClient} onChange={e => setEditClient(e.target.value)} className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" /></div>
-                  <div><label className="text-[10px] text-content-muted">Téléphone</label>
+                  <div><label className="text-[10px] text-content-secondary">Téléphone</label>
                     <input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" /></div>
                 </div>
               ) : (
                 <>
                   <p className="font-semibold text-content-primary">{order.client_name}</p>
-                  {order.client_phone && <p className="text-sm text-content-muted">{order.client_phone}</p>}
+                  {order.client_phone && <p className="text-sm text-content-secondary">{order.client_phone}</p>}
                 </>
               )}
             </div>
@@ -561,7 +577,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
 
           {/* Items */}
           <div className="rounded-xl border border-surface-border overflow-hidden">
-            <p className="text-xs text-content-muted font-semibold uppercase tracking-wider px-4 py-3 bg-surface-hover flex items-center gap-1.5">
+            <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider px-4 py-3 bg-surface-hover flex items-center gap-1.5">
               <Wrench className="w-3.5 h-3.5" />Prestations
             </p>
             {editing ? (
@@ -585,7 +601,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                     <input value={line.quantity} onChange={e => updateEL(line._id, 'quantity', parseInt(e.target.value) || 1)} type="number" min={1}
                       className="w-12 px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm text-center" />
                     <button onClick={() => setEditLines(prev => prev.length === 1 ? [newLine()] : prev.filter(l => l._id !== line._id))}
-                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-muted hover:text-status-error"><Trash2 className="w-3.5 h-3.5" /></button>
+                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 ))}
                 <button onClick={() => setEditLines(prev => [...prev, newLine()])} className="text-xs text-content-brand hover:text-brand-400 flex items-center gap-1 font-medium mt-1">
@@ -598,7 +614,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                   <div key={item.id} className="flex items-center justify-between px-4 py-3">
                     <div>
                       <p className="text-sm text-content-primary font-medium">{item.name}</p>
-                      {item.quantity > 1 && <p className="text-xs text-content-muted">{item.quantity} × {formatCurrency(item.price, currency)}</p>}
+                      {item.quantity > 1 && <p className="text-xs text-content-secondary">{item.quantity} × {formatCurrency(item.price, currency)}</p>}
                     </div>
                     <span className="text-sm font-semibold text-content-primary">{formatCurrency(item.total, currency)}</span>
                   </div>
@@ -610,13 +626,13 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           {/* Notes */}
           {editing ? (
             <div>
-              <label className="text-xs text-content-muted font-medium mb-1 block">Notes</label>
+              <label className="text-xs text-content-secondary font-medium mb-1 block">Notes</label>
               <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2}
                 className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm resize-none" />
             </div>
           ) : order.notes && (
             <div className="rounded-xl bg-surface-hover p-4">
-              <p className="text-xs text-content-muted font-semibold uppercase tracking-wider mb-1">Notes</p>
+              <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider mb-1">Notes</p>
               <p className="text-sm text-content-secondary italic">{order.notes}</p>
             </div>
           )}
@@ -624,17 +640,17 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           {/* Totals */}
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <div className="flex justify-between px-4 py-3">
-              <span className="text-content-muted text-sm">Total</span>
+              <span className="text-content-secondary text-sm">Total</span>
               <span className="font-bold text-content-primary">{formatCurrency(order.total, currency)}</span>
             </div>
             {order.paid_amount > 0 && (
               <div className="flex justify-between px-4 py-3 border-t border-surface-border">
-                <span className="text-emerald-400 text-sm">Payé</span>
-                <span className="font-semibold text-emerald-400">-{formatCurrency(order.paid_amount, currency)}</span>
+                <span className="text-status-success text-sm">Payé</span>
+                <span className="font-semibold text-status-success">-{formatCurrency(order.paid_amount, currency)}</span>
               </div>
             )}
             {balance > 0 && (
-              <div className="flex justify-between px-4 py-3 border-t border-surface-border bg-red-500/10">
+              <div className="flex justify-between px-4 py-3 border-t border-surface-border bg-badge-error">
                 <span className="text-status-error text-sm font-semibold">Reste dû</span>
                 <span className="font-bold text-status-error">{formatCurrency(balance, currency)}</span>
               </div>
@@ -656,31 +672,31 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
               <div className="flex gap-2">
                 {order.status === 'attente' && (
                   <button onClick={() => transition('en_cours')} disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold disabled:opacity-40">
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-info hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
                     <Play className="w-4 h-4" />Démarrer
                   </button>
                 )}
                 {order.status === 'en_cours' && (
                   <button onClick={() => transition('termine')} disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-semibold disabled:opacity-40">
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
                     <CheckCircle2 className="w-4 h-4" />Terminer
                   </button>
                 )}
                 {order.status === 'termine' && (
                   <button onClick={() => setShowPay(true)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold">
                     <CreditCard className="w-4 h-4" />Encaisser
                   </button>
                 )}
                 {order.status !== 'paye' && order.status !== 'annule' && (
                   <button onClick={doCancel} disabled={busy}
-                    className="p-2.5 rounded-xl border border-surface-border text-content-muted hover:bg-red-500/20 hover:text-status-error hover:border-red-500/30">
+                    className="p-2.5 rounded-xl border border-surface-border text-content-secondary hover:bg-red-500/20 hover:text-status-error hover:border-red-500/30">
                     <XCircle className="w-4 h-4" />
                   </button>
                 )}
               </div>
               {order.status === 'paye' && (
-                <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-sm border border-emerald-500/20 mb-2">
+                <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-badge-success text-status-success font-bold text-sm border border-status-success/30 mb-2">
                   <Check className="w-4 h-4" />Soldé — {formatCurrency(order.paid_amount, currency)}
                 </div>
               )}
@@ -691,12 +707,12 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                   <Printer className="w-3.5 h-3.5" />Imprimer
                 </button>
                 <button onClick={() => handleWhatsApp('receipt')} disabled={busy}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-emerald-500/30 text-emerald-500 text-xs font-semibold hover:bg-emerald-500/10">
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-status-success/30 text-status-success text-xs font-semibold hover:bg-badge-success">
                   <MessageCircle className="w-3.5 h-3.5" />WhatsApp Reçu
                 </button>
                 {order.status !== 'attente' && order.status !== 'paye' && (
                   <button onClick={() => handleWhatsApp('status_update')} disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-blue-500/30 text-blue-500 text-xs font-semibold hover:bg-blue-500/10">
+                    className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-status-info/30 text-status-info text-xs font-semibold hover:bg-badge-info">
                     <Bell className="w-3.5 h-3.5" />Notifier
                   </button>
                 )}
@@ -718,6 +734,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
 function CatalogModal({ businessId, item, onClose, onSaved }: {
   businessId: string; item?: ServiceCatalogItem; onClose: () => void; onSaved: () => void;
 }) {
+  const { error: notifError } = useNotificationStore();
   const [name,       setName]       = useState(item?.name ?? '');
   const [categoryId, setCategoryId] = useState<string | null>(item?.category_id ?? null);
   const [price,      setPrice]      = useState(String(item?.price ?? ''));
@@ -742,7 +759,7 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
         sort_order:   item?.sort_order ?? 0,
       });
       onSaved();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -751,16 +768,16 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
       <div className="bg-surface-card rounded-2xl w-full max-w-sm shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-surface-border">
           <h3 className="font-bold text-content-primary">{item ? 'Modifier prestation' : 'Nouvelle prestation'}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-4 space-y-3">
           <div>
-            <label className="text-xs text-content-muted font-medium mb-1 block">Nom</label>
+            <label className="text-xs text-content-secondary font-medium mb-1 block">Nom</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="ex: Lavage complet"
               className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
           </div>
           <div>
-            <label className="text-xs text-content-muted font-medium mb-1 block">Catégorie</label>
+            <label className="text-xs text-content-secondary font-medium mb-1 block">Catégorie</label>
             <select value={categoryId || ''} onChange={e => setCategoryId(e.target.value || null)}
               className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm appearance-none">
               <option value="">Aucune catégorie</option>
@@ -771,12 +788,12 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-content-muted font-medium mb-1 block">Prix</label>
+              <label className="text-xs text-content-secondary font-medium mb-1 block">Prix</label>
               <input value={price} onChange={e => setPrice(e.target.value)} type="number" min={0} placeholder="0"
                 className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
             </div>
             <div>
-              <label className="text-xs text-content-muted font-medium mb-1 block">Durée (min)</label>
+              <label className="text-xs text-content-secondary font-medium mb-1 block">Durée (min)</label>
               <input value={duration} onChange={e => setDuration(e.target.value)} type="number" min={0} placeholder="optionnel"
                 className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
             </div>
@@ -799,6 +816,7 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
 function CategoryManagerModal({ businessId, onClose, onSaved }: {
   businessId: string; onClose: () => void; onSaved: () => void;
 }) {
+  const { error: notifError } = useNotificationStore();
   const [cats, setCats] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
@@ -821,7 +839,7 @@ function CategoryManagerModal({ businessId, onClose, onSaved }: {
       setNewName('');
       load();
       onSaved();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
 
@@ -831,7 +849,7 @@ function CategoryManagerModal({ businessId, onClose, onSaved }: {
       await deleteServiceCategory(id);
       load();
       onSaved();
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
   }
 
   return (
@@ -853,12 +871,12 @@ function CategoryManagerModal({ businessId, onClose, onSaved }: {
           </div>
 
           <div className="max-h-64 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {loading ? <div className="text-center py-4"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-content-muted" /></div> :
-             cats.length === 0 ? <p className="text-center py-4 text-sm text-content-muted italic">Aucune catégorie</p> :
+            {loading ? <div className="text-center py-4"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-content-secondary" /></div> :
+             cats.length === 0 ? <p className="text-center py-4 text-sm text-content-secondary italic">Aucune catégorie</p> :
              cats.map(c => (
                <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface-hover border border-surface-border">
                  <span className="text-sm font-bold text-content-primary ml-1">{c.name}</span>
-                 <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg text-content-muted hover:text-status-error hover:bg-red-500/10 transition-colors">
+                 <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-colors">
                    <Trash2 className="w-4 h-4" />
                  </button>
                </div>
@@ -908,14 +926,14 @@ function SubjectsTab({ businessId, currency }: { businessId: string; currency: s
     <div className="flex gap-4 h-full">
       <div className="flex-1 flex flex-col min-h-0">
         <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par référence, description…"
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
         </div>
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-content-muted"><RefreshCw className="w-5 h-5 animate-spin mr-2" />Chargement…</div>
+          <div className="flex-1 flex items-center justify-center text-content-secondary"><RefreshCw className="w-5 h-5 animate-spin mr-2" />Chargement…</div>
         ) : filtered.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-content-muted gap-2">
+          <div className="flex-1 flex flex-col items-center justify-center text-content-secondary gap-2">
             <Package2 className="w-10 h-10 opacity-30" />
             <p className="text-sm">Aucun sujet trouvé</p>
           </div>
@@ -930,7 +948,7 @@ function SubjectsTab({ businessId, currency }: { businessId: string; currency: s
                   <SubjectTypePill type={s.type_sujet} />
                   <p className="font-mono font-bold text-sm">{s.reference}</p>
                 </div>
-                {s.designation && <p className="text-xs text-content-muted">{s.designation}</p>}
+                {s.designation && <p className="text-xs text-content-secondary">{s.designation}</p>}
               </button>
             ))}
           </div>
@@ -942,23 +960,23 @@ function SubjectsTab({ businessId, currency }: { businessId: string; currency: s
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-1"><SubjectTypePill type={selected.type_sujet} /></div>
             <h3 className="font-bold text-content-primary font-mono">{selected.reference}</h3>
-            {selected.designation && <p className="text-sm text-content-muted">{selected.designation}</p>}
+            {selected.designation && <p className="text-sm text-content-secondary">{selected.designation}</p>}
           </div>
-          <p className="text-xs text-content-muted font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2">
+          <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2">
             <History className="w-3.5 h-3.5" />Historique ({history.length})
           </p>
           <div className="flex-1 overflow-y-auto space-y-2">
             {history.length === 0 ? (
-              <p className="text-content-muted text-sm">Aucun historique</p>
+              <p className="text-content-secondary text-sm">Aucun historique</p>
             ) : history.map(o => (
               <div key={o.id} className="rounded-xl border border-surface-border p-3">
                 <div className="flex items-center justify-between mb-1">
                   <OTNumber n={o.order_number} />
                   <StatusBadge status={o.status} />
                 </div>
-                <p className="text-xs text-content-muted">{new Date(o.created_at).toLocaleDateString('fr-FR')}</p>
+                <p className="text-xs text-content-secondary">{new Date(o.created_at).toLocaleDateString('fr-FR')}</p>
                 <p className="text-sm font-semibold text-content-primary mt-1">{formatCurrency(o.total, currency)}</p>
-                {(o.items ?? []).slice(0, 2).map(i => <p key={i.id} className="text-xs text-content-muted">· {i.name}</p>)}
+                {(o.items ?? []).slice(0, 2).map(i => <p key={i.id} className="text-xs text-content-secondary">· {i.name}</p>)}
               </div>
             ))}
           </div>
@@ -1012,7 +1030,7 @@ export default function ServicesPage() {
         getServiceCategories(businessId),
       ]);
       setOrders(o); setCatalog(c); setAllCatalog(ac); setServiceCategories(cats);
-    } catch (e: any) { notifError(e.message); }
+    } catch (e: any) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }
 
@@ -1043,20 +1061,34 @@ export default function ServicesPage() {
     e.stopPropagation();
     try {
       await updateServiceOrderStatus(id, status);
+      const order = orders.find(o => o.id === id);
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
       success('Statut mis à jour');
-    } catch (err: any) { notifError(err.message); }
+      // Push notification client (fire-and-forget)
+      if (order) {
+        fetch('/api/client-push/notify', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serviceOrderId: id,
+            status,
+            orderRef:     `OT-${String(order.order_number).padStart(4, '0')}`,
+            businessName: business?.name ?? '',
+          }),
+        }).catch(() => {});
+      }
+    } catch (err: any) { notifError(toUserError(err)); }
   }
 
   async function deleteCatalogItem(id: string) {
     if (!confirm('Supprimer cette prestation ?')) return;
     try { await deleteServiceCatalogItem(id); await loadOrders(); success('Prestation supprimée'); }
-    catch (e: any) { notifError(e.message); }
+    catch (e: any) { notifError(toUserError(e)); }
   }
 
   async function toggleCatalog(id: string, active: boolean) {
     try { await toggleServiceCatalogItem(id, active); await loadOrders(); }
-    catch (e: any) { notifError(e.message); }
+    catch (e: any) { notifError(toUserError(e)); }
   }
 
   function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
@@ -1092,7 +1124,7 @@ export default function ServicesPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-content-primary">Prestations de service</h1>
-            <p className="text-xs text-content-muted">{counts.all} ordre{counts.all !== 1 ? 's' : ''} de travail</p>
+            <p className="text-xs text-content-secondary">{counts.all} ordre{counts.all !== 1 ? 's' : ''} de travail</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1116,7 +1148,7 @@ export default function ServicesPage() {
           <button key={key} onClick={() => setTab(key)}
             className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors', tab === key
               ? 'bg-brand-500/15 text-content-brand border border-brand-500/30'
-              : 'text-content-muted hover:text-content-primary hover:bg-surface-hover')}>
+              : 'text-content-secondary hover:text-content-primary hover:bg-surface-hover')}>
             {label}
           </button>
         ))}
@@ -1130,23 +1162,23 @@ export default function ServicesPage() {
             <div className="px-6 py-3 bg-surface-card border-b border-surface-border shrink-0 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher référence, client, prestation…"
                     className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
                 </div>
                 <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
                   className="px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
                 {dateFilter && (
-                  <button onClick={() => setDateFilter('')} className="p-2 rounded-xl hover:bg-surface-hover text-content-muted"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setDateFilter('')} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
                 )}
-                <button onClick={loadOrders} className="p-2 rounded-xl hover:bg-surface-hover text-content-muted"><RefreshCw className="w-4 h-4" /></button>
+                <button onClick={loadOrders} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><RefreshCw className="w-4 h-4" /></button>
               </div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {STATUS_TABS.map(({ key, label }) => (
                   <button key={key} onClick={() => setStatusFilter(key as any)}
                     className={cn('flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors', statusFilter === key
                       ? 'bg-brand-500 text-white'
-                      : 'bg-surface-hover text-content-muted hover:text-content-primary')}>
+                      : 'bg-surface-hover text-content-secondary hover:text-content-primary')}>
                     {label}
                     {(counts[key] ?? 0) > 0 && (
                       <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full', statusFilter === key ? 'bg-white/20 text-white' : 'bg-surface-border')}>
@@ -1161,11 +1193,11 @@ export default function ServicesPage() {
             {/* Orders grid */}
             <div className="flex-1 overflow-y-auto p-6">
               {loading ? (
-                <div className="flex items-center justify-center h-40 text-content-muted">
+                <div className="flex items-center justify-center h-40 text-content-secondary">
                   <RefreshCw className="w-5 h-5 animate-spin mr-2" />Chargement…
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-content-muted gap-3">
+                <div className="flex flex-col items-center justify-center h-40 text-content-secondary gap-3">
                   <Wrench className="w-12 h-12 opacity-20" />
                   <p className="text-sm">Aucun ordre de travail</p>
                   <button onClick={() => setShowNewOT(true)} className="text-xs text-content-brand hover:underline flex items-center gap-1">
@@ -1191,16 +1223,16 @@ export default function ServicesPage() {
                               <p className="text-base font-mono font-bold text-content-primary">{order.subject_ref}</p>
                             </div>
                           )}
-                          {order.subject_info && <p className="text-xs text-content-muted mb-1">{order.subject_info}</p>}
+                          {order.subject_info && <p className="text-xs text-content-secondary mb-1">{order.subject_info}</p>}
                           {order.client_name && (
                             <p className="text-sm text-content-secondary flex items-center gap-1 mb-1"><User className="w-3 h-3" />{order.client_name}</p>
                           )}
 
                           <div className="mt-2 space-y-0.5">
                             {(order.items ?? []).slice(0, 3).map(item => (
-                              <p key={item.id} className="text-xs text-content-muted truncate">· {item.name}{item.quantity > 1 ? ` ×${item.quantity}` : ''}</p>
+                              <p key={item.id} className="text-xs text-content-secondary truncate">· {item.name}{item.quantity > 1 ? ` ×${item.quantity}` : ''}</p>
                             ))}
-                            {(order.items ?? []).length > 3 && <p className="text-xs text-content-muted">+{(order.items ?? []).length - 3} autres…</p>}
+                            {(order.items ?? []).length > 3 && <p className="text-xs text-content-secondary">+{(order.items ?? []).length - 3} autres…</p>}
                           </div>
 
                           <div className="mt-3 flex items-center justify-between">
@@ -1210,7 +1242,7 @@ export default function ServicesPage() {
                                 <span className="ml-2 text-xs text-status-error">reste {formatCurrency(balance, currency)}</span>
                               )}
                             </div>
-                            <span className="text-xs text-content-muted">{new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
+                            <span className="text-xs text-content-secondary">{new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
                           </div>
                         </div>
 
@@ -1218,19 +1250,19 @@ export default function ServicesPage() {
                         <div className="flex border-t border-surface-border divide-x divide-surface-border">
                           {order.status === 'attente' && (
                             <button onClick={e => quickTransition(order.id, 'en_cours', e)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-blue-400 hover:bg-blue-500/10 transition-colors">
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-info hover:bg-badge-info transition-colors">
                               <Play className="w-3.5 h-3.5" />Démarrer
                             </button>
                           )}
                           {order.status === 'en_cours' && (
                             <button onClick={e => quickTransition(order.id, 'termine', e)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-green-400 hover:bg-green-500/10 transition-colors">
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-success hover:bg-badge-success transition-colors">
                               <CheckCircle2 className="w-3.5 h-3.5" />Terminer
                             </button>
                           )}
                           {order.status === 'termine' && (
                             <button onClick={e => { e.stopPropagation(); setSelectedOrder(order); }}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-success hover:bg-badge-success transition-colors">
                               <CreditCard className="w-3.5 h-3.5" />Encaisser
                             </button>
                           )}
@@ -1238,7 +1270,7 @@ export default function ServicesPage() {
                             <div className="flex-1" />
                           )}
                           <button onClick={e => handlePrintOrder(order, e)}
-                            className="px-4 flex items-center justify-center text-content-muted hover:text-content-primary hover:bg-surface-hover transition-colors">
+                            className="px-4 flex items-center justify-center text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors">
                             <Printer className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -1269,7 +1301,7 @@ export default function ServicesPage() {
               </div>
 
               {allCatalog.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-content-muted gap-3">
+                <div className="flex flex-col items-center justify-center py-16 text-content-secondary gap-3">
                   <Package2 className="w-12 h-12 opacity-20" />
                   <p className="text-sm">Aucune prestation dans le catalogue</p>
                   <button onClick={() => setCatalogModal({})} className="text-xs text-content-brand hover:underline">Ajouter une prestation</button>
@@ -1282,7 +1314,7 @@ export default function ServicesPage() {
                     if (items.length === 0) return null;
                     return (
                       <div key={cat.id || 'none'}>
-                        <p className="text-xs font-bold text-content-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <p className="text-xs font-bold text-content-secondary uppercase tracking-widest mb-3 flex items-center gap-2">
                           <span className="w-1 h-3 bg-brand-500 rounded-full" />
                           {cat.name}
                         </p>
@@ -1291,17 +1323,17 @@ export default function ServicesPage() {
                             <div key={item.id} className={cn('flex items-center gap-3 p-3 rounded-xl border transition-colors',
                               item.is_active ? 'bg-surface-card border-surface-border' : 'bg-surface-hover border-surface-border opacity-60')}>
                               <div className="flex-1 min-w-0">
-                                <p className={cn('text-sm font-semibold', item.is_active ? 'text-content-primary' : 'text-content-muted line-through')}>{item.name}</p>
-                                {item.duration_min && <p className="text-xs text-content-muted">{item.duration_min} min</p>}
+                                <p className={cn('text-sm font-semibold', item.is_active ? 'text-content-primary' : 'text-content-secondary line-through')}>{item.name}</p>
+                                {item.duration_min && <p className="text-xs text-content-secondary">{item.duration_min} min</p>}
                               </div>
                               <span className="font-bold text-content-primary text-sm">{formatCurrency(item.price, currency)}</span>
                               <div className="flex items-center gap-1">
                                 <button onClick={() => toggleCatalog(item.id, !item.is_active)}
-                                  className={cn('p-1.5 rounded-lg transition-colors', item.is_active ? 'text-green-400 hover:bg-green-500/10' : 'text-content-muted hover:bg-surface-hover')}>
+                                  className={cn('p-1.5 rounded-lg transition-colors', item.is_active ? 'text-status-success hover:bg-badge-success' : 'text-content-secondary hover:bg-surface-hover')}>
                                   {item.is_active ? <Check className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                                 </button>
-                                <button onClick={() => setCatalogModal({ item })} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => deleteCatalogItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-muted hover:text-status-error"><Trash2 className="w-4 h-4" /></button>
+                                <button onClick={() => setCatalogModal({ item })} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => deleteCatalogItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error"><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
                           ))}

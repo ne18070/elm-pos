@@ -20,16 +20,17 @@ export function toUserError(err: unknown): string {
       msg.includes('already exists')) {
     return 'Cet élément existe déjà.';
   }
-  if (msg.includes('foreign key') || msg.includes('violates') ||
-      msg.includes('referenced') || msg.includes('still referenced')) {
+  if (msg.includes('permission denied') || msg.includes('row-level security') ||
+      msg.includes('unauthorized') || msg.includes('403')) {
+    return "Vous n'avez pas les droits nécessaires pour cette action.";
+  }
+  if (msg.includes('foreign key') || msg.includes('still referenced') ||
+      msg.includes('referenced') ||
+      (msg.includes('violates') && !msg.includes('row-level security'))) {
     return 'Impossible de supprimer : cet élément est utilisé ailleurs.';
   }
   if (msg.includes('not found') || msg.includes('no rows')) {
     return 'Élément introuvable.';
-  }
-  if (msg.includes('permission denied') || msg.includes('row-level security') ||
-      msg.includes('unauthorized') || msg.includes('403')) {
-    return "Vous n'avez pas les droits nécessaires pour cette action.";
   }
   if (msg.includes('jwt') || msg.includes('token') || msg.includes('session expired') ||
       msg.includes('invalid token') || msg.includes('401')) {

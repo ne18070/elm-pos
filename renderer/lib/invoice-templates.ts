@@ -1,5 +1,6 @@
 import type { Order, Business } from '../../types';
 import type { Staff, StaffPayment, StaffAttendance } from '../../services/supabase/staff';
+import { formatCurrency } from './utils';
 
 // --- Montant en lettres (français) -------------------------------------------
 
@@ -70,12 +71,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   partial: 'Paiement mixte',
 };
 
-function fmt(amount: number, currency = 'XOF'): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount) + '\u00a0' + currency;
-}
+const fmt = formatCurrency;
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -140,6 +136,8 @@ export function generateThermalReceipt(order: Order, business: Business): string
       font-size: 12px;
       color: #000;
       width: 72mm;
+      margin: 0 auto;
+      overflow-wrap: anywhere;
     }
     .center   { text-align: center; }
     .right    { text-align: right; }
@@ -352,8 +350,10 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
       color: #1a202c;
       display: flex;
       gap: 0;
-      width: 277mm;
-      height: 190mm;
+      width: 100%;
+      max-width: 277mm;
+      min-height: 190mm;
+      margin: 0 auto;
     }
 
     /* -- Les deux colonnes -- */
@@ -1574,7 +1574,7 @@ export function generateServiceOrderReceipt(data: ServiceReceiptData, business: 
 <style>
   @page { size: 80mm auto; margin: 4mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; width: 72mm; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; width: 72mm; margin: 0 auto; overflow-wrap: anywhere; }
   .center { text-align: center; }
   .biz-name { font-size: 15px; font-weight: bold; }
   .ot-num { font-size: 20px; font-weight: bold; letter-spacing: 3px; margin: 6px 0; }
