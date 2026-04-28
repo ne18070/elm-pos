@@ -372,7 +372,7 @@ export default function PublicTrackingView() {
                   </div>
                   <div>
                     <p className="font-bold text-content-primary text-sm">Notifications activées</p>
-                    <p className="text-xs text-content-secondary mt-0.5">Vous serez alerté à chaque avancement de votre dossier.</p>
+                    <p className="text-xs text-content-secondary mt-0.5">Vous serez alerté à chaque avancement.</p>
                   </div>
                 </>
               ) : pushState === 'denied' ? (

@@ -81,7 +81,7 @@ export default function ComptabilitePage() {
         syncAccounting(business.id),
         business.type === 'hotel' || features.includes('hotel') ? syncHotelAccounting(business.id) : Promise.resolve(0),
         features.includes('honoraires') || features.includes('dossiers') ? syncHonorairesAccounting(business.id) : Promise.resolve(0),
-        features.includes('services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
+        business.type === 'service' || features.includes('service') || features.includes('services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
       ]);
 
       const total = results.reduce((s, r) => s + (r.status === 'fulfilled' ? (r.value as number) : 0), 0);

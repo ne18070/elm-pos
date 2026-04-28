@@ -98,13 +98,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const currentNavItem = NAV_ITEMS.find((item) => pathname.startsWith(item.href));
     if (currentNavItem?.permission) {
       const { overrides } = usePermissionsStore.getState();
-      const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides);
+      const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides, business);
       if (!hasAccess) {
         // Rediriger vers la page par défaut de l'établissement (probablement /pos ou /hotel)
         router.replace('/pos');
       }
     }
-  }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck]);
+  }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck, business]);
 
   if (isLoading) {
     return (

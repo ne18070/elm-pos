@@ -460,6 +460,17 @@ export async function syncHonorairesAccounting(businessId: string): Promise<numb
 //   Crédit 7065 (Prestations de services)     : paid_amount
 
 export async function syncServiceOrdersAccounting(businessId: string): Promise<number> {
+  const { data: rpcData, error: rpcError } = await rpc('sync_service_orders_accounting', {
+    p_business_id: businessId,
+  });
+
+  if (!rpcError) return Number(rpcData ?? 0);
+
+  const rpcMessage = `${rpcError.code ?? ''} ${rpcError.message ?? ''}`;
+  if (!rpcMessage.includes('sync_service_orders_accounting')) {
+    throw new Error(rpcError.message);
+  }
+
   const { data: existing } = await db('journal_entries')
     .select('source_id')
     .eq('business_id', businessId)

@@ -9,6 +9,7 @@ export type PermissionKey =
   | 'view_livraisons'
   | 'view_livreurs'
   | 'view_orders'
+  | 'view_services'
   | 'view_clients'
   | 'view_products'
   | 'view_approvisionnement'
@@ -38,6 +39,13 @@ export type PermissionKey =
   | 'manage_rooms'
   | 'manage_expenses'
   | 'delete_data'
+  | 'create_service_order'
+  | 'edit_service_order'
+  | 'update_service_status'
+  | 'collect_service_payment'
+  | 'share_service_order'
+  | 'cancel_service_order'
+  | 'manage_service_catalog'
   // -- Legal action permissions ------------------------------------------------
   | 'create_dossier'
   | 'edit_dossier'
@@ -65,6 +73,7 @@ export const PERMISSIONS: Record<PermissionKey, PermissionMeta> = {
   view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'retail' },
   view_cash_session:      { label: 'Clôture caisse',               group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
   view_orders:            { label: 'Commandes',                    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'retail' },
+  view_services:          { label: 'Prestations de service',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
   view_livraisons:        { label: 'Livraisons',                   group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'delivery' },
   view_livreurs:          { label: 'Gestion des livreurs',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'delivery' },
   view_clients:           { label: 'Clients',                      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
@@ -98,6 +107,14 @@ export const PERMISSIONS: Record<PermissionKey, PermissionMeta> = {
   manage_rooms:           { label: 'Gérer les chambres',           group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'hotel' },
   manage_expenses:        { label: 'Enregistrer des dépenses',     group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'expenses' },
   delete_data:            { label: 'Supprimer des données',        group: 'admin',      defaultRoles: ['admin', 'owner'] },
+
+  create_service_order:   { label: 'Creer des ordres de travail',  group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
+  edit_service_order:     { label: 'Modifier des ordres de travail', group: 'gestion',   defaultRoles: ['manager', 'admin', 'owner'], feature: 'service' },
+  update_service_status:  { label: 'Changer le statut des prestations', group: 'gestion', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
+  collect_service_payment:{ label: 'Encaisser les prestations',     group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'service' },
+  share_service_order:    { label: 'Imprimer / partager les recus prestation', group: 'gestion', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
+  cancel_service_order:   { label: 'Annuler des ordres de travail', group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'service' },
+  manage_service_catalog: { label: 'Gerer le catalogue prestations', group: 'gestion',   defaultRoles: ['manager', 'admin', 'owner'], feature: 'service' },
 
   // Actions Juridiques (Dossiers)
   create_dossier:         { label: 'Créer de nouveaux dossiers',    group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'dossiers' },

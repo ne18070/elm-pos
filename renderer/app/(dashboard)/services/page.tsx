@@ -6,14 +6,15 @@ import {
   Clock, CheckCircle2, XCircle, Edit2, Trash2, Play,
   Square, CreditCard, Package2, ChevronDown, ChevronUp,
   RefreshCw, User, Phone, History, MessageCircle, Bell,
-  ExternalLink, Copy, Share2, LayoutGrid
+  ExternalLink, Copy, Share2, LayoutGrid, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
-  getServiceOrders, getServiceCatalog, getAllServiceCatalog, getSubjects,
+  getServiceOrders, getServiceOrderCounts, getServiceCatalog, getAllServiceCatalog, getSubjects,
   createServiceOrder, updateServiceOrderStatus, payServiceOrder,
   updateServiceOrder, cancelServiceOrder,
   getServiceCategories, upsertServiceCategory, deleteServiceCategory,
@@ -98,6 +99,7 @@ function NewOTModal({
   onClose: () => void;
   onCreated: (o: ServiceOrder) => void;
 }) {
+  const { user } = useAuthStore();
   const { error: notifError } = useNotificationStore();
   const [subjectType, setSubjectType] = useState<SubjectType>('vehicule');
   const [subjectRef,  setSubjectRef]  = useState('');
@@ -162,6 +164,8 @@ function NewOTModal({
         clientName:  clientName.trim() || undefined,
         clientPhone: clientPhone.trim() || undefined,
         notes:       notes.trim() || undefined,
+        createdBy:   user?.id,
+        createdByName: user?.full_name,
         items: validLines.map(l => ({
           service_id: l.service_id,
           name:       l.name.trim(),
@@ -330,6 +334,7 @@ function NewOTModal({
 function PayModal({ order, currency, onClose, onPaid }: {
   order: ServiceOrder; currency: string; onClose: () => void; onPaid: () => void;
 }) {
+  const { user } = useAuthStore();
   const { error: notifError } = useNotificationStore();
   const balance = order.total - order.paid_amount;
   const [amount, setAmount] = useState(String(balance));
@@ -338,7 +343,7 @@ function PayModal({ order, currency, onClose, onPaid }: {
 
   async function handlePay() {
     setSaving(true);
-    try { await payServiceOrder(order.id, parseFloat(amount) || 0, method); onPaid(); }
+    try { await payServiceOrder(order.id, parseFloat(amount) || 0, method, { userId: user?.id, userName: user?.full_name }); onPaid(); }
     catch (e: any) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
@@ -392,7 +397,8 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
   order: ServiceOrder; currency: string; catalog: ServiceCatalogItem[];
   businessId: string; onClose: () => void; onRefresh: () => void;
 }) {
-  const { business, user } = useAuthStore();
+  const { business, businesses, user } = useAuthStore();
+  const can = useCan();
   const { success, error: notifError } = useNotificationStore();
   const [showPay, setShowPay] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -410,11 +416,23 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
 
   const balance = order.total - order.paid_amount;
   const typeCfg = subjectTypeCfg(order.subject_type);
+  const canEditOrder = can('edit_service_order');
+  const canUpdateStatus = can('update_service_status');
+  const canCollectPayment = can('collect_service_payment');
+  const canShareOrder = can('share_service_order');
+  const canCancelOrder = can('cancel_service_order');
+  const activeRole = businesses.find(m => m.business.id === business?.id)?.role ?? user?.role;
+  const canEditThisOrder = canEditOrder && order.status !== 'annule' && (order.status !== 'paye' || activeRole === 'owner');
+
+  function deny() {
+    notifError('Permission insuffisante');
+  }
 
   async function transition(newStatus: ServiceOrderStatus) {
+    if (!canUpdateStatus) { deny(); return; }
     setBusy(true);
     try {
-      await updateServiceOrderStatus(order.id, newStatus);
+      await updateServiceOrderStatus(order.id, newStatus, { userId: user?.id, userName: user?.full_name });
       fetch('/api/client-push/notify', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -432,14 +450,16 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
   }
 
   async function doCancel() {
+    if (!canCancelOrder) { deny(); return; }
     if (!confirm('Annuler cet ordre de travail ?')) return;
     setBusy(true);
-    try { await cancelServiceOrder(order.id); onRefresh(); onClose(); }
+    try { await cancelServiceOrder(order.id, { userId: user?.id, userName: user?.full_name }); onRefresh(); onClose(); }
     catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
 
   async function saveEdit() {
+    if (!canEditThisOrder) { deny(); return; }
     const validLines = editLines.filter(l => l.name.trim() && parseFloat(l.price) > 0);
     setBusy(true);
     try {
@@ -456,7 +476,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           price:      parseFloat(l.price),
           quantity:   l.quantity,
         })),
-      });
+      }, { userId: user?.id, userName: user?.full_name, role: activeRole });
       setEditing(false);
       onRefresh(); onClose();
     } catch (e: any) { notifError(toUserError(e)); }
@@ -464,6 +484,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
   }
 
   async function handleWhatsApp(type: 'receipt' | 'status_update') {
+    if (!canShareOrder) { deny(); return; }
     if (!business || !user) return;
     try {
       setBusy(true);
@@ -478,6 +499,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
   }
 
   function handlePrint() {
+    if (!canShareOrder) { deny(); return; }
     if (!business) return;
     printHtml(generateServiceOrderReceipt({
       id: order.id, order_number: order.order_number, created_at: order.created_at,
@@ -510,8 +532,10 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
             {order.subject_ref && <p className="text-sm font-mono font-bold text-content-primary mt-0.5">{order.subject_ref}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrint} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary" title="Imprimer"><Printer className="w-4 h-4" /></button>
-            {order.status !== 'paye' && order.status !== 'annule' && (
+            {canShareOrder && (
+              <button onClick={handlePrint} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary" title="Imprimer"><Printer className="w-4 h-4" /></button>
+            )}
+            {canEditThisOrder && (
               <button onClick={() => setEditing(v => !v)} className={cn('p-2 rounded-xl hover:bg-surface-hover', editing ? 'text-brand-400 bg-brand-500/10' : 'text-content-secondary')}><Edit2 className="w-4 h-4" /></button>
             )}
           </div>
@@ -670,25 +694,25 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
           ) : (
             <>
               <div className="flex gap-2">
-                {order.status === 'attente' && (
+                {canUpdateStatus && order.status === 'attente' && (
                   <button onClick={() => transition('en_cours')} disabled={busy}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-info hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
                     <Play className="w-4 h-4" />Démarrer
                   </button>
                 )}
-                {order.status === 'en_cours' && (
+                {canUpdateStatus && order.status === 'en_cours' && (
                   <button onClick={() => transition('termine')} disabled={busy}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
                     <CheckCircle2 className="w-4 h-4" />Terminer
                   </button>
                 )}
-                {order.status === 'termine' && (
+                {canCollectPayment && order.status === 'termine' && (
                   <button onClick={() => setShowPay(true)}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold">
                     <CreditCard className="w-4 h-4" />Encaisser
                   </button>
                 )}
-                {order.status !== 'paye' && order.status !== 'annule' && (
+                {canCancelOrder && order.status !== 'paye' && order.status !== 'annule' && (
                   <button onClick={doCancel} disabled={busy}
                     className="p-2.5 rounded-xl border border-surface-border text-content-secondary hover:bg-red-500/20 hover:text-status-error hover:border-red-500/30">
                     <XCircle className="w-4 h-4" />
@@ -702,6 +726,7 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
               )}
 
               {/* Barre de partage / actions secondaires */}
+              {canShareOrder && (
               <div className="flex gap-2">
                 <button onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-surface-border text-content-secondary text-xs font-semibold hover:bg-surface-hover">
                   <Printer className="w-3.5 h-3.5" />Imprimer
@@ -717,12 +742,13 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                   </button>
                 )}
               </div>
+              )}
             </>
           )}
         </div>
       </div>
 
-      {showPay && (
+      {showPay && canCollectPayment && (
         <PayModal order={order} currency={currency} onClose={() => setShowPay(false)} onPaid={() => { setShowPay(false); onRefresh(); onClose(); }} />
       )}
     </>
@@ -991,7 +1017,8 @@ function SubjectsTab({ businessId, currency }: { businessId: string; currency: s
 type PageTab = 'orders' | 'catalog' | 'subjects';
 
 export default function ServicesPage() {
-  const { business } = useAuthStore();
+  const { business, user } = useAuthStore();
+  const can = useCan();
   const { success, error: notifError } = useNotificationStore();
   const currency = business?.currency ?? 'XOF';
   const businessId = business?.id ?? '';
@@ -1005,10 +1032,27 @@ export default function ServicesPage() {
   const [statusFilter, setStatusFilter] = useState<ServiceOrderStatus | 'all'>('all');
   const [search,       setSearch]       = useState('');
   const [dateFilter,   setDateFilter]   = useState('');
+  const [page,         setPage]         = useState(1);
+  const [totalCount,   setTotalCount]   = useState(0);
+  const [counts,       setCounts]       = useState<Record<ServiceOrderStatus | 'all', number>>({
+    all: 0, attente: 0, en_cours: 0, termine: 0, paye: 0, annule: 0,
+  });
   const [showNewOT,    setShowNewOT]    = useState(false);
   const [selectedOrder,  setSelectedOrder]  = useState<ServiceOrder | null>(null);
   const [catalogModal, setCatalogModal] = useState<{ item?: ServiceCatalogItem } | null>(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const canViewServices = can('view_services');
+  const canCreateOrder = can('create_service_order');
+  const canUpdateStatus = can('update_service_status');
+  const canCollectPayment = can('collect_service_payment');
+  const canShareOrder = can('share_service_order');
+  const canManageCatalog = can('manage_service_catalog');
+  const pageSize = 25;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  function deny() {
+    notifError('Permission insuffisante');
+  }
 
   function copyPublicLink() {
     if (!business) return;
@@ -1023,44 +1067,35 @@ export default function ServicesPage() {
     if (!businessId) return;
     setLoading(true);
     try {
-      const [o, c, ac, cats] = await Promise.all([
-        getServiceOrders(businessId, { date: dateFilter || undefined }),
+      const [ordersResult, orderCounts, c, ac, cats] = await Promise.all([
+        getServiceOrders(businessId, {
+          date: dateFilter || undefined,
+          status: statusFilter,
+          search: search || undefined,
+          page,
+          pageSize,
+        }),
+        getServiceOrderCounts(businessId, { date: dateFilter || undefined, search: search || undefined }),
         getServiceCatalog(businessId),
         getAllServiceCatalog(businessId),
         getServiceCategories(businessId),
       ]);
-      setOrders(o); setCatalog(c); setAllCatalog(ac); setServiceCategories(cats);
+      setOrders(ordersResult.data);
+      setTotalCount(ordersResult.count);
+      setCounts(orderCounts);
+      setCatalog(c); setAllCatalog(ac); setServiceCategories(cats);
     } catch (e: any) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }
 
-  useEffect(() => { loadOrders(); }, [businessId, dateFilter]);
-
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: orders.length };
-    for (const o of orders) c[o.status] = (c[o.status] ?? 0) + 1;
-    return c;
-  }, [orders]);
-
-  const filtered = useMemo(() => {
-    let list = orders;
-    if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(o =>
-        (o.subject_ref ?? '').toLowerCase().includes(q) ||
-        (o.subject_info ?? '').toLowerCase().includes(q) ||
-        (o.client_name ?? '').toLowerCase().includes(q) ||
-        (o.items ?? []).some(i => i.name.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [orders, statusFilter, search]);
+  useEffect(() => { setPage(1); }, [businessId, dateFilter, statusFilter, search]);
+  useEffect(() => { loadOrders(); }, [businessId, dateFilter, statusFilter, search, page]);
 
   async function quickTransition(id: string, status: ServiceOrderStatus, e: React.MouseEvent) {
     e.stopPropagation();
+    if (!canUpdateStatus) { deny(); return; }
     try {
-      await updateServiceOrderStatus(id, status);
+      await updateServiceOrderStatus(id, status, { userId: user?.id, userName: user?.full_name });
       const order = orders.find(o => o.id === id);
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
       success('Statut mis à jour');
@@ -1081,18 +1116,21 @@ export default function ServicesPage() {
   }
 
   async function deleteCatalogItem(id: string) {
+    if (!canManageCatalog) { deny(); return; }
     if (!confirm('Supprimer cette prestation ?')) return;
     try { await deleteServiceCatalogItem(id); await loadOrders(); success('Prestation supprimée'); }
     catch (e: any) { notifError(toUserError(e)); }
   }
 
   async function toggleCatalog(id: string, active: boolean) {
+    if (!canManageCatalog) { deny(); return; }
     try { await toggleServiceCatalogItem(id, active); await loadOrders(); }
     catch (e: any) { notifError(toUserError(e)); }
   }
 
   function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
     e.stopPropagation();
+    if (!canShareOrder) { deny(); return; }
     if (!business) return;
     printHtml(generateServiceOrderReceipt({
       id: o.id, order_number: o.order_number, created_at: o.created_at,
@@ -1114,10 +1152,22 @@ export default function ServicesPage() {
     { key: 'annule',   label: 'Annulé'   },
   ] as const;
 
+  if (!canViewServices) {
+    return (
+      <div className="flex h-full items-center justify-center bg-surface-base p-6">
+        <div className="max-w-sm text-center">
+          <Wrench className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
+          <h1 className="text-lg font-bold text-content-primary">Acces refuse</h1>
+          <p className="mt-1 text-sm text-content-secondary">Vous n'avez pas la permission d'ouvrir les prestations de service.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-surface-base">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-surface-card border-b border-surface-border shrink-0">
+      <div className="flex flex-col gap-3 px-4 py-4 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-6">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-brand-500/20 flex items-center justify-center">
             <Wrench className="w-5 h-5 text-content-brand" />
@@ -1127,19 +1177,23 @@ export default function ServicesPage() {
             <p className="text-xs text-content-secondary">{counts.all} ordre{counts.all !== 1 ? 's' : ''} de travail</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={copyPublicLink}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover">
-            <Share2 className="w-4 h-4" />Partager
-          </button>
-          <button onClick={() => setShowNewOT(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-sm">
-            <Plus className="w-4 h-4" />Nouvel OT
-          </button>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          {canShareOrder && (
+            <button onClick={copyPublicLink}
+              className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover sm:flex-none">
+              <Share2 className="w-4 h-4" />Partager
+            </button>
+          )}
+          {canCreateOrder && (
+            <button onClick={() => setShowNewOT(true)}
+              className="flex flex-1 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-sm sm:flex-none">
+              <Plus className="w-4 h-4" />Nouvel OT
+            </button>
+          )}
         </div>
       </div>
       {/* Tab bar */}
-      <div className="flex items-center gap-1 px-6 py-3 bg-surface-card border-b border-surface-border shrink-0">
+      <div className="flex items-center gap-1 overflow-x-auto px-4 py-3 bg-surface-card border-b border-surface-border shrink-0 md:px-6">
         {([
           { key: 'orders',   label: 'Ordres de travail' },
           { key: 'catalog',  label: 'Catalogue' },
@@ -1159,15 +1213,15 @@ export default function ServicesPage() {
         {tab === 'orders' && (
           <>
             {/* Filters */}
-            <div className="px-6 py-3 bg-surface-card border-b border-surface-border shrink-0 space-y-3">
-              <div className="flex items-center gap-3">
+            <div className="px-4 py-3 bg-surface-card border-b border-surface-border shrink-0 space-y-3 md:px-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher référence, client, prestation…"
                     className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
                 </div>
                 <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
-                  className="px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
+                  className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm sm:w-auto" />
                 {dateFilter && (
                   <button onClick={() => setDateFilter('')} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
                 )}
@@ -1191,22 +1245,25 @@ export default function ServicesPage() {
             </div>
 
             {/* Orders grid */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
               {loading ? (
                 <div className="flex items-center justify-center h-40 text-content-secondary">
                   <RefreshCw className="w-5 h-5 animate-spin mr-2" />Chargement…
                 </div>
-              ) : filtered.length === 0 ? (
+              ) : orders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-content-secondary gap-3">
                   <Wrench className="w-12 h-12 opacity-20" />
                   <p className="text-sm">Aucun ordre de travail</p>
+                  {canCreateOrder && (
                   <button onClick={() => setShowNewOT(true)} className="text-xs text-content-brand hover:underline flex items-center gap-1">
                     <Plus className="w-3.5 h-3.5" />Créer un OT
                   </button>
+                  )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filtered.map(order => {
+                <>
+                <div className="space-y-3 md:hidden">
+                  {orders.map(order => {
                     const balance = order.total - order.paid_amount;
                     return (
                       <div key={order.id} onClick={() => setSelectedOrder(order)}
@@ -1248,19 +1305,19 @@ export default function ServicesPage() {
 
                         {/* Quick actions */}
                         <div className="flex border-t border-surface-border divide-x divide-surface-border">
-                          {order.status === 'attente' && (
+                          {canUpdateStatus && order.status === 'attente' && (
                             <button onClick={e => quickTransition(order.id, 'en_cours', e)}
                               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-info hover:bg-badge-info transition-colors">
                               <Play className="w-3.5 h-3.5" />Démarrer
                             </button>
                           )}
-                          {order.status === 'en_cours' && (
+                          {canUpdateStatus && order.status === 'en_cours' && (
                             <button onClick={e => quickTransition(order.id, 'termine', e)}
                               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-success hover:bg-badge-success transition-colors">
                               <CheckCircle2 className="w-3.5 h-3.5" />Terminer
                             </button>
                           )}
-                          {order.status === 'termine' && (
+                          {canCollectPayment && order.status === 'termine' && (
                             <button onClick={e => { e.stopPropagation(); setSelectedOrder(order); }}
                               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-success hover:bg-badge-success transition-colors">
                               <CreditCard className="w-3.5 h-3.5" />Encaisser
@@ -1269,15 +1326,117 @@ export default function ServicesPage() {
                           {(order.status === 'paye' || order.status === 'annule') && (
                             <div className="flex-1" />
                           )}
+                          {canShareOrder && (
                           <button onClick={e => handlePrintOrder(order, e)}
                             className="px-4 flex items-center justify-center text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors">
                             <Printer className="w-3.5 h-3.5" />
                           </button>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
+
+                <div className="hidden md:block overflow-hidden rounded-lg border border-surface-border bg-surface-card">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-surface-border text-sm">
+                      <thead className="bg-surface-hover text-xs font-semibold uppercase text-content-secondary">
+                        <tr>
+                          <th className="px-4 py-3 text-left">OT</th>
+                          <th className="px-4 py-3 text-left">Date</th>
+                          <th className="px-4 py-3 text-left">Client</th>
+                          <th className="px-4 py-3 text-left">Reference</th>
+                          <th className="px-4 py-3 text-left">Prestations</th>
+                          <th className="px-4 py-3 text-left">Statut</th>
+                          <th className="px-4 py-3 text-right">Total</th>
+                          <th className="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-surface-border">
+                        {orders.map(order => {
+                          const balance = order.total - order.paid_amount;
+                          const items = order.items ?? [];
+                          return (
+                            <tr key={order.id} onClick={() => setSelectedOrder(order)} className="cursor-pointer hover:bg-surface-hover/70">
+                              <td className="whitespace-nowrap px-4 py-3"><OTNumber n={order.order_number} /></td>
+                              <td className="whitespace-nowrap px-4 py-3 text-content-secondary">{new Date(order.created_at).toLocaleDateString('fr-FR')}</td>
+                              <td className="px-4 py-3">
+                                <div className="max-w-[180px] truncate font-medium text-content-primary">{order.client_name || '-'}</div>
+                                {order.client_phone && <div className="text-xs text-content-secondary">{order.client_phone}</div>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5">
+                                  {order.subject_type && <SubjectTypePill type={order.subject_type} />}
+                                  <span className="max-w-[160px] truncate font-mono font-semibold text-content-primary">{order.subject_ref || '-'}</span>
+                                </div>
+                                {order.subject_info && <div className="mt-0.5 max-w-[220px] truncate text-xs text-content-secondary">{order.subject_info}</div>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="max-w-[260px] truncate text-content-primary">
+                                  {items.length ? items.slice(0, 2).map(i => i.name).join(', ') : '-'}
+                                  {items.length > 2 ? ` +${items.length - 2}` : ''}
+                                </div>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.status} /></td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right">
+                                <div className="font-bold text-content-primary">{formatCurrency(order.total, currency)}</div>
+                                {balance > 0 && balance < order.total && <div className="text-xs text-status-error">reste {formatCurrency(balance, currency)}</div>}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3">
+                                <div className="flex items-center justify-end gap-1">
+                                  {canUpdateStatus && order.status === 'attente' && (
+                                    <button onClick={e => quickTransition(order.id, 'en_cours', e)}
+                                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-status-info hover:bg-badge-info">
+                                      <Play className="h-3.5 w-3.5" />Demarrer
+                                    </button>
+                                  )}
+                                  {canUpdateStatus && order.status === 'en_cours' && (
+                                    <button onClick={e => quickTransition(order.id, 'termine', e)}
+                                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-status-success hover:bg-badge-success">
+                                      <CheckCircle2 className="h-3.5 w-3.5" />Terminer
+                                    </button>
+                                  )}
+                                  {canCollectPayment && order.status === 'termine' && (
+                                    <button onClick={e => { e.stopPropagation(); setSelectedOrder(order); }}
+                                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-status-success hover:bg-badge-success">
+                                      <CreditCard className="h-3.5 w-3.5" />Encaisser
+                                    </button>
+                                  )}
+                                  {canShareOrder && (
+                                    <button onClick={e => handlePrintOrder(order, e)}
+                                      className="rounded-lg p-2 text-content-secondary hover:bg-surface-hover hover:text-content-primary"
+                                      title="Imprimer">
+                                      <Printer className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 text-sm text-content-secondary sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    {totalCount === 0 ? '0 resultat' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalCount)} sur ${totalCount}`}
+                  </span>
+                  <div className="flex items-center justify-between gap-2 sm:justify-end">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+                      className="inline-flex items-center gap-1 rounded-lg border border-surface-border px-3 py-2 font-medium disabled:opacity-40">
+                      <ChevronLeft className="h-4 w-4" />Precedent
+                    </button>
+                    <span className="min-w-20 text-center">Page {page} / {totalPages}</span>
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                      className="inline-flex items-center gap-1 rounded-lg border border-surface-border px-3 py-2 font-medium disabled:opacity-40">
+                      Suivant<ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                </>
               )}
             </div>
           </>
@@ -1288,6 +1447,7 @@ export default function ServicesPage() {
             <div className="max-w-2xl">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-content-primary">Catalogue des prestations</h2>
+                {canManageCatalog && (
                 <div className="flex gap-2">
                   <button onClick={() => setShowCategoryManager(true)}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover">
@@ -1298,13 +1458,16 @@ export default function ServicesPage() {
                     <Plus className="w-4 h-4" />Nouvelle prestation
                   </button>
                 </div>
+                )}
               </div>
 
               {allCatalog.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-content-secondary gap-3">
                   <Package2 className="w-12 h-12 opacity-20" />
                   <p className="text-sm">Aucune prestation dans le catalogue</p>
-                  <button onClick={() => setCatalogModal({})} className="text-xs text-content-brand hover:underline">Ajouter une prestation</button>
+                  {canManageCatalog && (
+                    <button onClick={() => setCatalogModal({})} className="text-xs text-content-brand hover:underline">Ajouter une prestation</button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -1327,6 +1490,7 @@ export default function ServicesPage() {
                                 {item.duration_min && <p className="text-xs text-content-secondary">{item.duration_min} min</p>}
                               </div>
                               <span className="font-bold text-content-primary text-sm">{formatCurrency(item.price, currency)}</span>
+                              {canManageCatalog && (
                               <div className="flex items-center gap-1">
                                 <button onClick={() => toggleCatalog(item.id, !item.is_active)}
                                   className={cn('p-1.5 rounded-lg transition-colors', item.is_active ? 'text-status-success hover:bg-badge-success' : 'text-content-secondary hover:bg-surface-hover')}>
@@ -1335,6 +1499,7 @@ export default function ServicesPage() {
                                 <button onClick={() => setCatalogModal({ item })} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><Edit2 className="w-4 h-4" /></button>
                                 <button onClick={() => deleteCatalogItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error"><Trash2 className="w-4 h-4" /></button>
                               </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1355,7 +1520,7 @@ export default function ServicesPage() {
       </div>
 
       {/* Modals */}
-      {showNewOT && (
+      {showNewOT && canCreateOrder && (
         <NewOTModal businessId={businessId} catalog={catalog} onClose={() => setShowNewOT(false)}
           onCreated={order => { setShowNewOT(false); setOrders(prev => [{ ...order, items: order.items ?? [] }, ...prev]); success('Ordre de travail créé'); }} />
       )}
@@ -1365,12 +1530,12 @@ export default function ServicesPage() {
           businessId={businessId} onClose={() => setSelectedOrder(null)} onRefresh={() => { loadOrders(); setSelectedOrder(null); }} />
       )}
 
-      {catalogModal !== null && (
+      {catalogModal !== null && canManageCatalog && (
         <CatalogModal businessId={businessId} item={catalogModal.item} onClose={() => setCatalogModal(null)}
           onSaved={() => { setCatalogModal(null); loadOrders(); success('Catalogue mis à jour'); }} />
       )}
 
-      {showCategoryManager && (
+      {showCategoryManager && canManageCatalog && (
         <CategoryManagerModal businessId={businessId} onClose={() => setShowCategoryManager(false)}
           onSaved={() => { loadOrders(); }} />
       )}

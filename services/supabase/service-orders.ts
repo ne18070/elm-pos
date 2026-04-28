@@ -1,5 +1,9 @@
 import { supabase as _supabase } from './client';
+import { syncServiceOrdersAccounting } from './accounting';
+import { logAction } from './logger';
 const db = _supabase as any;
+
+type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -227,14 +231,18 @@ async function upsertSubject(
 
 export async function getServiceOrders(
   businessId: string,
-  opts?: { date?: string; status?: ServiceOrderStatus | 'all' }
-): Promise<ServiceOrder[]> {
+  opts?: { date?: string; status?: ServiceOrderStatus | 'all'; search?: string; page?: number; pageSize?: number }
+): Promise<{ data: ServiceOrder[]; count: number }> {
+  const page = Math.max(1, opts?.page ?? 1);
+  const pageSize = Math.max(1, opts?.pageSize ?? 25);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
   let q = db
     .from('service_orders')
-    .select('*, items:service_order_items(*)')
+    .select('*, items:service_order_items(*)', { count: 'exact' })
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (opts?.status && opts.status !== 'all') {
     q = q.eq('status', opts.status);
@@ -242,9 +250,44 @@ export async function getServiceOrders(
   if (opts?.date) {
     q = q.gte('created_at', `${opts.date}T00:00:00Z`).lte('created_at', `${opts.date}T23:59:59Z`);
   }
-  const { data, error } = await q;
+  if (opts?.search?.trim()) {
+    const term = opts.search.trim().replace(/[%_,]/g, ' ');
+    q = q.or(`subject_ref.ilike.%${term}%,subject_info.ilike.%${term}%,client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
+  }
+
+  const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return { data: data ?? [], count: count ?? 0 };
+}
+
+export async function getServiceOrderCounts(
+  businessId: string,
+  opts?: { date?: string; search?: string }
+): Promise<Record<ServiceOrderStatus | 'all', number>> {
+  const statuses: Array<ServiceOrderStatus | 'all'> = ['all', 'attente', 'en_cours', 'termine', 'paye', 'annule'];
+
+  const applyFilters = (status: ServiceOrderStatus | 'all') => {
+    let q = db
+      .from('service_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId);
+
+    if (status !== 'all') q = q.eq('status', status);
+    if (opts?.date) q = q.gte('created_at', `${opts.date}T00:00:00Z`).lte('created_at', `${opts.date}T23:59:59Z`);
+    if (opts?.search?.trim()) {
+      const term = opts.search.trim().replace(/[%_,]/g, ' ');
+      q = q.or(`subject_ref.ilike.%${term}%,subject_info.ilike.%${term}%,client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
+    }
+    return q;
+  };
+
+  const results = await Promise.all(statuses.map(async status => {
+    const { error, count } = await applyFilters(status);
+    if (error) throw new Error(error.message);
+    return [status, count ?? 0] as const;
+  }));
+
+  return Object.fromEntries(results) as Record<ServiceOrderStatus | 'all', number>;
 }
 
 export interface CreateServiceOrderInput {
@@ -256,6 +299,7 @@ export interface CreateServiceOrderInput {
   clientPhone?:  string;
   notes?:        string;
   createdBy?:    string;
+  createdByName?: string;
   items: Array<{ service_id?: string | null; name: string; price: number; quantity: number }>;
 }
 
@@ -306,6 +350,22 @@ export async function createServiceOrder(input: CreateServiceOrderInput): Promis
     if (itemErr) throw new Error(itemErr.message);
   }
 
+  logAction({
+    business_id: input.businessId,
+    action:      'service_order.created',
+    entity_type: 'service_order',
+    entity_id:   order.id,
+    user_id:     input.createdBy,
+    user_name:   input.createdByName,
+    metadata: {
+      order_number: order.order_number,
+      total,
+      items_count: input.items.length,
+      subject_ref: input.subjectRef ?? null,
+      client_name: input.clientName ?? null,
+    },
+  });
+
   return {
     ...order,
     items: input.items.map((i, idx) => ({
@@ -317,28 +377,76 @@ export async function createServiceOrder(input: CreateServiceOrderInput): Promis
 
 export async function updateServiceOrderStatus(
   id: string,
-  status: ServiceOrderStatus
+  status: ServiceOrderStatus,
+  actor?: ServiceOrderActor
 ): Promise<void> {
   const updates: any = { status };
   if (status === 'en_cours') updates.started_at  = new Date().toISOString();
   if (status === 'termine')  updates.finished_at = new Date().toISOString();
   if (status === 'paye')     updates.paid_at     = new Date().toISOString();
-  const { error } = await db.from('service_orders').update(updates).eq('id', id);
+  const { data: order, error } = await db
+    .from('service_orders')
+    .update(updates)
+    .eq('id', id)
+    .select('id, business_id, order_number, status')
+    .single();
   if (error) throw new Error(error.message);
+
+  if (order) {
+    logAction({
+      business_id: order.business_id,
+      action:      'service_order.status_updated',
+      entity_type: 'service_order',
+      entity_id:   id,
+      user_id:     actor?.userId,
+      user_name:   actor?.userName,
+      metadata:    { order_number: order.order_number, status },
+    });
+  }
 }
 
 export async function payServiceOrder(
   id: string,
   amount: number,
-  paymentMethod: string
+  paymentMethod: string,
+  actor?: ServiceOrderActor
 ): Promise<void> {
-  const { error } = await db.from('service_orders').update({
-    status:         'paye',
-    paid_amount:    amount,
-    payment_method: paymentMethod,
-    paid_at:        new Date().toISOString(),
-  }).eq('id', id);
+  const { data: order, error } = await db
+    .from('service_orders')
+    .update({
+      status:         'paye',
+      paid_amount:    amount,
+      payment_method: paymentMethod,
+      paid_at:        new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('id, business_id, order_number, total, paid_amount, payment_method, client_name')
+    .single();
   if (error) throw new Error(error.message);
+
+  if (order) {
+    try {
+      await syncServiceOrdersAccounting(order.business_id);
+    } catch (syncError) {
+      console.warn('[service-orders] accounting sync failed', syncError);
+    }
+
+    logAction({
+      business_id: order.business_id,
+      action:      'service_order.paid',
+      entity_type: 'service_order',
+      entity_id:   id,
+      user_id:     actor?.userId,
+      user_name:   actor?.userName,
+      metadata: {
+        order_number: order.order_number,
+        amount,
+        payment_method: paymentMethod,
+        total: order.total,
+        client_name: order.client_name ?? null,
+      },
+    });
+  }
 }
 
 export async function updateServiceOrder(
@@ -347,8 +455,31 @@ export async function updateServiceOrder(
     subjectRef?:  string; subjectType?: string; subjectInfo?: string;
     clientName?:  string; clientPhone?: string; notes?: string;
     items?: Array<{ service_id?: string | null; name: string; price: number; quantity: number }>;
-  }
+  },
+  actor?: ServiceOrderActor
 ): Promise<void> {
+  const { data: before, error: beforeErr } = await db
+    .from('service_orders')
+    .select('id, business_id, order_number, status, total, paid_amount, payment_method, subject_ref, subject_type, subject_info, client_name, client_phone, notes')
+    .eq('id', id)
+    .single();
+  if (beforeErr) throw new Error(beforeErr.message);
+
+  if (before?.status === 'paye' && actor?.role !== 'owner') {
+    throw new Error('Seul le proprietaire peut modifier une facture payee');
+  }
+
+  let previousItems: Array<{ service_id: string | null; name: string; price: number; quantity: number; total: number }> = [];
+  if (input.items !== undefined) {
+    const { data: itemsData, error: itemsErr } = await db
+      .from('service_order_items')
+      .select('service_id, name, price, quantity, total')
+      .eq('order_id', id)
+      .order('id');
+    if (itemsErr) throw new Error(itemsErr.message);
+    previousItems = (itemsData ?? []) as typeof previousItems;
+  }
+
   const updates: any = {};
   if (input.subjectRef  !== undefined) updates.subject_ref  = input.subjectRef?.trim()  || null;
   if (input.subjectType !== undefined) updates.subject_type = input.subjectType          || null;
@@ -360,6 +491,7 @@ export async function updateServiceOrder(
   if (input.items !== undefined) {
     const total = input.items.reduce((s, i) => s + i.price * i.quantity, 0);
     updates.total = total;
+    if (before?.status === 'paye') updates.paid_amount = total;
     await db.from('service_order_items').delete().eq('order_id', id);
     if (input.items.length > 0) {
       await db.from('service_order_items').insert(
@@ -376,12 +508,84 @@ export async function updateServiceOrder(
   }
 
   if (Object.keys(updates).length > 0) {
-    const { error } = await db.from('service_orders').update(updates).eq('id', id);
+    const { data: order, error } = await db
+      .from('service_orders')
+      .update(updates)
+      .eq('id', id)
+      .select('id, business_id, order_number, status, total, paid_amount, subject_ref, subject_type, subject_info, client_name, client_phone, notes')
+      .single();
     if (error) throw new Error(error.message);
+
+    if (order) {
+      if (before?.status === 'paye') {
+        try {
+          await syncServiceOrdersAccounting(order.business_id);
+        } catch (syncError) {
+          console.warn('[service-orders] accounting resync failed', syncError);
+        }
+      }
+
+      const changes: Record<string, { before: unknown; after: unknown }> = {};
+      const track = (key: string, prev: unknown, next: unknown) => {
+        if (JSON.stringify(prev ?? null) !== JSON.stringify(next ?? null)) {
+          changes[key] = { before: prev ?? null, after: next ?? null };
+        }
+      };
+      track('subject_ref', before?.subject_ref, order.subject_ref);
+      track('subject_type', before?.subject_type, order.subject_type);
+      track('subject_info', before?.subject_info, order.subject_info);
+      track('client_name', before?.client_name, order.client_name);
+      track('client_phone', before?.client_phone, order.client_phone);
+      track('notes', before?.notes, order.notes);
+      track('total', before?.total, order.total);
+      track('paid_amount', before?.paid_amount, order.paid_amount);
+      if (input.items !== undefined) {
+        track('items', previousItems, input.items.map(i => ({
+          service_id: i.service_id ?? null,
+          name:       i.name,
+          price:      i.price,
+          quantity:   i.quantity,
+          total:      i.price * i.quantity,
+        })));
+      }
+
+      logAction({
+        business_id: order.business_id,
+        action:      'service_order.updated',
+        entity_type: 'service_order',
+        entity_id:   id,
+        user_id:     actor?.userId,
+        user_name:   actor?.userName,
+        metadata:    {
+          order_number: order.order_number,
+          status: order.status,
+          paid_invoice: before?.status === 'paye',
+          total: order.total,
+          changes,
+        },
+      });
+    }
   }
 }
 
-export async function cancelServiceOrder(id: string): Promise<void> {
-  const { error } = await db.from('service_orders').update({ status: 'annule' }).eq('id', id);
+export async function cancelServiceOrder(id: string, actor?: ServiceOrderActor): Promise<void> {
+  const { data: order, error } = await db
+    .from('service_orders')
+    .update({ status: 'annule' })
+    .eq('id', id)
+    .select('id, business_id, order_number, total')
+    .single();
   if (error) throw new Error(error.message);
+
+  if (order) {
+    logAction({
+      business_id: order.business_id,
+      action:      'service_order.cancelled',
+      entity_type: 'service_order',
+      entity_id:   id,
+      user_id:     actor?.userId,
+      user_name:   actor?.userName,
+      metadata:    { order_number: order.order_number, total: order.total },
+    });
+  }
 }

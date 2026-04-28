@@ -26,6 +26,8 @@ export function hasRole(
 export function hasFeature(business: Business | null | undefined, feature: string): boolean {
   if (!business) return false;
 
+  if (business.type === feature) return true;
+
   const types = business.types ?? [];
   const features = business.features ?? [];
 

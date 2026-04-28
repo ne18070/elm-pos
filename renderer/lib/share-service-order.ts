@@ -1,7 +1,7 @@
 import { formatCurrency } from './utils';
 import { generateServiceOrderReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
-import { getWhatsAppConfig, sendWhatsAppDocument, sendWhatsAppMessage } from '@services/supabase/whatsapp';
+import { getWhatsAppConfig, sendWhatsAppReply } from '@services/supabase/whatsapp';
 import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
 import { supabase } from './supabase';
 import { buildPublicDocumentUrl } from './public-links';
@@ -100,7 +100,7 @@ export async function shareServiceOrderViaWhatsApp(
 
     const config = await getWhatsAppConfig(business.id);
     if (config && config.is_active) {
-       await sendWhatsAppMessage(config, phone, message, userId);
+       await sendWhatsAppReply(config, phone, message, userId);
     } else {
       const url = `https://wa.me/${toWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`;
       window.open(url, '_blank', 'noopener,noreferrer');

@@ -8,7 +8,7 @@ export async function getAnalyticsSummary(
 ): Promise<AnalyticsSummary> {
   const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
 
-  const [ordersResult, itemsResult] = await Promise.all([
+  const [ordersResult, itemsResult, serviceOrdersResult, serviceItemsResult] = await Promise.all([
     // Orders summary
     supabase
       .from('orders')
@@ -30,13 +30,38 @@ export async function getAnalyticsSummary(
       .eq('order.business_id', businessId)
       .eq('order.status', 'paid')
       .gte('order.created_at' as never, `${startDate}T00:00:00Z`),
+
+    (supabase as any)
+      .from('service_orders')
+      .select('id, total, paid_amount, paid_at, created_at')
+      .eq('business_id', businessId)
+      .eq('status', 'paye')
+      .gte('paid_at', `${startDate}T00:00:00Z`),
+
+    (supabase as any)
+      .from('service_order_items')
+      .select(`
+        service_id,
+        name,
+        quantity,
+        total,
+        order:service_orders!inner(business_id, status, paid_at)
+      `)
+      .eq('order.business_id', businessId)
+      .eq('order.status', 'paye')
+      .gte('order.paid_at', `${startDate}T00:00:00Z`),
   ]);
 
   if (ordersResult.error) throw new Error(ordersResult.error.message);
+  if (itemsResult.error) throw new Error(itemsResult.error.message);
+  if (serviceOrdersResult.error) throw new Error(serviceOrdersResult.error.message);
+  if (serviceItemsResult.error) throw new Error(serviceItemsResult.error.message);
 
   const orders = (ordersResult.data ?? []) as Array<{ total: number; created_at: string }>;
-  const total_sales = orders.reduce((sum, o) => sum + o.total, 0);
-  const order_count = orders.length;
+  const serviceOrders = (serviceOrdersResult.data ?? []) as Array<{ total: number; paid_amount: number; paid_at: string | null; created_at: string }>;
+  const total_sales = orders.reduce((sum, o) => sum + o.total, 0) +
+    serviceOrders.reduce((sum, o) => sum + Number(o.paid_amount ?? o.total), 0);
+  const order_count = orders.length + serviceOrders.length;
   const avg_order_value = order_count > 0 ? total_sales / order_count : 0;
 
   // Build daily stats
@@ -50,6 +75,18 @@ export async function getAnalyticsSummary(
       avg_order_value: 0,
     };
     existing.total_sales += order.total;
+    existing.order_count += 1;
+    dailyMap.set(date, existing);
+  }
+  for (const order of serviceOrders) {
+    const date = (order.paid_at ?? order.created_at).slice(0, 10);
+    const existing = dailyMap.get(date) ?? {
+      date,
+      total_sales: 0,
+      order_count: 0,
+      avg_order_value: 0,
+    };
+    existing.total_sales += Number(order.paid_amount ?? order.total);
     existing.order_count += 1;
     dailyMap.set(date, existing);
   }
@@ -74,6 +111,18 @@ export async function getAnalyticsSummary(
     existing.quantity_sold += item.quantity;
     existing.revenue += item.total;
     productMap.set(item.product_id, existing);
+  }
+  for (const item of (serviceItemsResult.data ?? []) as Array<{ service_id: string | null; name: string; quantity: number; total: number }>) {
+    const key = item.service_id ? `service:${item.service_id}` : `service:${item.name}`;
+    const existing = productMap.get(key) ?? {
+      product_id: key,
+      name: item.name,
+      quantity_sold: 0,
+      revenue: 0,
+    };
+    existing.quantity_sold += item.quantity;
+    existing.revenue += item.total;
+    productMap.set(key, existing);
   }
 
   const top_products = Array.from(productMap.values())
@@ -304,19 +353,32 @@ export async function getDailySales(
   businessId: string,
   date: string
 ): Promise<{ total: number; count: number }> {
-  const { data, error } = await supabase
+  const [{ data, error }, serviceRes] = await Promise.all([
+    supabase
     .from('orders')
     .select('total')
     .eq('business_id', businessId)
     .eq('status', 'paid')
     .gte('created_at', `${date}T00:00:00Z`)
-    .lte('created_at', `${date}T23:59:59Z`);
+    .lte('created_at', `${date}T23:59:59Z`),
+    (supabase as any)
+      .from('service_orders')
+      .select('paid_amount, total')
+      .eq('business_id', businessId)
+      .eq('status', 'paye')
+      .gte('paid_at', `${date}T00:00:00Z`)
+      .lte('paid_at', `${date}T23:59:59Z`),
+  ]);
 
   if (error) throw new Error(error.message);
+  if (serviceRes.error) throw new Error(serviceRes.error.message);
+
+  const serviceOrders = (serviceRes.data ?? []) as Array<{ paid_amount: number; total: number }>;
 
   return {
-    total: ((data ?? []) as Array<{ total: number }>).reduce((sum, o) => sum + o.total, 0),
-    count: (data ?? []).length,
+    total: ((data ?? []) as Array<{ total: number }>).reduce((sum, o) => sum + o.total, 0) +
+      serviceOrders.reduce((sum, o) => sum + Number(o.paid_amount ?? o.total), 0),
+    count: (data ?? []).length + serviceOrders.length,
   };
 }
 
@@ -591,7 +653,7 @@ export async function getPrevPeriodCA(
   const start = format(subDays(new Date(), days * 2), 'yyyy-MM-dd');
   const db    = supabase as any;
 
-  const [ordersRes, feesRes, hotelRes] = await Promise.all([
+  const [ordersRes, serviceOrdersRes, feesRes, hotelRes] = await Promise.all([
     supabase
       .from('orders')
       .select('total')
@@ -599,6 +661,12 @@ export async function getPrevPeriodCA(
       .eq('status', 'paid')
       .gte('created_at', `${start}T00:00:00Z`)
       .lt('created_at',  `${end}T23:59:59Z`),
+    db.from('service_orders')
+      .select('paid_amount, total')
+      .eq('business_id', businessId)
+      .eq('status', 'paye')
+      .gte('paid_at', `${start}T00:00:00Z`)
+      .lt('paid_at',  `${end}T23:59:59Z`),
     hasJuridique
       ? db.from('honoraires_cabinet').select('montant')
           .eq('business_id', businessId)
@@ -612,8 +680,14 @@ export async function getPrevPeriodCA(
       : Promise.resolve({ data: [] }),
   ]);
 
+  if (ordersRes.error) throw new Error(ordersRes.error.message);
+  if (serviceOrdersRes.error) throw new Error(serviceOrdersRes.error.message);
+  if (feesRes.error) throw new Error(feesRes.error.message);
+  if (hotelRes.error) throw new Error(hotelRes.error.message);
+
   return {
-    total_sales: ((ordersRes.data ?? []) as any[]).reduce((s, o) => s + Number(o.total), 0),
+    total_sales: ((ordersRes.data ?? []) as any[]).reduce((s, o) => s + Number(o.total), 0) +
+      ((serviceOrdersRes.data ?? []) as any[]).reduce((s, o) => s + Number(o.paid_amount ?? o.total), 0),
     total_fees:  ((feesRes.data  ?? []) as any[]).reduce((s, f) => s + Number(f.montant), 0),
     total_hotel: ((hotelRes.data ?? []) as any[]).reduce((s, r) => s + Number(r.total), 0),
   };

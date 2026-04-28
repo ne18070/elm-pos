@@ -1,5 +1,4 @@
 import { supabase } from './client';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function getOrCreateTrackingToken(
   businessId: string,
@@ -17,7 +16,7 @@ export async function getOrCreateTrackingToken(
   if (existing) return existing.token;
 
   // 2. Créer un nouveau token (expire dans 30 jours)
-  const token = uuidv4().replace(/-/g, '');
+  const token = crypto.randomUUID().replace(/-/g, '');
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 30);
 

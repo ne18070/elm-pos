@@ -11,8 +11,9 @@ import type { PermissionKey } from '@/lib/permissions-map';
  */
 export function usePermission(permission: PermissionKey): boolean {
   const role      = useAuthStore((s) => s.user?.role ?? null);
+  const business  = useAuthStore((s) => s.business);
   const overrides = usePermissionsStore((s) => s.overrides);
-  return checkPermission(role, permission, overrides);
+  return checkPermission(role, permission, overrides, business);
 }
 
 /**
@@ -21,6 +22,7 @@ export function usePermission(permission: PermissionKey): boolean {
  */
 export function useCan(): (permission: PermissionKey) => boolean {
   const role      = useAuthStore((s) => s.user?.role ?? null);
+  const business  = useAuthStore((s) => s.business);
   const overrides = usePermissionsStore((s) => s.overrides);
-  return (permission: PermissionKey) => checkPermission(role, permission, overrides);
+  return (permission: PermissionKey) => checkPermission(role, permission, overrides, business);
 }
