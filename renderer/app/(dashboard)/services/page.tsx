@@ -19,9 +19,9 @@ import {
   updateServiceOrder, cancelServiceOrder,
   getServiceCategories, upsertServiceCategory, deleteServiceCategory,
   upsertServiceCatalogItem, toggleServiceCatalogItem, deleteServiceCatalogItem,
-  searchSubjects, getSubjectHistory,
+  searchSubjects, getSubjectHistory, getOrdersSummary, getOrdersByClientName,
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
-  type ServiceSubject, type ServiceCategory, type SubjectType,
+  type ServiceSubject, type ServiceCategory, type SubjectType, type ServiceOrderSummary,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { shareServiceOrderViaWhatsApp } from '@/lib/share-service-order';
@@ -837,175 +837,212 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
   );
 }
 
-// ─── Category Manager Modal ───────────────────────────────────────────────────
-
-function CategoryManagerModal({ businessId, onClose, onSaved }: {
-  businessId: string; onClose: () => void; onSaved: () => void;
-}) {
-  const { error: notifError } = useNotificationStore();
-  const [cats, setCats] = useState<ServiceCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newName, setNewName] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    const r = await getServiceCategories(businessId);
-    setCats(r);
-    setLoading(false);
-  }
-
-  useEffect(() => { load(); }, [businessId]);
-
-  async function handleAdd() {
-    if (!newName.trim()) return;
-    setBusy(true);
-    try {
-      await upsertServiceCategory(businessId, { name: newName.trim() });
-      setNewName('');
-      load();
-      onSaved();
-    } catch (e: any) { notifError(toUserError(e)); }
-    finally { setBusy(false); }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Supprimer cette catégorie ? Les prestations liées ne seront pas supprimées.')) return;
-    try {
-      await deleteServiceCategory(id);
-      load();
-      onSaved();
-    } catch (e: any) { notifError(toUserError(e)); }
-  }
-
-  return (
-    <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-surface-card rounded-[32px] w-full max-w-md shadow-2xl overflow-hidden border border-surface-border">
-        <div className="flex items-center justify-between p-6 border-b border-surface-border">
-          <h3 className="text-xl font-bold text-content-primary">Gérer les catégories</h3>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-hover"><X className="w-5 h-5" /></button>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          <div className="flex gap-2">
-            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nouvelle catégorie..."
-              className="flex-1 px-4 py-3 rounded-2xl bg-surface-hover border border-surface-border focus:bg-surface-card focus:border-brand-500 outline-none transition-all text-sm font-medium" />
-            <button onClick={handleAdd} disabled={busy || !newName.trim()}
-              className="p-3 rounded-2xl bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-40 shadow-lg shadow-brand-500/20">
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="max-h-64 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {loading ? <div className="text-center py-4"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-content-secondary" /></div> :
-             cats.length === 0 ? <p className="text-center py-4 text-sm text-content-secondary italic">Aucune catégorie</p> :
-             cats.map(c => (
-               <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface-hover border border-surface-border">
-                 <span className="text-sm font-bold text-content-primary ml-1">{c.name}</span>
-                 <button onClick={() => handleDelete(c.id)} className="p-2 rounded-lg text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-colors">
-                   <Trash2 className="w-4 h-4" />
-                 </button>
-               </div>
-             ))}
-          </div>
-        </div>
-
-        <div className="p-6 bg-surface-hover border-t border-surface-border">
-           <button onClick={onClose} className="w-full py-4 rounded-2xl bg-surface-card border border-surface-border text-content-primary font-bold hover:bg-surface-hover transition-all">
-             Fermer
-           </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Subjects Tab ─────────────────────────────────────────────────────────────
 
+type HistoryEntry =
+  | { kind: 'subject'; subject: ServiceSubject; count: number }
+  | { kind: 'client'; name: string; phone: string | null; count: number; lastDate: string };
+
 function SubjectsTab({ businessId, currency }: { businessId: string; currency: string }) {
-  const [subjects, setSubjects] = useState<ServiceSubject[]>([]);
-  const [search,   setSearch]   = useState('');
-  const [selected, setSelected] = useState<ServiceSubject | null>(null);
-  const [history,  setHistory]  = useState<ServiceOrder[]>([]);
-  const [loading,  setLoading]  = useState(true);
+  const [subjects,  setSubjects]  = useState<ServiceSubject[]>([]);
+  const [summary,   setSummary]   = useState<ServiceOrderSummary[]>([]);
+  const [search,    setSearch]    = useState('');
+  const [selected,  setSelected]  = useState<HistoryEntry | null>(null);
+  const [history,   setHistory]   = useState<ServiceOrder[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
+  const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    getSubjects(businessId).then(r => { setSubjects(r); setLoading(false); });
+    Promise.all([
+      getSubjects(businessId).catch(() => [] as ServiceSubject[]),
+      getOrdersSummary(businessId).catch(() => [] as ServiceOrderSummary[]),
+    ]).then(([s, o]) => {
+      setSubjects(s);
+      setSummary(o);
+      setLoading(false);
+    });
   }, [businessId]);
 
   useEffect(() => {
     if (!selected) { setHistory([]); return; }
-    getSubjectHistory(businessId, selected.id).then(setHistory);
+    setHistLoading(true);
+    const p = selected.kind === 'subject'
+      ? getSubjectHistory(businessId, selected.subject.id)
+      : getOrdersByClientName(businessId, selected.name);
+    p.then(setHistory).catch(() => setHistory([])).finally(() => setHistLoading(false));
   }, [selected, businessId]);
+
+  // Entrées unifiées : sujets + clients (ordres sans sujet groupés par client_name)
+  const entries = useMemo<HistoryEntry[]>(() => {
+    const subjectEntries: HistoryEntry[] = subjects.map(s => ({
+      kind: 'subject',
+      subject: s,
+      count: summary.filter(o => o.subject_id === s.id).length,
+    }));
+
+    const clientMap = new Map<string, { name: string; phone: string | null; count: number; lastDate: string }>();
+    for (const o of summary) {
+      if (o.subject_id || !o.client_name) continue;
+      const key = o.client_name.toLowerCase().trim();
+      const existing = clientMap.get(key);
+      if (!existing) {
+        clientMap.set(key, { name: o.client_name, phone: o.client_phone ?? null, count: 1, lastDate: o.created_at });
+      } else {
+        existing.count++;
+        if (o.created_at > existing.lastDate) existing.lastDate = o.created_at;
+      }
+    }
+    const clientEntries: HistoryEntry[] = Array.from(clientMap.values()).map(v => ({
+      kind: 'client' as const,
+      name: v.name,
+      phone: v.phone,
+      count: v.count,
+      lastDate: v.lastDate,
+    }));
+
+    return [...subjectEntries, ...clientEntries];
+  }, [subjects, summary]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return subjects.filter(s =>
-      s.reference.toLowerCase().includes(q) ||
-      (s.designation ?? '').toLowerCase().includes(q) ||
-      s.type_sujet.toLowerCase().includes(q)
-    );
-  }, [subjects, search]);
+    if (!q) return entries;
+    return entries.filter(e => {
+      if (e.kind === 'subject') {
+        return e.subject.reference.toLowerCase().includes(q) ||
+               (e.subject.designation ?? '').toLowerCase().includes(q) ||
+               e.subject.type_sujet.toLowerCase().includes(q);
+      }
+      return e.name.toLowerCase().includes(q) || (e.phone ?? '').includes(q);
+    });
+  }, [entries, search]);
+
+  const selKey = selected
+    ? selected.kind === 'subject' ? `s-${selected.subject.id}` : `c-${selected.name}`
+    : null;
 
   return (
-    <div className="flex gap-4 h-full">
+    <div className="flex gap-5 h-full">
+
+      {/* ── Liste gauche ── */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par référence, description…"
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher par référence, client…"
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
         </div>
+
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-content-secondary"><RefreshCw className="w-5 h-5 animate-spin mr-2" />Chargement…</div>
+          <div className="flex-1 flex items-center justify-center text-content-secondary">
+            <RefreshCw className="w-5 h-5 animate-spin mr-2" />Chargement…
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-content-secondary gap-2">
             <Package2 className="w-10 h-10 opacity-30" />
-            <p className="text-sm">Aucun sujet trouvé</p>
+            <p className="text-sm">Aucun résultat</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {filtered.map(s => (
-              <button key={s.id} onClick={() => setSelected(selected?.id === s.id ? null : s)}
-                className={cn('w-full text-left rounded-xl border p-3 transition-colors', selected?.id === s.id
-                  ? 'bg-brand-500/10 border-brand-500/30 text-content-brand'
-                  : 'border-surface-border hover:bg-surface-hover text-content-primary')}>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <SubjectTypePill type={s.type_sujet} />
-                  <p className="font-mono font-bold text-sm">{s.reference}</p>
-                </div>
-                {s.designation && <p className="text-xs text-content-secondary">{s.designation}</p>}
-              </button>
-            ))}
+          <div className="flex-1 overflow-y-auto space-y-1.5">
+            {/* Sujets (véhicules, appareils…) */}
+            {filtered.some(e => e.kind === 'subject') && (
+              <p className="text-xs font-bold text-content-secondary uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />Sujets suivis
+              </p>
+            )}
+            {filtered.filter(e => e.kind === 'subject').map(e => {
+              if (e.kind !== 'subject') return null;
+              const key = `s-${e.subject.id}`;
+              return (
+                <button key={key} onClick={() => setSelected(selKey === key ? null : e)}
+                  className={cn('w-full text-left rounded-xl border p-3 transition-colors',
+                    selKey === key ? 'bg-brand-500/10 border-brand-500/30 text-content-brand' : 'border-surface-border hover:bg-surface-hover text-content-primary')}>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <SubjectTypePill type={e.subject.type_sujet} />
+                    <p className="font-mono font-bold text-sm flex-1 truncate">{e.subject.reference}</p>
+                    <span className="text-xs text-content-secondary">{e.count} OT</span>
+                  </div>
+                  {e.subject.designation && <p className="text-xs text-content-secondary truncate">{e.subject.designation}</p>}
+                </button>
+              );
+            })}
+
+            {/* Clients (ordres sans sujet) */}
+            {filtered.some(e => e.kind === 'client') && (
+              <p className={cn('text-xs font-bold text-content-secondary uppercase tracking-widest mb-2 flex items-center gap-1.5',
+                filtered.some(e => e.kind === 'subject') && 'mt-4')}>
+                <User className="w-3.5 h-3.5" />Clients
+              </p>
+            )}
+            {filtered.filter(e => e.kind === 'client').map(e => {
+              if (e.kind !== 'client') return null;
+              const key = `c-${e.name}`;
+              return (
+                <button key={key} onClick={() => setSelected(selKey === key ? null : e)}
+                  className={cn('w-full text-left rounded-xl border p-3 transition-colors',
+                    selKey === key ? 'bg-brand-500/10 border-brand-500/30 text-content-brand' : 'border-surface-border hover:bg-surface-hover text-content-primary')}>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-content-secondary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{e.name}</p>
+                      {e.phone && <p className="text-xs text-content-secondary">{e.phone}</p>}
+                    </div>
+                    <span className="text-xs text-content-secondary flex-shrink-0">{e.count} OT</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
+      {/* ── Panneau historique droite ── */}
       {selected && (
-        <div className="w-80 flex flex-col min-h-0 border-l border-surface-border pl-4">
-          <div className="mb-3">
-            <div className="flex items-center gap-2 mb-1"><SubjectTypePill type={selected.type_sujet} /></div>
-            <h3 className="font-bold text-content-primary font-mono">{selected.reference}</h3>
-            {selected.designation && <p className="text-sm text-content-secondary">{selected.designation}</p>}
+        <div className="w-80 flex flex-col min-h-0 border-l border-surface-border pl-5">
+          <div className="mb-4">
+            {selected.kind === 'subject' ? (
+              <>
+                <div className="flex items-center gap-2 mb-1"><SubjectTypePill type={selected.subject.type_sujet} /></div>
+                <h3 className="font-bold text-content-primary font-mono">{selected.subject.reference}</h3>
+                {selected.subject.designation && <p className="text-sm text-content-secondary">{selected.subject.designation}</p>}
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-content-secondary" /></div>
+                <h3 className="font-bold text-content-primary">{selected.name}</h3>
+                {selected.phone && <p className="text-sm text-content-secondary">{selected.phone}</p>}
+              </>
+            )}
           </div>
-          <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2">
-            <History className="w-3.5 h-3.5" />Historique ({history.length})
+
+          <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <History className="w-3.5 h-3.5" />Historique
+            {!histLoading && <span>({history.length})</span>}
           </p>
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {history.length === 0 ? (
-              <p className="text-content-secondary text-sm">Aucun historique</p>
-            ) : history.map(o => (
-              <div key={o.id} className="rounded-xl border border-surface-border p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <OTNumber n={o.order_number} />
-                  <StatusBadge status={o.status} />
+
+          {histLoading ? (
+            <div className="flex items-center justify-center py-8 text-content-secondary">
+              <RefreshCw className="w-4 h-4 animate-spin mr-2" />Chargement…
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {history.length === 0 ? (
+                <p className="text-content-secondary text-sm">Aucun historique</p>
+              ) : history.map(o => (
+                <div key={o.id} className="rounded-xl border border-surface-border p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <OTNumber n={o.order_number} />
+                    <StatusBadge status={o.status} />
+                  </div>
+                  <p className="text-xs text-content-secondary">{new Date(o.created_at).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-sm font-semibold text-content-primary mt-1">{formatCurrency(o.total, currency)}</p>
+                  {(o.items ?? []).slice(0, 3).map(i => (
+                    <p key={i.id} className="text-xs text-content-secondary">· {i.name}</p>
+                  ))}
                 </div>
-                <p className="text-xs text-content-secondary">{new Date(o.created_at).toLocaleDateString('fr-FR')}</p>
-                <p className="text-sm font-semibold text-content-primary mt-1">{formatCurrency(o.total, currency)}</p>
-                {(o.items ?? []).slice(0, 2).map(i => <p key={i.id} className="text-xs text-content-secondary">· {i.name}</p>)}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1040,7 +1077,8 @@ export default function ServicesPage() {
   const [showNewOT,    setShowNewOT]    = useState(false);
   const [selectedOrder,  setSelectedOrder]  = useState<ServiceOrder | null>(null);
   const [catalogModal, setCatalogModal] = useState<{ item?: ServiceCatalogItem } | null>(null);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [selectedCatalogCat, setSelectedCatalogCat] = useState<string | null | '__all__'>('__all__');
+  const [newCatName, setNewCatName] = useState('');
   const canViewServices = can('view_services');
   const canCreateOrder = can('create_service_order');
   const canUpdateStatus = can('update_service_status');
@@ -1078,7 +1116,7 @@ export default function ServicesPage() {
         getServiceOrderCounts(businessId, { date: dateFilter || undefined, search: search || undefined }),
         getServiceCatalog(businessId),
         getAllServiceCatalog(businessId),
-        getServiceCategories(businessId),
+        getServiceCategories(businessId).catch(() => [] as ServiceCategory[]),
       ]);
       setOrders(ordersResult.data);
       setTotalCount(ordersResult.count);
@@ -1127,6 +1165,36 @@ export default function ServicesPage() {
     try { await toggleServiceCatalogItem(id, active); await loadOrders(); }
     catch (e: any) { notifError(toUserError(e)); }
   }
+
+  async function handleAddCategory() {
+    if (!newCatName.trim()) return;
+    try {
+      await upsertServiceCategory(businessId, { name: newCatName.trim() });
+      setNewCatName('');
+      const cats = await getServiceCategories(businessId).catch(() => [] as ServiceCategory[]);
+      setServiceCategories(cats);
+    } catch (e: any) { notifError(toUserError(e)); }
+  }
+
+  async function handleDeleteCategory(id: string) {
+    if (!confirm('Supprimer cette catégorie ? Les prestations liées ne seront pas supprimées.')) return;
+    try {
+      await deleteServiceCategory(id);
+      if (selectedCatalogCat === id) setSelectedCatalogCat('__all__');
+      const [cats, ac] = await Promise.all([
+        getServiceCategories(businessId).catch(() => [] as ServiceCategory[]),
+        getAllServiceCatalog(businessId),
+      ]);
+      setServiceCategories(cats);
+      setAllCatalog(ac);
+    } catch (e: any) { notifError(toUserError(e)); }
+  }
+
+  const filteredCatalogItems = useMemo(() => {
+    if (selectedCatalogCat === '__all__') return allCatalog;
+    if (selectedCatalogCat === null) return allCatalog.filter(i => !i.category_id);
+    return allCatalog.filter(i => i.category_id === selectedCatalogCat);
+  }, [allCatalog, selectedCatalogCat]);
 
   function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
     e.stopPropagation();
@@ -1193,17 +1261,21 @@ export default function ServicesPage() {
         </div>
       </div>
       {/* Tab bar */}
-      <div className="flex items-center gap-1 overflow-x-auto px-4 py-3 bg-surface-card border-b border-surface-border shrink-0 md:px-6">
+      <div className="flex items-center gap-1 overflow-x-auto px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 md:px-6">
         {([
-          { key: 'orders',   label: 'Ordres de travail' },
-          { key: 'catalog',  label: 'Catalogue' },
-          { key: 'subjects', label: 'Sujets / Historique' },
-        ] as const).map(({ key, label }) => (
+          { key: 'orders',   icon: Wrench,     label: 'Ordres de travail', desc: 'Créer & suivre les bons de prestation' },
+          { key: 'catalog',  icon: Package2,   label: 'Catalogue',         desc: 'Prestations types & tarifs' },
+          { key: 'subjects', icon: History,    label: 'Historique',        desc: 'Par véhicule, appareil ou client' },
+        ] as const).map(({ key, icon: Icon, label, desc }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors', tab === key
+            className={cn('flex items-start gap-2.5 px-4 py-2.5 rounded-xl text-left transition-colors min-w-0 flex-shrink-0', tab === key
               ? 'bg-brand-500/15 text-content-brand border border-brand-500/30'
               : 'text-content-secondary hover:text-content-primary hover:bg-surface-hover')}>
-            {label}
+            <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold leading-tight">{label}</p>
+              <p className="text-xs opacity-70 leading-tight mt-0.5 hidden sm:block">{desc}</p>
+            </div>
           </button>
         ))}
       </div>
@@ -1212,6 +1284,21 @@ export default function ServicesPage() {
       <div className="flex-1 overflow-hidden flex flex-col">
         {tab === 'orders' && (
           <>
+            {/* Workflow hint */}
+            <div className="px-4 pt-3 pb-0 bg-surface-card shrink-0 md:px-6">
+              <p className="text-[11px] text-content-secondary flex items-center gap-1 flex-wrap">
+                <Wrench className="w-3 h-3 flex-shrink-0" />
+                Flux&nbsp;:
+                <span className="text-status-warning font-semibold">En attente</span>
+                <span>→</span>
+                <span className="text-status-info font-semibold">En cours</span>
+                <span>→</span>
+                <span className="text-status-success font-semibold">Terminé</span>
+                <span>→</span>
+                <span className="text-status-success font-semibold">Payé</span>
+                <span className="opacity-50 ml-1">· Cliquez un OT pour modifier, encaisser ou imprimer</span>
+              </p>
+            </div>
             {/* Filters */}
             <div className="px-4 py-3 bg-surface-card border-b border-surface-border shrink-0 space-y-3 md:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1443,78 +1530,161 @@ export default function ServicesPage() {
         )}
 
         {tab === 'catalog' && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-content-primary">Catalogue des prestations</h2>
-                {canManageCatalog && (
-                <div className="flex gap-2">
-                  <button onClick={() => setShowCategoryManager(true)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover">
-                    <LayoutGrid className="w-4 h-4" />Catégories
-                  </button>
-                  <button onClick={() => setCatalogModal({})}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-500/15 hover:bg-brand-500/25 text-content-brand text-sm font-medium">
-                    <Plus className="w-4 h-4" />Nouvelle prestation
-                  </button>
-                </div>
-                )}
-              </div>
+          <div className="flex-1 overflow-hidden p-6">
+            <p className="text-xs text-content-secondary mb-4 flex items-center gap-1.5">
+              <Package2 className="w-3.5 h-3.5 flex-shrink-0" />
+              Définissez ici toutes vos prestations avec leur prix. Elles apparaîtront dans le formulaire de création d'un OT.
+            </p>
+            <div className="flex gap-5 h-[calc(100%-2rem)] max-w-4xl">
 
-              {allCatalog.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-content-secondary gap-3">
-                  <Package2 className="w-12 h-12 opacity-20" />
-                  <p className="text-sm">Aucune prestation dans le catalogue</p>
-                  {canManageCatalog && (
-                    <button onClick={() => setCatalogModal({})} className="text-xs text-content-brand hover:underline">Ajouter une prestation</button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Groupement par catégories dynamiques */}
-                  {(serviceCategories.length > 0 ? serviceCategories : [{ id: null, name: 'Autres' } as any]).map(cat => {
-                    const items = allCatalog.filter(i => (i.category_id === cat.id) || (!i.category_id && !cat.id));
-                    if (items.length === 0) return null;
+              {/* ── Colonne gauche : Catégories ──────────────────────── */}
+              <div className="w-52 flex-shrink-0 flex flex-col border-r border-surface-border pr-5">
+                <p className="text-xs font-bold text-content-secondary uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <LayoutGrid className="w-3.5 h-3.5" />Catégories
+                </p>
+
+                <div className="flex-1 overflow-y-auto space-y-0.5">
+                  {/* Option "Toutes" */}
+                  <button
+                    onClick={() => setSelectedCatalogCat('__all__')}
+                    className={cn('w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                      selectedCatalogCat === '__all__'
+                        ? 'bg-brand-500/15 text-content-brand'
+                        : 'text-content-secondary hover:bg-surface-hover hover:text-content-primary')}>
+                    <span>Toutes</span>
+                    <span className="text-xs opacity-70">{allCatalog.length}</span>
+                  </button>
+
+                  {/* Catégories dynamiques */}
+                  {serviceCategories.map(cat => {
+                    const count = allCatalog.filter(i => i.category_id === cat.id).length;
                     return (
-                      <div key={cat.id || 'none'}>
-                        <p className="text-xs font-bold text-content-secondary uppercase tracking-widest mb-3 flex items-center gap-2">
-                          <span className="w-1 h-3 bg-brand-500 rounded-full" />
-                          {cat.name}
-                        </p>
-                        <div className="space-y-1">
-                          {items.map(item => (
-                            <div key={item.id} className={cn('flex items-center gap-3 p-3 rounded-xl border transition-colors',
-                              item.is_active ? 'bg-surface-card border-surface-border' : 'bg-surface-hover border-surface-border opacity-60')}>
-                              <div className="flex-1 min-w-0">
-                                <p className={cn('text-sm font-semibold', item.is_active ? 'text-content-primary' : 'text-content-secondary line-through')}>{item.name}</p>
-                                {item.duration_min && <p className="text-xs text-content-secondary">{item.duration_min} min</p>}
-                              </div>
-                              <span className="font-bold text-content-primary text-sm">{formatCurrency(item.price, currency)}</span>
-                              {canManageCatalog && (
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => toggleCatalog(item.id, !item.is_active)}
-                                  className={cn('p-1.5 rounded-lg transition-colors', item.is_active ? 'text-status-success hover:bg-badge-success' : 'text-content-secondary hover:bg-surface-hover')}>
-                                  {item.is_active ? <Check className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                                </button>
-                                <button onClick={() => setCatalogModal({ item })} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => deleteCatalogItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error"><Trash2 className="w-4 h-4" /></button>
-                              </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                      <div key={cat.id}
+                        onClick={() => setSelectedCatalogCat(cat.id)}
+                        className={cn('group flex items-center gap-1 rounded-xl px-3 py-2.5 cursor-pointer transition-colors',
+                          selectedCatalogCat === cat.id
+                            ? 'bg-brand-500/15 text-content-brand'
+                            : 'text-content-primary hover:bg-surface-hover')}>
+                        <span className="flex-1 text-sm font-medium truncate">{cat.name}</span>
+                        <span className="text-xs text-content-secondary opacity-70">{count}</span>
+                        {canManageCatalog && (
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/20 hover:text-status-error text-content-secondary transition-all ml-0.5">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
+
+                  {/* Sans catégorie */}
+                  {allCatalog.some(i => !i.category_id) && (
+                    <button
+                      onClick={() => setSelectedCatalogCat(null)}
+                      className={cn('w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors',
+                        selectedCatalogCat === null
+                          ? 'bg-brand-500/15 text-content-brand'
+                          : 'text-content-secondary hover:bg-surface-hover hover:text-content-primary')}>
+                      <span className="font-medium italic">Sans catégorie</span>
+                      <span className="text-xs opacity-70">{allCatalog.filter(i => !i.category_id).length}</span>
+                    </button>
+                  )}
                 </div>
-              )}
+
+                {/* Ajouter une catégorie */}
+                {canManageCatalog && (
+                  <div className="mt-3 pt-3 border-t border-surface-border">
+                    <div className="flex gap-1.5">
+                      <input
+                        value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddCategory()}
+                        placeholder="Nouvelle catégorie…"
+                        className="flex-1 min-w-0 px-2.5 py-2 text-xs rounded-xl bg-surface-hover border border-surface-border text-content-primary placeholder:text-content-secondary focus:outline-none focus:border-brand-500 transition-colors" />
+                      <button
+                        onClick={handleAddCategory}
+                        disabled={!newCatName.trim()}
+                        className="p-2 rounded-xl bg-brand-500/15 text-content-brand hover:bg-brand-500/25 disabled:opacity-40 transition-colors flex-shrink-0">
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Colonne droite : Prestations ─────────────────────── */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-content-primary">
+                    {selectedCatalogCat === '__all__'
+                      ? 'Toutes les prestations'
+                      : selectedCatalogCat === null
+                        ? 'Sans catégorie'
+                        : (serviceCategories.find(c => c.id === selectedCatalogCat)?.name ?? 'Prestations')}
+                    <span className="ml-2 text-xs font-normal text-content-secondary">({filteredCatalogItems.length})</span>
+                  </h2>
+                  {canManageCatalog && (
+                    <button onClick={() => setCatalogModal({})}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-500/15 hover:bg-brand-500/25 text-content-brand text-sm font-medium">
+                      <Plus className="w-4 h-4" />Nouvelle prestation
+                    </button>
+                  )}
+                </div>
+
+                {filteredCatalogItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center flex-1 text-content-secondary gap-3">
+                    <Package2 className="w-12 h-12 opacity-20" />
+                    <p className="text-sm">Aucune prestation ici</p>
+                    {canManageCatalog && (
+                      <button onClick={() => setCatalogModal({})} className="text-xs text-content-brand hover:underline">
+                        Ajouter une prestation
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto space-y-1">
+                    {filteredCatalogItems.map(item => (
+                      <div key={item.id} className={cn('flex items-center gap-3 p-3 rounded-xl border transition-colors',
+                        item.is_active ? 'bg-surface-card border-surface-border' : 'bg-surface-hover border-surface-border opacity-60')}>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-sm font-semibold', item.is_active ? 'text-content-primary' : 'text-content-secondary line-through')}>{item.name}</p>
+                          {item.duration_min && <p className="text-xs text-content-secondary">{item.duration_min} min</p>}
+                        </div>
+                        <span className="font-bold text-content-primary text-sm whitespace-nowrap">{formatCurrency(item.price, currency)}</span>
+                        {canManageCatalog && (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => toggleCatalog(item.id, !item.is_active)}
+                              className={cn('p-1.5 rounded-lg transition-colors', item.is_active ? 'text-status-success hover:bg-badge-success' : 'text-content-secondary hover:bg-surface-hover')}>
+                              {item.is_active ? <Check className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                            </button>
+                            <button onClick={() => setCatalogModal({ item })} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteCatalogItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         )}
 
         {tab === 'subjects' && (
-          <div className="flex-1 overflow-hidden p-6">
-            <SubjectsTab businessId={businessId} currency={currency} />
+          <div className="flex-1 overflow-hidden flex flex-col p-6">
+            <p className="text-xs text-content-secondary mb-4 flex items-center gap-1.5 flex-shrink-0">
+              <History className="w-3.5 h-3.5 flex-shrink-0" />
+              Retrouvez l'historique complet des OT par véhicule, appareil ou client. Cliquez sur une entrée pour voir tous ses ordres passés.
+            </p>
+            <div className="flex-1 overflow-hidden">
+              <SubjectsTab businessId={businessId} currency={currency} />
+            </div>
           </div>
         )}
       </div>
@@ -1535,10 +1705,7 @@ export default function ServicesPage() {
           onSaved={() => { setCatalogModal(null); loadOrders(); success('Catalogue mis à jour'); }} />
       )}
 
-      {showCategoryManager && canManageCatalog && (
-        <CategoryManagerModal businessId={businessId} onClose={() => setShowCategoryManager(false)}
-          onSaved={() => { loadOrders(); }} />
-      )}
+
     </div>
   );
 }

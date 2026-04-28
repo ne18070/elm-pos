@@ -162,6 +162,46 @@ export async function deleteServiceCatalogItem(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ── Résumé léger de tous les ordres (pour historique) ────────────────────────
+
+export interface ServiceOrderSummary {
+  id:           string;
+  order_number: number;
+  subject_id:   string | null;
+  subject_ref:  string | null;
+  subject_type: string | null;
+  subject_info: string | null;
+  client_name:  string | null;
+  client_phone: string | null;
+  status:       ServiceOrderStatus;
+  total:        number;
+  paid_amount:  number;
+  created_at:   string;
+}
+
+export async function getOrdersSummary(businessId: string): Promise<ServiceOrderSummary[]> {
+  const { data, error } = await db
+    .from('service_orders')
+    .select('id, order_number, subject_id, subject_ref, subject_type, subject_info, client_name, client_phone, status, total, paid_amount, created_at')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getOrdersByClientName(businessId: string, clientName: string): Promise<ServiceOrder[]> {
+  const { data, error } = await db
+    .from('service_orders')
+    .select('*, items:service_order_items(*)')
+    .eq('business_id', businessId)
+    .eq('client_name', clientName)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 // ── Sujets de service ────────────────────────────────────────────────────────
 
 export async function searchSubjects(businessId: string, ref: string): Promise<ServiceSubject[]> {
