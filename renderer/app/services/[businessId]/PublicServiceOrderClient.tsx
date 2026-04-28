@@ -9,6 +9,7 @@ import {
 import { getPublicBusinessInfo, type PublicBusinessInfo } from '@services/supabase/business-public';
 import { getPublicServiceCatalog, createPublicServiceOrder } from '@services/supabase/services-public';
 import { formatCurrency, cn } from '@/lib/utils';
+import { PublicHeader } from '@/components/shared/PublicHeader';
 
 export default function PublicServiceOrderPage() {
   const { businessId } = useParams();
@@ -162,7 +163,7 @@ export default function PublicServiceOrderPage() {
   /* ── Page principale ── */
   return (
     <div className="min-h-screen bg-surface-hover text-content-primary font-sans pb-28">
-      <Header info={info} />
+      <PublicHeader business={info} loading={loading} title="Services & Prestations" />
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
 

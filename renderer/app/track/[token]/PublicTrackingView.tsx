@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation';
 import {
   CheckCircle2, Clock, AlertCircle,
   Calendar, User, FileText, Loader2, GitBranch,
-  Car, Package2, Bell, BellOff
+  Car, Package2, Bell, BellOff, Plus
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn, formatCurrency } from '@/lib/utils';
+import { PublicHeader } from '@/components/shared/PublicHeader';
 import type { WorkflowInstance, WorkflowNode } from '@pos-types';
 
 interface BusinessInfo {
@@ -29,6 +30,7 @@ interface TrackingData {
     date_ouverture: string;
   };
   service?: {
+    id:             string;
     order_number:   number;
     subject_ref:    string | null;
     subject_type:   string | null;
@@ -67,9 +69,54 @@ export default function PublicTrackingView() {
   const [data, setData]       = useState<TrackingData | null>(null);
 
   const [pushState, setPushState] = useState<'idle' | 'subscribing' | 'subscribed' | 'denied' | 'unsupported'>('idle');
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  // --- Realtime Subscription ---
+  useEffect(() => {
+    if (!data?.service?.id) return;
+
+    const channel = supabase
+      .channel(`public-tracking-${data.service.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'service_orders',
+          filter: `id=eq.${data.service.id}`,
+        },
+        (payload) => {
+          setData((prev) => {
+            if (!prev || !prev.service) return prev;
+            return {
+              ...prev,
+              service: {
+                ...prev.service,
+                status: payload.new.status,
+                total: payload.new.total,
+                paid_amount: payload.new.paid_amount,
+              },
+            };
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [data?.service?.id]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
+    if (typeof window === 'undefined') return;
+
+    const isApple = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    setIsIOS(isApple);
+    setIsStandalone(!!standalone);
+
+    if (!('Notification' in window)) {
       setPushState('unsupported');
     } else if (Notification.permission === 'denied') {
       setPushState('denied');
@@ -195,37 +242,7 @@ export default function PublicTrackingView() {
   return (
     <div className="min-h-screen bg-surface-hover text-content-primary font-sans pb-20">
 
-      {/* Header */}
-      <header className="bg-surface-card border-b border-surface-border sticky top-0 z-10 shadow-sm">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-surface-hover border border-surface-border overflow-hidden shrink-0">
-              {business?.logo_url ? (
-                <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-brand-600 flex items-center justify-center">
-                  <span className="text-white font-black text-sm">{business?.name?.slice(0, 2).toUpperCase() ?? 'EL'}</span>
-                </div>
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-content-muted leading-none mb-1">Espace Suivi Client</p>
-              <h1 className="font-bold text-content-primary text-base truncate leading-none">{business?.name ?? 'ELM Services'}</h1>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => window.location.reload()} 
-              className="p-2 rounded-xl bg-surface-hover text-content-secondary hover:text-brand-600 transition-colors"
-              title="Actualiser"
-            >
-              <Loader2 className={cn("w-5 h-5", loading && "animate-spin")} />
-            </button>
-            <img src="/logo.png" alt="ELM APP" className="h-10 w-auto shrink-0 object-contain" />
-          </div>
-        </div>
-      </header>
+      <PublicHeader business={business} loading={loading} title="Espace Suivi Client" />
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
 
@@ -368,15 +385,16 @@ export default function PublicTrackingView() {
         </section>
 
         {/* Notifications push client */}
-        {pushState !== 'unsupported' && type === 'service' && (
+        {type === 'service' && (
           <section className="space-y-4">
             <div className="flex items-center gap-2 px-1">
               <Bell className="w-5 h-5 text-brand-600" />
               <h3 className="font-bold text-content-primary">Notifications</h3>
             </div>
-            <div className="bg-surface-card rounded-3xl border border-surface-border p-6 flex items-center gap-4">
+            
+            <div className="bg-surface-card rounded-3xl border border-surface-border p-6">
               {pushState === 'subscribed' ? (
-                <>
+                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-badge-success flex items-center justify-center text-status-success shrink-0">
                     <Bell className="w-6 h-6" />
                   </div>
@@ -384,9 +402,26 @@ export default function PublicTrackingView() {
                     <p className="font-bold text-content-primary text-sm">Notifications activées</p>
                     <p className="text-xs text-content-secondary mt-0.5">Vous serez alerté à chaque avancement.</p>
                   </div>
-                </>
+                </div>
+              ) : pushState === 'unsupported' && isIOS && !isStandalone ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 text-brand-600">
+                    <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center shrink-0">
+                      <Plus className="w-6 h-6" />
+                    </div>
+                    <p className="font-bold text-sm">Activez les notifications</p>
+                  </div>
+                  <div className="bg-surface-hover rounded-2xl p-4 text-xs text-content-secondary leading-relaxed space-y-2">
+                    <p>Pour recevoir des alertes sur votre iPhone :</p>
+                    <ol className="list-decimal list-inside space-y-1 ml-1">
+                      <li>Cliquez sur le bouton <span className="font-bold underline">Partager</span> (icône <span className="inline-block border rounded px-1">↑</span>)</li>
+                      <li>Choisissez <span className="font-bold underline">"Sur l'écran d'accueil"</span></li>
+                      <li>Ouvrez l'application depuis votre accueil</li>
+                    </ol>
+                  </div>
+                </div>
               ) : pushState === 'denied' ? (
-                <>
+                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-badge-error flex items-center justify-center text-status-error shrink-0">
                     <BellOff className="w-6 h-6" />
                   </div>
@@ -394,9 +429,14 @@ export default function PublicTrackingView() {
                     <p className="font-bold text-content-primary text-sm">Notifications bloquées</p>
                     <p className="text-xs text-content-secondary mt-0.5">Autorisez les notifications dans les paramètres de votre navigateur.</p>
                   </div>
-                </>
+                </div>
+              ) : pushState === 'unsupported' ? (
+                <div className="flex items-center gap-4 text-content-muted">
+                   <BellOff className="w-6 h-6" />
+                   <p className="text-sm">Notifications non supportées sur ce navigateur.</p>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-badge-info flex items-center justify-center text-status-info shrink-0">
                     <Bell className="w-6 h-6" />
                   </div>
@@ -411,7 +451,7 @@ export default function PublicTrackingView() {
                       : <Bell className="w-4 h-4" />}
                     Activer
                   </button>
-                </>
+                </div>
               )}
             </div>
           </section>
