@@ -1,5 +1,5 @@
 /**
- * Order Service — Couche métier
+ * Order Service - Couche métier
  *
  * Centralise toute la logique de création, validation et calcul des commandes.
  * Utilisé par le renderer via les hooks, et par le main process via IPC.

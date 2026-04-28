@@ -271,7 +271,7 @@ export default function ActivityPage() {
 
                     {/* Utilisateur */}
                     <td className="px-4 py-3">
-                      <p className="text-sm text-content-primary">{log.user_name ?? log.users?.full_name ?? '—'}</p>
+                      <p className="text-sm text-content-primary">{log.user_name ?? log.users?.full_name ?? '-'}</p>
                       {log.user_id && (
                         <p className="text-xs text-content-muted font-mono">{log.user_id.slice(0, 8)}</p>
                       )}
@@ -313,7 +313,7 @@ export default function ActivityPage() {
       {!loading && (
         <div className="px-6 py-2 border-t border-surface-border text-xs text-content-muted">
           {filtered.length} événement{filtered.length !== 1 ? 's' : ''} affiché{filtered.length !== 1 ? 's' : ''}
-          {logs.length >= 500 && ' (limité à 500 — affiner les filtres pour voir plus)'}
+          {logs.length >= 500 && ' (limité à 500 - affiner les filtres pour voir plus)'}
         </div>
       )}
     </div>

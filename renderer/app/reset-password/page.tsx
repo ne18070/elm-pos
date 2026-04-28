@@ -11,6 +11,7 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isActivation, setIsActivation] = useState(false);
@@ -20,17 +21,20 @@ export default function ResetPasswordPage() {
     // Vérifier si c'est une activation de compte (invitation) via l'URL
     const hash = window.location.hash;
     const searchParams = new URLSearchParams(window.location.search);
-    if (hash.includes('type=invite') || hash.includes('type=signup') || searchParams.get('type') === 'invite') {
+    if (hash.includes('type=invite') || hash.includes('type=signup') || hash.includes('type=recovery') || searchParams.get('type') === 'invite') {
       setIsActivation(true);
     }
 
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        // En cas d'invitation Supabase, la session est souvent déjà injectée
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        setIsInitializing(false);
+      } else {
+        // Laisser un petit délai pour la détection de session via hash
+        setTimeout(() => setIsInitializing(false), 1000);
       }
-    };
-    checkSession();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -92,7 +96,12 @@ export default function ResetPasswordPage() {
 
         {/* Carte */}
         <div className="card p-6">
-          {success ? (
+          {isInitializing ? (
+            <div className="flex flex-col items-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-500 mb-4" />
+              <p className="text-content-secondary text-sm">Vérification de la session...</p>
+            </div>
+          ) : success ? (
             <div className="text-center py-4">
               <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-6 h-6 text-status-success" />

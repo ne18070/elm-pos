@@ -91,7 +91,7 @@ export default function ComptabilitePage() {
         success(`${total} écriture${total > 1 ? 's' : ''} synchronisée${total > 1 ? 's' : ''}`);
         await load();
       } else if (errors.length === 0) {
-        success('Journal à jour — aucune nouvelle écriture');
+        success('Journal à jour - aucune nouvelle écriture');
       }
     } catch (err) {
       notifErr(String(err));
@@ -120,7 +120,7 @@ export default function ComptabilitePage() {
   }
 
   function handlePrint() {
-    const periodLabel = period === 'custom' ? `${customFrom} —${customTo}` : PERIOD_LABELS[period];
+    const periodLabel = period === 'custom' ? `${customFrom} -${customTo}` : PERIOD_LABELS[period];
     const bizName  = business?.name ?? 'Établissement';
     const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const fmt = (n: number) =>
@@ -174,7 +174,7 @@ export default function ComptabilitePage() {
           <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${r.total_debit > 0 ? fmt(r.total_debit) : ''}</td>
           <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${r.total_credit > 0 ? fmt(r.total_credit) : ''}</td>
           <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px;color:${solde > 0 ? '#16a34a' : solde < 0 ? '#dc2626' : '#888'}">
-            ${solde !== 0 ? fmt(Math.abs(solde)) + (solde > 0 ? ' D' : ' C') : '—'}
+            ${solde !== 0 ? fmt(Math.abs(solde)) + (solde > 0 ? ' D' : ' C') : '-'}
           </td>
         </tr>`;
       }).join('');
@@ -209,7 +209,7 @@ export default function ComptabilitePage() {
       <tr style="${bold ? 'background:#f8fafc;' : ''}">
         <td style="padding:${big ? '6' : '4'}px 8px;${indent ? 'padding-left:24px;' : ''}font-size:${big ? '13' : '12'}px;${bold ? 'font-weight:700;' : ''}">${label}</td>
         <td style="padding:${big ? '6' : '4'}px 8px;text-align:right;font-family:monospace;font-size:${big ? '13' : '12'}px;${bold ? 'font-weight:700;' : ''}color:${val >= 0 ? (bold ? '#15803d' : '#222') : '#dc2626'}">
-          ${val !== 0 ? fmt(val) : '—'}
+          ${val !== 0 ? fmt(val) : '-'}
         </td>
       </tr>`).join('');
 
@@ -278,7 +278,7 @@ export default function ComptabilitePage() {
     const html = `<!DOCTYPE html>
 <html lang="fr"><head>
   <meta charset="UTF-8">
-  <title>Comptabilité —${bizName}</title>
+  <title>Comptabilité -${bizName}</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 12px; }
@@ -290,7 +290,7 @@ export default function ComptabilitePage() {
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #4f46e5">
     <div>
       <h1 style="font-size:20px;font-weight:800;color:#1e293b;margin:0">${bizName}</h1>
-      <p style="font-size:12px;color:#64748b;margin:2px 0 0">Comptabilité OHADA —SYSCOHADA Révisé</p>
+      <p style="font-size:12px;color:#64748b;margin:2px 0 0">Comptabilité OHADA -SYSCOHADA Révisé</p>
     </div>
     <div style="text-align:right">
       <p style="font-size:13px;font-weight:700;color:#4f46e5;margin:0">${TAB_TITLES[tab]}</p>
@@ -330,7 +330,7 @@ export default function ComptabilitePage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Comptabilité OHADA</h1>
-            <p className="text-xs text-content-primary mt-0.5">SYSCOHADA Révisé —Journal général et états financiers</p>
+            <p className="text-xs text-content-primary mt-0.5">SYSCOHADA Révisé -Journal général et états financiers</p>
           </div>
           <div className="flex items-center gap-2">
             <select value={period} onChange={(e) => setPeriod(e.target.value as Period)} className="input py-1.5 text-sm">

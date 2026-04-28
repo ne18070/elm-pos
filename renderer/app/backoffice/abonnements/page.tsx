@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { 
   Loader2, CheckCircle, Clock, XCircle, RefreshCw, 
   Smartphone, Search, ChevronLeft, ChevronRight, 
-  Settings2, Zap, X
+  Settings2, Zap, X, Trash2
 } from 'lucide-react';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
-  getAllSubscriptions, activateSubscription, getPlans, 
+  getAllSubscriptions, activateSubscription, getPlans, deleteAccount,
   type SubscriptionRow, type Plan 
 } from '@services/supabase/subscriptions';
 import { getIntouchConfig, upsertIntouchConfig } from '@services/supabase/intouch';
@@ -60,6 +60,8 @@ export default function SubscriptionsPage() {
     businessId: string; planId: string; days: string; mode: 'jours' | 'mois'; note: string;
   } | null>(null);
   const [page, setPage] = useState(1);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ ownerId: string; businessId: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Intouch Config
   const [intouchForm, setIntouchForm] = useState<{
@@ -147,6 +149,17 @@ export default function SubscriptionsPage() {
     finally { setIntouchLoading(false); }
   }
 
+  async function handleDeleteAccount() {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await deleteAccount(deleteConfirm.ownerId, deleteConfirm.businessId);
+      setDeleteConfirm(null);
+      await load();
+    } catch (e) { alert(toUserError(e)); }
+    finally { setDeleting(false); }
+  }
+
   return (
     <div className="p-8 space-y-8 pb-32">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -197,12 +210,12 @@ export default function SubscriptionsPage() {
                   return (
                     <tr key={row.owner_id ?? row.business_id} className="hover:bg-surface-hover/30 transition-colors group">
                       <td className="px-6 py-4">
-                        <p className="font-black text-content-primary">{row.owner_name ?? '—'}</p>
+                        <p className="font-black text-content-primary">{row.owner_name ?? '-'}</p>
                         <p className="text-xs text-content-muted">{row.owner_email ?? ''}</p>
                       </td>
                       <td className="px-6 py-4">
                         {bizList.length === 0 ? (
-                          <p className="text-sm text-content-muted">{row.business_name ?? '—'}</p>
+                          <p className="text-sm text-content-muted">{row.business_name ?? '-'}</p>
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {bizList.map((b) => (
@@ -211,7 +224,7 @@ export default function SubscriptionsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-content-primary font-bold">{row.plan_label ?? '—'}</td>
+                      <td className="px-6 py-4 text-content-primary font-bold">{row.plan_label ?? '-'}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1 items-start">
                           <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border", badge.color)}>
@@ -229,7 +242,7 @@ export default function SubscriptionsPage() {
                           ? `Fin essai : ${new Date(row.trial_ends_at).toLocaleDateString('fr-FR')}`
                           : row.expires_at
                             ? new Date(row.expires_at).toLocaleDateString('fr-FR')
-                            : '—'}
+                            : '-'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -246,6 +259,15 @@ export default function SubscriptionsPage() {
                           >
                             <Zap className="w-3.5 h-3.5" /> Activer
                           </button>
+                          {st === 'expired' && row.owner_id && (
+                            <button
+                              onClick={() => setDeleteConfirm({ ownerId: row.owner_id!, businessId: row.business_id, name: row.business_name })}
+                              className="p-2 rounded-xl bg-surface-card text-status-error/60 hover:text-status-error hover:bg-badge-error transition-all border border-surface-border shadow-sm"
+                              title="Supprimer définitivement"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -318,7 +340,7 @@ export default function SubscriptionsPage() {
             <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Choisir un Plan</label>
             <select value={form?.planId} onChange={(e) => setForm((f: any) => ({ ...f, planId: e.target.value }))} className="input h-12">
               {plans.map((p) => (
-                <option key={p.id} value={p.id}>{p.label} — {p.price.toLocaleString()} {displayCurrency(p.currency)}</option>
+                <option key={p.id} value={p.id}>{p.label} - {p.price.toLocaleString()} {displayCurrency(p.currency)}</option>
               ))}
             </select>
           </div>
@@ -339,6 +361,52 @@ export default function SubscriptionsPage() {
           <div>
             <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Notes (Paiement, Réf...)</label>
             <textarea value={form?.note} onChange={(e) => setForm((f: any) => ({ ...f, note: e.target.value }))} className="input min-h-[100px] py-4" placeholder="Optionnel..." />
+          </div>
+        </div>
+      </SideDrawer>
+
+      {/* Suppression Définitive */}
+      <SideDrawer
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Supprimer le client"
+        subtitle="Action irréversible et totale"
+        footer={
+          <div className="flex gap-4">
+            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
+            <button onClick={handleDeleteAccount} disabled={deleting} className="btn-danger flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+              {deleting && <Loader2 size={16} className="animate-spin" />} Supprimer tout
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <div className="p-5 rounded-2xl bg-badge-error/50 border border-status-error/30 text-status-error flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-status-error flex items-center justify-center text-white shrink-0 shadow-lg">
+              <Trash2 size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest leading-tight">Attention</p>
+              <p className="text-xs font-bold opacity-80 mt-0.5">La suppression est définitive et immédiate.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-sm text-content-secondary leading-relaxed">
+              Vous êtes sur le point de supprimer l'établissement <span className="font-black text-content-primary">"{deleteConfirm?.name}"</span> ainsi que le compte de son propriétaire.
+            </p>
+            
+            <div className="p-4 rounded-xl bg-surface-hover/50 border border-surface-border space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-content-muted">Données supprimées :</p>
+              <ul className="text-xs font-bold text-content-secondary space-y-1 list-disc pl-4">
+                <li>Compte utilisateur Auth (accès révoqué)</li>
+                <li>Profil et paramètres de l'établissement</li>
+                <li>Catalogue produits et stocks</li>
+                <li>Historique des ventes et paiements</li>
+                <li>Données clients et fidélité</li>
+                <li>Configuration de l'organisation légale</li>
+              </ul>
+            </div>
           </div>
         </div>
       </SideDrawer>

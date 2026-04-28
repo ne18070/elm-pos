@@ -97,7 +97,7 @@ export default function SettingsPage() {
     }
   }
 
-  // Organisation (entité légale) — owner uniquement
+  // Organisation (entité légale) - owner uniquement
   const isOwner = hasRole(user?.role, 'owner');
   const [org, setOrg] = useState<Organization | null>(null);
   const [orgForm, setOrgForm] = useState({ legal_name: '', denomination: '', rib: '' });
@@ -206,7 +206,7 @@ export default function SettingsPage() {
     try {
       const result = await openCashDrawer();
       if (result.success) success('Tiroir ouvert avec succès');
-      else notifError(result.error ?? 'Tiroir non répondu — vérifiez la connexion');
+      else notifError(result.error ?? 'Tiroir non répondu - vérifiez la connexion');
     } finally {
       setTestingDrawer(false);
     }
@@ -365,7 +365,7 @@ export default function SettingsPage() {
     try {
       const newToken = await regenerateVerifyToken(waConfig.id);
       setWaConfig((prev) => prev ? { ...prev, verify_token: newToken } : prev);
-      success('Nouveau token généré — reconfigurez le webhook dans Meta Dashboard');
+      success('Nouveau token généré - reconfigurez le webhook dans Meta Dashboard');
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -407,7 +407,7 @@ export default function SettingsPage() {
 
       <div className="p-6 space-y-6 max-w-2xl">
 
-        {/* Type d'activité — manager+ seulement */}
+        {/* Type d'activité - manager+ seulement */}
         {isManagerOrAbove && (() => {
           const businessTypes: string[] = business?.types?.length
             ? business.types
@@ -444,7 +444,7 @@ export default function SettingsPage() {
           );
         })()}
 
-        {/* Organisation — owner uniquement */}
+        {/* Organisation - owner uniquement */}
         {isOwner && org && (
           <div className="card overflow-hidden">
             <div className="p-5 border-b border-surface-border flex items-center justify-between">
@@ -497,7 +497,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Informations établissement — manager+ seulement */}
+        {/* Informations établissement - manager+ seulement */}
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('etablissement')} className="w-full flex items-center justify-between p-5">
@@ -557,13 +557,13 @@ export default function SettingsPage() {
                 onChange={(e) => setBizForm({ ...bizForm, currency: e.target.value })}
                 className="input"
               >
-                <option value="XOF">XOF — Franc CFA</option>
-                <option value="EUR">EUR — Euro</option>
-                <option value="USD">USD — Dollar</option>
-                <option value="GBP">GBP — Livre sterling</option>
-                <option value="MAD">MAD — Dirham marocain</option>
-                <option value="DZD">DZD — Dinar algérien</option>
-                <option value="TND">TND — Dinar tunisien</option>
+                <option value="XOF">XOF - Franc CFA</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="USD">USD - Dollar</option>
+                <option value="GBP">GBP - Livre sterling</option>
+                <option value="MAD">MAD - Dirham marocain</option>
+                <option value="DZD">DZD - Dinar algérien</option>
+                <option value="TND">TND - Dinar tunisien</option>
               </select>
             </div>
           </div>
@@ -713,7 +713,7 @@ export default function SettingsPage() {
                 <span>
                   TVA incluse dans les prix
                   <span className="ml-1 text-xs text-content-muted">
-                    ({bizForm.tax_inclusive ? 'prix TTC saisis — TVA déduite' : 'prix HT saisis — TVA ajoutée'})
+                    ({bizForm.tax_inclusive ? 'prix TTC saisis - TVA déduite' : 'prix HT saisis - TVA ajoutée'})
                   </span>
                 </span>
               </button>
@@ -785,7 +785,7 @@ export default function SettingsPage() {
         </div>
         )}
 
-        {/* Unités de stock — manager+ seulement */}
+        {/* Unités de stock - manager+ seulement */}
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('stock')} className="w-full flex items-center justify-between p-5">
@@ -846,7 +846,7 @@ export default function SettingsPage() {
         </div>
         )}
 
-        {/* Modèles de facture — manager+ seulement */}
+        {/* Modèles de facture - manager+ seulement */}
         {isManagerOrAbove && (
         <div className="card overflow-hidden">
           <button onClick={() => toggleSection('facture')} className="w-full flex items-center justify-between p-5">
@@ -997,7 +997,7 @@ export default function SettingsPage() {
                   <div>
                     <p>
                       {printerTestResult.connected
-                        ? `Imprimante joignable — latence ${printerTestResult.latency} ms`
+                        ? `Imprimante joignable - latence ${printerTestResult.latency} ms`
                         : `Impossible de joindre l'imprimante${printerTestResult.error ? ` (${printerTestResult.error})` : ''}`}
                     </p>
                     {!isElectron && (
@@ -1080,7 +1080,7 @@ export default function SettingsPage() {
           </div>}
         </div>
 
-        {/* WhatsApp Business — admin/owner uniquement */}
+        {/* WhatsApp Business - admin/owner uniquement */}
         {isAdmin && (
           <div className="card overflow-hidden">
             <button onClick={() => toggleSection('whatsapp')} className="w-full flex items-center justify-between p-5">
@@ -1131,7 +1131,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="label">
                       Access Token permanent
-                      <span className="text-content-muted font-normal"> — obtenu depuis Meta Developer Dashboard</span>
+                      <span className="text-content-muted font-normal"> - obtenu depuis Meta Developer Dashboard</span>
                     </label>
                     <div className="relative">
                       <input
@@ -1166,12 +1166,12 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Verify token — généré par l'app, à coller dans Meta */}
+                {/* Verify token - généré par l'app, à coller dans Meta */}
                 {waConfig?.verify_token && (
                   <div>
                     <label className="label">
                       Verify Token
-                      <span className="text-content-muted font-normal"> — généré par ELM APP, à coller dans Meta</span>
+                      <span className="text-content-muted font-normal"> - généré par ELM APP, à coller dans Meta</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -1199,7 +1199,7 @@ export default function SettingsPage() {
                       </button>
                     </div>
                     <p className="text-xs text-status-warning/80 mt-1">
-                      ⚠ Régénérer invalide l&apos;ancien token — vous devrez reconfigurer le webhook dans Meta.
+                      ⚠ Régénérer invalide l&apos;ancien token - vous devrez reconfigurer le webhook dans Meta.
                     </p>
                     <p className="text-xs text-content-muted mt-1">
                       URL du webhook :{' '}

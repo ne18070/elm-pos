@@ -417,6 +417,22 @@ export async function approvePublicRequest(
   }).catch(() => {});
 }
 
+export async function deleteAccount(ownerId: string, businessId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch('/api/admin/delete-account', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify({ ownerId, businessId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error ?? 'Erreur lors de la suppression');
+  }
+}
+
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {
   const BUCKET = 'product-images';
   const ext    = file.name.split('.').pop() ?? 'png';
@@ -427,4 +443,20 @@ export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<str
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
+}
+
+export async function deleteSubscriptionRequest(requestId: string): Promise<void> {
+  const { error } = await db
+    .from('subscription_requests')
+    .delete()
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deletePublicSubscriptionRequest(requestId: string): Promise<void> {
+  const { error } = await db
+    .from('public_subscription_requests')
+    .delete()
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
 }

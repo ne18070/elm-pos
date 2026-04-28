@@ -24,7 +24,7 @@ function daysUntil(dateStr: string | null): number | null {
 }
 
 function fmtDate(dateStr: string | null) {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
 }
 
@@ -150,7 +150,7 @@ function BusinessConfigModal({
           <div>
             <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
               Modules actifs
-              <span className="text-content-muted font-normal normal-case ml-1">— le client verra uniquement ceux activés ici</span>
+              <span className="text-content-muted font-normal normal-case ml-1">- le client verra uniquement ceux activés ici</span>
             </p>
             <div className="space-y-2">
               {allModules.map((m) => {
@@ -262,14 +262,14 @@ function OwnerRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-content-primary truncate">
             {expiringSoon && <AlertTriangle className="w-3.5 h-3.5 text-status-warning inline mr-1.5 -mt-0.5" />}
-            {group.owner_name ?? '—'}
+            {group.owner_name ?? '-'}
           </p>
           <p className="text-xs text-content-muted truncate">{group.owner_email ?? ''}</p>
         </div>
 
         {/* Plan + status */}
         <div className="hidden sm:flex items-center gap-2 shrink-0">
-          <span className="text-xs text-content-secondary">{group.plan_label ?? '—'}</span>
+          <span className="text-xs text-content-secondary">{group.plan_label ?? '-'}</span>
           <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs border', STATUS_STYLE[st])}>
             {STATUS_LABEL[st]}
           </span>
@@ -297,7 +297,7 @@ function OwnerRow({
           {group.businesses.map((biz) => {
             const typeLabels = biz.business_types.length > 0
               ? biz.business_types.join(', ')
-              : '—';
+              : '-';
             return (
               <div key={biz.business_id} className="flex items-center gap-3 px-4 py-3 bg-surface-input/20 hover:bg-surface-input/40 transition-colors">
                 {/* Indent */}
@@ -414,7 +414,7 @@ export function MonitoringTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-content-primary">
-          Monitoring — {groups.length} compte{groups.length !== 1 ? 's' : ''} · {rows.length} établissement{rows.length !== 1 ? 's' : ''}
+          Monitoring - {groups.length} compte{groups.length !== 1 ? 's' : ''} · {rows.length} établissement{rows.length !== 1 ? 's' : ''}
         </h2>
         <button onClick={load} disabled={loading}
           className="btn-secondary flex items-center gap-2 text-sm disabled:opacity-50">

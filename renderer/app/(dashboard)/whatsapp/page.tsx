@@ -137,7 +137,7 @@ export default function WhatsAppPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Realtime — nouveaux messages WhatsApp
+  // Realtime - nouveaux messages WhatsApp
   useEffect(() => {
     if (!business?.id) return;
 
@@ -506,7 +506,7 @@ export default function WhatsAppPage() {
                         </div>
                         <div className="flex items-center justify-between">
                           <p className={`text-xs truncate ${conv.unread > 0 ? 'text-content-primary' : 'text-content-secondary'}`}>
-                            {conv.last_message ?? '—'}
+                            {conv.last_message ?? '-'}
                           </p>
                           {conv.unread > 0 && (
                             <span className="ml-2 shrink-0 min-w-[20px] h-5 px-1 rounded-full bg-green-600 text-content-primary text-xs flex items-center justify-center font-bold">
@@ -521,7 +521,7 @@ export default function WhatsAppPage() {
                 </div>
               ))}
 
-              {/* Pagination — Charger plus */}
+              {/* Pagination - Charger plus */}
               {hasMore && (
                 <div className="p-3 flex justify-center">
                   <button
@@ -634,7 +634,7 @@ export default function WhatsAppPage() {
                           return <p className="text-sm">{msg.body ?? '📍 Localisation'}</p>;
                         })()}
                         {msg.message_type !== 'location' && (
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '—'}</p>
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.body ?? '-'}</p>
                         )}
                         <p className={`text-xs ${msg.direction === 'outbound' ? 'text-green-200' : 'text-content-secondary'} text-right`}>
                           {timeStr(msg.created_at)}

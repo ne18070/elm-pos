@@ -4,13 +4,14 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
   Search, Eye, X, Copy, Check as CheckIcon,
-  ChevronLeft, ChevronRight, Check, Send
+  ChevronLeft, ChevronRight, Check, Send, Trash2
 } from 'lucide-react';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
   getSubscriptionRequests, approveSubscriptionRequest, rejectSubscriptionRequest,
   getPublicSubscriptionRequests, rejectPublicRequest, getPlans,
+  deleteSubscriptionRequest, deletePublicSubscriptionRequest,
   type Plan 
 } from '@services/supabase/subscriptions';
 import { type SubscriptionRequest, type PublicSubscriptionRequest } from '@pos-types';
@@ -80,6 +81,7 @@ export default function RequestsPage() {
   } | null>(null);
   const [page, setPage]       = useState(1);
   const [resending, setResending] = useState<string | null>(null);
+  const [deleteId, setDeleteId]   = useState<{ id: string; isPublic: boolean } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -181,6 +183,21 @@ export default function RequestsPage() {
       }
       setRejectId(null);
       setRejectNote('');
+      await load();
+    } catch (e) { alert(toUserError(e)); }
+    finally { setProcessing(null); }
+  };
+
+  const onDelete = async () => {
+    if (!deleteId) return;
+    setProcessing(deleteId.id);
+    try {
+      if (deleteId.isPublic) {
+        await deletePublicSubscriptionRequest(deleteId.id);
+      } else {
+        await deleteSubscriptionRequest(deleteId.id);
+      }
+      setDeleteId(null);
       await load();
     } catch (e) { alert(toUserError(e)); }
     finally { setProcessing(null); }
@@ -326,7 +343,7 @@ export default function RequestsPage() {
                               {resending === req.id ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                             </button>
                           )}
-                          {req.status === 'pending' && (
+                          {req.status === 'pending' ? (
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => req.isPublic ? setApprovePublicForm({ req, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' }) : setApproveForm({ requestId: req.id, businessId: req.business_id, planId: req.plan_id ?? plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
@@ -341,6 +358,14 @@ export default function RequestsPage() {
                                 Rejeter
                               </button>
                             </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteId({ id: req.id, isPublic: req.isPublic })}
+                              className="p-2 rounded-xl bg-surface-card text-status-error/60 hover:text-status-error hover:bg-badge-error transition-all border border-surface-border shadow-sm"
+                              title="Supprimer la demande"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           )}
                         </div>
                       </td>
@@ -475,6 +500,32 @@ export default function RequestsPage() {
             <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Motif du rejet (Optionnel)</label>
             <textarea value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} className="input min-h-[120px] py-4" placeholder="Ex: Reçu illisible ou non valide..." autoFocus />
           </div>
+        </div>
+      </SideDrawer>
+
+      {/* Suppression */}
+      <SideDrawer
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        title="Supprimer la demande"
+        subtitle="Cette action est définitive"
+        footer={
+          <div className="flex gap-4">
+            <button onClick={() => setDeleteId(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
+            <button onClick={onDelete} disabled={!!processing} className="btn-danger flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+              {processing && <Loader2 size={16} className="animate-spin" />} Supprimer définitivement
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="p-5 rounded-2xl bg-badge-error/50 border border-status-error/30 text-status-error flex items-center gap-3">
+             <Trash2 size={24} />
+             <p className="text-sm font-bold leading-tight">Attention : Cette demande sera définitivement supprimée de la base de données.</p>
+          </div>
+          <p className="text-sm text-content-secondary px-2">
+            La suppression est irréversible. Assurez-vous que cette demande n'est plus nécessaire avant de confirmer.
+          </p>
         </div>
       </SideDrawer>
 

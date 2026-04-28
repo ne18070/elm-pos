@@ -224,7 +224,7 @@ export default function BillingPage() {
                   </strong>
                   {daysLeft !== null && daysLeft >= 0 && (
                     <span className="text-content-primary ml-1">
-                      —{daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
+                      -{daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}
                     </span>
                   )}
                 </span>
@@ -345,7 +345,7 @@ export default function BillingPage() {
                   <span className="text-content-secondary">Plan sélectionné</span>
                   <span className="font-bold text-content-primary">
                     {selectedPlan.label}
-                    {' —'}
+                    {' -'}
                     {selectedPlan.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan.currency)}
                   </span>
                 </div>
@@ -410,7 +410,7 @@ export default function BillingPage() {
                     <div className="flex-1 min-w-0 space-y-1.5">
                       {/* Plan name + price */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-content-primary">{req.plan_label ?? '—'}</p>
+                        <p className="text-sm font-semibold text-content-primary">{req.plan_label ?? '-'}</p>
                         {req.plan_price != null && req.plan_currency && (
                           <span className="text-xs font-medium text-content-brand bg-brand-600/10 border border-brand-600/20 px-2 py-0.5 rounded-full">
                             {req.plan_price.toLocaleString('fr-FR')} {displayCurrency(req.plan_currency)}

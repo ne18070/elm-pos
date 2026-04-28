@@ -123,11 +123,11 @@ function Hero() {
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold text-brand-300 tracking-widest uppercase mb-6">
-            Gestion complete pour les PME — Senegal & Afrique
+            Gestion complete pour les PME - Senegal & Afrique
           </p>
 
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-content-primary leading-[1.1] tracking-tight mb-6">
-            Gerez votre activite
+            Gerez votre activité
             <br />
             <span className="text-content-secondary">sans vous compliquer la vie.</span>
           </h1>

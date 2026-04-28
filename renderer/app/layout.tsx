@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
+    default: 'ELM APP - Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
     template: '%s | ELM APP',
   },
   description:
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     locale: 'fr_SN',
     url: BASE_URL,
     siteName: 'ELM APP',
-    title: 'ELM APP — Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
+    title: 'ELM APP - Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
     description:
       'Tout-en-un : caisse tactile, stocks temps réel, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels et cabinets au Sénégal. Essai 7 jours gratuit.',
     images: [
@@ -84,14 +84,14 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'ELM APP — Logiciel de gestion tout-en-un pour PME africaines',
+        alt: 'ELM APP - Logiciel de gestion tout-en-un pour PME africaines',
       },
     ],
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'ELM APP — Caisse · Stocks · Compta OHADA · Location · Réservations · Juridique',
+    title: 'ELM APP - Caisse · Stocks · Compta OHADA · Location · Réservations · Juridique',
     description:
       'Caisse tactile, stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, hors-ligne. Pour restaurants, boutiques, hôtels & cabinets au Sénégal.',
     images: ['/og-image.png'],

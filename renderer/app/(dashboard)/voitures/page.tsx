@@ -852,7 +852,7 @@ function VoitureForm({
             onChange={(e) => onChange({ carburant: e.target.value as Carburant | '' })}
             className="input w-full mt-1.5"
           >
-            <option value="">—</option>
+            <option value="">-</option>
             {(Object.entries(CARBURANT_LABELS) as [Carburant, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
@@ -865,7 +865,7 @@ function VoitureForm({
             onChange={(e) => onChange({ transmission: e.target.value as Transmission | '' })}
             className="input w-full mt-1.5"
           >
-            <option value="">—</option>
+            <option value="">-</option>
             {(Object.entries(TRANSMISSION_LABELS) as [Transmission, string][]).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
