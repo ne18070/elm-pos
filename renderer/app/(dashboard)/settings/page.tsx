@@ -24,7 +24,7 @@ const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sac
 
 const ALL_PUBLIC_MODULES = [
   { key: 'boutique',    label: 'Boutique / Catalogue', icon: ShoppingBag, features: ['retail'],    bizTypes: null as string[] | null },
-  { key: 'services',    label: 'Prestations de service', icon: Wrench,     features: ['services'],  bizTypes: null as string[] | null },
+  { key: 'services',    label: 'Prestations de service', icon: Wrench,     features: ['voitures'],  bizTypes: ['service']  as string[] | null },
   { key: 'location',   label: 'Location',           icon: Briefcase,   features: ['rental'],    bizTypes: null as string[] | null },
   { key: 'reservation',label: 'Réservation Hôtel',  icon: BedDouble,   features: ['hotel'],     bizTypes: null as string[] | null },
   { key: 'voitures',   label: 'Vente de Voitures',  icon: Car,         features: ['voitures'],  bizTypes: null as string[] | null },
