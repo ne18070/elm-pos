@@ -9,7 +9,7 @@ import {
   Package, Pencil, Trash2, Warehouse, UserCog, UserMinus,
   UserPlus, LogIn, Settings, Tag, RefreshCw, Search, Filter,
   ShieldAlert, History, BedDouble, LogOut, CalendarX,
-  Briefcase, Receipt, Archive, ArchiveRestore,
+  Briefcase, Receipt, Archive, ArchiveRestore, Wrench, Car, FileSignature,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -68,24 +68,79 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'dossier.unarchived':            { label: 'Dossier désarchivé',     Icon: ArchiveRestore,  color: 'text-status-success' },
   'honoraire.added':               { label: 'Honoraire ajouté',       Icon: Receipt,         color: 'text-status-success' },
   'honoraire.paid':                { label: 'Honoraire encaissé',     Icon: CreditCard,      color: 'text-status-success' },
+  // Ordres de travail (Prestations)
+  'service_order.created':         { label: 'OT créé',                Icon: Wrench,          color: 'text-status-success' },
+  'service_order.updated':         { label: 'OT modifié',             Icon: Pencil,          color: 'text-status-warning' },
+  'service_order.status_updated':  { label: 'Statut OT mis à jour',   Icon: RefreshCw,       color: 'text-content-brand' },
+  'service_order.paid':            { label: 'OT encaissé',            Icon: CreditCard,      color: 'text-status-success' },
+  'service_order.cancelled':       { label: 'OT annulé',              Icon: XCircle,         color: 'text-status-error' },
+  // Voitures
+  'voiture.created':               { label: 'Véhicule ajouté',        Icon: Car,             color: 'text-status-success' },
+  'voiture.updated':               { label: 'Véhicule modifié',       Icon: Pencil,          color: 'text-status-warning' },
+  'voiture.deleted':               { label: 'Véhicule supprimé',      Icon: Trash2,          color: 'text-status-error' },
+  'voiture.sold':                  { label: 'Véhicule vendu',         Icon: Car,             color: 'text-content-brand' },
+  // Contrats
+  'contrat.created':               { label: 'Contrat créé',           Icon: FileSignature,   color: 'text-status-success' },
+  'contrat.updated':               { label: 'Contrat modifié',        Icon: Pencil,          color: 'text-status-warning' },
+  'contrat.cancelled':             { label: 'Contrat annulé',         Icon: XCircle,         color: 'text-status-error' },
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  service_order:    'OT / Prestation',
+  order:            'Commande',
+  product:          'Produit',
+  stock:            'Stock',
+  coupon:           'Coupon',
+  user:             'Utilisateur',
+  cash_session:     'Session caisse',
+  hotel_room:       'Chambre',
+  hotel_reservation:'Réservation hôtel',
+  dossier:          'Dossier',
+  honoraire:        'Honoraire',
+  voiture:          'Véhicule',
+  contrat:          'Contrat',
+  snapshot:         'Sauvegarde',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  attente:  'En attente',
+  en_cours: 'En cours',
+  termine:  'Terminé',
+  paye:     'Payé',
+  annule:   'Annulé',
+  paid:     'Payé',
+  pending:  'En attente',
+  cancelled:'Annulé',
+  refunded: 'Remboursé',
 };
 
 function getActionConfig(action: string) {
   return ACTION_CONFIG[action] ?? { label: action, Icon: Filter, color: 'text-content-secondary' };
 }
 
+function getEntityLabel(entityType: string | null): string {
+  if (!entityType) return '';
+  return ENTITY_LABELS[entityType] ?? entityType;
+}
+
 function metaSummary(metadata: Record<string, unknown> | null): string {
   if (!metadata) return '';
   const parts: string[] = [];
-  if (metadata.total !== undefined)       parts.push(`Total : ${metadata.total}`);
-  if (metadata.amount !== undefined)      parts.push(`Montant : ${metadata.amount}`);
-  if (metadata.name !== undefined)        parts.push(`${metadata.name}`);
-  if (metadata.quantity !== undefined)    parts.push(`Qté : ${metadata.quantity}`);
-  if (metadata.supplier !== undefined && metadata.supplier)   parts.push(`Fournisseur : ${metadata.supplier}`);
-  if (metadata.method !== undefined)      parts.push(`${metadata.method}`);
-  if (metadata.reason !== undefined && metadata.reason)       parts.push(`Motif : ${metadata.reason}`);
-  if (metadata.new_role !== undefined)    parts.push(`→ ${metadata.new_role}`);
-  if (metadata.fields !== undefined)      parts.push(`Champs : ${(metadata.fields as string[]).join(', ')}`);
+  if (metadata.order_number !== undefined)  parts.push(`OT #${metadata.order_number}`);
+  if (metadata.client_name  !== undefined && metadata.client_name)  parts.push(`${metadata.client_name}`);
+  if (metadata.subject_ref  !== undefined && metadata.subject_ref)  parts.push(`Réf : ${metadata.subject_ref}`);
+  if (metadata.status       !== undefined)  parts.push(STATUS_LABELS[metadata.status as string] ?? String(metadata.status));
+  if (metadata.items_count  !== undefined)  parts.push(`${metadata.items_count} prestation${Number(metadata.items_count) > 1 ? 's' : ''}`);
+  if (metadata.total        !== undefined)  parts.push(`Total : ${metadata.total}`);
+  if (metadata.amount       !== undefined)  parts.push(`Montant : ${metadata.amount}`);
+  if (metadata.payment_method !== undefined && metadata.payment_method) parts.push(`${metadata.payment_method}`);
+  if (metadata.name         !== undefined)  parts.push(`${metadata.name}`);
+  if (metadata.quantity     !== undefined)  parts.push(`Qté : ${metadata.quantity}`);
+  if (metadata.supplier     !== undefined && metadata.supplier)  parts.push(`Fournisseur : ${metadata.supplier}`);
+  if (metadata.method       !== undefined)  parts.push(`${metadata.method}`);
+  if (metadata.reason       !== undefined && metadata.reason)    parts.push(`Motif : ${metadata.reason}`);
+  if (metadata.new_role     !== undefined)  parts.push(`→ ${metadata.new_role}`);
+  if (metadata.fields       !== undefined)  parts.push(`Champs : ${(metadata.fields as string[]).join(', ')}`);
   return parts.join(' · ');
 }
 
@@ -288,8 +343,8 @@ export default function ActivityPage() {
                     {/* Entité */}
                     <td className="px-4 py-3 text-xs hidden md:table-cell">
                       {log.entity_type && (
-                        <span className="px-2 py-0.5 rounded-md bg-surface-input text-content-secondary capitalize">
-                          {log.entity_type}
+                        <span className="px-2 py-0.5 rounded-md bg-surface-input text-content-secondary">
+                          {getEntityLabel(log.entity_type)}
                         </span>
                       )}
                       {log.entity_id && (
