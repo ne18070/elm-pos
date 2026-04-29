@@ -53,9 +53,12 @@ export async function generateServiceOrderLink(
   const filename = `${orderRef}.pdf`;
   const filePath = `services/${business.id}/${order.id}/${filename}`;
 
+  // Remove existing file first — upsert fails RLS when the owner field doesn't match the current user
+  await supabase.storage.from('product-images').remove([filePath]).catch(() => {});
+
   const { error: uploadError } = await supabase.storage
-    .from('product-images') // On réutilise le bucket existant ou on en créerait un 'documents'
-    .upload(filePath, pdfBlob, { upsert: true, contentType: 'application/pdf' });
+    .from('product-images')
+    .upload(filePath, pdfBlob, { upsert: false, contentType: 'application/pdf' });
 
   if (uploadError) throw uploadError;
 
