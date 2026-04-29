@@ -47,6 +47,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [offlineCheck, setOfflineCheck] = useState<{ allowed: boolean; status: string; reason?: string } | null>(null);
 
+  // Empêche la molette de changer la valeur des inputs numériques
+  useEffect(() => {
+    const prevent = (e: WheelEvent) => {
+      if ((e.target as HTMLElement)?.tagName === 'INPUT' &&
+          (e.target as HTMLInputElement).type === 'number') {
+        (e.target as HTMLInputElement).blur();
+      }
+    };
+    document.addEventListener('wheel', prevent, { passive: true });
+    return () => document.removeEventListener('wheel', prevent);
+  }, []);
+
   // Load per-member permission overrides when user + business are known
   useEffect(() => {
     if (!user?.id || !business?.id) { resetPermissions(); return; }

@@ -216,8 +216,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                 <label className="label">Quantité offerte</label>
                 <input
                   type="number"
-                  min="0.001"
-                  step="0.001"
+                  min="0"
+                  step="any"
                   value={form.free_item_quantity}
                   onChange={(e) => update('free_item_quantity', e.target.value)}
                   className="input"
@@ -261,7 +261,7 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                 type="number"
                 min="0.01"
                 max={form.type === 'percentage' ? '100' : undefined}
-                step="0.01"
+                step="any"
                 value={form.value}
                 onChange={(e) => update('value', e.target.value)}
                 className="input"
@@ -273,7 +273,7 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
               <input
                 type="number"
                 min="0"
-                step="0.01"
+                step="any"
                 value={form.min_order_amount}
                 onChange={(e) => update('min_order_amount', e.target.value)}
                 className="input"

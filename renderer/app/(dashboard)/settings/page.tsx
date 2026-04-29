@@ -696,7 +696,7 @@ export default function SettingsPage() {
               type="number"
               min="0"
               max="100"
-              step="0.1"
+              step="any"
               value={bizForm.tax_rate}
               onChange={(e) => setBizForm({ ...bizForm, tax_rate: e.target.value })}
               className="input"

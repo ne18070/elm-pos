@@ -6,7 +6,7 @@ import {
   Clock, CheckCircle2, XCircle, Edit2, Trash2, Play,
   Square, CreditCard, Package2, ChevronDown, ChevronUp,
   RefreshCw, User, Phone, History, MessageCircle, Bell,
-  ExternalLink, Copy, Share2, LayoutGrid, ChevronLeft, ChevronRight
+  ExternalLink, Copy, Share2, LayoutGrid, ChevronLeft, ChevronRight, Pencil
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -26,6 +26,8 @@ import {
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { shareServiceOrderViaWhatsApp } from '@/lib/share-service-order';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { searchClients, type Client } from '@services/supabase/clients';
+import { getStaff, type Staff } from '@services/supabase/staff';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -108,11 +110,22 @@ function NewOTModal({
   const [clientPhone, setClientPhone] = useState('');
   const [notes,       setNotes]       = useState('');
   const [lines,       setLines]       = useState<OTLine[]>([newLine()]);
-  const [saving,      setSaving]      = useState(false);
-  const [suggestions, setSuggestions] = useState<ServiceSubject[]>([]);
-  const [showSugg,    setShowSugg]    = useState(false);
-  const [showSubject, setShowSubject] = useState(true);
-  const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [suggestions,   setSuggestions]   = useState<ServiceSubject[]>([]);
+  const [showSugg,      setShowSugg]      = useState(false);
+  const [showSubject,   setShowSubject]   = useState(true);
+  const [clientSugg,    setClientSugg]    = useState<Client[]>([]);
+  const [showClientSugg, setShowClientSugg] = useState(false);
+  const [staffList,       setStaffList]       = useState<Staff[]>([]);
+  const [assignedTo,      setAssignedTo]      = useState<string>('');
+  const [catalogSearch,   setCatalogSearch]   = useState('');
+  const [showCatalogDrop, setShowCatalogDrop] = useState(false);
+  const debRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debClient = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    getStaff(businessId).then(setStaffList).catch(() => {});
+  }, [businessId]);
 
   const typeCfg = subjectTypeCfg(subjectType);
   const total = lines.reduce((s, l) => s + (parseFloat(l.price) || 0) * l.quantity, 0);
@@ -133,6 +146,25 @@ function NewOTModal({
     setSubjectInfo(s.designation ?? '');
     setSubjectType(s.type_sujet as SubjectType);
     setShowSugg(false);
+  }
+
+  function handleClientSearch(val: string, field: 'name' | 'phone') {
+    if (field === 'name') setClientName(val);
+    else setClientPhone(val);
+    if (debClient.current) clearTimeout(debClient.current);
+    if (val.length < 2) { setClientSugg([]); setShowClientSugg(false); return; }
+    debClient.current = setTimeout(async () => {
+      const res = await searchClients(businessId, val);
+      setClientSugg(res);
+      setShowClientSugg(res.length > 0);
+    }, 250);
+  }
+
+  function pickClient(c: Client) {
+    setClientName(c.name);
+    setClientPhone(c.phone ?? '');
+    setClientSugg([]);
+    setShowClientSugg(false);
   }
 
   function addFromCatalog(item: ServiceCatalogItem) {
@@ -163,6 +195,8 @@ function NewOTModal({
         subjectInfo: subjectInfo.trim() || undefined,
         clientName:  clientName.trim() || undefined,
         clientPhone: clientPhone.trim() || undefined,
+        assignedTo:  assignedTo || undefined,
+        assignedName: staffList.find(s => s.id === assignedTo)?.name || undefined,
         notes:       notes.trim() || undefined,
         createdBy:   user?.id,
         createdByName: user?.full_name,
@@ -187,6 +221,16 @@ function NewOTModal({
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Aide rapide */}
+          <div className="bg-brand-500/5 border border-brand-500/15 rounded-xl px-4 py-3 space-y-1">
+            <p className="text-xs font-bold text-content-brand uppercase tracking-widest">Comment ça marche</p>
+            <ul className="text-xs text-content-secondary space-y-1 mt-1">
+              <li>· <strong className="text-content-primary">Client :</strong> tapez un nom ou numéro — les clients existants apparaissent. Sélectionnez pour remplir automatiquement.</li>
+              <li>· <strong className="text-content-primary">Assigné à :</strong> choisissez le technicien responsable de cet OT.</li>
+              <li>· <strong className="text-content-primary">Sujet :</strong> véhicule, appareil ou autre objet de la prestation (optionnel).</li>
+            </ul>
+          </div>
+
           {/* Subject section */}
           <div className="rounded-xl border border-surface-border overflow-hidden">
             <button
@@ -253,31 +297,100 @@ function NewOTModal({
           </div>
 
           {/* Client info */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 relative">
+            {/* Dropdown suggestions */}
+            {showClientSugg && clientSugg.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden col-span-2">
+                {clientSugg.map(c => (
+                  <button key={c.id} onMouseDown={() => pickClient(c)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover text-left transition-colors border-b border-surface-border last:border-0">
+                    <div className="w-8 h-8 rounded-full bg-brand-500/10 flex items-center justify-center shrink-0 text-xs font-bold text-content-brand">
+                      {c.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-content-primary truncate">{c.name}</p>
+                      {c.phone && <p className="text-xs text-content-muted">{c.phone}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <div>
               <label className="text-xs text-content-secondary font-medium mb-1 block flex items-center gap-1"><User className="w-3 h-3" />Nom client</label>
-              <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nom du client"
+              <input
+                value={clientName}
+                onChange={e => handleClientSearch(e.target.value, 'name')}
+                onFocus={() => clientName.length >= 2 && setShowClientSugg(clientSugg.length > 0)}
+                onBlur={() => setTimeout(() => setShowClientSugg(false), 150)}
+                placeholder="Nom du client"
                 className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
             </div>
             <div>
               <label className="text-xs text-content-secondary font-medium mb-1 block flex items-center gap-1"><Phone className="w-3 h-3" />Téléphone</label>
-              <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="+221 77 000 00 00"
+              <input
+                value={clientPhone}
+                onChange={e => handleClientSearch(e.target.value, 'phone')}
+                onFocus={() => clientPhone.length >= 2 && setShowClientSugg(clientSugg.length > 0)}
+                onBlur={() => setTimeout(() => setShowClientSugg(false), 150)}
+                placeholder="+221 77 000 00 00"
                 className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
             </div>
           </div>
 
-          {/* Catalog quick-add */}
-          {catalog.length > 0 && (
+          {/* Assignation technicien */}
+          {staffList.filter(s => s.status === 'active').length > 0 && (
             <div>
-              <p className="text-xs text-content-secondary font-semibold mb-2 uppercase tracking-wider">Prestations catalogue</p>
-              <div className="flex flex-wrap gap-2">
-                {catalog.map(item => (
-                  <button key={item.id} onClick={() => addFromCatalog(item)}
-                    className="text-xs px-3 py-1.5 rounded-full border border-surface-border bg-surface-hover hover:bg-brand-500/20 hover:border-brand-500/50 hover:text-content-brand text-content-secondary transition-colors">
-                    {item.name} — {formatCurrency(item.price)}
-                  </button>
+              <label className="text-xs text-content-secondary font-medium mb-1 block flex items-center gap-1">
+                <Wrench className="w-3 h-3" />Assigner à
+              </label>
+              <select
+                value={assignedTo}
+                onChange={e => setAssignedTo(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm">
+                <option value="">— Non assigné —</option>
+                {staffList.filter(s => s.status === 'active').map(s => (
+                  <option key={s.id} value={s.id}>{s.name}{s.position ? ` · ${s.position}` : ''}</option>
                 ))}
+              </select>
+            </div>
+          )}
+
+          {/* Catalog quick-add — recherche */}
+          {catalog.length > 0 && (
+            <div className="relative">
+              <p className="text-xs text-content-secondary font-semibold mb-2 uppercase tracking-wider">Ajouter depuis le catalogue</p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
+                <input
+                  value={catalogSearch}
+                  onChange={e => { setCatalogSearch(e.target.value); setShowCatalogDrop(true); }}
+                  onFocus={() => setShowCatalogDrop(true)}
+                  onBlur={() => setTimeout(() => setShowCatalogDrop(false), 150)}
+                  placeholder="Rechercher une prestation…"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm"
+                />
               </div>
+              {showCatalogDrop && catalogSearch.length >= 1 && (
+                <div className="absolute left-0 right-0 z-40 mt-1 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden max-h-52 overflow-y-auto">
+                  {catalog
+                    .filter(i => i.name.toLowerCase().includes(catalogSearch.toLowerCase()))
+                    .slice(0, 20)
+                    .map(item => (
+                      <button key={item.id}
+                        onMouseDown={() => { addFromCatalog(item); setCatalogSearch(''); setShowCatalogDrop(false); }}
+                        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-surface-hover text-left border-b border-surface-border last:border-0 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium text-content-primary">{item.name}</p>
+                          {item.service_category?.name && <p className="text-[10px] text-content-muted">{item.service_category.name}</p>}
+                        </div>
+                        <span className="text-sm font-bold text-content-brand shrink-0 ml-3">{formatCurrency(item.price)}</span>
+                      </button>
+                    ))}
+                  {catalog.filter(i => i.name.toLowerCase().includes(catalogSearch.toLowerCase())).length === 0 && (
+                    <p className="px-4 py-3 text-sm text-content-muted italic">Aucune prestation trouvée</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -410,6 +523,17 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
   const [editClient, setEditClient] = useState(order.client_name ?? '');
   const [editPhone,  setEditPhone]  = useState(order.client_phone ?? '');
   const [editNotes,  setEditNotes]  = useState(order.notes ?? '');
+  const [editClientSugg,     setEditClientSugg]     = useState<Client[]>([]);
+  const [showEditClientSugg, setShowEditClientSugg] = useState(false);
+  const [editAssignedTo,      setEditAssignedTo]      = useState(order.assigned_to ?? '');
+  const [editStaffList,       setEditStaffList]       = useState<Staff[]>([]);
+  const [editCatalogSearch,   setEditCatalogSearch]   = useState('');
+  const [showEditCatalogDrop, setShowEditCatalogDrop] = useState(false);
+  const debEditClient = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    getStaff(businessId).then(s => setEditStaffList(s.filter(m => m.status === 'active'))).catch(() => {});
+  }, [businessId]);
   const [editLines,  setEditLines]  = useState<OTLine[]>(
     (order.items ?? []).map(i => ({ _id: ++_lid, service_id: i.service_id, name: i.name, price: String(i.price), quantity: i.quantity }))
   );
@@ -464,12 +588,14 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
     setBusy(true);
     try {
       await updateServiceOrder(order.id, {
-        subjectRef:  editRef,
-        subjectType: editType,
-        subjectInfo: editInfo,
-        clientName:  editClient,
-        clientPhone: editPhone,
-        notes:       editNotes,
+        subjectRef:   editRef,
+        subjectType:  editType,
+        subjectInfo:  editInfo,
+        clientName:   editClient,
+        clientPhone:  editPhone,
+        assignedTo:   editAssignedTo || null,
+        assignedName: editStaffList.find(s => s.id === editAssignedTo)?.name || null,
+        notes:        editNotes,
         items: validLines.map(l => ({
           service_id: l.service_id,
           name:       l.name.trim(),
@@ -584,11 +710,51 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
             <div className="rounded-xl bg-surface-hover p-4 space-y-3">
               <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Client</p>
               {editing ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 relative">
+                  {showEditClientSugg && editClientSugg.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden col-span-2">
+                      {editClientSugg.map(c => (
+                        <button key={c.id} onMouseDown={() => { setEditClient(c.name); setEditPhone(c.phone ?? ''); setShowEditClientSugg(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-surface-hover text-left transition-colors border-b border-surface-border last:border-0">
+                          <div className="w-7 h-7 rounded-full bg-brand-500/10 flex items-center justify-center shrink-0 text-xs font-bold text-content-brand">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-content-primary truncate">{c.name}</p>
+                            {c.phone && <p className="text-xs text-content-muted">{c.phone}</p>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div><label className="text-[10px] text-content-secondary">Nom</label>
-                    <input value={editClient} onChange={e => setEditClient(e.target.value)} className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" /></div>
+                    <input value={editClient}
+                      onChange={e => {
+                        setEditClient(e.target.value);
+                        if (debEditClient.current) clearTimeout(debEditClient.current);
+                        if (e.target.value.length >= 2) {
+                          debEditClient.current = setTimeout(async () => {
+                            const res = await searchClients(businessId, e.target.value);
+                            setEditClientSugg(res); setShowEditClientSugg(res.length > 0);
+                          }, 250);
+                        } else { setShowEditClientSugg(false); }
+                      }}
+                      onBlur={() => setTimeout(() => setShowEditClientSugg(false), 150)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" /></div>
                   <div><label className="text-[10px] text-content-secondary">Téléphone</label>
-                    <input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" /></div>
+                    <input value={editPhone}
+                      onChange={e => {
+                        setEditPhone(e.target.value);
+                        if (debEditClient.current) clearTimeout(debEditClient.current);
+                        if (e.target.value.length >= 2) {
+                          debEditClient.current = setTimeout(async () => {
+                            const res = await searchClients(businessId, e.target.value);
+                            setEditClientSugg(res); setShowEditClientSugg(res.length > 0);
+                          }, 250);
+                        } else { setShowEditClientSugg(false); }
+                      }}
+                      onBlur={() => setTimeout(() => setShowEditClientSugg(false), 150)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5" /></div>
                 </div>
               ) : (
                 <>
@@ -596,6 +762,46 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
                   {order.client_phone && <p className="text-sm text-content-secondary">{order.client_phone}</p>}
                 </>
               )}
+              {/* Assignation dans le mode édition */}
+              {editing && editStaffList.length > 0 && (
+                <div className="mt-2">
+                  <label className="text-[10px] text-content-secondary">Technicien assigné</label>
+                  <select value={editAssignedTo} onChange={e => setEditAssignedTo(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm mt-0.5">
+                    <option value="">— Non assigné —</option>
+                    {editStaffList.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}{s.position ? ` · ${s.position}` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Affichage assigné (lecture) */}
+              {!editing && order.assigned_name && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Wrench className="w-3 h-3 text-content-secondary" />
+                  <p className="text-sm text-content-secondary">{order.assigned_name}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Assignation quand pas de client */}
+          {!order.client_name && !editing && order.assigned_name && (
+            <div className="rounded-xl bg-surface-hover p-3 flex items-center gap-2">
+              <Wrench className="w-3.5 h-3.5 text-content-secondary" />
+              <span className="text-sm text-content-secondary">Assigné à <strong className="text-content-primary">{order.assigned_name}</strong></span>
+            </div>
+          )}
+          {!order.client_name && editing && editStaffList.length > 0 && (
+            <div className="rounded-xl bg-surface-hover p-3 space-y-1">
+              <label className="text-[10px] text-content-secondary uppercase tracking-wider font-semibold flex items-center gap-1"><Wrench className="w-3 h-3" />Technicien assigné</label>
+              <select value={editAssignedTo} onChange={e => setEditAssignedTo(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm">
+                <option value="">— Non assigné —</option>
+                {editStaffList.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}{s.position ? ` · ${s.position}` : ''}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -607,13 +813,36 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
             {editing ? (
               <div className="p-3 space-y-2">
                 {catalog.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pb-2 border-b border-surface-border">
-                    {catalog.map(item => (
-                      <button key={item.id} onClick={() => setEditLines(prev => [...prev, newLine({ service_id: item.id, name: item.name, price: String(item.price) })])}
-                        className="text-xs px-2.5 py-1 rounded-full border border-surface-border bg-surface-hover hover:bg-brand-500/20 hover:border-brand-500/50 hover:text-content-brand text-content-secondary">
-                        + {item.name}
-                      </button>
-                    ))}
+                  <div className="relative pb-2 border-b border-surface-border">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
+                      <input
+                        value={editCatalogSearch}
+                        onChange={e => { setEditCatalogSearch(e.target.value); setShowEditCatalogDrop(true); }}
+                        onFocus={() => setShowEditCatalogDrop(true)}
+                        onBlur={() => setTimeout(() => setShowEditCatalogDrop(false), 150)}
+                        placeholder="Rechercher une prestation du catalogue…"
+                        className="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm"
+                      />
+                    </div>
+                    {showEditCatalogDrop && editCatalogSearch.length >= 1 && (
+                      <div className="absolute left-0 right-0 z-40 mt-1 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                        {catalog.filter(i => i.name.toLowerCase().includes(editCatalogSearch.toLowerCase())).slice(0, 20).map(item => (
+                          <button key={item.id}
+                            onMouseDown={() => { setEditLines(prev => [...prev, newLine({ service_id: item.id, name: item.name, price: String(item.price) })]); setEditCatalogSearch(''); setShowEditCatalogDrop(false); }}
+                            className="w-full flex items-center justify-between px-4 py-2 hover:bg-surface-hover text-left border-b border-surface-border last:border-0 transition-colors">
+                            <div>
+                              <p className="text-sm font-medium text-content-primary">{item.name}</p>
+                              {item.service_category?.name && <p className="text-[10px] text-content-muted">{item.service_category.name}</p>}
+                            </div>
+                            <span className="text-sm font-bold text-content-brand ml-3">{formatCurrency(item.price)}</span>
+                          </button>
+                        ))}
+                        {catalog.filter(i => i.name.toLowerCase().includes(editCatalogSearch.toLowerCase())).length === 0 && (
+                          <p className="px-4 py-3 text-sm text-content-muted italic">Aucune prestation trouvée</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {editLines.map(line => (
@@ -1075,10 +1304,14 @@ export default function ServicesPage() {
     all: 0, attente: 0, en_cours: 0, termine: 0, paye: 0, annule: 0,
   });
   const [showNewOT,    setShowNewOT]    = useState(false);
+  const [migrationNeeded, setMigrationNeeded] = useState(false);
+  const [migrationCopied, setMigrationCopied] = useState(false);
   const [selectedOrder,  setSelectedOrder]  = useState<ServiceOrder | null>(null);
   const [catalogModal, setCatalogModal] = useState<{ item?: ServiceCatalogItem } | null>(null);
   const [selectedCatalogCat, setSelectedCatalogCat] = useState<string | null | '__all__'>('__all__');
   const [newCatName, setNewCatName] = useState('');
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState('');
   const canViewServices = can('view_services');
   const canCreateOrder = can('create_service_order');
   const canUpdateStatus = can('update_service_status');
@@ -1187,6 +1420,18 @@ export default function ServicesPage() {
       ]);
       setServiceCategories(cats);
       setAllCatalog(ac);
+    } catch (e: any) { notifError(toUserError(e)); }
+  }
+
+  async function handleRenameCategory(id: string, name: string) {
+    setEditingCatId(null);
+    if (!name.trim()) return;
+    const cat = serviceCategories.find(c => c.id === id);
+    if (!cat || name.trim() === cat.name) return;
+    try {
+      await upsertServiceCategory(businessId, { id, name: name.trim(), color: cat.color, sort_order: cat.sort_order });
+      const cats = await getServiceCategories(businessId).catch(() => [] as ServiceCategory[]);
+      setServiceCategories(cats);
     } catch (e: any) { notifError(toUserError(e)); }
   }
 
@@ -1560,19 +1805,42 @@ export default function ServicesPage() {
                     const count = allCatalog.filter(i => i.category_id === cat.id).length;
                     return (
                       <div key={cat.id}
-                        onClick={() => setSelectedCatalogCat(cat.id)}
+                        onClick={() => editingCatId !== cat.id && setSelectedCatalogCat(cat.id)}
                         className={cn('group flex items-center gap-1 rounded-xl px-3 py-2.5 cursor-pointer transition-colors',
                           selectedCatalogCat === cat.id
                             ? 'bg-brand-500/15 text-content-brand'
                             : 'text-content-primary hover:bg-surface-hover')}>
-                        <span className="flex-1 text-sm font-medium truncate">{cat.name}</span>
+                        {editingCatId === cat.id ? (
+                          <input
+                            autoFocus
+                            className="flex-1 min-w-0 bg-transparent border-b border-brand-500 text-sm font-medium outline-none px-0 py-0"
+                            value={editingCatName}
+                            onChange={e => setEditingCatName(e.target.value)}
+                            onBlur={() => handleRenameCategory(cat.id, editingCatName)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleRenameCategory(cat.id, editingCatName);
+                              if (e.key === 'Escape') setEditingCatId(null);
+                              e.stopPropagation();
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span className="flex-1 text-sm font-medium truncate">{cat.name}</span>
+                        )}
                         <span className="text-xs text-content-secondary opacity-70">{count}</span>
-                        {canManageCatalog && (
-                          <button
-                            onClick={e => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/20 hover:text-status-error text-content-secondary transition-all ml-0.5">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                        {canManageCatalog && editingCatId !== cat.id && (
+                          <>
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditingCatId(cat.id); setEditingCatName(cat.name); }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-surface-hover text-content-secondary transition-all">
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); handleDeleteCategory(cat.id); }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/20 hover:text-status-error text-content-secondary transition-all">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
                         )}
                       </div>
                     );

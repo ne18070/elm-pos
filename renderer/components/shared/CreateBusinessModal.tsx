@@ -143,7 +143,7 @@ export function CreateBusinessModal({ onClose, onCreated }: CreateBusinessModalP
               type="number"
               min="0"
               max="100"
-              step="0.1"
+              step="any"
               value={form.tax_rate}
               onChange={(e) => setForm({ ...form, tax_rate: e.target.value })}
               className="input"

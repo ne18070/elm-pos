@@ -184,7 +184,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                   <div>
                     <label className="label">Montant *</label>
                     <div className="relative">
-                      <input type="number" min="0" step="0.01" autoFocus value={amount}
+                      <input type="number" min="0" step="any" autoFocus value={amount}
                         onChange={(e) => setAmount(e.target.value)} placeholder="0"
                         className="input text-xl font-bold text-content-primary text-right pr-16" />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-content-secondary text-sm font-medium">
@@ -291,12 +291,12 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                             placeholder="Intitulé" className="input py-1 px-2 text-xs" />
                         </td>
                         <td className="px-1.5 py-1.5">
-                          <input type="number" min="0" step="0.01" value={line.debit || ''}
+                          <input type="number" min="0" step="any" value={line.debit || ''}
                             onChange={(e) => updateLine(i, 'debit', parseFloat(e.target.value) || 0)}
                             className="input py-1 px-2 text-xs text-right" />
                         </td>
                         <td className="px-1.5 py-1.5">
-                          <input type="number" min="0" step="0.01" value={line.credit || ''}
+                          <input type="number" min="0" step="any" value={line.credit || ''}
                             onChange={(e) => updateLine(i, 'credit', parseFloat(e.target.value) || 0)}
                             className="input py-1 px-2 text-xs text-right" />
                         </td>

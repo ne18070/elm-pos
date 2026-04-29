@@ -1,6 +1,7 @@
 import { supabase as _supabase } from './client';
 import { syncServiceOrdersAccounting } from './accounting';
 import { logAction } from './logger';
+import { upsertClientByPhone } from './clients';
 const db = _supabase as any;
 
 type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
@@ -26,6 +27,7 @@ export interface ServiceCatalogItem {
   name:         string;
   category_id:  string | null;
   category?:    string; // champ texte legacy
+  service_category?: { id: string; name: string; color?: string } | null;
   price:        number;
   duration_min: number | null;
   is_active:    boolean;
@@ -59,11 +61,13 @@ export interface ServiceOrder {
   business_id:     string;
   order_number:    number;
   subject_id?:     string | null;
-  subject_ref?:    string | null;   // référence du sujet (plaque, n° série…)
-  subject_type?:   string | null;   // type du sujet
-  subject_info?:   string | null;   // description du sujet
+  subject_ref?:    string | null;
+  subject_type?:   string | null;
+  subject_info?:   string | null;
   client_name?:    string | null;
   client_phone?:   string | null;
+  assigned_to?:    string | null;   // staff.id
+  assigned_name?:  string | null;   // dénormalisé pour affichage rapide
   status:          ServiceOrderStatus;
   total:           number;
   paid_amount:     number;
@@ -125,7 +129,7 @@ export async function getServiceCatalog(businessId: string): Promise<ServiceCata
 export async function getAllServiceCatalog(businessId: string): Promise<ServiceCatalogItem[]> {
   const { data, error } = await db
     .from('service_catalog')
-    .select('*')
+    .select('*, service_category:service_categories(id, name, color)')
     .eq('business_id', businessId)
     .order('sort_order')
     .order('name');
@@ -332,11 +336,13 @@ export async function getServiceOrderCounts(
 
 export interface CreateServiceOrderInput {
   businessId:    string;
-  subjectRef?:   string;              // identifiant du sujet (plaque, n° série, nom…)
+  subjectRef?:   string;
   subjectType?:  SubjectType;
-  subjectInfo?:  string;             // description du sujet
+  subjectInfo?:  string;
   clientName?:   string;
   clientPhone?:  string;
+  assignedTo?:   string;   // staff.id
+  assignedName?: string;   // staff.name (dénormalisé)
   notes?:        string;
   createdBy?:    string;
   createdByName?: string;
@@ -344,6 +350,11 @@ export interface CreateServiceOrderInput {
 }
 
 export async function createServiceOrder(input: CreateServiceOrderInput): Promise<ServiceOrder> {
+  // Enregistre / met à jour le client automatiquement (dédup par téléphone)
+  if (input.clientName?.trim() && input.clientPhone?.trim()) {
+    upsertClientByPhone(input.businessId, input.clientName, input.clientPhone);
+  }
+
   let subjectId: string | null = null;
   if (input.subjectRef?.trim()) {
     const subject = await upsertSubject(input.businessId, {
@@ -366,6 +377,8 @@ export async function createServiceOrder(input: CreateServiceOrderInput): Promis
       subject_info:  input.subjectInfo?.trim() || null,
       client_name:   input.clientName?.trim() || null,
       client_phone:  input.clientPhone?.trim() || null,
+      assigned_to:   input.assignedTo ?? null,
+      assigned_name: input.assignedName ?? null,
       notes:         input.notes?.trim() || null,
       created_by:    input.createdBy ?? null,
       total,
@@ -493,7 +506,9 @@ export async function updateServiceOrder(
   id: string,
   input: {
     subjectRef?:  string; subjectType?: string; subjectInfo?: string;
-    clientName?:  string; clientPhone?: string; notes?: string;
+    clientName?:  string; clientPhone?: string;
+    assignedTo?:  string | null; assignedName?: string | null;
+    notes?: string;
     items?: Array<{ service_id?: string | null; name: string; price: number; quantity: number }>;
   },
   actor?: ServiceOrderActor
@@ -526,6 +541,8 @@ export async function updateServiceOrder(
   if (input.subjectInfo !== undefined) updates.subject_info = input.subjectInfo?.trim()  || null;
   if (input.clientName  !== undefined) updates.client_name  = input.clientName?.trim()   || null;
   if (input.clientPhone !== undefined) updates.client_phone = input.clientPhone?.trim()  || null;
+  if (input.assignedTo  !== undefined) updates.assigned_to  = input.assignedTo           ?? null;
+  if (input.assignedName !== undefined) updates.assigned_name = input.assignedName       ?? null;
   if (input.notes       !== undefined) updates.notes        = input.notes?.trim()        || null;
 
   if (input.items !== undefined) {

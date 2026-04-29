@@ -102,7 +102,7 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
               className="input"
               min="0.01"
               max={order.total}
-              step="0.01"
+              step="any"
               autoFocus
             />
             {parseFloat(amount) > order.total && (

@@ -245,7 +245,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             <input
               type="number"
               inputMode="decimal"
-              step="0.01"
+              step="any"
               min="0"
               value={form.price}
               onChange={(e) => update('price', e.target.value)}
@@ -343,7 +343,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
               className="input w-24 py-1.5 text-sm"
               placeholder="Qté"
               min="0"
-              step="0.001"
+              step="any"
             />
           )}
         </div>
@@ -408,7 +408,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                       }}
                       className="input w-28 py-1.5 text-sm"
                       placeholder="Prix vente"
-                      step="0.01"
+                      step="any"
                       min="0"
                     />
                     <span className="text-[10px] text-content-primary pl-1">prix de vente</span>
@@ -422,8 +422,8 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                         onChange={(e) => updateVariant(vr.id, 'stock_consumption', parseFloat(e.target.value) || 1)}
                         className="input w-20 py-1.5 text-sm"
                         placeholder="1"
-                        step="0.001"
-                        min="0.001"
+                        step="any"
+                        min="0"
                       />
                       <span className="text-[10px] text-content-primary pl-1">
                         {form.unit ? form.unit : 'unité'}/vente

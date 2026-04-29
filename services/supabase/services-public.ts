@@ -1,10 +1,11 @@
 import { supabase as _supabase } from './client';
+import { upsertClientByPhone } from './clients';
 const db = _supabase as any;
 
 export async function getPublicServiceCatalog(businessId: string) {
   const { data, error } = await db
     .from('service_catalog')
-    .select('*')
+    .select('*, category:service_categories(id, name, color)')
     .eq('business_id', businessId)
     .eq('is_active', true)
     .order('sort_order')
@@ -23,6 +24,11 @@ export async function createPublicServiceOrder(input: {
   notes?:        string;
   items: Array<{ service_id: string; name: string; price: number; quantity: number }>;
 }) {
+  // Enregistre / met à jour le client automatiquement (dédup par téléphone)
+  if (input.clientName?.trim() && input.clientPhone?.trim()) {
+    upsertClientByPhone(input.businessId, input.clientName, input.clientPhone);
+  }
+
   const total = input.items.reduce((s, i) => s + i.price * i.quantity, 0);
 
   // 1. Créer l'OT (Ordre de Travail)
