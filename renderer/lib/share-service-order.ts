@@ -70,7 +70,7 @@ export async function shareServiceOrderViaWhatsApp(
   order: ServiceOrder,
   business: Business,
   userId: string,
-  options: { includeTracking?: boolean; type: 'receipt' | 'status_update' }
+  options: { includeTracking?: boolean; type: 'receipt' | 'tracking' | 'status_update' }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const phone = order.client_phone;
@@ -86,18 +86,21 @@ export async function shareServiceOrderViaWhatsApp(
     if (options.type === 'receipt') {
       const publicUrl = await generateServiceOrderLink(order, business);
       message = `${greeting} voici le reçu pour votre prestation *${orderRef}* 🧾\n\n` +
-                `🔗 Télécharger le PDF : ${publicUrl}\n` +
-                (trackingUrl ? `📍 Suivre l'avancement : ${trackingUrl}\n` : '') +
+                `🔗 Télécharger le PDF : ${publicUrl}\n\n` +
                 `Merci pour votre confiance ! 🙏`;
+    } else if (options.type === 'tracking') {
+      if (!trackingUrl) throw new Error('Lien de suivi indisponible');
+      message = `${greeting} voici le lien pour suivre l'avancement de votre prestation *${orderRef}* 📍\n\n` +
+                `${trackingUrl}\n\n` +
+                `À bientôt chez *${business.name}* !`;
     } else {
-      // Notification de changement de statut
+      // status_update
       let statusText = '';
       if (order.status === 'en_cours') statusText = 'est maintenant *en cours de traitement* 🛠️';
       else if (order.status === 'termine') statusText = 'est désormais *terminé* ! ✅ Vous pouvez passer le récupérer.';
       else if (order.status === 'paye') statusText = 'a été réglé. Merci ! 💰';
-      
       message = `${greeting} votre service *${orderRef}* ${statusText}\n\n` +
-                (trackingUrl ? `📍 Suivi en temps réel : ${trackingUrl}\n` : '') +
+                (trackingUrl ? `📍 Suivi en temps réel : ${trackingUrl}\n\n` : '') +
                 `À bientôt chez *${business.name}* !`;
     }
 
