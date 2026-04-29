@@ -14,7 +14,7 @@ export async function GET(
       const anon = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
       const { data, error } = await (anon as any)
         .from('service_catalog')
-        .select('*, service_category:service_categories(id, name, color)')
+        .select('*, category:service_categories(id, name, color)')
         .eq('business_id', params.businessId)
         .eq('is_active', true)
         .order('sort_order')
@@ -29,7 +29,7 @@ export async function GET(
 
     const { data, error } = await (admin as any)
       .from('service_catalog')
-      .select('*, service_category:service_categories(id, name, color)')
+      .select('*, category:service_categories(id, name, color)')
       .eq('business_id', params.businessId)
       .eq('is_active', true)
       .order('sort_order')
