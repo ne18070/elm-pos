@@ -343,9 +343,9 @@ export default function BoutiquePage() {
       <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
+            <div className="w-10 h-10 rounded-xl border border-surface-border overflow-hidden shrink-0" style={{ backgroundColor: '#ffffff' }}>
               {info.logo_url ? (
-                <img src={info.logo_url} alt={info.name} className="w-full h-full object-cover" />
+                <img src={info.logo_url} alt={info.name} className="w-full h-full object-contain" style={{ backgroundColor: '#ffffff' }} />
               ) : (
                 <div className="w-full h-full bg-brand-600 flex items-center justify-center">
                   <Store className="w-5 h-5 text-content-primary" />

@@ -664,19 +664,24 @@ export default function SettingsPage() {
                             className="w-full h-full object-contain"
                           />
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center p-2">
+                            <div
+                              className="w-16 h-16 rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center p-2"
+                              style={{ backgroundColor: '#ffffff' }}
+                            >
                               {logoUrl ? (
                                 <img
                                   src={logoUrl}
                                   alt={business.name}
                                   crossOrigin="anonymous"
                                   className="max-w-full max-h-full object-contain"
+                                  style={{ backgroundColor: '#ffffff' }}
                                 />
                               ) : (
                                 <img
                                   src="/logo.png"
                                   alt="ELM"
                                   className="max-w-full max-h-full object-contain"
+                                  style={{ backgroundColor: '#ffffff' }}
                                 />
                               )}
                             </div>

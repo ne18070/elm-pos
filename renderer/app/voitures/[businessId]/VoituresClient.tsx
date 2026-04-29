@@ -287,9 +287,9 @@ export function VoituresPublicClient() {
       <header className="bg-surface-card border-b border-surface-border shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-surface-hover border border-surface-border overflow-hidden shrink-0">
+            <div className="w-10 h-10 rounded-xl border border-surface-border overflow-hidden shrink-0" style={{ backgroundColor: '#ffffff' }}>
               {agency.logo_url ? (
-                <img src={agency.logo_url} alt={agency.name} className="w-full h-full object-cover" />
+                <img src={agency.logo_url} alt={agency.name} className="w-full h-full object-contain" style={{ backgroundColor: '#ffffff' }} />
               ) : (
                 <div className="w-full h-full bg-brand-600 flex items-center justify-center">
                   <Car className="w-5 h-5 text-white" />

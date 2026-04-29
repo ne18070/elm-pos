@@ -18,9 +18,9 @@ export function PublicHeader({ business, loading, title = "Espace Client" }: Pub
     <header className="bg-surface-card border-b border-surface-border sticky top-0 z-10 shadow-sm">
       <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-10 h-10 rounded-xl bg-surface-hover border border-surface-border overflow-hidden shrink-0">
+          <div className="w-10 h-10 rounded-xl border border-surface-border overflow-hidden shrink-0" style={{ backgroundColor: '#ffffff' }}>
             {business?.logo_url ? (
-              <img src={business.logo_url} alt={business.name} className="w-full h-full object-cover" />
+              <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" style={{ backgroundColor: '#ffffff' }} />
             ) : (
               <div className="w-full h-full bg-brand-600 flex items-center justify-center">
                 <span className="text-white font-black text-sm">
