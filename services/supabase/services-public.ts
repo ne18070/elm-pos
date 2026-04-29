@@ -3,15 +3,9 @@ import { upsertClientByPhone } from './clients';
 const db = _supabase as any;
 
 export async function getPublicServiceCatalog(businessId: string) {
-  const { data, error } = await db
-    .from('service_catalog')
-    .select('*, category:service_categories(id, name, color)')
-    .eq('business_id', businessId)
-    .eq('is_active', true)
-    .order('sort_order')
-    .order('name');
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  const res = await fetch(`/api/public/service-catalog/${businessId}`);
+  if (!res.ok) throw new Error('Erreur chargement catalogue');
+  return res.json();
 }
 
 export async function createPublicServiceOrder(input: {
