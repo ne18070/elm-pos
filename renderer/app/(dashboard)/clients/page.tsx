@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import {
   Plus, Search, Phone, Mail, Pencil, Trash2,
   Check, Upload, Download, Building2, UserCircle2,
-  Loader2
+  Loader2, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -53,6 +53,8 @@ export default function ClientsPage() {
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Panneau latéral
   const [panel, setPanel] = useState<{ item: Client | null } | null>(null);
@@ -123,6 +125,12 @@ export default function ClientsPage() {
     (c.representative_name ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset à la page 1 quand la recherche change
+  useEffect(() => { setPage(1); }, [search]);
+
   const isMoral = form.type === 'personne_morale' || form.type === 'association';
 
   return (
@@ -192,40 +200,131 @@ export default function ClientsPage() {
 
         {loading && <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>}
 
-        <div className="max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((c) => {
-            const isEntity = c.type === 'personne_morale' || c.type === 'association';
-            return (
-              <div key={c.id} className="card p-5 flex items-start gap-4 hover:border-brand-500/30 transition-all group">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${isEntity ? 'bg-badge-purple border-status-purple/30 text-status-purple' : 'bg-badge-info border-status-info/30 text-status-info'}`}>
-                  {isEntity ? <Building2 className="w-6 h-6" /> : <UserCircle2 className="w-6 h-6" />}
-                </div>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-content-primary truncate">{c.name}</p>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface-input text-content-secondary uppercase font-black tracking-tighter border border-surface-border">
-                      {typesClient.find(t => t.value === c.type)?.label || c.type || 'Inconnu'}
-                    </span>
-                  </div>
-                  {c.representative_name && (
-                    <p className="text-xs text-content-secondary flex items-center gap-1.5">
-                      <UserCircle2 className="w-3 h-3 text-content-muted" /> Rep: {c.representative_name}
-                    </p>
+        {filtered.length > 0 && (
+        <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card flex flex-col">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-surface-border bg-surface-input text-[10px] font-black uppercase tracking-widest text-content-secondary">
+                <th className="px-4 py-3 text-left">Client</th>
+                <th className="px-4 py-3 text-left hidden sm:table-cell">Type</th>
+                <th className="px-4 py-3 text-left hidden md:table-cell">Représentant</th>
+                <th className="px-4 py-3 text-left hidden sm:table-cell">Téléphone</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Email</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">ID</th>
+                <th className="px-3 py-3 text-right w-20"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-surface-border">
+              {paginated.map((c) => {
+                const isEntity = c.type === 'personne_morale' || c.type === 'association';
+                return (
+                  <tr key={c.id} className="group hover:bg-surface-hover/40 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${isEntity ? 'bg-badge-purple border-status-purple/30 text-status-purple' : 'bg-badge-info border-status-info/30 text-status-info'}`}>
+                          {isEntity ? <Building2 className="w-4 h-4" /> : <UserCircle2 className="w-4 h-4" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-content-primary truncate">{c.name}</p>
+                          {c.phone && (
+                            <p className="text-xs text-content-secondary flex items-center gap-1 sm:hidden">
+                              <Phone className="w-3 h-3 shrink-0" />{c.phone}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-surface-input text-content-secondary uppercase font-black tracking-tighter border border-surface-border whitespace-nowrap">
+                        {typesClient.find(t => t.value === c.type)?.label || c.type || '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-content-secondary hidden md:table-cell">
+                      {c.representative_name || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-content-secondary hidden sm:table-cell whitespace-nowrap">
+                      {c.phone ? (
+                        <a href={`tel:${c.phone}`} className="flex items-center gap-1.5 hover:text-content-brand transition-colors">
+                          <Phone className="w-3 h-3 shrink-0" />{c.phone}
+                        </a>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-content-secondary hidden lg:table-cell">
+                      {c.email ? (
+                        <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 hover:text-content-brand transition-colors truncate max-w-[180px]">
+                          <Mail className="w-3 h-3 shrink-0" />{c.email}
+                        </a>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-mono text-content-secondary hidden lg:table-cell">
+                      {c.identification_number || '—'}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => openPanel(c)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted hover:text-content-primary transition-all">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => remove(c.id)} className="p-1.5 rounded-lg hover:bg-badge-error text-content-muted hover:text-status-error transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-surface-border bg-surface-input text-sm">
+              <span className="text-xs text-content-secondary">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-1.5 rounded-lg border border-surface-border text-content-secondary hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                    if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === '...' ? (
+                      <span key={`ellipsis-${i}`} className="px-1 text-content-muted text-xs">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p as number)}
+                        className={`min-w-[30px] h-[30px] rounded-lg text-xs font-semibold transition-colors ${
+                          page === p
+                            ? 'bg-brand-600 text-white'
+                            : 'border border-surface-border text-content-secondary hover:bg-surface-hover'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
                   )}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-                    {c.phone && <p className="text-[11px] text-content-secondary flex items-center gap-1.5"><Phone className="w-3 h-3" /> {c.phone}</p>}
-                    {c.email && <p className="text-[11px] text-content-secondary flex items-center gap-1.5"><Mail className="w-3 h-3" /> {c.email}</p>}
-                    {c.identification_number && <p className="text-[11px] text-content-secondary font-mono flex items-center gap-1.5"><Check className="w-3 h-3 text-content-brand" /> {c.identification_number}</p>}
-                  </div>
-                </div>
-                <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openPanel(c)} className="p-2 rounded-xl bg-surface hover:text-content-primary transition-all"><Pencil className="w-4 h-4" /></button>
-                  <button onClick={() => remove(c.id)} className="p-2 rounded-xl bg-surface hover:text-status-error transition-all"><Trash2 className="w-4 h-4" /></button>
-                </div>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-1.5 rounded-lg border border-surface-border text-content-secondary hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
+        )}
       </div>
 
       {/* -- Panneau latéral -- */}
@@ -268,12 +367,10 @@ export default function ClientsPage() {
                 <label className="label">{isMoral ? 'RCCM / NINEA' : 'CNI / Passeport'}</label>
                 <input className="input font-mono" value={form.identification_number || ''} onChange={(e) => setForm(f => ({ ...f, identification_number: e.target.value }))} placeholder="ID..." />
               </div>
-              {isMoral && (
-                <div>
-                  <label className="label">Représentant légal</label>
-                  <input className="input" value={form.representative_name || ''} onChange={(e) => setForm(f => ({ ...f, representative_name: e.target.value }))} placeholder="Nom du gérant..." />
-                </div>
-              )}
+              <div>
+                <label className="label">Représentant légal</label>
+                <input className="input" value={form.representative_name || ''} onChange={(e) => setForm(f => ({ ...f, representative_name: e.target.value }))} placeholder="Nom du représentant..." />
+              </div>
             </div>
           </div>
 
