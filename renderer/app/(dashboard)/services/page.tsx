@@ -29,6 +29,15 @@ import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 import { searchClients, type Client } from '@services/supabase/clients';
 import { getStaff, type Staff } from '@services/supabase/staff';
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<ServiceOrderStatus, { label: string; color: string; dot: string }> = {
@@ -629,9 +638,11 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
     if (!business) return;
     printHtml(generateServiceOrderReceipt({
       id: order.id, order_number: order.order_number, created_at: order.created_at,
+      started_at: order.started_at, finished_at: order.finished_at, paid_at: order.paid_at,
       subject_ref: order.subject_ref,
       subject_info: order.subject_info ?? undefined,
       client_name: order.client_name, client_phone: order.client_phone,
+      assigned_name: order.assigned_name,
       status: order.status, notes: order.notes,
       items: (order.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
       total: order.total, paid_amount: order.paid_amount, payment_method: order.payment_method,
@@ -887,6 +898,44 @@ function OrderDetailPanel({ order, currency, catalog, businessId, onClose, onRef
             <div className="rounded-xl bg-surface-hover p-4">
               <p className="text-xs text-content-secondary font-semibold uppercase tracking-wider mb-1">Notes</p>
               <p className="text-sm text-content-secondary italic">{order.notes}</p>
+            </div>
+          )}
+
+          {/* Timeline */}
+          {!editing && (
+            <div className="rounded-xl border border-surface-border overflow-hidden">
+              <p className="text-[10px] font-black uppercase tracking-widest text-content-secondary px-4 py-2.5 bg-surface-hover border-b border-surface-border">
+                Chronologie
+              </p>
+              <div className="divide-y divide-surface-border">
+                {[
+                  { label: 'Créé',     ts: order.created_at,  dot: 'bg-content-muted'     },
+                  { label: 'Démarré',  ts: order.started_at,  dot: 'bg-status-info'        },
+                  { label: 'Terminé',  ts: order.finished_at, dot: 'bg-status-success'     },
+                  { label: 'Payé',     ts: order.paid_at,     dot: 'bg-status-success'     },
+                ].map(({ label, ts, dot }) => (
+                  <div key={label} className={cn('flex items-center justify-between px-4 py-2.5', !ts && 'opacity-35')}>
+                    <div className="flex items-center gap-2">
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', ts ? dot : 'bg-surface-border')} />
+                      <span className="text-xs font-semibold text-content-secondary">{label}</span>
+                    </div>
+                    <span className="text-xs font-mono text-content-primary">
+                      {ts ? fmtDateTime(ts) : '—'}
+                    </span>
+                  </div>
+                ))}
+                {/* Durée totale si démarré et terminé */}
+                {order.started_at && order.finished_at && (() => {
+                  const mins = Math.round((new Date(order.finished_at).getTime() - new Date(order.started_at).getTime()) / 60000);
+                  const h = Math.floor(mins / 60), m = mins % 60;
+                  return (
+                    <div className="flex items-center justify-between px-4 py-2 bg-surface-hover">
+                      <span className="text-[10px] font-black text-content-secondary uppercase tracking-widest">Durée intervention</span>
+                      <span className="text-xs font-bold text-content-brand">{h > 0 ? `${h}h ` : ''}{m}min</span>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
 
@@ -1447,9 +1496,11 @@ export default function ServicesPage() {
     if (!business) return;
     printHtml(generateServiceOrderReceipt({
       id: o.id, order_number: o.order_number, created_at: o.created_at,
+      started_at: o.started_at, finished_at: o.finished_at, paid_at: o.paid_at,
       subject_ref: o.subject_ref,
       subject_info: o.subject_info ?? undefined,
       client_name: o.client_name, client_phone: o.client_phone,
+      assigned_name: o.assigned_name,
       status: o.status, notes: o.notes,
       items: (o.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
       total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,

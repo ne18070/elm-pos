@@ -1541,10 +1541,14 @@ export interface ServiceReceiptData {
   id:              string;
   order_number:    number;
   created_at:      string;
+  started_at?:      string | null;
+  finished_at?:     string | null;
+  paid_at?:         string | null;
   subject_ref?:     string | null;
   subject_info?:    string | null;
   client_name?:     string | null;
   client_phone?:    string | null;
+  assigned_name?:   string | null;
   status:           string;
   notes?:           string | null;
   items:            Array<{ name: string; price: number; quantity: number; total: number }>;
@@ -1614,9 +1618,33 @@ ${data.client_name ? `
 <table>
   <tr><td class="label">Client</td><td style="text-align:right">${data.client_name}</td></tr>
   ${data.client_phone ? `<tr><td class="label">Tél</td><td style="text-align:right">${data.client_phone}</td></tr>` : ''}
+  ${data.assigned_name ? `<tr><td class="label">Technicien</td><td style="text-align:right">${data.assigned_name}</td></tr>` : ''}
 </table>
 <hr>
-` : ''}
+` : (data.assigned_name ? `<table><tr><td class="label">Technicien</td><td style="text-align:right">${data.assigned_name}</td></tr></table><hr>` : '')}
+
+${(() => {
+  const rows = [
+    ['Créé',    data.created_at],
+    ['Démarré', data.started_at],
+    ['Terminé', data.finished_at],
+    ['Payé',    data.paid_at],
+  ].filter(([, ts]) => !!ts).map(([label, ts]) => {
+    const d = new Date(ts as string);
+    const dt = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+             + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `<tr><td class="label">${label}</td><td style="text-align:right">${dt}</td></tr>`;
+  }).join('');
+
+  const durMin = data.started_at && data.finished_at
+    ? Math.round((new Date(data.finished_at).getTime() - new Date(data.started_at).getTime()) / 60000)
+    : null;
+  const dur = durMin !== null
+    ? `<tr><td class="label">Durée</td><td style="text-align:right;font-weight:700">${durMin >= 60 ? `${Math.floor(durMin/60)}h ` : ''}${durMin % 60}min</td></tr>`
+    : '';
+
+  return rows ? `<table>${rows}${dur}</table><hr>` : '';
+})()}
 
 <table>${itemsRows}</table>
 
