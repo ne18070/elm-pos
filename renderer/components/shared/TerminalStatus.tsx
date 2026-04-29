@@ -27,7 +27,7 @@ function PageLabel({ pathname }: { pathname: string }) {
     '/products':  'Produits',
     '/settings':  'Paramètres',
     '/analytics': 'Analytique',
-    '/caisse':    'Clôture caisse',
+    '/caisse':    'Gestion de caisse',
     '/stock':     'Stock',
     '/users':     'Utilisateurs',
     '/billing':   'Abonnement',

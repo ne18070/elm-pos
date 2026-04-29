@@ -71,7 +71,7 @@ export interface PermissionMeta {
 export const PERMISSIONS: Record<PermissionKey, PermissionMeta> = {
   // Navigation
   view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'retail' },
-  view_cash_session:      { label: 'Clôture caisse',               group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
+  view_cash_session:      { label: 'Gestion de caisse',               group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
   view_orders:            { label: 'Commandes',                    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'retail' },
   view_services:          { label: 'Prestations de service',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
   view_livraisons:        { label: 'Livraisons',                   group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'delivery' },

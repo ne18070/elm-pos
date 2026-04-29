@@ -38,7 +38,7 @@ export const NAV_SECTIONS: {
     label: 'Ventes & Services',
     items: [
       { href: '/pos',               icon: ShoppingCart,  label: 'Caisse (POS)',       permission: 'view_pos',               feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
-      { href: '/caisse',            icon: Vault,         label: 'Clôture caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'],           bizTypes: null           },
+      { href: '/caisse',            icon: Vault,         label: 'Gestion de caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'],           bizTypes: null           },
       { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
       { href: '/services',          icon: Wrench,        label: 'Prestations',        permission: 'view_services',          feature: null,                          bizTypes: ['service']    },
       { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',                    bizTypes: ['service']    },

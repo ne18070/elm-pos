@@ -525,9 +525,9 @@ export default function CaissePage() {
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-content-primary">Clôture de caisse</h1>
+            <h1 className="text-xl font-bold text-content-primary">Gestion de caisse</h1>
             <p className="text-xs text-content-secondary mt-0.5">
-              Suivez les encaissements de la session et clôturez en fin de journée pour valider les comptes
+              Ouvrez une session, encaissez, puis clôturez en fin de service
             </p>
             <p className="text-xs text-content-muted mt-0.5">
               {session
@@ -571,31 +571,6 @@ export default function CaissePage() {
           </div>
         </div>
 
-        {/* Explication */}
-        <div className="card p-5 border-l-4 border-brand-500 space-y-4">
-          <p className="text-sm font-semibold text-content-primary">Comment ça fonctionne ?</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { n: 1, title: 'Ouvrir la caisse', body: "Indiquez le montant d'espèces déjà présent — c'est le fond de caisse." },
-              { n: 2, title: 'Encaisser normalement', body: 'Toutes les ventes de la session sont comptabilisées automatiquement.' },
-              { n: 3, title: 'Clôturer en fin de service', body: "Comptez les billets, saisissez le total. Le Z-Report calcule l'écart." },
-            ].map(({ n, title, body }) => (
-              <div key={n} className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-full bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
-                <div>
-                  <p className="text-sm font-medium text-content-primary">{title}</p>
-                  <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">{body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-4 pt-1 border-t border-surface-border text-xs text-content-muted">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />Écart nul = caisse équilibrée</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Écart positif = excédent</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Écart négatif = déficit</span>
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
           {([
@@ -616,17 +591,45 @@ export default function CaissePage() {
         {tab === 'session' && (
           <>
             {!session ? (
-              <div className="card p-12 flex flex-col items-center gap-4 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
-                  <Lock className="w-8 h-8 text-content-muted" />
+              <div className="space-y-4">
+                {/* État fermé */}
+                <div className="card p-8 flex flex-col items-center gap-3 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
+                    <Lock className="w-8 h-8 text-content-muted" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-content-primary">Caisse fermée</p>
+                    <p className="text-sm text-content-secondary mt-1">Aucune session active — cliquez sur le bouton pour démarrer.</p>
+                  </div>
+                  <button onClick={() => setShowOpenModal(true)} className="btn-primary flex items-center gap-2 mt-1">
+                    <LockOpen className="w-4 h-4" />Ouvrir la caisse
+                  </button>
                 </div>
-                <div>
-                  <p className="text-lg font-semibold text-content-primary">Caisse fermée</p>
-                  <p className="text-sm text-content-secondary mt-1">Ouvrez une session pour commencer à encaisser.</p>
+
+                {/* Conditions / guide d'ouverture */}
+                <div className="card p-5 border-l-4 border-brand-500 space-y-4">
+                  <p className="text-sm font-semibold text-content-primary">Comment ça fonctionne ?</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                      { n: 1, title: 'Ouvrir la caisse', body: "Indiquez le montant d'espèces déjà présent dans le tiroir — c'est le fond de caisse de départ." },
+                      { n: 2, title: 'Encaisser normalement', body: 'Toutes les ventes de la session sont comptabilisées automatiquement en temps réel.' },
+                      { n: 3, title: 'Clôturer en fin de service', body: "Comptez les billets, saisissez le total. Le Z-Report calcule l'écart et imprime le rapport." },
+                    ].map(({ n, title, body }) => (
+                      <div key={n} className="flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-full bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
+                        <div>
+                          <p className="text-sm font-medium text-content-primary">{title}</p>
+                          <p className="text-xs text-content-secondary mt-0.5 leading-relaxed">{body}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-4 pt-2 border-t border-surface-border text-xs text-content-muted">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />Écart nul = caisse équilibrée</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Écart positif = excédent</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Écart négatif = déficit</span>
+                  </div>
                 </div>
-                <button onClick={() => setShowOpenModal(true)} className="btn-primary flex items-center gap-2 mt-2">
-                  <LockOpen className="w-4 h-4" />Ouvrir la caisse
-                </button>
               </div>
             ) : (
               <>

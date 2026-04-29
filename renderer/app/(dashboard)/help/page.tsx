@@ -156,7 +156,7 @@ const SECTIONS: Section[] = [
         question: 'Comment gérer les sessions et clôturer la caisse ?',
         answer: (
           <div className="space-y-2 text-content-primary">
-            <p>Allez dans <strong className="text-content-primary">Clôture caisse</strong> pour voir l&apos;état de la session actuelle.</p>
+            <p>Allez dans <strong className="text-content-primary">Gestion de caisse</strong> pour voir l&apos;état de la session actuelle.</p>
             <p>Vous y verrez le fonds de caisse initial, le total des ventes par mode de paiement et le solde théorique.</p>
             <p>Pour clôturer, cliquez sur <strong className="text-content-primary">Clôturer la session</strong>. Un rapport détaillé est généré.</p>
             <div className="flex gap-2 p-3 bg-badge-error border border-status-error rounded-lg mt-2">
