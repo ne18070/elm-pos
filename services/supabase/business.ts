@@ -25,6 +25,13 @@ export interface OrganizationWithBusinesses extends Organization {
 
 // --- Organizations ------------------------------------------------------------
 
+export async function getOrganization(orgId: string): Promise<Organization> {
+  const { data, error } = await supabase
+    .from('organizations').select('*').eq('id', orgId).single();
+  if (error) throw new Error(error.message);
+  return data as Organization;
+}
+
 /** Toutes les organizations (superadmin) avec leurs établissements */
 export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusinesses[]> {
   const { data, error } = await (supabase as any)
@@ -237,6 +244,32 @@ export async function removeBusinessMember(
     p_user_id:     userId,
   });
   if (error) throw new Error(error.message);
+}
+
+// --- Logo & Assets -----------------------------------------------------------
+
+export async function uploadBusinessLogo(businessId: string, file: File): Promise<string> {
+  const ext  = file.name.split('.').pop() ?? 'png';
+  const path = `${businessId}/logo.${ext}`;
+  
+  const { error: upErr } = await (supabase as any).storage
+    .from('business-logos')
+    .upload(path, file, { upsert: true, contentType: file.type });
+    
+  if (upErr) throw new Error(upErr.message);
+  
+  const { data: urlData } = (supabase as any).storage
+    .from('business-logos')
+    .getPublicUrl(path);
+    
+  const url = `${urlData.publicUrl}?t=${Date.now()}`; // Cache busting
+  
+  await updateBusiness(businessId, { logo_url: url });
+  return url;
+}
+
+export async function deleteBusinessLogo(businessId: string): Promise<void> {
+  await updateBusiness(businessId, { logo_url: undefined });
 }
 
 /** @deprecated - utiliser getAllOrganizationsAdmin() pour le backoffice */
