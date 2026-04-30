@@ -1068,12 +1068,13 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
   businessId: string; item?: ServiceCatalogItem; onClose: () => void; onSaved: () => void;
 }) {
   const { error: notifError } = useNotificationStore();
-  const [name,       setName]       = useState(item?.name ?? '');
-  const [categoryId, setCategoryId] = useState<string | null>(item?.category_id ?? null);
-  const [price,      setPrice]      = useState(String(item?.price ?? ''));
-  const [duration,   setDuration]   = useState(String(item?.duration_min ?? ''));
-  const [saving,     setSaving]     = useState(false);
-  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [name,        setName]        = useState(item?.name ?? '');
+  const [description, setDescription] = useState(item?.description ?? '');
+  const [categoryId,  setCategoryId]  = useState<string | null>(item?.category_id ?? null);
+  const [price,       setPrice]       = useState(String(item?.price ?? ''));
+  const [duration,    setDuration]    = useState(String(item?.duration_min ?? ''));
+  const [saving,      setSaving]      = useState(false);
+  const [categories,  setCategories]  = useState<ServiceCategory[]>([]);
 
   useEffect(() => {
     getServiceCategories(businessId).then(setCategories);
@@ -1086,6 +1087,7 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
       await upsertServiceCatalogItem(businessId, {
         id:           item?.id,
         name:         name.trim(),
+        description:  description.trim() || null,
         category_id:  categoryId,
         price:        parseFloat(price) || 0,
         duration_min: duration ? parseInt(duration) : null,
@@ -1108,6 +1110,12 @@ function CatalogModal({ businessId, item, onClose, onSaved }: {
             <label className="text-xs text-content-secondary font-medium mb-1 block">Nom</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="ex: Lavage complet"
               className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm" />
+          </div>
+          <div>
+            <label className="text-xs text-content-secondary font-medium mb-1 block">Description <span className="text-content-muted font-normal">(optionnel — visible sur la page publique)</span></label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+              placeholder="ex: Inclut nettoyage intérieur et extérieur…"
+              className="w-full px-3 py-2 rounded-xl bg-surface-input border border-surface-border text-content-primary text-sm resize-none" />
           </div>
           <div>
             <label className="text-xs text-content-secondary font-medium mb-1 block">Catégorie</label>

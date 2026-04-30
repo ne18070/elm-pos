@@ -169,6 +169,8 @@ const ACTION_FILTERS = [
 
 // --- Page ---------------------------------------------------------------------
 
+const PAGE_SIZE = 50;
+
 export default function ActivityPage() {
   const { business, user } = useAuthStore();
   const { error: notifError } = useNotificationStore();
@@ -180,6 +182,10 @@ export default function ActivityPage() {
   const [actionFilter, setActionFilter] = useState('');
   const [dateFrom, setDateFrom]   = useState('');
   const [dateTo, setDateTo]       = useState('');
+  const [page, setPage]           = useState(0);
+  const [total, setTotal]         = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const fetchLogs = useCallback(async () => {
     if (!business) return;
@@ -187,24 +193,25 @@ export default function ActivityPage() {
     try {
       let query = (supabase as any)
         .from('activity_logs')
-        .select('*, users(full_name)')
+        .select('*, users(full_name)', { count: 'exact' })
         .eq('business_id', business.id)
         .order('created_at', { ascending: false })
-        .limit(500);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (actionFilter) query = query.eq('action', actionFilter);
       if (dateFrom)     query = query.gte('created_at', `${dateFrom}T00:00:00Z`);
       if (dateTo)       query = query.lte('created_at', `${dateTo}T23:59:59Z`);
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw new Error(error.message);
       setLogs(data as ActivityLog[]);
+      setTotal(count ?? 0);
     } catch (err) {
       notifError(toUserError(err));
     } finally {
       setLoading(false);
     }
-  }, [business, actionFilter, dateFrom, dateTo]);
+  }, [business, actionFilter, dateFrom, dateTo, page]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -261,7 +268,7 @@ export default function ActivityPage() {
           {/* Filtre action */}
           <select
             value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
+            onChange={(e) => { setActionFilter(e.target.value); setPage(0); }}
             className="input w-56"
           >
             {ACTION_FILTERS.map((f) => (
@@ -273,7 +280,7 @@ export default function ActivityPage() {
           <input
             type="date"
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
             className="input w-40"
             title="Date début"
           />
@@ -282,7 +289,7 @@ export default function ActivityPage() {
           <input
             type="date"
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
+            onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
             className="input w-40"
             title="Date fin"
           />
@@ -364,11 +371,31 @@ export default function ActivityPage() {
         )}
       </div>
 
-      {/* Footer compteur */}
+      {/* Footer pagination */}
       {!loading && (
-        <div className="px-6 py-2 border-t border-surface-border text-xs text-content-muted">
-          {filtered.length} événement{filtered.length !== 1 ? 's' : ''} affiché{filtered.length !== 1 ? 's' : ''}
-          {logs.length >= 500 && ' (limité à 500 - affiner les filtres pour voir plus)'}
+        <div className="px-6 py-2 border-t border-surface-border flex items-center justify-between text-xs text-content-muted">
+          <span>
+            {filtered.length > 0
+              ? `${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + filtered.length} sur ${total} événement${total !== 1 ? 's' : ''}`
+              : `0 événement`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="btn-secondary py-1 px-3 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Précédent
+            </button>
+            <span className="font-medium">Page {page + 1} / {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              className="btn-secondary py-1 px-3 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Suivant →
+            </button>
+          </div>
         </div>
       )}
     </div>

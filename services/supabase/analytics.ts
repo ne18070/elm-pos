@@ -761,6 +761,93 @@ export async function getRevendeursAnalytics(
   };
 }
 
+// --- Services analytics -------------------------------------------------------
+
+export interface ServicesAnalyticsSummary {
+  ca_paye:         number;
+  ca_pending:      number;
+  count_paye:      number;
+  count_en_cours:  number;
+  count_attente:   number;
+  count_termine:   number;
+  count_annule:    number;
+  completion_rate: number;
+  avg_order_value: number;
+  top_services:    Array<{ name: string; count: number; revenue: number }>;
+  daily_revenue:   Array<{ date: string; total: number; count: number }>;
+}
+
+export async function getServicesAnalytics(
+  businessId: string,
+  days = 30,
+): Promise<ServicesAnalyticsSummary> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const db = supabase as any;
+
+  const [ordersRes, itemsRes] = await Promise.all([
+    db
+      .from('service_orders')
+      .select('id, total, paid_amount, status, created_at, paid_at')
+      .eq('business_id', businessId)
+      .gte('created_at', `${startDate}T00:00:00Z`),
+    db
+      .from('service_order_items')
+      .select('name, quantity, total, order:service_orders!inner(business_id, status, paid_at)')
+      .eq('order.business_id', businessId)
+      .eq('order.status', 'paye')
+      .gte('order.paid_at', `${startDate}T00:00:00Z`),
+  ]);
+
+  if (ordersRes.error) throw new Error(ordersRes.error.message);
+  if (itemsRes.error)  throw new Error(itemsRes.error.message);
+
+  type OrderRow = { id: string; total: number; paid_amount: number; status: string; created_at: string; paid_at: string | null };
+  const orders = (ordersRes.data ?? []) as OrderRow[];
+
+  const count_paye     = orders.filter(o => o.status === 'paye').length;
+  const count_en_cours = orders.filter(o => o.status === 'en_cours').length;
+  const count_attente  = orders.filter(o => o.status === 'attente').length;
+  const count_termine  = orders.filter(o => o.status === 'termine').length;
+  const count_annule   = orders.filter(o => o.status === 'annule').length;
+  const total_excl_annule = orders.length - count_annule;
+
+  const ca_paye    = orders.filter(o => o.status === 'paye').reduce((s, o) => s + Number(o.paid_amount ?? o.total), 0);
+  const ca_pending = orders.filter(o => ['attente', 'en_cours', 'termine'].includes(o.status)).reduce((s, o) => s + Number(o.total), 0);
+  const completion_rate  = total_excl_annule > 0 ? Math.round(((count_paye + count_termine) / total_excl_annule) * 100) : 0;
+  const avg_order_value  = count_paye > 0 ? ca_paye / count_paye : 0;
+
+  const dayMap = new Map<string, { total: number; count: number }>();
+  for (const o of orders.filter(o => o.status === 'paye')) {
+    const d = (o.paid_at ?? o.created_at).slice(0, 10);
+    const e = dayMap.get(d) ?? { total: 0, count: 0 };
+    e.total += Number(o.paid_amount ?? o.total);
+    e.count++;
+    dayMap.set(d, e);
+  }
+  const daily_revenue = Array.from(dayMap.entries())
+    .map(([date, v]) => ({ date, ...v }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  type ItemRow = { name: string; quantity: number; total: number };
+  const serviceMap = new Map<string, { name: string; count: number; revenue: number }>();
+  for (const item of (itemsRes.data ?? []) as ItemRow[]) {
+    const existing = serviceMap.get(item.name) ?? { name: item.name, count: 0, revenue: 0 };
+    existing.count   += item.quantity;
+    existing.revenue += item.total;
+    serviceMap.set(item.name, existing);
+  }
+  const top_services = Array.from(serviceMap.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  return {
+    ca_paye, ca_pending,
+    count_paye, count_en_cours, count_attente, count_termine, count_annule,
+    completion_rate, avg_order_value,
+    top_services, daily_revenue,
+  };
+}
+
 // --- Approvisionnement analytics -----------------------------------------------
 
 export interface ApprovAnalyticsSummary {

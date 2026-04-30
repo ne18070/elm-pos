@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Bell, Package, Clock, Vault, X } from 'lucide-react';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -25,7 +26,9 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
   const { lowStock } = useLowStockAlerts(business?.id ?? '');
 
   const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const expanded = !collapsed;
 
@@ -38,6 +41,14 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  const handleToggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.top, left: rect.right + 8 });
+    }
+    setOpen((v) => !v);
+  };
 
   const alerts: Alert[] = [];
 
@@ -129,7 +140,8 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className={cn(
           "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors text-content-secondary hover:text-content-primary hover:bg-surface-hover",
           collapsed ? "justify-center" : ""
@@ -155,11 +167,11 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
         )}
       </button>
 
-      {open && (
-        <div className={cn(
-          "absolute bottom-full left-0 mb-2 w-72 bg-surface-card border border-surface-border rounded-xl shadow-xl z-50 overflow-hidden",
-          "md:bottom-0 md:mb-0 md:ml-2 md:left-full"
-        )}>
+      {open && dropdownPos && createPortal(
+        <div
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
+          className="w-72 bg-surface-card border border-surface-border rounded-xl shadow-xl overflow-hidden"
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
             <p className="text-sm font-semibold text-content-primary">Notifications</p>
             <button onClick={() => setOpen(false)} className="text-content-secondary hover:text-content-primary">
@@ -197,7 +209,8 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
               })}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

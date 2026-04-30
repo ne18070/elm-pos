@@ -102,9 +102,10 @@ export function checkPermission(
   const meta = PERMISSIONS[permission];
   if (!meta) return false;
 
-  // 1. Check feature requirement first
-  if (meta.feature && business && !hasFeature(business, meta.feature)) {
-    return false;
+  // 1. Check feature requirement first (supports string or string[] — any match is enough)
+  if (meta.feature && business) {
+    const required = Array.isArray(meta.feature) ? meta.feature : [meta.feature];
+    if (!required.some(f => hasFeature(business, f))) return false;
   }
 
   // 2. Owners cannot have critical permissions denied

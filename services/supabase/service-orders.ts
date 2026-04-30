@@ -25,6 +25,7 @@ export interface ServiceCatalogItem {
   id:           string;
   business_id:  string;
   name:         string;
+  description?: string | null;
   category_id:  string | null;
   category?:    string; // champ texte legacy
   service_category?: { id: string; name: string; color?: string } | null;
@@ -139,11 +140,12 @@ export async function getAllServiceCatalog(businessId: string): Promise<ServiceC
 
 export async function upsertServiceCatalogItem(
   businessId: string,
-  input: { id?: string; name: string; category_id: string | null; price: number; duration_min?: number | null; sort_order?: number }
+  input: { id?: string; name: string; description?: string | null; category_id: string | null; price: number; duration_min?: number | null; sort_order?: number }
 ): Promise<ServiceCatalogItem> {
   const payload: any = {
     business_id:  businessId,
     name:         input.name.trim(),
+    description:  input.description?.trim() || null,
     category_id:  input.category_id,
     price:        input.price,
     duration_min: input.duration_min ?? null,

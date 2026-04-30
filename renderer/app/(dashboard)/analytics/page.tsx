@@ -2,6 +2,10 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
+  ResponsiveContainer, BarChart as RBarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip as RTooltip,
+} from 'recharts';
+import {
   TrendingUp, ShoppingBag, BarChart, DollarSign, Sun,
   RefreshCw, Store, Tag, BedDouble, LogIn, LogOut, Banknote, Wrench, Download, Car,
   Package, ArrowUpRight, ArrowDownRight, Minus, Users, Truck,
@@ -13,13 +17,14 @@ import {
   getAnalyticsSummary, getDailySales, getCouponStats,
   getHotelAnalytics, getJuridiqueAnalytics, getVoituresAnalytics,
   getRevendeursAnalytics, getApprovisionnementAnalytics, getPrevPeriodCA,
+  getServicesAnalytics,
 } from '@services/supabase/analytics';
 import { supabase } from '@services/supabase/client';
 import type { AnalyticsSummary } from '@pos-types';
 import type {
   CouponStat, HotelAnalyticsSummary, JuridiqueAnalyticsSummary,
   VoituresAnalyticsSummary, RevendeursAnalyticsSummary,
-  ApprovAnalyticsSummary, PrevPeriodCA,
+  ApprovAnalyticsSummary, PrevPeriodCA, ServicesAnalyticsSummary,
 } from '@services/supabase/analytics';
 import { GrossisteTab } from '@/components/analytics/GrossisteTab';
 import { format, parseISO } from 'date-fns';
@@ -40,7 +45,7 @@ const TYPE_COLORS: Record<string, string> = {
   detaillant:'bg-emerald-500/20 text-emerald-400',
 };
 
-type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique' | 'voitures' | 'revendeurs' | 'appro';
+type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique' | 'voitures' | 'revendeurs' | 'appro' | 'services';
 
 // --- Delta badge --------------------------------------------------------------
 
@@ -57,44 +62,84 @@ function Delta({ current, prev, invert = false }: { current: number; prev: numbe
   );
 }
 
+// --- Chart helpers -----------------------------------------------------------
+
+const fmtAxis = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
+  : n >= 1_000   ? `${(n / 1_000).toFixed(0)}K`
+  : String(Math.round(n));
+
+const chartTooltipStyle = {
+  backgroundColor: 'var(--color-surface-card, #1e1e2e)',
+  border: '1px solid var(--color-surface-border, #333)',
+  borderRadius: '10px',
+  fontSize: 11,
+  color: 'var(--color-content-primary, #fff)',
+};
+
 // --- Stacked bar chart --------------------------------------------------------
 
-interface DayStack { date: string; retail: number; hotel: number; juridique: number }
+interface DayStack { date: string; retail: number; services: number; hotel: number; juridique: number }
 
 function StackedChart({ days: daysList, fmt }: { days: DayStack[]; fmt: (n: number) => string }) {
   if (daysList.length === 0) return null;
-  const maxTotal = Math.max(...daysList.map(d => d.retail + d.hotel + d.juridique), 1);
+
+  const hasRetail   = daysList.some(d => d.retail    > 0);
+  const hasServices = daysList.some(d => d.services  > 0);
+  const hasHotel    = daysList.some(d => d.hotel     > 0);
+  const hasJur      = daysList.some(d => d.juridique > 0);
+
+  const data = daysList.map(d => ({
+    ...d,
+    label: format(new Date(d.date), 'd MMM', { locale: fr }),
+  }));
 
   return (
-    <div>
-      <div className="flex items-end gap-0.5 h-32">
-        {daysList.map((day) => {
-          const total   = day.retail + day.hotel + day.juridique;
-          const pctH    = (total / maxTotal) * 100;
-          const pRetail = total > 0 ? (day.retail    / total) * 100 : 0;
-          const pHotel  = total > 0 ? (day.hotel     / total) * 100 : 0;
-          const pJur    = total > 0 ? (day.juridique / total) * 100 : 0;
-          return (
-            <div
-              key={day.date}
-              className="group flex-1 flex flex-col justify-end h-full relative"
-              title={`${format(new Date(day.date), 'd MMM', { locale: fr })} — ${fmt(total)}`}
-            >
-              <div className="w-full flex flex-col rounded-t overflow-hidden" style={{ height: `${pctH}%` }}>
-                {pJur > 0    && <div className="w-full bg-purple-500 group-hover:brightness-110 transition-all" style={{ height: `${pJur}%` }} />}
-                {pHotel > 0  && <div className="w-full bg-teal-500   group-hover:brightness-110 transition-all" style={{ height: `${pHotel}%` }} />}
-                {pRetail > 0 && <div className="w-full bg-brand-600  group-hover:brightness-110 transition-all" style={{ height: `${pRetail}%` }} />}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-3 mt-2 flex-wrap">
-        <span className="flex items-center gap-1 text-[10px] text-content-muted"><span className="w-2.5 h-2.5 rounded-sm bg-brand-600 inline-block" /> Ventes</span>
-        <span className="flex items-center gap-1 text-[10px] text-content-muted"><span className="w-2.5 h-2.5 rounded-sm bg-teal-500 inline-block" /> Hôtel</span>
-        <span className="flex items-center gap-1 text-[10px] text-content-muted"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block" /> Honoraires</span>
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={220}>
+      <RBarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-content-muted, #888)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+        <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 10, fill: 'var(--color-content-muted, #888)' }} axisLine={false} tickLine={false} width={42} />
+        <RTooltip
+          contentStyle={chartTooltipStyle}
+          formatter={(value, name) => [fmt(value as number), name as string]}
+          labelStyle={{ marginBottom: 4, fontWeight: 600, color: 'var(--color-content-secondary,#aaa)' }}
+        />
+        {hasRetail   && <Bar dataKey="retail"    name="Ventes"      stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />}
+        {hasServices && <Bar dataKey="services"  name="Prestations" stackId="a" fill="#fb923c" radius={[0, 0, 0, 0]} />}
+        {hasHotel    && <Bar dataKey="hotel"     name="Hôtel"       stackId="a" fill="#14b8a6" radius={[0, 0, 0, 0]} />}
+        {hasJur      && <Bar dataKey="juridique" name="Honoraires"  stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} />}
+      </RBarChart>
+    </ResponsiveContainer>
+  );
+}
+
+// --- Simple bar chart (single series) ----------------------------------------
+
+function SimpleBarChart({
+  data, dataKey, color = '#6366f1', fmt, xKey = 'label',
+}: {
+  data: Record<string, unknown>[];
+  dataKey: string;
+  color?: string;
+  fmt: (n: number) => string;
+  xKey?: string;
+}) {
+  if (data.length === 0) return null;
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <RBarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: 'var(--color-content-muted,#888)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+        <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 10, fill: 'var(--color-content-muted,#888)' }} axisLine={false} tickLine={false} width={42} />
+        <RTooltip
+          contentStyle={chartTooltipStyle}
+          formatter={(value) => [fmt(value as number)]}
+          labelStyle={{ marginBottom: 4, fontWeight: 600, color: 'var(--color-content-secondary,#aaa)' }}
+        />
+        <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />
+      </RBarChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -137,6 +182,7 @@ export default function AnalyticsPage() {
   const [revendeursData, setRevendeursData] = useState<RevendeursAnalyticsSummary | null>(null);
   const [approvData, setApprovData]         = useState<ApprovAnalyticsSummary | null>(null);
   const [prevCA, setPrevCA]                 = useState<PrevPeriodCA | null>(null);
+  const [servicesData, setServicesData]     = useState<ServicesAnalyticsSummary | null>(null);
   const [audiences, setAudiences]           = useState<any[]>([]);
 
   const isHotel     = business?.type === 'hotel' || business?.features?.includes('hotel');
@@ -147,6 +193,7 @@ export default function AnalyticsPage() {
                       business?.features?.includes('retail') || business?.features?.includes('restaurant');
   const isVoitures  = business?.features?.includes('voitures');
   const isGrossiste = business?.features?.includes('retail') || business?.features?.includes('grossiste');
+  const isService   = business?.type === 'service' || (business as any)?.types?.includes('service');
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -156,7 +203,7 @@ export default function AnalyticsPage() {
     if (!business) return;
     if (!silent) setLoading(true); else setRefreshing(true);
     try {
-      const [summary, todayData, couponData, hotelStats, juridiqueStats, voituresStats, revendStats, approvStats, prevStats] = await Promise.all([
+      const [summary, todayData, couponData, hotelStats, juridiqueStats, voituresStats, revendStats, approvStats, prevStats, serviceStats] = await Promise.all([
         getAnalyticsSummary(business.id, days),
         getDailySales(business.id, todayStr),
         getCouponStats(business.id, days),
@@ -165,7 +212,8 @@ export default function AnalyticsPage() {
         isVoitures  ? getVoituresAnalytics(business.id, days)       : Promise.resolve(null),
         isGrossiste ? getRevendeursAnalytics(business.id, days)     : Promise.resolve(null),
         getApprovisionnementAnalytics(business.id, days),
-        period > 0  ? getPrevPeriodCA(business.id, days, !!isHotel, !!isJuridique) : Promise.resolve(null),
+            period > 0  ? getPrevPeriodCA(business.id, days, !!isHotel, !!isJuridique) : Promise.resolve(null),
+        isService   ? getServicesAnalytics(business.id, days)       : Promise.resolve(null),
       ]);
 
       setHotelData(hotelStats);
@@ -174,6 +222,7 @@ export default function AnalyticsPage() {
       setRevendeursData(revendStats);
       setApprovData(approvStats);
       setPrevCA(prevStats);
+      setServicesData(serviceStats);
 
       if (isJuridique) {
         const { data: audData } = await (supabase as any)
@@ -200,21 +249,27 @@ export default function AnalyticsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [business, days, period, todayStr, isHotel, isJuridique, isVoitures, isGrossiste]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [business, days, period, todayStr, isHotel, isJuridique, isVoitures, isGrossiste, isService]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadAll(); }, [business, period, loadAll]);
 
   // -- Stacked daily chart data -------------------------------------------------
   const stackedDays = useMemo<DayStack[]>(() => {
     const map = new Map<string, DayStack>();
-    const ensure = (d: string) => { if (!map.has(d)) map.set(d, { date: d, retail: 0, hotel: 0, juridique: 0 }); return map.get(d)!; };
+    const ensure = (d: string) => { if (!map.has(d)) map.set(d, { date: d, retail: 0, services: 0, hotel: 0, juridique: 0 }); return map.get(d)!; };
+    // data.daily_stats already includes service orders merged with retail — separate them out below
     (data?.daily_stats ?? []).forEach(d => { ensure(d.date).retail = d.total_sales; });
     (juridiqueData?.daily_fees ?? []).forEach(d => { ensure(d.date).juridique = d.amount; });
     (hotelData?.daily_revenue ?? []).forEach(d => { ensure(d.date).hotel = d.total; });
+    (servicesData?.daily_revenue ?? []).forEach(d => {
+      const e = ensure(d.date);
+      e.services += d.total;
+      e.retail = Math.max(0, e.retail - d.total);
+    });
     return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }, [data, juridiqueData, hotelData]);
+  }, [data, juridiqueData, hotelData, servicesData]);
 
-  const hasMultiSource = (stackedDays.some(d => d.hotel > 0) || stackedDays.some(d => d.juridique > 0));
+  const hasMultiSource = stackedDays.some(d => d.hotel > 0) || stackedDays.some(d => d.juridique > 0) || stackedDays.some(d => d.services > 0);
 
   // -- KPIs ----------------------------------------------------------------------
   const getKPIs = () => {
@@ -274,16 +329,17 @@ export default function AnalyticsPage() {
   }
 
   const TABS = ([
-    { id: 'general',    label: 'Général',     icon: TrendingUp                         },
-    { id: 'produits',   label: 'Produits',    icon: BarChart,   feature: 'retail'      },
-    { id: 'grossiste',  label: 'Détail ventes',icon: Store,     feature: 'retail'      },
-    { id: 'revendeurs', label: 'Revendeurs',  icon: Users,      feature: 'retail'      },
-    { id: 'promos',     label: 'Promos',      icon: Tag,        feature: 'retail'      },
-    { id: 'appro',      label: 'Achats',      icon: Package                            },
-    { id: 'juridique',  label: 'Dossiers',    icon: Briefcase,  feature: 'dossiers'   },
-    { id: 'hotel',      label: 'Hôtel',       icon: BedDouble,  feature: 'hotel'       },
-    { id: 'voitures',   label: 'Voitures',    icon: Car,        feature: 'voitures'   },
-  ] as any[]).filter(t => !t.feature || business?.features?.includes(t.feature));
+    { id: 'general',    label: 'Général',      icon: TrendingUp                          },
+    { id: 'services',   label: 'Prestations',  icon: Wrench,    show: isService          },
+    { id: 'produits',   label: 'Produits',     icon: BarChart,  feature: 'retail'        },
+    { id: 'grossiste',  label: 'Détail ventes',icon: Store,     feature: 'retail'        },
+    { id: 'revendeurs', label: 'Revendeurs',   icon: Users,     feature: 'retail'        },
+    { id: 'promos',     label: 'Promos',       icon: Tag,       feature: 'retail'        },
+    { id: 'appro',      label: 'Achats',       icon: Package                             },
+    { id: 'juridique',  label: 'Dossiers',     icon: Briefcase, feature: 'dossiers'      },
+    { id: 'hotel',      label: 'Hôtel',        icon: BedDouble, feature: 'hotel'         },
+    { id: 'voitures',   label: 'Voitures',     icon: Car,       feature: 'voitures'      },
+  ] as any[]).filter(t => (t.show === undefined ? true : t.show) && (!t.feature || business?.features?.includes(t.feature)));
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -391,17 +447,11 @@ export default function AnalyticsPage() {
                 {hasMultiSource
                   ? <StackedChart days={stackedDays} fmt={fmt} />
                   : (
-                    <div className="flex items-end gap-0.5 h-32">
-                      {stackedDays.map((day) => {
-                        const maxVal = Math.max(...stackedDays.map(d => d.retail), 1);
-                        const height = (day.retail / maxVal) * 100;
-                        return (
-                          <div key={day.date} className="group flex-1 flex flex-col items-center gap-1" title={`${format(new Date(day.date), 'd MMM', { locale: fr })} — ${fmt(day.retail)}`}>
-                            <div className="w-full bg-brand-600 hover:bg-brand-500 rounded-t transition-colors" style={{ height: `${height}%` }} />
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <SimpleBarChart
+                      data={stackedDays.map(d => ({ label: format(new Date(d.date), 'd MMM', { locale: fr }), total: d.retail + d.services }))}
+                      dataKey="total"
+                      fmt={fmt}
+                    />
                   )
                 }
               </div>
@@ -471,23 +521,12 @@ export default function AnalyticsPage() {
                 {juridiqueData.monthly_fees.length < 2
                   ? <p className="text-sm text-content-muted text-center py-8 italic">Pas assez de données historiques</p>
                   : (
-                    <div className="space-y-6">
-                      <div className="flex items-end gap-2 h-24">
-                        {juridiqueData.monthly_fees.map((m) => {
-                          const max    = Math.max(...juridiqueData!.monthly_fees.map(x => x.amount), 1);
-                          const height = (m.amount / max) * 100;
-                          return (
-                            <div key={m.month} className="group relative flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                              <div className="w-full bg-emerald-500/20 hover:bg-emerald-500/40 border-t-2 border-emerald-500/50 rounded-t-sm transition-all cursor-help" style={{ height: `${height}%` }} />
-                              <span className="text-[8px] font-black text-content-muted uppercase">{format(parseISO(m.month + '-01'), 'MMM', { locale: fr })}</span>
-                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-card text-content-primary text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-xl border border-surface-border">
-                                {fmt(m.amount)}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <SimpleBarChart
+                      data={juridiqueData.monthly_fees.map(m => ({ label: format(parseISO(m.month + '-01'), 'MMM yy', { locale: fr }), total: m.amount }))}
+                      dataKey="total"
+                      color="#10b981"
+                      fmt={fmt}
+                    />
                   )
                 }
               </div>
@@ -517,6 +556,98 @@ export default function AnalyticsPage() {
                     );
                   })}
                 </div>
+              )
+            }
+          </div>
+        )}
+
+        {/* ── Prestations de service ── */}
+        {tab === 'services' && (
+          <div className="space-y-5">
+            {loading || !servicesData
+              ? <p className="text-sm text-content-muted text-center py-8">Chargement…</p>
+              : (
+                <>
+                  {/* KPIs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'CA encaissé',      value: fmt(servicesData.ca_paye),           icon: DollarSign,  color: 'text-content-brand',   bg: 'bg-badge-brand border-status-brand' },
+                      { label: 'En attente paiement', value: fmt(servicesData.ca_pending),      icon: Banknote,    color: 'text-status-warning',  bg: 'bg-badge-warning border-status-warning' },
+                      { label: 'Prestations payées',  value: String(servicesData.count_paye),   icon: ShoppingBag, color: 'text-status-success',  bg: 'bg-badge-success border-status-success' },
+                      { label: 'Taux de complétion',  value: `${servicesData.completion_rate}%`, icon: TrendingUp,  color: 'text-status-info',    bg: 'bg-badge-info border-status-info' },
+                    ].map(({ label, value, icon: Icon, color, bg }) => (
+                      <div key={label} className={`p-4 rounded-xl border ${bg}`}>
+                        <div className="flex items-center justify-between mb-2"><p className="text-xs text-content-secondary">{label}</p><Icon className={`w-4 h-4 ${color}`} /></div>
+                        <p className="text-xl font-bold text-content-primary">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Répartition par statut */}
+                  <div className="card p-4">
+                    <h2 className="text-sm font-semibold text-content-secondary mb-4 flex items-center gap-2">
+                      <Wrench className="w-4 h-4" /> Répartition par statut
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[
+                        { label: 'En attente', value: servicesData.count_attente,  color: 'bg-badge-warning  text-status-warning  border-status-warning/30' },
+                        { label: 'En cours',   value: servicesData.count_en_cours, color: 'bg-badge-info     text-status-info     border-status-info/30' },
+                        { label: 'Terminées',  value: servicesData.count_termine,  color: 'bg-badge-brand    text-content-brand   border-status-brand/30' },
+                        { label: 'Payées',     value: servicesData.count_paye,     color: 'bg-badge-success  text-status-success  border-status-success/30' },
+                        { label: 'Annulées',   value: servicesData.count_annule,   color: 'bg-badge-error    text-status-error    border-status-error/30' },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className={`rounded-xl border px-3 py-2.5 text-center ${color}`}>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide mb-1 opacity-70">{label}</p>
+                          <p className="text-2xl font-black">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Graphique CA journalier */}
+                    {servicesData.daily_revenue.length > 0 && (
+                      <div className="card p-4">
+                        <h2 className="text-sm font-semibold text-content-secondary mb-4">CA journalier encaissé</h2>
+                        <SimpleBarChart
+                          data={servicesData.daily_revenue.map(d => ({ label: format(new Date(d.date), 'd MMM', { locale: fr }), total: d.total }))}
+                          dataKey="total"
+                          color="#fb923c"
+                          fmt={fmt}
+                        />
+                      </div>
+                    )}
+
+                    {/* Top prestations */}
+                    <div className="card p-4">
+                      <h2 className="text-sm font-semibold text-content-secondary mb-4 flex items-center gap-2">
+                        <BarChart className="w-4 h-4" /> Top prestations
+                      </h2>
+                      {servicesData.top_services.length === 0
+                        ? <p className="text-sm text-content-muted text-center py-6">Aucune prestation payée sur la période</p>
+                        : (
+                          <div className="space-y-3">
+                            {servicesData.top_services.map((s, i) => (
+                              <div key={s.name} className="flex items-center gap-3">
+                                <span className="text-xs font-mono text-content-muted w-4 shrink-0">{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <RankBar
+                                    label={s.name}
+                                    sub={`${s.count} fois`}
+                                    value={s.revenue}
+                                    max={servicesData.top_services[0].revenue}
+                                    color="bg-brand-500"
+                                    fmt={fmt}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      }
+                    </div>
+                  </div>
+                </>
               )
             }
           </div>
@@ -678,21 +809,12 @@ export default function AnalyticsPage() {
                   {approvData.monthly.length > 0 && (
                     <div className="card p-4">
                       <h2 className="text-sm font-semibold text-content-secondary mb-4">Dépenses mensuelles</h2>
-                      <div className="flex items-end gap-1 h-28">
-                        {approvData.monthly.map((m) => {
-                          const maxVal = Math.max(...approvData.monthly.map(x => x.total), 1);
-                          const height = (m.total / maxVal) * 100;
-                          return (
-                            <div key={m.month} className="group relative flex-1 flex flex-col items-center gap-1 h-full justify-end" title={`${m.month} — ${fmt(m.total)}`}>
-                              <div className="w-full bg-red-500/70 hover:bg-red-500 rounded-t transition-colors" style={{ height: `${height}%` }} />
-                              <span className="text-[8px] text-content-muted font-medium">{m.month.slice(5)}</span>
-                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-card text-content-primary text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 shadow-xl border border-surface-border pointer-events-none">
-                                {fmt(m.total)}<br/><span className="text-content-muted font-normal">{m.entries} entrée{m.entries > 1 ? 's' : ''}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <SimpleBarChart
+                        data={approvData.monthly.map(m => ({ label: format(parseISO(m.month + '-01'), 'MMM yy', { locale: fr }), total: m.total }))}
+                        dataKey="total"
+                        color="#ef4444"
+                        fmt={fmt}
+                      />
                     </div>
                   )}
 

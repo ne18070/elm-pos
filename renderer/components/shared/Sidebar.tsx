@@ -127,7 +127,7 @@ function SidebarContent({
   const expanded = !collapsed;
 
   const [isSupportOpen, setIsSupportOpen] = useState(false);
-  const [footerExpanded, setFooterExpanded] = useState(true);
+  const [footerExpanded, setFooterExpanded] = useState(false);
 
   // Heartbeat pour le pointage staff (toutes les 10 minutes)
   useEffect(() => {
@@ -321,10 +321,15 @@ function SidebarContent({
       <div className="border-t border-surface-border/50">
         <button
           onClick={() => setFooterExpanded(v => !v)}
-          className="w-full flex items-center justify-center py-1 text-content-muted hover:text-content-primary hover:bg-white/5 transition-colors"
-          title={footerExpanded ? 'Réduire' : 'Développer'}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-content-muted hover:text-content-primary hover:bg-white/5 transition-colors"
+          title={footerExpanded ? 'Réduire' : 'Plus d\'options'}
         >
-          <ChevronUp className={cn("w-3.5 h-3.5 transition-transform duration-200", footerExpanded ? "rotate-0" : "rotate-180")} />
+          {expanded && (
+            <span className="text-[10px] font-semibold uppercase tracking-widest">
+              {footerExpanded ? 'Réduire' : 'Plus'}
+            </span>
+          )}
+          <ChevronUp className={cn("w-3.5 h-3.5 transition-transform duration-200", footerExpanded ? "rotate-180" : "rotate-0")} />
         </button>
       </div>
       <div className={cn(

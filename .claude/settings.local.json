@@ -52,7 +52,8 @@
       "Bash(git commit -m 'Public vehicle rental + push notification fixes *)",
       "Bash(xargs perl -pi -e ' *)",
       "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
-      "Bash(node -e \"const l = require\\('c:/Users/pourq/OneDrive/Documents/BUILD/elm-pos/node_modules/lucide-react'\\); console.log\\(!!l.ClipboardList, !!l.Building2, !!l.ChevronDown\\);\")"
+      "Bash(node -e \"const l = require\\('c:/Users/pourq/OneDrive/Documents/BUILD/elm-pos/node_modules/lucide-react'\\); console.log\\(!!l.ClipboardList, !!l.Building2, !!l.ChevronDown\\);\")",
+      "Bash(node -e \"require\\('recharts'\\); console.log\\('ok'\\)\")"
     ]
   }
 }

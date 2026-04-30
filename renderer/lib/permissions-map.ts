@@ -61,7 +61,7 @@ export interface PermissionMeta {
   label:        string;
   group:        PermissionGroup;
   defaultRoles: readonly UserRole[];
-  feature?:     string; // Feature required to enable this permission
+  feature?:     string | string[]; // Feature(s) required — any one match is sufficient
 }
 
 // -- Permissions table ---------------------------------------------------------
@@ -84,7 +84,7 @@ export const PERMISSIONS: Record<PermissionKey, PermissionMeta> = {
   view_categories:        { label: 'Catégories',                   group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
   view_coupons:           { label: 'Coupons',                      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
   view_analytics:         { label: 'Statistiques',                 group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'] },
-  view_depenses:          { label: 'Dépenses',                     group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'expenses' },
+  view_depenses:          { label: 'Dépenses',                     group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['expenses', 'comptabilite'] },
   view_comptabilite:      { label: 'Comptabilité',                 group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'comptabilite' },
   view_activity:          { label: 'Journal d\'activité',          group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] },
   view_recovery:          { label: 'Récupération de données',      group: 'admin',      defaultRoles: ['admin', 'owner'] },

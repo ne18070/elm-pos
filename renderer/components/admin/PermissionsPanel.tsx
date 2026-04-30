@@ -109,7 +109,10 @@ export function PermissionsPanel({ businessId, members }: Props) {
       .filter(([, meta]) => {
         if (meta.group !== group) return false;
         // Si la permission requiert une feature que l'établissement n'a pas, on la cache
-        if (meta.feature && !hasFeature(business, meta.feature)) return false;
+        if (meta.feature) {
+          const required = Array.isArray(meta.feature) ? meta.feature : [meta.feature];
+          if (!required.some(f => hasFeature(business, f))) return false;
+        }
         return true;
       }),
   })).filter(g => g.items.length > 0);
