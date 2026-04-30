@@ -53,7 +53,16 @@
       "Bash(xargs perl -pi -e ' *)",
       "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
       "Bash(node -e \"const l = require\\('c:/Users/pourq/OneDrive/Documents/BUILD/elm-pos/node_modules/lucide-react'\\); console.log\\(!!l.ClipboardList, !!l.Building2, !!l.ChevronDown\\);\")",
-      "Bash(node -e \"require\\('recharts'\\); console.log\\('ok'\\)\")"
+      "Bash(node -e \"require\\('recharts'\\); console.log\\('ok'\\)\")",
+      "Bash(git mv *)",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/page.tsx '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(marketing\\)/page.tsx')",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/privacy '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(marketing\\)/privacy')",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/subscribe '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(marketing\\)/subscribe')",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/login '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(auth\\)/login')",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/reset-password '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(auth\\)/reset-password')",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/backoffice '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(backoffice\\)/backoffice')",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos add renderer/app/\\\\\\(auth\\\\\\)/layout.tsx renderer/app/\\\\\\(public\\\\\\)/layout.tsx renderer/app/\\\\\\(kiosk\\\\\\)/layout.tsx)",
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos status --short)"
     ]
   }
 }

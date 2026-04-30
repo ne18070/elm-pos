@@ -196,7 +196,7 @@ export default function PrivacyPage() {
           {/* 9 */}
           <Section title="9. Cookies et stockage local">
             <p>
-              ELM APP est une application de bureau (Electron). Elle utilise le stockage local du navigateur
+              ELM APP est une application de bureau. Elle utilise le stockage local du navigateur
               intégré uniquement pour conserver les préférences de configuration (imprimante, tiroir-caisse,
               thème) sur votre appareil. Aucun cookie de traçage publicitaire n&apos;est utilisé.
             </p>

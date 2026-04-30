@@ -52,7 +52,7 @@ export function PrinterSection() {
         <div className="p-3 bg-amber-500/10 border border-status-warning/20 rounded-xl flex items-start gap-3">
           <AlertCircle className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
           <p className="text-xs text-status-warning leading-relaxed font-medium">
-            L&apos;impression thermique directe est uniquement disponible via l&apos;application de bureau (Electron). En mode Web, seule l&apos;impression système standard est possible.
+            L&apos;impression thermique directe est uniquement disponible via l&apos;application de bureau. En mode Web, seule l&apos;impression système standard est possible.
           </p>
         </div>
       )}
