@@ -1,8 +1,5 @@
-import { supabase as _supabase } from './client';
+import { supabasePublic as supabase } from './public-client';
 import { findPublicBusinessByRef } from './public-business-ref';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

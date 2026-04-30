@@ -1,7 +1,4 @@
-import { supabase as _supabase } from './client';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
+import { supabasePublic as supabase } from './public-client';
 
 export function slugifyBusinessName(name: string): string {
   return name

@@ -1,6 +1,5 @@
-import { supabase as _supabase } from './client';
+import { supabasePublic as db } from './public-client';
 import { upsertClientByPhone } from './clients';
-const db = _supabase as any;
 
 export async function getPublicServiceCatalog(businessId: string) {
   const { data, error } = await db
