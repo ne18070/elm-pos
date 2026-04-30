@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from './providers/auth-provider';
 import { ThemeProvider } from './providers/theme-provider';
 import { NotificationContainer } from '@/components/ui/NotificationContainer';
+import { Analytics } from '@vercel/analytics/next';
 
 const BASE_URL = 'https://www.elm-app.click';
 
@@ -192,6 +193,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <NotificationContainer />
           </AuthProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
