@@ -641,6 +641,7 @@ export interface PrevPeriodCA {
   total_sales: number;
   total_fees:  number;
   total_hotel: number;
+  order_count: number;
 }
 
 export async function getPrevPeriodCA(
@@ -685,11 +686,15 @@ export async function getPrevPeriodCA(
   if (feesRes.error) throw new Error(feesRes.error.message);
   if (hotelRes.error) throw new Error(hotelRes.error.message);
 
+  const ordersData = (ordersRes.data ?? []) as any[];
+  const serviceOrdersData = (serviceOrdersRes.data ?? []) as any[];
+
   return {
-    total_sales: ((ordersRes.data ?? []) as any[]).reduce((s, o) => s + Number(o.total), 0) +
-      ((serviceOrdersRes.data ?? []) as any[]).reduce((s, o) => s + Number(o.paid_amount ?? o.total), 0),
+    total_sales: ordersData.reduce((s, o) => s + Number(o.total), 0) +
+      serviceOrdersData.reduce((s, o) => s + Number(o.paid_amount ?? o.total), 0),
     total_fees:  ((feesRes.data  ?? []) as any[]).reduce((s, f) => s + Number(f.montant), 0),
     total_hotel: ((hotelRes.data ?? []) as any[]).reduce((s, r) => s + Number(r.total), 0),
+    order_count: ordersData.length + serviceOrdersData.length,
   };
 }
 
