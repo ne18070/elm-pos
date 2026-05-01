@@ -65,7 +65,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
   const cart = useCartStore();
   const { user, business } = useAuthStore();
-  const { success: notifSuccess, warning: notifWarning } = useNotificationStore();
+  const { success: notifSuccess, warning: notifWarning, error: notifError } = useNotificationStore();
 
   // Intouch
   const [intouchConfig, setIntouchConfig] = useState<IntouchConfig | null>(null);
@@ -74,11 +74,16 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
   // Hôtel
   const [selectedReservation, setSelectedReservation] = useState<HotelReservation | null>(null);
+  // Ref for immediate access in async submit (Point 4)
+  const reservationRef = useRef<HotelReservation | null>(null);
 
   // Charger config Intouch
   useEffect(() => {
     if (business?.id) {
-      getIntouchConfig(business.id).then(setIntouchConfig).catch(() => {});
+      getIntouchConfig(business.id).then(setIntouchConfig).catch(e => {
+        console.error('Failed to load Intouch config:', e);
+        // Discrete warning or no-op is fine here since it's just a feature activation
+      });
     }
   }, [business?.id]);
 
@@ -165,6 +170,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   async function submitSimple() {
     if (!user || !business) return;
     setChargement(true);
+    // Use ref for immediate access to avoid race condition (Point 4)
+    const reservation = reservationRef.current;
     try {
       const order = await createOrder({
         business_id:    business.id,
@@ -175,9 +182,9 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         tax_rate:       taxRate,
         coupons:        cart.coupons,
         notes:          cart.notes,
-        customer_name:  (methode === 'room_charge' ? selectedReservation?.guest?.full_name : customerName.trim()) || undefined,
-        customer_phone: (methode === 'room_charge' ? selectedReservation?.guest?.phone : customerPhone.trim()) || undefined,
-        hotel_reservation_id: selectedReservation?.id,
+        customer_name:  (methode === 'room_charge' ? reservation?.guest?.full_name : customerName.trim()) || undefined,
+        customer_phone: (methode === 'room_charge' ? reservation?.guest?.phone : customerPhone.trim()) || undefined,
+        hotel_reservation_id: reservation?.id,
         table_id:       tableId,
       });
       if (customerName.trim() && methode !== 'room_charge') saveCustomer(customerName, customerPhone);
@@ -210,8 +217,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         notes:         cart.notes,
         tableId:       tableId,
       });
-      if (selectedReservation) {
-        (dbPayload as any).hotel_reservation_id = selectedReservation.id;
+      if (reservation) {
+        (dbPayload as any).hotel_reservation_id = reservation.id;
       }
       await enqueueToSync('create_order', dbPayload);
       notifWarning('Hors ligne —vente enregistrée, synchronisation automatique à la reconnexion');
@@ -369,7 +376,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         notifWarning(`Échec de l'envoi : ${res.error}`);
       }
     } catch (err) {
-      notifWarning("Erreur lors de l'envoi WhatsApp");
+      console.error('WhatsApp send error:', err);
+      notifError("Erreur lors de l'envoi WhatsApp");
     } finally {
       setSendingWa(false);
     }
@@ -385,7 +393,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       await navigator.clipboard.writeText(url);
       notifSuccess('Lien copié dans le presse-papier');
     } catch (err) {
-      notifWarning('Erreur lors de la génération du lien');
+      console.error('Link generation error:', err);
+      notifError('Erreur lors de la génération du lien');
     } finally {
       setCopying(false);
     }
@@ -756,6 +765,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           businessId={business?.id!}
           currency={currency}
           onSelect={(res) => {
+            reservationRef.current = res; // Set ref for immediate access (Point 4)
             setSelectedReservation(res);
             preConfirmerSimple();
           }}
@@ -988,5 +998,3 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     </Modal>
   );
 }
-
-

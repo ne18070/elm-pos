@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Info } from 'lucide-react';
+import { X, Info, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCashSessionStore } from '@/store/cashSession';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import { payServiceOrder, type ServiceOrder } from '@services/supabase/service-orders';
@@ -11,6 +12,7 @@ export function PayModal({ order, currency, onClose, onPaid }: {
   order: ServiceOrder; currency: string; onClose: () => void; onPaid: () => void;
 }) {
   const { user } = useAuthStore();
+  const { session: cashSession } = useCashSessionStore();
   const { error: notifError } = useNotificationStore();
   const balance = order.total - order.paid_amount;
   const [amount, setAmount] = useState(String(balance));
@@ -18,6 +20,10 @@ export function PayModal({ order, currency, onClose, onPaid }: {
   const [saving, setSaving] = useState(false);
 
   async function handlePay() {
+    if (!cashSession) {
+      notifError('Aucune session de caisse ouverte');
+      return;
+    }
     setSaving(true);
     try { 
       await payServiceOrder(order.id, parseFloat(amount) || 0, method, { userId: user?.id, userName: user?.full_name }); 
@@ -35,6 +41,15 @@ export function PayModal({ order, currency, onClose, onPaid }: {
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
+          {!cashSession && (
+            <div className="p-3 rounded-xl bg-status-error/10 border border-status-error/20 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
+              <p className="text-xs text-status-error leading-relaxed">
+                <strong>Action bloquée.</strong> Vous devez ouvrir une session de caisse pour enregistrer un versement.
+              </p>
+            </div>
+          )}
+
           {order.paid_amount > 0 && (
             <div className="rounded-xl bg-surface-hover p-3 space-y-1.5">
               <div className="flex justify-between text-sm">
@@ -62,7 +77,8 @@ export function PayModal({ order, currency, onClose, onPaid }: {
           <div>
             <label className="text-xs text-content-secondary font-medium mb-1 block">Montant reçu</label>
             <input value={amount} onChange={e => setAmount(e.target.value)} type="number" min={0}
-              className="w-full px-3 py-2.5 rounded-xl bg-surface-input border border-surface-border text-content-primary text-lg font-bold" />
+              disabled={!cashSession}
+              className="w-full px-3 py-2.5 rounded-xl bg-surface-input border border-surface-border text-content-primary text-lg font-bold disabled:opacity-50" />
             <p className="flex items-center gap-1.5 mt-1.5 text-xs text-content-muted">
               <Info className="w-3 h-3 shrink-0" />
               Vous pouvez encaisser un acompte — saisissez un montant inférieur au reste dû.
@@ -73,7 +89,8 @@ export function PayModal({ order, currency, onClose, onPaid }: {
             <div className="grid grid-cols-3 gap-2">
               {PAY_METHODS.map(m => (
                 <button key={m.value} onClick={() => setMethod(m.value)}
-                  className={cn('py-2 rounded-xl border text-xs font-semibold transition-colors', method === m.value
+                  disabled={!cashSession}
+                  className={cn('py-2 rounded-xl border text-xs font-semibold transition-colors disabled:opacity-50', method === m.value
                     ? 'bg-brand-500/20 border-brand-500/50 text-content-brand'
                     : 'border-surface-border text-content-secondary hover:bg-surface-hover')}>
                   {m.label}
@@ -84,8 +101,8 @@ export function PayModal({ order, currency, onClose, onPaid }: {
         </div>
         <div className="flex gap-3 p-5 border-t border-surface-border">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-surface-border text-content-secondary text-sm font-medium">Annuler</button>
-          <button onClick={handlePay} disabled={saving}
-            className="flex-1 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold disabled:opacity-40">
+          <button onClick={handlePay} disabled={saving || !cashSession}
+            className="flex-1 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold disabled:bg-surface-input disabled:text-content-muted disabled:cursor-not-allowed">
             {saving ? 'Enregistrement…' : 'Confirmer'}
           </button>
         </div>

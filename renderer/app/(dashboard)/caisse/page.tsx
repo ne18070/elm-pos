@@ -1,422 +1,30 @@
 'use client';
-import { toUserError } from '@/lib/user-error';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Loader2, LockOpen, Lock, RefreshCw, Banknote, CreditCard,
-  Smartphone, RotateCcw, History, CheckCircle, AlertTriangle, X,
-  Printer, FileText,
+  Smartphone, RotateCcw, History, CheckCircle, AlertTriangle,
+  Printer, FileText, Search, Filter, Calendar, Clock, User
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInMinutes, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCashSessionStore } from '@/store/cashSession';
 import { formatCurrency } from '@/lib/utils';
+import { toUserError } from '@/lib/user-error';
 import {
   openSession, closeSession, getLiveSummary, getSessionHistory,
   type CashSession, type SessionLiveSummary,
 } from '@services/supabase/cash-sessions';
 import { logAction } from '@services/supabase/logger';
 
-// -- Report data ---------------------------------------------------------------
-
-interface ReportData {
-  type:          'X' | 'Z';
-  businessName:  string;
-  generatedAt:   string;
-  openedAt:      string;
-  closedAt?:     string | null;
-  cashierName:   string;
-  currency:      string;
-  openingAmount: number;
-  totalSales:    number;
-  totalCash:     number;
-  totalCard:     number;
-  totalMobile:   number;
-  totalOrders:   number;
-  totalRefunds:  number;
-  expectedCash:  number;
-  actualCash?:   number | null;
-  difference?:   number | null;
-  notes?:        string | null;
-}
-
-function buildReportData(
-  type: 'X' | 'Z',
-  session: CashSession,
-  summary: SessionLiveSummary | null,
-  businessName: string,
-  cashierName: string,
-  currency: string,
-): ReportData {
-  const isZ    = type === 'Z';
-  const cash   = isZ ? (session.total_cash    ?? 0) : (summary?.total_cash    ?? 0);
-  const card   = isZ ? (session.total_card    ?? 0) : (summary?.total_card    ?? 0);
-  const mobile = isZ ? (session.total_mobile  ?? 0) : (summary?.total_mobile  ?? 0);
-  return {
-    type, businessName, cashierName, currency,
-    generatedAt:   new Date().toISOString(),
-    openedAt:      session.opened_at,
-    closedAt:      session.closed_at,
-    openingAmount: session.opening_amount,
-    totalSales:    isZ ? (session.total_sales   ?? 0) : (summary?.total_sales   ?? 0),
-    totalCash:     cash,
-    totalCard:     card,
-    totalMobile:   mobile,
-    totalOrders:   isZ ? (session.total_orders  ?? 0) : (summary?.total_orders  ?? 0),
-    totalRefunds:  isZ ? (session.total_refunds ?? 0) : (summary?.total_refunds ?? 0),
-    expectedCash:  isZ ? (session.expected_cash ?? session.opening_amount + cash)
-                       : session.opening_amount + cash,
-    actualCash:  isZ ? session.actual_cash  : undefined,
-    difference:  isZ ? session.difference   : undefined,
-    notes:       isZ ? session.notes        : undefined,
-  };
-}
-
-// -- Print (new window, inline styles — works on thermal + regular printers) --
-
-function printReport(data: ReportData) {
-  const fmt  = (n: number) => formatCurrency(n, data.currency);
-  const isZ  = data.type === 'Z';
-  const diff = data.difference ?? 0;
-
-  const row = (l: string, v: string, bold = false) =>
-    `<div style="display:flex;justify-content:space-between;padding:1px 0${bold ? ';font-weight:bold' : ''}">
-       <span>${l}</span><span>${v}</span></div>`;
-  const hr = `<hr style="border:none;border-top:1px dashed #aaa;margin:3px 0">`;
-
-  const body = [
-    `<p style="text-align:center;font-weight:bold;font-size:13pt;margin:0 0 2px">${data.businessName}</p>`,
-    `<p style="text-align:center;margin:0">${isZ ? '=== RAPPORT Z ===' : '=== RAPPORT X ==='}</p>`,
-    `<p style="text-align:center;font-size:9pt;margin:0 0 4px">${format(new Date(data.generatedAt), 'dd/MM/yyyy HH:mm:ss', { locale: fr })}</p>`,
-    hr,
-    row('Ouverture', format(new Date(data.openedAt), 'dd/MM/yyyy HH:mm', { locale: fr })),
-    isZ && data.closedAt ? row('Clôture', format(new Date(data.closedAt), 'dd/MM/yyyy HH:mm', { locale: fr })) : '',
-    row('Caissier', data.cashierName),
-    hr,
-    row('Fond de caisse', fmt(data.openingAmount)),
-    hr,
-    row('Espèces',       fmt(data.totalCash)),
-    row('Carte bancaire',fmt(data.totalCard)),
-    row('Mobile Money',  fmt(data.totalMobile)),
-    data.totalRefunds > 0 ? row('Remboursements', `-${fmt(data.totalRefunds)}`) : '',
-    hr,
-    row('TOTAL VENTES',  fmt(data.totalSales), true),
-    row('Transactions',  String(data.totalOrders)),
-    hr,
-    row('Fond initial',       fmt(data.openingAmount)),
-    row('+ Espèces reçues',  `+${fmt(data.totalCash)}`),
-    row('= ESPÈCES ATTENDUES', fmt(data.expectedCash), true),
-    ...(isZ && data.actualCash != null ? [
-      hr,
-      row('Espèces comptées', fmt(data.actualCash)),
-      row('ÉCART', `${diff >= 0 ? '+' : ''}${fmt(diff)}`, true),
-      `<p style="text-align:center;font-weight:bold">${
-        Math.abs(diff) < 1 ? '*** CAISSE ÉQUILIBRÉE ***'
-          : diff > 0 ? '*** EXCÉDENT ***' : '*** DÉFICIT ***'
-      }</p>`,
-    ] : []),
-    ...(data.notes ? [hr, `<p style="font-size:9pt;font-style:italic">Notes : ${data.notes}</p>`] : []),
-    hr,
-    `<p style="text-align:center;font-size:9pt">${isZ ? 'Clôture définitive' : 'Document non définitif'}</p>`,
-    `<p style="text-align:center;font-size:9pt">elm-pos</p>`,
-  ].join('');
-
-  const win = window.open('', '_blank', 'width=380,height=750');
-  if (!win) return;
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Rapport ${data.type}</title>
-    <style>body{font-family:'Courier New',monospace;font-size:11pt;width:72mm;margin:0;padding:4mm}
-    @media print{@page{margin:4mm}}</style>
-  </head><body>${body}</body></html>`);
-  win.document.close();
-  setTimeout(() => { win.print(); win.close(); }, 300);
-}
-
-// -- ReportModal ---------------------------------------------------------------
-
-function RRow({ label, value, bold = false, color }: {
-  label: string; value: string; bold?: boolean; color?: string;
-}) {
-  return (
-    <div className={`flex justify-between gap-2 text-[11px] ${bold ? 'font-bold' : ''}`}>
-      <span className="text-gray-500">{label}</span>
-      <span className={color ?? 'text-gray-800'}>{value}</span>
-    </div>
-  );
-}
-
-function ReportModal({ data, onClose }: { data: ReportData; onClose: () => void }) {
-  const fmt  = (n: number) => formatCurrency(n, data.currency);
-  const isZ  = data.type === 'Z';
-  const diff = data.difference ?? 0;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="card p-0 w-full max-w-sm overflow-hidden flex flex-col" style={{ maxHeight: '90vh' }}>
-
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-surface-border">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-brand-600/20 rounded-lg">
-              <FileText className="w-4 h-4 text-content-brand" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-content-primary text-base leading-none">
-                Rapport {data.type} — {isZ ? 'Clôture' : 'Lecture'}
-              </h2>
-              <p className="text-xs text-content-muted mt-0.5">
-                {isZ ? 'Clôture définitive de session' : 'Lecture en cours de journée'}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-content-primary">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="bg-white rounded-xl p-4 font-mono shadow-inner">
-            <p className="text-center font-bold text-sm text-content-primary mb-0.5">{data.businessName}</p>
-            <p className="text-center text-[10px] text-gray-500 border-b border-dashed border-gray-300 pb-1 mb-1">
-              {isZ ? '— RAPPORT Z — CLÔTURE —' : '— RAPPORT X — LECTURE —'}
-            </p>
-            <p className="text-center text-[10px] text-gray-500 mb-1">
-              {format(new Date(data.generatedAt), 'dd/MM/yyyy HH:mm', { locale: fr })}
-            </p>
-
-            <div className="border-t border-dashed border-gray-200 pt-1 pb-1 space-y-0.5">
-              <RRow label="Ouverture" value={format(new Date(data.openedAt), 'dd/MM HH:mm', { locale: fr })} />
-              {isZ && data.closedAt && <RRow label="Clôture" value={format(new Date(data.closedAt), 'dd/MM HH:mm', { locale: fr })} />}
-              <RRow label="Caissier" value={data.cashierName} />
-            </div>
-
-            <div className="border-t border-dashed border-gray-200 pt-1 pb-1 space-y-0.5">
-              <RRow label="Fond de caisse" value={fmt(data.openingAmount)} />
-            </div>
-
-            <div className="border-t border-dashed border-gray-200 pt-1 pb-1 space-y-0.5">
-              <RRow label="Espèces"      value={fmt(data.totalCash)} />
-              <RRow label="Carte"        value={fmt(data.totalCard)} />
-              <RRow label="Mobile Money" value={fmt(data.totalMobile)} />
-              {data.totalRefunds > 0 && <RRow label="Remboursements" value={`-${fmt(data.totalRefunds)}`} />}
-            </div>
-
-            <div className="border-t border-dashed border-gray-200 pt-1 pb-1 space-y-0.5">
-              <RRow label="TOTAL VENTES" value={fmt(data.totalSales)}    bold />
-              <RRow label="Transactions" value={String(data.totalOrders)} />
-            </div>
-
-            <div className="border-t border-dashed border-gray-200 pt-1 pb-1 space-y-0.5">
-              <RRow label="Fond initial"      value={fmt(data.openingAmount)} />
-              <RRow label="+ Espèces reçues"  value={fmt(data.totalCash)} />
-              <RRow label="= ATTENDUES"       value={fmt(data.expectedCash)} bold />
-            </div>
-
-            {isZ && data.actualCash != null && (
-              <div className="border-t border-dashed border-gray-200 pt-1 pb-1 space-y-0.5">
-                <RRow label="Espèces comptées" value={fmt(data.actualCash)} />
-                <RRow
-                  label="ÉCART"
-                  value={`${diff >= 0 ? '+' : ''}${fmt(diff)}`}
-                  bold
-                  color={Math.abs(diff) < 1 ? 'text-green-700' : diff > 0 ? 'text-blue-700' : 'text-red-700'}
-                />
-                <p className={`text-center text-[11px] font-bold ${
-                  Math.abs(diff) < 1 ? 'text-green-700' : diff > 0 ? 'text-blue-700' : 'text-red-700'
-                }`}>
-                  {Math.abs(diff) < 1 ? '✓ ÉQUILIBRÉE' : diff > 0 ? '▲ EXCÉDENT' : '▼ DÉFICIT'}
-                </p>
-              </div>
-            )}
-
-            {data.notes && (
-              <div className="border-t border-dashed border-gray-200 pt-1">
-                <p className="text-[10px] italic text-gray-500">Notes : {data.notes}</p>
-              </div>
-            )}
-
-            <p className="text-center text-[10px] text-gray-400 border-t border-dashed border-gray-200 pt-1 mt-1">
-              {isZ ? 'Document définitif' : 'Non définitif'} · elm-pos
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-2 p-4 border-t border-surface-border">
-          <button onClick={onClose} className="btn-secondary flex-1 h-11">Fermer</button>
-          <button
-            onClick={() => printReport(data)}
-            className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
-          >
-            <Printer className="w-4 h-4" />
-            Imprimer
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -- MetricCard ----------------------------------------------------------------
-
-function MetricCard({
-  label, value, icon: Icon, color = 'text-content-primary',
-}: { label: string; value: string; icon: React.ElementType; color?: string }) {
-  return (
-    <div className="card p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-surface-input flex items-center justify-center shrink-0">
-        <Icon className={`w-5 h-5 ${color}`} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-content-muted truncate">{label}</p>
-        <p className={`text-lg font-bold truncate ${color}`}>{value}</p>
-      </div>
-    </div>
-  );
-}
-
-// -- OpenModal -----------------------------------------------------------------
-
-function OpenModal({
-  currency,
-  onConfirm,
-  onClose,
-}: { currency: string; onConfirm: (amount: number) => Promise<void>; onClose: () => void }) {
-  const [amount, setAmount]   = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function handleConfirm() {
-    setLoading(true);
-    try { await onConfirm(parseFloat(amount) || 0); } finally { setLoading(false); }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="card p-6 w-full max-w-sm space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-content-primary text-lg">Ouvrir la caisse</h2>
-          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
-        </div>
-        <div>
-          <label className="label">Fond de caisse (espèces disponibles)</label>
-          <input
-            type="number" min="0" step="100" value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="input text-xl font-bold text-center"
-            placeholder="0" autoFocus
-          />
-          <p className="text-xs text-content-muted mt-1.5">
-            Montant en espèces présent dans la caisse en début de session.
-          </p>
-        </div>
-        <div className="flex gap-3 pt-1">
-          <button onClick={onClose} className="btn-secondary flex-1 h-11">Annuler</button>
-          <button
-            onClick={handleConfirm} disabled={loading}
-            className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            <LockOpen className="w-4 h-4" />Ouvrir
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -- CloseModal ----------------------------------------------------------------
-
-function CloseModal({
-  session, summary, currency, onConfirm, onClose,
-}: {
-  session: CashSession; summary: SessionLiveSummary; currency: string;
-  onConfirm: (actualCash: number, notes: string) => Promise<void>; onClose: () => void;
-}) {
-  const [actualCash, setActualCash] = useState('');
-  const [notes, setNotes]           = useState('');
-  const [loading, setLoading]       = useState(false);
-
-  const fmt          = (n: number) => formatCurrency(n, currency);
-  const expectedCash = session.opening_amount + summary.total_cash;
-  const actualNum    = parseFloat(actualCash) || 0;
-  const difference   = actualNum - expectedCash;
-
-  async function handleConfirm() {
-    setLoading(true);
-    try { await onConfirm(actualNum, notes); } finally { setLoading(false); }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="card p-6 w-full max-w-md space-y-5 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-content-primary text-lg">Clôturer la caisse</h2>
-          <button onClick={onClose} className="text-content-secondary hover:text-content-primary"><X className="w-5 h-5" /></button>
-        </div>
-
-        <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
-          <p className="text-xs text-content-muted uppercase tracking-wider font-medium mb-3">Résumé de la session</p>
-          <div className="flex justify-between"><span className="text-content-secondary">Fond de caisse</span><span className="text-content-primary font-medium">{fmt(session.opening_amount)}</span></div>
-          <div className="flex justify-between"><span className="text-content-secondary">Ventes espèces</span><span className="text-status-success font-medium">+{fmt(summary.total_cash)}</span></div>
-          {summary.total_card > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes carte</span><span className="text-content-primary">{fmt(summary.total_card)}</span></div>}
-          {summary.total_mobile > 0 && <div className="flex justify-between"><span className="text-content-secondary">Ventes mobile money</span><span className="text-content-primary">{fmt(summary.total_mobile)}</span></div>}
-          {summary.total_refunds > 0 && <div className="flex justify-between"><span className="text-content-secondary">Remboursements</span><span className="text-status-error">-{fmt(summary.total_refunds)}</span></div>}
-          <div className="flex justify-between font-bold border-t border-surface-border pt-2 mt-1"><span className="text-content-primary">Total ventes</span><span className="text-content-brand">{fmt(summary.total_sales)}</span></div>
-          <div className="flex justify-between font-semibold"><span className="text-content-primary">Espèces attendues en caisse</span><span className="text-content-primary">{fmt(expectedCash)}</span></div>
-        </div>
-
-        <div>
-          <label className="label">Espèces comptées (montant réel en caisse)</label>
-          <input
-            type="number" min="0" step="100" value={actualCash}
-            onChange={(e) => setActualCash(e.target.value)}
-            className="input text-xl font-bold text-center"
-            placeholder={fmt(expectedCash)} autoFocus
-          />
-        </div>
-
-        {actualCash && (
-          <div className={`rounded-xl p-4 border text-center ${
-            Math.abs(difference) < 1 ? 'bg-badge-success border-status-success'
-              : difference > 0       ? 'bg-badge-info border-blue-700'
-                                     : 'bg-badge-error border-status-error'
-          }`}>
-            <p className="text-xs text-content-secondary mb-1">Écart</p>
-            <p className={`text-2xl font-bold ${
-              Math.abs(difference) < 1 ? 'text-status-success' : difference > 0 ? 'text-status-info' : 'text-status-error'
-            }`}>
-              {difference >= 0 ? '+' : ''}{fmt(difference)}
-            </p>
-            <p className="text-xs text-content-muted mt-1">
-              {Math.abs(difference) < 1 ? 'Caisse équilibrée' : difference > 0 ? 'Excédent de caisse' : 'Déficit de caisse'}
-            </p>
-          </div>
-        )}
-
-        <div>
-          <label className="label">Notes (optionnel)</label>
-          <textarea
-            value={notes} onChange={(e) => setNotes(e.target.value)}
-            className="input resize-none h-16" placeholder="Ex : Erreur de rendu, billet abîmé…"
-          />
-        </div>
-
-        <div className="flex gap-3 pt-1">
-          <button onClick={onClose} className="btn-secondary flex-1 h-11">Annuler</button>
-          <button
-            onClick={handleConfirm} disabled={loading || !actualCash}
-            className="btn-danger flex-1 h-11 flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            <Lock className="w-4 h-4" />Clôturer
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// -- Page principale -----------------------------------------------------------
+// Local components & utils
+import { MetricCard } from './_components/MetricCard';
+import { OpenModal } from './_components/OpenModal';
+import { CloseModal } from './_components/CloseModal';
+import { ReportModal } from './_components/ReportModal';
+import { buildReportData, type ReportData } from './_lib/report-utils';
 
 export default function CaissePage() {
   const { business, user }                      = useAuthStore();
@@ -426,25 +34,49 @@ export default function CaissePage() {
   const [summary, setSummary]               = useState<SessionLiveSummary | null>(null);
   const [history, setHistory]               = useState<CashSession[]>([]);
   const [refreshing, setRefreshing]         = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [showOpenModal, setShowOpenModal]   = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [tab, setTab]                       = useState<'session' | 'historique'>('session');
   const [reportData, setReportData]         = useState<ReportData | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+
+  // Filters for history
+  const [historySearch, setHistorySearch]   = useState('');
+  const [historyFilter, setHistoryFilter]   = useState<'all' | 'discrepancy'>('all');
+  const [dateRange, setDateRange]           = useState<{ from?: Date; to?: Date }>({});
 
   const currency     = business?.currency ?? 'XOF';
   const fmt          = (n: number) => formatCurrency(n, currency);
   const cashierName  = user?.full_name ?? '—';
   const businessName = business?.name  ?? 'Caisse';
 
-  const loadSummary = useCallback(async () => {
+  // Point 2: Improved error handling for summary loading
+  const loadSummary = useCallback(async (showError = false) => {
     if (!session) return;
-    try { setSummary(await getLiveSummary(session.id)); } catch { /* silencieux */ }
-  }, [session]);
+    try { 
+      const data = await getLiveSummary(session.id);
+      setSummary(data); 
+      setLastRefreshedAt(new Date());
+    } catch (e) {
+      if (showError) notifError(toUserError(e));
+      console.error('Failed to load session summary:', e);
+    }
+  }, [session, notifError]);
 
-  const loadHistory = useCallback(async () => {
+  // Point 2: Improved error handling for history loading
+  const loadHistory = useCallback(async (showError = false) => {
     if (!business) return;
-    setHistory(await getSessionHistory(business.id));
-  }, [business]);
+    setLoadingHistory(true);
+    try {
+      const data = await getSessionHistory(business.id);
+      setHistory(data);
+    } catch (e) {
+      if (showError) notifError(toUserError(e));
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [business, notifError]);
 
   useEffect(() => {
     if (!loaded || !business) return;
@@ -454,24 +86,30 @@ export default function CaissePage() {
   useEffect(() => {
     if (!session) return;
     loadSummary();
-    const id = setInterval(loadSummary, 30_000);
+    const id = setInterval(() => loadSummary(false), 30_000);
     return () => clearInterval(id);
   }, [session, loadSummary]);
 
   async function handleRefresh() {
     setRefreshing(true);
-    try { await loadSummary(); } finally { setRefreshing(false); }
+    await loadSummary(true);
+    setRefreshing(false);
   }
 
+  // Point 2: Improved error handling for opening session
   async function handleOpen(amount: number) {
     if (!business) return;
-    const s = await openSession(business.id, amount);
-    setSession(s);
-    setShowOpenModal(false);
-    setSummary(null);
-    success('Caisse ouverte');
-    logAction({ business_id: business.id, action: 'cash_session.opened', metadata: { opening_amount: amount } });
-    await loadHistory();
+    try {
+      const s = await openSession(business.id, amount);
+      setSession(s);
+      setShowOpenModal(false);
+      setSummary(null);
+      success('Caisse ouverte');
+      logAction({ business_id: business.id, action: 'cash_session.opened', metadata: { opening_amount: amount } });
+      await loadHistory();
+    } catch (e) {
+      notifError(toUserError(e));
+    }
   }
 
   async function handleClose(actualCash: number, notes: string) {
@@ -510,6 +148,25 @@ export default function CaissePage() {
     setReportData(buildReportData('Z', s, null, businessName, '—', currency));
   }
 
+  // Point 6: History filtering
+  const filteredHistory = useMemo(() => {
+    return history.filter(s => {
+      if (s.status !== 'closed') return false;
+      
+      const matchesSearch = !historySearch || 
+        (s.notes?.toLowerCase().includes(historySearch.toLowerCase())) ||
+        (s.id.toLowerCase().includes(historySearch.toLowerCase()));
+      
+      const matchesDiscrepancy = historyFilter === 'all' || Math.abs(s.difference ?? 0) >= 1;
+      
+      const date = new Date(s.opened_at);
+      const matchesDate = (!dateRange.from || date >= startOfDay(dateRange.from)) &&
+                          (!dateRange.to   || date <= endOfDay(dateRange.to));
+
+      return matchesSearch && matchesDiscrepancy && matchesDate;
+    });
+  }, [history, historySearch, historyFilter, dateRange]);
+
   if (!loaded) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -518,21 +175,24 @@ export default function CaissePage() {
     );
   }
 
+  // Point 4: Session status calculation
+  const sessionDuration = session 
+    ? differenceInMinutes(new Date(), new Date(session.opened_at))
+    : 0;
+  const durationStr = sessionDuration > 60 
+    ? `${Math.floor(sessionDuration / 60)}h ${sessionDuration % 60}m`
+    : `${sessionDuration}m`;
+
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
       <div className="max-w-3xl mx-auto space-y-6">
 
-        {/* En-tête */}
-        <div className="flex items-center justify-between">
+        {/* En-tête - Point 5: Improved mobile layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Gestion de caisse</h1>
             <p className="text-xs text-content-secondary mt-0.5">
               Ouvrez une session, encaissez, puis clôturez en fin de service
-            </p>
-            <p className="text-xs text-content-muted mt-0.5">
-              {session
-                ? `Session ouverte le ${format(new Date(session.opened_at), 'dd MMM à HH:mm', { locale: fr })}`
-                : 'Aucune session active'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -540,30 +200,32 @@ export default function CaissePage() {
               <>
                 <button
                   onClick={handleRefresh} disabled={refreshing}
-                  className="btn-secondary p-2" title="Actualiser"
+                  className="btn-secondary p-2.5" title="Actualiser"
+                  aria-label="Actualiser les données"
                 >
                   <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </button>
                 {summary && (
                   <button
                     onClick={handleShowXReport}
-                    className="btn-secondary flex items-center gap-1.5 text-sm"
+                    className="btn-secondary flex items-center gap-1.5 text-sm h-10 px-3"
                     title="Rapport X — lecture de caisse"
                   >
                     <FileText className="w-4 h-4" />
-                    Rapport X
+                    <span className="hidden sm:inline">Rapport X</span>
+                    <span className="sm:hidden">X-Report</span>
                   </button>
                 )}
               </>
             )}
             {!session ? (
-              <button onClick={() => setShowOpenModal(true)} className="btn-primary flex items-center gap-2">
+              <button onClick={() => setShowOpenModal(true)} className="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4">
                 <LockOpen className="w-4 h-4" />Ouvrir la caisse
               </button>
             ) : (
               <button
-                onClick={() => { loadSummary().then(() => setShowCloseModal(true)); }}
-                className="btn-danger flex items-center gap-2"
+                onClick={() => { loadSummary(true).then(() => setShowCloseModal(true)); }}
+                className="btn-danger flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4"
               >
                 <Lock className="w-4 h-4" />Clôturer
               </button>
@@ -571,15 +233,15 @@ export default function CaissePage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
+        {/* Tabs - Point 5: Scrollable on mobile if needed */}
+        <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-full sm:w-fit overflow-x-auto no-scrollbar">
           {([
             { id: 'session',    label: 'Session en cours' },
             { id: 'historique', label: 'Historique' },
           ] as const).map(({ id, label }) => (
             <button
               key={id} onClick={() => setTab(id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-none
                 ${tab === id ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
             >
               {label}
@@ -624,15 +286,32 @@ export default function CaissePage() {
                       </div>
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-4 pt-2 border-t border-surface-border text-xs text-content-muted">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />Écart nul = caisse équilibrée</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Écart positif = excédent</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Écart négatif = déficit</span>
-                  </div>
                 </div>
               </div>
             ) : (
-              <>
+              <div className="space-y-4">
+                {/* Point 4: Active session status strip */}
+                <div className="bg-surface-input rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-y-2 gap-x-6 text-[11px] font-medium text-content-secondary border border-surface-border">
+                  <div className="flex items-center gap-1.5" title="Caissier actuel">
+                    <User className="w-3.5 h-3.5 text-content-muted" />
+                    <span>Caissier : <span className="text-content-primary">{cashierName}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5" title="Durée de la session">
+                    <Clock className="w-3.5 h-3.5 text-content-muted" />
+                    <span>Ouvert depuis : <span className="text-content-primary">{durationStr}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5" title="Dernière mise à jour des données">
+                    <RefreshCw className={`w-3.5 h-3.5 text-content-muted ${refreshing ? 'animate-spin' : ''}`} />
+                    <span>MàJ : <span className="text-content-primary">{format(lastRefreshedAt, 'HH:mm:ss')}</span></span>
+                  </div>
+                  {summary && (
+                    <div className="ml-auto flex items-center gap-1.5" title="Espèces attendues actuellement">
+                      <Banknote className="w-3.5 h-3.5 text-status-success" />
+                      <span>Attendu : <span className="text-content-primary font-bold">{fmt(session.opening_amount + summary.total_cash - summary.total_refunds)}</span></span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="card p-4 flex items-center gap-3 border-l-4 border-brand-500">
                   <Banknote className="w-5 h-5 text-content-brand shrink-0" />
                   <div>
@@ -663,96 +342,162 @@ export default function CaissePage() {
                     <p className="text-xs text-content-muted uppercase tracking-wider font-medium">Espèces attendues en caisse</p>
                     <div className="flex justify-between"><span className="text-content-secondary">Fond initial</span><span className="text-content-primary">{fmt(session.opening_amount)}</span></div>
                     <div className="flex justify-between"><span className="text-content-secondary">+ Ventes espèces</span><span className="text-status-success">+{fmt(summary.total_cash)}</span></div>
+                    {summary.total_refunds > 0 && (
+                       <div className="flex justify-between"><span className="text-content-secondary">- Remboursements</span><span className="text-status-error">-{fmt(summary.total_refunds)}</span></div>
+                    )}
                     <div className="flex justify-between font-bold border-t border-surface-border pt-2">
                       <span className="text-content-primary">Total attendu</span>
-                      <span className="text-content-brand">{fmt(session.opening_amount + summary.total_cash)}</span>
+                      <span className="text-content-brand">{fmt(session.opening_amount + summary.total_cash - summary.total_refunds)}</span>
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </>
         )}
 
         {/* -- Onglet Historique -- */}
         {tab === 'historique' && (
-          <div className="space-y-3">
-            {history.filter((s) => s.status === 'closed').length === 0 ? (
+          <div className="space-y-4">
+            
+            {/* Point 6: History Filters */}
+            <div className="card p-3 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
+                  <input 
+                    type="text"
+                    placeholder="Rechercher par note ou ID..."
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    className="input pl-9 h-10 text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <select 
+                    value={historyFilter}
+                    onChange={(e) => setHistoryFilter(e.target.value as any)}
+                    className="input h-10 text-sm py-0 px-3 w-40"
+                  >
+                    <option value="all">Toutes les sessions</option>
+                    <option value="discrepancy">Écarts uniquement</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-[11px] text-content-muted border-t border-surface-border pt-2">
+                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Filtrer par date :</span>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="date" 
+                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value ? new Date(e.target.value) : undefined }))}
+                    className="bg-transparent border-none p-0 focus:ring-0 text-[11px] text-content-primary"
+                  />
+                  <span>→</span>
+                  <input 
+                    type="date" 
+                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value ? new Date(e.target.value) : undefined }))}
+                    className="bg-transparent border-none p-0 focus:ring-0 text-[11px] text-content-primary"
+                  />
+                  {(dateRange.from || dateRange.to || historySearch || historyFilter !== 'all') && (
+                    <button 
+                      onClick={() => { setHistorySearch(''); setHistoryFilter('all'); setDateRange({}); }}
+                      className="text-brand-500 hover:text-brand-600 font-medium ml-2"
+                    >
+                      Réinitialiser
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {loadingHistory ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+              </div>
+            ) : filteredHistory.length === 0 ? (
               <div className="card p-12 flex flex-col items-center gap-3 text-center">
                 <History className="w-10 h-10 text-content-muted" />
-                <p className="text-content-muted">Aucune clôture enregistrée</p>
+                <p className="text-content-muted">Aucune clôture enregistrée avec ces filtres</p>
               </div>
             ) : (
-              history.filter((s) => s.status === 'closed').map((s) => {
-                const diff = s.difference ?? 0;
-                return (
-                  <div key={s.id} className="card p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-content-primary">
-                          {format(new Date(s.opened_at), 'EEEE dd MMMM yyyy', { locale: fr })}
-                        </p>
-                        <p className="text-xs text-content-muted">
-                          {format(new Date(s.opened_at), 'HH:mm')}
-                          {' → '}
-                          {s.closed_at && format(new Date(s.closed_at), 'HH:mm')}
-                        </p>
+              <div className="space-y-3">
+                {filteredHistory.map((s) => {
+                  const diff = s.difference ?? 0;
+                  return (
+                    <div key={s.id} className="card p-4 space-y-3 hover:border-surface-border-hover transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-content-primary">
+                            {format(new Date(s.opened_at), 'EEEE dd MMMM yyyy', { locale: fr })}
+                          </p>
+                          <p className="text-xs text-content-muted flex items-center gap-1.5 mt-0.5">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(s.opened_at), 'HH:mm')}
+                            {' → '}
+                            {s.closed_at && format(new Date(s.closed_at), 'HH:mm')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleShowZReport(s)}
+                            className="flex items-center gap-1.5 text-xs text-content-secondary hover:text-content-brand transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-hover border border-transparent hover:border-surface-border"
+                            title="Voir le rapport Z"
+                            aria-label="Voir le rapport Z"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Rapport Z</span>
+                          </button>
+                          <span className={`text-sm font-bold px-2 py-1 rounded-lg ${
+                            Math.abs(diff) < 1 ? 'text-status-success bg-status-success/10' 
+                              : diff > 0 ? 'text-status-info bg-status-info/10' 
+                              : 'text-status-error bg-status-error/10'
+                          }`}>
+                            {diff >= 0 ? '+' : ''}{fmt(diff)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleShowZReport(s)}
-                          className="flex items-center gap-1.5 text-xs text-content-secondary hover:text-content-brand transition-colors px-2 py-1 rounded-lg hover:bg-surface-hover"
-                          title="Voir le rapport Z"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          Rapport Z
-                        </button>
-                        <span className={`text-sm font-bold ${
-                          Math.abs(diff) < 1 ? 'text-status-success' : diff > 0 ? 'text-status-info' : 'text-status-error'
+
+                      <div className="grid grid-cols-3 gap-2 text-[11px]">
+                        <div className="bg-surface-input/50 rounded-lg px-3 py-2 border border-surface-border/50">
+                          <p className="text-content-muted mb-0.5">Ventes totales</p>
+                          <p className="text-content-primary font-bold">{fmt(s.total_sales ?? 0)}</p>
+                        </div>
+                        <div className="bg-surface-input/50 rounded-lg px-3 py-2 border border-surface-border/50">
+                          <p className="text-content-muted mb-0.5">Esp. attendues</p>
+                          <p className="text-content-primary font-bold">{fmt(s.expected_cash ?? 0)}</p>
+                        </div>
+                        <div className="bg-surface-input/50 rounded-lg px-3 py-2 border border-surface-border/50">
+                          <p className="text-content-muted mb-0.5">Esp. comptées</p>
+                          <p className="text-content-primary font-bold">{fmt(s.actual_cash ?? 0)}</p>
+                        </div>
+                      </div>
+
+                      {Math.abs(diff) >= 1 && (
+                        <div className={`flex items-start gap-2 text-xs px-3 py-2 rounded-lg border ${
+                          diff > 0 ? 'border-blue-800/30 bg-badge-info/50 text-status-info'
+                                   : 'border-status-error/30 bg-badge-error/50 text-status-error'
                         }`}>
-                          {diff >= 0 ? '+' : ''}{fmt(diff)}
-                        </span>
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold">{diff > 0 ? 'Excédent' : 'Déficit'} de {fmt(Math.abs(diff))}</span>
+                            {s.notes && <p className="mt-0.5 opacity-90 italic">« {s.notes} »</p>}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-content-muted pt-1 border-t border-surface-border/30">
+                        <span className="flex items-center gap-1"><Banknote className="w-3 h-3" /> {fmt(s.total_cash ?? 0)}</span>
+                        <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" /> {fmt(s.total_card ?? 0)}</span>
+                        <span className="flex items-center gap-1"><Smartphone className="w-3 h-3" /> {fmt(s.total_mobile ?? 0)}</span>
+                        {s.total_refunds ? (
+                          <span className="flex items-center gap-1 text-status-error"><RotateCcw className="w-3 h-3" /> {fmt(s.total_refunds)}</span>
+                        ) : null}
+                        <span className="ml-auto">{s.total_orders ?? 0} transactions</span>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="bg-surface-input rounded-lg px-3 py-2">
-                        <p className="text-content-muted">Ventes</p>
-                        <p className="text-content-primary font-semibold">{fmt(s.total_sales ?? 0)}</p>
-                      </div>
-                      <div className="bg-surface-input rounded-lg px-3 py-2">
-                        <p className="text-content-muted">Espèces attendues</p>
-                        <p className="text-content-primary font-semibold">{fmt(s.expected_cash ?? 0)}</p>
-                      </div>
-                      <div className="bg-surface-input rounded-lg px-3 py-2">
-                        <p className="text-content-muted">Espèces comptées</p>
-                        <p className="text-content-primary font-semibold">{fmt(s.actual_cash ?? 0)}</p>
-                      </div>
-                    </div>
-
-                    {Math.abs(diff) >= 1 && (
-                      <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${
-                        diff > 0 ? 'border-blue-800 bg-badge-info text-status-info'
-                                 : 'border-status-error bg-badge-error text-status-error'
-                      }`}>
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                        {diff > 0 ? 'Excédent' : 'Déficit'} de {fmt(Math.abs(diff))}
-                        {s.notes && ` — ${s.notes}`}
-                      </div>
-                    )}
-
-                    <div className="flex gap-3 text-xs text-content-muted">
-                      <span className="text-status-success">Esp. {fmt(s.total_cash ?? 0)}</span>
-                      <span>·</span>
-                      <span className="text-status-info">CB {fmt(s.total_card ?? 0)}</span>
-                      <span>·</span>
-                      <span className="text-status-purple">Mobile {fmt(s.total_mobile ?? 0)}</span>
-                      <span>·</span>
-                      <span>{s.total_orders ?? 0} ventes</span>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         )}

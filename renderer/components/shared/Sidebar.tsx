@@ -6,7 +6,7 @@ import {
   ShoppingCart, Package, ClipboardList,
   BarChart2, Settings, LogOut, Tag, LayoutGrid, Truck, Warehouse,
   Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, CalendarDays, UserCheck,
-  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin, MessageSquareShare, Car, ChevronUp, Wrench
+  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin, Car, ChevronUp, Wrench, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -22,13 +22,13 @@ import { TerminalStatus } from './TerminalStatus';
 import { SupportPanel } from './SupportPanel';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
 import { hasRole, getRoleLabel } from '@/lib/permissions';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSidebarStore } from '@/store/sidebar';
 
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions-map';
 
-import { autoRecordDeparture, updateStaffHeartbeat } from '@services/supabase/staff';
+import { autoRecordDeparture } from '@services/supabase/staff';
 
 export const NAV_SECTIONS: { 
   label: string; 
@@ -103,6 +103,37 @@ const BOTTOM_NAV = [
   { href: '/analytics',icon: BarChart2,   label: 'Stats'      },
 ] as const;
 
+// Visibility filtering logic (Point 5)
+function useVisibleNav(can: (p: PermissionKey) => boolean, business: any) {
+  return useMemo(() => {
+    return NAV_SECTIONS.map(section => ({
+      ...section,
+      items: section.items.filter(({ permission, feature, bizTypes }) => {
+        const canAccess = !permission || can(permission as PermissionKey);
+        const features = business?.features ?? [];
+        const bizTypesArray = business?.types ?? [];
+        const primaryType = business?.type ?? '';
+        
+        const isJuridiqueBiz = bizTypesArray.includes('juridique') || primaryType === 'juridique';
+        
+        const hasFeature = !feature || (
+          Array.isArray(feature) 
+            ? feature.some((f: string) => features.includes(f)) 
+            : features.includes(feature)
+        );
+
+        const hasBizType = !bizTypes || 
+                           bizTypesArray.some((t: string) => bizTypes.includes(t)) || 
+                           bizTypes.includes(primaryType);
+        
+        if (section.label === 'Espace Juridique' && !isJuridiqueBiz) return false;
+
+        return canAccess && hasFeature && hasBizType;
+      })
+    })).filter(section => section.items.length > 0);
+  }, [can, business]);
+}
+
 // --- Sidebar content (shared between drawer and desktop) ---------------------
 
 function SidebarContent({
@@ -120,6 +151,7 @@ function SidebarContent({
   const { setSubscription, setLoaded } = useSubscriptionStore();
   const { theme, cycle: cycleTheme } = useThemeStore();
   const { session: cashSession } = useCashSessionStore();
+  const { toggle: toggleSidebar } = useSidebarStore();
   const can = useCan();
   const role = user?.role ?? 'staff';
   const isAdmin = hasRole(role, 'admin');
@@ -129,19 +161,7 @@ function SidebarContent({
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [footerExpanded, setFooterExpanded] = useState(false);
 
-  // Heartbeat pour le pointage staff (toutes les 10 minutes)
-  useEffect(() => {
-    if (!business?.id || !user?.id) return;
-    
-    // Premier appel immédiat
-    updateStaffHeartbeat(business.id, user.id);
-
-    const interval = setInterval(() => {
-      updateStaffHeartbeat(business.id, user.id);
-    }, 10 * 60 * 1000); // 10 minutes
-
-    return () => clearInterval(interval);
-  }, [business?.id, user?.id]);
+  // Point 6: Business effects (heartbeat) moved to layout.tsx
 
   function handleOpenDisplay() {
     if (window.electronAPI?.display?.open) {
@@ -152,7 +172,6 @@ function SidebarContent({
   }
 
   async function handleLogout() {
-    // Pointage de départ automatique
     if (business?.id && user?.id) {
       await autoRecordDeparture(business.id, user.id).catch(() => {});
     }
@@ -167,35 +186,7 @@ function SidebarContent({
     router.push('/login');
   }
 
-  const visibleSections = NAV_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.filter(({ href, permission, feature, bizTypes }) => {
-      const canAccess = !permission || can(permission);
-      const features = business?.features ?? [];
-      const bizTypesArray = (business as any)?.types ?? [];
-      const primaryType = business?.type ?? '';
-      
-      // Détection stricte du métier juridique via le tableau 'types'
-      const isJuridiqueBiz = bizTypesArray.includes('juridique') || primaryType === 'juridique';
-      
-      // Filtrage des fonctionnalités (supporte les listes de clés)
-      const hasFeature = !feature || (
-        Array.isArray(feature) 
-          ? feature.some(f => features.includes(f)) 
-          : features.includes(feature)
-      );
-
-      // Filtrage par type d'établissement (supporte le tableau 'types')
-      const hasBizType = !bizTypes || 
-                         bizTypesArray.some((t: string) => bizTypes.includes(t)) || 
-                         bizTypes.includes(primaryType);
-      
-      // Sécurité : On cache l'Espace Juridique si l'établissement n'est pas de type juridique
-      if (section.label === 'Espace Juridique' && !isJuridiqueBiz) return false;
-
-      return canAccess && hasFeature && hasBizType;
-    })
-  })).filter(section => section.items.length > 0);
+  const visibleSections = useVisibleNav(can, business);
 
   const [version, setVersion] = useState<string>('');
 
@@ -206,17 +197,29 @@ function SidebarContent({
   }, []);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* App Logo */}
-      <div className="px-4 py-3 flex items-center">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* App Logo & Collapse Button (Point 4) */}
+      <div className="px-4 py-3 flex items-center justify-between">
         <div className="w-10 flex items-center justify-center shrink-0">
           <div className={cn(
             "rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md border border-white/20 transition-all duration-300 overflow-hidden p-1",
-            collapsed ? "w-10 h-10" : "w-14 h-14"
+            collapsed ? "w-10 h-10" : "w-12 h-12"
           )}>
             <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
           </div>
         </div>
+        {!onClose && (
+          <button 
+            onClick={toggleSidebar}
+            className={cn(
+              "p-1.5 rounded-lg text-content-muted hover:text-content-primary hover:bg-white/5 transition-all duration-300",
+              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+            )}
+            aria-label={collapsed ? "Étendre la barre latérale" : "Réduire la barre latérale"}
+          >
+            {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
+        )}
       </div>
 
       {/* Header : business switcher + close (mobile) */}
@@ -228,7 +231,11 @@ function SidebarContent({
           <BusinessSwitcher collapsed={collapsed} isHovering={isHovering} />
         </div>
         {onClose && (
-          <button onClick={onClose} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors shrink-0">
+          <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors shrink-0"
+            aria-label="Fermer le menu"
+          >
             <X className="w-5 h-5" />
           </button>
         )}
@@ -308,6 +315,14 @@ function SidebarContent({
         ))}
       </nav>
 
+      {/* Point 8: Refactor Footer - Quick access items */}
+      <div className="px-2 py-2 space-y-0.5 border-t border-surface-border/50 bg-white/5">
+         <NotificationBell collapsed={collapsed} />
+         {(business?.features ?? []).includes('tracking') && role !== 'owner' && (
+            <TeamTracker collapsed={collapsed} />
+          )}
+      </div>
+
       {/* Offline + terminal */}
       <div className={cn(
         "px-2 py-2 space-y-1 transition-all duration-300",
@@ -318,11 +333,13 @@ function SidebarContent({
       </div>
 
       {/* Footer actions */}
-      <div className="border-t border-surface-border/50">
+      <div className="border-t border-surface-border/50 shrink-0">
         <button
           onClick={() => setFooterExpanded(v => !v)}
           className="w-full flex items-center justify-center gap-1.5 py-1.5 text-content-muted hover:text-content-primary hover:bg-white/5 transition-colors"
           title={footerExpanded ? 'Réduire' : 'Plus d\'options'}
+          aria-expanded={footerExpanded}
+          aria-label="Plus d'options"
         >
           {expanded && (
             <span className="text-[10px] font-semibold uppercase tracking-widest">
@@ -333,15 +350,10 @@ function SidebarContent({
         </button>
       </div>
       <div className={cn(
-        "px-2 space-y-1 overflow-hidden transition-all duration-300",
+        "px-2 space-y-1 overflow-hidden transition-all duration-300 shrink-0",
         footerExpanded ? "py-2 max-h-[500px] opacity-100" : "max-h-0 py-0 opacity-0 pointer-events-none"
       )}>
         <div className="space-y-0.5 mb-4">
-          {(business?.features ?? []).includes('tracking') && role !== 'owner' && (
-            <TeamTracker collapsed={collapsed} />
-          )}
-          <NotificationBell collapsed={collapsed} />
-
           <Link
             href="/help"
             onClick={onClose}
@@ -368,6 +380,7 @@ function SidebarContent({
             className={cn(
               'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-content-secondary hover:text-content-primary hover:bg-white/5 group p-1',
             )}
+            aria-label="Signaler un problème"
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
               <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform text-status-warning" />
@@ -388,6 +401,7 @@ function SidebarContent({
             className={cn(
               'w-full flex items-center gap-0 rounded-xl transition-all duration-200 text-content-secondary hover:text-content-primary hover:bg-white/5 group p-1',
             )}
+            aria-label="Ouvrir l'écran client"
           >
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
               <Monitor className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
@@ -441,6 +455,7 @@ function SidebarContent({
               onClick={cycleTheme}
               title="Changer le thème"
               className="flex-1 flex items-center justify-center p-2 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-all group"
+              aria-label="Changer le thème"
             >
               {theme === 'light'  ? <Sun     className="w-4 h-4 group-hover:rotate-45 transition-transform" /> :
                theme === 'dark'   ? <Moon    className="w-4 h-4 group-hover:-rotate-12 transition-transform" /> :
@@ -451,6 +466,7 @@ function SidebarContent({
               onClick={handleLogout}
               title="Déconnexion"
               className="flex-1 flex items-center justify-center p-2 rounded-lg text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-all group"
+              aria-label="Déconnexion"
             >
               <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
@@ -493,6 +509,7 @@ export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
       <button
         onClick={onMenuOpen}
         className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+        aria-label="Ouvrir le menu"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -508,19 +525,34 @@ export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { user, business } = useAuthStore();
+  const { business } = useAuthStore();
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
-  const role = user?.role ?? 'staff';
+  const can = useCan();
 
-  const visible = BOTTOM_NAV.filter(({ href }) => {
-    const features = business?.features ?? [];
-    if (href === '/pos' && !features.includes('caisse') && !features.includes('pos') && !features.includes('retail')) return false;
-    if (href === '/products') {
-      if (!features.includes('stock')) return false;
-      if (!['owner','admin','manager'].includes(role)) return false;
-    }
-    return true;
-  });
+  // Point 5: Unify visibility rules for mobile bottom nav
+  const visible = useMemo(() => {
+    return BOTTOM_NAV.filter(({ href }) => {
+      const item = NAV_ITEMS.find(i => i.href === href);
+      if (!item) return true;
+      
+      const canAccess = !item.permission || can(item.permission as PermissionKey);
+      const features = business?.features ?? [];
+      const bizTypesArray = (business as any)?.types ?? [];
+      const primaryType = business?.type ?? '';
+      
+      const hasFeature = !item.feature || (
+        Array.isArray(item.feature) 
+          ? item.feature.some((f: string) => features.includes(f)) 
+          : features.includes(item.feature)
+      );
+
+      const hasBizType = !item.bizTypes || 
+                         bizTypesArray.some((t: string) => item.bizTypes!.includes(t)) || 
+                         item.bizTypes!.includes(primaryType);
+      
+      return canAccess && hasFeature && hasBizType;
+    });
+  }, [business, can]);
 
   return (
     <nav
@@ -563,35 +595,54 @@ export function MobileBottomNav() {
 // --- Main Sidebar export ------------------------------------------------------
 
 export function Sidebar() {
-  const collapsed = useSidebarStore((s) => s.collapsed);
+  const { collapsed, drawerOpen, setDrawerOpen } = useSidebarStore();
   const [isHovering, setIsHovering] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Point 2: Responsive logic to prevent double mounting
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Close drawer on route change
   const pathname = usePathname();
-  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+  useEffect(() => { setDrawerOpen(false); }, [pathname, setDrawerOpen]);
+
+  // Point 7: Escape key to close
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [setDrawerOpen]);
 
   const effectiveCollapsed = collapsed && !isHovering;
 
   return (
     <>
       {/* -- Desktop sidebar -- */}
-      <aside 
-        onMouseEnter={() => collapsed && setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        className={cn(
-          'theme-dark hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-300 ease-in-out z-30 shadow-xl',
-          effectiveCollapsed ? 'w-16' : 'w-64',
-        )}
-      >
-        <SidebarContent
-          collapsed={effectiveCollapsed}
-          isHovering={isHovering}
-        />
-      </aside>
+      {!isMobile && (
+        <aside 
+          onMouseEnter={() => collapsed && setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          className={cn(
+            'theme-dark hidden md:flex h-full bg-surface-card border-r border-surface-border flex-col shrink-0 transition-all duration-300 ease-in-out z-30 shadow-xl',
+            effectiveCollapsed ? 'w-16' : 'w-64',
+          )}
+        >
+          <SidebarContent
+            collapsed={effectiveCollapsed}
+            isHovering={isHovering}
+          />
+        </aside>
+      )}
 
       {/* -- Mobile drawer overlay -- */}
-      {drawerOpen && (
+      {isMobile && drawerOpen && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/60"
           onClick={() => setDrawerOpen(false)}
@@ -599,28 +650,18 @@ export function Sidebar() {
       )}
 
       {/* -- Mobile drawer -- */}
-      <aside className={cn(
-        'theme-dark md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-card border-r border-surface-border flex flex-col',
-        'transition-transform duration-250',
-        drawerOpen ? 'translate-x-0' : '-translate-x-full',
-      )}>
-        <SidebarContent
-          collapsed={false}
-          onClose={() => setDrawerOpen(false)}
-        />
-      </aside>
-
-      {/* -- Expose open fn via data attr for MobileTopBar -- */}
-      <div id="sidebar-drawer-trigger" className="hidden" data-open={String(drawerOpen)}
-        onClick={() => setDrawerOpen(true)} />
+      {isMobile && (
+        <aside className={cn(
+          'theme-dark md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-surface-card border-r border-surface-border flex flex-col',
+          'transition-transform duration-250',
+          drawerOpen ? 'translate-x-0' : '-translate-x-full',
+        )}>
+          <SidebarContent
+            collapsed={false}
+            onClose={() => setDrawerOpen(false)}
+          />
+        </aside>
+      )}
     </>
   );
-}
-
-// --- Hook to open drawer from outside ----------------------------------------
-
-export function useOpenSidebar() {
-  return () => {
-    document.getElementById('sidebar-drawer-trigger')?.click();
-  };
 }

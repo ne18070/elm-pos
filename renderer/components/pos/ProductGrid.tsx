@@ -6,7 +6,7 @@ import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { VariantPicker } from './VariantPicker';
 import type { Product, ProductVariant } from '@pos-types';
 
@@ -20,10 +20,18 @@ interface ProductGridProps {
 
 export function ProductGrid({ businessId, categoryId, search, view, onSelect }: ProductGridProps) {
   // realtime=true : abonnement Supabase pour les mises à jour de stock en direct
-  const { products, loading } = useProducts(businessId, true);
+  const { products, loading, error } = useProducts(businessId, true);
   const { business } = useAuthStore();
-  const { syncProductStock } = useCartStore();
-  const { warning } = useNotificationStore();
+  const { syncProductStock, items: cartItems, addItem } = useCartStore();
+  const { warning, error: notifError } = useNotificationStore();
+
+  // Point 8: Handle loading error
+  useEffect(() => {
+    if (error) {
+      console.error('Failed to load products:', error);
+      notifError('Erreur de chargement des produits');
+    }
+  }, [error, notifError]);
 
   // Propager les changements de stock Realtime vers les lignes du panier
   useEffect(() => {
@@ -33,8 +41,6 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
       }
     });
   }, [products, syncProductStock]);
-
-  const { items: cartItems, addItem } = useCartStore();
 
   // Produit en attente de sélection de variante
   const [pickerProduct, setPickerProduct] = useState<Product | null>(null);
@@ -74,29 +80,40 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
     onSelect(product);
   }
 
+  // Point 10: Memoize filtered products
+  const filtered = useMemo(() => {
+    const s = search.toLowerCase().trim();
+    return products.filter((p) => {
+      const matchesCategory = !categoryId || p.category_id === categoryId;
+      if (!matchesCategory) return false;
+      
+      if (!s) return true;
+      
+      return (
+        p.name.toLowerCase().includes(s) ||
+        p.barcode?.includes(s) ||
+        p.sku?.toLowerCase().includes(s)
+      );
+    });
+  }, [products, categoryId, search]);
+
   // Total base-units consumed in cart for a product (used for stock checks)
-  function consumedInCart(productId: string): number {
-    return cartItems
-      .filter((i) => i.product_id === productId)
-      .reduce((s, i) => s + i.quantity * (i.stock_consumption ?? 1), 0);
-  }
+  // Memoized for performance in the loops
+  const consumedMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    cartItems.forEach(i => {
+      map[i.product_id] = (map[i.product_id] || 0) + i.quantity * (i.stock_consumption ?? 1);
+    });
+    return map;
+  }, [cartItems]);
 
-  // Total item count in cart for a product (used for the badge display)
-  function qtyInCart(productId: string): number {
-    return cartItems
-      .filter((i) => i.product_id === productId)
-      .reduce((s, i) => s + i.quantity, 0);
-  }
-
-  const filtered = products.filter((p) => {
-    const matchesCategory = !categoryId || p.category_id === categoryId;
-    const matchesSearch =
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode?.includes(search) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const qtyMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    cartItems.forEach(i => {
+      map[i.product_id] = (map[i.product_id] || 0) + i.quantity;
+    });
+    return map;
+  }, [cartItems]);
 
   if (loading) {
     return view === 'grid' ? (
@@ -127,7 +144,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
   function stockState(product: Product) {
     if (!product.track_stock) return 'ok' as const;
-    const consumed = consumedInCart(product.id);
+    const consumed = consumedMap[product.id] || 0;
     const remaining = (product.stock ?? 0) - consumed;
     if (remaining <= 0) return 'out' as const;
     if (remaining <= 3) return 'low' as const;
@@ -136,7 +153,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
 
   function stockLabel(product: Product): string | null {
     if (!product.track_stock) return null;
-    const consumed = consumedInCart(product.id);
+    const consumed = consumedMap[product.id] || 0;
     const remaining = (product.stock ?? 0) - consumed;
     if (remaining <= 0) return 'Épuisé';
     if (remaining <= 3) return `${remaining} restant${remaining > 1 ? 's' : ''}`;
@@ -152,6 +169,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
           const state = stockState(product);
           const label = stockLabel(product);
           const disabled = state === 'out';
+          const inCart = qtyMap[product.id] || 0;
 
           return (
             <button
@@ -180,10 +198,10 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                   <div className="absolute top-1.5 right-1.5 bg-yellow-500 rounded-full w-2.5 h-2.5" />
                 )}
                 {/* Badge quantité en panier */}
-                {qtyInCart(product.id) > 0 && (
+                {inCart > 0 && (
                   <div className="absolute top-1.5 left-1.5 min-w-[1.25rem] h-5 px-1 rounded-full
                                   bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center">
-                    {qtyInCart(product.id)}
+                    {inCart}
                   </div>
                 )}
               </div>
@@ -222,7 +240,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
         <VariantPicker
           product={pickerProduct}
           currency={business?.currency}
-          consumedInCart={consumedInCart(pickerProduct.id)}
+          consumedInCart={consumedMap[pickerProduct.id] || 0}
           onSelect={(variant) => addDirect(pickerProduct, variant)}
           onClose={() => setPickerProduct(null)}
         />
@@ -239,6 +257,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
         const state = stockState(product);
         const label = stockLabel(product);
         const disabled = state === 'out';
+        const inCart = qtyMap[product.id] || 0;
 
         return (
           <button
@@ -258,10 +277,10 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
               ) : (
                 <Package className="w-5 h-5 text-content-muted" />
               )}
-              {qtyInCart(product.id) > 0 && (
+              {inCart > 0 && (
                 <div className="absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full
                                 bg-brand-600 text-content-primary text-[10px] font-bold flex items-center justify-center">
-                  {qtyInCart(product.id)}
+                  {inCart}
                 </div>
               )}
             </div>
@@ -315,7 +334,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
       <VariantPicker
         product={pickerProduct}
         currency={business?.currency}
-        consumedInCart={consumedInCart(pickerProduct.id)}
+        consumedInCart={consumedMap[pickerProduct.id] || 0}
         onSelect={(variant) => addDirect(pickerProduct, variant)}
         onClose={() => setPickerProduct(null)}
       />

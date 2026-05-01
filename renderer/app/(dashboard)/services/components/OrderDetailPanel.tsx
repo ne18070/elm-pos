@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   X, Printer, Edit2, Wrench, User, Search, Plus, Trash2, 
   Play, CheckCircle2, CreditCard, XCircle, Check, MessageCircle, 
@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
+import { useCashSessionStore } from '@/store/cashSession';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
@@ -36,6 +37,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
   businessId: string; onClose: () => void; onRefresh: () => void;
 }) {
   const { business, businesses, user } = useAuthStore();
+  const { session: cashSession } = useCashSessionStore();
   const can = useCan();
   const { success, error: notifError } = useNotificationStore();
   const [showPay, setShowPay] = useState(false);
@@ -522,8 +524,12 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                   </button>
                 )}
                 {canCollectPayment && order.status === 'termine' && (
-                  <button onClick={() => setShowPay(true)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold">
+                  <button 
+                    onClick={() => setShowPay(true)}
+                    disabled={!cashSession}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold disabled:bg-surface-input disabled:text-content-muted disabled:cursor-not-allowed"
+                    title={!cashSession ? 'Ouvrez une session de caisse pour encaisser' : undefined}
+                  >
                     <CreditCard className="w-4 h-4" />Encaisser
                   </button>
                 )}
@@ -556,7 +562,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
                     WhatsApp
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3 m-3" />
                   </button>
                   {showWaMenu && (
                     <div className="absolute bottom-full mb-1 left-0 right-0 bg-surface-card border border-surface-border rounded-xl shadow-lg overflow-hidden z-20">

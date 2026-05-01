@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { usePermissionsStore } from '@/store/permissions';
-import { Sidebar, MobileTopBar, MobileBottomNav, useOpenSidebar } from '@/components/shared/Sidebar';
+import { Sidebar, MobileTopBar, MobileBottomNav } from '@/components/shared/Sidebar';
 import { TrialBanner } from '@/components/shared/TrialBanner';
 import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { CommandPalette } from '@/components/shared/CommandPalette';
@@ -15,16 +15,18 @@ import { NAV_ITEMS } from '@/components/shared/Sidebar';
 import { checkPermission } from '@/lib/permissions';
 import { NotificationBanner } from '@/components/shared/NotificationBanner';
 import { StartupAlertsModal } from '@/components/shared/StartupAlertsModal';
+import { updateStaffHeartbeat } from '@services/supabase/staff';
+import { useSidebarStore } from '@/store/sidebar';
 
 function MobileLayout({ children }: { children: React.ReactNode }) {
-  const openSidebar = useOpenSidebar();
+  const setDrawerOpen = useSidebarStore(s => s.setDrawerOpen);
   return (
     <div className="flex h-screen overflow-hidden">
       <InactivityGuard />
       <CommandPalette />
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <MobileTopBar onMenuOpen={openSidebar} />
+        <MobileTopBar onMenuOpen={() => setDrawerOpen(true)} />
         <NotificationBanner />
         <StartupAlertsModal />
         <TrialBanner />
@@ -46,6 +48,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router   = useRouter();
   const pathname = usePathname();
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+  // Heartbeat pour le pointage staff (toutes les 10 minutes)
+  useEffect(() => {
+    if (!business?.id || !user?.id) return;
+    
+    // Premier appel immédiat
+    updateStaffHeartbeat(business.id, user.id);
+
+    const interval = setInterval(() => {
+      updateStaffHeartbeat(business.id, user.id);
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(interval);
+  }, [business?.id, user?.id]);
 
   const [offlineCheck, setOfflineCheck] = useState<{ allowed: boolean; status: string; reason?: string } | null>(null);
 

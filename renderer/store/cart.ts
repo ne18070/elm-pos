@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CartItem, Coupon, Product, ProductVariant } from '@pos-types';
+import type { CartItem, Coupon, Product, ProductVariant, RestaurantTable } from '@pos-types';
 import { calculateDiscount } from '../../services/pricing';
 
 // --- Commande en attente -------------------------------------------------------
@@ -12,6 +12,9 @@ export interface HeldOrder {
   coupons: Coupon[];
   notes: string;
   heldAt: string;
+  selectedClient?: { id: string; name: string; phone?: string | null } | null;
+  selectedTable?: RestaurantTable | null;
+  wholesaleCtx?: any | null; // Using any for WholesaleContext to avoid circular or complex imports here
 }
 
 // --- Résultat d'ajout au panier -----------------------------------------------
@@ -27,6 +30,9 @@ interface CartState {
   items: CartItem[];
   coupons: Coupon[];
   notes: string;
+  selectedClient: { id: string; name: string; phone?: string | null } | null;
+  selectedTable: RestaurantTable | null;
+  wholesaleCtx: any | null;
 
   heldOrders: HeldOrder[];
   holdCurrentOrder: (label: string) => void;
@@ -51,6 +57,9 @@ interface CartState {
   addCoupon: (coupon: Coupon) => void;
   removeCoupon: (couponId: string) => void;
   setNotes:  (notes: string) => void;
+  setSelectedClient: (client: { id: string; name: string; phone?: string | null } | null) => void;
+  setSelectedTable: (table: RestaurantTable | null) => void;
+  setWholesaleCtx: (ctx: any | null) => void;
   clear: () => void;
   /** Applique des prix de gros sur les items du panier (clé = product_id → nouveau prix) */
   applyPriceOverrides: (overrides: Record<string, number>) => void;
@@ -87,12 +96,15 @@ export const useCartStore = create<CartState>()(
   items:       [],
   coupons:     [],
   notes:       '',
+  selectedClient: null,
+  selectedTable: null,
+  wholesaleCtx: null,
   heldOrders:  [],
 
   // -- Mise en attente ----------------------------------------------------------
 
   holdCurrentOrder: (label) => {
-    const { items, coupons, notes } = get();
+    const { items, coupons, notes, selectedClient, selectedTable, wholesaleCtx } = get();
     if (items.length === 0) return;
     const held: HeldOrder = {
       id:     crypto.randomUUID(),
@@ -101,10 +113,14 @@ export const useCartStore = create<CartState>()(
       coupons: [...coupons],
       notes,
       heldAt: new Date().toISOString(),
+      selectedClient,
+      selectedTable,
+      wholesaleCtx,
     };
     set((state) => ({
       heldOrders: [...state.heldOrders, held],
       items: [], coupons: [], notes: '',
+      selectedClient: null, selectedTable: null, wholesaleCtx: null,
     }));
   },
 
@@ -115,6 +131,9 @@ export const useCartStore = create<CartState>()(
       items:      [...held.items],
       coupons:    [...held.coupons],
       notes:      held.notes,
+      selectedClient: held.selectedClient ?? null,
+      selectedTable:  held.selectedTable ?? null,
+      wholesaleCtx:   held.wholesaleCtx ?? null,
       heldOrders: state.heldOrders.filter((h) => h.id !== id),
     }));
   },
@@ -283,7 +302,10 @@ export const useCartStore = create<CartState>()(
   },
 
   setNotes:  (notes)  => set({ notes }),
-  clear: () => set({ items: [], coupons: [], notes: '' }),
+  setSelectedClient: (selectedClient) => set({ selectedClient }),
+  setSelectedTable:  (selectedTable)  => set({ selectedTable }),
+  setWholesaleCtx:   (wholesaleCtx)   => set({ wholesaleCtx }),
+  clear: () => set({ items: [], coupons: [], notes: '', selectedClient: null, selectedTable: null, wholesaleCtx: null }),
 
   applyPriceOverrides: (overrides) => set((state) => ({
     items: state.items.map((item) =>
@@ -333,7 +355,11 @@ export const useCartStore = create<CartState>()(
         coupons:    state.coupons,
         notes:      state.notes,
         heldOrders: state.heldOrders,
+        selectedClient: state.selectedClient,
+        selectedTable:  state.selectedTable,
+        wholesaleCtx:   state.wholesaleCtx,
       }),
     }
   )
 );
+

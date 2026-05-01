@@ -7,6 +7,7 @@ import {
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCashSessionStore } from '@/store/cashSession';
 import { toUserError } from '@/lib/user-error';
 import { 
   updateServiceOrderStatus, 
@@ -61,6 +62,7 @@ export function ServiceOrdersTab({
   initialStatus?: ServiceOrderStatus | 'all';
 }) {
   const { user, business } = useAuthStore();
+  const { session: cashSession } = useCashSessionStore();
   const { success, error: notifError } = useNotificationStore();
   const [statusFilter, setStatusFilter] = React.useState<ServiceOrderStatus | 'all'>(initialStatus ?? 'all');
   React.useEffect(() => { setStatusFilter(initialStatus ?? 'all'); }, [initialStatus]);
@@ -240,8 +242,12 @@ export function ServiceOrdersTab({
                       </button>
                     )}
                     {canCollectPayment && order.status === 'termine' && (
-                      <button onClick={e => { e.stopPropagation(); onSelectOrder(order); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-success hover:bg-badge-success transition-colors">
+                      <button 
+                        onClick={e => { e.stopPropagation(); onSelectOrder(order); }}
+                        disabled={!cashSession}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-status-success hover:bg-badge-success transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={!cashSession ? 'Session de caisse fermée' : undefined}
+                      >
                         <CreditCard className="w-3.5 h-3.5" />Encaisser
                       </button>
                     )}
@@ -320,8 +326,12 @@ export function ServiceOrdersTab({
                               </button>
                             )}
                             {canCollectPayment && order.status === 'termine' && (
-                              <button onClick={e => { e.stopPropagation(); onSelectOrder(order); }}
-                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-status-success hover:bg-badge-success">
+                              <button 
+                                onClick={e => { e.stopPropagation(); onSelectOrder(order); }}
+                                disabled={!cashSession}
+                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-status-success hover:bg-badge-success disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={!cashSession ? 'Session de caisse fermée' : undefined}
+                              >
                                 <CreditCard className="h-3.5 w-3.5" />Encaisser
                               </button>
                             )}

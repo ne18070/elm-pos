@@ -5,6 +5,8 @@ interface SidebarState {
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
   toggle: () => void;
+  drawerOpen: boolean;
+  setDrawerOpen: (v: boolean) => void;
 }
 
 export const useSidebarStore = create<SidebarState>()(
@@ -13,7 +15,13 @@ export const useSidebarStore = create<SidebarState>()(
       collapsed: false,
       setCollapsed: (collapsed) => set({ collapsed }),
       toggle: () => set((state) => ({ collapsed: !state.collapsed })),
+      drawerOpen: false,
+      setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
     }),
-    { name: 'elm-pos-sidebar-collapsed-v2' }
+    { 
+      name: 'elm-pos-sidebar-collapsed-v2',
+      // Don't persist drawerOpen
+      partialize: (state) => ({ collapsed: state.collapsed }),
+    }
   )
 );

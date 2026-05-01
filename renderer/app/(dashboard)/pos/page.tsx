@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutGrid, List, ShoppingCart, X, Map as MapIcon, Utensils } from 'lucide-react';
+import { LayoutGrid, List, ShoppingCart, X, Map as MapIcon, Utensils, AlertCircle } from 'lucide-react';
 import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
 import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
@@ -17,6 +17,7 @@ import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCashSessionStore } from '@/store/cashSession';
 import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { getProductByBarcode } from '@services/supabase/products';
 import type { Product, RestaurantTable } from '@pos-types';
@@ -34,38 +35,56 @@ export default function PosPage() {
   const [view, setView]                          = useState<ViewMode>('list');
   const [layout, setLayout]                      = useState<LayoutMode>('catalog');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
-  const [wholesaleCtx, setWholesaleCtx]          = useState<WholesaleContext | null>(null);
-  const [selectedClient, setSelectedClient]      = useState<SelectedClient | null>(null);
-  const [selectedTable, setSelectedTable]        = useState<RestaurantTable | null>(null);
   const [mobileTab, setMobileTab]                = useState<MobileTab>('catalog');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const setCollapsed = useSidebarStore((s) => s.setCollapsed);
+  const { setCollapsed, collapsed: sidebarAlreadyCollapsed } = useSidebarStore();
 
-  const addItem   = useCartStore((s) => s.addItem);
-  const cartItems = useCartStore((s) => s.items);
+  const { 
+    addItem, 
+    items: cartItems, 
+    selectedClient, setSelectedClient,
+    selectedTable, setSelectedTable,
+    wholesaleCtx, setWholesaleCtx
+  } = useCartStore();
+
   const cartCount = cartItems.reduce((n, i) => n + i.quantity, 0);
   const { business } = useAuthStore();
+  const { session: cashSession } = useCashSessionStore();
   const router = useRouter();
 
-  // Auto-collapse sidebar on POS page to maximize space
+  // Point 1: Restore sidebar on leave
   useEffect(() => {
+    const wasCollapsed = sidebarAlreadyCollapsed;
     setCollapsed(true);
-  }, [setCollapsed]);
+    return () => {
+      // Restore previous state or at least expand if it was forced collapsed
+      if (!wasCollapsed) setCollapsed(false);
+    };
+  }, [setCollapsed, sidebarAlreadyCollapsed]);
 
-  // Keyboard Shortcuts
+  // Point 5: Safer keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      const isInput = active?.tagName === 'INPUT' || 
+                      active?.tagName === 'TEXTAREA' || 
+                      active?.tagName === 'SELECT' ||
+                      (active as HTMLElement)?.isContentEditable;
+
       // F1 or / : Focus search
-      if (e.key === 'F1' || (e.key === '/' && document.activeElement?.tagName !== 'INPUT')) {
+      if (e.key === 'F1' || (e.key === '/' && !isInput)) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
+      
       // F12 or Space (if not in input) : Checkout
-      if ((e.key === 'F12' || (e.key === ' ' && document.activeElement?.tagName !== 'INPUT')) && cartItems.length > 0 && !paymentOpen) {
+      // Don't trigger if a button is focused (Space usually clicks buttons)
+      if ((e.key === 'F12' || (e.key === ' ' && !isInput && active?.tagName !== 'BUTTON')) && cartItems.length > 0 && !paymentOpen) {
         e.preventDefault();
         setPaymentOpen(true);
       }
+      
       // Esc : Clear search or close modals
       if (e.key === 'Escape') {
         if (searchQuery) {
@@ -112,10 +131,21 @@ export default function PosPage() {
     [addItem, business, warning]
   );
 
+  const isRestaurant = useMemo(() => business?.type === 'restaurant' || business?.features?.includes('restaurant'), [business]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <OfflineBanner />
       <BarcodeListener onScan={handleBarcodeScanned} />
+
+      {/* Point 6: Cash session indicator */}
+      {!cashSession && (
+        <div className="bg-status-error/10 border-b border-status-error/20 px-4 py-2 flex items-center justify-center gap-2 text-status-error text-xs font-medium">
+          <AlertCircle className="w-4 h-4" />
+          Attention : Aucune session de caisse n'est ouverte. L'encaissement sera impossible.
+          <button onClick={() => router.push('/caisse')} className="underline ml-2">Ouvrir la caisse</button>
+        </div>
+      )}
 
       {/* -- Desktop layout -- */}
       <div className="hidden md:flex flex-1 overflow-hidden">
@@ -145,7 +175,7 @@ export default function PosPage() {
             </div>
             
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
-              {(business?.type === 'restaurant' || business?.features?.includes('restaurant')) && (
+              {isRestaurant && (
                 <>
                   <button 
                     onClick={() => setLayout('catalog')} 
@@ -205,7 +235,7 @@ export default function PosPage() {
             selectedClient={selectedClient} onClientChange={setSelectedClient}
             tableId={selectedTable?.id}
             onTableClear={() => setSelectedTable(null)}
-            isRestaurant={business?.type === 'restaurant' || business?.features?.includes('restaurant')}
+            isRestaurant={isRestaurant}
           />
         </div>
       </div>
@@ -222,6 +252,15 @@ export default function PosPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input flex-1 text-sm"
             />
+            {/* Point 3: Mobile Floor Plan button */}
+            {isRestaurant && (
+               <button 
+                onClick={() => setLayout(layout === 'map' ? 'catalog' : 'map')}
+                className={`p-2 rounded-xl border transition-colors ${layout === 'map' ? 'border-brand-500 bg-brand-600/10 text-brand-500' : 'border-surface-border text-content-secondary'}`}
+              >
+                <MapIcon className="w-5 h-5" />
+              </button>
+            )}
             <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
               <button onClick={() => setView('grid')}
                 className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-brand-600 text-content-primary' : 'text-content-secondary'}`}>
@@ -233,14 +272,31 @@ export default function PosPage() {
               </button>
             </div>
           </div>
-          <CategoryBar businessId={business?.id ?? ''} selected={selectedCategory} onSelect={setSelectedCategory} />
-          <div className="flex-1 overflow-y-auto p-3 pb-20">
-            <ProductGrid businessId={business?.id ?? ''} categoryId={selectedCategory} search={searchQuery} view={view} onSelect={handleProductSelect} />
-          </div>
+
+          {layout === 'map' ? (
+            <div className="flex-1 p-3 overflow-hidden">
+              <FloorPlan 
+                businessId={business?.id ?? ''} 
+                onTableSelect={(table) => {
+                  setSelectedTable(table);
+                  setLayout('catalog');
+                }}
+                selectedTableId={selectedTable?.id}
+              />
+            </div>
+          ) : (
+            <>
+              <CategoryBar businessId={business?.id ?? ''} selected={selectedCategory} onSelect={setSelectedCategory} />
+              <div className="flex-1 overflow-y-auto p-3 pb-20">
+                <ProductGrid businessId={business?.id ?? ''} categoryId={selectedCategory} search={searchQuery} view={view} onSelect={handleProductSelect} />
+              </div>
+            </>
+          )}
+
           {/* FAB panier */}
           <button
             onClick={() => setMobileTab('cart')}
-            className="absolute bottom-4 right-4 h-14 px-5 bg-brand-600 hover:bg-brand-500 text-content-primary rounded-2xl shadow-lg flex items-center gap-2.5 transition-colors"
+            className="absolute bottom-4 right-4 h-14 px-5 bg-brand-600 hover:bg-brand-500 text-content-primary rounded-2xl shadow-lg flex items-center gap-2.5 transition-colors z-10"
           >
             <ShoppingCart className="w-5 h-5" />
             <span className="font-semibold">Panier</span>
@@ -271,7 +327,9 @@ export default function PosPage() {
               onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
               wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
               selectedClient={selectedClient} onClientChange={setSelectedClient}
-              isRestaurant={business?.type === 'restaurant' || business?.features?.includes('restaurant')}
+              tableId={selectedTable?.id}
+              onTableClear={() => setSelectedTable(null)}
+              isRestaurant={isRestaurant}
             />
           </div>
         </div>

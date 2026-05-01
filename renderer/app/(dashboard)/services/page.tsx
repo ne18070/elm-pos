@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Wrench, Plus, Share2, Package2, History } from 'lucide-react';
+import { Wrench, Plus, Share2, Package2, History, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
+import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 import {
   type ServiceOrder,
@@ -31,6 +33,7 @@ const VALID_STATUSES = new Set(['en_attente', 'en_cours', 'termine', 'paye', 'an
 
 export default function ServicesPage() {
   const { business } = useAuthStore();
+  const { session: cashSession } = useCashSessionStore();
   const can = useCan();
   const { success } = useNotificationStore();
   const searchParams = useSearchParams();
@@ -122,6 +125,15 @@ export default function ServicesPage() {
           )}
         </div>
       </div>
+
+      {/* Point 6: Cash session indicator */}
+      {!cashSession && (
+        <div className="bg-status-error/10 border-b border-status-error/20 px-4 py-2 flex items-center justify-center gap-2 text-status-error text-xs font-medium shrink-0">
+          <AlertCircle className="w-4 h-4" />
+          Attention : Aucune session de caisse n'est ouverte. L'encaissement sera impossible.
+          <Link href="/caisse" className="underline ml-2">Ouvrir la caisse</Link>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex items-center gap-1 overflow-x-auto px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 md:px-6">

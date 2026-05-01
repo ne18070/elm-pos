@@ -26,38 +26,40 @@ interface OrderPanelProps {
   businessId: string;
   onCheckout: () => void;
   onShowHeld: () => void;
-  wholesaleCtx?: WholesaleContext | null;
-  onWholesaleChange?: (ctx: WholesaleContext | null) => void;
-  selectedClient?: SelectedClient | null;
-  onClientChange?: (client: SelectedClient | null) => void;
-  tableId?: string;
-  onTableClear?: () => void;
   isRestaurant?: boolean;
 }
 
 export function OrderPanel({ 
   taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld,
-  wholesaleCtx, onWholesaleChange, selectedClient, onClientChange,
-  tableId, onTableClear, isRestaurant
+  isRestaurant
 }: OrderPanelProps) {
   const {
     items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
     updateQuantity, removeItem, resetPriceOverrides,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
+    selectedClient, setSelectedClient,
+    selectedTable: tableId, setSelectedTable: onTableClear,
+    wholesaleCtx, setWholesaleCtx: onWholesaleChange
   } = useCartStore();
   
   const [tables, setTables] = useState<import('@pos-types').RestaurantTable[]>([]);
+  const { warning, error: notifError } = useNotificationStore();
   
   useEffect(() => {
     if (tableId) {
       // Small optimization: if we have a tableId, fetch its info to show the name
-      import('@services/supabase/restaurant').then(m => m.getTables(businessId)).then(setTables);
+      import('@services/supabase/restaurant')
+        .then(m => m.getTables(businessId))
+        .then(setTables)
+        .catch(e => {
+          console.error('Failed to load tables:', e);
+          notifError('Impossible de charger les informations des tables');
+        });
     }
-  }, [tableId, businessId]);
+  }, [tableId, businessId, notifError]);
 
-  const selectedTable = tables.find(t => t.id === tableId);
-  const { warning } = useNotificationStore();
+  const selectedTable = tables.find(t => t.id === (typeof tableId === 'string' ? tableId : (tableId as any)?.id));
   const [showWholesale, setShowWholesale] = useState(false);
 
   // -- Sélecteur client ---------------------------------------------------------
@@ -82,7 +84,10 @@ export function OrderPanel({
       try {
         const list = await getClients(businessId);
         setClientList(list);
-      } catch { /* silencieux */ }
+      } catch (e) {
+        console.error('Failed to load clients:', e);
+        notifError('Impossible de charger la liste des clients');
+      }
     }
     setShowClientDrop((v) => !v);
     setClientSearch('');
@@ -106,7 +111,10 @@ export function OrderPanel({
           const result = addFreeItem(freeProduct, qty);
           if (!result.ok) warning(result.reason ?? 'Stock insuffisant pour l\'article offert');
         }
-      } catch { /* silencieux */ }
+      } catch (e) {
+        console.error('Failed to add free item for coupon:', e);
+        notifError('Erreur lors de l\'ajout de l\'article offert');
+      }
     }
   }
 
@@ -403,15 +411,15 @@ export function OrderPanel({
         {/* -- Sélecteur client -- */}
         <div className="px-4 py-2 border-t border-surface-border space-y-2">
           {/* Table Selector */}
-          {selectedTable ? (
+          {tableId ? (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-900/20 border border-indigo-700 animate-in fade-in slide-in-from-bottom-2">
               <Utensils className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-indigo-300 truncate">Table {selectedTable.name}</p>
-                <p className="text-[10px] text-content-primary uppercase font-semibold">{selectedTable.floor?.name}</p>
+                <p className="text-xs font-bold text-indigo-300 truncate">Table {selectedTable?.name || 'chargement...'}</p>
+                <p className="text-[10px] text-content-primary uppercase font-semibold">{selectedTable?.floor?.name}</p>
               </div>
               <button
-                onClick={onTableClear}
+                onClick={() => onTableClear(null)}
                 className="text-content-primary hover:text-content-primary shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
@@ -429,7 +437,7 @@ export function OrderPanel({
                 {selectedClient.phone && <p className="text-xs text-content-primary">{selectedClient.phone}</p>}
               </div>
               <button
-                onClick={() => onClientChange?.(null)}
+                onClick={() => setSelectedClient(null)}
                 className="text-content-primary hover:text-content-primary shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
@@ -469,7 +477,7 @@ export function OrderPanel({
                         <button
                           key={c.id}
                           onClick={() => {
-                            onClientChange?.({ id: c.id, name: c.name, phone: c.phone });
+                            setSelectedClient({ id: c.id, name: c.name, phone: c.phone });
                             setShowClientDrop(false);
                             setClientSearch('');
                           }}
@@ -552,5 +560,3 @@ export function OrderPanel({
     </>
   );
 }
-
-
