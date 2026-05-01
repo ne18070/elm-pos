@@ -151,6 +151,8 @@ export async function getMyBusinesses(): Promise<BusinessMembership[]> {
       brand_config:      row.brand_config,
       types:             row.types    ?? [],
       features:          row.features ?? [],
+      industry_sector:   row.industry_sector ?? null,
+      onboarding_done:   row.onboarding_done  ?? false,
       address:           row.address,
       phone:             row.phone,
       email:             row.email,

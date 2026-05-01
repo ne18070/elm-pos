@@ -38,6 +38,7 @@ export interface Business {
   name: string;              // Nom de l'établissement
   public_slug?: string;
   type: BusinessType;
+  industry_sector?: string;
   denomination?: string;
   rib?: string;
   brand_config?: Record<string, any>;
@@ -53,6 +54,7 @@ export interface Business {
   stock_units?: string[];
   types: string[];
   features: string[];
+  onboarding_done?: boolean;
   owner_id?: string;
   organization_id?: string;
   organization_name?: string; // jointure depuis organizations.legal_name

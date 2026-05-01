@@ -13,10 +13,15 @@ export interface OnboardingStep {
 
 const DISMISS_KEY = (bizId: string) => `onboarding_dismissed_${bizId}`;
 
-export function useOnboarding(businessId: string | undefined, businessType?: string) {
+export function useOnboarding(businessId: string | undefined, businessType?: string, industrySector?: string) {
   const [steps, setSteps]         = useState<OnboardingStep[]>([]);
   const [loading, setLoading]     = useState(true);
   const [dismissed, setDismissed] = useState(false);
+
+  // Résout le type effectif : industry_sector prime sur type pour les cas ambigus
+  const effectiveType = industrySector === 'location'  ? 'location'
+    : industrySector === 'juridique' ? 'juridique'
+    : businessType ?? industrySector ?? 'retail';
 
   const check = useCallback(async () => {
     if (!businessId) return;
@@ -32,7 +37,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
     let newSteps: OnboardingStep[];
 
     // -- Hôtel -----------------------------------------------------------------
-    if (businessType === 'hotel') {
+    if (effectiveType === 'hotel') {
       const [
         { count: roomCount },
         { count: guestCount },
@@ -84,7 +89,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
       ];
 
     // -- Restaurant / Café ------------------------------------------------------
-    } else if (businessType === 'restaurant') {
+    } else if (effectiveType === 'restaurant') {
       const [
         { count: catCount },
         { count: prodCount },
@@ -136,7 +141,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
       ];
 
     // -- Cabinet Juridique ------------------------------------------------------
-    } else if (businessType === 'juridique') {
+    } else if (effectiveType === 'juridique') {
       const [
         { count: clientCount },
         { count: dossierCount },
@@ -175,6 +180,51 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
           id: 'team',
           label: 'Inviter votre équipe',
           description: 'Ajoutez vos collaborateurs, associés ou assistants.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+      ];
+
+    // -- Location de véhicules --------------------------------------------------
+    } else if (effectiveType === 'location') {
+      const [
+        { count: vehicleCount },
+        { count: clientCount },
+        { count: contractCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('rental_vehicles').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('clients').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('contrats').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'vehicles',
+          label: 'Ajouter votre flotte',
+          description: 'Enregistrez vos premiers véhicules (marque, modèle, immatriculation).',
+          href: '/voitures',
+          done: (vehicleCount ?? 0) > 0,
+        },
+        {
+          id: 'client',
+          label: 'Ajouter un client',
+          description: 'Créez la fiche d\'un client pour préparer un contrat.',
+          href: '/clients',
+          done: (clientCount ?? 0) > 0,
+        },
+        {
+          id: 'contract',
+          label: 'Créer un contrat',
+          description: 'Générez votre premier contrat de location.',
+          href: '/contrats',
+          done: (contractCount ?? 0) > 0,
+        },
+        {
+          id: 'team',
+          label: 'Inviter votre équipe',
+          description: 'Ajoutez vos agents et collaborateurs.',
           href: '/admin',
           done: (userCount ?? 0) > 1,
         },
@@ -235,7 +285,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
 
     setSteps(newSteps);
     setLoading(false);
-  }, [businessId, businessType]);
+  }, [businessId, effectiveType]);
 
   useEffect(() => { check(); }, [check]);
 

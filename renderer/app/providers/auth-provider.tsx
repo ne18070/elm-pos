@@ -12,7 +12,7 @@ import { getMyPermissions } from '@services/supabase/permissions';
 import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
 
-const PUBLIC_PATHS = ['/', '/login', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -36,25 +36,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Charger l'établissement actif
     const hasTabBusiness = !!sessionStorage.getItem('elm-pos-active-business');
+    let activeBizLoaded = false;
     if (!hasTabBusiness && profile.business_id) {
       const { data: biz } = await supabase
         .from('businesses')
         .select('*')
         .eq('id', profile.business_id)
         .single();
-      if (biz) setBusiness(biz as never);
+      if (biz) { setBusiness(biz as never); activeBizLoaded = true; }
     }
 
     // Charger tous les établissements
+    let fallbackBizId: string | null = null;
     try {
       const memberships = await getMyBusinesses();
       setBusinesses(memberships);
+      // Profile had no business_id yet (post-onboarding timing) — use first membership
+      if (!hasTabBusiness && !activeBizLoaded && memberships.length > 0) {
+        setBusiness(memberships[0].business as never);
+        fallbackBizId = memberships[0].business.id;
+      }
     } catch { /* non critique */ }
 
     // Charger abonnement + plans + paramètres paiement + permissions
     const activeBizId = (sessionStorage.getItem('elm-pos-active-business')
       ? JSON.parse(sessionStorage.getItem('elm-pos-active-business')!)?.id
-      : null) ?? profile.business_id;
+      : null) ?? profile.business_id ?? fallbackBizId;
 
     if (activeBizId) {
       try {
@@ -104,12 +111,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .from('users')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
 
     if (!profile) {
-      clear();
-      setLoading(false);
-      if (!isPublic(pathname)) router.replace('/login');
+      // Trigger may not have fired yet — try RPC fallback
+      const { data: rows } = await (supabase as any).rpc('get_or_create_profile');
+      const fallbackProfile = rows?.[0] ?? null;
+      if (!fallbackProfile) {
+        clear();
+        setLoading(false);
+        if (!isPublic(pathname)) router.replace('/login');
+        return;
+      }
+      await loadAllData(session.user, fallbackProfile);
       return;
     }
 

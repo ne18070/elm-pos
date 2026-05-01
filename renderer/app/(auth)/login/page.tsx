@@ -183,8 +183,8 @@ export default function LoginPage() {
           <p className="text-content-secondary text-sm mt-1">Connectez-vous à votre compte</p>
           <p className="text-xs text-content-muted mt-2">
             Pas encore de compte ?{' '}
-            <a href="/subscribe" className="text-content-brand hover:text-content-brand transition-colors">
-              S&apos;inscrire
+            <a href="/signup" className="text-content-brand hover:text-content-brand transition-colors">
+              Créer un compte
             </a>
           </p>
         </div>

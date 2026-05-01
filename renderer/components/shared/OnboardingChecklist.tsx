@@ -5,7 +5,7 @@ import {
   CheckCircle2, ChevronRight, X, Rocket,
   Tag, Package, Printer, Users, ShoppingCart,
   Building2, UserPlus, CalendarDays,
-  FolderOpen, Receipt,
+  FolderOpen, Receipt, Car,
 } from 'lucide-react';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAuthStore } from '@/store/auth';
@@ -23,11 +23,14 @@ const STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   client:      UserPlus,
   dossier:     FolderOpen,
   honoraires:  Receipt,
+  // location
+  vehicles:    Car,
+  contract:    Receipt,
 };
 
 export function OnboardingChecklist() {
   const { business } = useAuthStore();
-  const { steps, doneCount, show, dismiss } = useOnboarding(business?.id, business?.type);
+  const { steps, doneCount, show, dismiss } = useOnboarding(business?.id, business?.type, (business as any)?.industry_sector);
 
   if (!show) return null;
 

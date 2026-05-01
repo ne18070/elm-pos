@@ -91,7 +91,7 @@ function Nav() {
                 Connexion
               </Link>
               <Link
-                href="/subscribe"
+                href="/signup"
                 className="text-sm font-semibold text-content-primary bg-brand-600 hover:bg-brand-500 px-4 py-1.5 rounded-lg transition-colors"
               >
                 Essai gratuit
@@ -171,7 +171,7 @@ function Hero() {
             ) : (
               <>
                 <Link
-                  href="/subscribe"
+                  href="/signup"
                   className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
                 >
                   Démarrer gratuitement <ArrowRight className="w-4 h-4" />
@@ -522,7 +522,7 @@ function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
       </ul>
 
       <Link
-        href="/subscribe"
+        href="/signup"
         className={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors ${
           isPrimary
             ? 'bg-brand-600 hover:bg-brand-500 text-content-primary'
@@ -640,7 +640,7 @@ function CtaFinal() {
           </Link>
         ) : (
           <Link
-            href="/subscribe"
+            href="/signup"
             className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl text-sm transition-colors shrink-0"
           >
             Commencer gratuitement <ArrowRight className="w-4 h-4" />
