@@ -11,6 +11,7 @@ import { CouponPicker } from './CouponPicker';
 import { HoldModal } from './HoldModal';
 import { WholesaleSelector } from './WholesaleSelector';
 import type { WholesaleContext } from './WholesaleSelector';
+import type { ResellerOffer } from '@services/supabase/resellers';
 import type { CartItem, Coupon } from '@pos-types';
 
 export interface SelectedClient {
@@ -391,7 +392,7 @@ export function OrderPanel({
         )}
 
         {/* Alertes offres volume */}
-        {wholesaleCtx && wholesaleCtx.offers.map((offer) => {
+        {wholesaleCtx && wholesaleCtx.offers.map((offer: ResellerOffer) => {
           const cartItem = items.find((i) => i.product_id === offer.product_id);
           if (!cartItem) return null;
           const eligible = cartItem.quantity >= offer.min_qty;

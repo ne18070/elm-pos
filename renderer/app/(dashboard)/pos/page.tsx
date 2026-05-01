@@ -105,7 +105,7 @@ export default function PosPage() {
   const { warning } = useNotificationStore();
 
   const { sendPaymentConfirm } = useCustomerDisplay({
-    businessName: business?.name ?? 'ELM APP',
+    businessName: business?.name ?? 'ELM (Sénégal)',
     logoUrl:      business?.logo_url,
     currency:     business?.currency ?? 'XOF',
     taxRate:      business?.tax_rate ?? 0,
@@ -231,10 +231,6 @@ export default function PosPage() {
             taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
             onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
-            wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
-            selectedClient={selectedClient} onClientChange={setSelectedClient}
-            tableId={selectedTable?.id}
-            onTableClear={() => setSelectedTable(null)}
             isRestaurant={isRestaurant}
           />
         </div>
@@ -325,10 +321,6 @@ export default function PosPage() {
               taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
               currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
               onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
-              wholesaleCtx={wholesaleCtx} onWholesaleChange={setWholesaleCtx}
-              selectedClient={selectedClient} onClientChange={setSelectedClient}
-              tableId={selectedTable?.id}
-              onTableClear={() => setSelectedTable(null)}
               isRestaurant={isRestaurant}
             />
           </div>

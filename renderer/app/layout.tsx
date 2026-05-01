@@ -11,56 +11,56 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM APP - Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
-    template: '%s | ELM APP',
+    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Stocks · Compta · Location · Juridique',
+    template: '%s | ELM (Sénégal)',
   },
   description:
-    'ELM APP : caisse tactile, gestion des stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels, cabinets juridiques et prestataires de services au Sénégal et en Afrique. Essai gratuit 7 jours.',
-  applicationName: 'ELM APP',
+    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons et WhatsApp natif. La solution de référence à Dakar et dans tout le Sénégal.',
+  applicationName: 'ELM Sénégal',
   keywords: [
     // Fonctionnalités core
-    'logiciel caisse', 'caisse tactile', 'point de vente', 'POS Sénégal',
-    'caisse enregistreuse Sénégal', 'logiciel caisse restaurant',
+    'logiciel caisse Sénégal', 'caisse tactile Dakar', 'point de vente Sénégal', 'POS Sénégal',
+    'caisse enregistreuse Sénégal', 'logiciel caisse restaurant Sénégal',
     // Stock & ventes
-    'gestion des stocks', 'gestion stock temps réel', 'alertes rupture stock',
-    'approvisionnement', 'codes-barres', 'variantes produits',
+    'gestion des stocks Sénégal', 'gestion stock temps réel', 'alertes rupture stock',
+    'approvisionnement', 'codes-barres Sénégal', 'variantes produits',
     // Comptabilité
-    'comptabilité OHADA', 'logiciel comptabilité Sénégal', 'journal comptable',
-    'bilan OHADA', 'facturation', 'devis factures',
+    'comptabilité OHADA Sénégal', 'logiciel comptabilité Sénégal', 'journal comptable Sénégal',
+    'bilan OHADA', 'facturation Sénégal', 'devis factures Sénégal',
     // Paiements
-    'Wave paiement', 'Orange Money', 'paiement mobile Sénégal',
+    'Wave paiement Sénégal', 'Orange Money Sénégal', 'paiement mobile Sénégal',
     // Livraisons
-    'gestion livraisons', 'suivi livreur', 'tracking commandes',
+    'gestion livraisons Sénégal', 'suivi livreur Sénégal', 'tracking commandes Sénégal',
     // Communication
-    'WhatsApp business', 'menu du jour WhatsApp', 'reçu WhatsApp',
+    'WhatsApp business Sénégal', 'menu du jour WhatsApp', 'reçu WhatsApp Sénégal',
     // Hors-ligne
-    'mode hors-ligne', 'caisse sans internet',
+    'mode hors-ligne', 'caisse sans internet Sénégal',
     // Multi-établissements
-    'multi-établissements', 'gestion plusieurs boutiques',
+    'multi-établissements Sénégal', 'gestion plusieurs boutiques',
     // Équipe
-    'gestion équipe', 'rôles employés', 'accès employés',
+    'gestion équipe Sénégal', 'rôles employés', 'accès employés Sénégal',
     // Location véhicules
-    'location voiture Sénégal', 'contrat location véhicule', 'gestion flotte',
+    'location voiture Sénégal', 'contrat location véhicule Sénégal', 'gestion flotte Sénégal',
     // Réservations
-    'réservation hôtel Sénégal', 'gestion réservations', 'logiciel hôtellerie',
+    'réservation hôtel Sénégal', 'gestion réservations Sénégal', 'logiciel hôtellerie Sénégal',
     // Juridique
-    'logiciel cabinet juridique', 'gestion dossiers juridiques', 'honoraires avocat',
-    'dossiers juridiques OHADA', 'suivi affaires juridiques',
+    'logiciel cabinet juridique Sénégal', 'gestion dossiers juridiques Sénégal', 'honoraires avocat Sénégal',
+    'dossiers juridiques OHADA Sénégal', 'suivi affaires juridiques Sénégal',
     // Secteurs
-    'logiciel restaurant Sénégal', 'logiciel boutique retail',
-    'logiciel hôtellerie Afrique', 'gestion hôtel Sénégal',
-    'logiciel prestation service', 'honoraires',
-    'commerce distribution', 'revendeurs grossistes',
+    'logiciel restaurant Sénégal', 'logiciel boutique retail Sénégal',
+    'logiciel hôtellerie Sénégal', 'gestion hôtel Sénégal',
+    'logiciel prestation service Sénégal', 'honoraires Sénégal',
+    'commerce distribution Sénégal', 'revendeurs grossistes Sénégal',
     // Géo
     'logiciel gestion PME Sénégal', 'logiciel gestion PME Afrique',
-    'ELM APP', 'application gestion business Dakar',
+    'ELM Entreprise Lifecycle Management', 'application gestion business Dakar',
     // Statistiques
-    'statistiques ventes', 'chiffre affaires', 'rapports business',
+    'statistiques ventes Sénégal', 'chiffre affaires Sénégal', 'rapports business Sénégal',
   ],
 
-  authors: [{ name: 'ELM APP', url: BASE_URL }],
-  creator: 'ELM APP',
-  publisher: 'ELM APP',
+  authors: [{ name: 'ELM - Entreprise Lifecycle Management', url: BASE_URL }],
+  creator: 'ELM Sénégal',
+  publisher: 'ELM Sénégal',
 
   robots: {
     index: true,
@@ -76,25 +76,25 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_SN',
     url: BASE_URL,
-    siteName: 'ELM APP',
-    title: 'ELM APP - Caisse · Stocks · Comptabilité OHADA · Location · Réservations · Juridique',
+    siteName: 'ELM Sénégal',
+    title: 'ELM - Entreprise Lifecycle Management (Sénégal) | Gestion PME Tout-en-un',
     description:
-      'Tout-en-un : caisse tactile, stocks temps réel, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, hors-ligne, multi-établissements. Pour restaurants, commerces, hôtels et cabinets au Sénégal. Essai 7 jours gratuit.',
+      'Solution complète pour PME au Sénégal : caisse, stocks, comptabilité OHADA, location, hôtellerie et dossiers juridiques. WhatsApp natif & mode hors-ligne. Essayez ELM gratuitement pendant 7 jours.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'ELM APP - Logiciel de gestion tout-en-un pour PME africaines',
+        alt: 'ELM Sénégal - Logiciel de gestion Entreprise Lifecycle Management pour PME sénégalaises',
       },
     ],
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: 'ELM APP - Caisse · Stocks · Compta OHADA · Location · Réservations · Juridique',
+    title: 'ELM (Entreprise Lifecycle Management) Sénégal - Gestion PME Tout-en-un',
     description:
-      'Caisse tactile, stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons, WhatsApp natif, hors-ligne. Pour restaurants, boutiques, hôtels & cabinets au Sénégal.',
+      'Caisse tactile, stocks, comptabilité OHADA, location, hôtellerie & dossiers juridiques au Sénégal. WhatsApp natif & hors-ligne.',
     images: ['/og-image.png'],
     creator: '@elmapp',
   },
@@ -124,7 +124,7 @@ const jsonLd = {
     {
       '@type': 'Organization',
       '@id': `${BASE_URL}/#organization`,
-      name: 'ELM APP',
+      name: 'ELM - Entreprise Lifecycle Management',
       url: BASE_URL,
       logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo.png` },
       sameAs: [],
@@ -133,18 +133,18 @@ const jsonLd = {
       '@type': 'WebSite',
       '@id': `${BASE_URL}/#website`,
       url: BASE_URL,
-      name: 'ELM APP',
+      name: 'ELM Sénégal',
       publisher: { '@id': `${BASE_URL}/#organization` },
       inLanguage: 'fr-SN',
     },
     {
       '@type': 'SoftwareApplication',
-      name: 'ELM APP',
+      name: 'ELM (Entreprise Lifecycle Management) Sénégal',
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web, Windows',
       url: BASE_URL,
       description:
-        'ELM APP est un logiciel de gestion tout-en-un pour les PME africaines : caisse tactile, stocks en temps réel, comptabilité OHADA, livraisons avec suivi, WhatsApp natif, mode hors-ligne, multi-établissements, gestion hôtelière, dossiers juridiques, et gestion d\'équipe. Conçu pour les restaurants, boutiques, hôtels, cabinets juridiques et prestataires de services au Sénégal et en Afrique.',
+        'ELM (Entreprise Lifecycle Management) est le logiciel de gestion tout-en-un leader au Sénégal pour les PME : caisse tactile, stocks en temps réel, comptabilité OHADA, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements, gestion hôtelière et dossiers juridiques.',
       offers: {
         '@type': 'Offer',
         price: '0',

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -61,7 +61,7 @@ function Nav() {
             scrolled ? 'text-content-muted' : 'text-content-secondary'
           }`}
         >
-          <a href="#features" className="hover:text-brand-300 transition-colors">Fonctionnalites</a>
+          <a href="#features" className="hover:text-brand-300 transition-colors">Fonctionnalités</a>
           <a href="#secteurs" className="hover:text-brand-300 transition-colors">Secteurs</a>
           <a href="#tarifs" className="hover:text-brand-300 transition-colors">Tarifs</a>
         </nav>
@@ -123,31 +123,31 @@ function Hero() {
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold text-brand-300 tracking-widest uppercase mb-6">
-            Gestion complete pour les PME - Senegal & Afrique
+            ELM Sénégal - Entreprise Lifecycle Management
           </p>
 
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-content-primary leading-[1.1] tracking-tight mb-6">
-            Gerez votre activité
+            Gérez votre activité au Sénégal
             <br />
             <span className="text-content-secondary">sans vous compliquer la vie.</span>
           </h1>
 
           <p className="text-lg text-content-secondary leading-relaxed max-w-xl mb-10">
-            Caisse, stocks, comptabilite OHADA, location de vehicules, reservations, dossiers juridiques, livraisons : tout dans une seule application. Concu pour les PME africaines.
+            ELM (Entreprise Lifecycle Management) : Caisse, stocks, comptabilité OHADA, location, hôtellerie et juridique. La solution tout-en-un conçue pour les PME sénégalaises.
           </p>
 
           <div className="flex flex-wrap gap-2 mb-12 max-w-2xl">
             {[
               { label: 'Caisse tactile', icon: ShoppingCart },
               { label: 'Gestion des stocks', icon: Package },
-              { label: 'Comptabilite OHADA', icon: Receipt },
-              { label: 'Location vehicules', icon: Car },
-              { label: 'Reservations', icon: CalendarCheck },
+              { label: 'Comptabilité OHADA', icon: Receipt },
+              { label: 'Location véhicules', icon: Car },
+              { label: 'Réservations', icon: CalendarCheck },
               { label: 'Livraisons', icon: Truck },
               { label: 'WhatsApp', icon: MessageCircle },
               { label: 'Mode hors ligne', icon: WifiOff },
-              { label: 'Multi-etablissements', icon: Globe },
-              { label: 'Hotellerie', icon: BedDouble },
+              { label: 'Multi-établissements', icon: Globe },
+              { label: 'Hôtellerie', icon: BedDouble },
               { label: 'Dossiers juridiques', icon: Scale },
             ].map((tag) => (
               <span
@@ -166,7 +166,7 @@ function Hero() {
                 href="/pos"
                 className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
               >
-                Acceder a mon espace <ArrowRight className="w-4 h-4" />
+                Accéder à mon espace <ArrowRight className="w-4 h-4" />
               </Link>
             ) : (
               <>
@@ -174,7 +174,7 @@ function Hero() {
                   href="/subscribe"
                   className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
                 >
-                  Demarrer gratuitement <ArrowRight className="w-4 h-4" />
+                  Démarrer gratuitement <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
                   href="/login"
@@ -204,22 +204,22 @@ const FEATURES = [
   {
     icon: ShoppingCart,
     title: 'Caisse tactile',
-    desc: 'Interface ultra-rapide optimisee pour le scan et le tactile. Recus WhatsApp instantanes.',
+    desc: 'Interface ultra-rapide optimisée pour le scan et le tactile. Reçus WhatsApp instantanés.',
   },
   {
     icon: Package,
     title: 'Gestion des stocks',
-    desc: 'Suivi en temps reel, alertes de rupture, gestion des variantes et prix de gros.',
+    desc: 'Suivi en temps réel, alertes de rupture, gestion des variantes et prix de gros.',
   },
   {
     icon: Receipt,
-    title: 'Comptabilite OHADA',
-    desc: 'Generation automatique des journaux, bilans et resultats aux normes africaines.',
+    title: 'Comptabilité OHADA',
+    desc: 'Génération automatique des journaux, bilans et résultats aux normes africaines.',
   },
   {
     icon: Truck,
     title: 'Livraisons',
-    desc: 'Suivi des livreurs sur le terrain et verification des colis par scan.',
+    desc: 'Suivi des livreurs sur le terrain et vérification des colis par scan.',
   },
   {
     icon: MessageCircle,
@@ -229,27 +229,27 @@ const FEATURES = [
   {
     icon: WifiOff,
     title: 'Mode hors ligne',
-    desc: 'Encaissez meme sans connexion internet. Synchronisation automatique au retour.',
+    desc: 'Encaissez même sans connexion internet. Synchronisation automatique au retour.',
   },
   {
     icon: Globe,
-    title: 'Multi-etablissements',
-    desc: 'Gerez plusieurs boutiques ou points de vente depuis un seul compte centralise.',
+    title: 'Multi-établissements',
+    desc: 'Gérez plusieurs boutiques ou points de vente depuis un seul compte centralisé.',
   },
   {
     icon: Car,
-    title: 'Location de vehicules',
-    desc: 'Contrats numeriques, signature electronique, suivi des disponibilites et encaissement.',
+    title: 'Location de véhicules',
+    desc: 'Contrats numériques, signature électronique, suivi des disponibilités et encaissement.',
   },
   {
     icon: BedDouble,
-    title: 'Hotellerie & Reservations',
-    desc: 'Gestion des chambres, check-in/out, reservations en ligne et facturation unifiee.',
+    title: 'Hôtellerie & Réservations',
+    desc: 'Gestion des chambres, check-in/out, réservations en ligne et facturation unifiée.',
   },
   {
     icon: Scale,
     title: 'Dossiers juridiques',
-    desc: "Suivi des procedures OHADA, gestion documentaire et facturation d'honoraires.",
+    desc: "Suivi des procédures OHADA, gestion documentaire et facturation d'honoraires.",
   },
 ];
 
@@ -259,7 +259,7 @@ function Features() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
           <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Expertise</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Une solution complete</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Une solution complète</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -282,7 +282,7 @@ function Features() {
         <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-content-primary">Suivi des stocks et inventaire</h3>
-            <p className="text-sm text-content-secondary">Gerez vos variantes et vos prix de gros en quelques clics.</p>
+            <p className="text-sm text-content-secondary">Gérez vos variantes et vos prix de gros en quelques clics.</p>
             <img
               src="/screenshots/10-products-list.png"
               className="rounded-xl border border-surface-border shadow-xl bg-surface-card"
@@ -292,7 +292,7 @@ function Features() {
           </div>
           <div className="space-y-4">
             <h3 className="text-xl font-bold text-content-primary">Analytique et rapports</h3>
-            <p className="text-sm text-content-secondary">Visualisez votre chiffre d'affaires et vos marges en temps reel.</p>
+            <p className="text-sm text-content-secondary">Visualisez votre chiffre d'affaires et vos marges en temps réel.</p>
             <img
               src="/screenshots/17-analytics.png"
               className="rounded-xl border border-surface-border shadow-xl bg-surface-card"
@@ -335,16 +335,16 @@ const SECTEURS: {
     iconColor: 'text-status-warning',
     iconBg: 'bg-badge-warning',
     border: 'border-surface-border',
-    title: 'Location de vehicules',
-    desc: 'Contrats, signature electronique, disponibilites et encaissements.',
+    title: 'Location de véhicules',
+    desc: 'Contrats, signature électronique, disponibilités et encaissements.',
   },
   {
     icon: BedDouble,
     iconColor: 'text-status-info',
     iconBg: 'bg-badge-info',
     border: 'border-surface-border',
-    title: 'Hotellerie',
-    desc: 'Reservations, check-in/out, services additionnels.',
+    title: 'Hôtellerie',
+    desc: 'Réservations, check-in/out, services additionnels.',
   },
   {
     icon: Scale,
@@ -352,7 +352,7 @@ const SECTEURS: {
     iconBg: 'bg-surface-input',
     border: 'border-surface-border',
     title: 'Cabinet juridique',
-    desc: 'Dossiers, honoraires, OHADA, juridictions senegalaises.',
+    desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.',
   },
   {
     icon: Users,
@@ -370,9 +370,9 @@ function Secteurs() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
           <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Secteurs</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Adapte a votre activite</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Adapté à votre activité au Sénégal</h2>
           <p className="text-content-muted mt-2 text-sm max-w-md">
-            ELM se configure selon votre secteur. Vous ne voyez que ce qui vous est utile.
+            ELM se configure selon votre secteur d&apos;activité. Une expertise locale pour les entreprises sénégalaises.
           </p>
         </div>
 
@@ -402,22 +402,22 @@ function MultiEtablissements() {
     <section className="py-24 px-5 bg-surface">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         <div>
-          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Multi-etablissements</p>
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Multi-établissements</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-content-primary leading-tight mb-5">
             Plusieurs boutiques,
             <br />
             un seul compte.
           </h2>
           <p className="text-content-secondary text-sm leading-relaxed mb-8">
-            Gerez plusieurs etablissements depuis le meme compte. Chacun a ses propres donnees,
-            son equipe et ses stocks. Vous passez de l&apos;un a l&apos;autre en un clic.
+            Gérez plusieurs établissements depuis le même compte. Chacun a ses propres données,
+            son équipe et ses stocks. Vous passez de l&apos;un à l&apos;autre en un clic.
           </p>
           <ul className="space-y-3">
             {[
-              'Donnees isolees par etablissement',
-              'Equipe et roles separes',
-              'Changement de contexte instantane',
-              'Synchronisation en temps reel',
+              'Données isolées par établissement',
+              'Équipe et rôles séparés',
+              'Changement de contexte instantané',
+              'Synchronisation en temps réel',
             ].map((item) => (
               <li key={item} className="flex items-center gap-3 text-sm text-content-secondary">
                 <Check className="w-3.5 h-3.5 text-brand-300 shrink-0" />
@@ -475,7 +475,7 @@ function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
     >
       {isPrimary && (
         <span className="absolute top-4 right-4 text-[10px] font-semibold text-brand-300 bg-badge-info border border-brand-500/30 px-2 py-0.5 rounded-full tracking-wider uppercase">
-          Recommande
+          Recommandé
         </span>
       )}
 
@@ -565,7 +565,7 @@ function Tarifs() {
           <div>
             <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Tarifs</p>
             <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Simple et transparent</h2>
-            <p className="text-content-muted mt-2 text-sm">Pas de frais caches. Pas de surprise.</p>
+            <p className="text-content-muted mt-2 text-sm">Pas de frais cachés. Pas de surprise.</p>
           </div>
 
           {hasAnnual && hasMonthly && (
@@ -628,7 +628,7 @@ function CtaFinal() {
     <section className="py-24 px-5 bg-surface border-t border-surface-border">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary mb-2">Pret a demarrer ?</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary mb-2">Prêt à démarrer ?</h2>
           <p className="text-content-muted text-sm">7 jours gratuits. Aucune carte bancaire requise.</p>
         </div>
         {user ? (
@@ -636,7 +636,7 @@ function CtaFinal() {
             href="/pos"
             className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl text-sm transition-colors shrink-0"
           >
-            Acceder a mon espace <ArrowRight className="w-4 h-4" />
+            Accéder à mon espace <ArrowRight className="w-4 h-4" />
           </Link>
         ) : (
           <Link
@@ -659,16 +659,20 @@ function Footer() {
           <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center p-1.5 overflow-hidden shadow-sm border border-surface-border">
             <img src="/logo.png" alt="ELM" className="max-w-full max-h-full object-contain" />
           </div>
+          <div className="hidden sm:block">
+            <p className="text-xs font-bold text-content-primary">ELM</p>
+            <p className="text-[10px] text-content-muted">Entreprise Lifecycle Management</p>
+          </div>
         </div>
         <div className="flex items-center gap-6 text-xs text-content-muted">
-          <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialite</Link>
+          <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialité</Link>
           <a href="https://wa.me/33746436801" className="hover:text-content-secondary transition-colors">WhatsApp</a>
           <a href="mailto:contact@elm-app.click" className="hover:text-content-secondary transition-colors">Contact</a>
           <span className="flex items-center gap-1.5">
-            <Globe className="w-3 h-3" /> Senegal - Afrique
+            <Globe className="w-3 h-3" /> Sénégal - Afrique
           </span>
         </div>
-        <p className="text-xs text-content-muted">(c) {new Date().getFullYear()} ELM APP</p>
+        <p className="text-xs text-content-muted">(c) {new Date().getFullYear()} ELM - Entreprise Lifecycle Management</p>
       </div>
     </footer>
   );
@@ -752,59 +756,59 @@ function ModulesShowcase() {
         <ModuleFeature
           subtitle="Communication client"
           title="Factures PDF sur WhatsApp"
-          desc="Modernisez votre relation client. Plus besoin d'imprimer systematiquement: envoyez les recus professionnels directement sur le telephone de vos clients en un clic."
+          desc="Modernisez votre relation client. Plus besoin d'imprimer systématiquement: envoyez les reçus professionnels directement sur le téléphone de vos clients en un clic."
           img="/screenshots/22-whatsapp-integration.png"
         />
 
         <ModuleFeature
-          subtitle="Pilotage strategique"
-          title="Tableaux de bord en temps reel"
-          desc="Prenez des decisions basees sur des chiffres reels. Suivez votre chiffre d'affaires, vos marges nettes et vos produits les plus vendus grace a des graphiques dynamiques et precis."
+          subtitle="Pilotage stratégique"
+          title="Tableaux de bord en temps réel"
+          desc="Prenez des décisions basées sur des chiffres réels. Suivez votre chiffre d'affaires, vos marges nettes et vos produits les plus vendus grâce à des graphiques dynamiques et précis."
           img="/screenshots/17-analytics.png"
           reverse
         />
 
         <ModuleFeature
           subtitle="Logistique & Terrain"
-          title="Suivez vos livraisons en temps reel"
-          desc="Preparez les colis avec verification par scan pour eviter les erreurs. Assignez des livreurs et suivez l'etat de chaque commande jusqu'a la remise au client."
+          title="Suivez vos livraisons en temps réel"
+          desc="Préparez les colis avec vérification par scan pour éviter les erreurs. Assignez des livreurs et suivez l'état de chaque commande jusqu'à la remise au client."
           img="/screenshots/07-livraison.png"
         />
 
         <ModuleFeature
-          subtitle="Reseau de vente"
+          subtitle="Réseau de vente"
           title="Module Grossiste & Revendeurs"
-          desc="Gerez vos ventes en volume en toute simplicite. Configurez des grilles de prix specifiques pour vos revendeurs et suivez leurs performances et commissions."
+          desc="Gérez vos ventes en volume en toute simplicité. Configurez des grilles de prix spécifiques pour vos revendeurs et suivez leurs performances et commissions."
           img="/screenshots/13-revendeurs.png"
           reverse
         />
 
         <ModuleFeature
-          subtitle="Transparence & Securite"
-          title="Un journal d'audit pour tout controler"
-          desc="Gardez l'esprit tranquille. Chaque annulation de vente, chaque modification de prix ou ouverture de tiroir est consignee. La fin des pertes inexpliquees en caisse."
+          subtitle="Transparence & Sécurité"
+          title="Un journal d'audit pour tout contrôler"
+          desc="Gardez l'esprit tranquille. Chaque annulation de vente, chaque modification de prix ou ouverture de tiroir est consignée. La fin des pertes inexpliquées en caisse."
           img="/screenshots/24-activity-logs.png"
         />
 
         <ModuleFeature
           subtitle="Confiance client"
-          title="Ecran client interactif"
-          desc="Ameliorez l'experience en caisse. Affichez le panier et le total sur un second ecran pour vos clients, reduisant les erreurs et renforcant la confiance lors du paiement."
+          title="Écran client interactif"
+          desc="Améliorez l'expérience en caisse. Affichez le panier et le total sur un second écran pour vos clients, réduisant les erreurs et renforçant la confiance lors du paiement."
           img="/screenshots/27-customer-display.png"
           reverse
         />
 
         <ModuleFeature
-          subtitle="Rigueur financiere"
-          title="Comptabilite OHADA automatisee"
-          desc="Generez vos journaux comptables, bilans et comptes de resultat sans effort. Toutes vos transactions sont deja pre-classees selon les normes OHADA en vigueur."
+          subtitle="Rigueur financière"
+          title="Comptabilité OHADA automatisée"
+          desc="Générez vos journaux comptables, bilans et comptes de résultat sans effort. Toutes vos transactions sont déjà pré-classées selon les normes OHADA en vigueur."
           img="/screenshots/19-comptabilite.png"
         />
 
         <ModuleFeature
-          subtitle="Location de vehicules"
+          subtitle="Location de véhicules"
           title="Contrats & signature en ligne"
-          desc="Creez des contrats de location en quelques secondes, envoyez le lien de signature par WhatsApp et encaissez en ligne. Suivez la disponibilite de votre flotte en temps reel."
+          desc="Créez des contrats de location en quelques secondes, envoyez le lien de signature par WhatsApp et encaissez en ligne. Suivez la disponibilité de votre flotte en temps réel."
           img="/screenshots/20-contrats-location.png"
           reverse
         />
@@ -812,14 +816,14 @@ function ModulesShowcase() {
         <ModuleFeature
           subtitle="Services juridiques"
           title="Suivi de dossiers et honoraires"
-          desc="Specialement concu pour les cabinets d'avocats et notaires au Senegal. Gerez l'ouverture des dossiers, le suivi des procedures OHADA et la facturation precise des honoraires."
+          desc="Spécialement conçu pour les cabinets d'avocats et notaires au Sénégal. Gérez l'ouverture des dossiers, le suivi des procédures OHADA et la facturation précise des honoraires."
           img="/screenshots/15-dossiers-clients.png"
         />
 
         <ModuleFeature
-          subtitle="Specialisation metier"
-          title="Gestion hoteliere integree"
-          desc="Activez le module PMS pour gerer vos chambres, vos reservations et vos consommations bar/restaurant sur une seule facture client. Une solution vraiment tout-en-un."
+          subtitle="Spécialisation métier"
+          title="Gestion hôtelière intégrée"
+          desc="Activez le module PMS pour gérer vos chambres, vos réservations et vos consommations bar/restaurant sur une seule facture client. Une solution vraiment tout-en-un."
           img="/screenshots/14-hotel-management.png"
           reverse
         />

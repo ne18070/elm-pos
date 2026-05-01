@@ -485,7 +485,7 @@ function SidebarContent({
             expanded ? "opacity-100 ml-1" : "opacity-0 w-0"
           )}>
             <span className="text-[10px] font-bold text-content-muted uppercase tracking-tighter truncate">
-              ELM APP
+              ELM - Entreprise Lifecycle Management
             </span>
             <span className="text-[10px] font-mono text-slate-700 ml-1">
               v{version || '1.0.0'}

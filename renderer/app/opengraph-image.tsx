@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'ELM APP — Logiciel de caisse et gestion pour les PME';
+export const alt = 'ELM Sénégal — Entreprise Lifecycle Management pour PME';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -52,12 +52,12 @@ export default function OgImage() {
 
         {/* Title */}
         <div style={{ color: '#ffffff', fontSize: 64, fontWeight: 900, lineHeight: 1.1, marginBottom: 24, maxWidth: 800 }}>
-          Gérez votre business sans vous compliquer la vie
+          Gérez votre business au Sénégal sans vous compliquer la vie
         </div>
 
         {/* Subtitle */}
         <div style={{ color: '#94a3b8', fontSize: 26, lineHeight: 1.5, marginBottom: 48, maxWidth: 700 }}>
-          Caisse · Stock · Comptabilité · Livraisons · CRM
+          ELM : Caisse · Stock · Compta · Livraisons · CRM · Sénégal
         </div>
 
         {/* Pills */}

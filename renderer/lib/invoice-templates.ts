@@ -802,7 +802,7 @@ ${payment.notes ? `
 
 <div class="footer">
   ${business.receipt_footer ?? 'Merci pour votre contribution au développement de l\'entreprise.'}<br>
-  Document généré par ELM APP
+  Document généré par ELM (Sénégal)
 </div>
 
 </body></html>`;
@@ -967,7 +967,7 @@ export function generateStaffAttendanceSheet(
 </div>
 
 <div class="footer">
-  Imprimé le ${printDate} — Document généré par ELM APP
+  Imprimé le ${printDate} — Document généré par ELM (Sénégal)
 </div>
 
 </body></html>`;
@@ -1140,7 +1140,7 @@ ${data.notes ? `<div style="margin-top:14px;font-size:10px;font-style:italic;col
 
 <div class="footer">
   ${business.receipt_footer ?? ''}<br>
-  Document généré par ELM APP — ${printDate}
+  Document généré par ELM (Sénégal) — ${printDate}
 </div>
 
 </body></html>`;
@@ -1337,7 +1337,7 @@ ${data.notes ? `<div style="font-size:10px;font-style:italic;color:#4a5568;margi
 
 <div class="footer">
   ${business.receipt_footer ?? ''}<br>
-  Document généré par ELM APP — ${printDate}
+  Document généré par ELM (Sénégal) — ${printDate}
 </div>
 
 </body></html>`;
@@ -1529,7 +1529,7 @@ export function generateResellerBonLivraison(data: ResellerBonLivraisonData, bus
 
 <div class="footer">
   ${business.receipt_footer ?? ''}<br>
-  Document généré par ELM APP — ${printDate}
+  Document généré par ELM (Sénégal) — ${printDate}
 </div>
 
 </body></html>`;

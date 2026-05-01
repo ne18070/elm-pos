@@ -262,7 +262,7 @@ export default function LoginPage() {
 
         <div className="text-center mt-8 space-y-2">
           <p className="text-[10px] font-medium text-content-muted tracking-widest uppercase">
-            ELM APP v{version || '1.0.0'}
+            ELM - Entreprise Lifecycle Management v{version || '1.0.0'}
           </p>
           <p className="text-xs text-slate-700">
             <a href="/privacy" className="hover:text-content-secondary transition-colors">
