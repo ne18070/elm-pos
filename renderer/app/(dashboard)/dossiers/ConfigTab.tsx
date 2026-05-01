@@ -104,15 +104,15 @@ export function ConfigTab({ businessId, onRefresh }: { businessId: string, onRef
           <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className="text-[10px] uppercase font-black text-content-muted mb-1.5 block">Nom (Libellé)</label>
-              <input className="input text-sm bg-surface-overlay" value={editing?.label ?? ''} onChange={e => setEditing(p => ({ ...p, label: e.target.value }))} placeholder="Ex: Tribunal de Grande Instance" required />
+              <input className="input text-sm" value={editing?.label ?? ''} onChange={e => setEditing(p => ({ ...p, label: e.target.value }))} placeholder="Ex: Tribunal de Grande Instance" required />
             </div>
             <div>
               <label className="text-[10px] uppercase font-black text-content-muted mb-1.5 block">Code (Clé unique)</label>
-              <input className="input text-sm bg-surface-overlay font-mono" value={editing?.value ?? ''} onChange={e => setEditing(p => ({ ...p, value: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} placeholder="ex: tgi_dakar" required disabled={!!editing?.id} />
+              <input className="input text-sm font-mono" value={editing?.value ?? ''} onChange={e => setEditing(p => ({ ...p, value: e.target.value.toLowerCase().replace(/\s+/g, '_') }))} placeholder="ex: tgi_dakar" required disabled={!!editing?.id} />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="submit" className="flex-1 bg-brand-500 hover:bg-brand-600 text-content-primary font-bold py-2 rounded-xl text-xs transition-all">{editing?.id ? 'Mettre à jour' : 'Ajouter à la liste'}</button>
-              {editing && <button type="button" onClick={() => setEditing(null)} className="px-4 bg-surface-card hover:bg-surface-input text-content-primary rounded-xl text-xs">Annuler</button>}
+              <button type="submit" className="btn-primary flex-1 text-xs">{editing?.id ? 'Mettre à jour' : 'Ajouter à la liste'}</button>
+              {editing && <button type="button" onClick={() => setEditing(null)} className="btn-secondary text-xs">Annuler</button>}
             </div>
           </form>
         </div>

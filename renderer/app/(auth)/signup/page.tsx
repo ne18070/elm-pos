@@ -31,7 +31,7 @@ export default function SignupPage() {
     const timer = setTimeout(async () => {
       setEmailStatus('checking');
       try {
-        const { data } = await (supabase as any).rpc('check_email_exists', { p_email: email.trim().toLowerCase() });
+        const { data } = await supabase.rpc('check_email_exists', { p_email: email.trim().toLowerCase() });
         setEmailStatus(data ? 'taken' : 'available');
       } catch {
         setEmailStatus('idle');

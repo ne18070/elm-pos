@@ -50,6 +50,8 @@ export type Database = {
           tax_inclusive: boolean;
           receipt_footer: string | null;
           stock_units: Json | null;
+          industry_sector: string | null;
+          onboarding_done: boolean;
           owner_id: string;
           created_at: string;
         };
@@ -69,11 +71,41 @@ export type Database = {
           tax_inclusive?: boolean;
           receipt_footer?: string | null;
           stock_units?: Json | null;
+          industry_sector?: string | null;
+          onboarding_done?: boolean;
           owner_id: string;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['businesses']['Insert']>;
         Relationships: [];
+      };
+      analytics_events: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          business_id: string | null;
+          event_name: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          business_id?: string | null;
+          event_name: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['analytics_events']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       users: {
         Row: {
@@ -701,6 +733,22 @@ export type Database = {
       remove_business_member: {
         Args: { p_business_id: string; p_user_id: string };
         Returns: undefined;
+      };
+      create_business_v2: {
+        Args: { p_name: string; p_sector: string };
+        Returns: string;
+      };
+      activate_trial_v2: {
+        Args: { p_biz_id: string };
+        Returns: undefined;
+      };
+      seed_demo_data: {
+        Args: { p_biz_id: string; p_sector: string };
+        Returns: undefined;
+      };
+      check_email_exists: {
+        Args: { p_email: string };
+        Returns: boolean;
       };
     };
     Enums: {

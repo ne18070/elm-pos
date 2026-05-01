@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Store, Utensils, Car, Gavel, Hotel, LayoutGrid,
-  ChevronRight,
+  ChevronRight, CheckCircle2, Loader2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { trackEvent } from '@/lib/analytics';
@@ -21,15 +21,15 @@ const SECTORS = [
   {
     id:    'restaurant',
     label: 'Restaurant / Café',
-    desc:  'Tables, commandes, menu',
+    desc:  'Tables, menu du jour, caisse',
     icon:  Utensils,
-    color: 'text-status-orange',
-    bg:    'bg-badge-orange',
+    color: 'text-status-warning',
+    bg:    'bg-badge-warning',
   },
   {
     id:    'location',
     label: 'Location Véhicules',
-    desc:  'Contrats, flotte, disponibilités',
+    desc:  'Flotte, contrats, clients',
     icon:  Car,
     color: 'text-status-success',
     bg:    'bg-badge-success',
@@ -39,29 +39,29 @@ const SECTORS = [
     label: 'Cabinet Juridique',
     desc:  'Dossiers, honoraires, clients',
     icon:  Gavel,
-    color: 'text-status-purple',
-    bg:    'bg-badge-purple',
+    color: 'text-status-info',
+    bg:    'bg-badge-info',
   },
   {
     id:    'hotel',
     label: 'Hôtel / Hébergement',
     desc:  'Chambres, réservations, check-in',
     icon:  Hotel,
-    color: 'text-content-brand',
-    bg:    'bg-badge-brand',
+    color: 'text-status-info',
+    bg:    'bg-badge-info',
   },
   {
     id:    'autre',
     label: 'Autre activité',
     desc:  'Configuration personnalisée',
     icon:  LayoutGrid,
-    color: 'text-content-muted',
+    color: 'text-content-secondary',
     bg:    'bg-surface-input',
   },
 ];
 
 export default function OnboardingPage() {
-  const [step,         setStep]        = useState<'sector' | 'loading'>('sector');
+  const [step,         setStep]        = useState<'sector' | 'loading' | 'success'>('sector');
   const [progress,     setProgress]    = useState(0);
   const [loadingText,  setLoadingText] = useState('Configuration...');
   const router = useRouter();
@@ -77,42 +77,45 @@ export default function OnboardingPage() {
       trackEvent('sector_selected', { sector: sectorId });
 
       setLoadingText('Création de votre environnement…');
-      const { data: bizId, error: bizError } = await (supabase as any).rpc('create_business_v2', {
+      const { data: bizId, error: bizError } = await supabase.rpc('create_business_v2', {
         p_name: bizName, p_sector: sectorId,
       });
       if (bizError) throw bizError;
       setProgress(40);
 
       setLoadingText('Activation de votre licence…');
-      await (supabase as any).rpc('activate_trial_v2', { p_biz_id: bizId });
+      await supabase.rpc('activate_trial_v2', { p_biz_id: bizId });
       trackEvent('trial_started', { bizId, sector: sectorId });
       setProgress(70);
 
       setLoadingText('Personnalisation de votre espace…');
-      await (supabase as any).rpc('seed_demo_data', { p_biz_id: bizId, p_sector: sectorId });
+      await supabase.rpc('seed_demo_data', { p_biz_id: bizId, p_sector: sectorId });
       trackEvent('provisioning_success', { bizId, sector: sectorId });
       setProgress(100);
 
+      // Transition vers le succès
+      setStep('success');
       setLoadingText('Tout est prêt !');
       localStorage.removeItem('temp_biz_name');
       await supabase.auth.refreshSession();
 
+      const { data }: any = await supabase
+        .from('businesses')
+        .select('features')
+        .eq('id', bizId)
+        .single();
+
+      const features: string[] = data?.features ?? [];
+      const route =
+        features.includes('hotel')    ? '/hotel'    :
+        features.includes('dossiers') ? '/dossiers' :
+        features.includes('contrats') ? '/contrats' :
+        '/pos';
+
+      // On laisse l'animation de succès respirer un peu
       setTimeout(() => {
-        (supabase as any)
-          .from('businesses')
-          .select('features')
-          .eq('id', bizId)
-          .single()
-          .then(({ data }: any) => {
-            const features: string[] = data?.features ?? [];
-            const route =
-              features.includes('hotel')    ? '/hotel'    :
-              features.includes('dossiers') ? '/dossiers' :
-              features.includes('contrats') ? '/contrats' :
-              '/pos';
-            router.push(`${route}?first_visit=true`);
-          });
-      }, 800);
+        router.push(`${route}?first_visit=true`);
+      }, 1500);
 
     } catch (err: any) {
       console.error('[Onboarding]', err);
@@ -121,6 +124,23 @@ export default function OnboardingPage() {
       setStep('sector');
       setProgress(0);
     }
+  }
+
+  /* ── Success ────────────────────────────────────────────────── */
+  if (step === 'success') {
+    return (
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-500">
+        <div className="w-24 h-24 mb-8 bg-badge-success border border-status-success rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+          <CheckCircle2 className="w-12 h-12 text-status-success animate-in zoom-in spin-in-90 duration-700" />
+        </div>
+        <h2 className="text-3xl font-black text-content-primary mb-3">C'est prêt !</h2>
+        <p className="text-content-secondary text-lg mb-8">Votre espace ELM est configuré et personnalisé.</p>
+        <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-2xl border border-surface-border shadow-sm">
+          <Loader2 className="w-4 h-4 text-brand-500 animate-spin" />
+          <span className="text-sm font-semibold text-content-primary">Redirection vers votre tableau de bord...</span>
+        </div>
+      </div>
+    );
   }
 
   /* ── Loading ─────────────────────────────────────────────────── */

@@ -63,7 +63,7 @@ export default function SubscribePage() {
     // Vérifier si l'email existe déjà dans auth.users
     setChecking(prev => ({ ...prev, email: true }));
     try {
-      const { data } = await db.rpc('check_email_exists', { p_email: trimmed });
+      const { data } = await supabase.rpc('check_email_exists', { p_email: trimmed });
       if (data) {
         setFieldError('email', 'Un compte existe déjà avec cet email. Connectez-vous.');
         return false;
@@ -83,8 +83,8 @@ export default function SubscribePage() {
       const reqCol = field === 'businessName' ? 'business_name' : 'denomination';
 
       const [{ data: bizData }, { data: reqData }] = await Promise.all([
-        db.from('businesses').select('id').ilike(col, trimmed).limit(1),
-        db.from('public_subscription_requests')
+        supabase.from('businesses').select('id').ilike(col, trimmed).limit(1),
+        supabase.from('public_subscription_requests' as any)
           .select('id').ilike(reqCol, trimmed)
           .not('status', 'eq', 'rejected').limit(1),
       ]);

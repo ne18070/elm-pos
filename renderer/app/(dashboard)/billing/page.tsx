@@ -271,7 +271,7 @@ export default function BillingPage() {
                           ${period === p ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
                       >
                         {p === 'monthly' ? 'Mensuel' : (
-                          <span className="flex items-center gap-1">Annuel <span className="text-status-success">∁E0%</span></span>
+                          <span className="flex items-center gap-1">Annuel <span className="text-status-success">−10%</span></span>
                         )}
                       </button>
                     ))}

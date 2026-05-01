@@ -106,7 +106,7 @@ export default function DossiersPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-status-purple shadow-glow">
+            <div className="p-3 rounded-2xl bg-badge-purple border border-status-purple/30 text-status-purple">
               <Scale className="w-6 h-6" />
             </div>
             <div>
@@ -118,13 +118,13 @@ export default function DossiersPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => window.open(`/juridique/${buildPublicBusinessRef(business.name, business.public_slug)}`, '_blank')}
-                className="bg-surface border border-surface-border text-content-secondary hover:text-content-primary font-black py-3 px-4 rounded-2xl flex items-center gap-2 shadow-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                className="btn-secondary flex items-center gap-2"
                 title="Page publique de rendez-vous"
               >
                 <ExternalLink className="w-4 h-4" /> Page Publique
               </button>
               {can('create_dossier') && (
-                <button onClick={() => setModal('new')} className="bg-brand-500 hover:bg-brand-600 text-content-primary font-black py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95 text-xs uppercase tracking-widest">
+                <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2">
                   <Plus className="w-5 h-5" /> Nouveau Dossier
                 </button>
               )}
@@ -159,7 +159,7 @@ export default function DossiersPage() {
             <div className="flex justify-end">
               <button 
                 onClick={() => setShowArchived(!showArchived)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-[10px] uppercase tracking-widest transition-all ${showArchived ? 'bg-amber-500/10 border-amber-500/50 text-status-warning' : 'bg-surface border-surface-border text-content-secondary hover:text-content-primary'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-[10px] uppercase tracking-widest transition-all ${showArchived ? 'bg-badge-warning border-status-warning/50 text-status-warning' : 'bg-surface border-surface-border text-content-secondary hover:text-content-primary'}`}
               >
                 {showArchived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
                 {showArchived ? 'Voir Dossiers Actifs' : 'Voir l\'Archive'}
