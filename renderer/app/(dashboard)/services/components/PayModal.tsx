@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -35,14 +35,38 @@ export function PayModal({ order, currency, onClose, onPaid }: {
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
-          <div className="rounded-xl bg-surface-hover p-4 flex justify-between items-center">
-            <span className="text-content-secondary text-sm">Montant dû</span>
-            <span className="text-content-primary font-bold text-lg">{formatCurrency(balance, currency)}</span>
-          </div>
+          {order.paid_amount > 0 && (
+            <div className="rounded-xl bg-surface-hover p-3 space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-content-secondary">Total OT</span>
+                <span className="font-medium text-content-primary">{formatCurrency(order.total, currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-content-secondary">Déjà encaissé</span>
+                <span className="font-medium text-status-success">-{formatCurrency(order.paid_amount, currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-surface-border pt-1.5">
+                <span className="font-semibold text-content-primary">Reste dû</span>
+                <span className="font-bold text-content-primary">{formatCurrency(balance, currency)}</span>
+              </div>
+            </div>
+          )}
+
+          {order.paid_amount === 0 && (
+            <div className="rounded-xl bg-surface-hover p-4 flex justify-between items-center">
+              <span className="text-content-secondary text-sm">Montant dû</span>
+              <span className="text-content-primary font-bold text-lg">{formatCurrency(balance, currency)}</span>
+            </div>
+          )}
+
           <div>
             <label className="text-xs text-content-secondary font-medium mb-1 block">Montant reçu</label>
             <input value={amount} onChange={e => setAmount(e.target.value)} type="number" min={0}
               className="w-full px-3 py-2.5 rounded-xl bg-surface-input border border-surface-border text-content-primary text-lg font-bold" />
+            <p className="flex items-center gap-1.5 mt-1.5 text-xs text-content-muted">
+              <Info className="w-3 h-3 shrink-0" />
+              Vous pouvez encaisser un acompte — saisissez un montant inférieur au reste dû.
+            </p>
           </div>
           <div>
             <label className="text-xs text-content-secondary font-medium mb-2 block">Mode de paiement</label>

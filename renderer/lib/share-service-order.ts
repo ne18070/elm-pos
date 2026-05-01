@@ -46,6 +46,7 @@ export async function generateServiceOrderLink(
     total:           order.total,
     paid_amount:     order.paid_amount,
     payment_method:  order.payment_method,
+    payments:        order.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
   };
 
   const html = generateServiceOrderReceipt(receiptData, business);

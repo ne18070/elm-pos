@@ -1555,6 +1555,7 @@ export interface ServiceReceiptData {
   total:            number;
   paid_amount:      number;
   payment_method?:  string | null;
+  payments?:        Array<{ amount: number; method: string; paid_at: string }>;
 }
 
 export function generateServiceOrderReceipt(data: ServiceReceiptData, business: Business): string {
@@ -1652,7 +1653,19 @@ ${(() => {
 
 <table>
   <tr class="total-row"><td>TOTAL</td><td style="text-align:right">${fmt(data.total, cur)}</td></tr>
-  ${data.paid_amount > 0 ? `<tr class="paid-row"><td>Payé${data.payment_method ? ` (${PAYMENT_LABELS[data.payment_method] ?? data.payment_method})` : ''}</td><td style="text-align:right">-${fmt(data.paid_amount, cur)}</td></tr>` : ''}
+  ${(() => {
+    if (data.payments && data.payments.length > 0) {
+      return data.payments.map(p => {
+        const d = new Date(p.paid_at);
+        const dt = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        return `<tr class="paid-row"><td>Versement (${PAYMENT_LABELS[p.method] ?? p.method}) ${dt}</td><td style="text-align:right">-${fmt(p.amount, cur)}</td></tr>`;
+      }).join('');
+    }
+    if (data.paid_amount > 0) {
+      return `<tr class="paid-row"><td>Payé${data.payment_method ? ` (${PAYMENT_LABELS[data.payment_method] ?? data.payment_method})` : ''}</td><td style="text-align:right">-${fmt(data.paid_amount, cur)}</td></tr>`;
+    }
+    return '';
+  })()}
   ${balance > 0 ? `<tr class="balance-row"><td>Reste dû</td><td style="text-align:right">${fmt(balance, cur)}</td></tr>` : ''}
 </table>
 

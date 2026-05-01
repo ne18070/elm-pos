@@ -10,6 +10,15 @@ type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
 
 export type ServiceOrderStatus = 'attente' | 'en_cours' | 'termine' | 'paye' | 'annule';
 
+export interface ServiceOrderPayment {
+  id:          string;
+  order_id:    string;
+  business_id: string;
+  amount:      number;
+  method:      string;
+  paid_at:     string;
+}
+
 export interface ServiceCategory {
   id:          string;
   business_id: string;
@@ -79,6 +88,7 @@ export interface ServiceOrder {
   paid_at?:        string | null;
   created_at:      string;
   items?:          ServiceOrderItem[];
+  payments?:       ServiceOrderPayment[];
 }
 
 // ── Catalogue ────────────────────────────────────────────────────────────────
@@ -199,7 +209,7 @@ export async function getOrdersSummary(businessId: string): Promise<ServiceOrder
 export async function getOrdersByClientName(businessId: string, clientName: string): Promise<ServiceOrder[]> {
   const { data, error } = await db
     .from('service_orders')
-    .select('*, items:service_order_items(*)')
+    .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
     .eq('business_id', businessId)
     .eq('client_name', clientName)
     .order('created_at', { ascending: false })
@@ -225,7 +235,7 @@ export async function searchSubjects(businessId: string, ref: string): Promise<S
 export async function getSubjectHistory(businessId: string, subjectId: string): Promise<ServiceOrder[]> {
   const { data, error } = await db
     .from('service_orders')
-    .select('*, items:service_order_items(*)')
+    .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
     .eq('business_id', businessId)
     .eq('subject_id', subjectId)
     .order('created_at', { ascending: false })
@@ -285,7 +295,7 @@ export async function getServiceOrders(
   const to = from + pageSize - 1;
   let q = db
     .from('service_orders')
-    .select('*, items:service_order_items(*)', { count: 'exact' })
+    .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)', { count: 'exact' })
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
     .range(from, to);
@@ -466,39 +476,64 @@ export async function payServiceOrder(
   paymentMethod: string,
   actor?: ServiceOrderActor
 ): Promise<void> {
+  const { data: current, error: fetchErr } = await db
+    .from('service_orders')
+    .select('id, business_id, order_number, total, paid_amount, client_name')
+    .eq('id', id)
+    .single();
+  if (fetchErr) throw new Error(fetchErr.message);
+
+  const newPaidAmount = (current.paid_amount ?? 0) + amount;
+  const isFullyPaid   = newPaidAmount >= current.total;
+
+  const updates: any = {
+    paid_amount:    newPaidAmount,
+    payment_method: paymentMethod,
+  };
+  if (isFullyPaid) {
+    updates.status  = 'paye';
+    updates.paid_at = new Date().toISOString();
+  }
+
   const { data: order, error } = await db
     .from('service_orders')
-    .update({
-      status:         'paye',
-      paid_amount:    amount,
-      payment_method: paymentMethod,
-      paid_at:        new Date().toISOString(),
-    })
+    .update(updates)
     .eq('id', id)
     .select('id, business_id, order_number, total, paid_amount, payment_method, client_name')
     .single();
   if (error) throw new Error(error.message);
 
-  if (order) {
+  await db.from('service_order_payments').insert({
+    order_id:    id,
+    business_id: current.business_id,
+    amount,
+    method:      paymentMethod,
+    paid_at:     updates.paid_at ?? new Date().toISOString(),
+  });
+
+  if (order && isFullyPaid) {
     try {
       await syncServiceOrdersAccounting(order.business_id);
     } catch (syncError) {
       console.warn('[service-orders] accounting sync failed', syncError);
     }
+  }
 
+  if (order) {
     logAction({
-      business_id: order.business_id,
-      action:      'service_order.paid',
+      business_id: current.business_id,
+      action:      isFullyPaid ? 'service_order.paid' : 'service_order.acompte',
       entity_type: 'service_order',
       entity_id:   id,
       user_id:     actor?.userId,
       user_name:   actor?.userName,
       metadata: {
-        order_number: order.order_number,
+        order_number:   current.order_number,
         amount,
         payment_method: paymentMethod,
-        total: order.total,
-        client_name: order.client_name ?? null,
+        total:          current.total,
+        paid_amount:    newPaidAmount,
+        client_name:    current.client_name ?? null,
       },
     });
   }

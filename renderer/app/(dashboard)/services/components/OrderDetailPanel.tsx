@@ -17,7 +17,7 @@ import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates'
 import { shareServiceOrderViaWhatsApp } from '@/lib/share-service-order';
 import { getStaff, type Staff } from '@services/supabase/staff';
 import { useServiceOrderForm } from '../hooks/useServiceOrderForm';
-import { SUBJECT_TYPES, subjectTypeCfg, fmtDateTime } from '../constants';
+import { SUBJECT_TYPES, PAY_METHODS, subjectTypeCfg, fmtDateTime } from '../constants';
 import { StatusBadge, OTNumber } from './StatusBadge';
 import { PayModal } from './PayModal';
 import { ConfirmModal } from '@/components/ui/Modal';
@@ -469,12 +469,25 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
               <span className="text-content-secondary text-sm">Total</span>
               <span className="font-bold text-content-primary">{formatCurrency(order.total, currency)}</span>
             </div>
-            {order.paid_amount > 0 && (
-              <div className="flex justify-between px-4 py-3 border-t border-surface-border">
-                <span className="text-status-success text-sm">Payé</span>
-                <span className="font-semibold text-status-success">-{formatCurrency(order.paid_amount, currency)}</span>
-              </div>
-            )}
+            {(order.payments && order.payments.length > 0)
+              ? order.payments.map((p, i) => (
+                  <div key={p.id} className="flex items-center justify-between px-4 py-2.5 border-t border-surface-border">
+                    <div>
+                      <span className="text-status-success text-sm">Versement {i + 1}</span>
+                      <span className="text-xs text-content-muted ml-2">
+                        {PAY_METHODS.find(m => m.value === p.method)?.label ?? p.method} · {fmtDateTime(p.paid_at)}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-status-success">-{formatCurrency(p.amount, currency)}</span>
+                  </div>
+                ))
+              : order.paid_amount > 0 && (
+                  <div className="flex justify-between px-4 py-3 border-t border-surface-border">
+                    <span className="text-status-success text-sm">Payé</span>
+                    <span className="font-semibold text-status-success">-{formatCurrency(order.paid_amount, currency)}</span>
+                  </div>
+                )
+            }
             {balance > 0 && (
               <div className="flex justify-between px-4 py-3 border-t border-surface-border bg-badge-error">
                 <span className="text-status-error text-sm font-semibold">Reste dû</span>

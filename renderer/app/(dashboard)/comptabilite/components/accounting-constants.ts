@@ -3,7 +3,7 @@ import {
 } from 'lucide-react';
 
 export type Tab    = 'dashboard' | 'journal' | 'balance' | 'etats';
-export type Period = 'month' | 'quarter' | 'year' | 'custom';
+export type Period = 'today' | 'month' | 'lastmonth' | 'quarter' | 'year' | 'custom';
 export type PaySide = 'caisse' | 'banque' | 'mobile';
 
 export interface OpTemplate {
@@ -18,28 +18,44 @@ export interface OpTemplate {
   credit: { code: string; name: string };
 }
 
+function localISO(date: Date): string {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const d  = String(date.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${d}`;
+}
+
 export function getPeriod(p: Period, customFrom?: string, customTo?: string) {
   const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth();
+  if (p === 'today') {
+    const today = localISO(now);
+    return { from: today, to: today };
+  }
   if (p === 'month') {
-    return { from: new Date(y, m, 1).toISOString().slice(0, 10), to: new Date(y, m + 1, 0).toISOString().slice(0, 10) };
+    return { from: localISO(new Date(y, m, 1)), to: localISO(new Date(y, m + 1, 0)) };
+  }
+  if (p === 'lastmonth') {
+    return { from: localISO(new Date(y, m - 1, 1)), to: localISO(new Date(y, m, 0)) };
   }
   if (p === 'quarter') {
     const q = Math.floor(m / 3);
-    return { from: new Date(y, q * 3, 1).toISOString().slice(0, 10), to: new Date(y, q * 3 + 3, 0).toISOString().slice(0, 10) };
+    return { from: localISO(new Date(y, q * 3, 1)), to: localISO(new Date(y, q * 3 + 3, 0)) };
   }
   if (p === 'year') {
     return { from: `${y}-01-01`, to: `${y}-12-31` };
   }
-  return { from: customFrom ?? `${y}-01-01`, to: customTo ?? new Date().toISOString().slice(0, 10) };
+  return { from: customFrom ?? `${y}-01-01`, to: customTo ?? localISO(now) };
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {
-  month:   'Ce mois',
-  quarter: 'Ce trimestre',
-  year:    'Cette année',
-  custom:  'Personnalisé',
+  today:     "Aujourd'hui",
+  month:     'Ce mois',
+  lastmonth: 'Mois précédent',
+  quarter:   'Ce trimestre',
+  year:      'Cette année',
+  custom:    'Personnalisé',
 };
 
 export const CLASS_LABELS: Record<number, string> = {

@@ -46,6 +46,7 @@ export function ServiceOrdersTab({
   onNewOrder,
   onPrintOrder,
   refreshTrigger = 0,
+  initialStatus,
 }: {
   businessId: string;
   currency: string;
@@ -57,10 +58,12 @@ export function ServiceOrdersTab({
   onNewOrder: () => void;
   onPrintOrder: (order: ServiceOrder, e: React.MouseEvent) => void;
   refreshTrigger?: number;
+  initialStatus?: ServiceOrderStatus | 'all';
 }) {
   const { user, business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
-  const [statusFilter, setStatusFilter] = React.useState<ServiceOrderStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = React.useState<ServiceOrderStatus | 'all'>(initialStatus ?? 'all');
+  React.useEffect(() => { setStatusFilter(initialStatus ?? 'all'); }, [initialStatus]);
   const [search, setSearch] = React.useState('');
   const [dateFilter, setDateFilter] = React.useState('');
   const [page, setPage] = React.useState(1);

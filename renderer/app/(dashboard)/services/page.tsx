@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Wrench, Plus, Share2, Package2, History } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
 import { cn } from '@/lib/utils';
-import { 
-  type ServiceOrder, 
+import {
+  type ServiceOrder,
   type ServiceCatalogItem,
+  type ServiceOrderStatus,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
@@ -25,10 +27,18 @@ import { useServiceCatalog } from './hooks/useServiceCatalog';
 
 type PageTab = 'orders' | 'catalog' | 'subjects';
 
+const VALID_STATUSES = new Set(['en_attente', 'en_cours', 'termine', 'paye', 'annule']);
+
 export default function ServicesPage() {
   const { business } = useAuthStore();
   const can = useCan();
   const { success } = useNotificationStore();
+  const searchParams = useSearchParams();
+  const statusParam = searchParams.get('status');
+  const initialStatus: ServiceOrderStatus | 'all' =
+    statusParam && VALID_STATUSES.has(statusParam)
+      ? (statusParam as ServiceOrderStatus)
+      : 'all';
   
   const currency = business?.currency ?? 'XOF';
   const businessId = business?.id ?? '';
@@ -68,6 +78,7 @@ export default function ServicesPage() {
       status: o.status, notes: o.notes,
       items: (o.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
       total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,
+      payments: o.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
     }, business as any));
   }
 
@@ -146,6 +157,7 @@ export default function ServicesPage() {
             onNewOrder={() => setShowNewOT(true)}
             onPrintOrder={handlePrintOrder}
             refreshTrigger={refreshTrigger}
+            initialStatus={initialStatus}
           />
         )}
 

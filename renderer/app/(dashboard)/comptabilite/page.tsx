@@ -34,7 +34,7 @@ export default function ComptabilitePage() {
   const { success, error: notifErr } = useNotificationStore();
 
   const [tab, setTab]               = useState<Tab>('dashboard');
-  const [period, setPeriod]         = useState<Period>('month');
+  const [period, setPeriod]         = useState<Period>(new Date().getDate() <= 5 ? 'lastmonth' : 'month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');
   const [syncing, setSyncing]       = useState(false);

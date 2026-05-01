@@ -304,10 +304,10 @@ export default function AdminPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-surface-border">
-        <div className="flex items-center justify-between mb-4">
+      <div className="px-4 pt-4 pb-3 border-b border-surface-border md:px-6 md:pt-5">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-xl font-bold text-content-primary">Administration</h1>
+            <h1 className="text-lg font-bold text-content-primary md:text-xl">Administration</h1>
             {business && (
               <p className="text-xs text-content-muted mt-0.5 flex items-center gap-1">
                 <Building2 className="w-3 h-3" />
@@ -317,31 +317,33 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
-          {TABS.map(({ id, icon: Icon, label, navigate }) => (
-            <button
-              key={id}
-              onClick={() => navigate ? router.push(navigate) : setTab(id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-              {navigate && <ExternalLink className="w-3 h-3 opacity-50" />}
-            </button>
-          ))}
+        {/* Tabs — scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
+            {TABS.map(({ id, icon: Icon, label, navigate }) => (
+              <button
+                key={id}
+                onClick={() => navigate ? router.push(navigate) : setTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0
+                  ${tab === id ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {label}
+                {navigate && <ExternalLink className="w-3 h-3 opacity-50" />}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
 
         {/* -- Onglet Profil -------------------------------------------------- */}
         {tab === 'profil' && (
           <div className="max-w-lg space-y-6">
-            <div className="card p-5 flex items-center gap-5">
-              <div className="relative shrink-0">
-                <div className="w-20 h-20 rounded-2xl bg-surface-input border border-surface-border overflow-hidden flex items-center justify-center">
+            <div className="card p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="w-16 h-16 rounded-2xl bg-surface-input border border-surface-border overflow-hidden flex items-center justify-center shrink-0 sm:w-20 sm:h-20">
                   {uploadingAvatar ? (
                     <Loader2 className="w-6 h-6 animate-spin text-content-secondary" />
                   ) : user?.avatar_url ? (
@@ -352,19 +354,17 @@ export default function AdminPage() {
                     </span>
                   )}
                 </div>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-content-primary truncate">{user?.full_name}</p>
-                <p className="text-sm text-content-secondary truncate">{user?.email}</p>
-                <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border
-                  ${ROLE_LABELS[user?.role ?? 'staff'].color}`}>
-                  <Shield className="w-3 h-3" />
-                  {ROLE_LABELS[user?.role ?? 'staff'].label}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-content-primary truncate">{user?.full_name}</p>
+                  <p className="text-sm text-content-secondary truncate">{user?.email}</p>
+                  <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border
+                    ${ROLE_LABELS[user?.role ?? 'staff'].color}`}>
+                    <Shield className="w-3 h-3" />
+                    {ROLE_LABELS[user?.role ?? 'staff'].label}
+                  </div>
                 </div>
               </div>
-
-              <label className="btn-secondary text-sm cursor-pointer shrink-0">
+              <label className="btn-secondary text-sm cursor-pointer self-start sm:self-auto shrink-0">
                 {uploadingAvatar ? 'Upload...' : 'Changer'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               </label>
@@ -493,7 +493,7 @@ export default function AdminPage() {
         {/* -- Onglet Équipe --------------------------------------------------- */}
         {tab === 'equipe' && (
           <div className="max-w-2xl space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-content-primary font-medium">
                   {members.length} agent{members.length !== 1 ? 's' : ''}
@@ -503,10 +503,10 @@ export default function AdminPage() {
               {isOwnerOrAdmin && (
                 <button
                   onClick={() => setShowInvite(true)}
-                  className="btn-primary flex items-center gap-2 text-sm"
+                  className="btn-primary flex items-center gap-2 text-sm shrink-0"
                 >
                   <UserPlus className="w-4 h-4" />
-                  Inviter un agent
+                  Inviter
                 </button>
               )}
             </div>
@@ -544,83 +544,87 @@ export default function AdminPage() {
                   const customLabel = getCustomRoleLabel(member.role, business?.type || 'retail');
 
                   return (
-                    <div key={member.id} className="card p-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-surface-input border border-surface-border
-                                      flex items-center justify-center text-base font-bold text-content-brand shrink-0 overflow-hidden">
-                        {member.avatar_url
-                          ? <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                          : member.full_name.charAt(0).toUpperCase()}
+                    <div key={member.id} className="card p-4 space-y-3">
+                      {/* Row 1: avatar + info + badge/select */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-surface-input border border-surface-border
+                                        flex items-center justify-center text-base font-bold text-content-brand shrink-0 overflow-hidden">
+                          {member.avatar_url
+                            ? <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                            : member.full_name.charAt(0).toUpperCase()}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={`font-medium text-sm truncate ${member.is_blocked ? 'text-content-muted line-through' : 'text-content-primary'}`}>
+                              {member.full_name}
+                            </p>
+                            {isSelf && <span className="text-xs text-content-muted shrink-0">(vous)</span>}
+                            {member.is_blocked && (
+                              <span className="shrink-0 text-xs text-status-error bg-badge-error border border-status-error px-1.5 py-0.5 rounded-full">
+                                Bloqué
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-content-muted truncate">{member.email}</p>
+                        </div>
+
+                        {canManage ? (
+                          <div className="relative shrink-0">
+                            <select
+                              value={member.role}
+                              onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
+                              className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer ${badge.color}`}
+                              style={{ background: 'rgb(var(--surface-card))', color: 'rgb(var(--text-base))' }}
+                            >
+                              <option value="staff">{getCustomRoleLabel('staff', business?.type || 'retail')}</option>
+                              <option value="manager">{getCustomRoleLabel('manager', business?.type || 'retail')}</option>
+                              <option value="admin">Administrateur</option>
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
+                          </div>
+                        ) : (
+                          <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
+                            {customLabel}
+                          </span>
+                        )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <p className={`font-medium text-sm truncate ${member.is_blocked ? 'text-content-muted line-through' : 'text-content-primary'}`}>
-                            {member.full_name}
-                          </p>
-                          {isSelf && <span className="text-xs text-content-muted shrink-0">(vous)</span>}
-                          {member.is_blocked && (
-                            <span className="shrink-0 text-xs text-status-error bg-badge-error border border-status-error px-1.5 py-0.5 rounded-full">
-                              Bloqué
-                            </span>
+                      {/* Row 2: action buttons (only when there are actions) */}
+                      {(canOwnerAct || canManage) && (
+                        <div className="flex items-center justify-end gap-1 pt-2 border-t border-surface-border">
+                          {canOwnerAct && (
+                            <button
+                              onClick={() => openReset(member)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-content-muted hover:text-content-brand hover:bg-badge-brand transition-colors"
+                            >
+                              <Lock className="w-3.5 h-3.5" /> MDP
+                            </button>
+                          )}
+                          {canOwnerAct && (
+                            <button
+                              onClick={() => handleToggleBlock(member)}
+                              disabled={blockingId === member.id}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors
+                                ${member.is_blocked
+                                  ? 'text-status-error bg-badge-error'
+                                  : 'text-content-muted hover:text-status-error hover:bg-badge-error'}`}
+                            >
+                              {blockingId === member.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Ban className="w-3.5 h-3.5" />}
+                              {member.is_blocked ? 'Débloquer' : 'Bloquer'}
+                            </button>
+                          )}
+                          {canManage && (
+                            <button
+                              onClick={() => handleRemove(member)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
+                            >
+                              <UserX className="w-3.5 h-3.5" /> Retirer
+                            </button>
                           )}
                         </div>
-                        <p className="text-xs text-content-muted truncate">{member.email}</p>
-                      </div>
-
-                      {canManage ? (
-                        <div className="relative shrink-0">
-                          <select
-                            value={member.role}
-                            onChange={(e) => handleRoleChange(member, e.target.value as UserRole)}
-                            className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer ${badge.color}`}
-                            style={{ background: 'rgb(var(--surface-card))', color: 'rgb(var(--text-base))' }}
-                          >
-                            <option value="staff">{getCustomRoleLabel('staff', business?.type || 'retail')}</option>
-                            <option value="manager">{getCustomRoleLabel('manager', business?.type || 'retail')}</option>
-                            <option value="admin">Administrateur</option>
-                          </select>
-                          <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />
-                        </div>
-                      ) : (
-                        <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium border ${badge.color}`}>
-                          {customLabel}
-                        </span>
-                      )}
-
-                      {canOwnerAct && (
-                        <button
-                          onClick={() => openReset(member)}
-                          className="shrink-0 p-1.5 rounded-lg text-content-muted hover:text-content-brand hover:bg-badge-brand transition-colors"
-                          title="Réinitialiser le mot de passe"
-                        >
-                          <Lock className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {canOwnerAct && (
-                        <button
-                          onClick={() => handleToggleBlock(member)}
-                          disabled={blockingId === member.id}
-                          className={`shrink-0 p-1.5 rounded-lg transition-colors
-                            ${member.is_blocked
-                              ? 'text-status-error bg-badge-error hover:bg-badge-error'
-                              : 'text-content-muted hover:text-status-error hover:bg-badge-error'}`}
-                          title={member.is_blocked ? 'Débloquer' : 'Bloquer'}
-                        >
-                          {blockingId === member.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <Ban className="w-4 h-4" />}
-                        </button>
-                      )}
-
-                      {canManage && (
-                        <button
-                          onClick={() => handleRemove(member)}
-                          className="shrink-0 p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
-                          title="Retirer de l'équipe"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </button>
                       )}
                     </div>
                   );
