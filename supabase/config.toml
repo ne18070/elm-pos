@@ -48,3 +48,6 @@ verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.daily-services-report]
+verify_jwt = false
