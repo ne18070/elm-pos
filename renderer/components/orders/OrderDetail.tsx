@@ -65,7 +65,7 @@ function isAcompte(order: Order): boolean {
 
 export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: OrderDetailProps) {
   const { business, user } = useAuthStore();
-  const { success, error: notifError } = useNotificationStore();
+  const { success, error: notifError, warning } = useNotificationStore();
   const [showRefundModal, setShowRefundModal]     = useState(false);
   const [showCompleteForm, setShowCompleteForm]   = useState(false);
   const [completeMethod, setCompleteMethod]       = useState<Exclude<PaymentMethod, 'partial'>>('cash');
@@ -73,6 +73,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [completing, setCompleting]               = useState(false);
   const [sharingWa, setSharingWa]                 = useState(false);
   const [copying, setCopying]                     = useState(false);
+  const [invoiceLink, setInvoiceLink]             = useState('');
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
   const fmt              = (n: number) => formatCurrency(n, currency);
@@ -87,6 +88,10 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       getRefundsForOrder(order.id).then(setRefunds).catch(() => {});
     }
   }, [order.id, order.status]);
+
+  useEffect(() => {
+    setInvoiceLink('');
+  }, [order.id]);
 
   // Pré-remplir le montant quand on ouvre le formulaire
   useEffect(() => {
@@ -117,11 +122,26 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
   async function handleCopyLink() {
     if (!order || !business) return;
+    if (invoiceLink) {
+      try {
+        await copyTextToClipboard(invoiceLink);
+        success('Lien copié dans le presse-papier');
+      } catch {
+        warning('Touchez le champ du lien puis copiez-le manuellement.');
+      }
+      return;
+    }
+
     setCopying(true);
     try {
       const url = await generateInvoiceLink(order, business);
-      await copyTextToClipboard(url);
-      success('Lien copié dans le presse-papier');
+      setInvoiceLink(url);
+      try {
+        await copyTextToClipboard(url);
+        success('Lien copié dans le presse-papier');
+      } catch {
+        warning('Lien prêt. Appuyez encore sur "Lien PDF" pour le copier.');
+      }
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -456,6 +476,16 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               Lien PDF
             </button>
           </div>
+          {invoiceLink && (
+            <input
+              readOnly
+              value={invoiceLink}
+              onFocus={(event) => event.currentTarget.select()}
+              onClick={(event) => event.currentTarget.select()}
+              className="input h-9 text-xs font-mono"
+              aria-label="Lien PDF"
+            />
+          )}
 
           {/* Compléter le paiement —acompte */}
           {partial && !showCompleteForm && (

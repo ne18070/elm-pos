@@ -385,14 +385,30 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   }
 
   const [copying, setCopying] = useState(false);
+  const [invoiceLink, setInvoiceLink] = useState('');
   async function handleCopyLink() {
     if (!ordre || !business) return;
+    if (invoiceLink) {
+      try {
+        await copyTextToClipboard(invoiceLink);
+        notifSuccess('Lien copié dans le presse-papier');
+      } catch {
+        notifWarning('Touchez le champ du lien puis copiez-le manuellement.');
+      }
+      return;
+    }
+
     setCopying(true);
     try {
       const { generateInvoiceLink } = await import('@/lib/share-invoice');
       const url = await generateInvoiceLink(ordre, business);
-      await copyTextToClipboard(url);
-      notifSuccess('Lien copié dans le presse-papier');
+      setInvoiceLink(url);
+      try {
+        await copyTextToClipboard(url);
+        notifSuccess('Lien copié dans le presse-papier');
+      } catch {
+        notifWarning('Lien prêt. Appuyez encore sur "Lien" pour le copier.');
+      }
     } catch (err) {
       console.error('Link generation error:', err);
       notifError('Erreur lors de la génération du lien');
@@ -989,6 +1005,16 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 Lien
               </button>
             </div>
+            {invoiceLink && (
+              <input
+                readOnly
+                value={invoiceLink}
+                onFocus={(event) => event.currentTarget.select()}
+                onClick={(event) => event.currentTarget.select()}
+                className="input h-9 text-xs font-mono"
+                aria-label="Lien PDF"
+              />
+            )}
           </div>
 
           <button onClick={onSuccess} className="btn-primary w-full h-11">
