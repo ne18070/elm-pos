@@ -10,7 +10,7 @@ export interface TrackingTokenInfo {
 }
 
 export async function getOrCreateTrackingToken(
-  businessId: string,
+  _businessId: string,
   entityId: string,
   type: 'service_order' | 'dossier',
   clientPhone?: string | null
@@ -35,7 +35,6 @@ export async function getOrCreateTrackingToken(
   const { error } = await (supabase as any)
     .from('client_tracking_tokens')
     .insert({
-      business_id: businessId,
       [col]:       entityId,
       token,
       client_phone:     clientPhone || null,
@@ -49,12 +48,37 @@ export async function getOrCreateTrackingToken(
 export async function validateTrackingToken(token: string): Promise<TrackingTokenInfo> {
   const { data, error } = await (supabase as any)
     .from('client_tracking_tokens')
-    .select('*, businesses(name, logo_url)')
+    .select('id, token, dossier_id, service_order_id, client_phone, expires_at, view_count')
     .eq('token', token)
     .gt('expires_at', new Date().toISOString())
-    .single();
+    .maybeSingle();
 
   if (error || !data) throw new Error('Lien invalide ou expiré.');
+
+  let businessId = '';
+  let businesses = { name: '', logo_url: null as string | null };
+
+  if (data.dossier_id) {
+    const { data: dossier, error: dossierError } = await (supabase as any)
+      .from('dossiers')
+      .select('business_id, businesses(name, logo_url)')
+      .eq('id', data.dossier_id)
+      .single();
+    if (dossierError || !dossier) throw new Error('Dossier introuvable.');
+    businessId = dossier.business_id;
+    businesses = dossier.businesses ?? businesses;
+  } else if (data.service_order_id) {
+    const { data: serviceOrder, error: serviceError } = await (supabase as any)
+      .from('service_orders')
+      .select('business_id, businesses(name, logo_url)')
+      .eq('id', data.service_order_id)
+      .single();
+    if (serviceError || !serviceOrder) throw new Error('Ordre de service introuvable.');
+    businessId = serviceOrder.business_id;
+    businesses = serviceOrder.businesses ?? businesses;
+  } else {
+    throw new Error('Lien sans dossier ni ordre de service.');
+  }
 
   // Update last_viewed and view_count
   await (supabase as any)
@@ -65,5 +89,9 @@ export async function validateTrackingToken(token: string): Promise<TrackingToke
     })
     .eq('id', data.id);
 
-  return data;
+  return {
+    ...data,
+    business_id: businessId,
+    businesses,
+  };
 }
