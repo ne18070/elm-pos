@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SYSTEM_WA_PHONE_NUMBER_ID = Deno.env.get('SYSTEM_WA_PHONE_NUMBER_ID');
+const SYSTEM_WA_ACCESS_TOKEN = Deno.env.get('SYSTEM_WA_ACCESS_TOKEN');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,15 +108,13 @@ serve(async (req) => {
     return new Response(challenge, { status: 200 });
   }
 
-  // POST — messages entrants depuis Meta Cloud API
+  // POST — messages entrants
   if (req.method === 'POST') {
-    let body: unknown;
+    let body: any;
     try { body = await req.json(); } catch { return new Response('OK', { status: 200 }); }
 
     const payload = body as WhatsAppWebhookPayload;
-    if (payload.object !== 'whatsapp_business_account') {
-      return new Response('OK', { status: 200 });
-    }
+    if (payload.object !== 'whatsapp_business_account') return new Response('OK', { status: 200 });
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -122,23 +122,122 @@ serve(async (req) => {
       for (const change of entry.changes ?? []) {
         if (change.field !== 'messages') continue;
         const value = change.value;
-
-        const { data: config } = await supabase
-          .from('whatsapp_configs')
-          .select('id,business_id,phone_number_id,access_token,catalog_enabled,welcome_message,menu_keyword,confirm_message,wave_payment_url,enable_pickup,enable_delivery,msg_cart_footer,msg_shipping_question,msg_address_request,businesses(name)')
-          .eq('phone_number_id', value.metadata?.phone_number_id ?? '')
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (config) {
-          (config as WaConfig).business_name =
-            (config as { businesses?: { name?: string } }).businesses?.name ?? '';
-        }
-
-        if (!config) continue;
+        const phoneId = value.metadata?.phone_number_id ?? '';
 
         for (const msg of value.messages ?? []) {
-          await processMessage(supabase, config, msg, value.contacts ?? []);
+          const fromPhone = normalizePhone(msg.from);
+          let config: any = null;
+
+          // ─── LOGIQUE DE ROUTAGE ──────────────────────────────────────────
+          
+          if (phoneId === SYSTEM_WA_PHONE_NUMBER_ID) {
+            // MODE PARTAGÉ (ELM BOT)
+            const bodyText = (msg.text?.body || '').trim().toUpperCase();
+
+            // 1. Chercher si le message contient un code de routage (ex: 'SENU1A2B')
+            const { data: bizByCode } = await supabase
+              .from('businesses')
+              .select('id, whatsapp_routing_code')
+              .eq('whatsapp_routing_code', bodyText)
+              .maybeSingle();
+
+            if (bizByCode) {
+              // Nouveau routage ou switch : on mémorise la session
+              await supabase.from('whatsapp_shared_sessions').upsert({
+                from_phone:     fromPhone,
+                business_id:    bizByCode.id,
+                last_active_at: new Date().toISOString(),
+              }, { onConflict: 'from_phone' });
+
+              // Charger la config active du business
+              const { data: c } = await supabase
+                .from('whatsapp_configs')
+                .select('*, businesses(name)')
+                .eq('business_id', bizByCode.id)
+                .eq('is_active', true)
+                .maybeSingle();
+              config = c;
+            } else {
+              // 2. Pas de code : chercher une session active
+              const { data: session } = await supabase
+                .from('whatsapp_shared_sessions')
+                .select('business_id')
+                .eq('from_phone', fromPhone)
+                .maybeSingle();
+
+              if (session) {
+                // Rafraîchir last_active_at à chaque message
+                await supabase
+                  .from('whatsapp_shared_sessions')
+                  .update({ last_active_at: new Date().toISOString() })
+                  .eq('from_phone', fromPhone);
+
+                const { data: c } = await supabase
+                  .from('whatsapp_configs')
+                  .select('*, businesses(name)')
+                  .eq('business_id', session.business_id)
+                  .eq('is_active', true)
+                  .maybeSingle();
+                config = c;
+              } else {
+                // Aucune session — demander le code de routage
+                if (SYSTEM_WA_ACCESS_TOKEN && SYSTEM_WA_PHONE_NUMBER_ID) {
+                  await fetch(
+                    `https://graph.facebook.com/v19.0/${SYSTEM_WA_PHONE_NUMBER_ID}/messages`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${SYSTEM_WA_ACCESS_TOKEN}`,
+                        'Content-Type':  'application/json',
+                      },
+                      body: JSON.stringify({
+                        messaging_product: 'whatsapp',
+                        recipient_type:    'individual',
+                        to:                fromPhone,
+                        type:              'text',
+                        text: {
+                          preview_url: false,
+                          body: '👋 Bienvenue sur ELM !\n\nPour commencer, envoyez le *code de votre boutique* (ex: SENU1A2B).\n\n_Ce code vous a été communiqué lors de votre inscription._',
+                        },
+                      }),
+                    },
+                  );
+                }
+              }
+            }
+
+            // Pour le numéro partagé, on force le token ELM (ne jamais utiliser le token client)
+            if (config) {
+              if (!SYSTEM_WA_ACCESS_TOKEN) {
+                console.error('[WhatsApp] SYSTEM_WA_ACCESS_TOKEN not set — cannot send via shared number');
+                config = null;
+              } else {
+                config.access_token    = SYSTEM_WA_ACCESS_TOKEN;
+                config.phone_number_id = SYSTEM_WA_PHONE_NUMBER_ID;
+              }
+            }
+          } else {
+            // MODE DÉDIÉ (Numéro propre au client)
+            const { data: c } = await supabase
+              .from('whatsapp_configs')
+              .select('*, businesses(name)')
+              .eq('phone_number_id', phoneId)
+              .eq('is_active', true)
+              .maybeSingle();
+            config = c;
+            
+            // Fallback sur le token ELM si celui du client est vide (Embedded Signup logic)
+            if (config && !config.access_token) {
+              config.access_token = SYSTEM_WA_ACCESS_TOKEN;
+            }
+          }
+
+          // ─── FIN ROUTAGE ────────────────────────────────────────────────
+
+          if (config) {
+            config.business_name = config.businesses?.name || '';
+            await processMessage(supabase, config, msg, value.contacts ?? []);
+          }
         }
 
         for (const status of value.statuses ?? []) {
@@ -151,10 +250,8 @@ serve(async (req) => {
         }
       }
     }
-
     return new Response('OK', { status: 200 });
   }
-
   return new Response('Method not allowed', { status: 405 });
 });
 
