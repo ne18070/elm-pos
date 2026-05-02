@@ -10,6 +10,9 @@ export function normalizeWhatsAppPhone(phone: string | null | undefined): string
   if (n.startsWith('0') && !n.startsWith('00')) {
     n = '221' + n.slice(1);
   }
+  if (/^[37]\d{8}$/.test(n)) {
+    n = '221' + n;
+  }
   return n.replace(/^\+/, '');
 }
 
