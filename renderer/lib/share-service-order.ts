@@ -78,7 +78,7 @@ export async function shareServiceOrderViaWhatsApp(
     if (!phone) throw new Error('Numéro de téléphone du client manquant');
 
     const orderRef = `OT-${String(order.order_number).padStart(4, '0')}`;
-    const trackingToken = options.includeTracking ? await getOrCreateTrackingToken(business.id, order.id, phone) : null;
+    const trackingToken = options.includeTracking ? await getOrCreateTrackingToken(business.id, order.id, 'service_order', phone) : null;
     const trackingUrl = trackingToken ? getTrackingUrl(trackingToken) : null;
     
     let message = '';

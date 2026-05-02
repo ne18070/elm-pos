@@ -134,46 +134,46 @@
 
   .label {
     @apply block text-[10px] font-black uppercase tracking-widest mb-1.5;
-    color: rgb(var(--text-placeholder));
+    color: rgb(var(--text-secondary));
   }
 }
 
 /* ─── MODE CLAIR ──────────────────────────────────────────────────────────── */
 
 [data-theme="light"] {
-  --surface:        248 250 252;  /* slate-50 */
+  --surface:        244 246 248;
   --surface-card:   255 255 255;
   --surface-input:  255 255 255;
-  --surface-border: 226 232 240;  /* slate-200 */
+  --surface-border: 226 232 240;
   --surface-hover:  241 245 249;
 
-  --text-base:        15 23 42;     /* slate-900 */
-  --text-secondary:   71 85 105;    /* slate-600 */
-  --text-placeholder: 148 163 184;  /* slate-400 */
+  --text-base:         15 23 42;
+  --text-secondary:    71 85 105;
+  --text-placeholder: 100 116 139;
 
-  /* Status — versions foncées lisibles sur fond blanc/pastel */
-  --color-success:  21 128 61;    /* green-700 */
-  --color-warning:  161 98 7;     /* amber-700 */
-  --color-error:    185 28 28;    /* red-700 */
-  --color-info:     3 105 161;    /* sky-700 */
+  --color-success: 21 128 61;
+  --color-warning: 180 83 9;
+  --color-error:   185 28 28;
+  --color-info:    3 105 161;
 
-  /* Badge — pastels très doux */
-  --badge-success:  220 252 231;  /* green-100 */
-  --badge-warning:  254 243 199;  /* amber-100 */
-  --badge-error:    254 226 226;  /* red-100 */
-  --badge-info:     224 242 254;  /* sky-100 */
+  --badge-success: 220 252 231;
+  --badge-warning: 254 243 199;
+  --badge-error:   254 226 226;
+  --badge-info:    224 242 254;
 
-  --surface-overlay: 241 245 249;  /* slate-100 */
-  --text-brand:      3 105 161;    /* brand-700 */
-  --color-brand:     3 105 161;
-  --color-teal:      15 118 110;   /* teal-700 */
-  --color-purple:    126 34 206;   /* purple-700 */
-  --color-orange:    194 65 12;    /* orange-700 */
-  
-  --badge-brand:     224 242 254;
-  --badge-teal:      204 251 241;
-  --badge-purple:    243 232 255;
-  --badge-orange:    255 237 213;
+  --surface-overlay: 241 245 249;
+
+  --color-brand: 14 116 144;
+  --text-brand: 14 116 144;
+
+  --color-teal:   13 148 136;
+  --color-purple: 147 51 234;
+  --color-orange: 234 88 12;
+
+  --badge-brand: 224 242 254;
+  --badge-teal:  204 251 241;
+  --badge-purple: 243 232 255;
+  --badge-orange: 255 237 213;
 }
 
 /* ── Inputs, labels, boutons ─────────────────────────────────────────────── */
@@ -216,7 +216,7 @@
 }
 [data-theme="light"] .shadow-glow { box-shadow: none !important; }
 [data-theme="light"] input::placeholder,
-[data-theme="light"] textarea::placeholder { color: #94a3b8 !important; }
+[data-theme="light"] textarea::placeholder { color: #a1a1aa !important; }
 
 /* ─── ZONE TOUJOURS SOMBRE ─── */
 .theme-dark {
