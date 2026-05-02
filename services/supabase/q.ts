@@ -16,7 +16,7 @@ export async function q<T = unknown>(query: PromiseLike<{ data: any; error: any 
       // Log technique (auto-instrumentation)
       // On évite de logger si l'erreur vient de la table de monitoring elle-même
       if (queryName !== 'monitoring_vitals_insert') {
-        supabase.from('monitoring_vitals').insert({
+        (supabase as any).from('monitoring_vitals').insert({
           level: 'error',
           category: 'sql',
           message: error.message || 'Supabase Error',
@@ -31,7 +31,7 @@ export async function q<T = unknown>(query: PromiseLike<{ data: any; error: any 
 
     // Log performance si lent (> 500ms)
     if (duration > 500 && queryName !== 'monitoring_vitals_insert') {
-      supabase.from('monitoring_vitals').insert({
+      (supabase as any).from('monitoring_vitals').insert({
         level: 'perf',
         category: 'sql',
         message: `Slow Query: ${queryName || 'unknown'}`,
