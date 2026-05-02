@@ -111,30 +111,35 @@ export async function billTimeEntries(businessId: string, dossierId: string, ent
   const minutes = totalMinutes % 60;
   const timeStr = `${hours}h${minutes > 0 ? minutes.toString().padStart(2, '0') : ''}`;
 
-  // 2. Create honoraire line
-  const { error: honoraireErr } = await supabase
+  // 2. Create honoraire line — capture id for rollback
+  const { data: honoraire, error: honoraireErr } = await supabase
     .from('honoraires_cabinet')
     .insert({
-      business_id: businessId,
-      dossier_id: dossierId,
-      client_name: clientName,
-      type_prestation: 'consultation',
-      description: `Facturation temps passé (${timeStr}) - ${entries.length} intervention(s)`,
-      montant: totalAmount,
-      montant_paye: 0,
-      status: 'impayé',
-      date_facture: new Date().toISOString().slice(0, 10)
-    });
+      business_id:     businessId,
+      dossier_id:      dossierId,
+      client_name:     clientName,
+      type_prestation: 'temps_facture',
+      description:     `Facturation temps passé (${timeStr}) — ${entries.length} intervention(s)`,
+      montant:         totalAmount,
+      montant_paye:    0,
+      status:          'impayé',
+      date_facture:    new Date().toISOString().slice(0, 10),
+    })
+    .select('id')
+    .single();
 
   if (honoraireErr) throw honoraireErr;
 
-  // 3. Mark entries as billed
+  // 3. Mark entries as billed — rollback honoraire if this fails (prevents duplicate invoice on retry)
   const { error: updateErr } = await supabase
     .from('dossier_time_entries')
-    .update({ is_billed: true })
+    .update({ is_billed: true, updated_at: new Date().toISOString() })
     .in('id', entryIds);
 
-  if (updateErr) throw updateErr;
+  if (updateErr) {
+    await supabase.from('honoraires_cabinet').delete().eq('id', (honoraire as { id: string }).id);
+    throw updateErr;
+  }
 
   await logAction({
     business_id: businessId,

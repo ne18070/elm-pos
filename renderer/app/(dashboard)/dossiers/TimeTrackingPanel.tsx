@@ -280,7 +280,9 @@ export function TimeTrackingPanel({ dossier, businessId, canEdit, onClose }: Pro
                       </button>
                     )}
                     {entry.is_billed && (
-                       <CheckCircle2 size={16} className="text-status-success" title="Facturé" />
+                       <span title="Facturé">
+                         <CheckCircle2 size={16} className="text-status-success" />
+                       </span>
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-border">
