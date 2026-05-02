@@ -41,7 +41,7 @@ export const NAV_SECTIONS: {
       { href: '/caisse',            icon: Vault,         label: 'Gestion de caisse',     permission: 'view_cash_session',      feature: ['caisse', 'retail'],           bizTypes: null           },
       { href: '/orders',            icon: ClipboardList, label: 'Commandes',          permission: 'view_orders',            feature: ['pos', 'caisse', 'retail'],   bizTypes: null           },
       { href: '/services',          icon: Wrench,        label: 'Prestations',        permission: 'view_services',          feature: null,                          bizTypes: ['service']    },
-      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Actes',   permission: 'view_contrats',          feature: 'contrats',                    bizTypes: ['service']    },
+      { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location',   permission: 'view_contrats',          feature: 'contrats',                    bizTypes: null    },
       { href: '/voitures',          icon: Car,           label: 'Vente de Voitures',  permission: 'view_voitures',          feature: 'voitures',                    bizTypes: null           },
       { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour',      feature: null,                bizTypes: ['restaurant'] },
     ]
