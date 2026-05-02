@@ -632,6 +632,59 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['pretentions']['Insert']>;
         Relationships: [];
       };
+      dossier_time_entries: {
+        Row: {
+          id: string;
+          business_id: string;
+          dossier_id: string;
+          user_id: string;
+          date_record: string;
+          duration_minutes: number;
+          hourly_rate: number;
+          total_amount: number;
+          description: string;
+          is_billed: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          dossier_id: string;
+          user_id: string;
+          date_record?: string;
+          duration_minutes: number;
+          hourly_rate?: number;
+          description: string;
+          is_billed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['dossier_time_entries']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: "dossier_time_entries_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dossier_time_entries_dossier_id_fkey";
+            columns: ["dossier_id"];
+            isOneToOne: false;
+            referencedRelation: "dossiers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dossier_time_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       client_tracking_tokens: {
         Row: {
           id: string;

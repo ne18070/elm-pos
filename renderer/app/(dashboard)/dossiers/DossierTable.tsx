@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { 
   Phone, Mail, Receipt, GitBranch, Paperclip, Pencil, 
-  Archive, ArchiveRestore, Filter, X, Search 
+  Archive, ArchiveRestore, Filter, X, Search, Clock
 } from 'lucide-react';
 import { type Dossier } from '@services/supabase/dossiers';
 import { type RefItem } from '@services/supabase/reference-data';
@@ -18,7 +18,7 @@ function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }
 export function DossierTable({ 
   dossiers, statuts, typesAffaire, 
   canEdit, canArchive, showArchived,
-  onEdit, onArchive, onFinances, onWorkflow, onFiles 
+  onEdit, onArchive, onFinances, onWorkflow, onFiles, onTime
 }: { 
   dossiers: Dossier[]; 
   statuts: RefItem[]; 
@@ -31,6 +31,7 @@ export function DossierTable({
   onFinances: (d: Dossier) => void;
   onWorkflow: (d: Dossier) => void;
   onFiles: (d: Dossier) => void;
+  onTime: (d: Dossier) => void;
 }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -148,6 +149,7 @@ export function DossierTable({
                     <td className="px-6 py-4 text-center"><StatusBadge status={d.status} statuts={statuts} /></td>
                     <td className="px-6 py-4 text-right sticky right-0 bg-surface/10 backdrop-blur-sm group-hover:bg-surface/50 transition-colors">
                       <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => onTime(d)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-status-info transition-all" title="Saisir du temps (Chronos)"><Clock className="w-4 h-4" /></button>
                         <button onClick={() => onFinances(d)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-status-success transition-all" title="Honoraires & Finances"><Receipt className="w-4 h-4" /></button>
                         <button onClick={() => onWorkflow(d)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-content-brand transition-all" title="Suivi Processus"><GitBranch className="w-4 h-4" /></button>
                         <button onClick={() => onFiles(d)} className="p-2 rounded-lg hover:bg-surface-card text-content-secondary hover:text-status-purple transition-all" title="Pièces Jointes"><Paperclip className="w-4 h-4" /></button>
@@ -192,6 +194,7 @@ export function DossierTable({
 
                 <div className="flex items-center justify-between pt-3 border-t border-surface-border/50">
                   <div className="flex items-center gap-1">
+                    <button onClick={() => onTime(d)} className="p-2.5 rounded-xl bg-surface-card text-content-secondary hover:text-status-info transition-all"><Clock className="w-4 h-4" /></button>
                     <button onClick={() => onFinances(d)} className="p-2.5 rounded-xl bg-surface-card text-content-secondary hover:text-status-success transition-all"><Receipt className="w-4 h-4" /></button>
                     <button onClick={() => onWorkflow(d)} className="p-2.5 rounded-xl bg-surface-card text-content-secondary hover:text-content-brand transition-all"><GitBranch className="w-4 h-4" /></button>
                     <button onClick={() => onFiles(d)} className="p-2.5 rounded-xl bg-surface-card text-content-secondary hover:text-status-purple transition-all"><Paperclip className="w-4 h-4" /></button>

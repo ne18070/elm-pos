@@ -25,8 +25,9 @@ export interface WhatsAppConfig {
   msg_shipping_question:    string;
   msg_address_request:      string;
   msg_delivery_confirmation: string;
+  use_shared_number: boolean;
   created_at:        string;
-  updated_at:      string;
+  updated_at:        string;
 }
 
 export type WhatsAppConfigForm = Pick<

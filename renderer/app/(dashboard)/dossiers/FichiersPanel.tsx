@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, HardDrive, Upload, ExternalLink, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, HardDrive, Upload, ExternalLink, Trash2, AlertCircle, Share2, MessageCircle } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { ConfirmModal } from '@/components/ui/Modal';
@@ -9,6 +9,7 @@ import {
   type DossierFichier, type StorageInfo 
 } from '@services/supabase/dossier-fichiers';
 import { type Dossier } from '@services/supabase/dossiers';
+import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -20,6 +21,7 @@ export function FichiersPanel({
   const [fichiers, setFichiers] = useState<DossierFichier[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<DossierFichier | null>(null);
   const { error: notifError, success } = useNotificationStore();
 
@@ -74,6 +76,26 @@ export function FichiersPanel({
     } catch (e) { notifError(String(e)); }
   }
 
+  async function handleRequestFiles() {
+    setGeneratingLink(true);
+    try {
+      const token = await getOrCreateTrackingToken(businessId, dossier.id, 'dossier', dossier.client_phone);
+      const url = `${window.location.origin}/upload/${token}`;
+      
+      await navigator.clipboard.writeText(url);
+      success('Lien de dépôt sécurisé copié');
+      
+      if (dossier.client_phone) {
+        const msg = `Bonjour, merci de nous transmettre les documents pour votre dossier ${dossier.reference} via ce lien sécurisé : ${url}`;
+        window.open(`https://wa.me/${dossier.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+      }
+    } catch (err) {
+      notifError(String(err));
+    } finally {
+      setGeneratingLink(false);
+    }
+  }
+
   return (
     <SideDrawer
       isOpen={true}
@@ -100,6 +122,15 @@ export function FichiersPanel({
           </span>
           <input type="file" multiple onChange={e => handleFiles(e.target.files)} className="hidden" disabled={uploading} />
         </label>
+
+        <button
+          onClick={handleRequestFiles}
+          disabled={generatingLink}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-badge-info/30 border border-status-info/20 rounded-2xl text-status-info hover:bg-badge-info/50 transition-all font-bold text-xs uppercase tracking-widest"
+        >
+          {generatingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+          Demander des pièces au client
+        </button>
 
         {loading ? <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div> : fichiers.length === 0 ? (
           <div className="py-20 text-center opacity-30">

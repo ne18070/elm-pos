@@ -35,6 +35,21 @@ export interface HonoraireLine {
   date_facture:    string;
 }
 
+export interface DossierTimeEntry {
+  id:               string;
+  business_id:      string;
+  dossier_id:       string;
+  user_id:          string;
+  date_record:      string;
+  duration_minutes: number;
+  hourly_rate:      number;
+  total_amount:     number;
+  description:      string;
+  is_billed:        boolean;
+  created_at:       string;
+  users?:           { full_name: string };
+}
+
 export async function getDossiers(businessId: string): Promise<Dossier[]> {
   const { data, error } = await supabase
     .from('dossiers')
@@ -43,6 +58,91 @@ export async function getDossiers(businessId: string): Promise<Dossier[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data || [];
+}
+
+// ─── Time Tracking ────────────────────────────────────────────────────────────
+
+export async function getDossierTimeEntries(dossierId: string): Promise<DossierTimeEntry[]> {
+  const { data, error } = await supabase
+    .from('dossier_time_entries')
+    .select('*, users(full_name)')
+    .eq('dossier_id', dossierId)
+    .order('date_record', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createDossierTimeEntry(businessId: string, payload: Partial<DossierTimeEntry>): Promise<DossierTimeEntry> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data, error } = await supabase
+    .from('dossier_time_entries')
+    .insert({ ...payload, business_id: businessId, user_id: user.id })
+    .select('*, users(full_name)')
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteDossierTimeEntry(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('dossier_time_entries')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function billTimeEntries(businessId: string, dossierId: string, entryIds: string[], clientName: string): Promise<void> {
+  // 1. Fetch entries to sum amounts and create description
+  const { data: entries, error: fetchErr } = await supabase
+    .from('dossier_time_entries')
+    .select('*')
+    .in('id', entryIds)
+    .eq('is_billed', false);
+
+  if (fetchErr) throw fetchErr;
+  if (!entries || entries.length === 0) throw new Error('No unbilled entries found');
+
+  const totalAmount = entries.reduce((acc: number, e: any) => acc + (Number(e.total_amount) || 0), 0);
+  const totalMinutes = entries.reduce((acc: number, e: any) => acc + (e.duration_minutes || 0), 0);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const timeStr = `${hours}h${minutes > 0 ? minutes.toString().padStart(2, '0') : ''}`;
+
+  // 2. Create honoraire line
+  const { error: honoraireErr } = await supabase
+    .from('honoraires_cabinet')
+    .insert({
+      business_id: businessId,
+      dossier_id: dossierId,
+      client_name: clientName,
+      type_prestation: 'consultation',
+      description: `Facturation temps passé (${timeStr}) - ${entries.length} intervention(s)`,
+      montant: totalAmount,
+      montant_paye: 0,
+      status: 'impayé',
+      date_facture: new Date().toISOString().slice(0, 10)
+    });
+
+  if (honoraireErr) throw honoraireErr;
+
+  // 3. Mark entries as billed
+  const { error: updateErr } = await supabase
+    .from('dossier_time_entries')
+    .update({ is_billed: true })
+    .in('id', entryIds);
+
+  if (updateErr) throw updateErr;
+
+  await logAction({
+    business_id: businessId,
+    action: 'honoraire.added',
+    entity_type: 'dossier',
+    entity_id: dossierId,
+    metadata: { source: 'time_tracking', amount: totalAmount }
+  });
 }
 
 export async function createDossier(businessId: string, payload: Partial<Dossier>): Promise<Dossier> {
