@@ -1,8 +1,6 @@
 import { formatCurrency } from './utils';
 import { generateServiceOrderReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
-import { getWhatsAppConfig, sendWhatsAppReply } from '@services/supabase/whatsapp';
-import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
 import { supabase } from './supabase';
 import { buildPublicDocumentUrl } from './public-links';
 import type { Business } from '@pos-types';
@@ -15,14 +13,6 @@ function toWhatsAppNumber(phone: string): string {
     n = '221' + n.slice(1);
   }
   return n.replace(/^\+/, '');
-}
-
-/** Génère l'URL de suivi public */
-function getTrackingUrl(token: string): string {
-  // En production, on utiliserait le domaine de l'app. 
-  // En Electron, on peut pointer vers une page web si elle existe.
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${baseUrl}/track/${token}`;
 }
 
 /** Génère le PDF de l'OT, l'uploade et retourne l'URL publique */
@@ -54,7 +44,7 @@ export async function generateServiceOrderLink(
   const filename = `${orderRef}.pdf`;
   const filePath = `services/${business.id}/${order.id}/${filename}`;
 
-  // Remove existing file first — upsert fails RLS when the owner field doesn't match the current user
+  // Nettoyage avant upload
   await supabase.storage.from('product-images').remove([filePath]).catch(() => {});
 
   const { error: uploadError } = await supabase.storage
@@ -66,11 +56,11 @@ export async function generateServiceOrderLink(
   return buildPublicDocumentUrl(filePath);
 }
 
-/** Partage de l'OT ou du reçu via WhatsApp */
+/** Partage de l'OT ou du reçu via WhatsApp (MODE DIRECT SIMPLE) */
 export async function shareServiceOrderViaWhatsApp(
   order: ServiceOrder,
   business: Business,
-  userId: string,
+  _userId: string,
   options: { includeTracking?: boolean; type: 'receipt' | 'tracking' | 'status_update' }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -78,21 +68,23 @@ export async function shareServiceOrderViaWhatsApp(
     if (!phone) throw new Error('Numéro de téléphone du client manquant');
 
     const orderRef = `OT-${String(order.order_number).padStart(4, '0')}`;
-    const trackingToken = options.includeTracking ? await getOrCreateTrackingToken(business.id, order.id, 'service_order', phone) : null;
-    const trackingUrl = trackingToken ? getTrackingUrl(trackingToken) : null;
     
+    // 1. Récupérer l'URL du PDF si nécessaire
+    let publicUrl = '';
+    if (options.type === 'receipt') {
+      publicUrl = await generateServiceOrderLink(order, business);
+    }
+
     let message = '';
     const greeting = order.client_name ? `Bonjour ${order.client_name},` : 'Bonjour,';
 
     if (options.type === 'receipt') {
-      const publicUrl = await generateServiceOrderLink(order, business);
       message = `${greeting} voici le reçu pour votre prestation *${orderRef}* 🧾\n\n` +
                 `🔗 Télécharger le PDF : ${publicUrl}\n\n` +
                 `Merci pour votre confiance ! 🙏`;
     } else if (options.type === 'tracking') {
-      if (!trackingUrl) throw new Error('Lien de suivi indisponible');
-      message = `${greeting} voici le lien pour suivre l'avancement de votre prestation *${orderRef}* 📍\n\n` +
-                `${trackingUrl}\n\n` +
+      message = `${greeting} voici le lien pour suivre votre prestation *${orderRef}* 📍\n\n` +
+                `${window.location.origin}/track/${order.id}\n\n` +
                 `À bientôt chez *${business.name}* !`;
     } else {
       // status_update
@@ -100,18 +92,14 @@ export async function shareServiceOrderViaWhatsApp(
       if (order.status === 'en_cours') statusText = 'est maintenant *en cours de traitement* 🛠️';
       else if (order.status === 'termine') statusText = 'est désormais *terminé* ! ✅ Vous pouvez passer le récupérer.';
       else if (order.status === 'paye') statusText = 'a été réglé. Merci ! 💰';
+      
       message = `${greeting} votre service *${orderRef}* ${statusText}\n\n` +
-                (trackingUrl ? `📍 Suivi en temps réel : ${trackingUrl}\n\n` : '') +
                 `À bientôt chez *${business.name}* !`;
     }
 
-    const config = await getWhatsAppConfig(business.id);
-    if (config && config.is_active) {
-       await sendWhatsAppReply(config, phone, message, userId);
-    } else {
-      const url = `https://wa.me/${toWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    // 2. OUVERTURE DIRECTE SANS APPEL API
+    const waUrl = `https://wa.me/${toWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
 
     return { success: true };
   } catch (err: any) {
