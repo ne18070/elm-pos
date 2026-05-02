@@ -25,14 +25,15 @@ export interface WhatsAppConfig {
   msg_shipping_question:    string;
   msg_address_request:      string;
   msg_delivery_confirmation: string;
+  use_shared_number: boolean;
   created_at:        string;
-  updated_at:      string;
+  updated_at:        string;
 }
 
 export type WhatsAppConfigForm = Pick<
   WhatsAppConfig,
   'phone_number_id' | 'access_token' | 'display_phone' | 'is_active' | 'catalog_enabled' | 'welcome_message' | 'menu_keyword' | 'confirm_message' | 'wave_payment_url' | 'enable_pickup' | 'enable_delivery' | 'msg_cart_footer' | 'msg_shipping_question' | 'msg_address_request' | 'msg_delivery_confirmation'
->;
+> & { use_shared_number?: boolean };
 
 export interface WhatsAppMessage {
   id:           string;
@@ -375,14 +376,40 @@ export async function sendWhatsAppDocument(
     throw new Error((err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${res.status}`);
   }
 
-  // Stocker le message sortant
   await supabase.from('whatsapp_messages').insert({
     business_id:  config.business_id,
     from_phone:   phone,
     direction:    'outbound',
     message_type: 'document',
-    body:         `Document: ${filename}`,
+    body:         caption,
     replied_by:   userId,
     status:       'sent',
   });
+}
+
+// --- Health Monitoring (Admin) ------------------------------------------------
+
+export interface WhatsAppHealthRow extends WhatsAppConfig {
+  status_health: 'healthy' | 'token_expired' | 'api_error' | 'unknown';
+  last_health_check_at: string | null;
+  last_api_error_message: string | null;
+  business_name?: string;
+}
+
+export async function getAllWhatsAppConfigsAdmin(): Promise<WhatsAppHealthRow[]> {
+  const { data, error } = await supabase
+    .from('whatsapp_configs')
+    .select('*, businesses(name)')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    business_name: row.businesses?.name
+  }));
+}
+
+export async function runWhatsAppHealthCheck(): Promise<void> {
+  const { error } = await supabase.functions.invoke('check-wa-health');
+  if (error) throw error;
 }

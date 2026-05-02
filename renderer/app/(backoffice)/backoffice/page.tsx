@@ -8,10 +8,11 @@ import { getAllOrganizationsAdmin } from '@services/supabase/business';
 import { getTechnicalVitals } from '@services/supabase/monitoring';
 import { MonitoringTab } from './components/MonitoringTab';
 import { VitalsTab } from './components/VitalsTab';
+import { WhatsAppCenter } from './components/WhatsAppCenter';
 import { CEOTab } from './components/CEOTab';
 import { CTOTab } from './components/CTOTab';
 
-type Tab = 'monitoring' | 'vitals' | 'ceo' | 'cto';
+type Tab = 'monitoring' | 'vitals' | 'whatsapp' | 'ceo' | 'cto';
 
 export default function BackofficeDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('monitoring');
@@ -47,12 +48,13 @@ export default function BackofficeDashboard() {
     { key: 'monitoring', label: 'Activités Business' },
     {
       key: 'vitals', label: 'Santé Technique',
-      badge: stats.errorCount > 0
+      badge: stats.errorCount > 0 
         ? <span className="ml-2 inline-flex w-2 h-2 rounded-full bg-status-error animate-pulse" />
         : undefined,
     },
-    { key: 'ceo', label: 'Dashboard CEO' },
-    { key: 'cto', label: 'Dashboard CTO' },
+    { key: 'whatsapp',   label: 'WhatsApp Center' },
+    { key: 'ceo',        label: 'Dashboard CEO' },
+    { key: 'cto',        label: 'Dashboard CTO' },
   ];
 
   return (
@@ -107,6 +109,7 @@ export default function BackofficeDashboard() {
       <div className="space-y-6">
         {activeTab === 'monitoring' && <MonitoringTab />}
         {activeTab === 'vitals'     && <VitalsTab />}
+        {activeTab === 'whatsapp'   && <WhatsAppCenter />}
         {activeTab === 'ceo'        && <CEOTab />}
         {activeTab === 'cto'        && <CTOTab />}
       </div>

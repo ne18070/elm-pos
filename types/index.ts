@@ -52,6 +52,7 @@ export interface Business {
   webhook_whitelist?: string[];
   receipt_footer?: string;
   stock_units?: string[];
+  whatsapp_routing_code?: string;
   types: string[];
   features: string[];
   onboarding_done?: boolean;

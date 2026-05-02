@@ -51,6 +51,7 @@ export type Database = {
           receipt_footer: string | null;
           stock_units: Json | null;
           industry_sector: string | null;
+          whatsapp_routing_code: string | null;
           onboarding_done: boolean;
           owner_id: string;
           created_at: string;
@@ -631,6 +632,59 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['pretentions']['Insert']>;
         Relationships: [];
       };
+      dossier_time_entries: {
+        Row: {
+          id: string;
+          business_id: string;
+          dossier_id: string;
+          user_id: string;
+          date_record: string;
+          duration_minutes: number;
+          hourly_rate: number;
+          total_amount: number;
+          description: string;
+          is_billed: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          dossier_id: string;
+          user_id: string;
+          date_record?: string;
+          duration_minutes: number;
+          hourly_rate?: number;
+          description: string;
+          is_billed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['dossier_time_entries']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: "dossier_time_entries_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dossier_time_entries_dossier_id_fkey";
+            columns: ["dossier_id"];
+            isOneToOne: false;
+            referencedRelation: "dossiers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "dossier_time_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       client_tracking_tokens: {
         Row: {
           id: string;
@@ -662,6 +716,115 @@ export type Database = {
         };
         Update: Partial<Database['public']['Tables']['client_tracking_tokens']['Insert']>;
         Relationships: [];
+      };
+      whatsapp_configs: {
+        Row: {
+          id: string;
+          business_id: string;
+          phone_number_id: string;
+          access_token: string;
+          verify_token: string;
+          display_phone: string | null;
+          is_active: boolean;
+          use_shared_number: boolean;
+          catalog_enabled: boolean;
+          welcome_message: string;
+          menu_keyword: string;
+          confirm_message: string;
+          wave_payment_url: string | null;
+          enable_pickup: boolean;
+          enable_delivery: boolean;
+          msg_cart_footer: string;
+          msg_shipping_question: string;
+          msg_address_request: string;
+          msg_delivery_confirmation: string;
+          status_health: string;
+          last_health_check_at: string | null;
+          last_api_error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          phone_number_id: string;
+          access_token: string;
+          verify_token: string;
+          display_phone?: string | null;
+          is_active?: boolean;
+          use_shared_number?: boolean;
+          catalog_enabled?: boolean;
+          welcome_message?: string;
+          menu_keyword?: string;
+          confirm_message?: string;
+          wave_payment_url?: string | null;
+          enable_pickup?: boolean;
+          enable_delivery?: boolean;
+          msg_cart_footer?: string;
+          msg_shipping_question?: string;
+          msg_address_request?: string;
+          msg_delivery_confirmation?: string;
+          status_health?: string;
+          last_health_check_at?: string | null;
+          last_api_error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['whatsapp_configs']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_configs_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: true;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      monitoring_vitals: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          business_id: string | null;
+          level: string;
+          category: string;
+          message: string;
+          context: Json;
+          latency_ms: number | null;
+          user_agent: string | null;
+          url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          business_id?: string | null;
+          level: string;
+          category: string;
+          message: string;
+          context?: Json;
+          latency_ms?: number | null;
+          user_agent?: string | null;
+          url?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['monitoring_vitals']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_vitals_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "monitoring_vitals_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: {

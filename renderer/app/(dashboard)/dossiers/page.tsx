@@ -32,6 +32,7 @@ import { WorkflowPanel } from './WorkflowPanel';
 import { FichiersPanel } from './FichiersPanel';
 import { ProcessusManager } from './ProcessusManager';
 import { ConfigTab } from './ConfigTab';
+import { TimeTrackingPanel } from './TimeTrackingPanel';
 
 export default function DossiersPage() {
   const { business, user } = useAuthStore();
@@ -44,14 +45,17 @@ export default function DossiersPage() {
   const [tribunaux, setTribunaux] = useState<RefItem[]>([]);
   const [statuts, setStatuts] = useState<RefItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal/Panel states
   const [modal, setModal] = useState<'new' | Dossier | null>(null);
   const [workflowPanel, setWorkflowPanel] = useState<Dossier | null>(null);
   const [fichiersPanel, setFichiersPanel] = useState<Dossier | null>(null);
   const [financesPanel, setFinancesPanel] = useState<Dossier | null>(null);
-  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
+  const [timePanel, setTimePanel] = useState<Dossier | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+
+  // Initialize with null to avoid property mismatch errors
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
 
   const load = useCallback(async () => {
     if (!business) return;
@@ -72,12 +76,22 @@ export default function DossiersPage() {
   }, [business, notifError]);
 
   const loadStorage = useCallback(async () => {
-    if (business) getStorageInfo(business.id).then(setStorageInfo).catch(() => {});
+    if (business) {
+      try {
+        const info = await getStorageInfo(business.id);
+        setStorageInfo(info);
+      } catch (e) {
+        console.warn('Failed to load storage info', e);
+      }
+    }
   }, [business]);
 
-  useEffect(() => { load(); loadStorage(); }, [load, loadStorage]);
+  useEffect(() => { 
+    load(); 
+    loadStorage(); 
+  }, [load, loadStorage]);
 
-  // Handle URL param 'ref' for deep linking (e.g. from finance dashboard)
+  // Handle URL param 'ref' for deep linking
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
@@ -181,6 +195,7 @@ export default function DossiersPage() {
                 onFinances={setFinancesPanel}
                 onWorkflow={setWorkflowPanel}
                 onFiles={setFichiersPanel}
+                onTime={setTimePanel}
               />
             )}
           </div>
@@ -231,6 +246,15 @@ export default function DossiersPage() {
           businessId={business.id} 
           canEdit={can('add_fee')} 
           onClose={() => setFinancesPanel(null)} 
+        />
+      )}
+
+      {timePanel && (
+        <TimeTrackingPanel 
+          dossier={timePanel} 
+          businessId={business.id} 
+          canEdit={can('add_fee')} 
+          onClose={() => setTimePanel(null)} 
         />
       )}
     </div>
