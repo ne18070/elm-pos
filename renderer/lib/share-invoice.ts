@@ -54,12 +54,12 @@ export async function generateInvoiceLink(
   const orderRef = order.id.slice(0, 8).toUpperCase();
   const html = generateThermalReceipt(order, business);
   const pdfBlob = await htmlToPdfBlob(html);
-  const filename = `facture-${orderRef}.pdf`;
+  const filename = `facture-${orderRef}-${Date.now()}.pdf`;
   const filePath = `${business.id}/${order.id}/${filename}`;
 
   const { error: uploadError } = await supabase.storage
     .from('product-images')
-    .upload(filePath, pdfBlob, { upsert: true, contentType: 'application/pdf' });
+    .upload(filePath, pdfBlob, { upsert: false, contentType: 'application/pdf' });
 
   if (uploadError) throw uploadError;
 

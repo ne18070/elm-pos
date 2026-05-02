@@ -108,7 +108,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       triggerWhatsAppShare(order.customer_phone || '', text);
       success('Lien préparé pour WhatsApp');
     } catch (err) {
-      notifError("Erreur lors de l'envoi WhatsApp");
+      notifError(toUserError(err));
     } finally {
       setSharingWa(false);
     }
@@ -122,7 +122,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       await navigator.clipboard.writeText(url);
       success('Lien copié dans le presse-papier');
     } catch (err) {
-      notifError("Erreur lors de la génération du lien");
+      notifError(toUserError(err));
     } finally {
       setCopying(false);
     }
