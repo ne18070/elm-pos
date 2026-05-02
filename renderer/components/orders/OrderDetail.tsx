@@ -8,6 +8,7 @@ import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
 import { generateInvoiceLink } from '@/lib/share-invoice';
+import { copyTextToClipboard } from '@/lib/clipboard';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
@@ -119,7 +120,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     setCopying(true);
     try {
       const url = await generateInvoiceLink(order, business);
-      await navigator.clipboard.writeText(url);
+      await copyTextToClipboard(url);
       success('Lien copié dans le presse-papier');
     } catch (err) {
       notifError(toUserError(err));

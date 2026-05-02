@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
 import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
+import { copyTextToClipboard } from '@/lib/clipboard';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
 import { createOrder } from '@services/supabase/orders';
@@ -390,7 +391,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     try {
       const { generateInvoiceLink } = await import('@/lib/share-invoice');
       const url = await generateInvoiceLink(ordre, business);
-      await navigator.clipboard.writeText(url);
+      await copyTextToClipboard(url);
       notifSuccess('Lien copié dans le presse-papier');
     } catch (err) {
       console.error('Link generation error:', err);
