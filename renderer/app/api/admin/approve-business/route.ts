@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Create user via invite to get a userId
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'invite',
       email,
@@ -103,7 +104,24 @@ export async function POST(req: NextRequest) {
     if (linkError) throw new Error(linkError.message);
 
     const userId = linkData.user.id;
-    const activationUrl = linkData.properties?.action_link;
+
+    // Confirm email so we can generate a recovery link (works with implicit flow,
+    // no PKCE verifier needed — same mechanism used by resend-approvals)
+    const { error: confirmError } = await admin.auth.admin.updateUserById(userId, {
+      email_confirm: true,
+    });
+    if (confirmError) throw new Error(confirmError.message);
+
+    // Recovery links redirect with hash tokens (implicit flow), not a PKCE code,
+    // so the client can establish a session without a locally-stored code verifier
+    const { data: recoveryData, error: recoveryError } = await admin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${siteUrl()}/reset-password?type=invite` },
+    });
+    if (recoveryError) throw new Error(recoveryError.message);
+
+    const activationUrl = recoveryData.properties?.action_link;
     if (!activationUrl) throw new Error("Lien d'activation introuvable");
 
     const { error: userErr } = await admin.from('users').upsert({
