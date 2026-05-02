@@ -158,7 +158,7 @@ export default function PublicTrackingView() {
           .from('client_tracking_tokens')
           .select('dossier_id, service_order_id, instance_id, expires_at') as any)
           .eq('token', String(token))
-          .single();
+          .maybeSingle();
 
         if (tokenError || !tokenData) { setError("Lien de suivi invalide ou expiré."); return; }
         if (new Date(tokenData.expires_at) < new Date()) { setError("Ce lien de suivi a expiré."); return; }

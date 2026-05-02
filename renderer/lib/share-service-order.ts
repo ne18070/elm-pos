@@ -2,15 +2,15 @@ import { formatCurrency } from './utils';
 import { generateServiceOrderReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
 import { supabase } from './supabase';
-import { buildPublicDocumentUrl } from './public-links';
+import { buildPublicDocumentUrl, getPublicSiteUrl } from './public-links';
 import { triggerWhatsAppShare } from './whatsapp-direct';
+import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
 import type { Business } from '@pos-types';
 import type { ServiceOrder } from '@services/supabase/service-orders';
 
 /** Génère l'URL de suivi public */
 function getTrackingUrl(token: string): string {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${baseUrl}/track/${token}`;
+  return `${getPublicSiteUrl()}/track/${token}`;
 }
 
 /** Génère le PDF de l'OT, l'uploade et retourne l'URL publique */
@@ -73,6 +73,17 @@ export async function shareServiceOrderViaWhatsApp(
       publicUrl = await generateServiceOrderLink(order, business);
     }
 
+    let trackingUrl = '';
+    if (options.includeTracking || options.type === 'tracking') {
+      const token = await getOrCreateTrackingToken(
+        business.id,
+        order.id,
+        'service_order',
+        order.client_phone
+      );
+      trackingUrl = getTrackingUrl(token);
+    }
+
     let message = '';
     const greeting = order.client_name ? `Bonjour ${order.client_name},` : 'Bonjour,';
 
@@ -82,7 +93,7 @@ export async function shareServiceOrderViaWhatsApp(
                 `Merci pour votre confiance ! 🙏`;
     } else if (options.type === 'tracking') {
       message = `${greeting} voici le lien pour suivre votre prestation *${orderRef}* 📍\n\n` +
-                `${window.location.origin}/track/${order.id}\n\n` +
+                `${trackingUrl}\n\n` +
                 `À bientôt chez *${business.name}* !`;
     } else {
       // status_update
@@ -92,6 +103,7 @@ export async function shareServiceOrderViaWhatsApp(
       else if (order.status === 'paye') statusText = 'a été réglé. Merci ! 💰';
       
       message = `${greeting} votre service *${orderRef}* ${statusText}\n\n` +
+                (trackingUrl ? `Suivi : ${trackingUrl}\n\n` : '') +
                 `À bientôt chez *${business.name}* !`;
     }
 
