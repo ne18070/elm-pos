@@ -15,10 +15,10 @@ import {
   getVehicles, toggleVehicleAvailability,
   getTemplates, deleteTemplate,
   getContracts, sendContract, archiveContract, cancelContract,
-  buildWhatsAppLink,
   type RentalVehicle, type ContractTemplate, type Contract,
 } from '@services/supabase/contracts';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 
 // Shared Components & Utils
 import {
@@ -633,13 +633,13 @@ export default function ContratsPage() {
               >
                 <ExternalLink className="w-4 h-4" /> Aperçu
               </a>
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Réservez votre véhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}`}
-                target="_blank" rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => triggerWhatsAppShare(null, `Réservez votre véhicule en ligne : ${getAppUrl()}/location/${buildPublicBusinessRef(business.name, business.public_slug)}`)}
                 className="btn-primary flex items-center justify-center gap-2 text-sm h-10"
               >
                 <Share2 className="w-4 h-4" /> WhatsApp
-              </a>
+              </button>
             </div>
           </div>
         </Modal>

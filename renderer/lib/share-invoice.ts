@@ -7,19 +7,10 @@
 import { formatCurrency } from './utils';
 import { generateThermalReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
-import { getWhatsAppConfig, sendWhatsAppDocument } from '@services/supabase/whatsapp';
 import { supabase } from './supabase';
 import { buildPublicDocumentUrl } from './public-links';
+import { triggerWhatsAppShare } from './whatsapp-direct';
 import type { Order, Business } from '@pos-types';
-
-/** Normalise un numéro de téléphone pour wa.me (chiffres uniquement, sans +) */
-function toWhatsAppNumber(phone: string): string {
-  let n = phone.replace(/[^\d+]/g, '');
-  if (n.startsWith('0') && !n.startsWith('00')) {
-    n = '221' + n.slice(1);
-  }
-  return n.replace(/^\+/, '');
-}
 
 export interface WhatsAppOptions {
   phone?: string;
@@ -43,15 +34,14 @@ export function openWhatsApp({
   const totalLine  = total != null && currency
     ? `\n*Total :* ${formatCurrency(total, currency)}`
     : '';
-  const text = encodeURIComponent(
-    `${greeting} veuillez trouver ci-joint votre facture n° *${orderRef}* 🧾${totalLine}\n\nMerci pour votre confiance ! 🙏`
-  );
+  const text = `${greeting} veuillez trouver ci-joint votre facture n° *${orderRef}* 🧾${totalLine}\n\nMerci pour votre confiance ! 🙏`;
 
-  const url = phone
-    ? `https://wa.me/${toWhatsAppNumber(phone)}?text=${text}`
-    : `https://wa.me/?text=${text}`;
-
-  window.open(url, '_blank', 'noopener,noreferrer');
+  if (phone) {
+    triggerWhatsAppShare(phone, text);
+  } else {
+    // Fallback sans numéro (ouvre WhatsApp pour choisir contact)
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  }
 }
 
 /**
@@ -77,13 +67,13 @@ export async function generateInvoiceLink(
 }
 
 /**
- * Génère le PDF de la facture, l'uploade sur Supabase Storage et l'envoie via WhatsApp Business API.
- * Si l'API n'est pas configurée, bascule sur l'ouverture de l'application avec le lien PDF.
+ * Génère le PDF de la facture, l'uploade sur Supabase Storage et l'envoie via WhatsApp.
+ * On privilégie le partage direct via l'application locale pour la simplicité.
  */
 export async function sendInvoiceViaWhatsApp(
   order: Order,
   business: Business,
-  userId: string,
+  _userId: string,
   targetPhone?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -92,36 +82,16 @@ export async function sendInvoiceViaWhatsApp(
 
     const publicUrl = await generateInvoiceLink(order, business);
     const orderRef = order.id.slice(0, 8).toUpperCase();
-    const filename = `facture-${orderRef}.pdf`;
 
-    // 2. Vérifier la config API Meta
-    const config = await getWhatsAppConfig(business.id);
+    // Partage via l'application locale (Ouvre WhatsApp)
+    const greeting  = order.customer_name ? `Bonjour ${order.customer_name},` : 'Bonjour,';
+    const text = `${greeting} voici votre facture n° *${orderRef}* 🧾\n\n` +
+      `🔗 Télécharger le PDF : ${publicUrl}\n\n` +
+      `Merci pour votre confiance ! 🙏`;
 
-    if (config && config.is_active) {
-      // OPTION A : Envoi direct via API Meta (Silencieux pour l'utilisateur)
-      await sendWhatsAppDocument(
-        config,
-        phone,
-        publicUrl,
-        filename,
-        `Votre facture ${business.name}`,
-        userId
-      );
-      return { success: true };
-    } else {
-      // OPTION B : Partage via l'application locale (Ouvre WhatsApp)
-      const greeting  = order.customer_name ? `Bonjour ${order.customer_name},` : 'Bonjour,';
-      const text = encodeURIComponent(
-        `${greeting} voici votre facture n° *${orderRef}* 🧾\n\n` +
-        `🔗 Télécharger le PDF : ${publicUrl}\n\n` +
-        `Merci pour votre confiance ! 🙏`
-      );
-
-      const url = `https://wa.me/${toWhatsAppNumber(phone)}?text=${text}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-      
-      return { success: true };
-    }
+    triggerWhatsAppShare(phone, text);
+    
+    return { success: true };
   } catch (err: any) {
     console.error('WhatsApp share failed:', err);
     return { success: false, error: err.message };

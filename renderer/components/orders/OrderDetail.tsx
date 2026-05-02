@@ -7,7 +7,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { sendInvoiceViaWhatsApp, generateInvoiceLink } from '@/lib/share-invoice';
+import { generateInvoiceLink } from '@/lib/share-invoice';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
@@ -94,15 +95,18 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   }, [showCompleteForm, remaining, isWhatsAppPending, order.total]);
 
   async function handleWhatsAppShare() {
-    if (!order || !business || !user) return;
+    if (!order || !business) return;
     setSharingWa(true);
     try {
-      const res = await sendInvoiceViaWhatsApp(order, business, user.id);
-      if (res.success) {
-        success('Facture envoyée par WhatsApp');
-      } else {
-        notifError(res.error || "Erreur lors de l'envoi");
-      }
+      const publicUrl = await generateInvoiceLink(order, business);
+      const orderRef = order.id.slice(0, 8).toUpperCase();
+      const greeting  = order.customer_name ? `Bonjour ${order.customer_name},` : 'Bonjour,';
+      const text = `${greeting} voici votre facture n° *${orderRef}* 🧾\n\n` +
+        `🔗 Télécharger le PDF : ${publicUrl}\n\n` +
+        `Merci pour votre confiance ! 🙏`;
+
+      triggerWhatsAppShare(order.customer_phone || '', text);
+      success('Lien préparé pour WhatsApp');
     } catch (err) {
       notifError("Erreur lors de l'envoi WhatsApp");
     } finally {
@@ -520,5 +524,3 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     </>
   );
 }
-
-

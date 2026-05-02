@@ -10,6 +10,7 @@ import {
 } from '@services/supabase/dossier-fichiers';
 import { type Dossier } from '@services/supabase/dossiers';
 import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -87,7 +88,7 @@ export function FichiersPanel({
       
       if (dossier.client_phone) {
         const msg = `Bonjour, merci de nous transmettre les documents pour votre dossier ${dossier.reference} via ce lien sécurisé : ${url}`;
-        window.open(`https://wa.me/${dossier.client_phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+        triggerWhatsAppShare(dossier.client_phone, msg);
       }
     } catch (err) {
       notifError(String(err));

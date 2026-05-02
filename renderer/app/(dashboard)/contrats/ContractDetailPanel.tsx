@@ -12,10 +12,10 @@ import {
   type Contract, type PaymentMethod, type RentalVehicle, type ContractTemplate,
   PAYMENT_METHOD_LABELS, recordPayment, uploadContractDocument, uploadLessorSignature,
   saveLessorSignature, uploadContractPdf, savePdfUrl, saveContractInspection,
-  buildWhatsAppLink
 } from '@services/supabase/contracts';
 import { imageUrlToDataUrl, generateContractPdf, dataUrlToBlob } from '@/lib/contract-pdf';
 import { toUserError } from '@/lib/user-error';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import DOMPurify from 'dompurify';
 
 export function ContractDetailPanel({
@@ -207,8 +207,10 @@ export function ContractDetailPanel({
 
   function handleWhatsApp() {
     if (!detailContract.client_phone) { notifError('Numéro de téléphone client manquant'); return; }
-    const waLink = buildWhatsAppLink(detailContract.client_phone, link, detailContract.client_name);
-    window.open(waLink, '_blank');
+    triggerWhatsAppShare(
+      detailContract.client_phone,
+      `Bonjour ${detailContract.client_name}, voici votre lien de signature : ${link}`
+    );
   }
 
   return (

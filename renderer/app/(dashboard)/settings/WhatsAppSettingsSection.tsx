@@ -13,6 +13,7 @@ import {
 } from '@services/supabase/whatsapp';
 import { toUserError } from '@/lib/user-error';
 import { cn } from '@/lib/utils';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 
 export function WhatsAppSettingsSection() {
   const { business } = useAuthStore();
@@ -223,8 +224,7 @@ export function WhatsAppSettingsSection() {
 
               <button 
                 onClick={() => {
-                  const url = `https://wa.me/${sharedNumber.replace(/\D/g, '')}?text=${encodeURIComponent(routingCode)}`;
-                  window.open(url, '_blank');
+                  triggerWhatsAppShare(sharedNumber, routingCode);
                 }}
                 className="btn-secondary w-full flex items-center justify-center gap-2 h-12 font-bold"
               >

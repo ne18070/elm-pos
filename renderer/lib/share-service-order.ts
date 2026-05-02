@@ -3,16 +3,14 @@ import { generateServiceOrderReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
 import { supabase } from './supabase';
 import { buildPublicDocumentUrl } from './public-links';
+import { triggerWhatsAppShare } from './whatsapp-direct';
 import type { Business } from '@pos-types';
 import type { ServiceOrder } from '@services/supabase/service-orders';
 
-/** Normalise un numéro de téléphone pour wa.me */
-function toWhatsAppNumber(phone: string): string {
-  let n = phone.replace(/[^\d+]/g, '');
-  if (n.startsWith('0') && !n.startsWith('00')) {
-    n = '221' + n.slice(1);
-  }
-  return n.replace(/^\+/, '');
+/** Génère l'URL de suivi public */
+function getTrackingUrl(token: string): string {
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${baseUrl}/track/${token}`;
 }
 
 /** Génère le PDF de l'OT, l'uploade et retourne l'URL publique */
@@ -97,9 +95,8 @@ export async function shareServiceOrderViaWhatsApp(
                 `À bientôt chez *${business.name}* !`;
     }
 
-    // 2. OUVERTURE DIRECTE SANS APPEL API
-    const waUrl = `https://wa.me/${toWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    // 2. OUVERTURE DIRECTE VIA HELPER
+    triggerWhatsAppShare(phone, message);
 
     return { success: true };
   } catch (err: any) {
