@@ -11,6 +11,7 @@ import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { getMyPermissions } from '@services/supabase/permissions';
 import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
+import { setMonitoringUser } from '@/lib/analytics';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
@@ -25,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadAllData = useCallback(async (sessionUser: { id: string }, profile: any) => {
     setUser(profile as never);
+    // Alimenter le cache monitoring — élimine les appels getUser() sur chaque log d'erreur
+    setMonitoringUser(sessionUser.id, profile.business_id ?? null);
 
     // Superadmin → uniquement le backoffice
     if (profile.is_superadmin) {

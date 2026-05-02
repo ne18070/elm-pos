@@ -58,8 +58,8 @@ export function DossierTable({
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative group flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted group-focus-within:text-content-brand transition-colors" />
-          <input 
-            className="w-full bg-surface border border-surface-border rounded-xl pl-11 pr-4 py-2.5 text-sm text-content-primary placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" 
+          <input
+            className="input w-full pl-11"
             placeholder="Référence, client, adversaire..." 
             value={search} 
             onChange={e => setSearch(e.target.value)} 
@@ -79,7 +79,7 @@ export function DossierTable({
           <div className="flex-1 min-w-[150px]">
             <label className="text-[10px] font-black uppercase text-content-muted mb-1 block">Statut</label>
             <select 
-              className="input h-9 text-xs bg-surface-overlay" 
+              className="input h-9 text-xs bg-surface-input" 
               value={statusFilter} 
               onChange={e => setStatusFilter(e.target.value)}
             >
@@ -90,7 +90,7 @@ export function DossierTable({
           <div className="flex-1 min-w-[150px]">
             <label className="text-[10px] font-black uppercase text-content-muted mb-1 block">Type d'affaire</label>
             <select 
-              className="input h-9 text-xs bg-surface-overlay" 
+              className="input h-9 text-xs bg-surface-input" 
               value={typeFilter} 
               onChange={e => setTypeFilter(e.target.value)}
             >

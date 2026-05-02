@@ -78,12 +78,12 @@ export function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch 
             onClick={handleShareTracking}
             disabled={sharing}
             title="Partager le lien de suivi WhatsApp"
-            className="p-2 rounded-lg bg-badge-success text-status-success hover:bg-status-success hover:text-white transition-all disabled:opacity-50"
+            className="p-2 rounded-lg bg-badge-success text-status-success hover:opacity-80 transition-all disabled:opacity-50"
           >
             {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
           </button>
           {canLaunch && (
-            <button onClick={() => setShowPicker(!showPicker)} className="bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-lg hover:bg-brand-500 transition-all">
+            <button onClick={() => setShowPicker(!showPicker)} className="btn-primary text-[10px] uppercase tracking-widest">
               {showPicker ? 'Fermer' : 'Lancer'}
             </button>
           )}
@@ -92,7 +92,7 @@ export function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch 
     >
       <div className="space-y-3">
         {showPicker && canLaunch && (
-          <div className="bg-surface-overlay border border-surface-border rounded-xl overflow-hidden mb-4 shadow-xl animate-in fade-in slide-in-from-top-2">
+          <div className="bg-surface-card border border-surface-border rounded-xl overflow-hidden mb-4 shadow-xl animate-in fade-in slide-in-from-top-2">
             {workflows.length === 0 ? (
               <p className="p-4 text-xs text-content-muted italic text-center">Aucun workflow actif</p>
             ) : (
@@ -102,7 +102,7 @@ export function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch 
             )}
           </div>
         )}
-        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div> : instances.length === 0 ? (
+        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-content-brand" /></div> : instances.length === 0 ? (
           <div className="py-20 text-center space-y-3">
             <GitBranch className="w-10 h-10 text-content-muted mx-auto" />
             <p className="text-xs text-content-muted italic font-medium tracking-tight">Aucun processus en cours pour ce dossier.</p>

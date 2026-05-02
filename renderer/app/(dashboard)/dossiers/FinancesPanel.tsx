@@ -67,7 +67,7 @@ export function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossi
       onClose={onClose}
       title={`Honoraires — ${dossier.reference}`}
       headerActions={canEdit ? (
-        <button onClick={() => setShowAdd(!showAdd)} className="bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-lg hover:bg-brand-500 transition-all">
+        <button onClick={() => setShowAdd(!showAdd)} className="btn-primary text-[10px] uppercase tracking-widest">
           {showAdd ? 'Fermer' : 'Ajouter'}
         </button>
       ) : undefined}
@@ -112,7 +112,7 @@ export function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossi
           </div>
         </div>
 
-        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div> : lines.length === 0 ? (
+        {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-content-brand" /></div> : lines.length === 0 ? (
           <div className="py-20 text-center opacity-30">
             <Receipt className="w-10 h-10 mx-auto mb-2 text-content-muted" />
             <p className="text-[10px] font-black uppercase tracking-widest">Aucune facture liée</p>

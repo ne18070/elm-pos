@@ -19,7 +19,7 @@ export function OperationalKPIs({
     // For now, let's focus on dossier-based KPIs.
 
     return [
-      { label: 'Dossiers ouverts', value: open.length, icon: Scale, color: 'text-brand-500' },
+      { label: 'Dossiers ouverts', value: open.length, icon: Scale, color: 'text-content-brand' },
       { label: 'Audiences à venir', value: upcomingHearings, icon: Calendar, color: 'text-status-info' },
       { label: 'Sans prochaine action', value: noAction, icon: AlertCircle, color: 'text-status-warning' },
       { label: 'Stockage utilisé', value: storageInfo ? `${Math.round(storageInfo.used_pct)}%` : '—', icon: HardDrive, color: storageInfo?.used_pct && storageInfo.used_pct > 90 ? 'text-status-error' : 'text-content-secondary' },

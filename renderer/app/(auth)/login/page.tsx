@@ -13,6 +13,7 @@ import { autoRecordPresence } from '@services/supabase/staff';
 import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
+import { trackError } from '@/lib/analytics';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -41,6 +42,7 @@ export default function LoginPage() {
 
       if (authError) {
         console.error('[Login] Auth error:', authError);
+        trackError('auth', 'login_failed', { reason: authError.message, email_domain: email.split('@')[1] });
         setErreur(authError.message);
         setChargement(false);
         return;

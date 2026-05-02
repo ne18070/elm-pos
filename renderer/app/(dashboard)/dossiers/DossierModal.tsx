@@ -302,7 +302,7 @@ export function DossierModal({
                 <button type="button" onClick={() => setQuickRef({ category: 'type_affaire', label: 'Type d\'affaire' })} className="text-[9px] font-black uppercase text-content-brand hover:text-content-brand transition-all flex items-center gap-1"><Plus className="w-2.5 h-2.5" /> Nouveau</button>
               </div>
               <select className="input" value={form.type_affaire} onChange={(e) => set('type_affaire', e.target.value)}>
-                {localTypesAffaire.map((t) => <option key={t.value} value={t.value} className="bg-gray-900 text-content-primary">{t.label}</option>)}
+                {localTypesAffaire.map((t) => <option key={t.value} value={t.value} className="bg-surface-card text-content-primary">{t.label}</option>)}
               </select>
             </div>
           </div>

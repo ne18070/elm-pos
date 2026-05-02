@@ -1,0 +1,48 @@
+-- Migration: 040_monitoring_whatsapp_alert.sql
+-- Description: Alerte WhatsApp pour erreurs critiques via Supabase Database Webhook
+--
+-- ⚠️  NE PAS utiliser pg_net depuis un trigger pour appeler une Edge Function.
+--     La raison : request.headers n'existe pas dans un trigger → URL = null → crash silencieux.
+--
+-- ✅  Méthode correcte et recommandée par Supabase :
+--     Configurer un Database Webhook via le Dashboard (aucun SQL nécessaire).
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ÉTAPES MANUELLES À FAIRE UNE FOIS (pas de SQL) :
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+-- 1. Déployer l'Edge Function :
+--    supabase functions deploy monitoring-alert --no-verify-jwt
+--
+-- 2. Ajouter les variables d'environnement sur Supabase Dashboard :
+--    > Settings > Edge Functions > Secrets
+--      - SYSTEM_WA_PHONE_NUMBER_ID  = votre Phone Number ID Meta
+--      - SYSTEM_WA_ACCESS_TOKEN     = votre token d'accès WhatsApp Business
+--      - TECHNICAL_WA_NUMBER        = numéro destinataire (ex: 221770000000)
+--
+-- 3. Créer le Webhook :
+--    > Dashboard > Database > Webhooks > "Create a new hook"
+--      - Name         : monitoring-critical-error
+--      - Table        : public.monitoring_vitals
+--      - Events       : INSERT
+--      - Type         : Supabase Edge Functions
+--      - Edge Function: monitoring-alert
+--      - HTTP Headers : laisser vide (Supabase gère l'auth automatiquement)
+--
+--    ✅ Supabase injecte automatiquement le service_role token → pas d'API key en SQL.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- OPTIONNEL : Throttle côté Edge Function
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Pour éviter le spam WhatsApp (ex: 100 erreurs/seconde = 100 messages),
+-- activer le rate limiting dans l'Edge Function (voir index.ts) ou
+-- filtrer via une table d'état dans la DB.
+--
+-- La fonction monitoring-alert/index.ts filtre déjà sur level = 'error'.
+-- On peut ajouter une fenêtre de déduplication (ex: même message dans les 5 min → skip).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Aucun DDL nécessaire — tout est configuré via le Dashboard.
+-- Ce fichier sert de documentation et de checklist de déploiement.
+
+SELECT 'Migration 040 : Configuration via Dashboard Supabase requise. Voir commentaires.' AS status;
