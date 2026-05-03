@@ -282,7 +282,7 @@ export default function ContractSignPage() {
           </p>
           {contract.pdf_url && (
             <a href={contract.pdf_url} target="_blank" rel="noreferrer"
-               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary text-sm font-medium px-5 py-3 rounded-xl transition-colors">
+               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-5 py-3 rounded-xl transition-colors">
               <Download className="w-4 h-4" /> Télécharger le PDF
             </a>
           )}
@@ -304,7 +304,7 @@ export default function ContractSignPage() {
           </p>
           {contract?.pdf_url && (
             <a href={contract.pdf_url} target="_blank" rel="noreferrer"
-               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary text-sm font-medium px-5 py-3 rounded-xl transition-colors">
+               className="mt-4 flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-5 py-3 rounded-xl transition-colors">
               <Download className="w-4 h-4" /> Télécharger mon exemplaire (PDF)
             </a>
           )}
@@ -318,11 +318,11 @@ export default function ContractSignPage() {
   return (
     <MobileShell>
       {/* Header */}
-      <div className="px-4 pt-8 pb-4 text-center border-b border-gray-100">
-        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Contrat de location</p>
-        <h1 className="text-xl font-bold text-gray-900">{contract?.client_name}</h1>
+      <div className="px-4 pt-8 pb-4 text-center border-b border-surface-border bg-surface-card">
+        <p className="text-xs text-content-muted font-medium uppercase tracking-wider mb-1">Contrat de location</p>
+        <h1 className="text-xl font-bold text-content-primary">{contract?.client_name}</h1>
         {contract?.start_date && contract?.end_date && (
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-content-secondary mt-1">
             {new Date(contract.start_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
             {' → '}
             {new Date(contract.end_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -333,7 +333,7 @@ export default function ContractSignPage() {
       {/* Contract body */}
       <div className="px-4 py-6">
         <div
-          className="text-sm text-gray-800 leading-relaxed"
+          className="rounded-xl bg-white p-4 text-sm text-gray-800 leading-relaxed shadow-sm border border-surface-border overflow-auto"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(contract?.body ?? '') }}
         />
       </div>
@@ -342,7 +342,7 @@ export default function ContractSignPage() {
       <div className="px-4 pb-8">
         {stage === 'reading' && (
           <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+            <div className="bg-badge-warning border border-status-warning/30 rounded-2xl p-4 text-sm text-status-warning">
               <p className="font-semibold mb-1">Avant de signer</p>
               <p>Veuillez lire attentivement le contrat ci-dessus et ajouter les documents requis.</p>
             </div>
@@ -357,12 +357,12 @@ export default function ContractSignPage() {
             <button
               onClick={() => setStage('signing')}
               disabled={!requiredDocsReady}
-              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-content-primary font-semibold py-4 rounded-2xl transition-colors text-base"
+              className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-white font-semibold py-4 rounded-2xl transition-colors text-base"
             >
               <PenLine className="w-5 h-5" /> Signer ce contrat
             </button>
             {!requiredDocsReady && (
-              <p className="text-xs text-red-600 text-center">
+              <p className="text-xs text-status-error text-center">
                 Ajoutez {missingRequiredDocs.map((doc) => doc.label).join(' et ')} avant de signer.
               </p>
             )}
@@ -379,10 +379,10 @@ export default function ContractSignPage() {
             />
 
             <div>
-              <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <p className="text-sm font-semibold text-content-primary mb-2 flex items-center gap-2">
                 <PenLine className="w-4 h-4" /> Apposez votre signature ci-dessous
               </p>
-              <div className="relative border-2 border-dashed border-gray-300 rounded-2xl overflow-hidden bg-gray-50">
+              <div className="relative border-2 border-dashed border-surface-border rounded-2xl overflow-hidden bg-white">
                 <canvas
                   ref={canvasRef}
                   width={600}
@@ -395,32 +395,32 @@ export default function ContractSignPage() {
                   onMouseLeave={endDraw}
                 />
                 <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
-                  <div className="w-48 h-px bg-gray-300" />
+                  <div className="w-48 h-px bg-slate-300" />
                 </div>
               </div>
               <div className="flex justify-between items-center mt-2">
-                <p className="text-xs text-gray-400">Dessinez votre signature avec le doigt ou la souris</p>
-                <button onClick={clearCanvas} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
+                <p className="text-xs text-content-muted">Dessinez votre signature avec le doigt ou la souris</p>
+                <button onClick={clearCanvas} className="flex items-center gap-1 text-xs text-content-secondary hover:text-content-primary">
                   <RotateCcw className="w-3.5 h-3.5" /> Effacer
                 </button>
               </div>
             </div>
 
             {submitError && (
-              <p className="text-sm text-red-600 text-center">{submitError}</p>
+              <p className="text-sm text-status-error text-center">{submitError}</p>
             )}
 
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-60 text-content-primary font-semibold py-4 rounded-2xl transition-colors text-base"
+              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-60 text-white font-semibold py-4 rounded-2xl transition-colors text-base"
             >
               {submitting
                 ? <><Loader2 className="w-5 h-5 animate-spin" /> Signature en cours…</>
                 : <><Send className="w-5 h-5" /> Valider ma signature</>}
             </button>
 
-            <p className="text-xs text-gray-400 text-center">
+            <p className="text-xs text-content-muted text-center">
               En validant, vous signez électroniquement ce contrat. Cette action est irréversible.
             </p>
           </div>
@@ -434,15 +434,27 @@ export default function ContractSignPage() {
 
 function MobileShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white" style={{ maxWidth: '640px', margin: '0 auto' }}>
-      {/* Brand header */}
-      <div className="bg-brand-600 text-content-primary px-4 py-3 flex items-center gap-2">
-        <span className="font-bold text-lg tracking-tight">ELM</span>
-        <span className="text-brand-200 text-xs">|</span>
-        <span className="text-brand-100 text-sm">Signature de contrat</span>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <header className="bg-surface-card border-b border-surface-border shadow-sm sticky top-0 z-10">
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
+              <div className="w-full h-full bg-brand-600 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-content-primary" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-bold text-content-primary truncate">Signature de contrat</h1>
+              <p className="text-xs text-content-secondary truncate">Contrat de location</p>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
+            <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />
+          </div>
+        </div>
+      </header>
       {children}
-      <div className="px-4 py-6 text-center text-xs text-gray-400 border-t border-gray-100">
+      <div className="px-4 py-6 text-center text-xs text-content-muted border-t border-surface-border">
         Propulsé par <span className="font-semibold text-brand-500">Elm App</span>
       </div>
     </div>
@@ -465,18 +477,18 @@ function RequiredDocumentsBlock({
 
   if (requiredDocuments.length === 0) {
     return (
-      <div className="border border-gray-200 rounded-2xl p-4">
-        <p className="text-sm font-semibold text-gray-800">Documents requis</p>
-        <p className="text-xs text-gray-500 mt-0.5">Aucun document n'est requis pour ce contrat.</p>
+      <div className="border border-surface-border bg-surface-card rounded-2xl p-4">
+        <p className="text-sm font-semibold text-content-primary">Documents requis</p>
+        <p className="text-xs text-content-secondary mt-0.5">Aucun document n'est requis pour ce contrat.</p>
       </div>
     );
   }
 
   return (
-    <div className="border border-gray-200 rounded-2xl p-4 space-y-3">
+    <div className="border border-surface-border bg-surface-card rounded-2xl p-4 space-y-3">
       <div>
-        <p className="text-sm font-semibold text-gray-800">Documents requis</p>
-        <p className="text-xs text-gray-500 mt-0.5">Ajoutez les pièces demandées avant la signature.</p>
+        <p className="text-sm font-semibold text-content-primary">Documents requis</p>
+        <p className="text-xs text-content-secondary mt-0.5">Ajoutez les pièces demandées avant la signature.</p>
       </div>
 
       <div className="space-y-2">
@@ -485,10 +497,10 @@ function RequiredDocumentsBlock({
           const isUploading = uploadingDoc === required.key;
 
           return (
-            <div key={required.key} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div key={required.key} className="rounded-xl border border-surface-border bg-surface-input p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{required.label}</p>
+                  <p className="text-sm font-medium text-content-primary">{required.label}</p>
                   {existing ? (
                     <a
                       href={existing.url}
@@ -500,10 +512,10 @@ function RequiredDocumentsBlock({
                       <span className="truncate">{existing.name}</span>
                     </a>
                   ) : (
-                    <p className="text-xs text-red-600 mt-1">Document manquant</p>
+                    <p className="text-xs text-status-error mt-1">Document manquant</p>
                   )}
                 </div>
-                <label className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 cursor-pointer hover:border-brand-400">
+                <label className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-surface-card border border-surface-border px-3 py-2 text-xs font-semibold text-content-primary cursor-pointer hover:border-brand-400">
                   {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                   {existing ? 'Remplacer' : 'Ajouter'}
                   <input
@@ -523,7 +535,7 @@ function RequiredDocumentsBlock({
         })}
       </div>
 
-      {docError && <p className="text-xs text-red-600 text-center">{docError}</p>}
+      {docError && <p className="text-xs text-status-error text-center">{docError}</p>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Car, Loader2 } from 'lucide-react';
+import { X, Loader2, Upload, Image as ImageIcon } from 'lucide-react';
 import { SlidePanel, Field } from './SharedComponents';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency } from '@/lib/utils';
@@ -44,6 +44,20 @@ export function VehiclePanel({
   });
 
   function set(k: string, v: string | boolean) { setForm((f) => ({ ...f, [k]: v })); }
+
+  function selectImage(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      notifError('Choisissez une image valide');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      notifError('Image trop lourde. Maximum 5 Mo.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
 
   async function save() {
     if (!form.name.trim()) { notifError('Nom du véhicule requis'); return; }
@@ -93,26 +107,32 @@ export function VehiclePanel({
       <div className="space-y-4">
         {/* Image */}
         <label className="block cursor-pointer">
-          <p className="text-xs text-content-secondary mb-1">Photo</p>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs text-content-secondary">Photo du véhicule</p>
+            <p className="text-[11px] text-content-muted">PNG/JPG, max 5 Mo</p>
+          </div>
           {imagePreview
-            ? <div className="relative w-fit">
-                <img src={imagePreview} alt="" className="h-32 w-auto rounded-xl object-cover border border-surface-border" />
+            ? <div className="relative overflow-hidden rounded-xl border border-surface-border bg-surface-input">
+                <img src={imagePreview} alt="" className="h-40 w-full object-cover" />
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-black/60 px-3 py-2 text-xs text-white">
+                  <span className="truncate">{imageFile?.name ?? 'Photo actuelle'}</span>
+                  <span>Changer</span>
+                </div>
                 <button type="button" onClick={(e) => { e.preventDefault(); setImagePreview(''); setImageFile(null); }}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center">
+                  className="absolute right-2 top-2 w-7 h-7 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
                   <X className="w-3 h-3 text-white" />
                 </button>
               </div>
-            : <div className="h-24 border-2 border-dashed border-surface-border rounded-xl flex items-center justify-center text-content-muted hover:border-brand-500 transition-colors">
-                <Car className="w-6 h-6" />
+            : <div className="h-32 border-2 border-dashed border-surface-border rounded-xl flex flex-col items-center justify-center gap-2 text-content-muted hover:border-brand-500 hover:bg-surface-hover transition-colors">
+                <ImageIcon className="w-7 h-7" />
+                <span className="text-sm font-medium text-content-secondary">Ajouter une photo</span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-content-muted">
+                  <Upload className="w-3 h-3" /> Touchez pour choisir
+                </span>
               </div>
           }
           <input type="file" accept="image/*" className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              setImageFile(f);
-              setImagePreview(URL.createObjectURL(f));
-            }} />
+            onChange={(e) => selectImage(e.target.files?.[0])} />
         </label>
 
         <Field label="Nom *" value={form.name} onChange={(v) => set('name', v)} placeholder="Toyota Corolla" />

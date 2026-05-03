@@ -320,7 +320,7 @@ export function ContractFormPanel({
           {requiredDocuments.length > 0 ? (
             <div className="flex flex-wrap gap-2 mt-3">
               {requiredDocuments.map((doc) => (
-                <span key={doc.key} className="inline-flex items-center gap-1.5 rounded-full bg-surface-input border border-surface-border px-3 py-1 text-xs text-white">
+                <span key={doc.key} className="inline-flex items-center gap-1.5 rounded-full bg-surface-input border border-surface-border px-3 py-1 text-xs text-content-primary">
                   {doc.label}
                   <button type="button" onClick={() => removeRequiredDocument(doc.key)} className="text-content-secondary hover:text-status-error">
                     <X className="w-3 h-3" />

@@ -595,6 +595,32 @@ export async function uploadContractDocument(
   return documents;
 }
 
+export async function deleteContractDocument(
+  contractId: string,
+  documentUrl: string,
+  currentDocuments: ContractDocument[],
+): Promise<ContractDocument[]> {
+  const documents = (currentDocuments ?? []).filter((doc) => doc.url !== documentUrl);
+
+  const { error: updateErr } = await supabase
+    .from('contracts')
+    .update({ documents })
+    .eq('id', contractId);
+  if (updateErr) throw new Error(updateErr.message);
+
+  try {
+    const marker = '/storage/v1/object/public/contracts/';
+    const path = decodeURIComponent(new URL(documentUrl).pathname.split(marker)[1] ?? '');
+    if (path) {
+      await supabase.storage.from('contracts').remove([path]);
+    }
+  } catch {
+    // The database entry is the source of truth; storage cleanup is best-effort.
+  }
+
+  return documents;
+}
+
 // --- Upload image véhicule ----------------------------------------------------
 
 export async function uploadVehicleImage(businessId: string, file: File): Promise<string> {

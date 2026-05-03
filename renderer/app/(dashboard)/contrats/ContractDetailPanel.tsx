@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import {
   ChevronLeft, Pencil, Upload, Loader2, ExternalLink, Banknote, AlertCircle, XCircle,
-  CheckCircle, Download, PenLine, RotateCcw, Send, Share2, RefreshCw, Copy, Check, Archive
+  CheckCircle, Download, PenLine, RotateCcw, Send, Share2, RefreshCw, Copy, Check, Archive,
+  FileText, Image as ImageIcon, Trash2
 } from 'lucide-react';
 import {
   STATUS_CFG, PAYMENT_STATUS_CFG, isClosedContract, fmtDate, fmtTime, fmtMoney, getAppUrl, paymentStatus
@@ -11,7 +12,7 @@ import { SignatureCanvas } from './SignatureCanvas';
 import {
   type Contract, type PaymentMethod, type RentalVehicle, type ContractTemplate,
   PAYMENT_METHOD_LABELS, recordPayment, uploadContractDocument, uploadLessorSignature,
-  saveLessorSignature, uploadContractPdf, savePdfUrl, saveContractInspection,
+  saveLessorSignature, uploadContractPdf, savePdfUrl, saveContractInspection, deleteContractDocument,
 } from '@services/supabase/contracts';
 import { imageUrlToDataUrl, generateContractPdf, dataUrlToBlob } from '@/lib/contract-pdf';
 import { toUserError } from '@/lib/user-error';
@@ -52,6 +53,7 @@ export function ContractDetailPanel({
   }>({ amount_paid: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'cash' });
   const [savingPayment, setSavingPayment] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
   const [savingInspection, setSavingInspection] = useState(false);
   const [inspectionEditor, setInspectionEditor] = useState<'pickup' | 'return' | null>(null);
   const [inspectionForm, setInspectionForm] = useState({
@@ -76,6 +78,12 @@ export function ContractDetailPanel({
 
   const status = STATUS_CFG[detailContract.status] ?? STATUS_CFG.draft;
   const link = `${getAppUrl()}/c/${detailContract.token}`;
+  const documentsCount = detailContract.documents?.length ?? 0;
+
+  function formatUploadDate(value?: string | null) {
+    if (!value) return '';
+    return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
 
   async function handleRecordPayment() {
     if (!business) return;
@@ -119,6 +127,21 @@ export function ContractDetailPanel({
       notifError(toUserError(e));
     } finally {
       setUploadingDocument(false);
+    }
+  }
+
+  async function handleDeleteDocument(documentUrl: string, documentName: string) {
+    if (!window.confirm(`Supprimer le document "${documentName}" ?`)) return;
+    setDeletingDocument(documentUrl);
+    try {
+      const documents = await deleteContractDocument(detailContract.id, documentUrl, detailContract.documents ?? []);
+      setDetailContract({ ...detailContract, documents });
+      onRefresh();
+      notifSuccess('Document supprimé du contrat');
+    } catch (e) {
+      notifError(toUserError(e));
+    } finally {
+      setDeletingDocument(null);
     }
   }
 
@@ -315,12 +338,19 @@ export function ContractDetailPanel({
         </div>
 
         <div className="card p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Documents joints</h3>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Documents joints</h3>
+              <p className="mt-1 text-xs text-content-muted">
+                {documentsCount > 0
+                  ? `${documentsCount} fichier${documentsCount > 1 ? 's' : ''} ajouté${documentsCount > 1 ? 's' : ''}`
+                  : 'Aucun fichier ajouté'}
+              </p>
+            </div>
             {!isClosedContract(detailContract) && (
-              <label className="btn-secondary h-8 px-3 text-xs flex items-center gap-2 cursor-pointer">
+              <label className="btn-secondary h-9 px-3 text-xs flex items-center gap-2 cursor-pointer shrink-0">
                 {uploadingDocument ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                Ajouter
+                {uploadingDocument ? 'Envoi...' : 'Ajouter'}
                 <input
                   type="file"
                   accept="image/*,.pdf"
@@ -348,22 +378,53 @@ export function ContractDetailPanel({
             </div>
           )}
           {detailContract.documents && detailContract.documents.length > 0 ? (
-            <div className="space-y-2">
+            <div className="grid gap-2">
               {detailContract.documents.map((doc, idx) => (
-                <a
+                <div
                   key={`${doc.url}-${idx}`}
-                  href={doc.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between gap-3 rounded-xl bg-surface-input px-3 py-2 text-sm hover:bg-surface-hover"
+                  className="group flex items-center gap-3 rounded-xl border border-surface-border bg-surface-input px-3 py-2.5 text-sm hover:bg-surface-hover transition-colors"
                 >
-                  <span className="text-white truncate">{doc.name}</span>
-                  <ExternalLink className="w-4 h-4 text-content-secondary shrink-0" />
-                </a>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-card border border-surface-border text-content-brand">
+                    {doc.type?.startsWith('image/') ? <ImageIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-content-primary">{doc.name}</p>
+                    <p className="text-[11px] text-content-muted">
+                      {doc.type?.includes('pdf') ? 'PDF' : doc.type?.startsWith('image/') ? 'Image' : 'Fichier'}
+                      {doc.uploaded_at ? ` - ${formatUploadDate(doc.uploaded_at)}` : ''}
+                    </p>
+                  </div>
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-card transition-colors"
+                    title="Ouvrir le document"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  {!isClosedContract(detailContract) && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDocument(doc.url, doc.name)}
+                      disabled={deletingDocument === doc.url}
+                      className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-card transition-colors disabled:opacity-50"
+                      title="Supprimer le document"
+                    >
+                      {deletingDocument === doc.url
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-content-secondary">Aucun document joint. Vous pouvez ajouter une CNI, un permis ou un justificatif.</p>
+            <div className="rounded-xl border border-dashed border-surface-border bg-surface-input px-4 py-5 text-center">
+              <FileText className="mx-auto mb-2 h-7 w-7 text-content-muted" />
+              <p className="text-sm font-medium text-content-primary">Aucun document joint</p>
+              <p className="mt-1 text-xs text-content-secondary">Ajoutez une CNI, un permis, un passeport ou un justificatif.</p>
+            </div>
           )}
         </div>
 
@@ -468,7 +529,7 @@ export function ContractDetailPanel({
             </h3>
             {detailContract.cancelled_at && <p className="text-sm text-content-secondary">Le {fmtDate(detailContract.cancelled_at)}</p>}
             {detailContract.cancellation_reason && (
-              <p className="text-sm text-white whitespace-pre-wrap">{detailContract.cancellation_reason}</p>
+              <p className="text-sm text-content-primary whitespace-pre-wrap">{detailContract.cancellation_reason}</p>
             )}
           </div>
         )}
