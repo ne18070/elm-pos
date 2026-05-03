@@ -316,6 +316,16 @@ export async function getServiceOrders(
   return { data: data ?? [], count: count ?? 0 };
 }
 
+export async function getServiceOrderById(id: string): Promise<ServiceOrder | null> {
+  const { data, error } = await db
+    .from('service_orders')
+    .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
 export async function getServiceOrderCounts(
   businessId: string,
   opts?: { date?: string; search?: string }

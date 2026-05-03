@@ -13,6 +13,7 @@ import {
   type ServiceOrder,
   type ServiceCatalogItem,
   type ServiceOrderStatus,
+  getServiceOrderById,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
@@ -29,13 +30,13 @@ import { useServiceCatalog } from './hooks/useServiceCatalog';
 
 type PageTab = 'orders' | 'catalog' | 'subjects';
 
-const VALID_STATUSES = new Set(['en_attente', 'en_cours', 'termine', 'paye', 'annule']);
+const VALID_STATUSES = new Set(['attente', 'en_cours', 'termine', 'paye', 'annule']);
 
 export default function ServicesPage() {
   const { business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
   const can = useCan();
-  const { success } = useNotificationStore();
+  const { success, error: notifError } = useNotificationStore();
   const searchParams = useSearchParams();
   const statusParam = searchParams.get('status');
   const initialStatus: ServiceOrderStatus | 'all' =
@@ -57,12 +58,16 @@ export default function ServicesPage() {
   const canShareOrder = can('share_service_order');
   const canCreateOrder = can('create_service_order');
 
-  function copyPublicLink() {
+  async function copyPublicLink() {
     if (!business) return;
     const ref = buildPublicBusinessRef(business.name, business.public_slug);
     const url = `${window.location.origin}/services/${ref}`;
-    navigator.clipboard.writeText(url);
-    success('Lien public copié !');
+    try {
+      await navigator.clipboard.writeText(url);
+      success('Lien public copié !');
+    } catch {
+      notifError('Impossible de copier le lien public');
+    }
   }
 
   function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
@@ -81,6 +86,17 @@ export default function ServicesPage() {
       total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,
       payments: o.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
     }, business as any));
+  }
+
+  async function refreshOrdersAndSelection() {
+    setRefreshTrigger(prev => prev + 1);
+    if (!selectedOrder) return;
+    try {
+      const fresh = await getServiceOrderById(selectedOrder.id);
+      if (fresh) setSelectedOrder(fresh);
+    } catch (e) {
+      notifError('Impossible de rafraîchir le détail de cet OT');
+    }
   }
 
   if (!can('view_services')) {
@@ -202,7 +218,7 @@ export default function ServicesPage() {
           catalog={catalog}
           businessId={businessId}
           onClose={() => setSelectedOrder(null)}
-          onRefresh={() => setRefreshTrigger(prev => prev + 1)}
+          onRefresh={refreshOrdersAndSelection}
         />
       )}
     </div>

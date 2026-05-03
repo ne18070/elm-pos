@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Search, X, RefreshCw, Wrench, Plus, Play, 
   CheckCircle2, CreditCard, Printer, User, 
-  ChevronLeft, ChevronRight 
+  ChevronLeft, ChevronRight, UserRoundCheck, Coins
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
@@ -37,6 +37,35 @@ const STATUS_TABS = [
   { key: 'annule',   label: 'Annulé'   },
 ] as const;
 
+function OrdersMetrics({
+  counts,
+}: {
+  counts: Record<ServiceOrderStatus | 'all', number>;
+}) {
+  const items = [
+    { label: 'Attente', value: counts.attente ?? 0, icon: Wrench, color: 'text-status-warning', bg: 'bg-badge-warning' },
+    { label: 'En cours', value: counts.en_cours ?? 0, icon: Play, color: 'text-status-info', bg: 'bg-badge-info' },
+    { label: 'Terminés', value: counts.termine ?? 0, icon: CheckCircle2, color: 'text-status-success', bg: 'bg-badge-success' },
+    { label: 'À encaisser', value: counts.termine ?? 0, icon: Coins, color: 'text-content-brand', bg: 'bg-badge-brand' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-2 px-4 pt-3 bg-surface-card md:grid-cols-4 md:px-6">
+      {items.map(({ label, value, icon: Icon, color, bg }) => (
+        <div key={label} className="rounded-xl border border-surface-border bg-surface-input px-3 py-2.5 flex items-center gap-2.5">
+          <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', bg, color)}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-lg font-bold leading-tight text-content-primary">{value}</p>
+            <p className="text-[10px] uppercase tracking-wider text-content-secondary truncate">{label}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ServiceOrdersTab({
   businessId,
   currency,
@@ -66,9 +95,15 @@ export function ServiceOrdersTab({
   const [statusFilter, setStatusFilter] = React.useState<ServiceOrderStatus | 'all'>(initialStatus ?? 'all');
   React.useEffect(() => { setStatusFilter(initialStatus ?? 'all'); }, [initialStatus]);
   const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [dateFilter, setDateFilter] = React.useState('');
   const [page, setPage] = React.useState(1);
   const pageSize = 25;
+
+  React.useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(id);
+  }, [search]);
 
   const {
     orders,
@@ -80,14 +115,14 @@ export function ServiceOrdersTab({
   } = useServiceOrders({
     businessId,
     statusFilter,
-    search,
+    search: debouncedSearch,
     dateFilter,
     page,
     pageSize,
     refreshTrigger,
   });
 
-  React.useEffect(() => { setPage(1); }, [businessId, dateFilter, statusFilter, search]);
+  React.useEffect(() => { setPage(1); }, [businessId, dateFilter, statusFilter, debouncedSearch]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -120,21 +155,7 @@ export function ServiceOrdersTab({
 
   return (
     <>
-      {/* Workflow hint */}
-      <div className="px-4 pt-3 pb-0 bg-surface-card shrink-0 md:px-6">
-        <p className="text-[11px] text-content-secondary flex items-center gap-1 flex-wrap">
-          <Wrench className="w-3 h-3 flex-shrink-0" />
-          Flux&nbsp;:
-          <span className="text-status-warning font-semibold">En attente</span>
-          <span>→</span>
-          <span className="text-status-info font-semibold">En cours</span>
-          <span>→</span>
-          <span className="text-status-success font-semibold">Terminé</span>
-          <span>→</span>
-          <span className="text-status-success font-semibold">Payé</span>
-          <span className="opacity-50 ml-1">· Cliquez un OT pour modifier, encaisser ou imprimer</span>
-        </p>
-      </div>
+      <OrdersMetrics counts={counts} />
       {/* Filters */}
       <div className="px-4 py-3 bg-surface-card border-b border-surface-border shrink-0 space-y-3 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -206,6 +227,11 @@ export function ServiceOrdersTab({
                     {order.subject_info && <p className="text-xs text-content-secondary mb-1">{order.subject_info}</p>}
                     {order.client_name && (
                       <p className="text-sm text-content-secondary flex items-center gap-1 mb-1"><User className="w-3 h-3" />{order.client_name}</p>
+                    )}
+                    {order.assigned_name && (
+                      <p className="text-xs text-content-muted flex items-center gap-1 mb-1">
+                        <UserRoundCheck className="w-3 h-3" />{order.assigned_name}
+                      </p>
                     )}
 
                     <div className="mt-2 space-y-0.5">
