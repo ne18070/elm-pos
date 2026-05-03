@@ -8,7 +8,7 @@ import {
   PERMISSIONS, PERMISSION_GROUPS, IMMUTABLE_OWNER_PERMISSIONS,
   type PermissionKey, type PermissionGroup,
 } from '@/lib/permissions-map';
-import { checkPermission, hasFeature } from '@/lib/permissions';
+import { checkPermission, hasFeature, getContextualRoleLabel } from '@/lib/permissions';
 import type { UserRole } from '@pos-types';
 
 interface Member {
@@ -60,7 +60,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
     const role = selectedMember.role;
 
     // Cannot override immutable owner permissions
-    if (role === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(permission)) return;
+    if (role === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly PermissionKey[]).includes(permission)) return;
 
     const roleDefault = checkPermission(role, permission, {}, business);
     setSaving(permission);
@@ -105,13 +105,15 @@ export function PermissionsPanel({ businessId, members }: Props) {
   const permsByGroup = GROUP_ORDER.map((group) => ({
     group,
     label: PERMISSION_GROUPS[group],
-    items: (Object.entries(PERMISSIONS) as [PermissionKey, typeof PERMISSIONS[PermissionKey]][])
+    items: (Object.entries(PERMISSIONS) as [string, any][])
       .filter(([, meta]) => {
         if (meta.group !== group) return false;
         // Si la permission requiert une feature que l'établissement n'a pas, on la cache
         if (meta.feature) {
           const required = Array.isArray(meta.feature) ? meta.feature : [meta.feature];
-          if (!required.some(f => hasFeature(business, f))) return false;
+          const bFeatures = business?.features ?? [];
+          const bType = business?.type ?? '';
+          if (!required.some((f: string) => bFeatures.includes(f) || bType === f)) return false;
         }
         return true;
       }),
@@ -135,7 +137,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
           >
             {members.map((m) => (
               <option key={m.user_id} value={m.user_id} style={{ background: '#111827', color: '#fff' }}>
-                {m.user_name} —{m.role}
+                {m.user_name} — {getContextualRoleLabel(m.role, business?.type)}
               </option>
             ))}
           </select>
@@ -172,15 +174,16 @@ export function PermissionsPanel({ businessId, members }: Props) {
               {!collapsed[group] && (
                 <div className="divide-y divide-surface-border">
                   {items.map(([key, meta]) => {
+                    const pKey = key as PermissionKey;
                     const isImmutable = selectedMember.role === 'owner' &&
-                      (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(key);
-                    const effective   = checkPermission(selectedMember.role, key, overrides, business);
-                    const hasOverride = key in overrides;
-                    const isSavingThis = saving === key;
+                      (IMMUTABLE_OWNER_PERMISSIONS as readonly PermissionKey[]).includes(pKey);
+                    const effective   = checkPermission(selectedMember.role, pKey, overrides, business);
+                    const hasOverride = pKey in overrides;
+                    const isSavingThis = saving === pKey;
 
                     return (
                       <div
-                        key={key}
+                        key={pKey}
                         className={cn(
                           'flex items-center justify-between px-4 py-3',
                           isImmutable ? 'opacity-50' : 'hover:bg-surface-hover/20 transition-colors'
@@ -190,7 +193,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                           <p className="text-sm font-medium text-content-primary">{meta.label}</p>
                           {hasOverride && !isImmutable && (
                             <p className="text-xs text-status-warning mt-0.5">
-                              Remplacé (défaut rôle: {checkPermission(selectedMember.role, key, {}, business) ? 'Oui' : 'Non'})
+                              Remplacé (défaut rôle: {checkPermission(selectedMember.role, pKey, {}, business) ? 'Oui' : 'Non'})
                             </p>
                           )}
                         </div>
@@ -199,7 +202,7 @@ export function PermissionsPanel({ businessId, members }: Props) {
                           {isSavingThis && <Loader2 className="w-3.5 h-3.5 animate-spin text-content-brand" />}
 
                           <button
-                            onClick={() => handleToggle(key, effective)}
+                            onClick={() => handleToggle(pKey, effective)}
                             disabled={isImmutable || isSavingThis}
                             className={cn(
                               'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none',

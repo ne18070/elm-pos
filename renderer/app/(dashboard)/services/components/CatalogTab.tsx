@@ -3,6 +3,8 @@ import { Package2, LayoutGrid, Pencil, Trash2, Plus, Power, PowerOff } from 'luc
 import { cn, formatCurrency } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
+import { useAuthStore } from '@/store/auth';
+import { useCan } from '@/hooks/usePermission';
 import { 
   upsertServiceCategory, 
   deleteServiceCategory, 
@@ -17,11 +19,9 @@ import { ConfirmModal } from '@/components/ui/Modal';
 
 export function CatalogTab({ 
   businessId, 
-  canManageCatalog,
   currency 
 }: { 
   businessId: string; 
-  canManageCatalog: boolean;
   currency: string;
 }) {
   const { 
@@ -33,6 +33,8 @@ export function CatalogTab({
     setAllCatalog
   } = useServiceCatalog(businessId);
   
+  const can = useCan();
+  const canManageCatalog = can('manage_service_catalog');
   const { success, error: notifError } = useNotificationStore();
   const [selectedCatalogCat, setSelectedCatalogCat] = useState<string | null | '__all__'>('__all__');
   const [catalogModal, setCatalogModal] = useState<{ item?: ServiceCatalogItem } | null>(null);

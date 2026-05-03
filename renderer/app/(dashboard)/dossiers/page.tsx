@@ -187,8 +187,6 @@ export default function DossiersPage() {
                 dossiers={dossiers}
                 statuts={statuts}
                 typesAffaire={typesAffaire}
-                canEdit={can('edit_dossier')}
-                canArchive={can('archive_dossier')}
                 showArchived={showArchived}
                 onEdit={setModal}
                 onArchive={handleArchive}
@@ -202,7 +200,7 @@ export default function DossiersPage() {
         )}
 
         {tab === 'monitoring' && <MonitoringDashboard businessId={business.id} />}
-        {tab === 'workflows' && <ProcessusManager businessId={business.id} isOwnerOrAdmin={can('manage_workflows')} userId={user?.id} />}
+        {tab === 'workflows' && <ProcessusManager businessId={business.id} userId={user?.id} />}
         {tab === 'pretentions' && <PretentionsLibrary businessId={business.id} />}
         {tab === 'config' && <ConfigTab businessId={business.id} onRefresh={load} />}
       </div>
@@ -225,7 +223,6 @@ export default function DossiersPage() {
           dossier={workflowPanel} 
           businessId={business.id} 
           userId={user?.id} 
-          canLaunch={can('launch_workflow')} 
           onClose={() => setWorkflowPanel(null)} 
         />
       )}
@@ -244,7 +241,6 @@ export default function DossiersPage() {
         <FinancesPanel 
           dossier={financesPanel} 
           businessId={business.id} 
-          canEdit={can('add_fee')} 
           onClose={() => setFinancesPanel(null)} 
         />
       )}
@@ -253,7 +249,6 @@ export default function DossiersPage() {
         <TimeTrackingPanel 
           dossier={timePanel} 
           businessId={business.id} 
-          canEdit={can('add_fee')} 
           onClose={() => setTimePanel(null)} 
         />
       )}

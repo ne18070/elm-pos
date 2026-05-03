@@ -1,21 +1,24 @@
+import { checkPermission } from './permissions';
+import { NAV_ITEMS } from './nav-config';
+import type { UserRole, Business } from '@pos-types';
+
 /**
- * Retourne la première route accessible selon les features activées du business.
+ * Retourne la première route accessible selon les permissions de l'utilisateur.
  * Utilisé après login, switch de business, ou création d'établissement.
  */
-export function getDefaultRoute(features: string[]): string {
-  // Routes ordonnées par priorité — la première dont la feature est active est choisie
-  const PRIORITY: { feature: string | null; route: string }[] = [
-    { feature: 'caisse',      route: '/pos'        },
-    { feature: 'hotel',       route: '/hotel'       },
-    { feature: 'dossiers',    route: '/dossiers'    },
-    { feature: 'contrats',    route: '/contrats'    },
-    { feature: 'livraison',   route: '/livraison'   },
-    { feature: 'honoraires',  route: '/honoraires'  },
-    { feature: null,          route: '/orders'      }, // toujours accessible
-  ];
-
-  for (const { feature, route } of PRIORITY) {
-    if (!feature || features.includes(feature)) return route;
+export function getDefaultRoute(
+  role: UserRole | null | undefined, 
+  business: Business | null | undefined,
+  overrides: Record<string, boolean> = {}
+): string {
+  // On parcourt NAV_ITEMS dans l'ordre (défini par NAV_SECTIONS)
+  // et on retourne la première route autorisée.
+  for (const item of NAV_ITEMS) {
+    if (!item.permission || checkPermission(role, item.permission, overrides, business)) {
+      return item.href;
+    }
   }
+
+  // Fallback si rien n'est autorisé (théoriquement impossible car analytics ou orders sont ouverts)
   return '/orders';
 }

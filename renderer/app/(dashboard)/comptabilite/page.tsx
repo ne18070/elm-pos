@@ -5,7 +5,9 @@ import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer } from 'lucide
 import { useAuthStore } from '@/store/auth';
 import { displayCurrency } from '@/lib/utils';
 import { useNotificationStore } from '@/store/notifications';
-import { canViewFinancials } from '@/lib/permissions';
+import { hasFeature } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
+
 import {
   getJournalEntries, syncAccounting, syncHotelAccounting, getTrialBalance,
   deleteManualEntry, getAccounts, computeIncomeStatement, computeBalanceSheet,
@@ -30,7 +32,8 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 
 export default function ComptabilitePage() {
   const { business, user } = useAuthStore();
-  const isOwnerOrAdmin = canViewFinancials(user?.role);
+  const can = useCan();
+  const isOwnerOrAdmin = can('view_financials');
   const { success, error: notifErr } = useNotificationStore();
 
   const [tab, setTab]               = useState<Tab>('dashboard');
@@ -76,12 +79,11 @@ export default function ComptabilitePage() {
     if (!business?.id) return;
     setSyncing(true);
     try {
-      const features = (business as any)?.features ?? [];
       const results = await Promise.allSettled([
         syncAccounting(business.id),
-        business.type === 'hotel' || features.includes('hotel') ? syncHotelAccounting(business.id) : Promise.resolve(0),
-        features.includes('honoraires') || features.includes('dossiers') ? syncHonorairesAccounting(business.id) : Promise.resolve(0),
-        business.type === 'service' || features.includes('service') || features.includes('services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
+        hasFeature(business, 'hotel') ? syncHotelAccounting(business.id) : Promise.resolve(0),
+        hasFeature(business, 'honoraires') || hasFeature(business, 'dossiers') ? syncHonorairesAccounting(business.id) : Promise.resolve(0),
+        hasFeature(business, 'service') || hasFeature(business, 'services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
       ]);
 
       const total = results.reduce((s, r) => s + (r.status === 'fulfilled' ? (r.value as number) : 0), 0);

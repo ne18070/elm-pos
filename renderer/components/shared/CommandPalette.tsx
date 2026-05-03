@@ -3,38 +3,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Search, ShoppingCart, Package, ClipboardList, BarChart2, 
-  Settings, Users, Tag, LayoutGrid, Warehouse, Truck, 
-  BookOpen, ScrollText, History, MessageCircle 
+  Search
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
-
 import { useThemeStore } from '@/store/theme';
-
-const NAV_COMMANDS = [
-  { href: '/pos',               icon: ShoppingCart,  label: 'Caisse',             desc: 'Encaisser des ventes' },
-  { href: '/orders',            icon: ClipboardList, label: 'Commandes',          desc: 'Historique des ventes' },
-  { href: '/products',          icon: Package,       label: 'Produits',           desc: 'Gérer le catalogue' },
-  { href: '/stock',             icon: Warehouse,     label: 'Stock',              desc: 'État des stocks' },
-  { href: '/clients',           icon: Users,         label: 'Clients',            desc: 'Base de données clients' },
-  { href: '/analytics',         icon: BarChart2,     label: 'Statistiques',       desc: 'Rapports et CA' },
-  { href: '/livraison',         icon: Truck,         label: 'Livraisons',         desc: 'Suivi des livraisons' },
-  { href: '/categories',        icon: LayoutGrid,    label: 'Catégories',         desc: 'Organiser les produits' },
-  { href: '/coupons',           icon: Tag,           label: 'Coupons',            desc: 'Promotions et remises' },
-  { href: '/comptabilite',      icon: BookOpen,      label: 'Comptabilité',       desc: 'Journaux et bilan' },
-  { href: '/activity',          icon: ScrollText,    label: 'Journal d\'audit',   desc: 'Traçabilité des actions' },
-  { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp',           desc: 'Communications clients' },
-  { href: '/settings',          icon: Settings,      label: 'Paramètres',         desc: 'Configuration système' },
-];
+import { NAV_ITEMS } from '@/lib/nav-config';
+import { useCan } from '@/hooks/usePermission';
+import type { PermissionKey } from '@/lib/permissions-map';
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const router = useRouter();
-  const { business } = useAuthStore();
   const { cycle: cycleTheme } = useThemeStore();
+  const can = useCan();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,16 +55,13 @@ export function CommandPalette() {
     }
   }, [open]);
 
-  const filtered = NAV_COMMANDS.filter((cmd) => {
-    const searchStr = (cmd.label + cmd.desc).toLowerCase();
+  const filtered = NAV_ITEMS.filter((item) => {
+    // 1. Permission check
+    if (item.permission && !can(item.permission as PermissionKey)) return false;
+    
+    // 2. Search query filter
+    const searchStr = (item.label).toLowerCase();
     return searchStr.includes(query.toLowerCase());
-  }).filter((cmd) => {
-    // Basic feature check
-    if (!business) return true;
-    const features = business.features || [];
-    if (cmd.href === '/pos' && !features.includes('caisse')) return false;
-    if (cmd.href === '/livraison' && !features.includes('livraison')) return false;
-    return true;
   });
 
   const handleSelect = (href: string) => {
@@ -150,9 +131,6 @@ export function CommandPalette() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{cmd.label}</p>
-                    <p className={cn("text-xs truncate", active ? "text-brand-100" : "text-content-muted")}>
-                      {cmd.desc}
-                    </p>
                   </div>
                   {active && <span className="text-[10px] font-bold opacity-60">ENTER</span>}
                 </button>

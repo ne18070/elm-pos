@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { hasRole } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
 import { supabase } from '@/lib/supabase';
 import {
   getWhatsAppConfig, getConversations, getMessages, markMessagesRead, sendWhatsAppReply,
@@ -79,7 +79,8 @@ export default function WhatsAppPage() {
   const instantScroll    = useRef(false);
   const selectedRef      = useRef<WhatsAppConversation | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
-  const canReply         = hasRole(user?.role, 'manager');
+  const can = useCan();
+  const canReply         = can('reply_whatsapp');
 
   // Garde selectedRef synchronisé pour les callbacks Realtime (évite stale closure)
   useEffect(() => { selectedRef.current = selected; }, [selected]);

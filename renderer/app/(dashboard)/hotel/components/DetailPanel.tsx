@@ -6,6 +6,8 @@ import { generateHotelInvoice, printHtml } from '@/lib/invoice-templates';
 import type { HotelReservation, HotelService } from '@services/supabase/hotel';
 import { nightsBetween } from '@services/supabase/hotel';
 import type { Business } from '@pos-types';
+import { useAuthStore } from '@/store/auth';
+import { useCan } from '@/hooks/usePermission';
 import { PayMethod, fmt, fmtMoney, resStatusStyle, resStatusLabel } from './hotel-helpers';
 
 interface SvcForm { label: string; amount: string; service_date: string }
@@ -41,9 +43,11 @@ export function DetailPanel({
   onClose, setCheckoutPaid, setCheckoutMethod, setPayForm, setSvcForm,
   onCheckIn, onCheckOut, onCancel, onAddPayment, onAddService, onDeleteService,
 }: Props) {
+  const can = useCan();
   const res     = reservation;
   const nights  = nightsBetween(res.check_in, res.check_out);
   const balance = res.total - res.paid_amount;
+  const canUpdate = res.status === 'confirmed' || res.status === 'checked_in';
 
   return (
     <div className="absolute inset-y-0 right-0 w-[440px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
@@ -116,7 +120,7 @@ export function DetailPanel({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-content-primary">{fmtMoney(svc.amount, currency)}</span>
-                {(res.status === 'confirmed' || res.status === 'checked_in') && (
+                {canUpdate && can('manage_reservations') && (
                   <button onClick={() => onDeleteService(svc, res.id)} className="p-1 text-content-primary hover:text-status-error">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -124,7 +128,7 @@ export function DetailPanel({
               </div>
             </div>
           ))}
-          {(res.status === 'confirmed' || res.status === 'checked_in') && (
+          {canUpdate && can('manage_reservations') && (
             <div className="flex gap-2 mt-2">
               <input
                 className="input flex-1 h-8 text-sm"
@@ -176,7 +180,7 @@ export function DetailPanel({
         </div>
 
         {/* Encaissement partiel */}
-        {(res.status === 'confirmed' || res.status === 'checked_in') && balance > 0 && (
+        {canUpdate && balance > 0 && can('view_financials') && (
           <div>
             <p className="text-xs font-semibold text-content-secondary uppercase tracking-wide mb-2">Encaisser un acompte</p>
             <div className="flex gap-2">
@@ -205,7 +209,7 @@ export function DetailPanel({
         )}
 
         {/* Montant check-out */}
-        {res.status === 'checked_in' && (
+        {res.status === 'checked_in' && can('hotel_checkout') && (
           <div>
             <label className="label">Montant à encaisser au check-out</label>
             <div className="flex gap-2">
@@ -228,7 +232,7 @@ export function DetailPanel({
       </div>
 
       <div className="px-5 py-4 border-t border-surface-border space-y-2">
-        {res.status === 'confirmed' && (
+        {res.status === 'confirmed' && can('hotel_checkin') && (
           <button
             onClick={() => onCheckIn(res)}
             className="w-full h-10 rounded-xl bg-green-700 hover:bg-green-600 text-content-primary text-sm font-medium flex items-center justify-center gap-2 transition-colors"
@@ -236,7 +240,7 @@ export function DetailPanel({
             <LogIn className="w-4 h-4" /> Check-in
           </button>
         )}
-        {res.status === 'checked_in' && (
+        {res.status === 'checked_in' && can('hotel_checkout') && (
           <button
             onClick={() => onCheckOut(res)}
             className="w-full h-10 rounded-xl bg-brand-600 hover:bg-brand-500 text-content-primary text-sm font-medium flex items-center justify-center gap-2 transition-colors"
@@ -244,7 +248,7 @@ export function DetailPanel({
             <LogOut className="w-4 h-4" /> Check-out &amp; encaisser
           </button>
         )}
-        {isManagerOrAbove && (res.status === 'confirmed' || res.status === 'checked_in') && (
+        {can('hotel_cancel_res') && (res.status === 'confirmed' || res.status === 'checked_in') && (
           <button
             onClick={() => onCancel(res)}
             className="w-full h-9 rounded-xl border border-status-error text-status-error hover:bg-badge-error text-sm flex items-center justify-center gap-2 transition-colors"

@@ -97,8 +97,11 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
   const canCollectPayment = can('collect_service_payment');
   const canShareOrder = can('share_service_order');
   const canCancelOrder = can('cancel_service_order');
-  const activeRole = businesses.find(m => m.business.id === business?.id)?.role ?? user?.role;
-  const canEditThisOrder = canEditOrder && order.status !== 'annule' && (order.status !== 'paye' || activeRole === 'owner');
+  
+  // Seul un admin/owner ou qqun avec edit_service_order peut modifier
+  // On bloque l'édition si payé ou annulé, sauf si owner (ou permission spéciale edit_product?)
+  // Utilisons simplement canEditOrder et le statut.
+  const canEditThisOrder = canEditOrder && order.status !== 'annule' && order.status !== 'paye';
 
   function deny() {
     notifError('Permission insuffisante');
@@ -158,7 +161,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
           price:      parseFloat(l.price),
           quantity:   l.quantity,
         })),
-      }, { userId: user?.id, userName: user?.full_name, role: activeRole });
+      }, { userId: user?.id, userName: user?.full_name, role: user?.role });
       setEditing(false);
       onRefresh(); onClose();
     } catch (e: any) { notifError(toUserError(e)); }

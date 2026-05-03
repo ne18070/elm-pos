@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { canDelete } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
 import {
   getSnapshots, createSnapshot, restoreSnapshot, deleteSnapshot, getSnapshotData,
   type SnapshotMeta, type RestorableTable, type RestoreResult,
@@ -38,7 +38,8 @@ const TYPE_CONFIG = {
 export default function RecoveryPage() {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
-  const isOwnerOrAdmin = canDelete(user?.role);
+  const can = useCan();
+  const isOwnerOrAdmin = can('delete_data');
 
   const [snapshots, setSnapshots]       = useState<SnapshotMeta[]>([]);
   const [loading, setLoading]           = useState(true);

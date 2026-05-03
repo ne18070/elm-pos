@@ -6,6 +6,7 @@ import { Plus, Tag, Trash2, Pencil, Search, Percent, DollarSign, Gift } from 'lu
 import { useCoupons } from '@/hooks/useCoupons';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { formatCurrency } from '@/lib/utils';
 import { deleteCoupon } from '@services/supabase/coupons';
 import { CouponModal } from '@/components/coupons/CouponModal';
@@ -36,6 +37,7 @@ function CouponTypeIcon({ type }: { type: Coupon['type'] }) {
 
 export default function CouponsPage() {
   const { business } = useAuthStore();
+  const can = useCan();
   const { coupons, loading, refetch } = useCoupons(business?.id ?? '');
   const { success, error: notifError } = useNotificationStore();
   const [editCoupon, setEditCoupon] = useState<Coupon | null>(null);
@@ -73,13 +75,15 @@ export default function CouponsPage() {
               {!loading && ` · ${filtered.length} coupon${filtered.length !== 1 ? 's' : ''}${search ? ` filtrés sur ${coupons.length}` : ''}`}
             </p>
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-primary flex items-center gap-2 shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            Nouveau coupon
-          </button>
+          {can('manage_coupons') && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="btn-primary flex items-center gap-2 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Nouveau coupon
+            </button>
+          )}
         </div>
 
         {/* Recherche */}

@@ -54,10 +54,8 @@ export default function ServicesPage() {
   // We load catalog here because it's needed by multiple components (New OT, Order Detail)
   const { catalog, refresh: refreshCatalog } = useServiceCatalog(businessId);
 
-  const canViewServices = can('view_services');
-  const canCreateOrder = can('create_service_order');
   const canShareOrder = can('share_service_order');
-  const canManageCatalog = can('manage_service_catalog');
+  const canCreateOrder = can('create_service_order');
 
   function copyPublicLink() {
     if (!business) return;
@@ -85,7 +83,7 @@ export default function ServicesPage() {
     }, business as any));
   }
 
-  if (!canViewServices) {
+  if (!can('view_services')) {
     return (
       <div className="flex h-full items-center justify-center bg-surface-base p-6">
         <div className="max-w-sm text-center">
@@ -161,10 +159,6 @@ export default function ServicesPage() {
           <ServiceOrdersTab
             businessId={businessId}
             currency={currency}
-            canCreateOrder={canCreateOrder}
-            canUpdateStatus={can('update_service_status')}
-            canCollectPayment={can('collect_service_payment')}
-            canShareOrder={canShareOrder}
             onSelectOrder={setSelectedOrder}
             onNewOrder={() => setShowNewOT(true)}
             onPrintOrder={handlePrintOrder}
@@ -176,7 +170,6 @@ export default function ServicesPage() {
         {tab === 'catalog' && (
           <CatalogTab
             businessId={businessId}
-            canManageCatalog={canManageCatalog}
             currency={currency}
           />
         )}

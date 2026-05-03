@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { logAction } from '@services/supabase/logger';
 import { cn } from '@/lib/utils';
-import { canManageRooms } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import {
   getRooms, createRoom, updateRoom, deleteRoom,
@@ -74,9 +74,25 @@ const emptySvcForm = (): SvcForm => ({ label: '', amount: '', service_date: toda
 
 export default function HotelPage() {
   const { user, business } = useAuthStore();
-  const isManagerOrAbove = canManageRooms(user?.role);
+  const can = useCan();
+  const isManagerOrAbove = can('manage_rooms');
+  const canManageReservations = can('manage_reservations');
+  const canManageGuests = can('manage_guests');
+
   const { success, error: notifError } = useNotificationStore();
   const currency = business?.currency ?? 'XOF';
+
+  if (!can('view_hotel')) {
+    return (
+      <div className="flex h-full items-center justify-center bg-surface-base p-6">
+        <div className="max-w-sm text-center">
+          <BedDouble className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
+          <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
+          <p className="mt-1 text-sm text-content-secondary">Vous n'avez pas la permission d'accéder au module Hôtel.</p>
+        </div>
+      </div>
+    );
+  }
 
   const [rooms,        setRooms]        = useState<HotelRoom[]>([]);
   const [guests,       setGuests]       = useState<HotelGuest[]>([]);
@@ -514,12 +530,12 @@ export default function HotelPage() {
               <Plus className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Chambre</span>
             </button>
           )}
-          {tab === 'reservations' && (
+          {tab === 'reservations' && canManageReservations && (
             <button onClick={() => openReservationPanel()} className="btn-primary h-9 text-xs sm:text-sm flex items-center gap-1 shrink-0">
               <Plus className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Réservation</span>
             </button>
           )}
-          {tab === 'clients' && (
+          {tab === 'clients' && canManageGuests && (
             <button onClick={() => openGuestPanel(null)} className="btn-primary h-9 text-xs sm:text-sm flex items-center gap-1 shrink-0">
               <Plus className="w-4 h-4 shrink-0" /><span className="hidden sm:inline">Client</span>
             </button>

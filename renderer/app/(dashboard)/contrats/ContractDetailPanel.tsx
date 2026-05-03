@@ -16,6 +16,7 @@ import {
 import { imageUrlToDataUrl, generateContractPdf, dataUrlToBlob } from '@/lib/contract-pdf';
 import { toUserError } from '@/lib/user-error';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
+import { useCan } from '@/hooks/usePermission';
 import DOMPurify from 'dompurify';
 
 export function ContractDetailPanel({
@@ -60,6 +61,8 @@ export function ContractDetailPanel({
     notes: '',
     charges: '',
   });
+
+  const can = useCan();
 
   // Signature loueur
   const [lessorSigOpen, setLessorSigOpen]   = useState(false);

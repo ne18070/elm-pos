@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { cn, displayCurrency } from '@/lib/utils';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
@@ -76,6 +77,7 @@ export default function VoituresPage() {
   const { business }                     = useAuthStore();
   const { success, error: notifError }   = useNotificationStore();
   const currency                         = business?.currency ?? 'XOF';
+  const can = useCan();
 
   const [tab, setTab]               = useState<Tab>('parc');
   const [voitures, setVoitures]     = useState<Voiture[]>([]);
@@ -307,14 +309,16 @@ export default function VoituresPage() {
             {copied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
             {copied ? 'Copié !' : 'Lien public'}
           </button>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Ajouter un véhicule</span>
-            <span className="sm:hidden">Ajouter</span>
-          </button>
+          {can('create_voiture') && (
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Ajouter un véhicule</span>
+              <span className="sm:hidden">Ajouter</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -539,6 +543,7 @@ function ParcTab({
   onCopyOwnerReport: (v: Voiture) => void;
   onPrintBonVente:   (v: Voiture) => void;
 }) {
+  const can = useCan();
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -630,21 +635,25 @@ function ParcTab({
                       >
                         <Printer className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => onEdit(v)}
-                        className="p-1.5 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(v.id)}
-                        disabled={deletingId === v.id}
-                        className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                      >
-                        {deletingId === v.id
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Trash2 className="w-3.5 h-3.5" />}
-                      </button>
+                      {can('edit_voiture') && (
+                        <button
+                          onClick={() => onEdit(v)}
+                          className="p-1.5 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {can('delete_voiture') && (
+                        <button
+                          onClick={() => onDelete(v.id)}
+                          disabled={deletingId === v.id}
+                          className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        >
+                          {deletingId === v.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -666,6 +675,7 @@ function LeadsTab({
   onUpdateStatut:  (id: string, s: LeadStatut) => void;
   onDelete:        (id: string) => void;
 }) {
+  const can = useCan();
   if (leads.length === 0) {
     return (
       <div className="py-16 text-center text-content-muted">
@@ -710,26 +720,34 @@ function LeadsTab({
             </div>
 
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-surface-border">
-              {(['nouveau', 'contacte', 'converti'] as LeadStatut[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onUpdateStatut(lead.id, s)}
-                  className={cn(
-                    'flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-colors border',
-                    lead.statut === s
-                      ? 'bg-brand-500/10 border-brand-500/30 text-content-brand'
-                      : 'border-surface-border text-content-muted hover:text-content-primary hover:bg-surface-hover'
-                  )}
-                >
-                  {LEAD_STATUT_CFG[s].label}
-                </button>
-              ))}
-              <button
-                onClick={() => onDelete(lead.id)}
-                className="p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              {can('manage_leads') ? (
+                <>
+                  {(['nouveau', 'contacte', 'converti'] as LeadStatut[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => onUpdateStatut(lead.id, s)}
+                      className={cn(
+                        'flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-colors border',
+                        lead.statut === s
+                          ? 'bg-brand-500/10 border-brand-500/30 text-content-brand'
+                          : 'border-surface-border text-content-muted hover:text-content-primary hover:bg-surface-hover'
+                      )}
+                    >
+                      {LEAD_STATUT_CFG[s].label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => onDelete(lead.id)}
+                    className="p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              ) : (
+                <div className="flex-1 text-[10px] text-content-muted italic text-center">
+                  Consultez le manager pour traiter ce contact
+                </div>
+              )}
             </div>
           </div>
         );

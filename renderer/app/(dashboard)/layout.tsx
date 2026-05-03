@@ -11,8 +11,9 @@ import { InactivityGuard } from '@/components/shared/InactivityGuard';
 import { CommandPalette } from '@/components/shared/CommandPalette';
 import { Loader2 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
-import { NAV_ITEMS } from '@/components/shared/Sidebar';
+import { NAV_ITEMS } from '@/lib/nav-config';
 import { checkPermission } from '@/lib/permissions';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { NotificationBanner } from '@/components/shared/NotificationBanner';
 import { StartupAlertsModal } from '@/components/shared/StartupAlertsModal';
 import { updateStaffHeartbeat } from '@services/supabase/staff';
@@ -130,8 +131,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const { overrides } = usePermissionsStore.getState();
       const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides, business);
       if (!hasAccess) {
-        // Rediriger vers la page par défaut de l'établissement (probablement /pos ou /hotel)
-        router.replace('/pos');
+        // Rediriger vers la page par défaut autorisée pour cet utilisateur
+        router.replace(getDefaultRoute(user.role, business, overrides));
       }
     }
   }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck, business]);

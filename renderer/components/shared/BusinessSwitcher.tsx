@@ -94,7 +94,7 @@ export function BusinessSwitcher({
       clear();
       setOpen(false);
       success(`Basculé vers ${biz?.name ?? '…'}`);
-      router.replace(getDefaultRoute((biz as { features?: string[] })?.features ?? []));
+      router.replace(getDefaultRoute(profile?.role as any, biz as any));
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -131,7 +131,7 @@ export function BusinessSwitcher({
     setCashSession(null);
     setCashLoaded(true);
     clear();
-    router.replace(getDefaultRoute(newBiz.features ?? []));
+    router.replace(getDefaultRoute(profile?.role as any, newBiz));
   }
 
   return (

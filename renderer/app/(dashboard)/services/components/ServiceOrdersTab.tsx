@@ -7,6 +7,7 @@ import {
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { useCashSessionStore } from '@/store/cashSession';
 import { toUserError } from '@/lib/user-error';
 import { 
@@ -39,10 +40,6 @@ const STATUS_TABS = [
 export function ServiceOrdersTab({
   businessId,
   currency,
-  canCreateOrder,
-  canUpdateStatus,
-  canCollectPayment,
-  canShareOrder,
   onSelectOrder,
   onNewOrder,
   onPrintOrder,
@@ -51,10 +48,6 @@ export function ServiceOrdersTab({
 }: {
   businessId: string;
   currency: string;
-  canCreateOrder: boolean;
-  canUpdateStatus: boolean;
-  canCollectPayment: boolean;
-  canShareOrder: boolean;
   onSelectOrder: (order: ServiceOrder) => void;
   onNewOrder: () => void;
   onPrintOrder: (order: ServiceOrder, e: React.MouseEvent) => void;
@@ -63,7 +56,13 @@ export function ServiceOrdersTab({
 }) {
   const { user, business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
+  const can = useCan();
   const { success, error: notifError } = useNotificationStore();
+
+  const canCreateOrder = can('create_service_order');
+  const canUpdateStatus = can('update_service_status');
+  const canCollectPayment = can('collect_service_payment');
+  const canShareOrder = can('share_service_order');
   const [statusFilter, setStatusFilter] = React.useState<ServiceOrderStatus | 'all'>(initialStatus ?? 'all');
   React.useEffect(() => { setStatusFilter(initialStatus ?? 'all'); }, [initialStatus]);
   const [search, setSearch] = React.useState('');

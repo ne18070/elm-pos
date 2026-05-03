@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { formatCurrency } from '@/lib/utils';
 import { OrderVerification } from '@/components/livraison/OrderVerification';
 import {
@@ -34,6 +35,10 @@ const DELIVERY_LABELS = {
 export default function LivraisonPage() {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
+  const canAssign = can('assign_livreur');
+  const canConfirm = can('confirm_delivery');
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
@@ -271,7 +276,7 @@ export default function LivraisonPage() {
                       </div>
                     </button>
 
-                    {isDelivery && livreurs.length > 0 && (
+                    {isDelivery && livreurs.length > 0 && canAssign && (
                       <div className="px-4 pb-3 flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); openAssign(order); }}

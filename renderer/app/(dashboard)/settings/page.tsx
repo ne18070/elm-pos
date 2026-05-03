@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth';
-import { canManageSettings, hasRole } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
+import { hasRole } from '@/lib/permissions';
 import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -70,8 +71,9 @@ function SettingsSection({
 
 export default function SettingsPage() {
   const { business, user } = useAuthStore();
-  const isManager = canManageSettings(user?.role);
-  const isAdmin   = hasRole(user?.role, 'admin');
+  const can = useCan();
+  const isManager = can('manage_settings');
+  const isAdmin   = can('manage_whatsapp');
   const isOwner   = hasRole(user?.role, 'owner');
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({

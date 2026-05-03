@@ -56,35 +56,62 @@ export function getRoleLabel(role: UserRole | undefined | null): string {
   return ROLE_LABEL[role ?? 'staff'] ?? 'Caissier';
 }
 
+/**
+ * Retourne un label de rôle adapté au type de business.
+ * Ex: 'Clerc' pour un cabinet juridique, 'Serveur' pour un restaurant.
+ */
+export function getContextualRoleLabel(role: UserRole | undefined | null, businessType: string | undefined): string {
+  const r = role ?? 'staff';
+  
+  if (businessType === 'juridique') {
+    if (r === 'manager') return 'Clerc / Juriste';
+    if (r === 'staff') return 'Secrétaire';
+  }
+  if (businessType === 'restaurant') {
+    if (r === 'manager') return 'Maître d\'hôtel';
+    if (r === 'staff') return 'Serveur';
+  }
+  if (businessType === 'hotel') {
+    if (r === 'manager') return 'Gouvernant';
+    if (r === 'staff') return 'Réceptionniste';
+  }
+  
+  return ROLE_LABEL[r] ?? 'Employé';
+}
+
 // --- Permissions nommées ------------------------------------------------------
 
 /** Peut voir les données financières (balance, états financiers, caisse) */
-export const canViewFinancials    = (r: UserRole | null | undefined) => hasRole(r, 'admin');
+export const canViewFinancials    = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'view_financials', overrides, b);
 
 /** Peut gérer les paramètres (établissement, stock, templates, type) */
-export const canManageSettings    = (r: UserRole | null | undefined) => hasRole(r, 'manager');
+export const canManageSettings    = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'manage_settings', overrides, b);
 
 /** Peut annuler des commandes / réservations */
-export const canCancelOrders      = (r: UserRole | null | undefined, b?: Business | null) => 
-  hasRole(r, 'manager') && (!b || hasFeature(b, 'retail'));
+export const canCancelOrders      = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'cancel_orders', overrides, b);
 
 /** Peut créer / modifier / supprimer des chambres */
-export const canManageRooms       = (r: UserRole | null | undefined, b?: Business | null) => 
-  hasRole(r, 'manager') && (!b || hasFeature(b, 'hotel'));
+export const canManageRooms       = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'manage_rooms', overrides, b);
 
 /** Peut voir et enregistrer des dépenses */
-export const canManageExpenses    = (r: UserRole | null | undefined, b?: Business | null) => 
-  hasRole(r, 'manager') && (!b || hasFeature(b, 'expenses'));
+export const canManageExpenses    = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'manage_expenses', overrides, b);
 
 /** Peut gérer l'équipe (invitations, rôles) */
-export const canManageTeam        = (r: UserRole | null | undefined) => hasRole(r, 'admin');
+export const canManageTeam        = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'manage_team', overrides, b);
 
 /** Peut supprimer des données critiques */
-export const canDelete            = (r: UserRole | null | undefined) => hasRole(r, 'admin');
+export const canDelete            = (r: UserRole | null | undefined, overrides?: Record<string, boolean>, b?: Business | null) => 
+  checkPermission(r, 'delete_data', overrides, b);
 
 // --- Permissions granulaires --------------------------------------------------
 
-import type { PermissionKey } from './permissions-map';
+import type { PermissionKey, PermissionMeta } from './permissions-map';
 import { PERMISSIONS, IMMUTABLE_OWNER_PERMISSIONS } from './permissions-map';
 
 /**
@@ -99,7 +126,7 @@ export function checkPermission(
   const r = role ?? 'staff';
 
   // Fall back to role default
-  const meta = PERMISSIONS[permission];
+  const meta = (PERMISSIONS as Record<string, PermissionMeta>)[permission];
   if (!meta) return false;
 
   // 1. Check feature requirement first (supports string or string[] — any match is enough)

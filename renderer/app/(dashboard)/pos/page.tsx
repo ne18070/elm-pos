@@ -21,6 +21,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { getProductByBarcode } from '@services/supabase/products';
 import type { Product, RestaurantTable } from '@pos-types';
+import { hasFeature } from '@/lib/permissions';
 
 import { useSidebarStore } from '@/store/sidebar';
 
@@ -98,7 +99,7 @@ export default function PosPage() {
 
   // Les hôtels sans POS activé sont redirigés vers /hotel
   useEffect(() => {
-    if (business?.type === 'hotel' && !(business?.features ?? []).includes('pos')) {
+    if (hasFeature(business, 'hotel') && !hasFeature(business, 'pos')) {
       router.replace('/hotel');
     }
   }, [business, router]);
@@ -131,7 +132,7 @@ export default function PosPage() {
     [addItem, business, warning]
   );
 
-  const isRestaurant = useMemo(() => business?.type === 'restaurant' || business?.features?.includes('restaurant'), [business]);
+  const isRestaurant = useMemo(() => hasFeature(business, 'restaurant'), [business]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

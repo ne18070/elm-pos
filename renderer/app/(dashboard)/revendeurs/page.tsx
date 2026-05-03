@@ -11,6 +11,7 @@ import { SideDrawer } from '@/components/ui/SideDrawer';
 import { ImportModal } from '@/components/resellers/ImportModal';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { displayCurrency } from '@/lib/utils';
 import {
   getResellers, createReseller, updateReseller, deleteReseller,
@@ -207,6 +208,7 @@ type Panel = null | { type: 'reseller'; item: Reseller | null } | { type: 'clien
 export default function RevendeursPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
 
   const [tab, setTab]               = useState<Tab>('revendeurs');
   const [search, setSearch]         = useState('');
@@ -465,20 +467,24 @@ export default function RevendeursPage() {
             <Gift className="w-4 h-4 inline mr-1.5" />Offres volume
           </button>
           <div className="h-8 w-px bg-surface-border self-center" />
-          <button
-            onClick={() => setImportType('resellers')}
-            className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 whitespace-nowrap"
-            title="Importer revendeurs CSV"
-          >
-            <Upload className="w-3.5 h-3.5" /> Importer revendeurs
-          </button>
-          <button
-            onClick={() => setImportType('clients')}
-            className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 whitespace-nowrap"
-            title="Importer clients CSV"
-          >
-            <Upload className="w-3.5 h-3.5" /> Importer clients
-          </button>
+          {can('manage_revendeurs') && (
+            <button
+              onClick={() => setImportType('resellers')}
+              className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 whitespace-nowrap"
+              title="Importer revendeurs CSV"
+            >
+              <Upload className="w-3.5 h-3.5" /> Importer revendeurs
+            </button>
+          )}
+          {can('manage_reseller_clients') && (
+            <button
+              onClick={() => setImportType('clients')}
+              className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 whitespace-nowrap"
+              title="Importer clients CSV"
+            >
+              <Upload className="w-3.5 h-3.5" /> Importer clients
+            </button>
+          )}
         </div>
       </div>
 
@@ -520,9 +526,11 @@ export default function RevendeursPage() {
                   </select>
                 )}
               </div>
-              <button onClick={() => openResellerPanel(null)} className="btn-primary w-full h-8 text-sm flex items-center justify-center gap-1">
-                <Plus className="w-3.5 h-3.5 shrink-0" /> Nouveau revendeur
-              </button>
+              {can('manage_revendeurs') && (
+                <button onClick={() => openResellerPanel(null)} className="btn-primary w-full h-8 text-sm flex items-center justify-center gap-1">
+                  <Plus className="w-3.5 h-3.5 shrink-0" /> Nouveau revendeur
+                </button>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto">

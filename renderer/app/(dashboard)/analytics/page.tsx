@@ -8,6 +8,8 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
 import { GrossisteTab } from '@/components/analytics/GrossisteTab';
+import { useCan } from '@/hooks/usePermission';
+import { hasFeature } from '@/lib/permissions';
 
 // Components
 import { GeneralTab } from './components/GeneralTab';
@@ -42,6 +44,7 @@ interface TabConfig {
 
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
+  const can = useCan();
   const [period, setPeriod]   = useState(30);
   const [tab, setTab]         = useState<Tab>('general');
 
@@ -64,7 +67,7 @@ export default function AnalyticsPage() {
     refresh,
   } = useAnalyticsData(business, period);
 
-  const isService   = business?.type === 'service' || (business as any)?.types?.includes('service');
+  const isService = hasFeature(business, 'service');
 
   useEffect(() => {
       if (tab !== 'general') {
@@ -73,6 +76,18 @@ export default function AnalyticsPage() {
   }, [tab, loadTab]);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency ?? 'XOF');
+
+  if (!can('view_analytics')) {
+    return (
+      <div className="flex h-full items-center justify-center bg-surface-base p-6">
+        <div className="max-w-sm text-center">
+          <BarChart className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
+          <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
+          <p className="mt-1 text-sm text-content-secondary">Vous n'avez pas la permission de consulter les statistiques.</p>
+        </div>
+      </div>
+    );
+  }
 
   function exportCSV() {
     if (!data) return;

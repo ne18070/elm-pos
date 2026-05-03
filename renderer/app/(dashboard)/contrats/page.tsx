@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import {
   getVehicles, toggleVehicleAvailability,
   getTemplates, deleteTemplate,
@@ -118,6 +119,7 @@ function CancelContractModal({
 export default function ContratsPage() {
   const { business, user } = useAuthStore();
   const { success: notifSuccess, error: notifError } = useNotificationStore();
+  const can = useCan();
 
   const [tab, setTab]               = useState<Tab>('contrats');
   const [loading, setLoading]       = useState(true);
@@ -302,6 +304,10 @@ export default function ContratsPage() {
             else { setShowContractPanel(true); setEditContract(null); }
           }}
           className="btn-primary flex items-center gap-2 text-sm h-9 px-3"
+          disabled={
+            (tab === 'vehicules' && !can('manage_vehicles')) ||
+            (tab === 'modeles' && !can('manage_contract_templates'))
+          }
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">
@@ -493,24 +499,28 @@ export default function ContratsPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={async () => {
+                      if (!can('manage_vehicles')) return;
                       try {
                         await toggleVehicleAvailability(v.id, !v.is_available);
                         load();
                       } catch (e) { notifError(toUserError(e)); }
                     }}
-                    className={`text-[10px] px-2 py-0.5 rounded-full transition-colors font-medium
+                    disabled={!can('manage_vehicles')}
+                    className={`text-[10px] px-2 py-0.5 rounded-full transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed
                       ${v.is_available
                         ? 'bg-badge-success text-status-success hover:bg-badge-error hover:text-status-error'
                         : 'bg-badge-error text-status-error hover:bg-badge-success hover:text-status-success'}`}
                   >
                     {v.is_available ? 'Disponible' : 'Indispo'}
                   </button>
-                  <button
-                    onClick={() => { setEditVehicle(v); setShowVehiclePanel(true); }}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
+                  {can('manage_vehicles') && (
+                    <button
+                      onClick={() => { setEditVehicle(v); setShowVehiclePanel(true); }}
+                      className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               );
@@ -538,18 +548,22 @@ export default function ContratsPage() {
                   <p className="text-xs text-content-muted">Modifié le {fmtDate(t.updated_at)}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => { setEditTemplate(t); setShowTemplatePanel(true); }}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteTemplate(t.id)}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {can('manage_contract_templates') && (
+                    <>
+                      <button
+                        onClick={() => { setEditTemplate(t); setShowTemplatePanel(true); }}
+                        className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteTemplate(t.id)}
+                        className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

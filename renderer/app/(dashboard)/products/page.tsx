@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlerts';
 import { formatCurrency } from '@/lib/utils';
+import { useCan } from '@/hooks/usePermission';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { ProductModal } from '@/components/products/ProductModal';
 import { ImportProductsModal } from '@/components/products/ImportProductsModal';
@@ -20,6 +21,7 @@ type ViewMode = 'grid' | 'list';
 export default function ProductsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ViewMode>('list');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -107,46 +109,56 @@ export default function ProductsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowShare(true)}
-              className="btn-secondary flex items-center gap-2"
-              title="Partager ma boutique"
-            >
-              <Share2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Boutique</span>
-            </button>
-            <button
-              onClick={() => setShowBarcode(true)}
-              className="btn-secondary flex items-center gap-2"
-              title="Imprimer codes-barres"
-            >
-              <Barcode className="w-4 h-4" />
-              <span className="hidden sm:inline">Codes-barres</span>
-            </button>
-            <button
-              onClick={exportCSV}
-              className="btn-secondary flex items-center gap-2"
-              title="Exporter en CSV"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Exporter CSV</span>
-            </button>
-            <button
-              onClick={() => setShowImport(true)}
-              className="btn-secondary flex items-center gap-2"
-              title="Importer depuis CSV"
-            >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">Importer</span>
-            </button>
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nouveau produit</span>
-              <span className="sm:hidden">Nouveau</span>
-            </button>
+            {can('share_shop') && (
+              <button
+                onClick={() => setShowShare(true)}
+                className="btn-secondary flex items-center gap-2"
+                title="Partager ma boutique"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Boutique</span>
+              </button>
+            )}
+            {can('print_barcodes') && (
+              <button
+                onClick={() => setShowBarcode(true)}
+                className="btn-secondary flex items-center gap-2"
+                title="Imprimer codes-barres"
+              >
+                <Barcode className="w-4 h-4" />
+                <span className="hidden sm:inline">Codes-barres</span>
+              </button>
+            )}
+            {can('export_products') && (
+              <button
+                onClick={exportCSV}
+                className="btn-secondary flex items-center gap-2"
+                title="Exporter en CSV"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Exporter CSV</span>
+              </button>
+            )}
+            {can('import_products') && (
+              <button
+                onClick={() => setShowImport(true)}
+                className="btn-secondary flex items-center gap-2"
+                title="Importer depuis CSV"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Importer</span>
+              </button>
+            )}
+            {can('create_product') && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Nouveau produit</span>
+                <span className="sm:hidden">Nouveau</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -274,19 +286,23 @@ export default function ProductsPage() {
 
                 {/* Actions — visibles au hover */}
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => handleEdit(product, e)}
-                    className="flex-1 btn-secondary flex items-center justify-center gap-1 py-1.5 text-xs"
-                  >
-                    <Pencil className="w-3 h-3" />
-                    Modifier
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(product, e)}
-                    className="btn-danger flex items-center justify-center py-1.5 px-2"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  {can('edit_product') && (
+                    <button
+                      onClick={(e) => handleEdit(product, e)}
+                      className="flex-1 btn-secondary flex items-center justify-center gap-1 py-1.5 text-xs"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Modifier
+                    </button>
+                  )}
+                  {can('delete_product') && (
+                    <button
+                      onClick={(e) => handleDelete(product, e)}
+                      className="btn-danger flex items-center justify-center py-1.5 px-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -402,20 +418,24 @@ export default function ProductsPage() {
                     {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => handleEdit(product, e)}
-                          className="btn-secondary p-1.5"
-                          title="Modifier"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(product, e)}
-                          className="btn-danger p-1.5"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {can('edit_product') && (
+                          <button
+                            onClick={(e) => handleEdit(product, e)}
+                            className="btn-secondary p-1.5"
+                            title="Modifier"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {can('delete_product') && (
+                          <button
+                            onClick={(e) => handleDelete(product, e)}
+                            className="btn-danger p-1.5"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

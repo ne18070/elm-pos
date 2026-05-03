@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
 import { getMyTickets, type SupportTicket, type TicketStatus } from '@services/supabase/support';
 import { useNotificationStore } from '@/store/notifications';
+import { hasFeature } from '@/lib/permissions';
 
 type Tab = 'faq' | 'tickets';
 type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique';
@@ -611,10 +612,8 @@ export default function HelpPage() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   
   const role = user?.role ?? 'staff';
-  const businessType = (business?.type ?? 'retail') as BusinessType;
-  const features = business?.features ?? [];
-  const isHotel = businessType === 'hotel' || features.includes('hotel');
-  const isJuridique = businessType === 'juridique' || features.includes('dossiers') || features.includes('honoraires');
+  const isHotel = hasFeature(business, 'hotel');
+  const isJuridique = hasFeature(business, 'juridique') || hasFeature(business, 'dossiers') || hasFeature(business, 'honoraires');
   const [search, setSearch] = useState('');
 
   const loadTickets = useCallback(async () => {
@@ -641,14 +640,8 @@ export default function HelpPage() {
       : s.topics,
   })).filter((s) => {
     if (s.roles && !s.roles.includes(role as 'owner' | 'admin' | 'staff')) return false;
-    if (s.onlyFor) {
-      const allowedForHotel = s.onlyFor.includes('hotel');
-      const allowedForJuridique = s.onlyFor.includes('juridique');
-      if (allowedForHotel && !isHotel) return false;
-      if (allowedForJuridique && !isJuridique) return false;
-      if (!allowedForHotel && !allowedForJuridique && !s.onlyFor.includes(businessType)) return false;
-    }
-    if (s.excludeFor && s.excludeFor.includes(businessType)) return false;
+    if (s.onlyFor && !s.onlyFor.some(f => hasFeature(business, f))) return false;
+    if (s.excludeFor && s.excludeFor.some(f => hasFeature(business, f))) return false;
     return !search || s.topics.length > 0;
   });
 

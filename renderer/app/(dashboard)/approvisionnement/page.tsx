@@ -10,6 +10,7 @@ import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { formatCurrency, cn } from '@/lib/utils';
 import { getStockEntries } from '@services/supabase/stock';
 import { getSuppliers } from '@services/supabase/suppliers';
@@ -73,6 +74,8 @@ function exportCSV(entries: StockEntry[], currency?: string) {
 export default function ApprovisionnementPage() {
   const { business, user }       = useAuthStore();
   const { error: notifError, success: notifOk } = useNotificationStore();
+  const can = useCan();
+  const canManage = can('manage_inventory');
 
   const [entries, setEntries]       = useState<StockEntry[]>([]);
   const [suppliers, setSuppliers]   = useState<Supplier[]>([]);

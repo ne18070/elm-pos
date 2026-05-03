@@ -9,7 +9,7 @@ import { getJournalEntries, createManualEntry, deleteManualEntry } from '@servic
 import type { JournalEntry } from '@services/supabase/accounting';
 import { getVehicles, type RentalVehicle } from '@services/supabase/contracts';
 import { getVoitures, type Voiture } from '@services/supabase/voitures';
-import { canDelete } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
 import { displayCurrency } from '@/lib/utils';
 
 // --- Catégories de dépenses ---------------------------------------------------
@@ -47,6 +47,7 @@ export default function DepensesPage() {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const currency = business?.currency ?? 'XOF';
+  const can = useCan();
 
   const [entries, setEntries]     = useState<JournalEntry[]>([]);
   const [rentalVehicles, setRentalVehicles] = useState<RentalVehicle[]>([]);
@@ -66,7 +67,8 @@ export default function DepensesPage() {
     vehicleId:   '',
   });
 
-  const isOwnerOrAdmin = canDelete(user?.role);
+  const isOwnerOrAdmin = can('delete_expense');
+  const canSeeTotals   = can('view_financials');
 
   const load = useCallback(async () => {
     if (!business?.id) return;
@@ -162,17 +164,21 @@ export default function DepensesPage() {
           <p className="text-xs text-content-secondary mt-0.5">
             Charges opérationnelles hors ventes — loyer, salaires, transport…
           </p>
-          <p className="text-xs text-content-primary mt-0.5">
-            Ce mois : <span className="text-status-error font-semibold">{fmtMoney(totalMonth, currency)}</span>
-          </p>
+          {canSeeTotals && (
+            <p className="text-xs text-content-primary mt-0.5">
+              Ce mois : <span className="text-status-error font-semibold">{fmtMoney(totalMonth, currency)}</span>
+            </p>
+          )}
         </div>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Nouvelle dépense
-        </button>
+        {can('manage_expenses') && (
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Nouvelle dépense
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">

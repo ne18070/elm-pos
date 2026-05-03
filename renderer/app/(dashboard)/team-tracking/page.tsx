@@ -2,6 +2,7 @@
 
 import { useRealtimeStore } from '@/store/realtime';
 import { useAuthStore } from '@/store/auth';
+import { useCan } from '@/hooks/usePermission';
 import { MapPin, Navigation, Clock, User, Globe, WifiOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -25,6 +26,7 @@ function accuracyColor(accuracy: number | undefined): string {
 export default function TeamTrackingPage() {
   const { terminals, status, terminalId } = useRealtimeStore();
   const { user } = useAuthStore();
+  const can = useCan();
 
   // Filtrage strict pour exclure le propriétaire et soi-même
   const trackedMembers = terminals.filter(t => 
@@ -42,14 +44,14 @@ export default function TeamTrackingPage() {
     t.user_name !== user?.full_name // <--- EXCLUSION PAR NOM (SÉCURITÉ SUPPLÉMENTAIRE)
   );
 
-  const isOwner = user?.role === 'owner';
+  const canManage = can('manage_team_tracking');
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface p-6 pb-24 sm:pb-6">
       <div className="max-w-5xl mx-auto space-y-8">
 
         {/* Info banner for Admin/Owner */}
-        {isOwner && (
+        {canManage && (
           <div className="flex items-center gap-3 px-4 py-3 bg-brand-500/10 border border-brand-500/30 rounded-xl text-content-brand text-sm">
             <User className="w-4 h-4 shrink-0" />
             <span>

@@ -130,7 +130,7 @@ export default function LoginPage() {
         setLoaded(true);
         setCashLoaded(true);
         console.log('[Login] Redirecting user to default route');
-        router.replace(getDefaultRoute(activeBusiness?.features ?? []));
+        router.replace(getDefaultRoute(profile.role, activeBusiness as any));
       } catch (innerErr) {
         console.error('[Login] Inner loading error (non-blocking):', innerErr);
         router.replace('/orders'); // Fallback
