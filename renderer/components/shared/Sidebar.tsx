@@ -28,7 +28,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSidebarStore } from '@/store/sidebar';
 
 import { useCan } from '@/hooks/usePermission';
-import type { PermissionKey } from '@/lib/permissions-map';
+import type { PermissionKey } from '@/lib/permissions';
 import { NAV_SECTIONS, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
 
 import { autoRecordDeparture } from '@services/supabase/staff';

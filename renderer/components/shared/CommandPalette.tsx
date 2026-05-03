@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useThemeStore } from '@/store/theme';
 import { NAV_ITEMS } from '@/lib/nav-config';
 import { useCan } from '@/hooks/usePermission';
-import type { PermissionKey } from '@/lib/permissions-map';
+import type { PermissionKey } from '@/lib/permissions';
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);

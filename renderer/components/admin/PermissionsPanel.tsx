@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import {
   PERMISSIONS, PERMISSION_GROUPS, IMMUTABLE_OWNER_PERMISSIONS,
-  type PermissionKey, type PermissionGroup,
-} from '@/lib/permissions-map';
-import { checkPermission, hasFeature, getContextualRoleLabel } from '@/lib/permissions';
+  type PermissionKey, type PermissionGroup, type PermissionMeta,
+  checkPermission, hasFeature, getContextualRoleLabel
+} from '@/lib/permissions';
 import type { UserRole } from '@pos-types';
 
 interface Member {

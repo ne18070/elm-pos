@@ -3,7 +3,7 @@ import {
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History
 } from 'lucide-react';
-import type { PermissionKey } from './permissions-map';
+import type { PermissionKey } from './permissions';
 
 export const NAV_SECTIONS: { 
   label: string; 

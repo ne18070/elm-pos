@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { PermissionKey } from '../../renderer/lib/permissions-map';
+import type { PermissionKey } from '../../renderer/lib/permissions';
 
 export interface PermissionOverride {
   permission: string;
