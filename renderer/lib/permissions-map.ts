@@ -91,7 +91,7 @@ export const PERMISSIONS: Record<PermissionKey, PermissionMeta> = {
   view_dossiers:          { label: 'Dossiers & Affaires',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'dossiers' },
   view_honoraires:        { label: 'Honoraires',                   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'honoraires' },
 
-  view_contrats:          { label: 'Contrats & Location',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'rental' },
+  view_contrats:          { label: 'Contrats & Location',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'contrats' },
   view_voitures:          { label: 'Vente de Voitures',            group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'voitures' },
   view_staff:             { label: 'Personnel & Paie',             group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   view_team_tracking:     { label: 'Tracking terrain',             group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },

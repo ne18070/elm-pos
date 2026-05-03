@@ -7,6 +7,7 @@ import {
   getInstancesByDossier, getWorkflows, createTrackingToken,
 } from '@services/supabase/workflows';
 import { triggerWorkflow } from '@/lib/workflow-runtime';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { type Dossier } from '@services/supabase/dossiers';
 import type { WorkflowInstance, Workflow } from '@pos-types';
 
@@ -35,8 +36,7 @@ export function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch 
       const trackUrl = `${baseUrl}/track/${token}`;
       const message = `Bonjour ${dossier.client_name}, voici le lien pour suivre l'avancement de votre dossier ${dossier.reference} en temps réel : ${trackUrl}`;
       
-      const whatsappUrl = `https://wa.me/${dossier.client_phone?.replace(/\s+/g, '')}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      triggerWhatsAppShare(dossier.client_phone, message);
       success('Lien de suivi généré');
     } catch (e) { 
       notifError("Impossible de générer le lien de suivi.");

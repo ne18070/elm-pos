@@ -7,7 +7,9 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
 import { printReceipt } from '@/lib/ipc';
-import { sendInvoiceViaWhatsApp, generateInvoiceLink } from '@/lib/share-invoice';
+import { generateInvoiceLink } from '@/lib/share-invoice';
+import { copyTextToClipboard } from '@/lib/clipboard';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
@@ -63,7 +65,7 @@ function isAcompte(order: Order): boolean {
 
 export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: OrderDetailProps) {
   const { business, user } = useAuthStore();
-  const { success, error: notifError } = useNotificationStore();
+  const { success, error: notifError, warning } = useNotificationStore();
   const [showRefundModal, setShowRefundModal]     = useState(false);
   const [showCompleteForm, setShowCompleteForm]   = useState(false);
   const [completeMethod, setCompleteMethod]       = useState<Exclude<PaymentMethod, 'partial'>>('cash');
@@ -71,6 +73,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [completing, setCompleting]               = useState(false);
   const [sharingWa, setSharingWa]                 = useState(false);
   const [copying, setCopying]                     = useState(false);
+  const [invoiceLink, setInvoiceLink]             = useState('');
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
   const fmt              = (n: number) => formatCurrency(n, currency);
@@ -86,6 +89,10 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     }
   }, [order.id, order.status]);
 
+  useEffect(() => {
+    setInvoiceLink('');
+  }, [order.id]);
+
   // Pré-remplir le montant quand on ouvre le formulaire
   useEffect(() => {
     if (showCompleteForm) {
@@ -94,17 +101,20 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   }, [showCompleteForm, remaining, isWhatsAppPending, order.total]);
 
   async function handleWhatsAppShare() {
-    if (!order || !business || !user) return;
+    if (!order || !business) return;
     setSharingWa(true);
     try {
-      const res = await sendInvoiceViaWhatsApp(order, business, user.id);
-      if (res.success) {
-        success('Facture envoyée par WhatsApp');
-      } else {
-        notifError(res.error || "Erreur lors de l'envoi");
-      }
+      const publicUrl = await generateInvoiceLink(order, business);
+      const orderRef = order.id.slice(0, 8).toUpperCase();
+      const greeting  = order.customer_name ? `Bonjour ${order.customer_name},` : 'Bonjour,';
+      const text = `${greeting} voici votre facture n° *${orderRef}* 🧾\n\n` +
+        `🔗 Télécharger le PDF : ${publicUrl}\n\n` +
+        `Merci pour votre confiance ! 🙏`;
+
+      triggerWhatsAppShare(order.customer_phone || '', text);
+      success('Lien préparé pour WhatsApp');
     } catch (err) {
-      notifError("Erreur lors de l'envoi WhatsApp");
+      notifError(toUserError(err));
     } finally {
       setSharingWa(false);
     }
@@ -112,13 +122,28 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
   async function handleCopyLink() {
     if (!order || !business) return;
+    if (invoiceLink) {
+      try {
+        await copyTextToClipboard(invoiceLink);
+        success('Lien copié dans le presse-papier');
+      } catch {
+        warning('Touchez le champ du lien puis copiez-le manuellement.');
+      }
+      return;
+    }
+
     setCopying(true);
     try {
       const url = await generateInvoiceLink(order, business);
-      await navigator.clipboard.writeText(url);
-      success('Lien copié dans le presse-papier');
+      setInvoiceLink(url);
+      try {
+        await copyTextToClipboard(url);
+        success('Lien copié dans le presse-papier');
+      } catch {
+        warning('Lien prêt. Appuyez encore sur "Lien PDF" pour le copier.');
+      }
     } catch (err) {
-      notifError("Erreur lors de la génération du lien");
+      notifError(toUserError(err));
     } finally {
       setCopying(false);
     }
@@ -451,6 +476,16 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               Lien PDF
             </button>
           </div>
+          {invoiceLink && (
+            <input
+              readOnly
+              value={invoiceLink}
+              onFocus={(event) => event.currentTarget.select()}
+              onClick={(event) => event.currentTarget.select()}
+              className="input h-9 text-xs font-mono"
+              aria-label="Lien PDF"
+            />
+          )}
 
           {/* Compléter le paiement —acompte */}
           {partial && !showCompleteForm && (
@@ -520,5 +555,3 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     </>
   );
 }
-
-

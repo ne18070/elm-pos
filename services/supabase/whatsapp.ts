@@ -243,32 +243,14 @@ export async function broadcastDailyMenu(
             text:              { preview_url: false, body: text },
           };
 
-      const res = await fetch(
-        `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
-        {
-          method:  'POST',
-          headers: {
-            Authorization:  `Bearer ${config.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const msg = (err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${res.status}`;
-        result.failed++;
-        result.errors.push(`${client.name} (${client.phone}): ${msg}`);
-        continue;
-      }
+      await callMetaAPI(config, payload);
 
       // Enregistrer dans les messages WhatsApp
       await supabase.from('whatsapp_messages').insert({
         business_id:  config.business_id,
         from_phone:   phone,
         direction:    'outbound',
-        message_type: 'text',
+        message_type: imageUrl ? 'image' : 'text',
         body:         text,
         replied_by:   userId,
         status:       'sent',
@@ -292,7 +274,40 @@ export async function broadcastDailyMenu(
   return result;
 }
 
-// --- Envoi de message (reply depuis l'app) ------------------------------------
+// --- Helpers Meta Cloud API (via Proxy Edge Function) --------------------------
+
+async function callMetaAPI(config: WhatsAppConfig, payload: unknown) {
+  // On passe par une Edge Function pour éviter les problèmes de CORS dans Electron
+  const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+    body: {
+      phone_number_id: config.phone_number_id,
+      access_token:    config.access_token,
+      payload,
+    },
+  });
+
+  if (error) {
+    console.error('[WhatsApp Proxy] Error:', error);
+    throw new Error('Erreur de communication avec le service WhatsApp');
+  }
+
+  if (data?.error) {
+    console.error('[Meta API] Error:', data.error);
+    throw new Error(data.error.message || 'Erreur API WhatsApp');
+  }
+
+  return data;
+}
+
+async function sendTextMessage(config: WhatsAppConfig, toPhone: string, text: string) {
+  await callMetaAPI(config, {
+    messaging_product: 'whatsapp',
+    recipient_type:    'individual',
+    to:                toPhone,
+    type:              'text',
+    text:              { preview_url: false, body: text },
+  });
+}
 
 export async function sendWhatsAppReply(
   config: WhatsAppConfig,
@@ -302,29 +317,7 @@ export async function sendWhatsAppReply(
 ): Promise<void> {
   const phone = normalizePhone(toPhone);
 
-  // Appel direct à Meta Cloud API (depuis le renderer via fetch)
-  const res = await fetch(
-    `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
-    {
-      method:  'POST',
-      headers: {
-        Authorization:  `Bearer ${config.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type:    'individual',
-        to:                phone,
-        type:              'text',
-        text:              { preview_url: false, body: text },
-      }),
-    },
-  );
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${res.status}`);
-  }
+  await sendTextMessage(config, phone, text);
 
   // Stocker le message sortant
   await supabase.from('whatsapp_messages').insert({
@@ -349,32 +342,17 @@ export async function sendWhatsAppDocument(
 ): Promise<void> {
   const phone = normalizePhone(toPhone);
 
-  const res = await fetch(
-    `https://graph.facebook.com/v19.0/${config.phone_number_id}/messages`,
-    {
-      method:  'POST',
-      headers: {
-        Authorization:  `Bearer ${config.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type:    'individual',
-        to:                phone,
-        type:              'document',
-        document: {
-          link:     docUrl,
-          filename: filename,
-          caption:  caption,
-        },
-      }),
+  await callMetaAPI(config, {
+    messaging_product: 'whatsapp',
+    recipient_type:    'individual',
+    to:                phone,
+    type:              'document',
+    document: {
+      link:     docUrl,
+      filename: filename,
+      caption:  caption,
     },
-  );
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: { message?: string } })?.error?.message ?? `Meta API error ${res.status}`);
-  }
+  });
 
   await supabase.from('whatsapp_messages').insert({
     business_id:  config.business_id,
