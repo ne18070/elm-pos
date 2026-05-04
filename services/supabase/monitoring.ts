@@ -300,68 +300,89 @@ export interface CTOStats {
   slow_queries:      SlowQuery[];
 }
 
+const EMPTY_CTO_STATS: CTOStats = {
+  latency:            { p50: 0, p95: 0 },
+  error_rate_1h:      0,
+  total_events_24h:   0,
+  total_errors_24h:   0,
+  errors_by_category: {},
+  top_errors:         [],
+  alert_log:          [],
+  db_health:          null,
+  slow_queries:       [],
+};
+
 export async function getCTOStats(): Promise<CTOStats> {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const since1h  = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  const [vitals24hRes, alertLogRes, dbHealthRes, slowQueriesRes] = await Promise.allSettled([
-    db.from('monitoring_vitals')
-      .select('category, level, latency_ms, message, created_at')
-      .gte('created_at', since24h)
-      .limit(2000),
-    db.from('monitoring_alert_log')
-      .select('rule_code, value, fired_at')
-      .order('fired_at', { ascending: false })
-      .limit(10),
-    db.rpc('get_db_health'),
-    db.rpc('get_slow_queries', { p_limit: 5 }),
-  ]);
+  try {
+    const [vitals24hRes, alertLogRes, dbHealthRes] = await Promise.allSettled([
+      db.from('monitoring_vitals')
+        .select('category, level, latency_ms, message, created_at')
+        .gte('created_at', since24h)
+        .limit(2000),
+      db.from('monitoring_alert_log')
+        .select('rule_code, value, fired_at')
+        .order('fired_at', { ascending: false })
+        .limit(10),
+      db.rpc('get_db_health'),
+      // get_slow_queries omitted — requires pg_stat_statements extension (not available)
+    ]);
 
-  const vitals: any[] = vitals24hRes.status === 'fulfilled' ? (vitals24hRes.value.data ?? []) : [];
+    const vitals: any[] = vitals24hRes.status === 'fulfilled' ? (vitals24hRes.value.data ?? []) : [];
 
-  // Latency percentiles (API calls only)
-  const apiLatencies = vitals
-    .filter((v: any) => v.category === 'api' && v.latency_ms != null)
-    .map((v: any) => v.latency_ms as number)
-    .sort((a: number, b: number) => a - b);
+    // Latency percentiles (API calls only)
+    const apiLatencies = vitals
+      .filter((v: any) => v.category === 'api' && v.latency_ms != null)
+      .map((v: any) => v.latency_ms as number)
+      .sort((a: number, b: number) => a - b);
 
-  const p50 = apiLatencies.length ? apiLatencies[Math.floor(apiLatencies.length * 0.50)] ?? 0 : 0;
-  const p95 = apiLatencies.length ? apiLatencies[Math.floor(apiLatencies.length * 0.95)] ?? 0 : 0;
+    const p50 = apiLatencies.length ? apiLatencies[Math.floor(apiLatencies.length * 0.50)] ?? 0 : 0;
+    const p95 = apiLatencies.length ? apiLatencies[Math.floor(apiLatencies.length * 0.95)] ?? 0 : 0;
 
-  // Error breakdown
-  const errorsByCategory: Record<string, number> = {};
-  const messageCounts: Record<string, number>    = {};
+    // Error breakdown
+    const errorsByCategory: Record<string, number> = {};
+    const messageCounts: Record<string, number>    = {};
 
-  for (const v of vitals) {
-    if (v.level === 'error') {
-      errorsByCategory[v.category] = (errorsByCategory[v.category] ?? 0) + 1;
-      const key = (v.message ?? 'Unknown').slice(0, 100);
-      messageCounts[key] = (messageCounts[key] ?? 0) + 1;
+    for (const v of vitals) {
+      if (v.level === 'error') {
+        errorsByCategory[v.category] = (errorsByCategory[v.category] ?? 0) + 1;
+        const key = (v.message ?? 'Unknown').slice(0, 100);
+        messageCounts[key] = (messageCounts[key] ?? 0) + 1;
+      }
     }
+
+    const topErrors = Object.entries(messageCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([message, count]) => ({ message, count }));
+
+    // Error rate last 1h
+    const recent      = vitals.filter((v: any) => v.created_at >= since1h);
+    const errorRate1h = recent.length > 0
+      ? Math.round((recent.filter((v: any) => v.level === 'error').length / recent.length) * 100)
+      : 0;
+
+    // db_health: RPC may return a single object or an array with one row
+    const rawDbHealth = dbHealthRes.status === 'fulfilled' ? (dbHealthRes.value.data ?? null) : null;
+    const dbHealth: DbHealth | null = Array.isArray(rawDbHealth) ? (rawDbHealth[0] ?? null) : rawDbHealth;
+
+    return {
+      latency:            { p50, p95 },
+      error_rate_1h:      errorRate1h,
+      total_events_24h:   vitals.length,
+      total_errors_24h:   vitals.filter((v: any) => v.level === 'error').length,
+      errors_by_category: errorsByCategory,
+      top_errors:         topErrors,
+      alert_log:          alertLogRes.status === 'fulfilled' ? (alertLogRes.value.data ?? []) : [],
+      db_health:          dbHealth,
+      slow_queries:       [],
+    };
+  } catch (err) {
+    console.error('[getCTOStats]', err);
+    return EMPTY_CTO_STATS;
   }
-
-  const topErrors = Object.entries(messageCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([message, count]) => ({ message, count }));
-
-  // Error rate last 1h
-  const recent     = vitals.filter((v: any) => v.created_at >= since1h);
-  const errorRate1h = recent.length > 0
-    ? Math.round((recent.filter((v: any) => v.level === 'error').length / recent.length) * 100)
-    : 0;
-
-  return {
-    latency:            { p50, p95 },
-    error_rate_1h:      errorRate1h,
-    total_events_24h:   vitals.length,
-    total_errors_24h:   vitals.filter((v: any) => v.level === 'error').length,
-    errors_by_category: errorsByCategory,
-    top_errors:         topErrors,
-    alert_log:          alertLogRes.status === 'fulfilled' ? (alertLogRes.value.data ?? []) : [],
-    db_health:          dbHealthRes.status === 'fulfilled' ? (dbHealthRes.value.data ?? null) : null,
-    slow_queries:       slowQueriesRes.status === 'fulfilled' ? (slowQueriesRes.value.data ?? []) : [],
-  };
 }
 
 // --- Sécurité ------------------------------------------------------------
@@ -378,6 +399,7 @@ export interface SecurityStats {
   auth_failures_24h:      number;
   permission_denials_24h: number;
   recent_auth_failures:   AuthFailureEvent[];
+  recent_auth_events:     { id: string; message: string; business_name: string | null; created_at: string; is_superadmin: boolean }[];
   top_probed_urls:        { url: string; count: number }[];
   suspicious_businesses:  { name: string; error_count: number }[];
   login_events_24h:       { event_name: string; count: number }[];
@@ -386,15 +408,14 @@ export interface SecurityStats {
 export async function getSecurityStats(): Promise<SecurityStats> {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  const [authRes, apiRes, analyticsRes] = await Promise.allSettled([
-    // Erreurs d'authentification (login_failed, etc.)
+  const [authRes, apiRes] = await Promise.allSettled([
+    // Tous les événements auth (login, logout, login_failed)
     db.from('monitoring_vitals')
-      .select('id, message, context, created_at, businesses(name)')
+      .select('id, message, level, context, created_at, businesses(name)')
       .eq('category', 'auth')
-      .eq('level', 'error')
       .gte('created_at', since24h)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(200),
 
     // Erreurs API (pour détecter les 403 / probing)
     db.from('monitoring_vitals')
@@ -403,17 +424,15 @@ export async function getSecurityStats(): Promise<SecurityStats> {
       .eq('level', 'error')
       .gte('created_at', since24h)
       .limit(500),
-
-    // Événements analytics (login / logout)
-    db.from('analytics_events')
-      .select('event_name, created_at')
-      .in('event_name', ['user_login', 'user_logout', 'login_failed'])
-      .gte('created_at', since24h),
   ]);
 
-  const authFailures: any[] = authRes.status === 'fulfilled' ? (authRes.value.data ?? []) : [];
-  const apiErrors:    any[] = apiRes.status  === 'fulfilled' ? (apiRes.value.data  ?? []) : [];
-  const analytics:    any[] = analyticsRes.status === 'fulfilled' ? (analyticsRes.value.data ?? []) : [];
+  const allAuthEvents: any[] = authRes.status === 'fulfilled' ? (authRes.value.data ?? []) : [];
+  const apiErrors:     any[] = apiRes.status  === 'fulfilled' ? (apiRes.value.data  ?? []) : [];
+
+  // Separate client events (non-superadmin) for KPI counts
+  const clientAuthEvents = allAuthEvents.filter((e: any) => !e.context?.is_superadmin);
+
+  const authFailures = clientAuthEvents.filter((e: any) => e.level === 'error' || e.message === 'login_failed');
 
   // 403 uniquement
   const permDenials = apiErrors.filter((e: any) => e.context?.status === 403);
@@ -443,10 +462,11 @@ export async function getSecurityStats(): Promise<SecurityStats> {
     .slice(0, 8)
     .map(({ name, count }) => ({ name, error_count: count }));
 
-  // Comptage des événements analytics par type
+  // Comptage des événements auth par type — clients only (exclude superadmin)
   const eventCounts: Record<string, number> = {};
-  for (const e of analytics) {
-    eventCounts[e.event_name] = (eventCounts[e.event_name] ?? 0) + 1;
+  for (const e of clientAuthEvents) {
+    const key = e.message as string;
+    eventCounts[key] = (eventCounts[key] ?? 0) + 1;
   }
   const loginEvents = Object.entries(eventCounts).map(([event_name, count]) => ({ event_name, count }));
 
@@ -458,7 +478,14 @@ export async function getSecurityStats(): Promise<SecurityStats> {
       message:       e.message,
       context:       e.context,
       created_at:    e.created_at,
-      business_name: e.businesses?.name,
+      business_name: (e.businesses as any)?.name ?? null,
+    })),
+    recent_auth_events:     allAuthEvents.slice(0, 50).map((e: any) => ({
+      id:            e.id,
+      message:       e.message,
+      business_name: (e.businesses as any)?.name ?? null,
+      created_at:    e.created_at,
+      is_superadmin: e.context?.is_superadmin ?? false,
     })),
     top_probed_urls:        topProbedUrls,
     suspicious_businesses:  suspiciousBiz,

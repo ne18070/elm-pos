@@ -49,6 +49,46 @@ export async function trackEvent(eventName: string, metadata: Record<string, unk
   })();
 }
 
+// ─── Auth event tracking ─────────────────────────────────────────────────────
+// Writes to monitoring_vitals (category='auth') so superadmin can read it.
+export function trackAuth(
+  eventType: 'login' | 'logout' | 'login_failed',
+  context:   Record<string, unknown> = {},
+) {
+  (async () => {
+    try {
+      if (!_userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        _userId = user?.id ?? null;
+      }
+      // At login time _businessId may not be cached yet — fetch it directly.
+      let bizId        = getActiveBizId();
+      let isSuperadmin = false;
+      if (_userId) {
+        const { data } = await (supabase as any)
+          .from('users')
+          .select('business_id, is_superadmin')
+          .eq('id', _userId)
+          .maybeSingle();
+        if (data?.business_id && !bizId) {
+          bizId       = data.business_id;
+          _businessId = bizId;
+        }
+        isSuperadmin = data?.is_superadmin ?? false;
+      }
+      await (supabase as any).from('monitoring_vitals').insert({
+        user_id:     _userId,
+        business_id: bizId,
+        level:       eventType === 'login_failed' ? 'error' : 'info',
+        category:    'auth',
+        message:     eventType,
+        context:     sanitize({ ...context, is_superadmin: isSuperadmin }),
+        url:         typeof window !== 'undefined' ? safeUrl(window.location.href) : null,
+      });
+    } catch {}
+  })();
+}
+
 // ─── Error tracking ───────────────────────────────────────────────────────────
 // Fire-and-forget. Never blocks the main thread.
 // Context is sanitized (RGPD) before insertion.

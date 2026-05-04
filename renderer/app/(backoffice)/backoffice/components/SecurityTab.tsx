@@ -11,9 +11,9 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const EVENT_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  user_login:    { label: 'Connexions',          icon: LogIn,      color: 'text-status-success' },
-  user_logout:   { label: 'Déconnexions',        icon: LogOut,     color: 'text-content-muted' },
-  login_failed:  { label: 'Échecs de connexion', icon: AlertTriangle, color: 'text-status-error' },
+  login:        { label: 'Connexions',          icon: LogIn,         color: 'text-status-success' },
+  logout:       { label: 'Déconnexions',        icon: LogOut,        color: 'text-content-muted' },
+  login_failed: { label: 'Échecs de connexion', icon: AlertTriangle, color: 'text-status-error' },
 };
 
 export function SecurityTab() {
@@ -49,9 +49,9 @@ export function SecurityTab() {
     </div>
   );
 
-  const loginCount  = stats.login_events_24h.find(e => e.event_name === 'user_login')?.count  ?? 0;
+  const loginCount  = stats.login_events_24h.find(e => e.event_name === 'login')?.count        ?? 0;
   const failedCount = stats.login_events_24h.find(e => e.event_name === 'login_failed')?.count ?? 0;
-  const logoutCount = stats.login_events_24h.find(e => e.event_name === 'user_logout')?.count  ?? 0;
+  const logoutCount = stats.login_events_24h.find(e => e.event_name === 'logout')?.count       ?? 0;
 
   const threatLevel = stats.auth_failures_24h > 10 || stats.permission_denials_24h > 20
     ? 'high'
@@ -150,7 +150,7 @@ export function SecurityTab() {
         {/* Colonne gauche : résumé + URLs sondées */}
         <div className="space-y-6">
 
-          {/* Activité auth 24h */}
+          {/* Activité auth 24h — résumé */}
           <div>
             <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
               <LogIn size={16} className="text-content-brand" />
@@ -178,6 +178,45 @@ export function SecurityTab() {
               )}
             </div>
           </div>
+
+          {/* Flux événements récents avec business name */}
+          {stats.recent_auth_events.length > 0 && (
+            <div>
+              <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                <LogIn size={16} className="text-content-brand" />
+                Événements récents
+              </h3>
+              <div className="card divide-y divide-surface-border border-surface-border overflow-hidden">
+                {stats.recent_auth_events.map((evt) => {
+                  const meta = EVENT_META[evt.message];
+                  const Icon = meta?.icon ?? AlertTriangle;
+                  return (
+                    <div key={evt.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-surface-hover">
+                      <Icon size={13} className={cn('shrink-0', meta?.color ?? 'text-content-muted')} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className={cn('text-xs font-bold truncate', meta?.color ?? 'text-content-primary')}>
+                            {meta?.label ?? evt.message}
+                          </p>
+                          {evt.is_superadmin && (
+                            <span className="text-[8px] font-black bg-badge-info text-status-info px-1 py-px rounded uppercase tracking-wide shrink-0">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        {evt.business_name && (
+                          <p className="text-[10px] text-content-muted truncate">{evt.business_name}</p>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-content-muted whitespace-nowrap shrink-0">
+                        {format(new Date(evt.created_at), 'HH:mm:ss')}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* URLs les plus sondées (403) */}
           {stats.top_probed_urls.length > 0 && (

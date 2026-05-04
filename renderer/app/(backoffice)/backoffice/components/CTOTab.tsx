@@ -28,9 +28,11 @@ export function CTOTab() {
   async function loadData() {
     setRefreshing(true);
     try {
-      setStats(await getCTOStats());
+      const result = await getCTOStats();
+      console.log('[CTOTab] stats loaded:', result);
+      setStats(result);
     } catch (e) {
-      console.error(e);
+      console.error('[CTOTab] getCTOStats threw:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
