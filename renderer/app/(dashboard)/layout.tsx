@@ -16,6 +16,7 @@ import { checkPermission } from '@/lib/permissions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { NotificationBanner } from '@/components/shared/NotificationBanner';
 import { StartupAlertsModal } from '@/components/shared/StartupAlertsModal';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { updateStaffHeartbeat } from '@services/supabase/staff';
 import { useSidebarStore } from '@/store/sidebar';
 
@@ -32,7 +33,9 @@ function MobileLayout({ children }: { children: React.ReactNode }) {
         <StartupAlertsModal />
         <TrialBanner />
         <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {children}
+          <ErrorBoundary section="dashboard">
+            {children}
+          </ErrorBoundary>
         </main>
         <MobileBottomNav />
       </div>

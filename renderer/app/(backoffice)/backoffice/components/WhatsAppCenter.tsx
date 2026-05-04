@@ -126,7 +126,7 @@ export function WhatsAppCenter() {
                   <td className="px-4 py-3 text-center">
                     <div className="flex justify-center">
                       {c.status_health === 'healthy' ? (
-                        <div className="w-2.5 h-2.5 rounded-full bg-status-success shadow-[0_0_8px_rgba(34,197,94,0.5)]" title="Connecté" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-status-success shadow-sm" title="Connecté" />
                       ) : c.status_health === 'token_expired' ? (
                         <div className="w-2.5 h-2.5 rounded-full bg-status-error animate-pulse" title="Token Expiré" />
                       ) : (

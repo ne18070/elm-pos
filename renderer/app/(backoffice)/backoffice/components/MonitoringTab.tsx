@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   RefreshCw, Loader2, AlertTriangle, TrendingUp, Users, Store, Clock,
   Package, ShoppingCart, Settings, X, ToggleLeft, ToggleRight, ChevronDown,
+  Copy, Check, ExternalLink,
 } from 'lucide-react';
 import { getBusinessMonitoring, updateBusinessConfig, type BusinessMonitorRow } from '@services/supabase/monitoring';
 import { getAppModules, getBusinessTypesWithModules, type AppModule, type BusinessTypeWithModules } from '@services/supabase/business-config';
@@ -131,7 +132,7 @@ function BusinessConfigModal({
                     onClick={() => toggleType(t.id)}
                     className={cn(
                       'p-3 rounded-xl border-2 text-left transition-all flex items-center gap-2',
-                      active ? 'border-brand-600 bg-badge-brand' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
+                      active ? 'border-brand-600 bg-badge-brand' : 'border-surface-border bg-surface-input/30 hover:border-surface-border'
                     )}
                   >
                     {active
@@ -161,7 +162,7 @@ function BusinessConfigModal({
                     onClick={() => toggleFeature(m.id)}
                     className={cn(
                       'w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all',
-                      enabled ? 'border-brand-600 bg-badge-brand' : 'border-surface-border bg-surface-input/30 hover:border-slate-600'
+                      enabled ? 'border-brand-600 bg-badge-brand' : 'border-surface-border bg-surface-input/30 hover:border-surface-border'
                     )}
                   >
                     {enabled
@@ -188,6 +189,37 @@ function BusinessConfigModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// -- Slug badge ----------------------------------------------------------------
+
+function SlugBadge({ slug }: { slug: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!slug) return <span className="text-xs text-content-muted italic">—</span>;
+
+  function copy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(slug!).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-1 min-w-0">
+      <span className="text-[10px] font-mono text-content-brand bg-badge-brand border border-brand-800 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+        {slug}
+      </span>
+      <button
+        onClick={copy}
+        title="Copier le slug"
+        className="p-0.5 text-content-muted hover:text-content-brand transition-colors shrink-0"
+      >
+        {copied ? <Check className="w-3 h-3 text-status-success" /> : <Copy className="w-3 h-3" />}
+      </button>
     </div>
   );
 }
@@ -309,6 +341,11 @@ function OwnerRow({
                   <p className="text-xs text-content-muted truncate">{typeLabels}</p>
                 </div>
 
+                {/* Slug boutique */}
+                <div className="hidden sm:block shrink-0">
+                  <SlugBadge slug={biz.public_slug} />
+                </div>
+
                 {/* Features tags */}
                 <div className="hidden md:flex flex-wrap gap-1 max-w-[200px]">
                   {biz.features.length > 0
@@ -327,7 +364,7 @@ function OwnerRow({
                 <div className="hidden lg:flex items-center gap-4 text-xs text-content-muted shrink-0">
                   <span><span className="text-status-orange">{biz.products_count}</span> prod.</span>
                   <span><span className="text-status-success">{biz.orders_30d}</span> cmd</span>
-                  <span><span className="text-cyan-400">{biz.members_count}</span> mbr</span>
+                  <span><span className="text-status-info">{biz.members_count}</span> mbr</span>
                 </div>
 
                 {/* Gear */}
@@ -433,7 +470,7 @@ export function MonitoringTab() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard icon={TrendingUp}   label="Commandes (30j)"   value={orders30d}     color="text-status-purple" />
-        <StatCard icon={ShoppingCart} label="Commandes (total)"  value={totalOrders}   color="text-cyan-400" />
+        <StatCard icon={ShoppingCart} label="Commandes (total)"  value={totalOrders}   color="text-status-info" />
         <StatCard icon={Package}      label="Produits actifs"    value={totalProducts} color="text-status-orange" />
       </div>
 

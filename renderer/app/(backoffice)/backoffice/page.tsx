@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Layers, Activity, Users, Zap } from 'lucide-react';
+import { TrendingUp, Layers, Activity, Users, Zap, Sun, Moon, SunMoon } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { getAllSubscriptions } from '@services/supabase/subscriptions';
 import { getAllOrganizationsAdmin } from '@services/supabase/business';
@@ -11,12 +11,15 @@ import { VitalsTab } from './components/VitalsTab';
 import { WhatsAppCenter } from './components/WhatsAppCenter';
 import { CEOTab } from './components/CEOTab';
 import { CTOTab } from './components/CTOTab';
+import { SecurityTab } from './components/SecurityTab';
+import { useThemeStore } from '@/store/theme';
 
-type Tab = 'monitoring' | 'vitals' | 'whatsapp' | 'ceo' | 'cto';
+type Tab = 'monitoring' | 'vitals' | 'whatsapp' | 'ceo' | 'cto' | 'security';
 
 export default function BackofficeDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('monitoring');
   const [stats, setStats] = useState({ totalUsers: 0, activeOrgs: 0, mrr: 0, errorCount: 0 });
+  const { theme, cycle: cycleTheme } = useThemeStore();
 
   useEffect(() => {
     async function loadStats() {
@@ -55,6 +58,7 @@ export default function BackofficeDashboard() {
     { key: 'whatsapp',   label: 'WhatsApp Center' },
     { key: 'ceo',        label: 'Dashboard CEO' },
     { key: 'cto',        label: 'Dashboard CTO' },
+    { key: 'security',   label: 'Sécurité' },
   ];
 
   return (
@@ -64,8 +68,19 @@ export default function BackofficeDashboard() {
           <h1 className="text-2xl font-black text-content-primary tracking-tight uppercase">Vue d'ensemble</h1>
           <p className="text-content-muted text-sm mt-1">État de santé global de la plateforme ELM.</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-status-success text-xs font-black uppercase tracking-widest animate-pulse">
-          <Zap size={14} /> Système Live
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={cycleTheme}
+            className="p-2.5 rounded-xl bg-surface-card border border-surface-border text-content-secondary hover:text-content-primary transition-all group shadow-sm"
+            title="Changer de thème"
+          >
+            {theme === 'light' ? <Sun size={18} className="group-hover:rotate-45 transition-transform" /> : 
+             theme === 'dark'  ? <Moon size={18} className="group-hover:-rotate-12 transition-transform" /> : 
+             <SunMoon size={18} />}
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-badge-success border border-status-success/20 text-status-success text-[10px] font-black uppercase tracking-widest animate-pulse">
+            <Zap size={14} /> Système Live
+          </div>
         </div>
       </div>
 
@@ -96,7 +111,7 @@ export default function BackofficeDashboard() {
             className={cn(
               'px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center',
               activeTab === key
-                ? 'bg-white text-content-primary shadow-sm'
+                ? 'bg-surface-card text-content-primary shadow-sm ring-1 ring-surface-border/50'
                 : 'text-content-muted hover:text-content-secondary',
             )}
           >
@@ -112,6 +127,7 @@ export default function BackofficeDashboard() {
         {activeTab === 'whatsapp'   && <WhatsAppCenter />}
         {activeTab === 'ceo'        && <CEOTab />}
         {activeTab === 'cto'        && <CTOTab />}
+        {activeTab === 'security'   && <SecurityTab />}
       </div>
     </div>
   );

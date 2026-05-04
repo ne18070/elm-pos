@@ -12,6 +12,7 @@ export interface BusinessMonitorRow extends SubscriptionRow {
   orders_total:   number;
   features:       string[];
   business_types: string[];
+  public_slug:    string | null;
 }
 
 export async function updateBusinessConfig(
@@ -38,7 +39,7 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
     db.from('business_members').select('business_id'),
     db.from('products').select('business_id').eq('is_active', true),
     db.from('orders').select('business_id'),
-    db.from('businesses').select('id, features, type, types'),
+    db.from('businesses').select('id, features, type, types, public_slug'),
   ]);
 
   // Aggregate orders per business
@@ -68,12 +69,12 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
   }
 
   // Index business features and type
-  const bizById = new Map<string, { features: string[]; types: string[] }>();
+  const bizById = new Map<string, { features: string[]; types: string[]; public_slug: string | null }>();
   for (const row of (bizRaw.data ?? [])) {
     const types = (row.types && row.types.length > 0)
       ? row.types
       : row.type ? [row.type] : [];
-    bizById.set(row.id, { features: row.features ?? [], types });
+    bizById.set(row.id, { features: row.features ?? [], types, public_slug: row.public_slug ?? null });
   }
 
   // Étendre : une ligne par établissement (pas par abonnement)
@@ -93,8 +94,9 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
         members_count:   membersByBiz.get(biz.id)          ?? 0,
         products_count:  productsByBiz.get(biz.id)         ?? 0,
         orders_total:    ordersTotalByBiz.get(biz.id)      ?? 0,
-        features:       bizById.get(biz.id)?.features ?? [],
-        business_types: bizById.get(biz.id)?.types   ?? [],
+        features:       bizById.get(biz.id)?.features   ?? [],
+        business_types: bizById.get(biz.id)?.types     ?? [],
+        public_slug:    bizById.get(biz.id)?.public_slug ?? null,
       });
     }
   }
@@ -221,13 +223,13 @@ export async function getCEOStats(): Promise<CEOStats> {
     getAllSubscriptions(),
     db.from('analytics_events').select('event_name, created_at').gte('created_at', since7d),
     db.from('analytics_events').select('event_name').gte('created_at', since24h),
-    db.from('orders').select('total_amount').gte('created_at', since30d),
+    db.from('orders').select('total').gte('created_at', since30d),
   ]);
 
   const activeSubs = subs.filter((s: any) => s.status === 'active');
   const trialSubs  = subs.filter((s: any) => s.status === 'trial');
   const mrr        = activeSubs.reduce((acc: number, s: any) => acc + (Number(s.plan_price) || 0), 0);
-  const revenue30d = (orders30d.data ?? []).reduce((acc: number, o: any) => acc + (Number(o.total_amount) || 0), 0);
+  const revenue30d = (orders30d.data ?? []).reduce((acc: number, o: any) => acc + (Number(o.total) || 0), 0);
 
   const funnel = { signup_started: 0, signup_completed: 0, provisioning_success: 0, first_sale: 0 };
   const signupsByDay: Record<string, number> = {};
@@ -353,5 +355,107 @@ export async function getCTOStats(): Promise<CTOStats> {
     alert_log:          alertLogRes.status === 'fulfilled' ? (alertLogRes.value.data ?? []) : [],
     db_health:          dbHealthRes.status === 'fulfilled' ? (dbHealthRes.value.data ?? null) : null,
     slow_queries:       slowQueriesRes.status === 'fulfilled' ? (slowQueriesRes.value.data ?? []) : [],
+  };
+}
+
+// --- Sécurité ------------------------------------------------------------
+
+export interface AuthFailureEvent {
+  id:            string;
+  message:       string;
+  context:       any;
+  created_at:    string;
+  business_name?: string;
+}
+
+export interface SecurityStats {
+  auth_failures_24h:      number;
+  permission_denials_24h: number;
+  recent_auth_failures:   AuthFailureEvent[];
+  top_probed_urls:        { url: string; count: number }[];
+  suspicious_businesses:  { name: string; error_count: number }[];
+  login_events_24h:       { event_name: string; count: number }[];
+}
+
+export async function getSecurityStats(): Promise<SecurityStats> {
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const [authRes, apiRes, analyticsRes] = await Promise.allSettled([
+    // Erreurs d'authentification (login_failed, etc.)
+    db.from('monitoring_vitals')
+      .select('id, message, context, created_at, businesses(name)')
+      .eq('category', 'auth')
+      .eq('level', 'error')
+      .gte('created_at', since24h)
+      .order('created_at', { ascending: false })
+      .limit(50),
+
+    // Erreurs API (pour détecter les 403 / probing)
+    db.from('monitoring_vitals')
+      .select('url, context, business_id, businesses(name)')
+      .eq('category', 'api')
+      .eq('level', 'error')
+      .gte('created_at', since24h)
+      .limit(500),
+
+    // Événements analytics (login / logout)
+    db.from('analytics_events')
+      .select('event_name, created_at')
+      .in('event_name', ['user_login', 'user_logout', 'login_failed'])
+      .gte('created_at', since24h),
+  ]);
+
+  const authFailures: any[] = authRes.status === 'fulfilled' ? (authRes.value.data ?? []) : [];
+  const apiErrors:    any[] = apiRes.status  === 'fulfilled' ? (apiRes.value.data  ?? []) : [];
+  const analytics:    any[] = analyticsRes.status === 'fulfilled' ? (analyticsRes.value.data ?? []) : [];
+
+  // 403 uniquement
+  const permDenials = apiErrors.filter((e: any) => e.context?.status === 403);
+
+  // Top URLs sondées (403)
+  const urlCounts: Record<string, number> = {};
+  for (const e of permDenials) {
+    const u = (e.url as string | null) ?? 'inconnue';
+    urlCounts[u] = (urlCounts[u] ?? 0) + 1;
+  }
+  const topProbedUrls = Object.entries(urlCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([url, count]) => ({ url, count }));
+
+  // Businesses avec erreurs anormalement élevées
+  const bizCounts: Record<string, { name: string; count: number }> = {};
+  for (const e of apiErrors) {
+    if (!e.business_id) continue;
+    const name = (e.businesses as any)?.name ?? e.business_id;
+    const prev = bizCounts[e.business_id] ?? { name, count: 0 };
+    bizCounts[e.business_id] = { name: prev.name, count: prev.count + 1 };
+  }
+  const suspiciousBiz = Object.values(bizCounts)
+    .filter(b => b.count > 5)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+    .map(({ name, count }) => ({ name, error_count: count }));
+
+  // Comptage des événements analytics par type
+  const eventCounts: Record<string, number> = {};
+  for (const e of analytics) {
+    eventCounts[e.event_name] = (eventCounts[e.event_name] ?? 0) + 1;
+  }
+  const loginEvents = Object.entries(eventCounts).map(([event_name, count]) => ({ event_name, count }));
+
+  return {
+    auth_failures_24h:      authFailures.length,
+    permission_denials_24h: permDenials.length,
+    recent_auth_failures:   authFailures.map((e: any) => ({
+      id:            e.id,
+      message:       e.message,
+      context:       e.context,
+      created_at:    e.created_at,
+      business_name: e.businesses?.name,
+    })),
+    top_probed_urls:        topProbedUrls,
+    suspicious_businesses:  suspiciousBiz,
+    login_events_24h:       loginEvents,
   };
 }

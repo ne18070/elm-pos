@@ -10,9 +10,19 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+const ALERT_LABELS: Record<string, { label: string; desc: string }> = {
+  HIGH_ERROR_RATE:  { label: "Taux d'erreurs élevé",         desc: "Plus de X% des requêtes ont retourné une erreur sur la dernière heure." },
+  SLOW_LATENCY:     { label: "Latence API critique",          desc: "Le temps de réponse médian dépasse le seuil acceptable." },
+  DB_LOCK:          { label: "Verrou base de données",        desc: "Des transactions sont bloquées, risque de ralentissement global." },
+  LOW_CACHE_HIT:    { label: "Cache DB dégradé",              desc: "Le taux de cache hit est anormalement bas, la DB est sur-sollicitée." },
+  HIGH_CONNECTIONS: { label: "Connexions DB saturées",        desc: "Le pool de connexions approche ou dépasse sa limite." },
+  FUNNEL_DROP:      { label: "Chute du funnel d'activation",  desc: "Le taux d'activation des trials a chuté en dessous du seuil." },
+  SIGNUP_SPIKE:     { label: "Pic d'inscriptions",            desc: "Volume d'inscriptions anormalement élevé détecté." },
+};
+
 export function CTOTab() {
-  const [stats, setStats]     = useState<CTOStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats]       = useState<CTOStats | null>(null);
+  const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   async function loadData() {
@@ -42,9 +52,9 @@ export function CTOTab() {
     </div>
   );
 
-  const p50Color  = stats.latency.p50 < 500 ? 'text-status-success' : stats.latency.p50 < 1500 ? 'text-status-warning' : 'text-status-error';
-  const p95Color  = stats.latency.p95 < 1000 ? 'text-status-success' : stats.latency.p95 < 2500 ? 'text-status-warning' : 'text-status-error';
-  const errColor  = stats.error_rate_1h < 2 ? 'text-status-success' : stats.error_rate_1h < 10 ? 'text-status-warning' : 'text-status-error';
+  const p50Color = stats.latency.p50 < 500 ? 'text-status-success' : stats.latency.p50 < 1500 ? 'text-status-warning' : 'text-status-error';
+  const p95Color = stats.latency.p95 < 1000 ? 'text-status-success' : stats.latency.p95 < 2500 ? 'text-status-warning' : 'text-status-error';
+  const errColor = stats.error_rate_1h < 2 ? 'text-status-success' : stats.error_rate_1h < 10 ? 'text-status-warning' : 'text-status-error';
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -54,7 +64,7 @@ export function CTOTab() {
 
         <div className="card p-6 border-surface-border">
           <div className="flex items-center justify-between mb-4">
-            <div className={cn('p-3 rounded-2xl', stats.latency.p50 < 500 ? 'bg-status-success/10 text-status-success' : 'bg-badge-warning text-status-warning')}>
+            <div className={cn('p-3 rounded-2xl', stats.latency.p50 < 500 ? 'bg-badge-success text-status-success' : 'bg-badge-warning text-status-warning')}>
               <Zap size={22} />
             </div>
             <button onClick={loadData} className="text-content-muted hover:text-content-primary">
@@ -72,7 +82,7 @@ export function CTOTab() {
 
         <div className="card p-6 border-surface-border">
           <div className="flex items-center justify-between mb-4">
-            <div className={cn('p-3 rounded-2xl', stats.error_rate_1h < 2 ? 'bg-status-success/10 text-status-success' : 'bg-badge-error text-status-error')}>
+            <div className={cn('p-3 rounded-2xl', stats.error_rate_1h < 2 ? 'bg-badge-success text-status-success' : 'bg-badge-error text-status-error')}>
               <AlertCircle size={22} />
             </div>
           </div>
@@ -91,9 +101,7 @@ export function CTOTab() {
           </div>
           <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Événements (24h)</p>
           <p className="text-2xl font-black text-content-primary mt-1">{stats.total_events_24h.toLocaleString()}</p>
-          <p className="text-[10px] text-content-muted font-bold uppercase tracking-tight mt-1">
-            Logs collectés
-          </p>
+          <p className="text-[10px] text-content-muted font-bold uppercase tracking-tight mt-1">Logs collectés</p>
         </div>
 
         <div className="card p-6 border-surface-border">
@@ -101,8 +109,8 @@ export function CTOTab() {
             <div className={cn(
               'p-3 rounded-2xl',
               stats.db_health?.cache_hit_ratio && stats.db_health.cache_hit_ratio >= 90
-                ? 'bg-status-success/10 text-status-success'
-                : 'bg-badge-warning text-status-warning'
+                ? 'bg-badge-success text-status-success'
+                : 'bg-badge-warning text-status-warning',
             )}>
               <Database size={22} />
             </div>
@@ -120,10 +128,9 @@ export function CTOTab() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* Error breakdown + top errors */}
+        {/* Erreurs par catégorie + Santé DB */}
         <div className="space-y-6">
 
-          {/* By category */}
           <div>
             <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
               <BarChart2 size={16} className="text-content-brand" />
@@ -147,7 +154,6 @@ export function CTOTab() {
             </div>
           </div>
 
-          {/* DB Health detail */}
           {stats.db_health && (
             <div>
               <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -156,10 +162,10 @@ export function CTOTab() {
               </h3>
               <div className="card divide-y divide-surface-border border-surface-border overflow-hidden">
                 {[
-                  { label: 'Connexions actives',  value: stats.db_health.active_connections },
-                  { label: 'Locks bloquants',     value: stats.db_health.blocked_locks,    warn: stats.db_health.blocked_locks > 0 },
-                  { label: 'Cache hit ratio',     value: `${stats.db_health.cache_hit_ratio}%` },
-                  { label: 'Taille DB',           value: `${(stats.db_health.db_size_bytes / 1024 / 1024).toFixed(1)} MB` },
+                  { label: 'Connexions actives', value: stats.db_health.active_connections, warn: false },
+                  { label: 'Locks bloquants',    value: stats.db_health.blocked_locks,      warn: stats.db_health.blocked_locks > 0 },
+                  { label: 'Cache hit ratio',    value: `${stats.db_health.cache_hit_ratio}%`, warn: false },
+                  { label: 'Taille DB',          value: `${(stats.db_health.db_size_bytes / 1024 / 1024).toFixed(1)} MB`, warn: false },
                 ].map(({ label, value, warn }) => (
                   <div key={label} className="p-4 flex items-center justify-between">
                     <p className="text-[11px] font-bold text-content-secondary">{label}</p>
@@ -173,10 +179,9 @@ export function CTOTab() {
           )}
         </div>
 
-        {/* Top errors + Alerts + Slow queries */}
+        {/* Top errors + Slow queries + Alert log */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Top errors */}
           {stats.top_errors.length > 0 && (
             <div>
               <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -188,8 +193,8 @@ export function CTOTab() {
                   {stats.top_errors.map(({ message, count }, i) => (
                     <div key={i} className="p-4 flex items-start gap-4 hover:bg-surface-hover">
                       <span className="text-[10px] font-black text-content-muted w-4 shrink-0 mt-0.5">{i + 1}</span>
-                      <p className="text-[11px] font-medium text-status-error flex-1 truncate">{message}</p>
-                      <span className="text-xs font-black text-content-primary shrink-0">{count}×</span>
+                      <p className="text-[11px] font-medium text-status-error flex-1 break-words whitespace-pre-wrap">{message}</p>
+                      <span className="text-xs font-black text-content-primary shrink-0 ml-2">{count}×</span>
                     </div>
                   ))}
                 </div>
@@ -197,7 +202,6 @@ export function CTOTab() {
             </div>
           )}
 
-          {/* Slow queries */}
           {stats.slow_queries.length > 0 && (
             <div>
               <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -218,7 +222,7 @@ export function CTOTab() {
                       {stats.slow_queries.map((q, i) => (
                         <tr key={i} className="hover:bg-surface-hover">
                           <td className="px-4 py-3 max-w-xs">
-                            <p className="text-[10px] font-mono text-content-secondary truncate">{q.query_text}</p>
+                            <p className="text-[10px] font-mono text-content-secondary break-words whitespace-pre-wrap">{q.query_text}</p>
                           </td>
                           <td className="px-4 py-3 text-[11px] font-bold text-content-primary">{q.calls}</td>
                           <td className={cn('px-4 py-3 text-[11px] font-bold', q.mean_ms > 1000 ? 'text-status-error' : 'text-status-warning')}>
@@ -233,7 +237,6 @@ export function CTOTab() {
             </div>
           )}
 
-          {/* Alert log */}
           <div>
             <h3 className="text-sm font-black text-content-primary uppercase tracking-widest mb-4 flex items-center gap-2">
               <Bell size={16} className="text-content-brand" />
@@ -246,19 +249,37 @@ export function CTOTab() {
                 </div>
               ) : (
                 <div className="divide-y divide-surface-border">
-                  {stats.alert_log.map((a, i) => (
-                    <div key={i} className="p-4 flex items-center justify-between hover:bg-surface-hover">
-                      <div>
-                        <p className="text-xs font-black text-content-primary uppercase">{a.rule_code}</p>
-                        {a.value != null && (
-                          <p className="text-[10px] text-content-muted">Valeur : {a.value}</p>
-                        )}
+                  {stats.alert_log.map((a, i) => {
+                    const meta = ALERT_LABELS[a.rule_code];
+                    return (
+                      <div key={i} className="p-4 hover:bg-surface-hover">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle size={12} className="text-status-warning shrink-0 mt-0.5" />
+                              <p className="text-xs font-black text-content-primary">
+                                {meta?.label ?? a.rule_code}
+                              </p>
+                            </div>
+                            {meta?.desc && (
+                              <p className="text-[10px] text-content-muted mt-0.5 ml-4">{meta.desc}</p>
+                            )}
+                            {a.value != null && (
+                              <p className="text-[10px] text-status-warning font-bold mt-0.5 ml-4">
+                                Valeur mesurée : {a.value}
+                              </p>
+                            )}
+                            {!meta && (
+                              <p className="text-[9px] font-mono text-content-muted mt-0.5 ml-4">{a.rule_code}</p>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-content-muted whitespace-nowrap shrink-0">
+                            {format(new Date(a.fired_at), 'dd MMM HH:mm', { locale: fr })}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-content-muted">
-                        {format(new Date(a.fired_at), 'dd MMM HH:mm', { locale: fr })}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

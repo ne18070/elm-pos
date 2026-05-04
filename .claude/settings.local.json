@@ -62,7 +62,8 @@
       "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/reset-password '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(auth\\)/reset-password')",
       "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/backoffice '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(backoffice\\)/backoffice')",
       "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos add renderer/app/\\\\\\(auth\\\\\\)/layout.tsx renderer/app/\\\\\\(public\\\\\\)/layout.tsx renderer/app/\\\\\\(kiosk\\\\\\)/layout.tsx)",
-      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos status --short)"
+      "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos status --short)",
+      "Bash(yarn typecheck *)"
     ]
   }
 }

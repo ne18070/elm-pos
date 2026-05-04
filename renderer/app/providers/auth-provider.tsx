@@ -11,7 +11,7 @@ import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { getMyPermissions } from '@services/supabase/permissions';
 import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
-import { setMonitoringUser } from '@/lib/analytics';
+import { setMonitoringUser, trackEvent, trackError } from '@/lib/analytics';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
@@ -145,6 +145,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          trackEvent('user_login', {
+            user_agent: navigator.userAgent,
+            method:     'password',
+          });
+        }
+
+        if (event === 'SIGNED_OUT' || (!session && !isPublic(pathname))) {
+          trackEvent('user_logout', {
+            reason: event === 'SIGNED_OUT' ? 'explicit' : 'session_expired',
+          });
+        }
+
+        if (event === 'TOKEN_REFRESHED') {
+          // Silencieux — normal, pas un événement de sécurité
+        }
+
         if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathname)) {
           clear();
           resetPermissions();
