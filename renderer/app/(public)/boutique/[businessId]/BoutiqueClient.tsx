@@ -446,11 +446,18 @@ export default function BoutiquePage() {
             </div>
             <div className="min-w-0">
               <h1 className="font-bold text-content-primary text-sm sm:text-base truncate">{info.name}</h1>
-              {info.address && (
-                <p className="text-xs text-content-muted truncate flex items-center gap-1">
-                  <MapPin className="w-3 h-3 shrink-0" />{info.address}
-                </p>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {info.address && (
+                  <p className="text-xs text-content-muted truncate flex items-center gap-1">
+                    <MapPin className="w-3 h-3 shrink-0" />{info.address}
+                  </p>
+                )}
+                {info.phone && (
+                  <a href={`tel:${info.phone}`} className="text-xs text-content-muted flex items-center gap-1 hover:text-brand-500 transition-colors shrink-0">
+                    <Phone className="w-3 h-3 shrink-0" />{info.phone}
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 

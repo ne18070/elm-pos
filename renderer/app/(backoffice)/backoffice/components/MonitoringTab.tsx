@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   RefreshCw, Loader2, AlertTriangle, TrendingUp, Users, Store, Clock,
   Package, ShoppingCart, Settings, X, ToggleLeft, ToggleRight, ChevronDown,
-  Copy, Check, ExternalLink,
+  Copy, Check, Trash2,
 } from 'lucide-react';
 import { getBusinessMonitoring, updateBusinessConfig, type BusinessMonitorRow } from '@services/supabase/monitoring';
 import { getAppModules, getBusinessTypesWithModules, type AppModule, type BusinessTypeWithModules } from '@services/supabase/business-config';
+import { deleteAccount } from '@services/supabase/subscriptions';
 import { cn } from '@/lib/utils';
 
 // -- Helpers -------------------------------------------------------------------
@@ -67,10 +68,11 @@ function BusinessConfigModal({
   allTypes:   BusinessTypeWithModules[];
   allModules: AppModule[];
   onClose:    () => void;
-  onSaved:    (businessId: string, types: string[], features: string[]) => void;
+  onSaved:    (businessId: string, types: string[], features: string[], publicSlug: string) => void;
 }) {
   const [bizTypes, setBizTypes] = useState<string[]>(row.business_types);
   const [features, setFeatures] = useState<string[]>(row.features);
+  const [publicSlug, setPublicSlug] = useState<string>(row.public_slug ?? '');
   const [saving, setSaving]     = useState(false);
   const [err, setErr]           = useState<string | null>(null);
 
@@ -94,8 +96,8 @@ function BusinessConfigModal({
     setSaving(true);
     setErr(null);
     try {
-      await updateBusinessConfig(row.business_id, bizTypes, features);
-      onSaved(row.business_id, bizTypes, features);
+      await updateBusinessConfig(row.business_id, bizTypes, features, publicSlug || undefined);
+      onSaved(row.business_id, bizTypes, features, publicSlug);
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');
@@ -110,18 +112,34 @@ function BusinessConfigModal({
         <div className="flex items-center justify-between p-5 border-b border-surface-border shrink-0">
           <div>
             <p className="text-content-primary font-semibold">{row.business_name}</p>
-            <p className="text-xs text-content-secondary mt-0.5">Type & modules</p>
+            <p className="text-xs text-content-secondary mt-0.5">Configuration établissement</p>
           </div>
           <button onClick={onClose} className="text-content-secondary hover:text-content-primary transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-4 space-y-4">
+        <div className="overflow-y-auto flex-1 p-4 space-y-5">
+          {/* Public Slug */}
+          <div>
+            <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
+              Identifiant public (Slug)
+            </p>
+            <input 
+              value={publicSlug}
+              onChange={(e) => setPublicSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+              placeholder="identifiant-unique"
+              className="input h-10 text-sm font-mono"
+            />
+            <p className="text-[10px] text-content-muted mt-1.5">
+              Sert d&apos;URL pour les pages publiques. Caractères autorisés : a-z, 0-9 et tirets.
+            </p>
+          </div>
+
           {/* Types */}
           <div>
             <p className="text-xs font-semibold text-content-secondary uppercase tracking-wider mb-2">
-              Types d&apos;établissement <span className="text-content-muted font-normal normal-case">(plusieurs possibles)</span>
+              Types d&apos;établissement
             </p>
             <div className="grid grid-cols-2 gap-2">
               {allTypes.map((t) => {
@@ -195,7 +213,7 @@ function BusinessConfigModal({
 
 // -- Slug badge ----------------------------------------------------------------
 
-function SlugBadge({ slug }: { slug: string | null }) {
+function SlugBadge({ slug, isDuplicate }: { slug: string | null; isDuplicate?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   if (!slug) return <span className="text-xs text-content-muted italic">—</span>;
@@ -210,16 +228,109 @@ function SlugBadge({ slug }: { slug: string | null }) {
 
   return (
     <div className="flex items-center gap-1 min-w-0">
-      <span className="text-[10px] font-mono text-content-brand bg-badge-brand border border-brand-800 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+      <span className={cn(
+        "text-[10px] font-mono px-1.5 py-0.5 rounded truncate max-w-[120px] border",
+        isDuplicate 
+          ? "text-status-error bg-badge-error border-status-error animate-pulse" 
+          : "text-content-brand bg-badge-brand border-brand-800"
+      )}>
+        {isDuplicate && <AlertTriangle className="w-2.5 h-2.5 inline mr-1" />}
         {slug}
       </span>
       <button
         onClick={copy}
-        title="Copier le slug"
-        className="p-0.5 text-content-muted hover:text-content-brand transition-colors shrink-0"
+        title={isDuplicate ? "SLUG EN DOUBLE ! Cliquez pour copier" : "Copier le slug"}
+        className={cn(
+          "p-0.5 transition-colors shrink-0",
+          isDuplicate ? "text-status-error hover:text-red-400" : "text-content-muted hover:text-content-brand"
+        )}
       >
         {copied ? <Check className="w-3 h-3 text-status-success" /> : <Copy className="w-3 h-3" />}
       </button>
+    </div>
+  );
+}
+
+// -- Delete confirmation modal -------------------------------------------------
+
+function DeleteOrgModal({
+  group,
+  onClose,
+  onDeleted,
+}: {
+  group:     OwnerGroup;
+  onClose:   () => void;
+  onDeleted: (ownerId: string) => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [err, setErr]           = useState<string | null>(null);
+
+  async function handleDelete() {
+    if (!group.owner_id) return;
+    setDeleting(true);
+    setErr(null);
+    try {
+      await deleteAccount(group.owner_id, group.businesses[0].business_id);
+      onDeleted(group.owner_id);
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-sm border border-status-error/30">
+        <div className="flex items-center gap-3 p-5 border-b border-surface-border">
+          <div className="p-2 rounded-xl bg-badge-error text-status-error shrink-0">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-content-primary">Supprimer l&apos;organisation</p>
+            <p className="text-xs text-content-muted mt-0.5">Action irréversible</p>
+          </div>
+          <button onClick={onClose} className="ml-auto text-content-secondary hover:text-content-primary">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-content-secondary">
+            Vous allez supprimer le compte de{' '}
+            <span className="font-bold text-content-primary">{group.owner_name ?? group.owner_email ?? 'cet utilisateur'}</span>
+            {' '}et ses{' '}
+            <span className="font-bold text-status-error">{group.businesses.length} établissement{group.businesses.length > 1 ? 's' : ''}</span>.
+          </p>
+          <p className="text-xs text-content-muted bg-badge-error border border-status-error/20 rounded-xl px-3 py-2">
+            Toutes les données (commandes, produits, membres, abonnements) seront définitivement supprimées.
+          </p>
+
+          <div className="text-xs text-content-muted space-y-1">
+            {group.businesses.map((b) => (
+              <p key={b.business_id} className="flex items-center gap-2">
+                <Store className="w-3 h-3 shrink-0" />{b.business_name}
+              </p>
+            ))}
+          </div>
+
+          {err && <p className="text-xs text-status-error font-medium">{err}</p>}
+        </div>
+
+        <div className="flex gap-2 p-4 border-t border-surface-border">
+          <button onClick={onClose} className="btn-secondary flex-1 text-sm">
+            Annuler
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting || !group.owner_id}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-status-error text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all"
+          >
+            {deleting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Suppression…</> : <><Trash2 className="w-4 h-4" /> Supprimer</>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -263,11 +374,15 @@ function OwnerRow({
   allTypes,
   allModules,
   onConfigClick,
+  onDeleteClick,
+  duplicatedSlugs,
 }: {
   group:         OwnerGroup;
   allTypes:      BusinessTypeWithModules[];
   allModules:    AppModule[];
   onConfigClick: (row: BusinessMonitorRow) => void;
+  onDeleteClick: (group: OwnerGroup) => void;
+  duplicatedSlugs: Set<string>;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -281,11 +396,11 @@ function OwnerRow({
   const totalProducts  = group.businesses.reduce((s, b) => s + b.products_count, 0);
 
   return (
-    <div className={cn('rounded-xl border overflow-hidden transition-colors', expiringSoon ? 'border-status-warning bg-badge-warning' : 'border-surface-border bg-surface-card')}>
+    <div className={cn('rounded-xl border overflow-hidden transition-colors relative', expiringSoon ? 'border-status-warning bg-badge-warning' : 'border-surface-border bg-surface-card')}>
       {/* Owner header row */}
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-4 px-4 py-3 hover:bg-surface-hover transition-colors text-left"
+        className="w-full flex items-center gap-4 px-4 py-3 pr-10 hover:bg-surface-hover transition-colors text-left"
       >
         {/* Expand icon */}
         <ChevronDown className={cn('w-4 h-4 text-content-secondary shrink-0 transition-transform', expanded && 'rotate-180')} />
@@ -323,6 +438,15 @@ function OwnerRow({
         </div>
       </button>
 
+      {/* Delete button — outside the expand button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDeleteClick(group); }}
+        title="Supprimer l'organisation"
+        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+
       {/* Businesses list */}
       {expanded && (
         <div className="border-t border-surface-border divide-y divide-surface-border/50">
@@ -330,6 +454,8 @@ function OwnerRow({
             const typeLabels = biz.business_types.length > 0
               ? biz.business_types.join(', ')
               : '-';
+            const isDuplicate = biz.public_slug ? duplicatedSlugs.has(biz.public_slug) : false;
+
             return (
               <div key={biz.business_id} className="flex items-center gap-3 px-4 py-3 bg-surface-input/20 hover:bg-surface-input/40 transition-colors">
                 {/* Indent */}
@@ -343,7 +469,7 @@ function OwnerRow({
 
                 {/* Slug boutique */}
                 <div className="hidden sm:block shrink-0">
-                  <SlugBadge slug={biz.public_slug} />
+                  <SlugBadge slug={biz.public_slug} isDuplicate={isDuplicate} />
                 </div>
 
                 {/* Features tags */}
@@ -393,7 +519,8 @@ export function MonitoringTab() {
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
   const [filter, setFilter]       = useState<'all' | 'active' | 'trial' | 'expired' | 'expiring'>('all');
-  const [configModal, setConfigModal] = useState<BusinessMonitorRow | null>(null);
+  const [configModal, setConfigModal]   = useState<BusinessMonitorRow | null>(null);
+  const [deleteModal, setDeleteModal]   = useState<OwnerGroup | null>(null);
 
   async function load() {
     setLoading(true);
@@ -411,6 +538,21 @@ export function MonitoringTab() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // -- Duplicate Slugs --
+  const duplicatedSlugs = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      if (r.public_slug) {
+        counts.set(r.public_slug, (counts.get(r.public_slug) || 0) + 1);
+      }
+    }
+    const dups = new Set<string>();
+    for (const [slug, count] of counts.entries()) {
+      if (count > 1) dups.add(slug);
+    }
+    return dups;
+  }, [rows]);
 
   // -- Stats -----------------------------------------------------------------
   const groups     = groupByOwner(rows);
@@ -510,9 +652,20 @@ export function MonitoringTab() {
               allTypes={allTypes}
               allModules={allModules}
               onConfigClick={setConfigModal}
+              onDeleteClick={setDeleteModal}
+              duplicatedSlugs={duplicatedSlugs}
             />
           ))}
         </div>
+      )}
+
+      {/* Delete modal */}
+      {deleteModal && (
+        <DeleteOrgModal
+          group={deleteModal}
+          onClose={() => setDeleteModal(null)}
+          onDeleted={(ownerId) => setRows((prev) => prev.filter((r) => r.owner_id !== ownerId))}
+        />
       )}
 
       {/* Config modal */}
@@ -522,9 +675,9 @@ export function MonitoringTab() {
           allTypes={allTypes}
           allModules={allModules}
           onClose={() => setConfigModal(null)}
-          onSaved={(businessId, types, features) => {
+          onSaved={(businessId, types, features, publicSlug) => {
             setRows((prev) => prev.map((r) =>
-              r.business_id === businessId ? { ...r, business_types: types, features } : r
+              r.business_id === businessId ? { ...r, business_types: types, features, public_slug: publicSlug } : r
             ));
           }}
         />

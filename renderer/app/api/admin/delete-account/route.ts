@@ -42,21 +42,38 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Trouver l'organisation associée pour la supprimer aussi (car ON DELETE SET NULL)
-    const { data: bizData } = await admin
+    // 1. Trouver toutes les businesses de ce owner
+    const { data: allBiz } = await admin
       .from('businesses')
-      .select('organization_id')
-      .eq('id', businessId)
-      .single();
+      .select('id, organization_id')
+      .eq('owner_id', ownerId);
 
-    // 2. Supprimer l'utilisateur Auth (ceci va cascade sur businesses, subscriptions, members, et toutes les données business)
+    const bizIds = (allBiz ?? []).map((b: any) => b.id);
+    const orgId  = (allBiz ?? []).find((b: any) => b.organization_id)?.organization_id ?? null;
+
+    // 2. Supprimer les données liées pour chaque business (contourne les triggers)
+    if (bizIds.length > 0) {
+      await Promise.all([
+        admin.from('subscriptions').delete().in('business_id', bizIds),
+        admin.from('business_members').delete().in('business_id', bizIds),
+        admin.from('analytics_events').delete().in('business_id', bizIds),
+        admin.from('monitoring_vitals').delete().in('business_id', bizIds),
+      ]);
+      // Supprimer les businesses elles-mêmes
+      await admin.from('businesses').delete().in('id', bizIds);
+    }
+
+    // 3. Supprimer l'organisation
+    if (orgId) {
+      await admin.from('organizations').delete().eq('id', orgId);
+    }
+
+    // 4. Supprimer le profil public user
+    await admin.from('users').delete().eq('id', ownerId);
+
+    // 5. Supprimer le compte Auth (plus de données dépendantes à ce stade)
     const { error: deleteError } = await admin.auth.admin.deleteUser(ownerId);
     if (deleteError) throw deleteError;
-
-    // 3. Supprimer l'organisation si elle existe
-    if (bizData?.organization_id) {
-      await admin.from('organizations').delete().eq('id', bizData.organization_id);
-    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -63,7 +63,8 @@
       "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos mv /c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/backoffice '/c/Users/lamine-m/Documents/build/PERSO/elm-pos/renderer/app/\\(backoffice\\)/backoffice')",
       "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos add renderer/app/\\\\\\(auth\\\\\\)/layout.tsx renderer/app/\\\\\\(public\\\\\\)/layout.tsx renderer/app/\\\\\\(kiosk\\\\\\)/layout.tsx)",
       "Bash(git -C /c/Users/lamine-m/Documents/build/PERSO/elm-pos status --short)",
-      "Bash(yarn typecheck *)"
+      "Bash(yarn typecheck *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\pourq\\\\OneDrive\\\\Documents\\\\BUILD\\\\elm-pos\\\\renderer\\\\app\\\\\\(backoffice\\)\" -Recurse -Name)"
     ]
   }
 }

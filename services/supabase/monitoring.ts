@@ -19,12 +19,13 @@ export async function updateBusinessConfig(
   businessId: string,
   types:      string[],
   features:   string[],
+  publicSlug?: string,
 ): Promise<void> {
   // types[] are UUIDs from business_types table - never write them to the legacy
   // `type` TEXT column which has a strict CHECK constraint on legacy enum values.
   const { error } = await db
     .from('businesses')
-    .update({ types, features })
+    .update({ types, features, public_slug: publicSlug })
     .eq('id', businessId);
   if (error) throw new Error(error.message);
 }
@@ -79,12 +80,17 @@ export async function getBusinessMonitoring(): Promise<BusinessMonitorRow[]> {
 
   // Étendre : une ligne par établissement (pas par abonnement)
   const rows: BusinessMonitorRow[] = [];
+  const seenBizIds = new Set<string>();
+
   for (const sub of subs) {
     const bizList = sub.businesses?.length
       ? sub.businesses
       : [{ id: sub.business_id, name: sub.business_name }];
 
     for (const biz of bizList) {
+      if (seenBizIds.has(biz.id)) continue;
+      seenBizIds.add(biz.id);
+
       rows.push({
         ...sub,
         business_id:   biz.id,
