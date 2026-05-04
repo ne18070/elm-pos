@@ -38,33 +38,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Charger l'établissement actif
-    const hasTabBusiness = !!sessionStorage.getItem('elm-pos-active-business');
-    let activeBizLoaded = false;
-    if (!hasTabBusiness && profile.business_id) {
-      const { data: biz } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('id', profile.business_id)
-        .single();
-      if (biz) { setBusiness(biz as never); activeBizLoaded = true; }
-    }
+    const storedBusiness = (() => {
+      try {
+        const raw = sessionStorage.getItem('elm-pos-active-business');
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
 
     // Charger tous les établissements
     let fallbackBizId: string | null = null;
     try {
       const memberships = await getMyBusinesses();
       setBusinesses(memberships);
-      // Profile had no business_id yet (post-onboarding timing) — use first membership
-      if (!hasTabBusiness && !activeBizLoaded && memberships.length > 0) {
-        setBusiness(memberships[0].business as never);
-        fallbackBizId = memberships[0].business.id;
+      // Use only businesses returned by getMyBusinesses; ignore stale tab state.
+      const selectedMembership =
+        memberships.find((m) => m.business.id === storedBusiness?.id) ??
+        memberships.find((m) => m.business.id === profile.business_id) ??
+        memberships[0] ??
+        null;
+
+      if (selectedMembership) {
+        setBusiness(selectedMembership.business as never);
+        fallbackBizId = selectedMembership.business.id;
+      } else {
+        setBusiness(null);
       }
     } catch { /* non critique */ }
 
     // Charger abonnement + plans + paramètres paiement + permissions
-    const activeBizId = (sessionStorage.getItem('elm-pos-active-business')
-      ? JSON.parse(sessionStorage.getItem('elm-pos-active-business')!)?.id
-      : null) ?? profile.business_id ?? fallbackBizId;
+    const activeBizId = fallbackBizId ?? profile.business_id;
+    setMonitoringUser(sessionUser.id, activeBizId ?? null);
 
     if (activeBizId) {
       try {
