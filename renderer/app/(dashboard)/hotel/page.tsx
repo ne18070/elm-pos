@@ -22,6 +22,8 @@ import type {
   RoomType, RoomStatus,
 } from '@services/supabase/hotel';
 
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
+
 import { Tab, PayMethod, ResFilter, todayStr, tomorrowStr, fmt, fmtMoney } from './components/hotel-helpers';
 import { ChambresTab }     from './components/ChambresTab';
 import { ReservationsTab } from './components/ReservationsTab';
@@ -486,6 +488,9 @@ export default function HotelPage() {
 
   return (
     <div className="h-full flex flex-col relative">
+      <div className="px-4 sm:px-6 pt-3 empty:hidden">
+        <OnboardingChecklist />
+      </div>
       {/* Header */}
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-surface-border flex items-center justify-between gap-3">
         <div className="min-w-0">

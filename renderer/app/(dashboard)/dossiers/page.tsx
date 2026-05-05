@@ -30,9 +30,10 @@ import { DossierModal } from './DossierModal';
 import { FinancesPanel } from './FinancesPanel';
 import { WorkflowPanel } from './WorkflowPanel';
 import { FichiersPanel } from './FichiersPanel';
+import { TimeTrackingPanel } from './TimeTrackingPanel';
 import { ProcessusManager } from './ProcessusManager';
 import { ConfigTab } from './ConfigTab';
-import { TimeTrackingPanel } from './TimeTrackingPanel';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 
 export default function DossiersPage() {
   const { business, user } = useAuthStore();
@@ -116,7 +117,7 @@ export default function DossiersPage() {
   return (
     <div className="h-full overflow-y-auto bg-surface/20">
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        
+        <OnboardingChecklist />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

@@ -152,7 +152,7 @@ function SidebarContent({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 min-h-0 overflow-y-auto py-2 space-y-4 px-2 custom-scrollbar">
+      <nav id="sidebar-nav" className="flex-1 min-h-0 overflow-y-auto py-2 space-y-4 px-2 custom-scrollbar">
         {visibleSections.map((section) => (
           <div key={section.label} className="space-y-1">
             <div className={cn(
@@ -168,9 +168,11 @@ function SidebarContent({
                 const active = pathname.startsWith(href);
                 const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
                 const sessionDot = href === '/caisse';
+                const linkId = `nav-item-${href.replace('/', '')}`;
                 return (
                   <Link
                     key={href}
+                    id={linkId}
                     href={href}
                     onClick={onClose}
                     title={collapsed ? label : undefined}

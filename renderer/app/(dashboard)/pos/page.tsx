@@ -156,7 +156,7 @@ export default function PosPage() {
             <OnboardingChecklist />
           </div>
           <div className="px-4 py-3 border-b border-surface-border flex gap-2">
-            <div className="relative flex-1 group">
+            <div id="pos-search" className="relative flex-1 group">
               <input
                 ref={searchInputRef}
                 type="text"
@@ -227,7 +227,7 @@ export default function PosPage() {
           )}
         </div>
         {/* Droite : panier */}
-        <div className="w-96 flex flex-col bg-surface-card">
+        <div id="pos-cart" className="w-96 flex flex-col bg-surface-card">
           <OrderPanel
             taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}

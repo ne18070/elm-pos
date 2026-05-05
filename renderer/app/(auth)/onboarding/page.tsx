@@ -91,6 +91,10 @@ export default function OnboardingPage() {
 
       setLoadingText('Personnalisation de votre espace…');
       await supabase.rpc('seed_demo_data', { p_biz_id: bizId, p_sector: sectorId });
+      
+      // Finaliser l'onboarding pour déclencher les webhooks (email de bienvenue)
+      await supabase.from('businesses').update({ onboarding_done: true }).eq('id', bizId);
+      
       trackEvent('provisioning_success', { bizId, sector: sectorId });
       setProgress(100);
 

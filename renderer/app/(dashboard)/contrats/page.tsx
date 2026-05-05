@@ -33,6 +33,7 @@ import { VehiclePanel } from './VehiclePanel';
 import { TemplatePanel } from './TemplatePanel';
 import { ContractFormPanel } from './ContractFormPanel';
 import { ContractDetailPanel } from './ContractDetailPanel';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 
 // ------ Local Components --------------------------------------------------------------------------------------------------------------------
 
@@ -284,6 +285,9 @@ export default function ContratsPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      <div className="px-3 pt-3 empty:hidden">
+        <OnboardingChecklist />
+      </div>
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 px-3 py-3 border-b border-surface-border bg-surface-card shrink-0 sm:px-4">
         <FileSignature className="w-5 h-5 text-content-brand shrink-0" />
