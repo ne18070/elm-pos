@@ -36,9 +36,9 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
             <span className="text-xs text-content-secondary uppercase tracking-wide">Charges totales</span>
           </div>
           <p className="text-2xl font-bold text-content-primary">
-            {formatCurrency(is.achatsMarchandises + is.autresCharges, currency)}
+            {formatCurrency(is.caNet - is.ebe, currency)}
           </p>
-          <p className="text-xs text-content-primary mt-1">Achats : {formatCurrency(is.achatsMarchandises, currency)}</p>
+          <p className="text-xs text-content-primary mt-1">Opérationnelles (Achats + Frais)</p>
         </div>
 
         <div className="card p-5">

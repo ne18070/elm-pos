@@ -158,18 +158,24 @@ export async function getTrialBalance(
 // --- États financiers (calculés côté client depuis la balance) ---------------
 
 export interface IncomeStatement {
-  ventesGross:       number; // 701
-  rrrAccordes:       number; // 7091
+  ventesGross:       number; // 701, 706, etc.
+  rrrAccordes:       number; // 709
   caNet:             number;
   achatsMarchandises:number; // 601
   margeBrute:        number;
-  autresCharges:     number; // class 6 sauf 601
+  transports:        number; // 61x
+  servicesExterieurs:number; // 62x, 63x
+  impotsTaxes:       number; // 64x
+  chargesPersonnel:  number; // 66x (SYSCOHADA) or 64x
+  autresCharges:     number; // rest of class 6
+  ebe:               number; // Excédent Brut d'Exploitation
+  dotations:         number; // 68x
   resultatExpl:      number;
-  produitsFinanciers:number; // 761, 771
-  chargesFinancieres:number; // 661
+  produitsFinanciers:number; // 77x
+  chargesFinancieres:number; // 67x
   resultatFinancier: number;
   resultatAvantImpot:number;
-  impots:            number; // 691, 441
+  impots:            number; // 691, 89
   resultatNet:       number;
 }
 
@@ -312,47 +318,62 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
 }
 
 export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeStatement {
-  const get = (code: string) => {
-    const row = balance.find((r) => r.account_code === code);
-    if (!row) return 0;
-    return row.balance_type === 'credit' ? -row.balance : row.balance;
-  };
-
-  // Solde positif = dans le sens normal du compte
-  const sumClass = (cls: number, nature: string) =>
+  const sumRange = (prefix: string) =>
     balance
-      .filter((r) => r.class_num === cls && r.nature === nature)
-      .reduce((s, r) => {
-        const normal = r.balance_type === 'debit' ? r.balance : -r.balance;
-        return s + normal;
-      }, 0);
+      .filter((r) => r.account_code.startsWith(prefix))
+      .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
 
-  // CA = somme de tous les comptes 70x (ventes + prestations), hors 7091 (RRR)
+  // CA = somme de tous les comptes 70x (ventes + prestations), hors 709x (RRR)
   const ventesGross = balance
-    .filter((r) => r.account_code.startsWith('70') && r.account_code !== '7091')
+    .filter((r) => r.account_code.startsWith('70') && !r.account_code.startsWith('709'))
     .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
-  const rrrAccordes        = get('7091');
-  const caNet              = ventesGross - rrrAccordes;
-  const achatsMarchandises = get('601');
-  const margeBrute         = caNet - achatsMarchandises;
-
-  // Autres charges classe 6 (hors 601, 691)
-  const autresCharges = balance
-    .filter((r) => r.class_num === 6 && !['601','691'].includes(r.account_code))
+  
+  const rrrAccordes        = balance
+    .filter((r) => r.account_code.startsWith('709'))
     .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
 
-  const resultatExpl       = margeBrute - autresCharges;
-  const produitsFinanciers = ['761','771'].reduce((s, c) => s + get(c), 0);
-  const chargesFinancieres = get('661');
+  const caNet              = ventesGross - rrrAccordes;
+  const achatsMarchandises = sumRange('601');
+  const margeBrute         = caNet - achatsMarchandises;
+
+  // Détails des charges
+  const transports         = sumRange('61');
+  const servicesExterieurs = sumRange('62') + sumRange('63');
+  const impotsTaxes        = sumRange('64'); 
+  const chargesPersonnel   = sumRange('66'); 
+  
+  // Si le personnel a été mis en 64 (comme dans OP_TEMPLATES 641/646)
+  const personnelIn64 = balance
+    .filter((r) => r.account_code.startsWith('641') || r.account_code.startsWith('646'))
+    .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
+  
+  const effectivePersonnel = chargesPersonnel + personnelIn64;
+  const effectiveTaxes     = Math.max(0, impotsTaxes - personnelIn64);
+
+  const totalKnownCharges = achatsMarchandises + transports + servicesExterieurs + effectiveTaxes + effectivePersonnel;
+  const autresCharges = balance
+    .filter((r) => r.class_num === 6 && !['601','61','62','63','64','66','68','69','67'].some(p => r.account_code.startsWith(p)))
+    .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
+
+  const ebe                = margeBrute - (transports + servicesExterieurs + effectiveTaxes + effectivePersonnel + autresCharges);
+  const dotations          = sumRange('68');
+  const resultatExpl       = ebe - dotations;
+
+  const produitsFinanciers = balance
+    .filter((r) => r.account_code.startsWith('77'))
+    .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
+  
+  const chargesFinancieres = sumRange('67');
   const resultatFinancier  = produitsFinanciers - chargesFinancieres;
-  const impots             = get('691') + get('441');
+  
   const resultatAvantImpot = resultatExpl + resultatFinancier;
+  const impots             = sumRange('69');
   const resultatNet        = resultatAvantImpot - impots;
 
-  void sumClass;
   return {
     ventesGross, rrrAccordes, caNet, achatsMarchandises, margeBrute,
-    autresCharges, resultatExpl, produitsFinanciers, chargesFinancieres,
+    transports, servicesExterieurs, impotsTaxes: effectiveTaxes, chargesPersonnel: effectivePersonnel,
+    autresCharges, ebe, dotations, resultatExpl, produitsFinanciers, chargesFinancieres,
     resultatFinancier, resultatAvantImpot, impots, resultatNet,
   };
 }
