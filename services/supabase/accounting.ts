@@ -73,6 +73,47 @@ export async function getAccounts(businessId: string): Promise<Account[]> {
   return (data ?? []) as Account[];
 }
 
+export async function createAccount(
+  businessId: string,
+  input: { code: string; name: string; nature: Account['nature']; balance_type: Account['balance_type'] }
+): Promise<Account> {
+  const classNum = parseInt(input.code.charAt(0), 10);
+  if (isNaN(classNum) || classNum < 1 || classNum > 8) {
+    throw new Error('Le numéro de compte doit commencer par un chiffre de 1 à 8');
+  }
+  const { data: existing } = await db('accounts')
+    .select('id')
+    .eq('code', input.code)
+    .or(`business_id.eq.${businessId},business_id.is.null`)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (existing) throw new Error(`Le compte ${input.code} existe déjà dans votre plan comptable`);
+
+  const { data, error } = await db('accounts')
+    .insert({
+      business_id: businessId,
+      code: input.code.trim(),
+      name: input.name.trim(),
+      class: classNum,
+      nature: input.nature,
+      balance_type: input.balance_type,
+      is_default: false,
+      is_active: true,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Account;
+}
+
+export async function deleteAccount(accountId: string): Promise<void> {
+  const { error } = await db('accounts')
+    .update({ is_active: false })
+    .eq('id', accountId)
+    .eq('is_default', false);
+  if (error) throw new Error(error.message);
+}
+
 // --- Journal ------------------------------------------------------------------
 
 export async function getJournalEntries(

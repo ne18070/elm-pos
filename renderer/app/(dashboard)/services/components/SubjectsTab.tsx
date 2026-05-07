@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, RefreshCw, Package2, Wrench, User, History } from 'lucide-react';
+import { Search, RefreshCw, Package2, Wrench, User, History, Clock } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+
+function fmtRelDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.floor((now.getTime() - d.getTime()) / 86400000);
+  if (days === 0) return "aujourd'hui";
+  if (days === 1) return 'hier';
+  if (days < 30) return `il y a ${days}j`;
+  if (days < 365) return `il y a ${Math.floor(days / 30)}mois`;
+  return `il y a ${Math.floor(days / 365)}an`;
+}
 import { 
   getSubjectHistory, 
   getOrdersByClientName, 
@@ -60,13 +72,15 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
         if (o.created_at > existing.lastDate) existing.lastDate = o.created_at;
       }
     }
-    const clientEntries: HistoryEntry[] = Array.from(clientMap.values()).map(v => ({
-      kind: 'client' as const,
-      name: v.name,
-      phone: v.phone,
-      count: v.count,
-      lastDate: v.lastDate,
-    }));
+    const clientEntries: HistoryEntry[] = Array.from(clientMap.values())
+      .sort((a, b) => (b.lastDate > a.lastDate ? 1 : -1))
+      .map(v => ({
+        kind: 'client' as const,
+        name: v.name,
+        phone: v.phone,
+        count: v.count,
+        lastDate: v.lastDate,
+      }));
 
     return [...subjectEntries, ...clientEntries];
   }, [subjects, summary]);
@@ -149,17 +163,29 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
             {filtered.filter(e => e.kind === 'client').map(e => {
               if (e.kind !== 'client') return null;
               const key = `c-${e.name}`;
+              const isSelected = selKey === key;
               return (
-                <button key={key} onClick={() => setSelected(selKey === key ? null : e)}
+                <button key={key} onClick={() => setSelected(isSelected ? null : e)}
                   className={cn('w-full text-left rounded-xl border p-3 transition-colors',
-                    selKey === key ? 'bg-brand-500/10 border-brand-500/30 text-content-brand' : 'border-surface-border hover:bg-surface-hover text-content-primary')}>
+                    isSelected ? 'bg-brand-500/10 border-brand-500/30' : 'border-surface-border hover:bg-surface-hover text-content-primary')}>
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-content-secondary flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{e.name}</p>
-                      {e.phone && <p className="text-xs text-content-secondary">{e.phone}</p>}
+                    <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black',
+                      isSelected ? 'bg-brand-500/20 text-content-brand' : 'bg-surface-hover text-content-secondary')}>
+                      {e.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-xs text-content-secondary flex-shrink-0">{e.count} OT</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate text-content-primary">{e.name}</p>
+                      {e.phone && <p className="text-xs text-content-muted">{e.phone}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={cn('text-xs font-black', isSelected ? 'text-content-brand' : 'text-content-secondary')}>
+                        {e.count} visite{e.count > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-[10px] text-content-muted flex items-center gap-0.5 justify-end">
+                        <Clock className="w-2.5 h-2.5" />
+                        {fmtRelDate(e.lastDate)}
+                      </p>
+                    </div>
                   </div>
                 </button>
               );
@@ -180,9 +206,19 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2 mb-1"><User className="w-4 h-4 text-content-secondary" /></div>
                 <h3 className="font-bold text-content-primary">{selected.name}</h3>
                 {selected.phone && <p className="text-sm text-content-secondary">{selected.phone}</p>}
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-xs font-black text-content-brand bg-brand-500/10 px-2 py-0.5 rounded-full">
+                    {selected.count} visite{selected.count > 1 ? 's' : ''}
+                  </span>
+                  {selected.lastDate && (
+                    <span className="text-xs text-content-muted flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Dernière : {fmtRelDate(selected.lastDate)}
+                    </span>
+                  )}
+                </div>
               </>
             )}
           </div>

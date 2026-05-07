@@ -281,6 +281,16 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                             <p className="text-sm font-semibold text-content-primary truncate">{c.name}</p>
                             {c.phone && <p className="text-xs text-content-muted">{c.phone}</p>}
                           </div>
+                          {c.visit_count > 0 && (
+                            <div className="text-right shrink-0">
+                              <p className="text-xs font-bold text-content-brand">{c.visit_count} visite{c.visit_count > 1 ? 's' : ''}</p>
+                              {c.last_visit && (
+                                <p className="text-[10px] text-content-muted">
+                                  {new Date(c.last_visit).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </button>
                       ))}
                     </div>

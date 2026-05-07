@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Wrench, ChevronUp, ChevronDown, User, Phone, Search, Plus, Trash2 } from 'lucide-react';
+import { X, Wrench, ChevronUp, ChevronDown, User, Phone, Search, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -10,9 +10,30 @@ import {
   type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
 import { getStaff, type Staff } from '@services/supabase/staff';
-import { useServiceOrderForm } from '../hooks/useServiceOrderForm';
+import { useServiceOrderForm, type ClientWithStats } from '../hooks/useServiceOrderForm';
 import { SUBJECT_TYPES, subjectTypeCfg } from '../constants';
-import { StatusBadge, OTNumber } from './StatusBadge';
+
+function fmtRelDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.floor((now.getTime() - d.getTime()) / 86400000);
+  if (days === 0) return "aujourd'hui";
+  if (days === 1) return 'hier';
+  if (days < 30) return `il y a ${days}j`;
+  if (days < 365) return `il y a ${Math.floor(days / 30)}mois`;
+  return `il y a ${Math.floor(days / 365)}an`;
+}
+
+function PricePreview({ value, currency }: { value: string; currency?: string }) {
+  const num = parseFloat(value);
+  if (!value || isNaN(num) || num === 0) return null;
+  return (
+    <p className="text-xs font-bold font-mono text-content-brand mt-1">
+      = {formatCurrency(num, currency)}
+    </p>
+  );
+}
 
 function SubjectTypePill({ type }: { type: string | null | undefined }) {
   const cfg = subjectTypeCfg(type);
@@ -31,10 +52,11 @@ export function NewServiceOrderModal({
   onClose: () => void;
   onCreated: (o: ServiceOrder) => void;
 }) {
-  const { user } = useAuthStore();
+  const { user, business } = useAuthStore();
   const { error: notifError } = useNotificationStore();
   const [saving, setSaving] = useState(false);
   const [showSubject, setShowSubject] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [showCatalogDrop, setShowCatalogDrop] = useState(false);
@@ -66,13 +88,21 @@ export function NewServiceOrderModal({
 
   const typeCfg = subjectTypeCfg(formData.subjectType);
 
-  async function handleSubmit() {
+  function handleRequestSubmit() {
+    const { isValid, errors } = validate();
+    if (!isValid) {
+      if (errors.lines) notifError(errors.lines);
+      return;
+    }
+    setShowConfirm(true);
+  }
+
+  async function handleConfirmedSubmit() {
     const { isValid, errors, validLines } = validate();
     if (!isValid) {
       if (errors.lines) notifError(errors.lines);
       return;
     }
-
     setSaving(true);
     try {
       const order = await createServiceOrder({
@@ -198,6 +228,12 @@ export function NewServiceOrderModal({
                       <p className="text-sm font-semibold text-content-primary truncate">{c.name}</p>
                       {c.phone && <p className="text-xs text-content-muted">{c.phone}</p>}
                     </div>
+                    {c.visit_count > 0 && (
+                      <div className="text-right shrink-0">
+                        <p className="text-xs font-bold text-content-brand">{c.visit_count} visite{c.visit_count > 1 ? 's' : ''}</p>
+                        <p className="text-[10px] text-content-muted">{fmtRelDate(c.last_visit)}</p>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -284,18 +320,37 @@ export function NewServiceOrderModal({
           {/* Line items */}
           <div>
             <p className="text-xs text-content-secondary font-semibold mb-2 uppercase tracking-wider">Détail des prestations</p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {formData.lines.map(line => (
-                <div key={line._id} className="flex gap-2 items-center">
-                  <input value={line.name} onChange={e => updateLine(line._id, 'name', e.target.value)} placeholder="Désignation prestation"
-                    className="flex-1 px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
-                  <input value={line.price} onChange={e => updateLine(line._id, 'price', e.target.value)} placeholder="Prix" type="number" min={0}
-                    className="w-24 px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
-                  <input value={line.quantity} onChange={e => updateLine(line._id, 'quantity', parseInt(e.target.value) || 1)} type="number" min={1}
-                    className="w-14 px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm text-center" />
-                  <button onClick={() => removeLine(line._id)} className="p-2 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div key={line._id} className="rounded-xl border border-surface-border bg-surface-input/40 p-3 space-y-2">
+                  <div className="flex gap-2 items-center">
+                    <input value={line.name} onChange={e => updateLine(line._id, 'name', e.target.value)} placeholder="Désignation prestation"
+                      className="flex-1 px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder-content-muted text-sm" />
+                    <button onClick={() => removeLine(line._id)} className="p-2 rounded-lg hover:bg-red-500/20 text-content-secondary hover:text-status-error shrink-0">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-content-muted font-medium mb-1 block uppercase tracking-wide">Prix unitaire</label>
+                      <input value={line.price} onChange={e => updateLine(line._id, 'price', e.target.value)} placeholder="0" type="number" min={0}
+                        className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm font-mono" />
+                      <PricePreview value={line.price} currency={business?.currency} />
+                    </div>
+                    <div className="w-20">
+                      <label className="text-[10px] text-content-muted font-medium mb-1 block uppercase tracking-wide">Qté</label>
+                      <input value={line.quantity} onChange={e => updateLine(line._id, 'quantity', parseInt(e.target.value) || 1)} type="number" min={1}
+                        className="w-full px-3 py-2 rounded-lg bg-surface-input border border-surface-border text-content-primary text-sm text-center" />
+                    </div>
+                    {parseFloat(line.price) > 0 && line.quantity > 1 && (
+                      <div className="flex-1 pt-5">
+                        <p className="text-xs text-content-secondary">Sous-total</p>
+                        <p className="text-sm font-bold text-content-brand font-mono">
+                          {formatCurrency(parseFloat(line.price) * line.quantity, business?.currency)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -314,17 +369,62 @@ export function NewServiceOrderModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-5 border-t border-surface-border bg-surface-card sticky bottom-0">
-          <div className="text-content-primary font-bold text-lg">Total : {formatCurrency(total)}</div>
+        <div className="p-5 border-t border-surface-border bg-surface-card sticky bottom-0 space-y-3">
+          <div className="flex items-center justify-between rounded-xl bg-brand-500/10 border border-brand-500/20 px-4 py-3">
+            <span className="text-sm font-semibold text-content-secondary">Total à facturer</span>
+            <span className="text-2xl font-black text-content-brand font-mono tracking-tight">
+              {formatCurrency(total, business?.currency)}
+            </span>
+          </div>
           <div className="flex gap-3">
             <button onClick={onClose} className="px-4 py-2 rounded-xl border border-surface-border text-content-secondary hover:bg-surface-hover text-sm font-medium">Annuler</button>
-            <button onClick={handleSubmit} disabled={saving || formData.lines.every(l => !l.name.trim())}
-              className="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold disabled:opacity-40">
+            <button onClick={handleRequestSubmit} disabled={saving || formData.lines.every(l => !l.name.trim())}
+              className="flex-1 px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold disabled:opacity-40">
               {saving ? 'Création…' : "Créer l'OT"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Confirmation montant */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-surface-card rounded-2xl w-full max-w-sm shadow-2xl border border-surface-border">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-brand-500/10 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6 text-content-brand" />
+              </div>
+              <div>
+                <p className="text-sm text-content-secondary font-medium mb-1">Vérifiez le total avant de confirmer</p>
+                <p className="text-3xl font-black text-content-brand font-mono tracking-tight">
+                  {formatCurrency(total, business?.currency)}
+                </p>
+                <p className="text-xs text-content-muted mt-2">
+                  {formData.lines.filter(l => l.name.trim()).length} ligne(s) · {formData.clientName || 'Client non renseigné'}
+                </p>
+              </div>
+              {formData.lines.filter(l => l.name.trim() && parseFloat(l.price) > 0).map((l, i) => (
+                <div key={i} className="flex justify-between text-sm px-1">
+                  <span className="text-content-secondary truncate max-w-[60%]">{l.name} ×{l.quantity}</span>
+                  <span className="font-mono font-semibold text-content-primary">
+                    {formatCurrency(parseFloat(l.price) * l.quantity, business?.currency)}
+                  </span>
+                </div>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover">
+                  Corriger
+                </button>
+                <button onClick={handleConfirmedSubmit} disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold">
+                  {saving ? 'Création…' : 'Confirmer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

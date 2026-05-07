@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, ShieldCheck } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
 import type { Account } from '@services/supabase/accounting';
+import { createAccount, deleteAccount } from '@services/supabase/accounting';
 import { CLASS_LABELS } from './accounting-constants';
 
 interface Props {
@@ -15,18 +16,32 @@ interface Props {
 export function SettingsTab({ accounts, businessId, onRefresh }: Props) {
   const { success, error } = useNotificationStore();
   const [showAdd, setShowAdd] = useState(false);
-  const [newAcc, setNewAcc] = useState({ code: '', name: '', nature: 'charge' as any, balance_type: 'debit' as any });
+  const [saving, setSaving] = useState(false);
+  const [newAcc, setNewAcc] = useState({ code: '', name: '', nature: 'charge' as Account['nature'], balance_type: 'debit' as Account['balance_type'] });
 
-  // On trie les comptes par code
   const sortedAccounts = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
 
   async function handleAdd() {
-    if (!newAcc.code || !newAcc.name) return;
+    if (!newAcc.code.trim() || !newAcc.name.trim()) return;
+    setSaving(true);
     try {
-      // Simulation ou appel réel si la fonction existait
-      // Pour l'instant, on prépare l'UI, on supposera qu'on peut insérer via Supabase directement
-      success('Compte ajouté avec succès (simulation)');
+      await createAccount(businessId, newAcc);
+      success(`Compte ${newAcc.code} ajouté avec succès`);
       setShowAdd(false);
+      setNewAcc({ code: '', name: '', nature: 'charge', balance_type: 'debit' });
+      onRefresh();
+    } catch (err) {
+      error(String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(acc: Account) {
+    if (!confirm(`Supprimer le compte ${acc.code} – ${acc.name} ?\nCette action est irréversible.`)) return;
+    try {
+      await deleteAccount(acc.id);
+      success(`Compte ${acc.code} supprimé`);
       onRefresh();
     } catch (err) {
       error(String(err));
@@ -76,7 +91,11 @@ export function SettingsTab({ accounts, businessId, onRefresh }: Props) {
                           <ShieldCheck className="w-3 h-3" /> Standard
                         </span>
                       ) : (
-                        <button className="p-1.5 text-content-secondary hover:text-status-error transition-colors">
+                        <button
+                          onClick={() => handleDelete(acc)}
+                          className="p-1.5 text-content-secondary hover:text-status-error transition-colors"
+                          title="Supprimer ce compte"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -145,7 +164,13 @@ export function SettingsTab({ accounts, businessId, onRefresh }: Props) {
             </div>
             <div className="p-6 border-t border-surface-border flex justify-end gap-3">
               <button onClick={() => setShowAdd(false)} className="btn-secondary">Annuler</button>
-              <button onClick={handleAdd} className="btn-brand">Enregistrer</button>
+              <button
+                onClick={handleAdd}
+                disabled={saving || !newAcc.code.trim() || !newAcc.name.trim()}
+                className="btn-brand disabled:opacity-50"
+              >
+                {saving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
             </div>
           </div>
         </div>

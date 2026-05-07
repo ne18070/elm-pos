@@ -232,6 +232,30 @@ export async function searchSubjects(businessId: string, ref: string): Promise<S
   return data ?? [];
 }
 
+export async function getClientVisitStats(
+  businessId: string,
+  clientNames: string[]
+): Promise<Map<string, { count: number; lastVisit: string | null }>> {
+  if (!clientNames.length) return new Map();
+  const { data } = await db
+    .from('service_orders')
+    .select('client_name, created_at')
+    .eq('business_id', businessId)
+    .in('client_name', clientNames)
+    .order('created_at', { ascending: false });
+
+  const stats = new Map<string, { count: number; lastVisit: string | null }>();
+  for (const o of (data ?? []) as { client_name: string; created_at: string }[]) {
+    const key = o.client_name?.toLowerCase().trim();
+    if (!key) continue;
+    const s = stats.get(key) ?? { count: 0, lastVisit: null };
+    s.count++;
+    if (!s.lastVisit) s.lastVisit = o.created_at;
+    stats.set(key, s);
+  }
+  return stats;
+}
+
 export async function getSubjectHistory(businessId: string, subjectId: string): Promise<ServiceOrder[]> {
   const { data, error } = await db
     .from('service_orders')

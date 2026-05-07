@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer, Download, List, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { displayCurrency } from '@/lib/utils';
@@ -58,6 +58,17 @@ export default function ComptabilitePage() {
 
   const { from, to } = getPeriod(period, customFrom, customTo);
   const currency = business?.currency;
+
+  const is = useMemo(() => computeIncomeStatement(balance), [balance]);
+  const bs = useMemo(() => computeBalanceSheet(balance), [balance]);
+  const byClass = useMemo(() =>
+    Array.from(new Set(balance.map((r) => r.class_num))).sort().map((cls) => ({
+      cls,
+      rows: balance.filter((r) => r.class_num === cls),
+      totalDebit:  balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_debit, 0),
+      totalCredit: balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_credit, 0),
+    })),
+  [balance]);
 
   const load = useCallback(async () => {
     if (!business?.id) return;
@@ -398,16 +409,6 @@ export default function ComptabilitePage() {
     w.focus();
     setTimeout(() => { w.print(); }, 400);
   }
-
-  const is = computeIncomeStatement(balance);
-  const bs = computeBalanceSheet(balance);
-
-  const byClass = Array.from(new Set(balance.map((r) => r.class_num))).sort().map((cls) => ({
-    cls,
-    rows: balance.filter((r) => r.class_num === cls),
-    totalDebit:  balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_debit, 0),
-    totalCredit: balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_credit, 0),
-  }));
 
   const visibleTabs = isOwnerOrAdmin ? TABS : TABS.filter((t) => t.id === 'dashboard' || t.id === 'journal');
 
