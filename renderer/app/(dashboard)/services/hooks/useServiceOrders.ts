@@ -3,6 +3,7 @@ import { getServiceOrders, getServiceOrderCounts, ServiceOrder, ServiceOrderStat
 import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
+import { playNewOrderChime } from '@/lib/admin-sound';
 
 interface UseServiceOrdersOptions {
   businessId: string;
@@ -30,7 +31,21 @@ export function useServiceOrders({
   });
   const [loading, setLoading] = useState(true);
   const { error: notifError } = useNotificationStore();
-  
+
+  const [soundEnabled, setSoundEnabled] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('admin_order_sound') !== 'false' : true,
+  );
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('admin_order_sound', String(next));
+      return next;
+    });
+  }, []);
+
   // To prevent race conditions
   const lastRequestRef = useRef<number>(0);
 
@@ -83,7 +98,12 @@ export function useServiceOrders({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'service_orders', filter: `business_id=eq.${businessId}` },
-        () => loadOrdersRef.current(),
+        (payload) => {
+          loadOrdersRef.current();
+          if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
+            playNewOrderChime();
+          }
+        },
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -96,5 +116,7 @@ export function useServiceOrders({
     loading,
     refresh: loadOrders,
     setOrders,
+    soundEnabled,
+    toggleSound,
   };
 }

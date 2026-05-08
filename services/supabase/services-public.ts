@@ -1,5 +1,4 @@
 import { supabasePublic as db } from './public-client';
-import { upsertClientByPhone } from './clients';
 
 export async function getPublicServiceCatalog(businessId: string) {
   const { data, error } = await db
@@ -23,48 +22,16 @@ export async function createPublicServiceOrder(input: {
   notes?:        string;
   items: Array<{ service_id: string; name: string; price: number; quantity: number }>;
 }) {
-  // Enregistre / met à jour le client automatiquement (dédup par téléphone)
-  if (input.clientName?.trim() && input.clientPhone?.trim()) {
-    upsertClientByPhone(input.businessId, input.clientName, input.clientPhone);
-  }
-
-  const total = input.items.reduce((s, i) => s + i.price * i.quantity, 0);
-
-  // 1. Créer l'OT (Ordre de Travail)
-  const { data: order, error: orderErr } = await db
-    .from('service_orders')
-    .insert({
-      business_id:   input.businessId,
-      subject_ref:   input.subjectRef?.trim() || null,
-      subject_type:  input.subjectType || 'autre',
-      subject_info:  input.subjectInfo?.trim() || null,
-      client_name:   input.clientName.trim(),
-      client_phone:  input.clientPhone.trim(),
-      notes:         input.notes?.trim() || null,
-      total,
-      paid_amount:   0,
-      status:        'attente',
-      source:        'public',
-    })
-    .select()
-    .single();
-
-  if (orderErr) throw new Error(orderErr.message);
-
-  // 2. Insérer les items
-  if (input.items.length > 0) {
-    const { error: itemErr } = await db.from('service_order_items').insert(
-      input.items.map(i => ({
-        order_id:   order.id,
-        service_id: i.service_id,
-        name:       i.name,
-        price:      i.price,
-        quantity:   i.quantity,
-        total:      i.price * i.quantity,
-      }))
-    );
-    if (itemErr) throw new Error(itemErr.message);
-  }
-
-  return order;
+  const { data, error } = await (db as any).rpc('create_public_service_order', {
+    p_business_id:  input.businessId,
+    p_client_name:  input.clientName.trim(),
+    p_client_phone: input.clientPhone.trim(),
+    p_subject_ref:  input.subjectRef?.trim()  || null,
+    p_subject_type: input.subjectType         || 'autre',
+    p_subject_info: input.subjectInfo?.trim() || null,
+    p_notes:        input.notes?.trim()       || null,
+    p_items:        input.items,
+  });
+  if (error) throw new Error(error.message);
+  return data as { id: string; order_number: number; status: string; total: number };
 }

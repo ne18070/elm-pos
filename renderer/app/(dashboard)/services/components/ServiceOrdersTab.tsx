@@ -3,7 +3,9 @@ import {
   Search, X, RefreshCw, Wrench, Plus, Play,
   CheckCircle2, CreditCard, Printer, User,
   ChevronLeft, ChevronRight, UserRoundCheck, Coins, Star,
+  Volume2, VolumeX,
 } from 'lucide-react';
+import { unlockAdminAudio, playConfirmTone } from '@/lib/admin-sound';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -105,6 +107,17 @@ export function ServiceOrdersTab({
     return () => window.clearTimeout(id);
   }, [search]);
 
+  // Unlock AudioContext on first user gesture
+  React.useEffect(() => {
+    const unlock = () => unlockAdminAudio();
+    window.addEventListener('click', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
   const {
     orders,
     totalCount,
@@ -112,6 +125,8 @@ export function ServiceOrdersTab({
     loading,
     refresh,
     setOrders,
+    soundEnabled,
+    toggleSound,
   } = useServiceOrders({
     businessId,
     statusFilter,
@@ -169,7 +184,18 @@ export function ServiceOrdersTab({
           {dateFilter && (
             <button onClick={() => setDateFilter('')} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
           )}
-          <button onClick={refresh} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /></button>
+          <button onClick={refresh} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary" title="Actualiser"><RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /></button>
+          <button
+            onClick={() => {
+              unlockAdminAudio();
+              toggleSound();
+              if (!soundEnabled) playConfirmTone();
+            }}
+            title={soundEnabled ? 'Désactiver le son' : 'Activer le son'}
+            className={cn('p-2 rounded-xl hover:bg-surface-hover transition-colors', soundEnabled ? 'text-content-brand' : 'text-content-muted')}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {STATUS_TABS.map(({ key, label }) => (
