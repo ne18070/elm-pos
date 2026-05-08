@@ -98,6 +98,7 @@ export async function shareServiceOrderViaWhatsApp(
     } else if (options.type === 'tracking') {
       message = `${greeting} voici le lien pour suivre votre prestation *${orderRef}* 📍\n\n` +
                 `${trackingUrl}\n\n` +
+                `Une fois votre service terminé, n'oubliez pas de laisser votre avis ⭐ — votre retour nous aide à mieux vous servir !\n\n` +
                 `À bientôt chez *${business.name}* !`;
     } else {
       // status_update
