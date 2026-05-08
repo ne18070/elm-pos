@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { type Dossier } from '@services/supabase/dossiers';
 import { type RefItem } from '@services/supabase/reference-data';
+import { useCan } from '@/hooks/usePermission';
+import { cn } from '@/lib/utils';
 import { getStatusCls, getStatusLabel } from './dossier-utils';
 
 function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }) {
@@ -17,14 +19,12 @@ function StatusBadge({ status, statuts }: { status: string; statuts: RefItem[] }
 
 export function DossierTable({ 
   dossiers, statuts, typesAffaire, 
-  canEdit, canArchive, showArchived,
+  showArchived,
   onEdit, onArchive, onFinances, onWorkflow, onFiles, onTime
 }: { 
   dossiers: Dossier[]; 
   statuts: RefItem[]; 
   typesAffaire: RefItem[];
-  canEdit: boolean;
-  canArchive: boolean;
   showArchived: boolean;
   onEdit: (d: Dossier) => void;
   onArchive: (d: Dossier, archive: boolean) => void;
@@ -37,6 +37,9 @@ export function DossierTable({
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const can = useCan();
+  const canEdit = can('edit_dossier');
+  const canArchive = can('archive_dossier');
 
   const filtered = useMemo(() => {
     return dossiers.filter(d => {

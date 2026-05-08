@@ -19,7 +19,8 @@ export function MarketingTab() {
     content: '',
     buttonLabel: '',
     buttonUrl: '',
-    target: 'all' as 'all' | 'active' | 'trial' | 'expired',
+    target: 'all' as 'all' | 'active' | 'trial' | 'expired' | 'individual',
+    selectedOwnerEmail: '',
   });
 
   useEffect(() => {
@@ -38,6 +39,8 @@ export function MarketingTab() {
 
   const getTargetEmails = () => {
     const target = form.target;
+    if (target === 'individual') return form.selectedOwnerEmail ? [form.selectedOwnerEmail] : [];
+    
     return subs
       .filter(s => target === 'all' || effectiveStatus(s) === target)
       .map(s => s.owner_email)
@@ -56,7 +59,7 @@ export function MarketingTab() {
       return;
     }
 
-    if (!confirm(`Voulez-vous envoyer cet email à ${emails.length} contacts ?`)) return;
+    if (!confirm(`Voulez-vous envoyer cet email à ${emails.length} contact(s) ?`)) return;
 
     setSending(true);
     setSuccess(null);
@@ -89,7 +92,7 @@ export function MarketingTab() {
         ));
       }
 
-      setSuccess(`Campagne terminée : ${sentCount} envoyés, ${failCount} échecs.`);
+      setSuccess(`Campagne terminée : ${sentCount} envoyé(s), ${failCount} échec(s).`);
       if (failCount === 0) {
         setForm({ ...form, subject: '', title: '', content: '', buttonLabel: '', buttonUrl: '' });
       }
@@ -111,22 +114,47 @@ export function MarketingTab() {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <label className="label">Cible</label>
-            <select 
-              value={form.target} 
-              onChange={(e) => setForm(f => ({ ...f, target: e.target.value as any }))}
-              className="input"
-            >
-              <option value="all">Tous ({subs.length})</option>
-              <option value="active">Actifs ({subs.filter(s => effectiveStatus(s) === 'active').length})</option>
-              <option value="trial">En essai ({subs.filter(s => effectiveStatus(s) === 'trial').length})</option>
-              <option value="expired">Expirés ({subs.filter(s => effectiveStatus(s) === 'expired').length})</option>
-            </select>
-            <p className="text-[10px] text-content-muted mt-1 flex items-center gap-1">
-              <Users className="w-3 h-3" /> {emails.length} emails uniques seront contactés
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="label">Cible</label>
+              <select 
+                value={form.target} 
+                onChange={(e) => setForm(f => ({ ...f, target: e.target.value as any }))}
+                className="input"
+              >
+                <option value="all">Tous ({subs.length})</option>
+                <option value="active">Actifs ({subs.filter(s => effectiveStatus(s) === 'active').length})</option>
+                <option value="trial">En essai ({subs.filter(s => effectiveStatus(s) === 'trial').length})</option>
+                <option value="expired">Expirés ({subs.filter(s => effectiveStatus(s) === 'expired').length})</option>
+                <option value="individual">Un propriétaire spécifique</option>
+              </select>
+            </div>
+
+            {form.target === 'individual' && (
+              <div>
+                <label className="label">Sélectionner le propriétaire</label>
+                <select
+                  value={form.selectedOwnerEmail}
+                  onChange={(e) => setForm(f => ({ ...f, selectedOwnerEmail: e.target.value }))}
+                  className="input"
+                >
+                  <option value="">Choisir...</option>
+                  {subs
+                    .sort((a, b) => (a.owner_name || '').localeCompare(b.owner_name || ''))
+                    .map(s => (
+                      <option key={s.business_id} value={s.owner_email || ''}>
+                        {s.owner_name || 'Inconnu'} ({s.business_name})
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+            )}
           </div>
+
+          <p className="text-[10px] text-content-muted mt-1 flex items-center gap-1">
+            <Users className="w-3 h-3" /> {emails.length} email(s) unique(s) seront contacté(s)
+          </p>
 
           <div>
             <label className="label">Sujet de l'email (Objet)</label>

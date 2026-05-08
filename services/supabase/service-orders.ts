@@ -83,12 +83,14 @@ export interface ServiceOrder {
   paid_amount:     number;
   payment_method?: string | null;
   notes?:          string | null;
-  started_at?:     string | null;
-  finished_at?:    string | null;
-  paid_at?:        string | null;
-  created_at:      string;
-  items?:          ServiceOrderItem[];
-  payments?:       ServiceOrderPayment[];
+  started_at?:      string | null;
+  finished_at?:     string | null;
+  paid_at?:         string | null;
+  created_at:       string;
+  client_rating?:   number | null;
+  client_feedback?: string | null;
+  items?:           ServiceOrderItem[];
+  payments?:        ServiceOrderPayment[];
 }
 
 // ── Catalogue ────────────────────────────────────────────────────────────────
@@ -232,6 +234,30 @@ export async function searchSubjects(businessId: string, ref: string): Promise<S
   return data ?? [];
 }
 
+export async function getClientVisitStats(
+  businessId: string,
+  clientNames: string[]
+): Promise<Map<string, { count: number; lastVisit: string | null }>> {
+  if (!clientNames.length) return new Map();
+  const { data } = await db
+    .from('service_orders')
+    .select('client_name, created_at')
+    .eq('business_id', businessId)
+    .in('client_name', clientNames)
+    .order('created_at', { ascending: false });
+
+  const stats = new Map<string, { count: number; lastVisit: string | null }>();
+  for (const o of (data ?? []) as { client_name: string; created_at: string }[]) {
+    const key = o.client_name?.toLowerCase().trim();
+    if (!key) continue;
+    const s = stats.get(key) ?? { count: 0, lastVisit: null };
+    s.count++;
+    if (!s.lastVisit) s.lastVisit = o.created_at;
+    stats.set(key, s);
+  }
+  return stats;
+}
+
 export async function getSubjectHistory(businessId: string, subjectId: string): Promise<ServiceOrder[]> {
   const { data, error } = await db
     .from('service_orders')
@@ -314,6 +340,16 @@ export async function getServiceOrders(
   const { data, error, count } = await q;
   if (error) throw new Error(error.message);
   return { data: data ?? [], count: count ?? 0 };
+}
+
+export async function getServiceOrderById(id: string): Promise<ServiceOrder | null> {
+  const { data, error } = await db
+    .from('service_orders')
+    .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
 }
 
 export async function getServiceOrderCounts(

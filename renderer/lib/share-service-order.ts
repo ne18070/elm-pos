@@ -2,7 +2,7 @@ import { formatCurrency } from './utils';
 import { generateServiceOrderReceipt } from './invoice-templates';
 import { htmlToPdfBlob } from './pdf-utils';
 import { supabase } from './supabase';
-import { buildPublicDocumentUrl, getPublicSiteUrl } from './public-links';
+import { getPublicSiteUrl } from './public-links';
 import { triggerWhatsAppShare } from './whatsapp-direct';
 import { getOrCreateTrackingToken } from '@services/supabase/client-tracking';
 import type { Business } from '@pos-types';
@@ -51,7 +51,11 @@ export async function generateServiceOrderLink(
 
   if (uploadError) throw uploadError;
 
-  return buildPublicDocumentUrl(filePath);
+  const { data: signed, error: signErr } = await supabase.storage
+    .from('product-images')
+    .createSignedUrl(filePath, 60 * 60 * 24 * 7); // valide 7 jours
+  if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Impossible de créer le lien signé');
+  return signed.signedUrl;
 }
 
 /** Partage de l'OT ou du reçu via WhatsApp (MODE DIRECT SIMPLE) */
@@ -94,6 +98,7 @@ export async function shareServiceOrderViaWhatsApp(
     } else if (options.type === 'tracking') {
       message = `${greeting} voici le lien pour suivre votre prestation *${orderRef}* 📍\n\n` +
                 `${trackingUrl}\n\n` +
+                `Une fois votre service terminé, n'oubliez pas de laisser votre avis ⭐ — votre retour nous aide à mieux vous servir !\n\n` +
                 `À bientôt chez *${business.name}* !`;
     } else {
       // status_update

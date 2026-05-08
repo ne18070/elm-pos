@@ -14,7 +14,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { hasRole } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
 
 // --- Types --------------------------------------------------------------------
 
@@ -174,7 +174,8 @@ const PAGE_SIZE = 50;
 export default function ActivityPage() {
   const { business, user } = useAuthStore();
   const { error: notifError } = useNotificationStore();
-  const isAdmin = hasRole(user?.role, 'manager');
+  const can = useCan();
+  const isAdmin = can('view_activity');
 
   const [logs, setLogs]           = useState<ActivityLog[]>([]);
   const [loading, setLoading]     = useState(true);

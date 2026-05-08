@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, LayoutGrid } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { CategoryModal } from '@/components/categories/CategoryModal';
 import { deleteCategory } from '@services/supabase/products';
 import type { Category } from '@pos-types';
@@ -13,6 +14,7 @@ import type { Category } from '@pos-types';
 export default function CategoriesPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -36,13 +38,15 @@ export default function CategoriesPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-content-primary">Catégories</h1>
           <p className="text-xs text-content-secondary mt-0.5">Organisez vos produits par catégorie — affiché en caisse et dans le catalogue</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nouvelle catégorie
-          </button>
+          {can('create_category') && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Nouvelle catégorie
+            </button>
+          )}
         </div>
       </div>
 
@@ -82,20 +86,24 @@ export default function CategoriesPage() {
 
                 {/* Actions */}
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button
-                    onClick={() => setEditCategory(cat)}
-                    className="btn-secondary p-2"
-                    title="Modifier"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(cat)}
-                    className="btn-danger p-2"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {can('edit_category') && (
+                    <button
+                      onClick={() => setEditCategory(cat)}
+                      className="btn-secondary p-2"
+                      title="Modifier"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {can('delete_category') && (
+                    <button
+                      onClick={() => handleDelete(cat)}
+                      className="btn-danger p-2"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import {
   getVehicles, toggleVehicleAvailability,
   getTemplates, deleteTemplate,
@@ -32,6 +33,7 @@ import { VehiclePanel } from './VehiclePanel';
 import { TemplatePanel } from './TemplatePanel';
 import { ContractFormPanel } from './ContractFormPanel';
 import { ContractDetailPanel } from './ContractDetailPanel';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 
 // ------ Local Components --------------------------------------------------------------------------------------------------------------------
 
@@ -51,14 +53,14 @@ function DashboardMetrics({ contracts }: { contracts: Contract[] }) {
   }, [contracts]);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 mb-4 mt-2">
+    <div className="grid grid-cols-2 gap-2 px-3 mb-3 mt-2 sm:gap-4 sm:px-4 lg:grid-cols-4">
       {metrics.map((m) => (
-        <div key={m.label} className="card p-3 flex items-center gap-3">
-          <div className={`p-2 rounded-xl bg-surface-input ${m.color}`}>
-            <m.icon className="w-5 h-5" />
+        <div key={m.label} className="card p-3 flex items-center gap-2.5 sm:gap-3">
+          <div className={`p-2 rounded-xl bg-surface-input ${m.color} shrink-0`}>
+            <m.icon className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <p className="text-xl font-bold text-content-primary leading-tight">{m.value}</p>
+          <div className="min-w-0">
+            <p className="text-lg font-bold text-content-primary leading-tight sm:text-xl">{m.value}</p>
             <p className="text-[10px] text-content-secondary uppercase tracking-wider">{m.label}</p>
           </div>
         </div>
@@ -118,6 +120,7 @@ function CancelContractModal({
 export default function ContratsPage() {
   const { business, user } = useAuthStore();
   const { success: notifSuccess, error: notifError } = useNotificationStore();
+  const can = useCan();
 
   const [tab, setTab]               = useState<Tab>('contrats');
   const [loading, setLoading]       = useState(true);
@@ -162,6 +165,10 @@ export default function ContratsPage() {
       setVehicles(v);
       setTemplates(t);
       setContracts(c);
+      setDetailContract((current) => {
+        if (!current) return current;
+        return c.find((contract) => contract.id === current.id) ?? current;
+      });
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -278,8 +285,11 @@ export default function ContratsPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      <div className="px-3 pt-3 empty:hidden">
+        <OnboardingChecklist />
+      </div>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-border bg-surface-card shrink-0">
+      <div className="flex flex-wrap items-center gap-3 px-3 py-3 border-b border-surface-border bg-surface-card shrink-0 sm:px-4">
         <FileSignature className="w-5 h-5 text-content-brand shrink-0" />
         <div className="flex-1 min-w-0">
           <h1 className="font-semibold text-content-primary">Contrats & Location</h1>
@@ -292,7 +302,7 @@ export default function ContratsPage() {
             title="Partager le catalogue véhicules"
           >
             <Share2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Partager</span>
+            <span className="sr-only sm:not-sr-only">Partager</span>
           </button>
         )}
         <button
@@ -302,16 +312,20 @@ export default function ContratsPage() {
             else { setShowContractPanel(true); setEditContract(null); }
           }}
           className="btn-primary flex items-center gap-2 text-sm h-9 px-3"
+          disabled={
+            (tab === 'vehicules' && !can('manage_vehicles')) ||
+            (tab === 'modeles' && !can('manage_contract_templates'))
+          }
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">
+          <span className="sr-only sm:not-sr-only">
             {tab === 'vehicules' ? 'Véhicule' : tab === 'modeles' ? 'Modèle' : 'Contrat'}
           </span>
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 px-4 pt-3 pb-0 shrink-0">
+      <div className="flex gap-1 overflow-x-auto px-3 pt-3 pb-0 shrink-0 sm:px-4">
         {([
           { key: 'contrats',  label: 'Contrats',  icon: FileText },
           { key: 'vehicules', label: 'Véhicules',  icon: Car },
@@ -320,32 +334,32 @@ export default function ContratsPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-t-xl text-sm font-medium transition-colors
+            className={`flex shrink-0 items-center gap-2 px-3 py-2 rounded-t-xl text-sm font-medium transition-colors
               ${tab === key
                 ? 'bg-surface-card text-content-primary border border-b-0 border-surface-border'
                 : 'text-content-secondary hover:text-content-primary'}`}
           >
             <Icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{label}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto bg-surface-card border border-surface-border rounded-b-xl mx-4 mb-4">
+      <div className="flex-1 overflow-y-auto bg-surface-card border border-surface-border rounded-b-xl mx-2 mb-3 sm:mx-4 sm:mb-4">
         
         {/* Dashboard Metrics on Contracts tab */}
         {tab === 'contrats' && <DashboardMetrics contracts={contracts} />}
 
         {/* Search & Filter Bar */}
         {tab === 'contrats' && (
-          <div className="px-4 py-2 border-b border-surface-border bg-surface-card sticky top-0 z-10 space-y-2">
+          <div className="px-3 py-2 border-b border-surface-border bg-surface-card sticky top-0 z-10 space-y-2 sm:px-4">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
                 <input
                   type="text"
-                  placeholder="Rechercher client, véhicule, immatriculation..."
+                  placeholder="Client, véhicule, plaque..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="input pl-9 h-9 text-sm w-full"
@@ -415,7 +429,7 @@ export default function ContratsPage() {
                 <button
                   key={c.id}
                   onClick={() => setDetailContract(c)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-3 hover:bg-surface-hover transition-colors text-left sm:px-4"
                 >
                   <div className="w-9 h-9 rounded-xl bg-badge-brand flex items-center justify-center shrink-0">
                     {c.status === 'signed'
@@ -432,7 +446,7 @@ export default function ContratsPage() {
                       {vehicle?.name ?? '-'} 
                       {' · '}{fmtDate(c.start_date)} {fmtTime(c.start_time)} → {fmtDate(c.end_date)} {fmtTime(c.end_time)}                    </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="flex flex-col items-end gap-1 shrink-0 max-w-[34%] sm:max-w-none">
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${st.color}`}>{st.label}</span>
                     <span className="text-xs text-content-brand font-medium">{fmtMoney(c.total_amount, c.currency)}</span>
                     {!isClosedContract(c) && (
@@ -464,7 +478,7 @@ export default function ContratsPage() {
                 (c) => c.vehicle_id === v.id && (c.status === 'sent' || c.status === 'signed' || c.status === 'active')
               );
               return (
-              <div key={v.id} className="flex items-center gap-3 px-4 py-3">
+              <div key={v.id} className="flex items-center gap-3 px-3 py-3 sm:px-4">
                 {v.image_url
                   ? <img src={v.image_url} alt={v.name} className="w-12 h-12 rounded-xl object-cover shrink-0 border border-surface-border" />
                   : <div className="w-12 h-12 rounded-xl bg-surface-input flex items-center justify-center shrink-0">
@@ -490,27 +504,31 @@ export default function ContratsPage() {
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-col items-end gap-2 shrink-0 sm:flex-row sm:items-center">
                   <button
                     onClick={async () => {
+                      if (!can('manage_vehicles')) return;
                       try {
                         await toggleVehicleAvailability(v.id, !v.is_available);
                         load();
                       } catch (e) { notifError(toUserError(e)); }
                     }}
-                    className={`text-[10px] px-2 py-0.5 rounded-full transition-colors font-medium
+                    disabled={!can('manage_vehicles')}
+                    className={`text-[10px] px-2 py-0.5 rounded-full transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed
                       ${v.is_available
                         ? 'bg-badge-success text-status-success hover:bg-badge-error hover:text-status-error'
                         : 'bg-badge-error text-status-error hover:bg-badge-success hover:text-status-success'}`}
                   >
                     {v.is_available ? 'Disponible' : 'Indispo'}
                   </button>
-                  <button
-                    onClick={() => { setEditVehicle(v); setShowVehiclePanel(true); }}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
+                  {can('manage_vehicles') && (
+                    <button
+                      onClick={() => { setEditVehicle(v); setShowVehiclePanel(true); }}
+                      className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               );
@@ -538,18 +556,22 @@ export default function ContratsPage() {
                   <p className="text-xs text-content-muted">Modifié le {fmtDate(t.updated_at)}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => { setEditTemplate(t); setShowTemplatePanel(true); }}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteTemplate(t.id)}
-                    className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {can('manage_contract_templates') && (
+                    <>
+                      <button
+                        onClick={() => { setEditTemplate(t); setShowTemplatePanel(true); }}
+                        className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteTemplate(t.id)}
+                        className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-surface-hover transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

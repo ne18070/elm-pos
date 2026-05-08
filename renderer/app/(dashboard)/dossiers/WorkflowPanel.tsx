@@ -9,9 +9,10 @@ import {
 import { triggerWorkflow } from '@/lib/workflow-runtime';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { type Dossier } from '@services/supabase/dossiers';
+import { useCan } from '@/hooks/usePermission';
 import type { WorkflowInstance, Workflow } from '@pos-types';
 
-export function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch }: { dossier: Dossier; businessId: string; userId?: string; onClose: () => void; canLaunch: boolean; }) {
+export function WorkflowPanel({ dossier, businessId, userId, onClose }: { dossier: Dossier; businessId: string; userId?: string; onClose: () => void; }) {
   const [instances, setInstances] = useState<WorkflowInstance[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,8 @@ export function WorkflowPanel({ dossier, businessId, userId, onClose, canLaunch 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
+  const canLaunch = can('launch_workflow');
 
   useEffect(() => {
     Promise.all([getInstancesByDossier(dossier.id), getWorkflows(businessId, true)])

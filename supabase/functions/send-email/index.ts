@@ -110,13 +110,16 @@ serve(async (req) => {
 
     // Auth check
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader && !PUBLIC_EMAIL_TYPES.includes(type)) {
+    const token = authHeader?.replace('Bearer ', '');
+    const isServiceRole = token === SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!isServiceRole && !authHeader && !PUBLIC_EMAIL_TYPES.includes(type)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    if (authHeader) {
+    if (authHeader && !isServiceRole) {
       const authClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
-      const { data: { user }, error: authError } = await authClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      const { data: { user }, error: authError } = await authClient.auth.getUser(token!);
       if (authError || !user) {
         return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401 });
       }

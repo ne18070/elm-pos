@@ -59,7 +59,7 @@ export function CEOTab() {
         {/* MRR */}
         <div className="card p-6 border-surface-border">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-2xl bg-status-success/10 text-status-success">
+            <div className="p-3 rounded-2xl bg-badge-success text-status-success">
               <DollarSign size={22} />
             </div>
             <button onClick={loadData} className="text-content-muted hover:text-content-primary">
@@ -104,12 +104,12 @@ export function CEOTab() {
         {/* Conversion */}
         <div className={cn(
           'card p-6 border-2',
-          conversionOk ? 'border-surface-border' : 'border-status-warning/30 bg-badge-warning/5'
+          conversionOk ? 'border-surface-border' : 'border-status-warning/30 bg-badge-warning'
         )}>
           <div className="flex items-center justify-between mb-4">
             <div className={cn(
               'p-3 rounded-2xl',
-              conversionOk ? 'bg-status-success/10 text-status-success' : 'bg-badge-warning text-status-warning'
+              conversionOk ? 'bg-badge-success text-status-success' : 'bg-badge-warning text-status-warning'
             )}>
               <Target size={22} />
             </div>

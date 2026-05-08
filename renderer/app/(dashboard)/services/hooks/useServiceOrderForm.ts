@@ -1,7 +1,12 @@
 import { useState, useRef, useMemo } from 'react';
-import { SubjectType, ServiceSubject, searchSubjects } from '@services/supabase/service-orders';
+import { SubjectType, ServiceSubject, searchSubjects, getClientVisitStats } from '@services/supabase/service-orders';
 import { searchClients, type Client } from '@services/supabase/clients';
 import { ServiceOrderFormData, OTLine, newLine, validateServiceOrder } from '../service-order-form';
+
+export interface ClientWithStats extends Client {
+  visit_count: number;
+  last_visit: string | null;
+}
 
 export function useServiceOrderForm(initialData?: Partial<ServiceOrderFormData>, businessId?: string) {
   const [formData, setFormData] = useState<ServiceOrderFormData>({
@@ -18,13 +23,13 @@ export function useServiceOrderForm(initialData?: Partial<ServiceOrderFormData>,
 
   const [suggestions, setSuggestions] = useState<ServiceSubject[]>([]);
   const [showSugg, setShowSugg] = useState(false);
-  const [clientSugg, setClientSugg] = useState<Client[]>([]);
+  const [clientSugg, setClientSugg] = useState<ClientWithStats[]>([]);
   const [showClientSugg, setShowClientSugg] = useState(false);
 
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debClient = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const total = useMemo(() => 
+  const total = useMemo(() =>
     formData.lines.reduce((s, l) => s + (parseFloat(l.price) || 0) * l.quantity, 0)
   , [formData.lines]);
 
@@ -60,9 +65,14 @@ export function useServiceOrderForm(initialData?: Partial<ServiceOrderFormData>,
     if (debClient.current) clearTimeout(debClient.current);
     if (val.length < 2) { setClientSugg([]); setShowClientSugg(false); return; }
     debClient.current = setTimeout(async () => {
-      const res = await searchClients(businessId, val);
-      setClientSugg(res);
-      setShowClientSugg(res.length > 0);
+      const clients = await searchClients(businessId, val);
+      const stats = await getClientVisitStats(businessId, clients.map(c => c.name));
+      const enriched: ClientWithStats[] = clients.map(c => {
+        const s = stats.get(c.name.toLowerCase().trim());
+        return { ...c, visit_count: s?.count ?? 0, last_visit: s?.lastVisit ?? null };
+      });
+      setClientSugg(enriched);
+      setShowClientSugg(enriched.length > 0);
     }, 250);
   };
 

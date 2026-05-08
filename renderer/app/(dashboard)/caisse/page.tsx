@@ -10,7 +10,9 @@ import { format, differenceInMinutes, isWithinInterval, startOfDay, endOfDay } f
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { useCashSessionStore } from '@/store/cashSession';
+
 import { formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
@@ -30,6 +32,7 @@ export default function CaissePage() {
   const { business, user }                      = useAuthStore();
   const { success, error: notifError }          = useNotificationStore();
   const { session, setSession, loaded }         = useCashSessionStore();
+  const can = useCan();
 
   const [summary, setSummary]               = useState<SessionLiveSummary | null>(null);
   const [history, setHistory]               = useState<CashSession[]>([]);
@@ -218,17 +221,21 @@ export default function CaissePage() {
                 )}
               </>
             )}
-            {!session ? (
-              <button onClick={() => setShowOpenModal(true)} className="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4">
-                <LockOpen className="w-4 h-4" />Ouvrir la caisse
-              </button>
-            ) : (
-              <button
-                onClick={() => { loadSummary(true).then(() => setShowCloseModal(true)); }}
-                className="btn-danger flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4"
-              >
-                <Lock className="w-4 h-4" />Clôturer
-              </button>
+            {can('manage_cash_session') && (
+              <>
+                {!session ? (
+                  <button onClick={() => setShowOpenModal(true)} className="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4">
+                    <LockOpen className="w-4 h-4" />Ouvrir la caisse
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { loadSummary(true).then(() => setShowCloseModal(true)); }}
+                    className="btn-danger flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4"
+                  >
+                    <Lock className="w-4 h-4" />Clôturer
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

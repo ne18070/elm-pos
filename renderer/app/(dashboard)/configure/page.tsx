@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { hasFeature } from '@/lib/permissions';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import {
@@ -63,6 +64,8 @@ export default function ConfigurePage() {
       prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
     );
   }
+
+  const isModuleEnabled = (moduleId: string) => features.includes(moduleId);
 
   useEffect(() => {
     async function load() {

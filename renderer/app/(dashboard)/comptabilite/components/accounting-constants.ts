@@ -2,7 +2,7 @@ import {
   TrendingDown, ArrowLeftRight, Users, Wrench, Banknote,
 } from 'lucide-react';
 
-export type Tab    = 'dashboard' | 'journal' | 'balance' | 'etats';
+export type Tab    = 'dashboard' | 'journal' | 'grand-livre' | 'balance' | 'etats' | 'settings';
 export type Period = 'today' | 'month' | 'lastmonth' | 'quarter' | 'year' | 'custom';
 export type PaySide = 'caisse' | 'banque' | 'mobile';
 

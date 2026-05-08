@@ -21,8 +21,11 @@ import { getMyBusinesses, type BusinessMembership } from '@services/supabase/bus
 import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
 import { supabase } from '@/lib/supabase';
 import type { User as UserType, UserRole } from '@pos-types';
-import { canManageTeam, hasRole } from '@/lib/permissions';
+import { 
+  canManageTeam, hasRole, getContextualRoleLabel 
+} from '@/lib/permissions';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
+import { useCan } from '@/hooks/usePermission';
 
 const ROLE_LABELS: Record<UserRole, { label: string; color: string }> = {
   owner:   { label: 'Propriétaire',   color: 'text-status-orange bg-badge-orange border-status-orange/40' },
@@ -76,8 +79,8 @@ function RoleLegend({ businessType, allTypes }: { businessType?: string; allType
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {(Object.entries(legend) as [UserRole, string][]).map(([role, text]) => {
-          const { label, color } = ROLE_LABELS[role];
-          const customLabel = getCustomRoleLabel(role, type);
+          const { color } = ROLE_LABELS[role];
+          const customLabel = getContextualRoleLabel(role, type);
           return (
             <div key={role} className="space-y-1">
               <div className="flex items-center gap-2">
@@ -94,22 +97,6 @@ function RoleLegend({ businessType, allTypes }: { businessType?: string; allType
   );
 }
 
-function getCustomRoleLabel(role: UserRole, type: string): string {
-  if (type === 'juridique') {
-    if (role === 'manager') return 'Clerc / Juriste';
-    if (role === 'staff') return 'Secrétaire';
-  }
-  if (type === 'restaurant') {
-    if (role === 'manager') return 'Maître d\'hôtel';
-    if (role === 'staff') return 'Serveur';
-  }
-  if (type === 'hotel') {
-    if (role === 'manager') return 'Gouvernant';
-    if (role === 'staff') return 'Réceptionniste';
-  }
-  return ROLE_LABELS[role].label;
-}
-
 export default function AdminPage() {
   const router = useRouter();
   const { user, business, businesses, setUser, setBusinesses } = useAuthStore();
@@ -117,6 +104,7 @@ export default function AdminPage() {
   const { members, loading: loadingTeam, refetch } = useTeam(business?.id ?? '');
   const [tab, setTab] = useState<Tab>('profil');
   const [showInvite, setShowInvite] = useState(false);
+  const can = useCan();
 
   // Types d'établissement dynamiques pour la légende
   const [allTypes, setAllTypes] = useState<BusinessTypeRow[]>([]);
@@ -290,13 +278,13 @@ export default function AdminPage() {
   const trialDays  = getTrialDaysRemaining(subscription);
   const activePlan = plans.find((p) => p.id === subscription?.plan_id);
 
-  const isOwnerOrAdmin = canManageTeam(user?.role);
+  const isOwnerOrAdmin = can('manage_team');
   const isOwner        = hasRole(user?.role, 'owner');
 
   const TABS: { id: Tab; icon: typeof User; label: string; navigate?: string }[] = [
     { id: 'profil',         icon: User,       label: 'Mon profil' },
     { id: 'equipe',         icon: Users,      label: 'Équipe' },
-    ...(canManageTeam(user?.role) ? [{ id: 'permissions' as Tab, icon: Shield, label: 'Permissions' }] : []),
+    ...(can('manage_team') ? [{ id: 'permissions' as Tab, icon: Shield, label: 'Permissions' }] : []),
     ...(isOwner ? [{ id: 'etablissements' as Tab, icon: Building2,  label: 'Établissements' }] : []),
     ...(isOwner ? [{ id: 'facturation'    as Tab, icon: CreditCard, label: 'Facturation', navigate: '/billing' }] : []),
   ];
@@ -518,7 +506,7 @@ export default function AdminPage() {
                   const count = members.filter((m) => m.role === role).length;
                   if (count === 0 && role !== 'staff') return null;
                   const label = ROLE_LABELS[role];
-                  const customLabel = getCustomRoleLabel(role, business?.type || 'retail');
+                  const customLabel = getContextualRoleLabel(role, business?.type);
                   return (
                     <div
                       key={role}
@@ -541,7 +529,7 @@ export default function AdminPage() {
                   const isSelf    = member.id === user?.id;
                   const canManage = isOwnerOrAdmin && !isSelf && member.role !== 'owner';
                   const canOwnerAct = isOwner && !isSelf && member.role !== 'owner';
-                  const customLabel = getCustomRoleLabel(member.role, business?.type || 'retail');
+                  const customLabel = getContextualRoleLabel(member.role, business?.type || 'retail');
 
                   return (
                     <div key={member.id} className="card p-4 space-y-3">
@@ -577,8 +565,8 @@ export default function AdminPage() {
                               className={`appearance-none pl-2.5 pr-7 py-1 rounded-full text-xs font-medium border cursor-pointer ${badge.color}`}
                               style={{ background: 'rgb(var(--surface-card))', color: 'rgb(var(--text-base))' }}
                             >
-                              <option value="staff">{getCustomRoleLabel('staff', business?.type || 'retail')}</option>
-                              <option value="manager">{getCustomRoleLabel('manager', business?.type || 'retail')}</option>
+                              <option value="staff">{getContextualRoleLabel('staff', business?.type || 'retail')}</option>
+                              <option value="manager">{getContextualRoleLabel('manager', business?.type || 'retail')}</option>
                               <option value="admin">Administrateur</option>
                             </select>
                             <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 opacity-60" />

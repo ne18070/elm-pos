@@ -13,7 +13,7 @@ import { autoRecordPresence } from '@services/supabase/staff';
 import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
-import { trackError } from '@/lib/analytics';
+import { trackAuth } from '@/lib/analytics';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -42,7 +42,7 @@ export default function LoginPage() {
 
       if (authError) {
         console.error('[Login] Auth error:', authError);
-        trackError('auth', 'login_failed', { reason: authError.message, email_domain: email.split('@')[1] });
+        trackAuth('login_failed', { reason: authError.message, email_domain: email.split('@')[1] });
         setErreur(authError.message);
         setChargement(false);
         return;
@@ -130,7 +130,7 @@ export default function LoginPage() {
         setLoaded(true);
         setCashLoaded(true);
         console.log('[Login] Redirecting user to default route');
-        router.replace(getDefaultRoute(activeBusiness?.features ?? []));
+        router.replace(getDefaultRoute(profile.role, activeBusiness as any));
       } catch (innerErr) {
         console.error('[Login] Inner loading error (non-blocking):', innerErr);
         router.replace('/orders'); // Fallback

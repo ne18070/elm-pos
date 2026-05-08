@@ -13,6 +13,7 @@ import {
   type ServiceOrder,
   type ServiceCatalogItem,
   type ServiceOrderStatus,
+  getServiceOrderById,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
@@ -29,13 +30,13 @@ import { useServiceCatalog } from './hooks/useServiceCatalog';
 
 type PageTab = 'orders' | 'catalog' | 'subjects';
 
-const VALID_STATUSES = new Set(['en_attente', 'en_cours', 'termine', 'paye', 'annule']);
+const VALID_STATUSES = new Set(['attente', 'en_cours', 'termine', 'paye', 'annule']);
 
 export default function ServicesPage() {
   const { business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
   const can = useCan();
-  const { success } = useNotificationStore();
+  const { success, error: notifError } = useNotificationStore();
   const searchParams = useSearchParams();
   const statusParam = searchParams.get('status');
   const initialStatus: ServiceOrderStatus | 'all' =
@@ -54,17 +55,19 @@ export default function ServicesPage() {
   // We load catalog here because it's needed by multiple components (New OT, Order Detail)
   const { catalog, refresh: refreshCatalog } = useServiceCatalog(businessId);
 
-  const canViewServices = can('view_services');
-  const canCreateOrder = can('create_service_order');
   const canShareOrder = can('share_service_order');
-  const canManageCatalog = can('manage_service_catalog');
+  const canCreateOrder = can('create_service_order');
 
-  function copyPublicLink() {
+  async function copyPublicLink() {
     if (!business) return;
     const ref = buildPublicBusinessRef(business.name, business.public_slug);
     const url = `${window.location.origin}/services/${ref}`;
-    navigator.clipboard.writeText(url);
-    success('Lien public copié !');
+    try {
+      await navigator.clipboard.writeText(url);
+      success('Lien public copié !');
+    } catch {
+      notifError('Impossible de copier le lien public');
+    }
   }
 
   function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
@@ -85,7 +88,18 @@ export default function ServicesPage() {
     }, business as any));
   }
 
-  if (!canViewServices) {
+  async function refreshOrdersAndSelection() {
+    setRefreshTrigger(prev => prev + 1);
+    if (!selectedOrder) return;
+    try {
+      const fresh = await getServiceOrderById(selectedOrder.id);
+      if (fresh) setSelectedOrder(fresh);
+    } catch (e) {
+      notifError('Impossible de rafraîchir le détail de cet OT');
+    }
+  }
+
+  if (!can('view_services')) {
     return (
       <div className="flex h-full items-center justify-center bg-surface-base p-6">
         <div className="max-w-sm text-center">
@@ -161,10 +175,6 @@ export default function ServicesPage() {
           <ServiceOrdersTab
             businessId={businessId}
             currency={currency}
-            canCreateOrder={canCreateOrder}
-            canUpdateStatus={can('update_service_status')}
-            canCollectPayment={can('collect_service_payment')}
-            canShareOrder={canShareOrder}
             onSelectOrder={setSelectedOrder}
             onNewOrder={() => setShowNewOT(true)}
             onPrintOrder={handlePrintOrder}
@@ -176,7 +186,6 @@ export default function ServicesPage() {
         {tab === 'catalog' && (
           <CatalogTab
             businessId={businessId}
-            canManageCatalog={canManageCatalog}
             currency={currency}
           />
         )}
@@ -209,7 +218,7 @@ export default function ServicesPage() {
           catalog={catalog}
           businessId={businessId}
           onClose={() => setSelectedOrder(null)}
-          onRefresh={() => setRefreshTrigger(prev => prev + 1)}
+          onRefresh={refreshOrdersAndSelection}
         />
       )}
     </div>

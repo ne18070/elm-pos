@@ -3,7 +3,7 @@
 import { useAuthStore } from '@/store/auth';
 import { usePermissionsStore } from '@/store/permissions';
 import { checkPermission } from '@/lib/permissions';
-import type { PermissionKey } from '@/lib/permissions-map';
+import type { PermissionKey } from '@/lib/permissions';
 
 /**
  * Returns true if the current user has the given permission,

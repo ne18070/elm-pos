@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { trackEvent } from '@/lib/analytics';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 
 const SECTORS = [
   {
@@ -90,6 +91,10 @@ export default function OnboardingPage() {
 
       setLoadingText('Personnalisation de votre espace…');
       await supabase.rpc('seed_demo_data', { p_biz_id: bizId, p_sector: sectorId });
+      
+      // Finaliser l'onboarding pour déclencher les webhooks (email de bienvenue)
+      await supabase.from('businesses').update({ onboarding_done: true }).eq('id', bizId);
+      
       trackEvent('provisioning_success', { bizId, sector: sectorId });
       setProgress(100);
 
@@ -99,18 +104,13 @@ export default function OnboardingPage() {
       localStorage.removeItem('temp_biz_name');
       await supabase.auth.refreshSession();
 
-      const { data }: any = await supabase
+      const { data: business }: any = await supabase
         .from('businesses')
-        .select('features')
+        .select('*')
         .eq('id', bizId)
         .single();
 
-      const features: string[] = data?.features ?? [];
-      const route =
-        features.includes('hotel')    ? '/hotel'    :
-        features.includes('dossiers') ? '/dossiers' :
-        features.includes('contrats') ? '/contrats' :
-        '/pos';
+      const route = getDefaultRoute('owner', business);
 
       // On laisse l'animation de succès respirer un peu
       setTimeout(() => {
@@ -225,7 +225,7 @@ export default function OnboardingPage() {
         <p className="text-center text-xs text-content-muted mt-12">
           Besoin d'aide ?{' '}
           <a
-            href="https://wa.me/221338670000"
+            href="https://wa.me/33746436801"
             className="text-content-brand hover:underline"
           >
             Contactez-nous sur WhatsApp

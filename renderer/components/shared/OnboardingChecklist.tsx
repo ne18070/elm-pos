@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import {
-  CheckCircle2, ChevronRight, X, Rocket,
+  CheckCircle2, ChevronRight, X, Rocket, Sparkles,
   Tag, Package, Printer, Users, ShoppingCart,
   Building2, UserPlus, CalendarDays,
   FolderOpen, Receipt, Car,
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAuthStore } from '@/store/auth';
+import { VisualTour, TourStep } from './VisualTour';
+import { useSearchParams } from 'next/navigation';
 
 const STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   categories:  Tag,
@@ -28,17 +31,69 @@ const STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   contract:    Receipt,
 };
 
+const TOUR_STEPS_BY_TYPE: Record<string, TourStep[]> = {
+  restaurant: [
+    { id: 'welcome', title: 'Bienvenue Chef ! 👨‍🍳', content: 'ELM APP va transformer la gestion de votre restaurant. Suivez ce guide pour être prêt pour votre premier service.', position: 'center' },
+    { id: 'checklist', title: 'Plan de mise en place', content: 'Commencez par configurer votre menu du jour et vos catégories pour simplifier la prise de commande.', selector: '#onboarding-checklist', position: 'bottom' },
+    { id: 'sidebar', title: 'Navigation Cuisine & Salle', content: 'Accédez rapidement au suivi des commandes et à vos rapports de fin de service.', selector: '#sidebar-nav', position: 'right' },
+    { id: 'search', title: 'Prise de commande éclair', content: 'Recherchez vos plats ou boissons ici pour les ajouter instantanément à une table.', selector: '#pos-search', position: 'bottom' },
+  ],
+  juridique: [
+    { id: 'welcome', title: 'Bienvenue Maître ! ⚖️', content: 'Votre cabinet dispose maintenant d\'un outil puissant pour gérer dossiers, délais et honoraires.', position: 'center' },
+    { id: 'checklist', title: 'Configuration du Cabinet', content: 'Suivez ces étapes pour importer vos premiers dossiers et configurer vos types d\'affaires.', selector: '#onboarding-checklist', position: 'bottom' },
+    { id: 'sidebar', title: 'Vos Outils Juridiques', content: 'Retrouvez ici la gestion des dossiers, le suivi du temps et la facturation des honoraires.', selector: '#sidebar-nav', position: 'right' },
+    { id: 'nav-dossiers', title: 'Gestion des Dossiers', content: 'C\'est ici que vous centralisez toutes les informations, pièces et procédures de vos clients.', selector: '#nav-item-dossiers', position: 'right' },
+  ],
+  location: [
+    { id: 'welcome', title: 'Bienvenue ! 🚗', content: 'Optimisez la gestion de votre flotte et simplifiez la création de vos contrats de location.', position: 'center' },
+    { id: 'checklist', title: 'Mise en route de la flotte', content: 'Ajoutez vos véhicules et configurez vos modèles de contrats pour gagner du temps.', selector: '#onboarding-checklist', position: 'bottom' },
+    { id: 'sidebar', title: 'Gestion Locative', content: 'Accédez à votre parc automobile, vos contrats en cours et vos suivis de paiements.', selector: '#sidebar-nav', position: 'right' },
+    { id: 'nav-vehicules', title: 'Votre Flotte', content: 'Suivez la disponibilité de chaque véhicule et gérez les entretiens en un clin d\'œil.', selector: '#nav-item-voitures', position: 'right' },
+  ],
+  hotel: [
+    { id: 'welcome', title: 'Bienvenue ! 🏨', content: 'Gérez vos chambres, réservations et check-ins en toute simplicité.', position: 'center' },
+    { id: 'checklist', title: 'Configuration de l\'Hôtel', content: 'Définissez vos types de chambres et commencez à enregistrer vos premières réservations.', selector: '#onboarding-checklist', position: 'bottom' },
+    { id: 'sidebar', title: 'Espace Réception', content: 'Le calendrier des réservations et la gestion des clients sont à portée de clic.', selector: '#sidebar-nav', position: 'right' },
+    { id: 'nav-hotel', title: 'Planning des Chambres', content: 'Visualisez d\'un coup d\'œil l\'occupation de votre établissement et les départs prévus.', selector: '#nav-item-hotel', position: 'right' },
+  ],
+  retail: [
+    { id: 'welcome', title: 'Bienvenue ! 🛍️', content: 'ELM APP vous aide à piloter votre boutique, vos stocks et vos ventes au quotidien.', position: 'center' },
+    { id: 'checklist', title: 'Préparation du magasin', content: 'Importez vos produits et configurez vos alertes de stock pour ne jamais être en rupture.', selector: '#onboarding-checklist', position: 'bottom' },
+    { id: 'sidebar', title: 'Gestion Magasin', content: 'Tout pour vos stocks, vos clients et vos rapports de ventes est regroupé ici.', selector: '#sidebar-nav', position: 'right' },
+    { id: 'search', title: 'Vente Rapide', content: 'Scannez un code-barres ou cherchez un produit pour encaisser vos clients en quelques secondes.', selector: '#pos-search', position: 'bottom' },
+  ]
+};
+
 export function OnboardingChecklist() {
   const { business } = useAuthStore();
+  const sector = (business as any)?.industry_sector || business?.type || 'retail';
+  const effectiveSector = sector === 'boutique' ? 'retail' : sector;
+  
   const { steps, doneCount, show, dismiss } = useOnboarding(business?.id, business?.type, (business as any)?.industry_sector);
+  const searchParams = useSearchParams();
+  const [startTour, setStartTour] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('first_visit') === 'true' && show) {
+      setStartTour(true);
+    }
+  }, [searchParams, show]);
 
   if (!show) return null;
 
   const progress  = Math.round((doneCount / steps.length) * 100);
   const nextStep  = steps.find((s) => !s.done);
+  const tourSteps = TOUR_STEPS_BY_TYPE[effectiveSector] || TOUR_STEPS_BY_TYPE.retail;
 
   return (
-    <div className="card border border-brand-800/50 overflow-hidden">
+    <div id="onboarding-checklist" className="card border border-brand-800/50 overflow-hidden relative">
+      <VisualTour 
+        tourId="onboarding" 
+        steps={tourSteps} 
+        autoStart={startTour} 
+        onComplete={() => setStartTour(false)}
+        onDismiss={() => setStartTour(false)}
+      />
 
       {/* Header */}
       <div className="px-5 py-4 flex items-start justify-between gap-4 bg-brand-950/40">
@@ -47,7 +102,15 @@ export function OnboardingChecklist() {
             <Rocket className="w-4 h-4 text-content-primary" />
           </div>
           <div>
-            <p className="font-semibold text-content-primary text-sm">Configurez votre espace</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-content-primary text-sm">Configurez votre espace</p>
+              <button 
+                onClick={() => setStartTour(true)}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-brand-500/10 text-[10px] font-bold text-content-brand border border-brand-500/20 hover:bg-brand-500/20 transition-colors"
+              >
+                <Sparkles className="w-2.5 h-2.5" /> Guide
+              </button>
+            </div>
             <p className="text-xs text-content-brand mt-0.5 font-medium">
               {doneCount}/{steps.length} étapes · {progress}%
             </p>

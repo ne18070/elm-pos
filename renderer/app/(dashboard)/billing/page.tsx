@@ -60,7 +60,7 @@ export default function BillingPage() {
       const sub = await getSubscription(user.id, business?.id);
       setSubscription(sub);
       if (getEffectiveStatus(sub) === 'active') {
-        router.replace(getDefaultRoute(business?.features ?? []));
+        router.replace(getDefaultRoute(user?.role, business as any));
       }
     } finally {
       setChecking(false);

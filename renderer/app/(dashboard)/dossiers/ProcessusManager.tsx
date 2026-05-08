@@ -4,6 +4,7 @@ import {
   Pencil, Trash2, ToggleRight, ToggleLeft, ChevronLeft, ChevronRight, X 
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { 
   getWorkflows, deleteWorkflow, toggleWorkflowStatus, saveWorkflow, 
   getWorkflowVersions, type WorkflowVersion 
@@ -14,7 +15,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import { fmtDate } from './dossier-utils';
 import type { Workflow } from '@pos-types';
 
-export function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { businessId: string; isOwnerOrAdmin: boolean; userId?: string }) {
+export function ProcessusManager({ businessId, userId }: { businessId: string; userId?: string }) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [historyWf, setHistoryWf] = useState<Workflow | null>(null);
@@ -24,6 +25,8 @@ export function ProcessusManager({ businessId, isOwnerOrAdmin, userId }: { busin
   const [loading, setLoading] = useState(true);
   const { error: notifError, success } = useNotificationStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const can = useCan();
+  const isOwnerOrAdmin = can('manage_workflows');
 
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState<WorkflowVersion | null>(null);

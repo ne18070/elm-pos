@@ -19,6 +19,11 @@ export function PayModal({ order, currency, onClose, onPaid }: {
   const [method, setMethod] = useState('cash');
   const [saving, setSaving] = useState(false);
 
+  const parsedAmount = parseFloat(amount) || 0;
+  const remainder = balance - parsedAmount;
+  const isPartial = parsedAmount > 0 && parsedAmount < balance;
+  const isOverpay = parsedAmount > balance;
+
   async function handlePay() {
     if (!cashSession) {
       notifError('Aucune session de caisse ouverte');
@@ -79,10 +84,35 @@ export function PayModal({ order, currency, onClose, onPaid }: {
             <input value={amount} onChange={e => setAmount(e.target.value)} type="number" min={0}
               disabled={!cashSession}
               className="w-full px-3 py-2.5 rounded-xl bg-surface-input border border-surface-border text-content-primary text-lg font-bold disabled:opacity-50" />
-            <p className="flex items-center gap-1.5 mt-1.5 text-xs text-content-muted">
-              <Info className="w-3 h-3 shrink-0" />
-              Vous pouvez encaisser un acompte — saisissez un montant inférieur au reste dû.
-            </p>
+
+            {/* Retour visuel immédiat sur le montant saisi */}
+            {parsedAmount > 0 && (
+              <div className={`mt-2 rounded-xl px-3 py-2.5 text-sm flex items-center justify-between ${
+                isOverpay
+                  ? 'bg-status-warning/10 border border-status-warning/30 text-status-warning'
+                  : isPartial
+                  ? 'bg-status-info/10 border border-blue-800/30 text-blue-400'
+                  : 'bg-status-success/10 border border-status-success/30 text-status-success'
+              }`}>
+                <span className="font-medium">
+                  {isOverpay ? '⚠ Trop perçu' : isPartial ? 'Acompte — reste dû' : '✓ Solde complet'}
+                </span>
+                <span className="font-black font-mono">
+                  {isOverpay
+                    ? `+${formatCurrency(parsedAmount - balance, currency)}`
+                    : isPartial
+                    ? formatCurrency(remainder, currency)
+                    : formatCurrency(parsedAmount, currency)}
+                </span>
+              </div>
+            )}
+
+            {parsedAmount === 0 || !amount ? (
+              <p className="flex items-center gap-1.5 mt-1.5 text-xs text-content-muted">
+                <Info className="w-3 h-3 shrink-0" />
+                Vous pouvez encaisser un acompte — saisissez un montant inférieur au reste dû.
+              </p>
+            ) : null}
           </div>
           <div>
             <label className="text-xs text-content-secondary font-medium mb-2 block">Mode de paiement</label>

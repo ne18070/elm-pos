@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
@@ -37,6 +38,7 @@ export default function StaffPage() {
   const { business } = useAuthStore();
   const { success: notifSuccess, error: notifError } = useNotificationStore();
   const cur = business?.currency ?? 'XOF';
+  const can = useCan();
 
   const [tab, setTab] = useState<StaffTab>('employes');
   const [loading, setLoading] = useState(true);
@@ -161,13 +163,15 @@ export default function StaffPage() {
             </div>
           </div>
           
-          <button 
-            onClick={() => setStaffPanel({ item: null })}
-            className="btn-primary flex items-center gap-2 h-11 px-6 shadow-lg shadow-brand-500/20 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Ajouter un employé</span>
-          </button>
+          {can('manage_staff') && (
+            <button 
+              onClick={() => setStaffPanel({ item: null })}
+              className="btn-primary flex items-center gap-2 h-11 px-6 shadow-lg shadow-brand-500/20 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Ajouter un employé</span>
+            </button>
+          )}
         </div>
 
         {/* Top KPIs Row - Operational visibility */}
@@ -189,11 +193,11 @@ export default function StaffPage() {
       {/* Tabs */}
       <div className="flex px-4 bg-surface-card border-b border-surface-border shrink-0 overflow-x-auto no-scrollbar">
         {[
-          { id: 'employes', label: 'Équipe', icon: LayoutList },
-          { id: 'presences', label: 'Présences', icon: Calendar },
-          { id: 'paie', label: 'Paie & Salaires', icon: Wallet },
-          { id: 'conges', label: 'Congés & Absences', icon: Palmtree },
-        ].map((t) => (
+          { id: 'employes', label: 'Équipe', icon: LayoutList, show: true },
+          { id: 'presences', label: 'Présences', icon: Calendar, show: can('manage_staff_attendance') },
+          { id: 'paie', label: 'Paie & Salaires', icon: Wallet, show: can('manage_staff_payroll') },
+          { id: 'conges', label: 'Congés & Absences', icon: Palmtree, show: true },
+        ].filter(t => t.show).map((t) => (
           <button 
             key={t.id} 
             onClick={() => setTab(t.id as StaffTab)}

@@ -21,6 +21,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { getProductByBarcode } from '@services/supabase/products';
 import type { Product, RestaurantTable } from '@pos-types';
+import { hasFeature } from '@/lib/permissions';
 
 import { useSidebarStore } from '@/store/sidebar';
 
@@ -98,7 +99,7 @@ export default function PosPage() {
 
   // Les hôtels sans POS activé sont redirigés vers /hotel
   useEffect(() => {
-    if (business?.type === 'hotel' && !(business?.features ?? []).includes('pos')) {
+    if (hasFeature(business, 'hotel') && !hasFeature(business, 'pos')) {
       router.replace('/hotel');
     }
   }, [business, router]);
@@ -131,7 +132,7 @@ export default function PosPage() {
     [addItem, business, warning]
   );
 
-  const isRestaurant = useMemo(() => business?.type === 'restaurant' || business?.features?.includes('restaurant'), [business]);
+  const isRestaurant = useMemo(() => hasFeature(business, 'restaurant'), [business]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -155,7 +156,7 @@ export default function PosPage() {
             <OnboardingChecklist />
           </div>
           <div className="px-4 py-3 border-b border-surface-border flex gap-2">
-            <div className="relative flex-1 group">
+            <div id="pos-search" className="relative flex-1 group">
               <input
                 ref={searchInputRef}
                 type="text"
@@ -226,7 +227,7 @@ export default function PosPage() {
           )}
         </div>
         {/* Droite : panier */}
-        <div className="w-96 flex flex-col bg-surface-card">
+        <div id="pos-cart" className="w-96 flex flex-col bg-surface-card">
           <OrderPanel
             taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}

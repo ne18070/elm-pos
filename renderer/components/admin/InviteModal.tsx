@@ -6,6 +6,8 @@ import { Loader2, UserPlus, RefreshCw, Copy, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useNotificationStore } from '@/store/notifications';
 import { inviteUser } from '@services/supabase/users';
+import { useAuthStore } from '@/store/auth';
+import { getContextualRoleLabel } from '@/lib/permissions';
 
 interface InviteModalProps {
   businessId: string;
@@ -25,6 +27,7 @@ function generatePassword(): string {
 }
 
 export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps) {
+  const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const [loading,       setLoading]       = useState(false);
   const [done,          setDone]          = useState(false);
@@ -36,6 +39,11 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
     role:      'staff',
     password:  generatePassword(),
   });
+
+  const roles = ROLES.map(r => ({
+    ...r,
+    label: getContextualRoleLabel(r.value as any, business?.type)
+  }));
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -199,7 +207,7 @@ export function InviteModal({ businessId, onClose, onInvited }: InviteModalProps
         <div>
           <label className="label">Rôle</label>
           <div className="space-y-2 mt-1">
-            {ROLES.map((r) => (
+            {roles.map((r) => (
               <label
                 key={r.value}
                 className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all

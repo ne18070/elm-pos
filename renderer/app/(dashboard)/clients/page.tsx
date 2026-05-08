@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { ClientsImportModal } from '@/components/clients/ImportModal';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import {
@@ -46,6 +47,7 @@ function exportCSV(clients: Client[]) {
 export default function ClientsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
 
   const [clients, setClients]     = useState<Client[]>([]);
   const [typesClient, setTypesClient] = useState<RefItem[]>([]);
@@ -152,7 +154,7 @@ export default function ClientsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          {clients.length > 0 && (
+          {clients.length > 0 && can('export_clients') && (
             <button
               onClick={() => exportCSV(clients)}
               className="btn-secondary h-9 text-sm flex items-center gap-1.5 px-3"
@@ -162,19 +164,23 @@ export default function ClientsPage() {
               <span className="hidden sm:inline">Exporter</span>
             </button>
           )}
-          <button
-            onClick={() => setShowImport(true)}
-            className="btn-secondary h-9 text-sm flex items-center gap-1.5 px-3"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Importer</span>
-          </button>
-          <button
-            onClick={() => openPanel(null)}
-            className="btn-primary h-9 text-sm flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4 shrink-0" /> Nouveau client
-          </button>
+          {can('import_clients') && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="btn-secondary h-9 text-sm flex items-center gap-1.5 px-3"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Importer</span>
+            </button>
+          )}
+          {can('create_client') && (
+            <button
+              onClick={() => openPanel(null)}
+              className="btn-primary h-9 text-sm flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4 shrink-0" /> Nouveau client
+            </button>
+          )}
         </div>
       </div>
 
@@ -261,12 +267,16 @@ export default function ClientsPage() {
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openPanel(c)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted hover:text-content-primary transition-all">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => remove(c.id)} className="p-1.5 rounded-lg hover:bg-badge-error text-content-muted hover:text-status-error transition-all">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {can('edit_client') && (
+                          <button onClick={() => openPanel(c)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-muted hover:text-content-primary transition-all">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {can('delete_client') && (
+                          <button onClick={() => remove(c.id)} className="p-1.5 rounded-lg hover:bg-badge-error text-content-muted hover:text-status-error transition-all">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

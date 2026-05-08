@@ -6,6 +6,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { ALL_PUBLIC_MODULES, getAppUrl, qrImageUrl } from './settings-utils';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 import { toUserError } from '@/lib/user-error';
+import { hasFeature } from '@/lib/permissions';
 
 export function PublicLinksQrSection() {
   const { business } = useAuthStore();
@@ -38,11 +39,9 @@ export function PublicLinksQrSection() {
   }
 
   const publicModules = ALL_PUBLIC_MODULES.filter(({ features, bizTypes }) => {
-    const bFeatures = business.features ?? [];
-    const bTypes: string[] = (business as any).types ?? (business.type ? [business.type] : []);
-    const hasFeature = features.some(f => bFeatures.includes(f));
-    const hasBizType = bizTypes?.some(t => bTypes.includes(t));
-    return hasFeature || hasBizType;
+    const hasF = features.some(f => hasFeature(business, f));
+    const hasT = bizTypes?.some(t => hasFeature(business, t));
+    return hasF || hasT;
   });
 
   return (

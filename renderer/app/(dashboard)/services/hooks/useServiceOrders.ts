@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getServiceOrders, getServiceOrderCounts, ServiceOrder, ServiceOrderStatus } from '@services/supabase/service-orders';
+import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
+import { playNewOrderChime } from '@/lib/admin-sound';
 
 interface UseServiceOrdersOptions {
   businessId: string;
@@ -29,7 +31,21 @@ export function useServiceOrders({
   });
   const [loading, setLoading] = useState(true);
   const { error: notifError } = useNotificationStore();
-  
+
+  const [soundEnabled, setSoundEnabled] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('admin_order_sound') !== 'false' : true,
+  );
+  const soundEnabledRef = useRef(soundEnabled);
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      localStorage.setItem('admin_order_sound', String(next));
+      return next;
+    });
+  }, []);
+
   // To prevent race conditions
   const lastRequestRef = useRef<number>(0);
 
@@ -69,7 +85,29 @@ export function useServiceOrders({
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders, refreshTrigger]); // Added refreshTrigger here
+  }, [loadOrders, refreshTrigger]);
+
+  // Realtime: rafraîchissement automatique à chaque changement d'OT
+  const loadOrdersRef = useRef(loadOrders);
+  useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    const channel = supabase
+      .channel(`svc-orders-live-${businessId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_orders', filter: `business_id=eq.${businessId}` },
+        (payload) => {
+          loadOrdersRef.current();
+          if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
+            playNewOrderChime();
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [businessId]);
 
   return {
     orders,
@@ -77,6 +115,8 @@ export function useServiceOrders({
     counts,
     loading,
     refresh: loadOrders,
-    setOrders, // Useful for optimistic updates
+    setOrders,
+    soundEnabled,
+    toggleSound,
   };
 }

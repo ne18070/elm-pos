@@ -1,12 +1,15 @@
 import React from 'react';
-import { 
-  Search, X, RefreshCw, Wrench, Plus, Play, 
-  CheckCircle2, CreditCard, Printer, User, 
-  ChevronLeft, ChevronRight 
+import {
+  Search, X, RefreshCw, Wrench, Plus, Play,
+  CheckCircle2, CreditCard, Printer, User,
+  ChevronLeft, ChevronRight, UserRoundCheck, Coins, Star,
+  Volume2, VolumeX,
 } from 'lucide-react';
+import { unlockAdminAudio, playConfirmTone } from '@/lib/admin-sound';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { useCashSessionStore } from '@/store/cashSession';
 import { toUserError } from '@/lib/user-error';
 import { 
@@ -36,13 +39,38 @@ const STATUS_TABS = [
   { key: 'annule',   label: 'Annulé'   },
 ] as const;
 
+function OrdersMetrics({
+  counts,
+}: {
+  counts: Record<ServiceOrderStatus | 'all', number>;
+}) {
+  const items = [
+    { label: 'Attente', value: counts.attente ?? 0, icon: Wrench, color: 'text-status-warning', bg: 'bg-badge-warning' },
+    { label: 'En cours', value: counts.en_cours ?? 0, icon: Play, color: 'text-status-info', bg: 'bg-badge-info' },
+    { label: 'Terminés', value: counts.termine ?? 0, icon: CheckCircle2, color: 'text-status-success', bg: 'bg-badge-success' },
+    { label: 'À encaisser', value: counts.termine ?? 0, icon: Coins, color: 'text-content-brand', bg: 'bg-badge-brand' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-2 px-4 pt-3 bg-surface-card md:grid-cols-4 md:px-6">
+      {items.map(({ label, value, icon: Icon, color, bg }) => (
+        <div key={label} className="rounded-xl border border-surface-border bg-surface-input px-3 py-2.5 flex items-center gap-2.5">
+          <div className={cn('h-8 w-8 rounded-lg flex items-center justify-center shrink-0', bg, color)}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-lg font-bold leading-tight text-content-primary">{value}</p>
+            <p className="text-[10px] uppercase tracking-wider text-content-secondary truncate">{label}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ServiceOrdersTab({
   businessId,
   currency,
-  canCreateOrder,
-  canUpdateStatus,
-  canCollectPayment,
-  canShareOrder,
   onSelectOrder,
   onNewOrder,
   onPrintOrder,
@@ -51,10 +79,6 @@ export function ServiceOrdersTab({
 }: {
   businessId: string;
   currency: string;
-  canCreateOrder: boolean;
-  canUpdateStatus: boolean;
-  canCollectPayment: boolean;
-  canShareOrder: boolean;
   onSelectOrder: (order: ServiceOrder) => void;
   onNewOrder: () => void;
   onPrintOrder: (order: ServiceOrder, e: React.MouseEvent) => void;
@@ -63,13 +87,36 @@ export function ServiceOrdersTab({
 }) {
   const { user, business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
+  const can = useCan();
   const { success, error: notifError } = useNotificationStore();
+
+  const canCreateOrder = can('create_service_order');
+  const canUpdateStatus = can('update_service_status');
+  const canCollectPayment = can('collect_service_payment');
+  const canShareOrder = can('share_service_order');
   const [statusFilter, setStatusFilter] = React.useState<ServiceOrderStatus | 'all'>(initialStatus ?? 'all');
   React.useEffect(() => { setStatusFilter(initialStatus ?? 'all'); }, [initialStatus]);
   const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [dateFilter, setDateFilter] = React.useState('');
   const [page, setPage] = React.useState(1);
   const pageSize = 25;
+
+  React.useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(id);
+  }, [search]);
+
+  // Unlock AudioContext on first user gesture
+  React.useEffect(() => {
+    const unlock = () => unlockAdminAudio();
+    window.addEventListener('click', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
 
   const {
     orders,
@@ -78,17 +125,19 @@ export function ServiceOrdersTab({
     loading,
     refresh,
     setOrders,
+    soundEnabled,
+    toggleSound,
   } = useServiceOrders({
     businessId,
     statusFilter,
-    search,
+    search: debouncedSearch,
     dateFilter,
     page,
     pageSize,
     refreshTrigger,
   });
 
-  React.useEffect(() => { setPage(1); }, [businessId, dateFilter, statusFilter, search]);
+  React.useEffect(() => { setPage(1); }, [businessId, dateFilter, statusFilter, debouncedSearch]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -121,21 +170,7 @@ export function ServiceOrdersTab({
 
   return (
     <>
-      {/* Workflow hint */}
-      <div className="px-4 pt-3 pb-0 bg-surface-card shrink-0 md:px-6">
-        <p className="text-[11px] text-content-secondary flex items-center gap-1 flex-wrap">
-          <Wrench className="w-3 h-3 flex-shrink-0" />
-          Flux&nbsp;:
-          <span className="text-status-warning font-semibold">En attente</span>
-          <span>→</span>
-          <span className="text-status-info font-semibold">En cours</span>
-          <span>→</span>
-          <span className="text-status-success font-semibold">Terminé</span>
-          <span>→</span>
-          <span className="text-status-success font-semibold">Payé</span>
-          <span className="opacity-50 ml-1">· Cliquez un OT pour modifier, encaisser ou imprimer</span>
-        </p>
-      </div>
+      <OrdersMetrics counts={counts} />
       {/* Filters */}
       <div className="px-4 py-3 bg-surface-card border-b border-surface-border shrink-0 space-y-3 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -149,7 +184,18 @@ export function ServiceOrdersTab({
           {dateFilter && (
             <button onClick={() => setDateFilter('')} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><X className="w-4 h-4" /></button>
           )}
-          <button onClick={refresh} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary"><RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /></button>
+          <button onClick={refresh} className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary" title="Actualiser"><RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /></button>
+          <button
+            onClick={() => {
+              unlockAdminAudio();
+              toggleSound();
+              if (!soundEnabled) playConfirmTone();
+            }}
+            title={soundEnabled ? 'Désactiver le son' : 'Activer le son'}
+            className={cn('p-2 rounded-xl hover:bg-surface-hover transition-colors', soundEnabled ? 'text-content-brand' : 'text-content-muted')}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {STATUS_TABS.map(({ key, label }) => (
@@ -208,6 +254,11 @@ export function ServiceOrdersTab({
                     {order.client_name && (
                       <p className="text-sm text-content-secondary flex items-center gap-1 mb-1"><User className="w-3 h-3" />{order.client_name}</p>
                     )}
+                    {order.assigned_name && (
+                      <p className="text-xs text-content-muted flex items-center gap-1 mb-1">
+                        <UserRoundCheck className="w-3 h-3" />{order.assigned_name}
+                      </p>
+                    )}
 
                     <div className="mt-2 space-y-0.5">
                       {(order.items ?? []).slice(0, 3).map(item => (
@@ -221,6 +272,13 @@ export function ServiceOrdersTab({
                         <span className="text-base font-bold text-content-primary">{formatCurrency(order.total, currency)}</span>
                         {balance > 0 && balance < order.total && (
                           <span className="ml-2 text-xs text-status-error">reste {formatCurrency(balance, currency)}</span>
+                        )}
+                        {order.client_rating && (
+                          <div className="flex gap-0.5 mt-1">
+                            {[1,2,3,4,5].map(s => (
+                              <Star key={s} className={cn('w-3 h-3', s <= order.client_rating! ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                            ))}
+                          </div>
                         )}
                       </div>
                       <span className="text-xs text-content-secondary">{new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
@@ -277,6 +335,7 @@ export function ServiceOrdersTab({
                     <th className="px-4 py-3 text-left">Reference</th>
                     <th className="px-4 py-3 text-left">Prestations</th>
                     <th className="px-4 py-3 text-left">Statut</th>
+                    <th className="px-4 py-3 text-left">Avis</th>
                     <th className="px-4 py-3 text-right">Total</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -307,6 +366,15 @@ export function ServiceOrdersTab({
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.status} /></td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {order.client_rating ? (
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map(s => (
+                                <Star key={s} className={cn('w-3.5 h-3.5', s <= order.client_rating! ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                              ))}
+                            </div>
+                          ) : <span className="text-content-muted text-xs">—</span>}
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right">
                           <div className="font-bold text-content-primary">{formatCurrency(order.total, currency)}</div>
                           {balance > 0 && balance < order.total && <div className="text-xs text-status-error">reste {formatCurrency(balance, currency)}</div>}

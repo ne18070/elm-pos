@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer, Download, List, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { displayCurrency } from '@/lib/utils';
+import { exportToExcel } from '@/lib/export-excel';
 import { useNotificationStore } from '@/store/notifications';
-import { canViewFinancials } from '@/lib/permissions';
+import { hasFeature } from '@/lib/permissions';
+import { useCan } from '@/hooks/usePermission';
+
 import {
   getJournalEntries, syncAccounting, syncHotelAccounting, getTrialBalance,
   deleteManualEntry, getAccounts, computeIncomeStatement, computeBalanceSheet,
@@ -17,20 +20,25 @@ import { getPeriod, PERIOD_LABELS, CLASS_LABELS, SOURCE_LABELS } from './compone
 import type { Tab, Period } from './components/accounting-constants';
 import { DashboardTab }  from './components/DashboardTab';
 import { JournalTab }    from './components/JournalTab';
+import { GrandLivreTab } from './components/GrandLivreTab';
 import { BalanceTab }    from './components/BalanceTab';
 import { EtatsTab }      from './components/EtatsTab';
+import { SettingsTab }   from './components/SettingsTab';
 import { NewEntryModal } from './components/NewEntryModal';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3 },
-  { id: 'journal',   label: 'Journal',         icon: BookOpen },
-  { id: 'balance',   label: 'Balance',         icon: Scale },
-  { id: 'etats',     label: 'États financiers', icon: FileText },
+  { id: 'dashboard',   label: 'Tableau de bord', icon: BarChart3 },
+  { id: 'journal',     label: 'Journal',         icon: BookOpen },
+  { id: 'grand-livre', label: 'Grand Livre',     icon: List },
+  { id: 'balance',     label: 'Balance',         icon: Scale },
+  { id: 'etats',       label: 'États financiers', icon: FileText },
+  { id: 'settings',    label: 'Configuration',   icon: Settings },
 ];
 
 export default function ComptabilitePage() {
   const { business, user } = useAuthStore();
-  const isOwnerOrAdmin = canViewFinancials(user?.role);
+  const can = useCan();
+  const isOwnerOrAdmin = can('view_financials');
   const { success, error: notifErr } = useNotificationStore();
 
   const [tab, setTab]               = useState<Tab>('dashboard');
@@ -50,6 +58,17 @@ export default function ComptabilitePage() {
 
   const { from, to } = getPeriod(period, customFrom, customTo);
   const currency = business?.currency;
+
+  const is = useMemo(() => computeIncomeStatement(balance), [balance]);
+  const bs = useMemo(() => computeBalanceSheet(balance), [balance]);
+  const byClass = useMemo(() =>
+    Array.from(new Set(balance.map((r) => r.class_num))).sort().map((cls) => ({
+      cls,
+      rows: balance.filter((r) => r.class_num === cls),
+      totalDebit:  balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_debit, 0),
+      totalCredit: balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_credit, 0),
+    })),
+  [balance]);
 
   const load = useCallback(async () => {
     if (!business?.id) return;
@@ -76,12 +95,11 @@ export default function ComptabilitePage() {
     if (!business?.id) return;
     setSyncing(true);
     try {
-      const features = (business as any)?.features ?? [];
       const results = await Promise.allSettled([
         syncAccounting(business.id),
-        business.type === 'hotel' || features.includes('hotel') ? syncHotelAccounting(business.id) : Promise.resolve(0),
-        features.includes('honoraires') || features.includes('dossiers') ? syncHonorairesAccounting(business.id) : Promise.resolve(0),
-        business.type === 'service' || features.includes('service') || features.includes('services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
+        hasFeature(business, 'hotel') ? syncHotelAccounting(business.id) : Promise.resolve(0),
+        hasFeature(business, 'honoraires') || hasFeature(business, 'dossiers') ? syncHonorairesAccounting(business.id) : Promise.resolve(0),
+        hasFeature(business, 'service') || hasFeature(business, 'services') ? syncServiceOrdersAccounting(business.id) : Promise.resolve(0),
       ]);
 
       const total = results.reduce((s, r) => s + (r.status === 'fulfilled' ? (r.value as number) : 0), 0);
@@ -98,6 +116,84 @@ export default function ComptabilitePage() {
     } finally {
       setSyncing(false);
     }
+  }
+
+  function handleExport() {
+    const journalData = entries.flatMap((e) =>
+      (e.lines ?? []).map((l) => ({
+        Date: e.entry_date,
+        Référence: e.reference || '',
+        Description: e.description,
+        Source: SOURCE_LABELS[e.source]?.label ?? 'Manuel',
+        Compte: l.account_code,
+        Intitulé: l.account_name,
+        Débit: l.debit,
+        Crédit: l.credit,
+      }))
+    );
+
+    const balanceData = balance.map((b) => {
+      const solde = b.total_debit - b.total_credit;
+      return {
+        Compte: b.account_code,
+        Intitulé: b.account_name,
+        Classe: b.class_num,
+        Nature: b.nature,
+        'Total Débit': b.total_debit,
+        'Total Crédit': b.total_credit,
+        Solde: Math.abs(solde),
+        Sens: solde >= 0 ? 'Débit' : 'Crédit',
+      };
+    });
+
+    const isData = [
+      { Libellé: 'Ventes & Prestations (70x)', Montant: is.ventesGross },
+      { Libellé: 'RRR accordés (709)', Montant: -is.rrrAccordes },
+      { Libellé: "CHIFFRE D'AFFAIRES NET", Montant: is.caNet },
+      { Libellé: 'Achats de marchandises (601)', Montant: -is.achatsMarchandises },
+      { Libellé: 'MARGE BRUTE', Montant: is.margeBrute },
+      { Libellé: 'Transports (61)', Montant: -is.transports },
+      { Libellé: 'Services extérieurs (62/63)', Montant: -is.servicesExterieurs },
+      { Libellé: 'Impôts et taxes (64)', Montant: -is.impotsTaxes },
+      { Libellé: 'Charges de personnel (66)', Montant: -is.chargesPersonnel },
+      { Libellé: 'Autres charges externes', Montant: -is.autresCharges },
+      { Libellé: 'EXCÉDENT BRUT EXPLOIT. (EBE)', Montant: is.ebe },
+      { Libellé: 'Dotations amort. (68)', Montant: -is.dotations },
+      { Libellé: "RÉSULTAT D'EXPLOITATION", Montant: is.resultatExpl },
+      { Libellé: 'Résultat financier', Montant: is.resultatFinancier },
+      { Libellé: "RÉSULTAT AVANT IMPÔT", Montant: is.resultatAvantImpot },
+      { Libellé: 'Impôts sur résultat (69)', Montant: -is.impots },
+      { Libellé: 'RÉSULTAT NET', Montant: is.resultatNet },
+    ];
+
+    const bsData = [
+      { Section: 'ACTIF', Poste: 'Actif immobilisé', Montant: bs.actifImmobilise },
+      { Section: 'ACTIF', Poste: 'Stocks', Montant: bs.stocks },
+      { Section: 'ACTIF', Poste: 'Clients', Montant: bs.creancesClients },
+      { Section: 'ACTIF', Poste: 'TVA récupérable', Montant: bs.tvaRecuperable },
+      { Section: 'ACTIF', Poste: 'Autres actifs CT', Montant: bs.autresActifCT },
+      { Section: 'ACTIF', Poste: 'Trésorerie', Montant: bs.tresorerie },
+      { Section: 'ACTIF', Poste: 'TOTAL ACTIF', Montant: bs.totalActif },
+      { Section: '---', Poste: '---', Montant: null },
+      { Section: 'PASSIF', Poste: 'Capitaux propres', Montant: bs.capitaux },
+      { Section: 'PASSIF', Poste: 'Emprunts', Montant: bs.dettesLT },
+      { Section: 'PASSIF', Poste: 'Fournisseurs', Montant: bs.dettesFF },
+      { Section: 'PASSIF', Poste: 'Dettes fiscales', Montant: bs.dettesFiscales },
+      { Section: 'PASSIF', Poste: 'Dettes sociales', Montant: bs.dettesSociales },
+      { Section: 'PASSIF', Poste: 'Autres dettes CT', Montant: bs.autresDettesCT },
+      { Section: 'PASSIF', Poste: 'TOTAL PASSIF', Montant: bs.totalPassif },
+    ];
+
+    exportToExcel(
+      {
+        Journal: journalData,
+        Balance: balanceData,
+        'Compte de résultat': isData,
+        Bilan: bsData,
+      },
+      `Comptabilite_${business?.name || 'Export'}_${from}_${to}`
+    );
+    success('Exportation Excel réussie');
   }
 
   async function handleDeleteEntry(id: string) {
@@ -127,10 +223,12 @@ export default function ComptabilitePage() {
       new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(n) + ' ' + displayCurrency(business?.currency ?? 'XOF');
 
     const TAB_TITLES: Record<Tab, string> = {
-      dashboard: 'Tableau de bord',
-      journal:   'Journal général',
-      balance:   'Balance des comptes',
-      etats:     'États financiers',
+      dashboard:     'Tableau de bord',
+      journal:       'Journal général',
+      'grand-livre': 'Grand Livre',
+      balance:       'Balance des comptes',
+      etats:         'États financiers',
+      settings:      'Configuration plan comptable',
     };
 
     const journalRows = entries.map((e) => {
@@ -312,16 +410,6 @@ export default function ComptabilitePage() {
     setTimeout(() => { w.print(); }, 400);
   }
 
-  const is = computeIncomeStatement(balance);
-  const bs = computeBalanceSheet(balance);
-
-  const byClass = Array.from(new Set(balance.map((r) => r.class_num))).sort().map((cls) => ({
-    cls,
-    rows: balance.filter((r) => r.class_num === cls),
-    totalDebit:  balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_debit, 0),
-    totalCredit: balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_credit, 0),
-  }));
-
   const visibleTabs = isOwnerOrAdmin ? TABS : TABS.filter((t) => t.id === 'dashboard' || t.id === 'journal');
 
   return (
@@ -347,6 +435,10 @@ export default function ComptabilitePage() {
             <button onClick={handleSync} disabled={syncing} className="btn-secondary flex items-center gap-2 py-1.5">
               <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Synchroniser</span>
+            </button>
+            <button onClick={handleExport} className="btn-secondary flex items-center gap-2 py-1.5">
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Exporter</span>
             </button>
             <button onClick={handlePrint} className="btn-secondary flex items-center gap-2 py-1.5">
               <Printer className="w-4 h-4" />
@@ -389,6 +481,13 @@ export default function ComptabilitePage() {
                 onDeleteEntry={handleDeleteEntry}
               />
             )}
+            {tab === 'grand-livre' && (
+              <GrandLivreTab
+                entries={entries}
+                accounts={accounts}
+                currency={currency}
+              />
+            )}
             {tab === 'balance' && (
               <BalanceTab
                 byClass={byClass}
@@ -399,6 +498,13 @@ export default function ComptabilitePage() {
             )}
             {tab === 'etats' && (
               <EtatsTab is={is} bs={bs} currency={currency} />
+            )}
+            {tab === 'settings' && business?.id && (
+              <SettingsTab
+                accounts={accounts}
+                businessId={business.id}
+                onRefresh={load}
+              />
             )}
           </>
         )}

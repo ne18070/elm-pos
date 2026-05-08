@@ -103,18 +103,25 @@ export function MonitoringProvider({ children }: { children: React.ReactNode }) 
         || url.includes('/realtime/v1/');
 
       if (!isInternal) {
-        if (response.status >= 500) {
+        const isApiError = response.status >= 500
+          || (response.status >= 400 && response.status !== 401 && response.status !== 404);
+
+        if (isApiError) {
+          // Read body once (clone so the caller still gets the original response)
+          let bodyDetail: Record<string, unknown> | null = null;
+          try {
+            bodyDetail = await response.clone().json();
+          } catch { /* not JSON — ignore */ }
+
           trackError('api', `HTTP ${response.status}`, {
             url:        safeUrl(url),
             status:     response.status,
             latency_ms: latencyMs,
-          });
-        } else if (response.status >= 400 && response.status !== 401 && response.status !== 404) {
-          // 401 = expected on protected routes, 404 = expected on missing records
-          trackWarn('api', `HTTP ${response.status}`, {
-            url:        safeUrl(url),
-            status:     response.status,
-            latency_ms: latencyMs,
+            // Supabase error fields
+            error:      (bodyDetail as any)?.message ?? (bodyDetail as any)?.error ?? null,
+            code:       (bodyDetail as any)?.code    ?? null,
+            hint:       (bodyDetail as any)?.hint    ?? null,
+            detail:     (bodyDetail as any)?.details ?? null,
           });
         } else if (latencyMs > 3000) {
           trackPerf('api', 'slow_request', latencyMs, { url: safeUrl(url) });

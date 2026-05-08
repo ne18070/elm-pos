@@ -55,7 +55,9 @@ export function TrialBanner() {
           ? `Bienvenue ! Votre essai gratuit de 7 jours a commencé.`
           : days === 0
             ? 'Votre essai gratuit expire aujourd\'hui'
-            : `Essai gratuit — ${days} jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}`}
+            : days === 1
+              ? 'Votre essai expire demain. Abonnez-vous via Wave pour ne pas perdre l\'accès.'
+              : `Essai gratuit — ${days} jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}`}
       </div>
       <button
         onClick={() => router.push('/billing')}

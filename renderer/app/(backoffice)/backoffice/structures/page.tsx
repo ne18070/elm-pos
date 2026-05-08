@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Loader2, Plus, Pencil, Layers, Search, 
+import {
+  Loader2, Plus, Pencil, Layers, Search,
   Mail, LogIn, X, Save, Copy, Check as CheckIcon,
   Phone as PhoneIcon, Mail as MailIcon, ChevronLeft, ChevronRight,
-  Building2
+  Building2, Trash2, RefreshCw, AlertTriangle,
 } from 'lucide-react';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import {
   type OrganizationWithBusinesses 
 } from '@services/supabase/business';
 import { createBusinessAdmin } from '@services/supabase/users';
+import { deleteAccount } from '@services/supabase/subscriptions';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 
 const PAGE_SIZE = 12;
@@ -47,9 +48,12 @@ export default function StructuresPage() {
   const [orgs, setOrgs]             = useState<OrganizationWithBusinesses[]>([]);
   const [unassigned, setUnassigned] = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
-  const [orgModal, setOrgModal]     = useState<'new' | OrganizationWithBusinesses | null>(null);
-  const [adminModal, setAdminModal] = useState<any | null>(null);
-  const [saving, setSaving]         = useState(false);
+  const [orgModal, setOrgModal]         = useState<'new' | OrganizationWithBusinesses | null>(null);
+  const [adminModal, setAdminModal]     = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<OrganizationWithBusinesses | null>(null);
+  const [deleting, setDeleting]         = useState(false);
+  const [deleteErr, setDeleteErr]       = useState<string | null>(null);
+  const [saving, setSaving]             = useState(false);
   const [switching, setSwitching]   = useState<string | null>(null);
   const [search, setSearch]         = useState('');
   const [page, setPage]             = useState(1);
@@ -78,6 +82,21 @@ export default function StructuresPage() {
       await switchBusiness(bizId);
       window.location.href = '/';
     } catch (e) { alert(toUserError(e)); setSwitching(null); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.owner_id) return;
+    setDeleting(true);
+    setDeleteErr(null);
+    try {
+      await deleteAccount(deleteTarget.owner_id, deleteTarget.businesses[0]?.id ?? '');
+      setOrgs((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (e) {
+      setDeleteErr(e instanceof Error ? e.message : 'Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -156,6 +175,45 @@ export default function StructuresPage() {
   const pagedOrgs = filteredOrgs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => { setPage(1); }, [search]);
+
+  // -- Duplicate Slugs --
+  const duplicatedSlugs = useMemo(() => {
+    const counts = new Map<string, number>();
+    const allBusinesses = [
+      ...orgs.flatMap(o => o.businesses),
+      ...unassigned
+    ];
+    for (const b of allBusinesses) {
+      if (b.public_slug) {
+        counts.set(b.public_slug, (counts.get(b.public_slug) || 0) + 1);
+      }
+    }
+    const dups = new Set<string>();
+    for (const [slug, count] of counts.entries()) {
+      if (count > 1) dups.add(slug);
+    }
+    return dups;
+  }, [orgs, unassigned]);
+
+  // -- Render Helpers --
+  const renderSlug = (slug: string | null | undefined) => {
+    if (!slug) return <span className="text-[10px] text-content-muted italic">sans slug</span>;
+    const isDup = duplicatedSlugs.has(slug);
+    return (
+      <div className="flex items-center gap-1">
+        <span className={cn(
+          "text-[9px] font-mono px-1.5 py-0.5 rounded border truncate max-w-[100px]",
+          isDup 
+            ? "text-status-error bg-badge-error border-status-error animate-pulse" 
+            : "text-content-brand bg-badge-brand border-brand-800"
+        )}>
+          {isDup && <AlertTriangle className="w-2.5 h-2.5 inline mr-1" />}
+          {slug}
+        </span>
+        <CopyButton text={slug} className="scale-75" />
+      </div>
+    );
+  };
 
   // -- Render Drawer Footer --
   const renderOrgFooter = () => (
@@ -251,12 +309,22 @@ export default function StructuresPage() {
                         <p className="text-xs text-content-secondary italic truncate">{org.denomination}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => setOrgModal(org)}
-                      className="p-2 rounded-lg hover:bg-surface-input text-content-secondary hover:text-content-primary transition-all shrink-0"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setOrgModal(org)}
+                        className="p-2 rounded-lg hover:bg-surface-input text-content-secondary hover:text-content-primary transition-all"
+                        title="Modifier"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { setDeleteErr(null); setDeleteTarget(org); }}
+                        className="p-2 rounded-lg hover:bg-badge-error text-content-secondary hover:text-status-error transition-all"
+                        title="Supprimer l'organisation"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2 py-3 border-y border-surface-border/50">
@@ -288,8 +356,11 @@ export default function StructuresPage() {
                       </p>
                       {org.businesses.map((biz) => (
                         <div key={biz.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface-input border border-surface-border">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-content-primary truncate">{biz.name}</p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-content-primary truncate">{biz.name}</p>
+                              {renderSlug(biz.public_slug)}
+                            </div>
                             <span className={`text-[10px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded border ${getTypeBadge(biz.type)}`}>
                               {biz.type}
                             </span>
@@ -363,10 +434,13 @@ export default function StructuresPage() {
                   <div key={biz.id} className="card p-0 border-amber-500/20 hover:border-amber-500/40 transition-all group relative overflow-hidden flex flex-col">
                     <div className="p-6 flex-1 space-y-4">
                       <div className="flex items-start justify-between">
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1 min-w-0">
                           <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
-                          <h3 className="text-lg font-black text-content-primary tracking-tight mt-1">{biz.name}</h3>
-                          {biz.denomination && <p className="text-xs text-content-secondary italic">{biz.denomination}</p>}
+                          <div className="flex items-center gap-2 mt-1">
+                            <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{biz.name}</h3>
+                            {renderSlug(biz.public_slug)}
+                          </div>
+                          {biz.denomination && <p className="text-xs text-content-secondary italic truncate">{biz.denomination}</p>}
                         </div>
                         <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-content-brand hover:text-content-brand transition-all shrink-0">
                           {switching === biz.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
@@ -385,6 +459,67 @@ export default function StructuresPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* -- Delete confirm modal -- */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-sm border border-status-error/30">
+            <div className="flex items-center gap-3 p-5 border-b border-surface-border">
+              <div className="p-2 rounded-xl bg-badge-error text-status-error shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-content-primary">Supprimer l&apos;organisation</p>
+                <p className="text-xs text-content-muted mt-0.5">Action irréversible</p>
+              </div>
+              <button onClick={() => setDeleteTarget(null)} className="text-content-secondary hover:text-content-primary">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-content-secondary">
+                Vous allez supprimer{' '}
+                <span className="font-bold text-content-primary">{deleteTarget.legal_name}</span>
+                {deleteTarget.businesses.length > 0 && (
+                  <> et ses <span className="font-bold text-status-error">{deleteTarget.businesses.length} établissement{deleteTarget.businesses.length > 1 ? 's' : ''}</span></>
+                )}.
+              </p>
+              <p className="text-xs text-content-muted bg-badge-error border border-status-error/20 rounded-xl px-3 py-2">
+                Toutes les données (commandes, produits, membres, abonnements) seront définitivement supprimées.
+              </p>
+              {deleteTarget.businesses.length > 0 && (
+                <div className="text-xs text-content-muted space-y-1">
+                  {deleteTarget.businesses.map((b) => (
+                    <p key={b.id} className="flex items-center gap-2">
+                      <Building2 className="w-3 h-3 shrink-0" />{b.name}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {!deleteTarget.owner_id && (
+                <p className="text-xs text-status-warning font-medium">⚠ Cette organisation n&apos;a pas de propriétaire assigné.</p>
+              )}
+              {deleteErr && <p className="text-xs text-status-error font-medium">{deleteErr}</p>}
+            </div>
+
+            <div className="flex gap-2 p-4 border-t border-surface-border">
+              <button onClick={() => setDeleteTarget(null)} className="btn-secondary flex-1 text-sm">
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || !deleteTarget.owner_id}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-status-error text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all"
+              >
+                {deleting
+                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> Suppression…</>
+                  : <><Trash2 className="w-4 h-4" /> Supprimer</>}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* -- SideDrawers -- */}

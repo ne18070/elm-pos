@@ -9,6 +9,7 @@ import { displayCurrency } from '@/lib/utils';
 import { uploadMenuImage } from '@services/supabase/storage';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { getProducts } from '@services/supabase/products';
 import { getDailyMenu, saveDailyMenu, clearDailyMenu } from '@services/supabase/daily-menu';
 import { getWhatsAppConfig, broadcastDailyMenu, getBroadcastLog, type BroadcastResult, type BroadcastLog } from '@services/supabase/whatsapp';
@@ -17,6 +18,7 @@ import type { Product } from '@pos-types';
 export default function MenuDuJourPage() {
   const { business, user } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
 
   const [date, setDate]             = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [products, setProducts]     = useState<Product[]>([]);
@@ -187,7 +189,8 @@ export default function MenuDuJourPage() {
   }
 
   const isToday = date === format(new Date(), 'yyyy-MM-dd');
-  const canBroadcast = hasWaConfig && selected.size > 0 && isToday;
+  const canManage = can('manage_daily_menu');
+  const canBroadcast = hasWaConfig && selected.size > 0 && isToday && canManage;
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
@@ -319,14 +322,16 @@ export default function MenuDuJourPage() {
 
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              onClick={handleSave}
-              disabled={saving || selected.size === 0}
-              className="btn-primary flex items-center gap-2 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Enregistrer
-            </button>
+            {canManage && (
+              <button
+                onClick={handleSave}
+                disabled={saving || selected.size === 0}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Enregistrer
+              </button>
+            )}
 
             {/* Bouton broadcast — uniquement aujourd'hui avec WhatsApp actif */}
             {hasWaConfig && (
@@ -341,14 +346,16 @@ export default function MenuDuJourPage() {
               </button>
             )}
 
-            <button
-              onClick={handleClear}
-              disabled={saving || broadcasting}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-surface-border text-content-secondary hover:text-status-error hover:border-red-500/40 transition-colors text-sm disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              Effacer
-            </button>
+            {canManage && (
+              <button
+                onClick={handleClear}
+                disabled={saving || broadcasting}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-surface-border text-content-secondary hover:text-status-error hover:border-red-500/40 transition-colors text-sm disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                Effacer
+              </button>
+            )}
           </div>
 
           {/* Historique broadcast du jour */}

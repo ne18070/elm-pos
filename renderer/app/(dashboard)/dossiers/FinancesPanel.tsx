@@ -3,12 +3,15 @@ import { Loader2, Check, Receipt } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { displayCurrency } from '@/lib/utils';
+import { useCan } from '@/hooks/usePermission';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { getHonorairesByDossier, createHonoraire, type Dossier, type HonoraireLine } from '@services/supabase/dossiers';
 
-export function FinancesPanel({ dossier, businessId, onClose, canEdit }: { dossier: Dossier; businessId: string; onClose: () => void; canEdit: boolean; }) {
+export function FinancesPanel({ dossier, businessId, onClose }: { dossier: Dossier; businessId: string; onClose: () => void; }) {
   const { business } = useAuthStore();
   const currency = business?.currency ?? 'XOF';
+  const can = useCan();
+  const canEdit = can('add_fee');
   const [lines, setLines] = useState<HonoraireLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);

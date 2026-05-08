@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { hasRole } from '@/lib/permissions';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useRealtimeStore } from '@/store/realtime';
@@ -260,7 +261,7 @@ export function useRealtimeSync() {
     if (!channelRef.current || !user || status !== 'connected') return;
 
     // Le propriétaire n'est jamais tracké (protection vie privée / logique métier)
-    const isOwner = user.role === 'owner';
+    const isOwner = hasRole(user.role, 'owner');
     const effectiveIsTracking = isOwner ? false : isTracking;
     const effectiveLocation   = isOwner ? undefined : (location ?? undefined);
 

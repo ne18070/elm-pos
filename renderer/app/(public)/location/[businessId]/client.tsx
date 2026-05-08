@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Car, Calendar, Users, Loader2, AlertCircle, Hotel,
-  Search, ChevronRight, Star, Gauge, Fuel, Clock,
-  MessageCircle, MapPin, Info, X, ArrowRight, Phone,
+  Car, Calendar, Loader2, AlertCircle, Search, ChevronRight,
+  MessageCircle, MapPin, Info, X, ArrowRight, SlidersHorizontal,
 } from 'lucide-react';
 import {
   getPublicAgencyInfo, getAvailableVehicles, createPublicRentalRequest,
@@ -42,15 +41,15 @@ function VehicleCard({
   vehicle: PublicVehicle; days: number; currency: string; onSelect: () => void;
 }) {
   return (
-    <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-surface-border bg-surface-card shadow-sm">
       {vehicle.image_url ? (
         <img
           src={vehicle.image_url}
           alt={vehicle.name}
-          className="w-full h-44 object-cover"
+          className="h-44 w-full object-cover"
         />
       ) : (
-        <div className="w-full h-44 bg-surface-input flex items-center justify-center">
+        <div className="flex h-44 w-full items-center justify-center bg-surface-input">
           <Car className="w-16 h-16 text-content-secondary" />
         </div>
       )}
@@ -83,7 +82,7 @@ function VehicleCard({
           <p className="text-xs text-content-secondary line-clamp-2">{vehicle.description}</p>
         )}
 
-        <div className="flex items-end justify-between pt-1 border-t border-surface-border">
+        <div className="flex items-end justify-between gap-3 border-t border-surface-border pt-3">
           <div>
             <p className="text-xs text-content-secondary">Total {days} jour{days > 1 ? 's' : ''}</p>
             <p className="font-black text-brand-600 text-xl leading-tight">
@@ -93,7 +92,7 @@ function VehicleCard({
           </div>
           <button
             onClick={onSelect}
-            className="bg-brand-600 hover:bg-brand-700 text-content-primary px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-1.5"
+            className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
           >
             Réserver
             <ChevronRight className="w-4 h-4" />
@@ -233,23 +232,23 @@ export function LocationPageClient() {
       <header className="bg-surface-card border-b border-surface-border shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-9 h-9 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
-            {agency?.logo_url ? (
-              <img src={agency.logo_url} alt={agency.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-brand-600 flex items-center justify-center">
-                <Car className="w-5 h-5 text-content-primary" />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <h1 className="font-bold text-content-primary leading-tight truncate">{agency?.name ?? 'Location'}</h1>
-            {agency?.address && (
-              <p className="text-xs text-content-secondary flex items-center gap-1 mt-0.5 truncate">
-                <MapPin className="w-3 h-3 shrink-0" />{agency.address}
-              </p>
-            )}
-          </div>
+            <div className="w-10 h-10 rounded-xl bg-white border border-surface-border overflow-hidden shrink-0">
+              {agency?.logo_url ? (
+                <img src={agency.logo_url} alt={agency.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-brand-600 flex items-center justify-center">
+                  <Car className="w-5 h-5 text-content-primary" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-bold text-content-primary truncate">{agency?.name ?? 'Location'}</h1>
+              {agency?.address && (
+                <p className="text-xs text-content-secondary truncate flex items-center gap-1">
+                  <MapPin className="w-3 h-3 shrink-0" />{agency.address}
+                </p>
+              )}
+            </div>
           </div>
           <div className="w-8 h-8 rounded-lg bg-white border border-surface-border flex items-center justify-center p-1 shrink-0">
             <img src="/logo.png" alt="ELM APP" className="w-full h-full object-contain" />
@@ -257,17 +256,24 @@ export function LocationPageClient() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+      <main className="mx-auto max-w-3xl px-4 py-5 space-y-4 sm:py-6">
 
         {/* Hero */}
-        <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-content-primary space-y-1">
-          <h2 className="font-black text-xl">Réservez votre véhicule</h2>
-          <p className="text-brand-100 text-sm">Choisissez vos dates et trouvez le véhicule idéal.</p>
+        <div className="rounded-xl bg-brand-700 p-4 text-white shadow-sm sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+              <Car className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-black leading-tight sm:text-xl">Réservez votre véhicule</h2>
+              <p className="mt-1 text-sm text-brand-100">Choisissez une période, comparez les véhicules disponibles, puis envoyez votre demande.</p>
+            </div>
+          </div>
         </div>
 
         {/* Date picker */}
-        <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-4 space-y-3">
-          <h3 className="font-semibold text-content-secondary text-sm flex items-center gap-2">
+        <div className="rounded-xl border border-surface-border bg-surface-card p-4 shadow-sm space-y-4">
+          <h3 className="font-semibold text-content-primary text-sm flex items-center gap-2">
             <Calendar className="w-4 h-4 text-brand-500" />
             Période de location
           </h3>
@@ -322,14 +328,14 @@ export function LocationPageClient() {
             </div>
           </div>
           {startDate && endDate && isValidPeriod(startDate, startTime, endDate, endTime) && (
-            <p className="text-xs text-content-secondary text-center leading-relaxed">
-              {days} jour{days > 1 ? 's' : ''} · du {fmtDate(startDate)} à {startTime} au {fmtDate(endDate)} à {endTime}
-            </p>
+            <div className="rounded-xl bg-badge-brand px-3 py-2 text-center text-xs leading-relaxed text-content-brand">
+              {days} jour{days > 1 ? 's' : ''} - du {fmtDate(startDate)} à {startTime} au {fmtDate(endDate)} à {endTime}
+            </div>
           )}
           <button
             onClick={search}
             disabled={loading || !startDate || !endDate || !isValidPeriod(startDate, startTime, endDate, endTime)}
-            className="w-full py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-content-primary font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Voir les véhicules disponibles
@@ -347,14 +353,14 @@ export function LocationPageClient() {
         {searched && !loading && (
           <>
             {vehicles.length === 0 ? (
-              <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-8 text-center space-y-2">
+              <div className="rounded-xl border border-surface-border bg-surface-card p-8 text-center shadow-sm space-y-2">
                 <Car className="w-12 h-12 text-content-secondary mx-auto" />
-                <p className="font-semibold text-content-muted">Aucun véhicule disponible</p>
+                <p className="font-semibold text-content-primary">Aucun véhicule disponible</p>
                 <p className="text-sm text-content-secondary">Essayez d'autres dates.</p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="bg-surface-card rounded-2xl shadow-sm border border-surface-border p-3 space-y-3">
+                <div className="sticky top-[65px] z-[9] rounded-xl border border-surface-border bg-surface-card/95 p-3 shadow-sm backdrop-blur space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <Search className="w-4 h-4 text-content-secondary absolute left-3 top-1/2 -translate-y-1/2" />
@@ -362,10 +368,11 @@ export function LocationPageClient() {
                         type="search"
                         value={vehicleQuery}
                         onChange={(e) => setVehicleQuery(e.target.value)}
-                        placeholder="Rechercher modèle, marque, plaque..."
+                        placeholder="Modèle, marque, plaque..."
                         className="w-full border border-surface-border bg-surface-input rounded-xl pl-9 pr-3 py-2.5 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-brand-400"
                       />
                     </div>
+                    <SlidersHorizontal className="hidden h-4 w-4 text-content-muted sm:block" />
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
@@ -411,7 +418,7 @@ export function LocationPageClient() {
             <a
               href={`https://wa.me/${agency.phone.replace(/[^0-9]/g, '')}`}
               target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
+              className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
             >
               <MessageCircle className="w-4 h-4" />
               WhatsApp
@@ -424,12 +431,12 @@ export function LocationPageClient() {
       {showForm && selected && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
-          <div className="relative bg-surface-card border border-surface-border rounded-t-3xl max-h-[90vh] overflow-y-auto">
+          <div className="relative mx-auto w-full max-w-2xl bg-surface-card border border-surface-border rounded-t-3xl max-h-[92vh] overflow-y-auto">
             <div className="sticky top-0 bg-surface-card border-b border-surface-border px-5 pt-4 pb-3 flex items-center justify-between rounded-t-3xl">
               <div>
-                <h3 className="font-bold text-content-primary">Réserver — {selected.name}</h3>
+                <h3 className="font-bold text-content-primary">Réserver - {selected.name}</h3>
                 <p className="text-xs text-content-secondary mt-0.5">
-                  {fmtDate(startDate)} {startTime} → {fmtDate(endDate)} {endTime} · {days} jour{days > 1 ? 's' : ''}
+                  {fmtDate(startDate)} {startTime} - {fmtDate(endDate)} {endTime} - {days} jour{days > 1 ? 's' : ''}
                 </p>
               </div>
               <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-surface-hover">
@@ -488,7 +495,7 @@ export function LocationPageClient() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs text-content-muted block mb-1">Email</label>
                     <input
@@ -524,7 +531,7 @@ export function LocationPageClient() {
 
                 <p className="text-xs font-semibold text-content-muted uppercase tracking-wide pt-1">Lieux</p>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="text-xs text-content-muted block mb-1">Lieu de départ</label>
                     <input
@@ -568,7 +575,7 @@ export function LocationPageClient() {
               <button
                 onClick={submitRequest}
                 disabled={submitting || !form.client_name.trim() || !form.client_phone.trim()}
-                className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-content-primary font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

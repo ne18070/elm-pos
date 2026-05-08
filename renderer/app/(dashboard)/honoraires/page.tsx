@@ -6,8 +6,8 @@ import { Plus, Receipt, Search, Loader2, X, Check, Pencil, Trash2, TrendingUp, A
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { supabase } from '@/lib/supabase';
-import { canDelete } from '@/lib/permissions';
 import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
 import { displayCurrency } from '@/lib/utils';
 import { generateHonorairesReceipt, printHtml } from '@/lib/invoice-templates';
@@ -259,6 +259,7 @@ export default function HonorairesPage() {
   const { business, user } = useAuthStore();
   const { error: notifError, success } = useNotificationStore();
   const router = useRouter();
+  const can = useCan();
   const currency = business?.currency ?? 'XOF';
 
   const [lines, setLines]                   = useState<HonoraireLine[]>([]);
@@ -351,9 +352,11 @@ export default function HonorairesPage() {
             </h1>
             <p className="text-xs text-content-secondary mt-0.5">Émettez des factures d'honoraires, suivez les paiements et relancez vos clients</p>
           </div>
-          <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" /> Nouveaux honoraires
-          </button>
+          {can('add_fee') && (
+            <button onClick={() => setModal('new')} className="btn-primary flex items-center gap-2 text-sm">
+              <Plus className="w-4 h-4" /> Nouveaux honoraires
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -456,7 +459,7 @@ export default function HonorairesPage() {
                             <button onClick={() => setModal(l)} className="p-1.5 text-content-muted hover:text-content-primary rounded-lg hover:bg-surface-input transition-colors">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            {canDelete(user?.role ?? 'staff') && (
+                            {can('delete_data') && (
                               <button onClick={() => handleDelete(l.id)} disabled={deletingId === l.id}
                                 className="p-1.5 text-content-muted hover:text-status-error rounded-lg hover:bg-badge-error transition-colors disabled:opacity-40">
                                 <Trash2 className="w-3.5 h-3.5" />

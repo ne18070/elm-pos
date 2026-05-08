@@ -12,16 +12,21 @@ interface Props {
 export function EtatsTab({ is, bs, currency }: Props) {
   const plRows: { label: string; val: number; indent: number; style: string; separator?: boolean }[] = [
     { label: 'Ventes & Prestations (70x)',   val: is.ventesGross,         indent: 0, style: 'text-content-primary' },
-    { label: 'RRR accordés (7091)',           val: -is.rrrAccordes,        indent: 1, style: 'text-status-error' },
+    { label: 'RRR accordés (709)',           val: -is.rrrAccordes,        indent: 1, style: 'text-status-error' },
     { label: "CHIFFRE D'AFFAIRES NET",        val: is.caNet,               indent: 0, style: 'font-bold text-content-primary', separator: true },
     { label: 'Achats de marchandises (601)',  val: -is.achatsMarchandises, indent: 1, style: 'text-status-error' },
-    { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: `font-semibold ${is.margeBrute >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
-    { label: 'Autres charges (6xx)',          val: -is.autresCharges,      indent: 1, style: 'text-status-error' },
+    { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: 'font-semibold text-content-primary', separator: true },
+    { label: 'Transports (61)',              val: -is.transports,         indent: 1, style: 'text-status-error' },
+    { label: 'Services extérieurs (62/63)',  val: -is.servicesExterieurs, indent: 1, style: 'text-status-error' },
+    { label: 'Impôts et taxes (64)',         val: -is.impotsTaxes,        indent: 1, style: 'text-status-error' },
+    { label: 'Charges de personnel (66)',    val: -is.chargesPersonnel,   indent: 1, style: 'text-status-error' },
+    { label: 'Autres charges externes',      val: -is.autresCharges,      indent: 1, style: 'text-status-error' },
+    { label: 'EXCÉDENT BRUT EXPLOIT. (EBE)', val: is.ebe,                 indent: 0, style: `font-semibold ${is.ebe >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
+    { label: 'Dotations amort. (68)',        val: -is.dotations,          indent: 1, style: 'text-status-error' },
     { label: "RÉSULTAT D'EXPLOITATION",       val: is.resultatExpl,        indent: 0, style: `font-semibold ${is.resultatExpl >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
-    { label: 'Produits financiers',           val: is.produitsFinanciers,  indent: 1, style: 'text-content-primary' },
-    { label: 'Charges financières (661)',     val: -is.chargesFinancieres, indent: 1, style: 'text-status-error' },
+    { label: 'Résultat financier (77-67)',    val: is.resultatFinancier,   indent: 1, style: is.resultatFinancier >= 0 ? 'text-content-primary' : 'text-status-error' },
     { label: "RÉSULTAT AVANT IMPÔT",          val: is.resultatAvantImpot,  indent: 0, style: `font-semibold ${is.resultatAvantImpot >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
-    { label: 'Impôts sur résultat (691)',     val: -is.impots,             indent: 1, style: 'text-status-error' },
+    { label: 'Impôts sur résultat (69)',     val: -is.impots,             indent: 1, style: 'text-status-error' },
     { label: 'RÉSULTAT NET',                  val: is.resultatNet,         indent: 0, style: `font-bold text-lg ${is.resultatNet >= 0 ? 'text-content-brand' : 'text-status-error'}`, separator: true },
   ];
 

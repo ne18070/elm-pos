@@ -6,6 +6,7 @@ import { Plus, Phone, Pencil, Trash2, UserCheck, Check } from 'lucide-react';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import {
   getAllLivreurs, createLivreur, updateLivreur, deleteLivreur,
   type Livreur, type LivreurForm,
@@ -16,6 +17,7 @@ const EMPTY_FORM: LivreurForm = { name: '', phone: '', is_active: true, notes: '
 export default function LivreursPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
 
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -88,12 +90,14 @@ export default function LivreursPage() {
             {total} livreur{total !== 1 ? 's' : ''} · {actifs} actif{actifs !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => openPanel(null)}
-          className="btn-primary h-9 text-sm flex items-center gap-1.5"
-        >
-          <Plus className="w-4 h-4 shrink-0" /> Ajouter
-        </button>
+        {can('manage_livreurs') && (
+          <button
+            onClick={() => openPanel(null)}
+            className="btn-primary h-9 text-sm flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4 shrink-0" /> Ajouter
+          </button>
+        )}
       </div>
 
       {/* -- Corps -- */}

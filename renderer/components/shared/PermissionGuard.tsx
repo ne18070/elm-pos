@@ -1,6 +1,6 @@
 'use client';
 
-import type { PermissionKey } from '@/lib/permissions-map';
+import type { PermissionKey } from '@/lib/permissions';
 import { usePermission } from '@/hooks/usePermission';
 
 interface Props {

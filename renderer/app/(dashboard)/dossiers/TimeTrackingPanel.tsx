@@ -12,6 +12,7 @@ import {
 } from '@services/supabase/dossiers';
 import { toUserError } from '@/lib/user-error';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -22,8 +23,10 @@ interface Props {
   onClose: () => void;
 }
 
-export function TimeTrackingPanel({ dossier, businessId, canEdit, onClose }: Props) {
+export function TimeTrackingPanel({ dossier, businessId, onClose }: { dossier: Dossier; businessId: string; onClose: () => void; }) {
   const { error: notifError, success } = useNotificationStore();
+  const can = useCan();
+  const canEdit = can('add_fee');
   const [entries, setEntries] = useState<DossierTimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
