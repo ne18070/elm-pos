@@ -83,12 +83,14 @@ export interface ServiceOrder {
   paid_amount:     number;
   payment_method?: string | null;
   notes?:          string | null;
-  started_at?:     string | null;
-  finished_at?:    string | null;
-  paid_at?:        string | null;
-  created_at:      string;
-  items?:          ServiceOrderItem[];
-  payments?:       ServiceOrderPayment[];
+  started_at?:      string | null;
+  finished_at?:     string | null;
+  paid_at?:         string | null;
+  created_at:       string;
+  client_rating?:   number | null;
+  client_feedback?: string | null;
+  items?:           ServiceOrderItem[];
+  payments?:        ServiceOrderPayment[];
 }
 
 // ── Catalogue ────────────────────────────────────────────────────────────────

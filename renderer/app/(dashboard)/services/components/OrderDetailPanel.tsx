@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  X, Printer, Edit2, Wrench, User, Search, Plus, Trash2, 
-  Play, CheckCircle2, CreditCard, XCircle, Check, MessageCircle, 
-  ChevronDown, ExternalLink, Bell 
+import {
+  X, Printer, Edit2, Wrench, User, Search, Plus, Trash2,
+  Play, CheckCircle2, CreditCard, XCircle, Check, MessageCircle,
+  ChevronDown, ExternalLink, Bell, Star,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -474,6 +474,25 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                     </div>
                   );
                 })()}
+              </div>
+            </div>
+          )}
+
+          {/* Avis client */}
+          {!editing && order.client_rating && (
+            <div className="rounded-xl border border-surface-border overflow-hidden">
+              <p className="text-[10px] font-black uppercase tracking-widest text-content-secondary px-4 py-2.5 bg-surface-hover border-b border-surface-border">
+                Avis client
+              </p>
+              <div className="px-4 py-3 space-y-2">
+                <div className="flex gap-0.5">
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} className={cn('w-4 h-4', s <= order.client_rating! ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                  ))}
+                </div>
+                {order.client_feedback && (
+                  <p className="text-xs text-content-secondary italic">"{order.client_feedback}"</p>
+                )}
               </div>
             </div>
           )}

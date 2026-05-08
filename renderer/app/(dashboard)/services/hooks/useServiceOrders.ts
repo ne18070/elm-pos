@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getServiceOrders, getServiceOrderCounts, ServiceOrder, ServiceOrderStatus } from '@services/supabase/service-orders';
+import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 
@@ -69,7 +70,24 @@ export function useServiceOrders({
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders, refreshTrigger]); // Added refreshTrigger here
+  }, [loadOrders, refreshTrigger]);
+
+  // Realtime: rafraîchissement automatique à chaque changement d'OT
+  const loadOrdersRef = useRef(loadOrders);
+  useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    const channel = supabase
+      .channel(`svc-orders-live-${businessId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_orders', filter: `business_id=eq.${businessId}` },
+        () => loadOrdersRef.current(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [businessId]);
 
   return {
     orders,
@@ -77,6 +95,6 @@ export function useServiceOrders({
     counts,
     loading,
     refresh: loadOrders,
-    setOrders, // Useful for optimistic updates
+    setOrders,
   };
 }

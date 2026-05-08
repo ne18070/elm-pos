@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  Search, X, RefreshCw, Wrench, Plus, Play, 
-  CheckCircle2, CreditCard, Printer, User, 
-  ChevronLeft, ChevronRight, UserRoundCheck, Coins
+import {
+  Search, X, RefreshCw, Wrench, Plus, Play,
+  CheckCircle2, CreditCard, Printer, User,
+  ChevronLeft, ChevronRight, UserRoundCheck, Coins, Star,
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
@@ -247,6 +247,13 @@ export function ServiceOrdersTab({
                         {balance > 0 && balance < order.total && (
                           <span className="ml-2 text-xs text-status-error">reste {formatCurrency(balance, currency)}</span>
                         )}
+                        {order.client_rating && (
+                          <div className="flex gap-0.5 mt-1">
+                            {[1,2,3,4,5].map(s => (
+                              <Star key={s} className={cn('w-3 h-3', s <= order.client_rating! ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <span className="text-xs text-content-secondary">{new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
                     </div>
@@ -302,6 +309,7 @@ export function ServiceOrdersTab({
                     <th className="px-4 py-3 text-left">Reference</th>
                     <th className="px-4 py-3 text-left">Prestations</th>
                     <th className="px-4 py-3 text-left">Statut</th>
+                    <th className="px-4 py-3 text-left">Avis</th>
                     <th className="px-4 py-3 text-right">Total</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -332,6 +340,15 @@ export function ServiceOrdersTab({
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.status} /></td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {order.client_rating ? (
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map(s => (
+                                <Star key={s} className={cn('w-3.5 h-3.5', s <= order.client_rating! ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                              ))}
+                            </div>
+                          ) : <span className="text-content-muted text-xs">—</span>}
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right">
                           <div className="font-bold text-content-primary">{formatCurrency(order.total, currency)}</div>
                           {balance > 0 && balance < order.total && <div className="text-xs text-status-error">reste {formatCurrency(balance, currency)}</div>}

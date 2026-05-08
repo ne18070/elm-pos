@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
   CheckCircle2, Clock, AlertCircle,
   Calendar, User, FileText, Loader2, GitBranch,
-  Car, Package2, Bell, BellOff, Plus
+  Car, Package2, Bell, BellOff, Plus,
+  Play, History, XCircle, CreditCard,
+  Volume2, VolumeX, Star,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -17,6 +19,14 @@ interface BusinessInfo {
   logo_url:  string | null;
   phone?:    string | null;
   address?:  string | null;
+}
+
+interface ServiceOrderEvent {
+  id:         string;
+  event_type: string;
+  label:      string;
+  actor_name: string | null;
+  created_at: string;
 }
 
 interface TrackingData {
@@ -36,14 +46,75 @@ interface TrackingData {
     subject_type:   string | null;
     subject_info:   string | null;
     client_name:    string | null;
-    status:         string;
-    total:          number;
-    paid_amount:    number;
-    created_at:     string;
-    items:          any[];
-    currency?:      string;
+    status:           string;
+    total:            number;
+    paid_amount:      number;
+    created_at:       string;
+    items:            any[];
+    currency?:        string;
+    client_rating?:   number | null;
+    client_feedback?: string | null;
   };
   instance: WorkflowInstance | null;
+  events:   ServiceOrderEvent[];
+}
+
+const EVENT_CHIMES: Record<string, number[]> = {
+  'Prise en charge':  [523, 659],            // Do–Mi  (départ)
+  'Travaux terminés': [523, 659, 784],        // Do–Mi–Sol (succès)
+  'Paiement reçu':    [523, 659, 784, 1047],  // Do–Mi–Sol–Do (célébration)
+  'Annulé':           [330, 220],             // Mi–La grave (descente)
+};
+
+// AudioContext partagé — ne jamais créer hors geste utilisateur
+let _audioCtx: AudioContext | null = null;
+
+// À appeler UNIQUEMENT depuis un handler de clic/touch
+function unlockAudio(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!_audioCtx) {
+      const Ctor = window.AudioContext ?? (window as any).webkitAudioContext;
+      if (!Ctor) return;
+      _audioCtx = new Ctor();
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch {}
+}
+
+// Ne crée jamais de contexte — utilise uniquement si déjà running
+function playChime(label: string) {
+  if (!_audioCtx || _audioCtx.state !== 'running') return;
+  try {
+    const ctx   = _audioCtx;
+    const freqs = EVENT_CHIMES[label] ?? [440];
+    const step  = 0.14;
+    freqs.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type            = 'sine';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * step;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.22, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + step * 2.2);
+      osc.start(t);
+      osc.stop(t + step * 2.5);
+    });
+  } catch {}
+}
+
+function getEventIcon(evt: ServiceOrderEvent): { Icon: any; cls: string } {
+  if (evt.event_type === 'created') return { Icon: FileText, cls: 'text-content-muted' };
+  switch (evt.label) {
+    case 'Prise en charge':  return { Icon: Play,         cls: 'text-status-info'    };
+    case 'Travaux terminés': return { Icon: CheckCircle2, cls: 'text-status-success'  };
+    case 'Paiement reçu':    return { Icon: CreditCard,   cls: 'text-status-success'  };
+    case 'Annulé':           return { Icon: XCircle,      cls: 'text-status-error'    };
+    default:                 return { Icon: GitBranch,    cls: 'text-content-secondary' };
+  }
 }
 
 const SERVICE_STATUS: Record<string, { label: string; bg: string; icon: any }> = {
@@ -67,12 +138,21 @@ export default function PublicTrackingView() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [data, setData]       = useState<TrackingData | null>(null);
+  const eventsEndRef            = useRef<HTMLDivElement>(null);
 
   const [pushState, setPushState] = useState<'idle' | 'subscribing' | 'subscribed' | 'denied' | 'unsupported'>('idle');
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundEnabledRef = useRef(true);
 
-  // --- Realtime Subscription ---
+  const [rating, setRating]           = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackDone, setFeedbackDone] = useState(false);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+
+  // --- Realtime: service_orders status/total ---
   useEffect(() => {
     if (!data?.service?.id) return;
 
@@ -103,10 +183,63 @@ export default function PublicTrackingView() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [data?.service?.id]);
+
+  // --- Realtime: nouveaux événements timeline ---
+  useEffect(() => {
+    if (!data?.service?.id) return;
+
+    const channel = supabase
+      .channel(`public-tracking-events-${data.service.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'service_order_events',
+          filter: `service_order_id=eq.${data.service.id}`,
+        },
+        (payload) => {
+          const evt = payload.new as ServiceOrderEvent;
+          setData((prev) => {
+            if (!prev) return prev;
+            return { ...prev, events: [...prev.events, evt] };
+          });
+          if (soundEnabledRef.current) playChime(evt.label);
+          setTimeout(() => eventsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [data?.service?.id]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('tracking_sound');
+    const enabled = stored !== 'off';
+    setSoundEnabled(enabled);
+    soundEnabledRef.current = enabled;
+  }, []);
+
+  // Déverrouille l'AudioContext dès le premier geste utilisateur sur la page
+  useEffect(() => {
+    const handler = () => { if (soundEnabledRef.current) unlockAudio(); };
+    window.addEventListener('click',      handler, { once: true });
+    window.addEventListener('touchstart', handler, { once: true });
+    return () => {
+      window.removeEventListener('click',      handler);
+      window.removeEventListener('touchstart', handler);
+    };
+  }, []);
+
+  function toggleSound() {
+    const next = !soundEnabledRef.current;
+    soundEnabledRef.current = next;
+    setSoundEnabled(next);
+    localStorage.setItem('tracking_sound', next ? 'on' : 'off');
+    if (next) unlockAudio();
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -150,52 +283,56 @@ export default function PublicTrackingView() {
     }
   }
 
+  async function submitFeedback() {
+    if (!token || rating === 0 || feedbackBusy) return;
+    setFeedbackBusy(true);
+    try {
+      const { error } = await (supabase as any).rpc('submit_service_order_feedback', {
+        p_token:    String(token),
+        p_rating:   rating,
+        p_feedback: feedbackText.trim() || null,
+      });
+      if (error) throw error;
+      setFeedbackDone(true);
+      setData(prev => {
+        if (!prev?.service) return prev;
+        return {
+          ...prev,
+          service: { ...prev.service, client_rating: rating, client_feedback: feedbackText.trim() || null },
+        };
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFeedbackBusy(false);
+    }
+  }
+
   useEffect(() => {
     async function load() {
       if (!token) return;
       try {
-        const { data: tokenData, error: tokenError } = await (supabase
-          .from('client_tracking_tokens')
-          .select('dossier_id, service_order_id, instance_id, expires_at') as any)
-          .eq('token', String(token))
-          .maybeSingle();
+        const { data: result, error: rpcErr } = await (supabase as any)
+          .rpc('get_public_tracking', { p_token: String(token) });
 
-        if (tokenError || !tokenData) { setError("Lien de suivi invalide ou expiré."); return; }
-        if (new Date(tokenData.expires_at) < new Date()) { setError("Ce lien de suivi a expiré."); return; }
-
-        let trackingData: Partial<TrackingData> = {};
-
-        if (tokenData.dossier_id) {
-          const { data: dossier, error: dossierError } = await supabase
-            .from('dossiers' as any)
-            .select('reference, client_name, type_affaire, status, date_ouverture, businesses(name, logo_url, phone, address)')
-            .eq('id', tokenData.dossier_id)
-            .single();
-          if (dossierError) throw dossierError;
-          const biz = (dossier as any)?.businesses ?? null;
-          trackingData = { type: 'dossier', dossier: dossier as any, business: biz };
-        } else if (tokenData.service_order_id) {
-          const { data: service, error: serviceError } = await supabase
-            .from('service_orders' as any)
-            .select('*, items:service_order_items(*), businesses(name, logo_url, phone, address)')
-            .eq('id', tokenData.service_order_id)
-            .single();
-          if (serviceError) throw serviceError;
-          const biz = (service as any)?.businesses ?? null;
-          trackingData = { type: 'service', service: service as any, business: biz };
-        } else {
-          setError("Aucune donnée associée à ce lien."); return;
+        if (rpcErr) throw rpcErr;
+        if (!result || result.error) {
+          if (result?.error === 'expired_token') setError("Ce lien de suivi a expiré.");
+          else if (result?.error === 'no_data')  setError("Aucune donnée associée à ce lien.");
+          else                                   setError("Lien de suivi invalide ou expiré.");
+          return;
         }
 
-        let instance = null;
-        if (tokenData.instance_id) {
-          const { data: inst } = await supabase
-            .from('workflow_instances').select('*').eq('id', tokenData.instance_id).single();
-          instance = inst;
-        }
+        setData({
+          type:     result.type,
+          business: result.business ?? null,
+          service:  result.service  ?? undefined,
+          dossier:  result.dossier  ?? undefined,
+          instance: result.instance ?? null,
+          events:   result.events   ?? [],
+        } as TrackingData);
 
-        setData({ ...trackingData, instance: instance as any, business: trackingData.business ?? null } as TrackingData);
-        await (supabase as any).rpc('increment_tracking_view', { t: token });
+        void (supabase as any).rpc('increment_tracking_view', { t: token });
       } catch (e) {
         console.error(e);
         setError("Une erreur est survenue lors de la récupération des données.");
@@ -336,6 +473,68 @@ export default function PublicTrackingView() {
           </section>
         )}
 
+        {/* Timeline historique */}
+        {type === 'service' && data.events.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-brand-600" />
+                <h3 className="font-bold text-content-primary">Historique</h3>
+              </div>
+              <button
+                onClick={toggleSound}
+                title={soundEnabled ? 'Couper le son' : 'Activer le son'}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors',
+                  soundEnabled
+                    ? 'bg-badge-info border-status-info/30 text-status-info'
+                    : 'bg-surface-hover border-surface-border text-content-muted',
+                )}
+              >
+                {soundEnabled
+                  ? <><Volume2 className="w-3.5 h-3.5" />Son activé</>
+                  : <><VolumeX className="w-3.5 h-3.5" />Son coupé</>}
+              </button>
+            </div>
+            <div className="bg-surface-card rounded-3xl border border-surface-border p-6">
+              <div className="relative">
+                <div className="absolute left-3.5 top-5 bottom-5 w-px bg-surface-border" />
+                <div className="space-y-6">
+                  {data.events.map((evt, idx) => {
+                    const isLast = idx === data.events.length - 1;
+                    const { Icon, cls } = getEventIcon(evt);
+                    return (
+                      <div key={evt.id} className="flex items-start gap-4">
+                        <div className={cn(
+                          'w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 relative bg-surface-card',
+                          isLast ? `border-brand-500 ${cls}` : 'border-surface-border text-content-muted',
+                        )}>
+                          <Icon className="w-3.5 h-3.5" />
+                          {isLast && (
+                            <span className="absolute -right-0.5 -top-0.5 w-2.5 h-2.5 bg-brand-500 rounded-full border-2 border-surface-card animate-pulse" />
+                          )}
+                        </div>
+                        <div className="flex-1 pt-0.5">
+                          <p className={cn('font-bold text-sm', isLast ? 'text-content-primary' : 'text-content-secondary')}>
+                            {evt.label}
+                          </p>
+                          <p className="text-xs text-content-muted mt-0.5">
+                            {new Date(evt.created_at).toLocaleDateString('fr-FR', {
+                              day: 'numeric', month: 'long', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div ref={eventsEndRef} />
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* État d'avancement */}
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
@@ -383,6 +582,57 @@ export default function PublicTrackingView() {
             )}
           </div>
         </section>
+
+        {/* Feedback client */}
+        {type === 'service' && (service!.status === 'paye' || service!.status === 'termine') && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <Star className="w-5 h-5 text-brand-600" />
+              <h3 className="font-bold text-content-primary">Votre avis</h3>
+            </div>
+            <div className="bg-surface-card rounded-3xl border border-surface-border p-6">
+              {(service!.client_rating || feedbackDone) ? (
+                <div className="text-center space-y-3 py-2">
+                  <div className="flex justify-center gap-1">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={cn('w-7 h-7', s <= (service!.client_rating ?? rating) ? 'text-yellow-400 fill-yellow-400' : 'text-content-muted')} />
+                    ))}
+                  </div>
+                  <p className="font-bold text-content-primary">Merci pour votre avis !</p>
+                  {service!.client_feedback && (
+                    <p className="text-sm text-content-secondary italic">"{service!.client_feedback}"</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <p className="text-sm font-semibold text-content-primary text-center">
+                    Comment s'est passée votre prestation ?
+                  </p>
+                  <div className="flex justify-center gap-1.5">
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} onClick={() => setRating(s)}
+                        onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)}
+                        className="p-1 transition-transform active:scale-90 hover:scale-110">
+                        <Star className={cn('w-10 h-10 transition-colors', s <= (hoverRating || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                      </button>
+                    ))}
+                  </div>
+                  {rating > 0 && (
+                    <>
+                      <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)}
+                        placeholder="Un commentaire ? (optionnel)" rows={3}
+                        className="w-full px-4 py-3 rounded-2xl bg-surface-input border border-surface-border text-content-primary text-sm resize-none placeholder:text-content-muted" />
+                      <button onClick={submitFeedback} disabled={feedbackBusy}
+                        className="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center">
+                        {feedbackBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Envoyer mon avis'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Notifications push client */}
         {type === 'service' && (

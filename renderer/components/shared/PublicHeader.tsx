@@ -15,7 +15,7 @@ interface PublicHeaderProps {
 
 export function PublicHeader({ business, loading, title = "Espace Client" }: PublicHeaderProps) {
   return (
-    <header className="bg-surface-card border-b border-surface-border sticky top-0 z-10 shadow-sm">
+    <header className="bg-surface-card border-b border-surface-border sticky top-0 z-30 shadow-sm">
       <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-xl border border-surface-border overflow-hidden shrink-0" style={{ backgroundColor: '#ffffff' }}>
