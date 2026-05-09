@@ -15,6 +15,45 @@ const WEB_PRINT_CONFIG: TemplateConfig = {
   copies: 1,
 };
 
+export function printTestPageBrowser(
+  businessName: string,
+  address?: string,
+  phone?: string,
+): { success: boolean; error?: string } {
+  const win = window.open('', '_blank', 'width=400,height=500,scrollbars=no');
+  if (!win) return { success: false, error: 'Popup bloqué — autorisez les popups pour imprimer' };
+
+  const now = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  const line = (text: string) => `<p style="margin:0;padding:2px 0;border-top:1px dashed #999">&nbsp;</p><p style="margin:0">${text}</p>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Test impression</title>
+<style>
+  body { font-family: 'Courier New', monospace; font-size: 12px; width: 280px; margin: 20px auto; }
+  h1 { font-size: 14px; text-align: center; text-transform: uppercase; letter-spacing: 2px; margin: 8px 0; }
+  .div { border-top: 1px dashed #555; margin: 6px 0; }
+  p { margin: 2px 0; }
+  .ok { text-align: center; font-weight: bold; margin-top: 8px; }
+</style>
+</head><body>
+  <h1>Test Impression</h1>
+  <div class="div"></div>
+  <p><strong>${businessName}</strong></p>
+  ${address ? `<p>${address}</p>` : ''}
+  ${phone   ? `<p>${phone}</p>`   : ''}
+  <div class="div"></div>
+  <p>${now}</p>
+  <div class="div"></div>
+  <p class="ok">Imprimante OK</p>
+  <p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p>
+</body></html>`;
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.addEventListener('load', () => { win.focus(); win.print(); });
+  return { success: true };
+}
+
 export async function printReceiptBrowser(
   data: ReceiptData
 ): Promise<{ success: boolean; error?: string }> {

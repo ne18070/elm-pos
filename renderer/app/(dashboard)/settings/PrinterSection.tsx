@@ -25,8 +25,6 @@ export function PrinterSection() {
   }
 
   async function handleTest() {
-    if (config.type === 'network' && !config.ip) { notifError('Entrez une adresse IP'); return; }
-    if (!isElectron) { notifError('Disponible uniquement dans l\'application de bureau'); return; }
     setTesting(true);
     setTestResult(null);
     try {
@@ -145,7 +143,7 @@ export function PrinterSection() {
         </button>
         <button
           onClick={handleTest}
-          disabled={testing || (config.type === 'network' && !config.ip)}
+          disabled={testing}
           className="btn-secondary h-11 px-4 flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest"
         >
           {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
