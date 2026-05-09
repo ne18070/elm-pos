@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Printer, Network, Wifi, Loader2, CheckCircle2, XCircle, Save, AlertCircle } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
-import { loadPrinterConfig, savePrinterConfig, testPrinterConnection, isElectron, type PrinterConfig } from '@/lib/ipc';
+import { useAuthStore } from '@/store/auth';
+import { loadPrinterConfig, savePrinterConfig, printTestPage, isElectron, type PrinterConfig } from '@/lib/ipc';
 
 export function PrinterSection() {
   const { success, error: notifError } = useNotificationStore();
+  const { business } = useAuthStore();
   const [config, setConfig] = useState<PrinterConfig>(() => loadPrinterConfig());
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ connected: boolean; latency?: number; error?: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
   const handleChange = (patch: Partial<PrinterConfig>) => {
@@ -24,23 +26,18 @@ export function PrinterSection() {
 
   async function handleTest() {
     if (config.type === 'network' && !config.ip) { notifError('Entrez une adresse IP'); return; }
+    if (!isElectron) { notifError('Disponible uniquement dans l\'application de bureau'); return; }
     setTesting(true);
     setTestResult(null);
     try {
-      if (config.type === 'network') {
-        const result = await testPrinterConnection(config.ip!, config.port || 9100);
-        setTestResult(result);
-        if (result.connected) success('Imprimante joignable');
-      } else {
-        // USB test is usually handled by attempt to print or list devices
-        // For now, let's just show a simulated success if we're in Electron
-        if (isElectron) {
-          setTestResult({ connected: true });
-          success('Imprimante USB configurée');
-        } else {
-          setTestResult({ connected: false, error: 'Direct printing works in desktop app only' });
-        }
-      }
+      const result = await printTestPage(
+        business?.name ?? 'Mon établissement',
+        business?.address,
+        business?.phone,
+      );
+      setTestResult({ ok: result.success, error: result.error });
+      if (result.success) success('Page test imprimée');
+      else notifError(result.error ?? 'Erreur impression');
     } finally {
       setTesting(false);
     }
@@ -118,21 +115,21 @@ export function PrinterSection() {
       {/* Results and actions */}
       {testResult && (
         <div className={`flex items-start gap-2 p-3 rounded-xl border text-sm animate-in zoom-in-95 duration-200 ${
-          testResult.connected
+          testResult.ok
             ? 'bg-badge-success/10 border-status-success/20 text-status-success'
             : 'bg-badge-error/10 border-status-error/20 text-status-error'
         }`}>
-          {testResult.connected
+          {testResult.ok
             ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
             : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
           <div>
             <p className="font-bold uppercase text-[10px] tracking-widest">
-              {testResult.connected ? 'Connecté' : 'Échec de connexion'}
+              {testResult.ok ? 'Page test imprimée' : 'Échec d\'impression'}
             </p>
             <p className="text-xs mt-0.5">
-              {testResult.connected
-                ? `L'imprimante est prête${testResult.latency ? ` (latence ${testResult.latency}ms)` : ''}`
-                : testResult.error || 'Vérifiez l\'adresse IP et la connexion réseau'}
+              {testResult.ok
+                ? 'Vérifiez que la page est sortie correctement'
+                : testResult.error || 'Vérifiez la connexion et la configuration'}
             </p>
           </div>
         </div>
