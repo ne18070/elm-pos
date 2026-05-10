@@ -93,6 +93,33 @@ export interface ServiceOrder {
   payments?:        ServiceOrderPayment[];
 }
 
+export interface TechnicianServiceOrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
+export interface TechnicianServiceOrder {
+  id: string;
+  order_number: number;
+  status: ServiceOrderStatus;
+  subject_ref: string | null;
+  subject_type: string | null;
+  subject_info: string | null;
+  client_name: string | null;
+  notes: string | null;
+  created_at: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  items: TechnicianServiceOrderItem[];
+}
+
+export interface TechnicianWorkspaceData {
+  business: { name: string; logo_url: string | null };
+  technician: { id: string; name: string };
+  orders: TechnicianServiceOrder[];
+}
+
 // ── Catalogue ────────────────────────────────────────────────────────────────
 
 export async function getServiceCategories(businessId: string): Promise<ServiceCategory[]> {
@@ -503,6 +530,47 @@ export async function updateServiceOrderStatus(
       user_name:   actor?.userName,
       metadata:    { order_number: order.order_number, status },
     });
+  }
+}
+
+export async function getOrCreateServiceTechnicianToken(
+  businessId: string,
+  serviceOrderId: string,
+  staffId: string,
+): Promise<string> {
+  const { data, error } = await db.rpc('get_or_create_service_technician_token', {
+    p_business_id: businessId,
+    p_service_order_id: serviceOrderId,
+    p_staff_id: staffId,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getTechnicianServiceOrders(token: string): Promise<TechnicianWorkspaceData> {
+  const { data, error } = await db.rpc('get_technician_service_orders', { p_token: token });
+  if (error) throw new Error(error.message);
+  if (!data || data.error) {
+    throw new Error(data?.error === 'expired_token' ? 'Lien expiré' : 'Lien invalide');
+  }
+  return data as TechnicianWorkspaceData;
+}
+
+export async function updateTechnicianServiceOrderStatus(
+  token: string,
+  status: Extract<ServiceOrderStatus, 'en_cours' | 'termine'>,
+): Promise<void> {
+  const { data, error } = await db.rpc('update_technician_service_order_status', {
+    p_token: token,
+    p_status: status,
+  });
+  if (error) throw new Error(error.message);
+  if (!data?.success) {
+    const code = data?.error;
+    if (code === 'invalid_transition') throw new Error('Transition non autorisée');
+    if (code === 'closed_order') throw new Error("Cet ordre de travail n'est plus modifiable");
+    if (code === 'not_assigned') throw new Error("Cet ordre de travail n'est plus assigné à ce technicien");
+    throw new Error(code === 'expired_token' ? 'Lien expiré' : 'Action refusée');
   }
 }
 

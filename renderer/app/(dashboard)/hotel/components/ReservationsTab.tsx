@@ -17,17 +17,20 @@ interface Props {
   showDateCal:          boolean;
   loading:              boolean;
   currency:             string;
+  hasMore:              boolean;
+  loadingMore:          boolean;
   onFilterChange:       (f: ResFilter) => void;
   onToggleDateCal:      () => void;
   onDateSelect:         (from: string, to: string) => void;
   onSearchChange:       (v: string) => void;
   openDetail:           (res: HotelReservation) => void;
+  onLoadMore:           () => void;
 }
 
 export function ReservationsTab({
   filteredReservations, resFilter, search, today, dateFilterFrom, dateFilterTo,
-  showDateCal, loading, currency,
-  onFilterChange, onToggleDateCal, onDateSelect, onSearchChange, openDetail,
+  showDateCal, loading, currency, hasMore, loadingMore,
+  onFilterChange, onToggleDateCal, onDateSelect, onSearchChange, openDetail, onLoadMore,
 }: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -84,6 +87,7 @@ export function ReservationsTab({
         )}
         <div className="space-y-2 max-w-3xl">
           {filteredReservations.map((res) => {
+
             const nights = nightsBetween(res.check_in, res.check_out);
             const arrivesToday = res.check_in === today;
             const departsToday = res.check_out === today;
@@ -123,6 +127,18 @@ export function ReservationsTab({
               </button>
             );
           })}
+
+          {hasMore && !search && resFilter === 'all' && (
+            <div className="pt-2 text-center">
+              <button
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                className="btn-secondary h-9 px-5 text-sm"
+              >
+                {loadingMore ? 'Chargement…' : 'Charger les anciennes réservations'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

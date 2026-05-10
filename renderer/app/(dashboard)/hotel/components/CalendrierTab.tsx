@@ -100,7 +100,7 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
               {rooms.map((room) => {
                 const roomRes = reservations.filter((r) =>
                   r.room_id === room.id &&
-                  r.status !== 'cancelled' &&
+                  r.status !== 'cancelled' && r.status !== 'no_show' &&
                   r.check_in < `${calYear}-${String(calMonth + 1).padStart(2, '0')}-32` &&
                   r.check_out > `${calYear}-${String(calMonth + 1).padStart(2, '0')}-00`
                 );
@@ -123,8 +123,8 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
                             <div className={cn(
                               'absolute inset-y-1 inset-x-0 cursor-pointer',
                               activeR.status === 'checked_in'  ? 'bg-brand-600/80' :
-                              activeR.status === 'confirmed'   ? 'bg-amber-600/60' :
-                              activeR.status === 'checked_out' ? 'bg-badge-success' :
+                              activeR.status === 'confirmed'   ? 'bg-amber-500/70' :
+                              activeR.status === 'checked_out' ? 'bg-emerald-700/50' :
                               'bg-slate-700/40',
                               isStart ? 'rounded-l-md ml-1' : ''
                             )}>
@@ -143,10 +143,10 @@ export function CalendrierTab({ rooms, reservations, calYear, calMonth, loading,
               })}
             </tbody>
           </table>
-          <div className="flex gap-4 mt-4 text-xs text-content-secondary">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-600/60 inline-block" />Confirmée</span>
+          <div className="flex flex-wrap gap-4 mt-4 text-xs text-content-secondary">
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500/70 inline-block" />Confirmée</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-brand-600/80 inline-block" />En cours</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-badge-success border border-status-success inline-block" />Terminée</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-700/50 inline-block" />Terminée</span>
           </div>
         </div>
       )}

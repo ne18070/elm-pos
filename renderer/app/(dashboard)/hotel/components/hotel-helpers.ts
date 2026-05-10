@@ -65,3 +65,14 @@ export function resStatusLabel(status: ReservationStatus): string {
     case 'no_show':     return 'No-show';
   }
 }
+
+export function sourceLabel(source?: string | null): string {
+  if (!source || source === 'direct') return 'Direct';
+  if (source === 'public') return 'En ligne';
+  return source;
+}
+
+export function sourceBadgeStyle(source?: string | null): string {
+  if (source === 'public') return 'bg-badge-brand text-content-brand border border-brand-700';
+  return 'bg-surface-input text-content-secondary border border-surface-border';
+}

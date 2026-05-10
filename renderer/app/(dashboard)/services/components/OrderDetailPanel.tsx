@@ -12,10 +12,13 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
   updateServiceOrderStatus, cancelServiceOrder, updateServiceOrder,
+  getOrCreateServiceTechnicianToken,
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { shareServiceOrderViaWhatsApp } from '@/lib/share-service-order';
+import { getPublicSiteUrl } from '@/lib/public-links';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { getStaff, type Staff } from '@services/supabase/staff';
 import { useServiceOrderForm } from '../hooks/useServiceOrderForm';
 import { SUBJECT_TYPES, PAY_METHODS, subjectTypeCfg, fmtDateTime } from '../constants';
@@ -182,6 +185,42 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
       else throw new Error(res.error);
     } catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
+  }
+
+  async function notifyTechnician() {
+    if (!canShareOrder) { deny(); return; }
+    if (!business) return;
+    if (!order.assigned_to) {
+      notifError('Aucun technicien assigné à cet OT');
+      return;
+    }
+    const tech = staffList.find((s) => s.id === order.assigned_to);
+    if (!tech?.phone) {
+      notifError('Le technicien assigné n’a pas de numéro WhatsApp');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const token = await getOrCreateServiceTechnicianToken(businessId, order.id, order.assigned_to);
+      const url = `${getPublicSiteUrl()}/tech-service/${token}`;
+      const orderRef = `OT-${String(order.order_number).padStart(4, '0')}`;
+      const subject = order.subject_ref
+        ? `\nObjet : ${order.subject_ref}${order.subject_info ? ` - ${order.subject_info}` : ''}`
+        : '';
+      const message =
+        `Bonjour ${tech.name},\n\n` +
+        `Vous avez des ordres de travail assignés chez ${business.name}.\n` +
+        `Lien sécurisé technicien : ${url}\n\n` +
+        `OT concerné : ${orderRef}${subject}\n\n` +
+        `Depuis ce lien, vous pouvez voir votre liste d'OT et mettre à jour l'avancement.`;
+      triggerWhatsAppShare(tech.phone, message);
+      success('Message WhatsApp préparé pour le technicien');
+    } catch (e: any) {
+      notifError(toUserError(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function handlePrint() {
@@ -584,6 +623,15 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                 <button onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-surface-border text-content-secondary text-xs font-semibold hover:bg-surface-hover">
                   <Printer className="w-3.5 h-3.5" />Imprimer
                 </button>
+                {order.assigned_to && (
+                  <button
+                    onClick={notifyTechnician}
+                    disabled={busy}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border border-brand-500/30 text-content-brand text-xs font-semibold hover:bg-brand-500/10 disabled:opacity-50"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />Technicien
+                  </button>
+                )}
 
                 {/* WhatsApp dropdown — PDF ou Suivi */}
                 <div className="relative flex-1">
