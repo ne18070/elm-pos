@@ -6,16 +6,19 @@ import { AlertCircle, CheckCircle2, Clock, Loader2, Play, RefreshCw, Volume2, Vo
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { PublicHeader } from '@/components/shared/PublicHeader';
+import { ConfirmModal } from '@/components/ui/Modal';
 import {
   getTechnicianServiceOrders,
   updateTechnicianServiceOrderStatus,
   type TechnicianServiceOrder,
   type TechnicianWorkspaceData,
+  type ServiceOrderStatus,
 } from '@services/supabase/service-orders';
 
 const STATUS_LABEL: Record<string, string> = {
   attente: 'En attente',
   en_cours: 'En cours',
+  pause: 'En pause',
   termine: 'Terminé',
   paye: 'Payé',
   annule: 'Annulé',
@@ -24,6 +27,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_STYLE: Record<string, string> = {
   attente: 'bg-badge-warning text-status-warning border-status-warning/30',
   en_cours: 'bg-badge-info text-status-info border-status-info/30',
+  pause: 'bg-badge-orange text-status-orange border-status-orange/30',
   termine: 'bg-badge-success text-status-success border-status-success/30',
   paye: 'bg-badge-success text-status-success border-status-success/30',
   annule: 'bg-badge-error text-status-error border-status-error/30',
@@ -90,6 +94,7 @@ export default function TechnicianServiceWorkspace() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const soundEnabledRef = useRef(true);
   const orderIdsRef = useRef<Set<string>>(new Set());
+  const [showConfirm, setShowConfirm] = useState<{ order: TechnicianServiceOrder; status: 'en_cours' | 'pause' | 'termine'; title: string; msg: string } | null>(null);
 
   function showNotice(msg: string | null) {
     setNotice(msg);
@@ -184,13 +189,19 @@ export default function TechnicianServiceWorkspace() {
     if (next) unlockAudio();
   }
 
-  async function transition(order: TechnicianServiceOrder, status: 'en_cours' | 'termine') {
+  async function transition(order: TechnicianServiceOrder, status: 'en_cours' | 'pause' | 'termine') {
     setBusy(true);
     setError(null);
     showNotice(null);
     try {
-      await updateTechnicianServiceOrderStatus(tokenValue, status);
-      showNotice(status === 'en_cours' ? 'OT démarré' : 'OT marqué comme terminé');
+      await updateTechnicianServiceOrderStatus(tokenValue, order.id, status);
+      
+      let msg = 'OT mis à jour';
+      if (status === 'en_cours') msg = 'OT démarré';
+      if (status === 'pause')    msg = 'OT mis en pause';
+      if (status === 'termine')  msg = 'OT marqué comme terminé';
+      
+      showNotice(msg);
       await load();
       fetch('/api/client-push/notify', {
         method: 'POST',
@@ -368,32 +379,62 @@ export default function TechnicianServiceWorkspace() {
                 )}
 
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  {selected.status === 'attente' && (
+                  {(selected.status === 'attente' || selected.status === 'pause') && (
                     <button
                       onClick={() => transition(selected, 'en_cours')}
                       disabled={busy}
                       className="btn-primary flex-1 h-11 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                      Démarrer l'OT
+                      {selected.status === 'pause' ? 'Reprendre l\'OT' : 'Démarrer l\'OT'}
                     </button>
                   )}
                   {selected.status === 'en_cours' && (
-                    <button
-                      onClick={() => transition(selected, 'termine')}
-                      disabled={busy}
-                      className="flex-1 h-11 rounded-xl bg-status-success text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                      Marquer terminé
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setShowConfirm({
+                          order: selected, status: 'pause',
+                          title: 'Mettre en pause',
+                          msg: 'Voulez-vous mettre cet ordre de travail en pause ?'
+                        })}
+                        disabled={busy}
+                        className="flex-1 h-11 rounded-xl border border-status-orange/30 text-status-orange font-semibold flex items-center justify-center gap-2 hover:bg-badge-orange disabled:opacity-50"
+                      >
+                        Mettre en pause
+                      </button>
+                      <button
+                        onClick={() => setShowConfirm({
+                          order: selected, status: 'termine',
+                          title: 'Terminer l\'OT',
+                          msg: 'Voulez-vous marquer cette prestation comme terminée ?'
+                        })}
+                        disabled={busy}
+                        className="flex-1 h-11 rounded-xl bg-status-success text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        Terminer
+                      </button>
+                    </>
                   )}
                   {selected.status === 'termine' && (
-                    <div className="flex-1 h-11 rounded-xl bg-badge-success text-status-success font-semibold flex items-center justify-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />Terminé, en attente d'encaissement
+                    <div className="flex flex-col flex-1 gap-2">
+                      <div className="h-11 rounded-xl bg-badge-success text-status-success font-semibold flex items-center justify-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />Terminé, en attente d'encaissement
+                      </div>
+                      <button
+                        onClick={() => setShowConfirm({
+                          order: selected, status: 'en_cours',
+                          title: 'Ré-ouvrir l\'OT',
+                          msg: 'Voulez-vous ré-ouvrir cet OT et repasser en cours ?'
+                        })}
+                        disabled={busy}
+                        className="h-11 rounded-xl border border-surface-border text-content-secondary font-semibold flex items-center justify-center gap-2 hover:bg-surface-hover disabled:opacity-50"
+                      >
+                        <Wrench className="w-4 h-4" />Reprendre le travail
+                      </button>
                     </div>
                   )}
-                  {!['attente', 'en_cours', 'termine'].includes(selected.status) && (
+                  {!['attente', 'en_cours', 'pause', 'termine'].includes(selected.status) && (
                     <div className="flex-1 h-11 rounded-xl bg-surface-hover text-content-secondary font-semibold flex items-center justify-center gap-2">
                       <Clock className="w-4 h-4" />Aucune action disponible
                     </div>
@@ -409,6 +450,21 @@ export default function TechnicianServiceWorkspace() {
           )}
         </section>
       </main>
+
+      {showConfirm && (
+        <ConfirmModal
+          title={showConfirm.title}
+          message={showConfirm.msg}
+          confirmLabel="Confirmer"
+          cancelLabel="Annuler"
+          onConfirm={() => {
+            const { order, status } = showConfirm;
+            setShowConfirm(null);
+            transition(order, status);
+          }}
+          onCancel={() => setShowConfirm(null)}
+        />
+      )}
     </div>
   );
 }

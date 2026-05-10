@@ -27,7 +27,7 @@ export function useServiceOrders({
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [counts, setCounts] = useState<Record<ServiceOrderStatus | 'all', number>>({
-    all: 0, attente: 0, en_cours: 0, termine: 0, paye: 0, annule: 0,
+    all: 0, attente: 0, en_cours: 0, pause: 0, termine: 0, paye: 0, annule: 0,
   });
   const [loading, setLoading] = useState(true);
   const { error: notifError } = useNotificationStore();

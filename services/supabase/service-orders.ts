@@ -8,7 +8,7 @@ type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type ServiceOrderStatus = 'attente' | 'en_cours' | 'termine' | 'paye' | 'annule';
+export type ServiceOrderStatus = 'attente' | 'en_cours' | 'pause' | 'termine' | 'paye' | 'annule';
 
 export interface ServiceOrderPayment {
   id:          string;
@@ -383,7 +383,7 @@ export async function getServiceOrderCounts(
   businessId: string,
   opts?: { date?: string; search?: string }
 ): Promise<Record<ServiceOrderStatus | 'all', number>> {
-  const statuses: Array<ServiceOrderStatus | 'all'> = ['all', 'attente', 'en_cours', 'termine', 'paye', 'annule'];
+  const statuses: Array<ServiceOrderStatus | 'all'> = ['all', 'attente', 'en_cours', 'pause', 'termine', 'paye', 'annule'];
 
   const applyFilters = (status: ServiceOrderStatus | 'all') => {
     let q = db
@@ -558,10 +558,12 @@ export async function getTechnicianServiceOrders(token: string): Promise<Technic
 
 export async function updateTechnicianServiceOrderStatus(
   token: string,
-  status: Extract<ServiceOrderStatus, 'en_cours' | 'termine'>,
+  orderId: string,
+  status: Extract<ServiceOrderStatus, 'en_cours' | 'pause' | 'termine'>,
 ): Promise<void> {
   const { data, error } = await db.rpc('update_technician_service_order_status', {
     p_token: token,
+    p_order_id: orderId,
     p_status: status,
   });
   if (error) throw new Error(error.message);

@@ -3,6 +3,7 @@ import { ServiceOrderStatus, SubjectType } from '@services/supabase/service-orde
 export const STATUS_CFG: Record<ServiceOrderStatus, { label: string; color: string; dot: string }> = {
   attente:  { label: 'En attente', color: 'bg-badge-warning  text-status-warning  border-status-warning/30',  dot: 'bg-status-warning'  },
   en_cours: { label: 'En cours',   color: 'bg-badge-info     text-status-info     border-status-info/30',     dot: 'bg-status-info'     },
+  pause:    { label: 'En pause',   color: 'bg-badge-orange   text-status-orange   border-status-orange/30',   dot: 'bg-status-orange'   },
   termine:  { label: 'Terminé',    color: 'bg-badge-success  text-status-success  border-status-success/30',  dot: 'bg-status-success'  },
   paye:     { label: 'Payé',       color: 'bg-badge-success  text-status-success  border-status-success/30',  dot: 'bg-status-success'  },
   annule:   { label: 'Annulé',     color: 'bg-badge-error    text-status-error    border-status-error/30',    dot: 'bg-status-error'    },

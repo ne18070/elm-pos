@@ -49,6 +49,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
   const [showWaMenu, setShowWaMenu] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [showConfirm, setShowConfirm] = useState<{ status: ServiceOrderStatus; title: string; msg: string } | null>(null);
 
   const {
     formData,
@@ -582,16 +583,28 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
           ) : (
             <>
               <div className="flex gap-2">
-                {canUpdateStatus && order.status === 'attente' && (
+                {canUpdateStatus && (order.status === 'attente' || order.status === 'pause') && (
                   <button onClick={() => transition('en_cours')} disabled={busy}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-info hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
-                    <Play className="w-4 h-4" />Démarrer
+                    <Play className="w-4 h-4" />{order.status === 'pause' ? 'Reprendre' : 'Démarrer'}
                   </button>
                 )}
                 {canUpdateStatus && order.status === 'en_cours' && (
-                  <button onClick={() => transition('termine')} disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
-                    <CheckCircle2 className="w-4 h-4" />Terminer
+                  <>
+                    <button onClick={() => setShowConfirm({ status: 'pause', title: 'Mettre en pause', msg: 'Voulez-vous mettre cet ordre de travail en pause ?' })} disabled={busy}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-status-orange/30 text-status-orange text-sm font-semibold hover:bg-badge-orange disabled:opacity-40">
+                      Mettre en pause
+                    </button>
+                    <button onClick={() => setShowConfirm({ status: 'termine', title: 'Terminer l\'OT', msg: 'Voulez-vous marquer cette prestation comme terminée ?' })} disabled={busy}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-semibold disabled:opacity-40">
+                      <CheckCircle2 className="w-4 h-4" />Terminer
+                    </button>
+                  </>
+                )}
+                {canUpdateStatus && order.status === 'termine' && (
+                  <button onClick={() => setShowConfirm({ status: 'en_cours', title: 'Reprendre le travail', msg: 'Voulez-vous ré-ouvrir cet ordre de travail et repasser en cours ?' })} disabled={busy}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-surface-border text-content-secondary text-sm font-semibold hover:bg-surface-hover disabled:opacity-40">
+                    <Wrench className="w-4 h-4" />Reprendre
                   </button>
                 )}
                 {canCollectPayment && order.status === 'termine' && (
@@ -689,6 +702,21 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
           type="danger"
           onConfirm={() => { setShowCancelConfirm(false); doCancel(); }}
           onCancel={() => setShowCancelConfirm(false)}
+        />
+      )}
+
+      {showConfirm && (
+        <ConfirmModal
+          title={showConfirm.title}
+          message={showConfirm.msg}
+          confirmLabel="Confirmer"
+          cancelLabel="Annuler"
+          onConfirm={() => {
+            const status = showConfirm.status;
+            setShowConfirm(null);
+            transition(status);
+          }}
+          onCancel={() => setShowConfirm(null)}
         />
       )}
     </>
