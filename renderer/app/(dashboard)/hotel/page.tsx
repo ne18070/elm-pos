@@ -101,7 +101,7 @@ export default function HotelPage() {
 
   if (!can('view_hotel')) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-base p-6">
+      <div className="flex h-full items-center justify-center bg-surface p-6">
         <div className="max-w-sm text-center">
           <BedDouble className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
           <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>

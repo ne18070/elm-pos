@@ -211,7 +211,7 @@ export default function TechnicianServiceWorkspace() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-base flex items-center justify-center p-6">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
         <div className="text-center space-y-3">
           <Loader2 className="w-10 h-10 animate-spin mx-auto text-content-brand" />
           <p className="text-sm text-content-secondary">Chargement de vos OT...</p>
@@ -222,7 +222,7 @@ export default function TechnicianServiceWorkspace() {
 
   if (error && !data) {
     return (
-      <div className="min-h-screen bg-surface-base flex items-center justify-center p-6">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-2xl bg-surface-card border border-surface-border p-6 text-center space-y-4">
           <AlertCircle className="w-12 h-12 mx-auto text-status-error" />
           <h1 className="text-xl font-bold text-content-primary">Lien indisponible</h1>
@@ -233,7 +233,7 @@ export default function TechnicianServiceWorkspace() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-base text-content-primary">
+    <div className="min-h-screen bg-surface text-content-primary">
       <PublicHeader business={data?.business ?? null} loading={loading} title="Espace Technicien" />
 
       <div className="bg-surface-card border-b border-surface-border px-4 py-3">

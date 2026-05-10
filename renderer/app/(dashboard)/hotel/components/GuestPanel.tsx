@@ -50,7 +50,7 @@ export function GuestPanel({
   ];
 
   return (
-    <div className="absolute inset-y-0 right-0 w-full max-w-md bg-surface-base border-l border-surface-border shadow-2xl flex flex-col z-40">
+    <div className="absolute inset-y-0 right-0 w-full max-w-md bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border shrink-0">
         <div className="min-w-0">

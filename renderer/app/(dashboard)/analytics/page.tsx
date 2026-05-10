@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
 
   if (!can('view_analytics')) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-base p-6">
+      <div className="flex h-full items-center justify-center bg-surface p-6">
         <div className="max-w-sm text-center">
           <BarChart className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
           <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
