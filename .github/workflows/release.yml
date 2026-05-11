@@ -22,7 +22,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --ignore-optional --network-timeout 100000
+        run: yarn install --ignore-optional --ignore-engines --network-timeout 100000
 
       - name: Rebuild native modules for Electron
         run: npx electron-rebuild -f -w better-sqlite3
@@ -68,7 +68,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --ignore-optional --network-timeout 100000
+        run: yarn install --ignore-optional --ignore-engines --network-timeout 100000
 
       - name: Rebuild native modules for Electron
         run: npx electron-rebuild -f -w better-sqlite3
@@ -121,7 +121,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libusb-1.0-0-dev
 
       - name: Install dependencies
-        run: yarn install --ignore-optional --network-timeout 100000
+        run: yarn install --ignore-optional --ignore-engines --network-timeout 100000
 
       - name: Rebuild native modules for Electron
         run: npx electron-rebuild -f -w better-sqlite3
@@ -170,7 +170,7 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: yarn install --ignore-optional --network-timeout 100000
+        run: yarn install --ignore-optional --ignore-engines --network-timeout 100000
 
       - name: Create renderer/.env
         run: |
