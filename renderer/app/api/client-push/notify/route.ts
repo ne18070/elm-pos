@@ -3,10 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
 async function getWebPush() {
   const mod = await import('web-push');
@@ -42,6 +44,8 @@ export async function POST(req: NextRequest) {
 
   const notif = STATUS_NOTIF[status];
   if (!notif) return NextResponse.json({ ok: true, skipped: true });
+
+  const supabaseAdmin = getSupabaseAdmin();
 
   // Find tracking token for this service order
   const { data: tokenRow } = await supabaseAdmin

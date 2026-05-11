@@ -179,6 +179,9 @@ jobs:
 
       - name: Build Next.js + sync Capacitor
         run: yarn mobile:build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Write local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
