@@ -1,20 +1,22 @@
 'use client';
 
-import { X, Check, Phone, Calendar, BadgeCheck, AlertCircle, LogIn, LogOut, Plus, Printer } from 'lucide-react';
+import { X, Check, Phone, Calendar, BadgeCheck, AlertCircle, LogIn, LogOut, Plus, Printer, Pencil, UserX, Globe, MessageCircle, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { generateHotelInvoice, printHtml } from '@/lib/invoice-templates';
+import { generateHotelInvoice, generateHotelDepositReceipt, printHtml } from '@/lib/invoice-templates';
+import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import type { HotelReservation, HotelService } from '@services/supabase/hotel';
 import { nightsBetween } from '@services/supabase/hotel';
 import type { Business } from '@pos-types';
 import { useAuthStore } from '@/store/auth';
 import { useCan } from '@/hooks/usePermission';
-import { PayMethod, fmt, fmtMoney, resStatusStyle, resStatusLabel } from './hotel-helpers';
+import { PayMethod, fmt, fmtMoney, resStatusStyle, resStatusLabel, sourceLabel, sourceBadgeStyle } from './hotel-helpers';
 
 interface SvcForm { label: string; amount: string; service_date: string }
 
 interface Props {
   reservation:       HotelReservation;
   services:          HotelService[];
+  servicesLoading:   boolean;
   checkoutPaid:      string;
   checkoutMethod:    PayMethod;
   payForm:           { amount: string; method: PayMethod };
@@ -32,16 +34,19 @@ interface Props {
   onCheckIn:         (res: HotelReservation) => void;
   onCheckOut:        (res: HotelReservation) => void;
   onCancel:          (res: HotelReservation) => void;
+  onNoShow:          (res: HotelReservation) => void;
+  onEdit:            (res: HotelReservation) => void;
   onAddPayment:      (res: HotelReservation) => void;
   onAddService:      (reservationId: string) => void;
   onDeleteService:   (svc: HotelService, reservationId: string) => void;
 }
 
 export function DetailPanel({
-  reservation, services, checkoutPaid, checkoutMethod, payForm, svcForm,
+  reservation, services, servicesLoading,
+  checkoutPaid, checkoutMethod, payForm, svcForm,
   savingPay, saving, isManagerOrAbove, currency, business,
   onClose, setCheckoutPaid, setCheckoutMethod, setPayForm, setSvcForm,
-  onCheckIn, onCheckOut, onCancel, onAddPayment, onAddService, onDeleteService,
+  onCheckIn, onCheckOut, onCancel, onNoShow, onEdit, onAddPayment, onAddService, onDeleteService,
 }: Props) {
   const can = useCan();
   const res     = reservation;
@@ -52,21 +57,72 @@ export function DetailPanel({
   return (
     <div className="absolute inset-y-0 right-0 w-[440px] bg-surface-card border-l border-surface-border shadow-2xl flex flex-col z-40">
       <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-        <div className="flex items-center gap-2">
-          <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', resStatusStyle(res.status))}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium shrink-0', resStatusStyle(res.status))}>
             {resStatusLabel(res.status)}
           </span>
-          <h3 className="font-semibold text-content-primary">Chambre {res.room?.number}</h3>
+          <h3 className="font-semibold text-content-primary truncate">Chambre {res.room?.number}</h3>
+          {res.source === 'public' && (
+            <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium shrink-0 flex items-center gap-1', sourceBadgeStyle(res.source))}>
+              <Globe className="w-3 h-3" />{sourceLabel(res.source)}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
+          {canUpdate && isManagerOrAbove && (
+            <button
+              title="Modifier la réservation"
+              onClick={() => onEdit(res)}
+              className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+          {res.guest?.phone && (
+            <button
+              title="Envoyer par WhatsApp"
+              onClick={() => {
+                if (!business) return;
+                const balance = Math.max(0, res.total - res.paid_amount);
+                const msg = [
+                  `*Réservation — ${business.name}*`,
+                  `Client : ${res.guest?.full_name}`,
+                  `Chambre : ${res.room?.number}`,
+                  `Arrivée : ${fmt(res.check_in)}`,
+                  `Départ : ${fmt(res.check_out)}`,
+                  `Total : ${fmtMoney(res.total, currency)}`,
+                  res.paid_amount > 0 ? `Payé : ${fmtMoney(res.paid_amount, currency)}` : '',
+                  balance > 0 ? `Reste : ${fmtMoney(balance, currency)}` : '✅ Soldé',
+                ].filter(Boolean).join('\n');
+                triggerWhatsAppShare(res.guest?.phone, msg);
+              }}
+              className="p-1.5 rounded-lg text-green-500 hover:text-green-400 hover:bg-surface-hover"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </button>
+          )}
+          {res.paid_amount > 0 && (
+            <button
+              title="Imprimer reçu d'acompte"
+              onClick={() => {
+                if (!business) return;
+                const html = generateHotelDepositReceipt(res, business);
+                printHtml(html);
+              }}
+              className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
+            >
+              <Receipt className="w-4 h-4" />
+            </button>
+          )}
           <button
-            title="Imprimer la facture"
+            title="Imprimer la facture finale"
+            disabled={servicesLoading}
             onClick={() => {
               if (!business) return;
               const html = generateHotelInvoice(res, services, business);
               printHtml(html);
             }}
-            className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
+            className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover disabled:opacity-40"
           >
             <Printer className="w-4 h-4" />
           </button>
@@ -103,7 +159,7 @@ export function DetailPanel({
             <span className="font-medium text-content-primary">{fmt(res.check_out)}</span>
           </div>
           <div className="flex items-center justify-between text-sm border-t border-surface-border pt-2">
-            <span className="text-content-secondary">{nights} nuit{nights > 1 ? 's' : ''} —{fmtMoney(res.price_per_night, currency)}</span>
+            <span className="text-content-secondary">{nights} nuit{nights > 1 ? 's' : ''} — {fmtMoney(res.price_per_night, currency)}</span>
             <span className="font-semibold text-content-primary">{fmtMoney(res.total_room, currency)}</span>
           </div>
         </div>
@@ -111,7 +167,8 @@ export function DetailPanel({
         {/* Prestations */}
         <div>
           <p className="text-xs font-semibold text-content-secondary uppercase tracking-wide mb-2">Prestations</p>
-          {services.length === 0 && <p className="text-xs text-content-primary py-2">Aucune prestation</p>}
+          {servicesLoading && <p className="text-xs text-content-muted py-2">Chargement…</p>}
+          {!servicesLoading && services.length === 0 && <p className="text-xs text-content-primary py-2">Aucune prestation</p>}
           {services.map((svc) => (
             <div key={svc.id} className="flex items-center justify-between py-1.5 border-b border-surface-border last:border-0">
               <div>
@@ -172,7 +229,7 @@ export function DetailPanel({
               <span>Payé</span><span>{fmtMoney(res.paid_amount, currency)}</span>
             </div>
           )}
-          {balance > 0 && res.status !== 'cancelled' && (
+          {balance > 0 && res.status !== 'cancelled' && res.status !== 'no_show' && (
             <div className="flex justify-between text-sm text-status-warning">
               <span>Reste à payer</span><span>{fmtMoney(balance, currency)}</span>
             </div>
@@ -248,6 +305,14 @@ export function DetailPanel({
             <LogOut className="w-4 h-4" /> Check-out &amp; encaisser
           </button>
         )}
+        {res.status === 'confirmed' && can('hotel_cancel_res') && (
+          <button
+            onClick={() => onNoShow(res)}
+            className="w-full h-9 rounded-xl border border-status-warning text-status-warning hover:bg-badge-warning text-sm flex items-center justify-center gap-2 transition-colors"
+          >
+            <UserX className="w-4 h-4" /> Marquer No-show
+          </button>
+        )}
         {can('hotel_cancel_res') && (res.status === 'confirmed' || res.status === 'checked_in') && (
           <button
             onClick={() => onCancel(res)}
@@ -260,5 +325,3 @@ export function DetailPanel({
     </div>
   );
 }
-
-

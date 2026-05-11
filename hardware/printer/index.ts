@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import * as net from 'net';
 import type { PrinterStatus, ReceiptData } from '../../types';
 import { formatReceiptLines } from './escpos';
@@ -40,6 +41,37 @@ export class PrinterError extends Error {
     super(message);
     this.name = 'PrinterError';
   }
+}
+
+// ─── Test page ────────────────────────────────────────────────────────────────
+
+function buildTestPageBuffer(businessName: string, address?: string, phone?: string): Buffer {
+  const ESC = 0x1b;
+  const GS  = 0x1d;
+  const W   = 42;
+  const enc = (s: string) => Buffer.from(s, 'latin1');
+  const div = enc('-'.repeat(W) + '\n');
+  const now = new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+
+  const parts: Buffer[] = [
+    Buffer.from([ESC, 0x40]),            // init
+    Buffer.from([ESC, 0x61, 0x01]),      // centre
+    Buffer.from([ESC, 0x45, 0x01]),      // gras on
+    enc('TEST IMPRESSION\n'),
+    Buffer.from([ESC, 0x45, 0x00]),      // gras off
+    Buffer.from([ESC, 0x61, 0x00]),      // gauche
+    div,
+    enc(businessName.slice(0, W) + '\n'),
+    ...(address ? [enc(address.slice(0, W) + '\n')] : []),
+    ...(phone   ? [enc(phone.slice(0, W)   + '\n')] : []),
+    div,
+    enc(now + '\n'),
+    div,
+    enc('Imprimante OK\n'),
+    enc('\n\n\n'),
+    Buffer.from([GS, 0x56, 0x41, 0x03]), // coupe partielle
+  ];
+  return Buffer.concat(parts);
 }
 
 // ─── PrinterManager ───────────────────────────────────────────────────────────
@@ -140,29 +172,78 @@ export class PrinterManager {
     });
   }
 
+  /** Imprime une petite page de test avec les infos de l'établissement */
+  async printTestPage(
+    businessName: string,
+    address?: string,
+    phone?: string,
+    config?: PrinterConfig,
+  ): Promise<void> {
+    const payload = buildTestPageBuffer(businessName, address, phone);
+
+    if (config?.type === 'network' && config.ip) {
+      return this.sendRawNetwork(payload, config.ip, config.port ?? 9100);
+    }
+
+    if (!loadEscpos() || !USB) {
+      throw new PrinterError('Pilote ESC/POS non installé', 'DRIVER_MISSING');
+    }
+    const devices = (USB as { list: () => unknown[] }).list();
+    if (devices.length === 0) {
+      throw new PrinterError('Aucune imprimante USB détectée', 'NOT_FOUND');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(
+        () => reject(new PrinterError('Délai dépassé', 'TIMEOUT')),
+        5_000,
+      );
+      try {
+        const device = new (USB as new () => unknown)();
+        (device as { open: (cb: (err?: Error) => void) => void }).open((err) => {
+          if (err) {
+            clearTimeout(timeoutId);
+            return reject(new PrinterError(`Ouverture impossible : ${err}`, 'OPEN_FAILED'));
+          }
+          (device as { write: (data: Buffer, cb: () => void) => void }).write(payload, () => {
+            (device as { close: () => void }).close();
+            clearTimeout(timeoutId);
+            resolve();
+          });
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        reject(new PrinterError(String(err), 'PRINT_FAILED'));
+      }
+    });
+  }
+
   /** Test de connexion TCP — renvoie la latence si succès */
   async testConnection(ip: string, port: number): Promise<{ connected: boolean; latency?: number; error?: string }> {
     return new Promise((resolve) => {
       const start = Date.now();
       const socket = new net.Socket();
       const TIMEOUT = 3000;
+      let resolved = false;
 
       socket.setTimeout(TIMEOUT);
 
       socket.connect(port, ip, () => {
         const latency = Date.now() - start;
-        socket.destroy();
+        resolved = true;
+        // FIN gracieux — évite le RST qui peut déclencher un vidage de buffer sur certaines imprimantes
+        socket.end();
         resolve({ connected: true, latency });
       });
 
       socket.on('error', (err) => {
         socket.destroy();
-        resolve({ connected: false, error: err.message });
+        if (!resolved) resolve({ connected: false, error: err.message });
       });
 
       socket.on('timeout', () => {
         socket.destroy();
-        resolve({ connected: false, error: `Délai dépassé (${TIMEOUT}ms)` });
+        if (!resolved) resolve({ connected: false, error: `Délai dépassé (${TIMEOUT}ms)` });
       });
     });
   }

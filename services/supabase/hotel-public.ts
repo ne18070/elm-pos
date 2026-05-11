@@ -10,6 +10,8 @@ export interface PublicHotelInfo {
   currency: string;
   phone: string | null;
   address: string | null;
+  hotel_cancellation_policy: string | null;
+  hotel_deposit_info: string | null;
 }
 
 export interface PublicRoom {
@@ -73,7 +75,7 @@ export interface PublicReservationDetail {
 export async function getPublicHotelInfo(businessId: string): Promise<PublicHotelInfo | null> {
   return findPublicBusinessByRef<PublicHotelInfo>(
     businessId,
-    'id, name, logo_url, currency, phone, address',
+    'id, name, logo_url, currency, phone, address, hotel_cancellation_policy, hotel_deposit_info',
   );
 }
 

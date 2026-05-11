@@ -1,8 +1,4 @@
-import { supabase as _supabase } from './client';
-
-// Tables ajoutées par migration 036 - pas encore dans database.types.ts
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
+import { supabase } from './client';
 
 // --- Types --------------------------------------------------------------------
 
@@ -18,11 +14,26 @@ export interface HotelRoom {
   floor?: string | null;
   capacity: number;
   price_per_night: number;
+  weekend_price_per_night?: number | null; // migration 054
+  assigned_cleaner_id?: string | null;     // migration 055
   status: RoomStatus;
   description?: string | null;
   amenities: string[];
   is_active: boolean;
   created_at: string;
+}
+
+export interface HotelCleaningLog {
+  id: string;
+  business_id: string;
+  room_id: string;
+  reservation_id?: string | null;
+  cleaner_id?: string | null;
+  action: 'cleaned' | 'maintenance_start' | 'maintenance_end' | 'assigned';
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  cleaner?: { id: string; name: string } | null;
 }
 
 export interface HotelGuest {
@@ -36,6 +47,8 @@ export interface HotelGuest {
   nationality?: string | null;
   address?: string | null;
   notes?: string | null;
+  preferences?: string | null;    // migration 056
+  date_of_birth?: string | null;  // migration 056
   created_at: string;
 }
 
@@ -56,6 +69,9 @@ export interface HotelReservation {
   actual_check_in?: string | null;
   actual_check_out?: string | null;
   notes?: string | null;
+  source?: string | null;            // migration 014
+  confirmation_token?: string | null; // migration 014
+  group_id?: string | null;          // migration 054
   created_by?: string | null;
   created_at: string;
   updated_at: string;
@@ -80,6 +96,37 @@ export function nightsBetween(from: string, to: string): number {
   const d1 = new Date(from);
   const d2 = new Date(to);
   return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86_400_000));
+}
+
+/**
+ * Calcule le total hébergement en tenant compte du tarif weekend.
+ * Vendredi (5) et samedi (6) = weekend_price si défini.
+ */
+export function computeRoomTotal(
+  checkIn: string,
+  checkOut: string,
+  basePrice: number,
+  weekendPrice?: number | null,
+): { total: number; nights: number; hasWeekendRates: boolean } {
+  const start = new Date(checkIn + 'T12:00:00');
+  const end   = new Date(checkOut + 'T12:00:00');
+  let total = 0;
+  let nights = 0;
+  let hasWeekendRates = false;
+  const cur = new Date(start);
+  while (cur < end) {
+    const day = cur.getDay(); // 0=dim, 5=ven, 6=sam
+    const isWeekend = day === 5 || day === 6;
+    if (isWeekend && weekendPrice) {
+      total += weekendPrice;
+      hasWeekendRates = true;
+    } else {
+      total += basePrice;
+    }
+    cur.setDate(cur.getDate() + 1);
+    nights++;
+  }
+  return { total, nights: Math.max(1, nights), hasWeekendRates };
 }
 
 // --- Chambres -----------------------------------------------------------------
@@ -123,8 +170,12 @@ export async function updateRoom(
   return data;
 }
 
+// Soft-delete : on conserve l'historique des réservations liées
 export async function deleteRoom(id: string): Promise<void> {
-  const { error } = await supabase.from('hotel_rooms').delete().eq('id', id);
+  const { error } = await supabase
+    .from('hotel_rooms')
+    .update({ is_active: false })
+    .eq('id', id);
   if (error) throw new Error(error.message);
 }
 
@@ -204,14 +255,24 @@ export async function getRoomConflicts(
 
 // --- Réservations -------------------------------------------------------------
 
-export async function getReservations(businessId: string): Promise<HotelReservation[]> {
+const PAGE_SIZE = 100;
+
+export async function getReservations(
+  businessId: string,
+  opts?: { limit?: number; offset?: number }
+): Promise<{ data: HotelReservation[]; hasMore: boolean }> {
+  const limit  = opts?.limit  ?? PAGE_SIZE;
+  const offset = opts?.offset ?? 0;
   const { data, error } = await supabase
     .from('hotel_reservations')
     .select('*, room:hotel_rooms(*), guest:hotel_guests(*)')
     .eq('business_id', businessId)
-    .order('check_in', { ascending: false });
+    .order('check_in', { ascending: false })
+    .range(offset, offset + limit); // fetch limit+1 pour détecter s'il y en a plus
   if (error) throw new Error(error.message);
-  return data ?? [];
+  // Supabase TS inference doesn't resolve aliased joins — cast at return point
+  const rows = (data ?? []) as unknown as HotelReservation[];
+  return { data: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 
 export async function createReservation(
@@ -225,14 +286,21 @@ export async function createReservation(
     num_guests: number;
     price_per_night: number;
     notes?: string;
+    group_id?: string | null;
+    weekendPrice?: number | null;
   }
 ): Promise<HotelReservation> {
-  const nights    = nightsBetween(payload.check_in, payload.check_out);
-  const total_room = nights * payload.price_per_night;
+  const { weekendPrice, ...rest } = payload;
+  const { total: total_room } = computeRoomTotal(
+    payload.check_in,
+    payload.check_out,
+    payload.price_per_night,
+    weekendPrice,
+  );
   const { data, error } = await supabase
     .from('hotel_reservations')
     .insert({
-      ...payload,
+      ...rest,
       business_id:    businessId,
       total_room,
       total_services: 0,
@@ -244,7 +312,51 @@ export async function createReservation(
     .select('*, room:hotel_rooms(*), guest:hotel_guests(*)')
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as HotelReservation;
+}
+
+export async function updateReservation(
+  reservationId: string,
+  payload: {
+    room_id: string;
+    check_in: string;
+    check_out: string;
+    num_guests: number;
+    price_per_night: number;
+    notes?: string | null;
+    weekendPrice?: number | null;
+  }
+): Promise<HotelReservation> {
+  const { weekendPrice, ...rest } = payload;
+  const { total: total_room } = computeRoomTotal(
+    payload.check_in,
+    payload.check_out,
+    payload.price_per_night,
+    weekendPrice,
+  );
+
+  const { data: svcs } = await supabase
+    .from('hotel_services')
+    .select('amount')
+    .eq('reservation_id', reservationId);
+  const total_services = (svcs ?? []).reduce(
+    (s: number, x: { amount: number }) => s + Number(x.amount), 0
+  );
+
+  const { data, error } = await supabase
+    .from('hotel_reservations')
+    .update({
+      ...rest,
+      total_room,
+      total_services,
+      total: total_room + total_services,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', reservationId)
+    .select('*, room:hotel_rooms(*), guest:hotel_guests(*)')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as unknown as HotelReservation;
 }
 
 export async function checkIn(reservationId: string, roomId: string): Promise<HotelReservation> {
@@ -257,7 +369,7 @@ export async function checkIn(reservationId: string, roomId: string): Promise<Ho
     .single();
   if (error) throw new Error(error.message);
   await supabase.from('hotel_rooms').update({ status: 'occupied' }).eq('id', roomId);
-  return data;
+  return data as unknown as HotelReservation;
 }
 
 export async function checkOut(
@@ -269,7 +381,6 @@ export async function checkOut(
 ): Promise<HotelReservation> {
   const now = new Date().toISOString();
 
-  // Recalculate services total
   const { data: svcs } = await supabase
     .from('hotel_services')
     .select('amount')
@@ -304,7 +415,6 @@ export async function checkOut(
   if (error) throw new Error(error.message);
   await supabase.from('hotel_rooms').update({ status: 'cleaning' }).eq('id', roomId);
 
-  // Enregistrer le paiement dans la caisse si montant > 0
   if (additionalPayment > 0 && current?.business_id) {
     await addHotelPayment(
       current.business_id,
@@ -314,7 +424,7 @@ export async function checkOut(
       sessionId,
     );
   }
-  return data;
+  return data as unknown as HotelReservation;
 }
 
 export async function cancelReservation(reservationId: string): Promise<HotelReservation> {
@@ -325,7 +435,18 @@ export async function cancelReservation(reservationId: string): Promise<HotelRes
     .select('*, room:hotel_rooms(*), guest:hotel_guests(*)')
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as HotelReservation;
+}
+
+export async function markNoShow(reservationId: string): Promise<HotelReservation> {
+  const { data, error } = await supabase
+    .from('hotel_reservations')
+    .update({ status: 'no_show', updated_at: new Date().toISOString() })
+    .eq('id', reservationId)
+    .select('*, room:hotel_rooms(*), guest:hotel_guests(*)')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as unknown as HotelReservation;
 }
 
 // --- Prestations --------------------------------------------------------------
@@ -376,7 +497,6 @@ export async function addHotelPayment(
     .insert({ business_id: businessId, reservation_id: reservationId, session_id: sessionId, amount, method });
   if (pe) throw new Error(pe.message);
 
-  // Mettre à jour paid_amount sur la réservation
   const { data: res } = await supabase
     .from('hotel_reservations')
     .select('paid_amount')
@@ -387,6 +507,133 @@ export async function addHotelPayment(
     .from('hotel_reservations')
     .update({ paid_amount: newPaid, updated_at: new Date().toISOString() })
     .eq('id', reservationId);
+}
+
+export async function getRevenueToday(businessId: string): Promise<number> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from('hotel_payments')
+    .select('amount')
+    .eq('business_id', businessId)
+    .gte('created_at', today + 'T00:00:00.000Z')
+    .lte('created_at', today + 'T23:59:59.999Z');
+  return (data ?? []).reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0);
+}
+
+// --- Config réservation publique ----------------------------------------------
+
+export async function updateHotelBookingConfig(
+  businessId: string,
+  payload: { hotel_cancellation_policy?: string | null; hotel_deposit_info?: string | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from('businesses')
+    .update(payload)
+    .eq('id', businessId);
+  if (error) throw new Error(error.message);
+}
+
+// --- Ménage / Housekeeping ----------------------------------------------------
+
+export async function getCleaningLogs(roomId: string, limit = 30): Promise<HotelCleaningLog[]> {
+  const { data, error } = await supabase
+    .from('hotel_cleaning_logs')
+    .select('*, cleaner:staff(id, name)')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as HotelCleaningLog[];
+}
+
+export async function addCleaningLog(
+  businessId: string,
+  roomId: string,
+  action: HotelCleaningLog['action'],
+  opts?: { notes?: string; cleanerId?: string | null; reservationId?: string; userId?: string }
+): Promise<HotelCleaningLog> {
+  const { data, error } = await supabase
+    .from('hotel_cleaning_logs')
+    .insert({
+      business_id: businessId,
+      room_id: roomId,
+      action,
+      notes: opts?.notes || null,
+      cleaner_id: opts?.cleanerId ?? null,
+      reservation_id: opts?.reservationId ?? null,
+      created_by: opts?.userId ?? null,
+    })
+    .select('*, cleaner:staff(id, name)')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as unknown as HotelCleaningLog;
+}
+
+export async function markRoomClean(
+  roomId: string,
+  businessId: string,
+  opts?: { notes?: string; userId?: string }
+): Promise<HotelRoom> {
+  const { data, error } = await supabase
+    .from('hotel_rooms')
+    .update({ status: 'available' })
+    .eq('id', roomId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  await addCleaningLog(businessId, roomId, 'cleaned', opts);
+  return data;
+}
+
+export async function sendRoomToMaintenance(
+  roomId: string,
+  businessId: string,
+  opts?: { notes?: string; userId?: string }
+): Promise<HotelRoom> {
+  const { data, error } = await supabase
+    .from('hotel_rooms')
+    .update({ status: 'maintenance' })
+    .eq('id', roomId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  await addCleaningLog(businessId, roomId, 'maintenance_start', opts);
+  return data;
+}
+
+export async function markMaintenanceDone(
+  roomId: string,
+  businessId: string,
+  opts?: { notes?: string; userId?: string }
+): Promise<HotelRoom> {
+  const { data, error } = await supabase
+    .from('hotel_rooms')
+    .update({ status: 'available' })
+    .eq('id', roomId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  await addCleaningLog(businessId, roomId, 'maintenance_end', opts);
+  return data;
+}
+
+export async function assignRoomCleaner(
+  roomId: string,
+  cleanerId: string | null,
+  businessId: string,
+  opts?: { userId?: string }
+): Promise<HotelRoom> {
+  const { data, error } = await supabase
+    .from('hotel_rooms')
+    .update({ assigned_cleaner_id: cleanerId })
+    .eq('id', roomId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  if (cleanerId) {
+    await addCleaningLog(businessId, roomId, 'assigned', { cleanerId, userId: opts?.userId });
+  }
+  return data;
 }
 
 async function _recalcServiceTotal(reservationId: string): Promise<void> {

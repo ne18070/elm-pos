@@ -6,15 +6,16 @@ import type { HotelRoom, RoomType, RoomStatus } from '@services/supabase/hotel';
 import { ROOM_TYPES, AMENITIES } from './hotel-helpers';
 
 interface RoomForm {
-  number:          string;
-  type:            RoomType;
-  floor:           string;
-  capacity:        number;
-  price_per_night: string;
-  status:          RoomStatus;
-  description:     string;
-  amenities:       string[];
-  is_active:       boolean;
+  number:                    string;
+  type:                      RoomType;
+  floor:                     string;
+  capacity:                  number;
+  price_per_night:           string;
+  weekend_price_per_night:   string;
+  status:                    RoomStatus;
+  description:               string;
+  amenities:                 string[];
+  is_active:                 boolean;
 }
 
 interface Props {
@@ -63,6 +64,17 @@ export function RoomPanel({ item, form, saving, onChange, onToggleAmenity, onSav
             <label className="label">Prix / nuit <span className="text-status-error">*</span></label>
             <input className="input" type="number" min={0} value={form.price_per_night} onChange={(e) => onChange({ ...form, price_per_night: e.target.value })} placeholder="0" />
           </div>
+        </div>
+        <div>
+          <label className="label">Prix weekend / nuit <span className="text-xs text-content-muted">(ven./sam. — optionnel)</span></label>
+          <input
+            className="input"
+            type="number"
+            min={0}
+            value={form.weekend_price_per_night}
+            onChange={(e) => onChange({ ...form, weekend_price_per_night: e.target.value })}
+            placeholder="Laisser vide = même tarif"
+          />
         </div>
         <div>
           <label className="label">Statut</label>

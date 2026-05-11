@@ -56,6 +56,29 @@ export function registerHardwareHandlers(ipcMain: IpcMain): void {
     }
   );
 
+  ipcMain.handle(
+    'hardware:printer:printTest',
+    async (
+      _event,
+      { businessName, address, phone, printerConfig }: {
+        businessName: string;
+        address?: string;
+        phone?: string;
+        printerConfig?: PrinterConfig;
+      }
+    ): Promise<IpcResponse> => {
+      try {
+        await getPrinter().printTestPage(businessName, address, phone, printerConfig);
+        return { success: true };
+      } catch (err) {
+        if (err instanceof PrinterError) {
+          return { success: false, error: mapPrinterError(err) };
+        }
+        return { success: false, error: String(err) };
+      }
+    }
+  );
+
   // ─── Tiroir-caisse ───────────────────────────────────────────────────────────
 
   ipcMain.handle('hardware:cashdrawer:open', async (_event, payload: { printerConfig?: PrinterConfig }): Promise<IpcResponse> => {

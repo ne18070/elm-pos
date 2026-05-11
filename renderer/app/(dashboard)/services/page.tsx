@@ -101,7 +101,7 @@ export default function ServicesPage() {
 
   if (!can('view_services')) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-base p-6">
+      <div className="flex h-full items-center justify-center bg-surface p-6">
         <div className="max-w-sm text-center">
           <Wrench className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
           <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
@@ -112,7 +112,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface-base">
+    <div className="flex flex-col h-full bg-surface">
       {/* Header */}
       <div className="flex flex-col gap-3 px-4 py-4 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-6">
         <div className="flex items-center gap-3">

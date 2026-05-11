@@ -826,11 +826,219 @@ export type Database = {
           }
         ];
       };
+      hotel_rooms: {
+        Row: {
+          id: string;
+          business_id: string;
+          number: string;
+          type: 'simple' | 'double' | 'twin' | 'suite' | 'familiale';
+          floor: string | null;
+          capacity: number;
+          price_per_night: number;
+          weekend_price_per_night: number | null;
+          assigned_cleaner_id: string | null;
+          status: 'available' | 'occupied' | 'cleaning' | 'maintenance';
+          description: string | null;
+          amenities: string[];
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          number: string;
+          type: 'simple' | 'double' | 'twin' | 'suite' | 'familiale';
+          floor?: string | null;
+          capacity?: number;
+          price_per_night: number;
+          weekend_price_per_night?: number | null;
+          assigned_cleaner_id?: string | null;
+          status?: 'available' | 'occupied' | 'cleaning' | 'maintenance';
+          description?: string | null;
+          amenities?: string[];
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['hotel_rooms']['Insert']>;
+        Relationships: [];
+      };
+      hotel_guests: {
+        Row: {
+          id: string;
+          business_id: string;
+          full_name: string;
+          phone: string | null;
+          email: string | null;
+          id_type: string | null;
+          id_number: string | null;
+          nationality: string | null;
+          address: string | null;
+          notes: string | null;
+          preferences: string | null;
+          date_of_birth: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          full_name: string;
+          phone?: string | null;
+          email?: string | null;
+          id_type?: string | null;
+          id_number?: string | null;
+          nationality?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          preferences?: string | null;
+          date_of_birth?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['hotel_guests']['Insert']>;
+        Relationships: [];
+      };
+      hotel_reservations: {
+        Row: {
+          id: string;
+          business_id: string;
+          room_id: string;
+          guest_id: string;
+          check_in: string;
+          check_out: string;
+          num_guests: number;
+          price_per_night: number;
+          total_room: number;
+          total_services: number;
+          total: number;
+          paid_amount: number;
+          status: 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
+          actual_check_in: string | null;
+          actual_check_out: string | null;
+          notes: string | null;
+          source: string | null;
+          confirmation_token: string | null;
+          group_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          room_id: string;
+          guest_id: string;
+          check_in: string;
+          check_out: string;
+          num_guests?: number;
+          price_per_night: number;
+          total_room?: number;
+          total_services?: number;
+          total?: number;
+          paid_amount?: number;
+          status?: 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
+          actual_check_in?: string | null;
+          actual_check_out?: string | null;
+          notes?: string | null;
+          source?: string | null;
+          confirmation_token?: string | null;
+          group_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['hotel_reservations']['Insert']>;
+        Relationships: [];
+      };
+      hotel_services: {
+        Row: {
+          id: string;
+          business_id: string;
+          reservation_id: string;
+          label: string;
+          amount: number;
+          service_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          reservation_id: string;
+          label: string;
+          amount: number;
+          service_date: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['hotel_services']['Insert']>;
+        Relationships: [];
+      };
+      hotel_payments: {
+        Row: {
+          id: string;
+          business_id: string;
+          reservation_id: string;
+          session_id: string | null;
+          amount: number;
+          method: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          reservation_id: string;
+          session_id?: string | null;
+          amount: number;
+          method: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['hotel_payments']['Insert']>;
+        Relationships: [];
+      };
+      hotel_cleaning_logs: {
+        Row: {
+          id: string;
+          business_id: string;
+          room_id: string;
+          reservation_id: string | null;
+          cleaner_id: string | null;
+          action: 'cleaned' | 'maintenance_start' | 'maintenance_end' | 'assigned';
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          room_id: string;
+          reservation_id?: string | null;
+          cleaner_id?: string | null;
+          action: 'cleaned' | 'maintenance_start' | 'maintenance_end' | 'assigned';
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['hotel_cleaning_logs']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      get_room_conflicts: {
+        Args: { p_room_id: string; p_check_in: string; p_check_out: string; p_exclude_id: string | null };
+        Returns: { id: string; check_in: string; check_out: string; status: 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show'; guest_name: string | null }[];
+      };
+      get_available_rooms: {
+        Args: { p_business_id: string; p_check_in: string; p_check_out: string };
+        Returns: Json;
+      };
+      create_public_reservation: {
+        Args: { p_data: Json };
+        Returns: Json;
+      };
+      get_public_reservation: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
       create_order: {
         Args: { order_data: Json };
         Returns: Json;

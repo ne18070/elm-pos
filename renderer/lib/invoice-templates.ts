@@ -650,6 +650,110 @@ ${balance <= 0 && res.paid_amount > 0 ? '<div style="text-align:right"><span cla
 </body></html>`;
 }
 
+// --- Reçu d'acompte hôtel ----------------------------------------------------
+
+export function generateHotelDepositReceipt(
+  res:      HotelInvoiceData,
+  business: Business,
+): string {
+  const cur       = business.currency ?? 'XOF';
+  const balance   = Math.max(0, res.total - res.paid_amount);
+  const nights    = Math.max(1, Math.round(
+    (new Date(res.check_out).getTime() - new Date(res.check_in).getTime()) / 86_400_000
+  ));
+  const receiptN  = res.id.replace(/-/g, '').toUpperCase().slice(0, 8);
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Reçu acompte ${receiptN}</title>
+<style>
+  @page { size: A5 portrait; margin: 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .biz-name { font-size: 16px; font-weight: 700; }
+  .biz-detail { font-size: 10px; color: #555; margin-top: 2px; }
+  .logo { max-height: 50px; max-width: 90px; object-fit: contain; display: block; margin-bottom: 4px; }
+  .doc-title { font-size: 18px; font-weight: 700; text-align: right; }
+  .doc-meta { font-size: 10px; color: #555; text-align: right; margin-top: 3px; }
+  hr { border: none; border-top: 2px solid #1a1a1a; margin: 12px 0; }
+  hr.light { border-top: 1px solid #ccc; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  .label { font-size: 9px; text-transform: uppercase; color: #888; font-weight: 600; }
+  .val { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .amounts { margin-top: 14px; border-top: 2px solid #1a1a1a; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 12px; }
+  .row.total { font-size: 14px; font-weight: 700; border-bottom: none; padding-top: 8px; }
+  .row.paid { color: #16a34a; font-weight: 600; }
+  .row.balance { color: #d97706; font-weight: 600; }
+  .stamp { display: inline-block; border: 3px solid #16a34a; color: #16a34a; font-size: 20px; font-weight: 700;
+           letter-spacing: 0.1em; padding: 4px 18px; border-radius: 4px; transform: rotate(-8deg); margin-top: 10px; }
+  .words { font-size: 10px; font-style: italic; color: #444; margin: 10px 0; }
+  .footer { margin-top: 14px; text-align: center; font-size: 10px; color: #888; border-top: 1px solid #ccc; padding-top: 8px; }
+  .sig { margin-top: 20px; display: flex; justify-content: space-between; font-size: 10px; color: #666; }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    ${business.logo_url ? `<img src="${business.logo_url}" class="logo">` : ''}
+    <div class="biz-name">${business.name}</div>
+    ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+    ${business.phone   ? `<div class="biz-detail">Tél : ${business.phone}</div>` : ''}
+  </div>
+  <div>
+    <div class="doc-title">REÇU D'ACOMPTE</div>
+    <div class="doc-meta">Réf : ${receiptN}</div>
+    <div class="doc-meta">Date : ${printDate}</div>
+  </div>
+</div>
+<hr>
+
+<div class="info-grid">
+  <div>
+    <div class="label">Client</div>
+    <div class="val">${res.guest?.full_name ?? '—'}</div>
+    ${res.guest?.phone      ? `<div class="biz-detail">Tél : ${res.guest.phone}</div>` : ''}
+    ${res.guest?.id_number  ? `<div class="biz-detail">${res.guest.id_type ?? 'Pièce'} : ${res.guest.id_number}</div>` : ''}
+  </div>
+  <div>
+    <div class="label">Chambre</div>
+    <div class="val">Chambre ${res.room?.number ?? '—'}</div>
+    <div class="biz-detail">${nights} nuit${nights > 1 ? 's' : ''} · ${res.num_guests} pers.</div>
+    <div class="biz-detail" style="margin-top:4px">Arrivée : <strong>${fmtDate(res.check_in)}</strong></div>
+    <div class="biz-detail">Départ : <strong>${fmtDate(res.check_out)}</strong></div>
+  </div>
+</div>
+
+<hr class="light">
+
+<div class="amounts">
+  <div class="row total"><span>Total séjour</span><span>${fmt(res.total, cur)}</span></div>
+  <div class="row paid"><span>Acompte reçu</span><span>${fmt(res.paid_amount, cur)}</span></div>
+  ${balance > 0 ? `<div class="row balance"><span>Solde restant</span><span>${fmt(balance, cur)}</span></div>` : ''}
+</div>
+
+<div class="words">
+  Reçu la somme de : <strong>${amountInWords(res.paid_amount, cur)}</strong>
+</div>
+
+${balance <= 0 ? '<div style="text-align:right"><span class="stamp">SOLDÉ</span></div>' : ''}
+
+<div class="sig">
+  <span>Signature client : _____________________</span>
+  <span>Signature établissement : _____________</span>
+</div>
+
+<div class="footer">
+  ${business.receipt_footer ? `<p>${business.receipt_footer}</p>` : ''}
+  <p style="margin-top:4px">Édité le ${printDate} · ${business.name}</p>
+</div>
+
+</body></html>`;
+}
+
 // --- Bulletin de paie --------------------------------------------------------
 
 export function generateStaffPayslip(

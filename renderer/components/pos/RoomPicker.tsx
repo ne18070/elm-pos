@@ -21,7 +21,7 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
   useEffect(() => {
     async function load() {
       try {
-        const all = await getReservations(businessId);
+        const { data: all } = await getReservations(businessId);
         // Only active check-ins can be charged
         setReservations(all.filter(r => r.status === 'checked_in'));
       } catch (err) {

@@ -20,12 +20,13 @@ interface Props {
   activeResForRoom:   (roomId: string) => HotelReservation | undefined;
   confirmedResForRoom:(roomId: string) => HotelReservation | undefined;
   onMarkAvailable:    (roomId: string) => void;
+  onOpenCleaning:     (room: HotelRoom) => void;
 }
 
 export function ChambresTab({
   filteredRooms, stats, search, loading, isManagerOrAbove, currency,
   onSearchChange, openRoomPanel, openReservationPanel, openDetail,
-  activeResForRoom, confirmedResForRoom, onMarkAvailable,
+  activeResForRoom, confirmedResForRoom, onMarkAvailable, onOpenCleaning,
 }: Props) {
   const roomsByFloor = useMemo(() => {
     const grouped: Record<string, HotelRoom[]> = {};
@@ -203,10 +204,10 @@ export function ChambresTab({
 
                         {(room.status === 'cleaning' || room.status === 'maintenance') && (
                           <button
-                            className="mt-3 text-[10px] py-2 rounded-xl border border-surface-border hover:border-brand-500/50 text-content-secondary hover:text-content-primary transition-all font-bold uppercase tracking-widest bg-surface-input/30"
-                            onClick={(e) => { e.stopPropagation(); onMarkAvailable(room.id); }}
+                            className="mt-3 text-[10px] py-2 rounded-xl border border-amber-500/40 hover:border-amber-500/70 text-amber-400 hover:text-amber-300 transition-all font-bold uppercase tracking-widest bg-amber-500/5"
+                            onClick={(e) => { e.stopPropagation(); onOpenCleaning(room); }}
                           >
-                            Rendre disponible
+                            Gérer le ménage
                           </button>
                         )}
                       </div>

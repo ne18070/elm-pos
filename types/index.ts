@@ -53,6 +53,8 @@ export interface Business {
   receipt_footer?: string;
   stock_units?: string[];
   whatsapp_routing_code?: string;
+  hotel_cancellation_policy?: string | null;
+  hotel_deposit_info?: string | null;
   types: string[];
   features: string[];
   onboarding_done?: boolean;

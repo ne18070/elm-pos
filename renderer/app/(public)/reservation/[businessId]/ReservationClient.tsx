@@ -511,6 +511,24 @@ export default function ReservationPage() {
                 </div>
               </section>
 
+              {/* Infos acompte et conditions */}
+              {(info?.hotel_deposit_info || info?.hotel_cancellation_policy) && (
+                <div className="space-y-2 rounded-xl bg-surface-input border border-surface-border p-4">
+                  {info?.hotel_deposit_info && (
+                    <p className="text-xs text-status-warning flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">💳</span>
+                      {info.hotel_deposit_info}
+                    </p>
+                  )}
+                  {info?.hotel_cancellation_policy && (
+                    <p className="text-xs text-content-secondary flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">ℹ️</span>
+                      {info.hotel_cancellation_policy}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {submitError && (
                 <div className="flex items-center gap-2 p-3 bg-badge-error border border-status-error/30 rounded-xl text-sm text-status-error">
                   <AlertCircle className="w-4 h-4 shrink-0" />

@@ -75,6 +75,20 @@ export async function testPrinterConnection(
   return result.data ?? { connected: false };
 }
 
+export async function printTestPage(
+  businessName: string,
+  address?: string,
+  phone?: string,
+): Promise<{ success: boolean; error?: string }> {
+  if (!api) {
+    const { printTestPageBrowser } = await import('./print-web');
+    return printTestPageBrowser(businessName, address, phone);
+  }
+  const printerConfig = loadPrinterConfig();
+  const result = await (api.hardware as any).printTestPage({ businessName, address, phone, printerConfig }) as { success: boolean; error?: string };
+  return result;
+}
+
 // --- Tiroir-caisse ------------------------------------------------------------
 
 export interface CashDrawerConfig {
