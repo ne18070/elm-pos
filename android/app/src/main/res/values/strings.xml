@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ELM Mobile</string>
+    <string name="title_activity_main">ELM Mobile</string>
+    <string name="package_name">com.elmapp.mobile</string>
+    <string name="custom_url_scheme">com.elmapp.mobile</string>
+</resources>

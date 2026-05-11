@@ -24,6 +24,6 @@
       "@domain/*": ["domain/*"]
     }
   },
-  "include": ["renderer/**/*", "types/**/*", "services/**/*"],
+  "include": ["renderer/**/*", "types/**/*", "services/**/*", "capacitor.config.ts"],
   "exclude": ["node_modules", "dist", "main", "hardware"]
 }
