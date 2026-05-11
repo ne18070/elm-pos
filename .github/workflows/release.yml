@@ -189,7 +189,19 @@ jobs:
       - name: Decode keystore
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: python3 -c "import base64,os; d=''.join(os.environ['KEYSTORE_B64'].split()); open('elm-release.jks','wb').write(base64.b64decode(d+'='*(-len(d)%4)))"
+        run: |
+          python3 - <<'PYEOF'
+          import base64, os, sys, re
+          raw = os.environ.get('KEYSTORE_B64', '')
+          d = re.sub(r'[^A-Za-z0-9+/]', '', raw)   # keep only base64 alphabet
+          rem = len(d) % 4
+          if rem == 1:
+              print(f"ERROR: ANDROID_KEYSTORE_BASE64 secret is corrupted ({len(d)} data chars, len%4=1). Re-encode with: [Convert]::ToBase64String([IO.File]::ReadAllBytes('elm-release.jks'))", file=sys.stderr)
+              sys.exit(1)
+          d += '=' * ((4 - rem) % 4)
+          open('elm-release.jks', 'wb').write(base64.b64decode(d))
+          print(f"Keystore decoded: {len(open('elm-release.jks','rb').read())} bytes")
+          PYEOF
 
       - name: Write keystore.properties
         run: |
