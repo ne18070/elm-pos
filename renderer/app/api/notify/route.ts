@@ -3,10 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
 async function getWebPush() {
   const mod = await import('web-push');
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  const supabaseAdmin = getSupabaseAdmin();
   const businessId = record.business_id as string;
   const table = body.table ?? '';
   const { title, body: bodyText, url } = buildNotification(table, record);
