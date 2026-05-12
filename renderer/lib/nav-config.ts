@@ -1,7 +1,8 @@
 import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
-  Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck
+  Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
+  GraduationCap
 } from 'lucide-react';
 import type { PermissionKey } from './permissions';
 
@@ -50,6 +51,15 @@ export const NAV_SECTIONS: {
     items: [
       { href: '/dossiers',          icon: Scale,         label: 'Gestion Dossiers',   permission: 'view_dossiers'          },
       { href: '/honoraires',        icon: Receipt,       label: 'Facturation Honoraires', permission: 'view_honoraires'     },
+    ]
+  },
+  {
+    label: 'Scolarité',
+    items: [
+      { href: '/eleves',            icon: Users,         label: 'Base Élèves',        permission: 'view_eleves'            },
+      { href: '/classes',           icon: LayoutGrid,    label: 'Gestion Classes',    permission: 'view_classes'           },
+      { href: '/scolarite',         icon: Receipt,       label: 'Suivi Scolarité',    permission: 'view_scolarite'         },
+      { href: '/bulletins',         icon: GraduationCap, label: 'Notes & Bulletins',  permission: 'view_notes'             },
     ]
   },
   {

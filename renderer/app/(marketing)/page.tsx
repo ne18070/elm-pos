@@ -23,6 +23,7 @@ import {
   Car,
   CalendarCheck,
   Utensils,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
@@ -150,6 +151,7 @@ function Hero() {
               { label: 'Multi-établissements', icon: Globe },
               { label: 'Hôtellerie', icon: BedDouble },
               { label: 'Dossiers juridiques', icon: Scale },
+              { label: 'Gestion scolaire', icon: GraduationCap },
             ].map((tag) => (
               <span
                 key={tag.label}
@@ -251,6 +253,11 @@ const FEATURES = [
     icon: Scale,
     title: 'Dossiers juridiques',
     desc: "Suivi des procédures OHADA, gestion documentaire et facturation d'honoraires.",
+  },
+  {
+    icon: GraduationCap,
+    title: 'Gestion scolaire',
+    desc: 'Suivi des élèves, gestion des classes, bulletins de notes et paiements de scolarité.',
   },
 ];
 
@@ -354,6 +361,14 @@ const SECTEURS: {
     border: 'border-surface-border',
     title: 'Hôtellerie',
     desc: 'Réservations, check-in/out, services additionnels.',
+  },
+  {
+    icon: GraduationCap,
+    iconColor: 'text-brand-300',
+    iconBg: 'bg-badge-info',
+    border: 'border-surface-border',
+    title: 'Éducation & Formation',
+    desc: 'Gestion des élèves, classes, scolarité et bulletins scolaires.',
   },
   {
     icon: Scale,
@@ -675,7 +690,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-6 text-xs text-content-muted">
           <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialité</Link>
-          <a href="https://wa.me/33746436801" className="hover:text-content-secondary transition-colors">WhatsApp</a>
+          <a href="https://wa.me/221772211126" className="hover:text-content-secondary transition-colors">WhatsApp</a>
           <a href="mailto:contact@elm-app.click" className="hover:text-content-secondary transition-colors">Contact</a>
           <span className="flex items-center gap-1.5">
             <Globe className="w-3 h-3" /> Sénégal - Afrique
@@ -700,7 +715,7 @@ function FloatingActions() {
   return (
     <div className="fixed right-4 bottom-4 z-50 flex flex-col gap-3">
       <a
-        href="https://wa.me/33746436801"
+        href="https://wa.me/221772211126"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contacter sur WhatsApp"
@@ -843,6 +858,13 @@ function ModulesShowcase() {
           desc="Activez le module PMS pour gérer vos chambres, vos réservations et vos consommations bar/restaurant sur une seule facture client. Une solution vraiment tout-en-un."
           img="/screenshots/14-hotel-management.png"
           reverse
+        />
+
+        <ModuleFeature
+          subtitle="Éducation & Formation"
+          title="Gestion scolaire complète"
+          desc="Gérez vos élèves, vos classes et vos professeurs au même endroit. Suivez les paiements de scolarité et générez des bulletins de notes numériques en quelques clics."
+          img="/screenshots/15-dossiers-clients.png"
         />
       </div>
     </section>

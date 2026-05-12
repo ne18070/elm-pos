@@ -85,7 +85,8 @@
       "Read(//c/Users/lamine-m/**)",
       "Bash(find /c/Users/lamine-m -name \"build-tools\" -type d 2>/dev/null | head -5)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\\\(dashboard\\)\" -Recurse -ErrorAction SilentlyContinue)",
-      "PowerShell(head -50)"
+      "PowerShell(head -50)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\" -Recurse -Filter \"*education*\" -ErrorAction SilentlyContinue)"
     ]
   }
 }

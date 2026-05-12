@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Restaurant · Stocks · Compta · Location · Juridique',
+    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Restaurant · École · Stocks · Compta · Location · Juridique',
     template: '%s | ELM (Sénégal)',
   },
   description:
-    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, gestion restaurant (plan de salle, menu du jour), stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons et WhatsApp natif. La solution de référence à Dakar et dans tout le Sénégal.',
+    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, gestion scolaire (élèves, classes, bulletins), gestion restaurant, stocks, comptabilité OHADA, location de véhicules, réservations hôtels et dossiers juridiques. La solution de référence au Sénégal',
   applicationName: 'ELM Sénégal',
   keywords: [
     // Fonctionnalités core
@@ -44,6 +44,10 @@ export const metadata: Metadata = {
     'location voiture Sénégal', 'contrat location véhicule Sénégal', 'gestion flotte Sénégal',
     // Réservations
     'réservation hôtel Sénégal', 'gestion réservations Sénégal', 'logiciel hôtellerie Sénégal',
+    // École & Éducation
+    'logiciel gestion scolaire Sénégal', 'gestion école Dakar', 'système suivi élèves Sénégal',
+    'paiement scolarité en ligne Sénégal', 'bulletins scolaires numériques Sénégal',
+    'gestion centre de formation Sénégal',
     // Juridique
     'logiciel cabinet juridique Sénégal', 'gestion dossiers juridiques Sénégal', 'honoraires avocat Sénégal',
     'dossiers juridiques OHADA Sénégal', 'suivi affaires juridiques Sénégal',
@@ -155,6 +159,7 @@ const jsonLd = {
       provider: { '@id': `${BASE_URL}/#organization` },
       featureList: [
         'Caisse tactile (espèces, Wave, Orange Money, carte)',
+        'Gestion scolaire (élèves, classes, bulletins, scolarité)',
         'Gestion restaurant (plan de salle, menu du jour)',
         'Reçus WhatsApp instantanés',
         'Gestion des stocks en temps réel',

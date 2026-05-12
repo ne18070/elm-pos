@@ -15,9 +15,9 @@ export interface PermissionMeta {
 
 const PERMISSIONS_MAP = {
   // -- Navigation (Pages)
-  view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'caisse', 'retail'] },
-  view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['caisse', 'retail'] },
-  view_orders:            { label: 'Accès commandes/ventes',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'caisse', 'retail'] },
+  view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  view_orders:            { label: 'Accès commandes/ventes',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_services:          { label: 'Accès prestations service',    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
   view_livraisons:        { label: 'Accès suivi livraisons',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['livraison', 'delivery'] },
   view_livreurs:          { label: 'Accès gestion livreurs',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['livraison', 'delivery'] },
@@ -41,11 +41,20 @@ const PERMISSIONS_MAP = {
   view_team_tracking:     { label: 'Accès tracking équipe',        group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
   view_menu_du_jour:           { label: 'Accès menu du jour',             group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
   view_commandes_emporter:     { label: 'Accès commandes emporter/livraison', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
+  
+  // Éducation
+  view_eleves:            { label: 'Accès base élèves',            group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['eleves', 'education'] },
+  view_classes:           { label: 'Accès gestion classes',        group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['classes', 'education'] },
+  view_scolarite:         { label: 'Accès suivi scolarité',        group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['scolarite', 'education'] },
+  view_notes:             { label: 'Accès notes & bulletins',      group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['notes', 'education'] },
+  manage_education:       { label: 'Gérer les fiches élèves/classes', group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'education' },
+  add_grade:              { label: 'Saisir les notes',             group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'notes' },
+
   view_whatsapp:          { label: 'Accès support WhatsApp',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'whatsapp' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
 
   // -- Actions Générales
-  manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['caisse', 'retail'] },
+  manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_financials:        { label: 'Voir marges & bénéfices',      group: 'finance',    defaultRoles: ['admin', 'owner'] },
   manage_team:            { label: 'Gérer l\'équipe (inviter/rôles)', group: 'admin',      defaultRoles: ['admin', 'owner'] },
   manage_settings:        { label: 'Modifier config business',     group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] },
@@ -179,11 +188,14 @@ export function hasFeature(business: Business | null | undefined, feature: strin
   if (bTypes.includes(feature)) return true;
   
   // Héritage strict
-  if (feature === 'retail' || feature === 'pos' || feature === 'caisse') {
+  if (feature === 'retail' || feature === 'pos') {
     return bTypes.includes('restaurant') || bTypes.includes('hotel') || bTypes.includes('retail');
   }
   if (feature === 'dossiers' || feature === 'honoraires') {
     return bTypes.includes('juridique');
+  }
+  if (['eleves', 'classes', 'scolarite', 'notes'].includes(feature)) {
+    return bTypes.includes('education');
   }
   return false;
 }
