@@ -39,7 +39,8 @@ const PERMISSIONS_MAP = {
   view_voitures:          { label: 'Accès vente voitures',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'voitures' },
   view_staff:             { label: 'Accès personnel & RH',         group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   view_team_tracking:     { label: 'Accès tracking équipe',        group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
-  view_menu_du_jour:      { label: 'Accès menu du jour',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
+  view_menu_du_jour:           { label: 'Accès menu du jour',             group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
+  view_commandes_emporter:     { label: 'Accès commandes emporter/livraison', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
   view_whatsapp:          { label: 'Accès support WhatsApp',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'whatsapp' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
 

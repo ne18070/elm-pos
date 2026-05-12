@@ -1,7 +1,7 @@
 import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
-  Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History
+  Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck
 } from 'lucide-react';
 import type { PermissionKey } from './permissions';
 
@@ -23,7 +23,8 @@ export const NAV_SECTIONS: {
   {
     label: 'Restauration',
     items: [
-      { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour'      },
+      { href: '/menu-du-jour',          icon: CalendarDays,   label: 'Menu du jour',              permission: 'view_menu_du_jour'          },
+      { href: '/commandes-emporter',    icon: PackageCheck,   label: 'À emporter & livraison',    permission: 'view_commandes_emporter'    },
     ]
   },
   {

@@ -22,6 +22,8 @@ export interface CreateOrderInput {
   table_id?: string;
   /** Pour paiement partiel : liste détaillée des lignes de paiement */
   payments?: Array<{ method: string; amount: number }>;
+  order_channel?: 'salle' | 'emporter' | 'livraison';
+  delivery_address?: string;
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
@@ -72,10 +74,12 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       coupon_notes:   couponNotes,
       coupon_ids:     coupons.map((c) => c.id),
       coupon_codes:   coupons.map((c) => c.code),
-      notes:          input.notes          ?? null,
-      customer_name:  input.customer_name  ?? null,
-      customer_phone: input.customer_phone ?? null,
-      table_id:       input.table_id       ?? null,
+      notes:            input.notes            ?? null,
+      customer_name:    input.customer_name    ?? null,
+      customer_phone:   input.customer_phone   ?? null,
+      table_id:         input.table_id         ?? null,
+      order_channel:    input.order_channel    ?? 'salle',
+      delivery_address: input.delivery_address ?? null,
     },
   }) as never);
 

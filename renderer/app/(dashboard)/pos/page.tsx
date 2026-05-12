@@ -8,6 +8,7 @@ import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
 import { OrderPanel } from '@/components/pos/OrderPanel';
 import { PaymentModal } from '@/components/pos/PaymentModal';
+import { SplitBillModal } from '@/components/pos/SplitBillModal';
 import { CategoryBar } from '@/components/pos/CategoryBar';
 import { BarcodeListener } from '@/components/pos/BarcodeListener';
 import { HeldOrdersDrawer } from '@/components/pos/HeldOrdersDrawer';
@@ -33,6 +34,7 @@ export default function PosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery]            = useState('');
   const [paymentOpen, setPaymentOpen]            = useState(false);
+  const [splitOpen, setSplitOpen]                = useState(false);
   const [view, setView]                          = useState<ViewMode>('list');
   const [layout, setLayout]                      = useState<LayoutMode>('catalog');
   const [heldDrawerOpen, setHeldDrawerOpen]      = useState(false);
@@ -231,7 +233,7 @@ export default function PosPage() {
           <OrderPanel
             taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
-            onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
+            onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)} onSplit={() => setSplitOpen(true)}
             isRestaurant={isRestaurant}
           />
         </div>
@@ -321,7 +323,7 @@ export default function PosPage() {
             <OrderPanel
               taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
               currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
-              onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)}
+              onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)} onSplit={() => setSplitOpen(true)}
               isRestaurant={isRestaurant}
             />
           </div>
@@ -343,15 +345,30 @@ export default function PosPage() {
           taxInclusive={business?.tax_inclusive ?? false}
           currency={business?.currency ?? 'XOF'}
           onClose={() => setPaymentOpen(false)}
-          onSuccess={() => { 
-            setPaymentOpen(false); 
-            setSelectedClient(null); 
-            setSelectedTable(null); // Reset table after sale
+          onSuccess={() => {
+            setPaymentOpen(false);
+            setSelectedClient(null);
+            setSelectedTable(null);
           }}
           onPaymentConfirm={sendPaymentConfirm}
           wholesaleCtx={wholesaleCtx}
           prefilledCustomer={selectedClient}
           tableId={selectedTable?.id}
+        />
+      )}
+
+      {splitOpen && (
+        <SplitBillModal
+          taxRate={business?.tax_rate ?? 0}
+          taxInclusive={business?.tax_inclusive ?? false}
+          currency={business?.currency ?? 'XOF'}
+          tableId={selectedTable?.id}
+          onClose={() => setSplitOpen(false)}
+          onSuccess={() => {
+            setSplitOpen(false);
+            setSelectedClient(null);
+            setSelectedTable(null);
+          }}
         />
       )}
     </div>

@@ -23,8 +23,10 @@ import {
   computeChange,
   suggestRoundAmounts,
   PAYMENT_METHOD_LABELS,
+  MOBILE_MONEY_PROVIDER_LABELS,
   validatePayment,
   formatPaymentError,
+  type MobileMoneyProvider,
 } from '@domain/payment.service';
 import {
   validateOrderPayload,
@@ -65,8 +67,13 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | 'intouch' | null>(null);
 
   const cart = useCartStore();
+  const orderChannel    = cart.orderChannel;
+  const deliveryAddress = cart.deliveryAddress;
   const { user, business } = useAuthStore();
   const { success: notifSuccess, warning: notifWarning, error: notifError } = useNotificationStore();
+
+  // Référence de transaction (carte / mobile money manuel)
+  const [txReference, setTxReference] = useState('');
 
   // Intouch
   const [intouchConfig, setIntouchConfig] = useState<IntouchConfig | null>(null);
@@ -183,10 +190,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         tax_rate:       taxRate,
         coupons:        cart.coupons,
         notes:          cart.notes,
-        customer_name:  (methode === 'room_charge' ? reservation?.guest?.full_name : customerName.trim()) || undefined,
-        customer_phone: (methode === 'room_charge' ? reservation?.guest?.phone : customerPhone.trim()) || undefined,
+        customer_name:    (methode === 'room_charge' ? reservation?.guest?.full_name : customerName.trim()) || undefined,
+        customer_phone:   (methode === 'room_charge' ? reservation?.guest?.phone : customerPhone.trim()) || undefined,
         hotel_reservation_id: reservation?.id,
-        table_id:       tableId,
+        table_id:         tableId,
+        order_channel:    orderChannel !== 'salle' ? orderChannel : undefined,
+        delivery_address: deliveryAddress.trim() || undefined,
       });
       if (customerName.trim() && methode !== 'room_charge') saveCustomer(customerName, customerPhone);
       setOrdreId(order.id);
@@ -338,10 +347,14 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     if (orderError) { setErreur(formatOrderError(orderError)); return; }
 
     const payError = validatePayment({
-      orderId:  'new',
-      method:   methode,
-      amount:   total,
-      received: methode === 'cash' ? montantRecuNum : undefined,
+      orderId:   'new',
+      method:    methode,
+      amount:    total,
+      received:  methode === 'cash' ? montantRecuNum : undefined,
+      // Passe undefined si vide → la validation ne bloque pas (champ optionnel sans Intouch)
+      // Passe la valeur si remplie → la validation vérifie la cohérence (non vide)
+      reference: txReference.trim() || undefined,
+      phone:     methode === 'mobile_money' ? (intouchPhone.trim() || undefined) : undefined,
     });
     if (payError) { setErreur(formatPaymentError(payError)); return; }
 
@@ -547,6 +560,38 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   <p className="text-2xl font-bold text-status-success">{fmt(rendu)}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Référence transaction (carte / mobile money sans Intouch) */}
+          {(methode === 'card' || methode === 'mobile_money') && (
+            <div className="space-y-3">
+              {methode === 'mobile_money' && (
+                <div>
+                  <label className="label">Téléphone client <span className="text-content-muted text-[10px]">(optionnel)</span></label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={intouchPhone}
+                    onChange={(e) => { setIntouchPhone(e.target.value); setErreur(''); }}
+                    placeholder="7x xxx xx xx"
+                    className="input"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="label">
+                  {methode === 'card' ? 'Référence carte' : 'Référence de transaction'}{' '}
+                  <span className="text-content-muted text-[10px]">(optionnel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={txReference}
+                  onChange={(e) => { setTxReference(e.target.value); setErreur(''); }}
+                  placeholder={methode === 'card' ? 'Ex : code TPE ou 4 derniers chiffres' : 'Ex : ID transaction Wave / Orange'}
+                  className="input"
+                />
+              </div>
             </div>
           )}
 
@@ -811,7 +856,9 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                       : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
                     }`}
                 >
-                  <span className="text-[10px] font-bold">{p.replace('_', ' ')}</span>
+                  <span className="text-[10px] font-bold">
+                    {MOBILE_MONEY_PROVIDER_LABELS[p.toLowerCase() as MobileMoneyProvider]}
+                  </span>
                 </button>
               ))}
             </div>

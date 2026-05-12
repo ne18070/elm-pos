@@ -26,10 +26,14 @@ export interface AddItemResult {
 
 // --- Store --------------------------------------------------------------------
 
+export type OrderChannel = 'salle' | 'emporter' | 'livraison';
+
 interface CartState {
   items: CartItem[];
   coupons: Coupon[];
   notes: string;
+  orderChannel: OrderChannel;
+  deliveryAddress: string;
   selectedClient: { id: string; name: string; phone?: string | null } | null;
   selectedTable: RestaurantTable | null;
   wholesaleCtx: any | null;
@@ -57,6 +61,8 @@ interface CartState {
   addCoupon: (coupon: Coupon) => void;
   removeCoupon: (couponId: string) => void;
   setNotes:  (notes: string) => void;
+  setOrderChannel: (channel: OrderChannel) => void;
+  setDeliveryAddress: (address: string) => void;
   setSelectedClient: (client: { id: string; name: string; phone?: string | null } | null) => void;
   setSelectedTable: (table: RestaurantTable | null) => void;
   setWholesaleCtx: (ctx: any | null) => void;
@@ -93,13 +99,15 @@ function stockAvailable(product: Product, consumedInCart: number, consumption: n
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
-  items:       [],
-  coupons:     [],
-  notes:       '',
-  selectedClient: null,
-  selectedTable: null,
-  wholesaleCtx: null,
-  heldOrders:  [],
+  items:           [],
+  coupons:         [],
+  notes:           '',
+  orderChannel:    'salle',
+  deliveryAddress: '',
+  selectedClient:  null,
+  selectedTable:   null,
+  wholesaleCtx:    null,
+  heldOrders:      [],
 
   // -- Mise en attente ----------------------------------------------------------
 
@@ -301,11 +309,13 @@ export const useCartStore = create<CartState>()(
     set((state) => ({ coupons: state.coupons.filter((c) => c.id !== couponId) }));
   },
 
-  setNotes:  (notes)  => set({ notes }),
-  setSelectedClient: (selectedClient) => set({ selectedClient }),
-  setSelectedTable:  (selectedTable)  => set({ selectedTable }),
-  setWholesaleCtx:   (wholesaleCtx)   => set({ wholesaleCtx }),
-  clear: () => set({ items: [], coupons: [], notes: '', selectedClient: null, selectedTable: null, wholesaleCtx: null }),
+  setNotes:           (notes)           => set({ notes }),
+  setOrderChannel:    (orderChannel)    => set({ orderChannel }),
+  setDeliveryAddress: (deliveryAddress) => set({ deliveryAddress }),
+  setSelectedClient:  (selectedClient)  => set({ selectedClient }),
+  setSelectedTable:   (selectedTable)   => set({ selectedTable }),
+  setWholesaleCtx:    (wholesaleCtx)    => set({ wholesaleCtx }),
+  clear: () => set({ items: [], coupons: [], notes: '', orderChannel: 'salle', deliveryAddress: '', selectedClient: null, selectedTable: null, wholesaleCtx: null }),
 
   applyPriceOverrides: (overrides) => set((state) => ({
     items: state.items.map((item) =>
@@ -351,13 +361,15 @@ export const useCartStore = create<CartState>()(
       name: 'elm-pos-cart',
       // Persister uniquement les données sérialisables — pas les fonctions
       partialize: (state) => ({
-        items:      state.items,
-        coupons:    state.coupons,
-        notes:      state.notes,
-        heldOrders: state.heldOrders,
-        selectedClient: state.selectedClient,
-        selectedTable:  state.selectedTable,
-        wholesaleCtx:   state.wholesaleCtx,
+        items:           state.items,
+        coupons:         state.coupons,
+        notes:           state.notes,
+        orderChannel:    state.orderChannel,
+        deliveryAddress: state.deliveryAddress,
+        heldOrders:      state.heldOrders,
+        selectedClient:  state.selectedClient,
+        selectedTable:   state.selectedTable,
+        wholesaleCtx:    state.wholesaleCtx,
       }),
     }
   )
