@@ -99,18 +99,6 @@ export default function HotelPage() {
   const { success, error: notifError } = useNotificationStore();
   const currency = business?.currency ?? 'XOF';
 
-  if (!can('view_hotel')) {
-    return (
-      <div className="flex h-full items-center justify-center bg-surface p-6">
-        <div className="max-w-sm text-center">
-          <BedDouble className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
-          <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
-          <p className="mt-1 text-sm text-content-secondary">Vous n&apos;avez pas la permission d&apos;accéder au module Hôtel.</p>
-        </div>
-      </div>
-    );
-  }
-
   const [rooms,        setRooms]        = useState<HotelRoom[]>([]);
   const [guests,       setGuests]       = useState<HotelGuest[]>([]);
   const [reservations, setReservations] = useState<HotelReservation[]>([]);
@@ -172,9 +160,9 @@ export default function HotelPage() {
     } catch { /* ignore */ }
   }
 
-  const today2 = new Date();
-  const [calYear,  setCalYear]  = useState(today2.getFullYear());
-  const [calMonth, setCalMonth] = useState(today2.getMonth());
+  const calToday = new Date();
+  const [calYear,  setCalYear]  = useState(calToday.getFullYear());
+  const [calMonth, setCalMonth] = useState(calToday.getMonth());
 
   useEffect(() => {
     if (!business) return;
@@ -661,7 +649,7 @@ export default function HotelPage() {
 
   function openDetail(res: HotelReservation) {
     setPanel({ type: 'detail', reservation: res });
-    const remaining = res.total - res.paid_amount;
+    const remaining = Math.max(0, res.total - res.paid_amount);
     setCheckoutPaid(remaining > 0 ? String(remaining) : '');
     setCheckoutMethod('cash');
     setPayForm({ amount: '', method: 'cash' });
@@ -736,6 +724,18 @@ export default function HotelPage() {
   const editReservation = panel?.type === 'editReservation' ? panel.reservation : null;
 
   // --- Render ---------------------------------------------------------------
+
+  if (!can('view_hotel')) {
+    return (
+      <div className="flex h-full items-center justify-center bg-surface p-6">
+        <div className="max-w-sm text-center">
+          <BedDouble className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
+          <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
+          <p className="mt-1 text-sm text-content-secondary">Vous n&apos;avez pas la permission d&apos;accéder au module Hôtel.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col relative">
@@ -903,7 +903,7 @@ export default function HotelPage() {
           calYear={calYear}
           calMonth={calMonth}
           loading={loading}
-          today2={today2}
+          today2={calToday}
           setCalYear={setCalYear}
           setCalMonth={setCalMonth}
           openDetail={openDetail}

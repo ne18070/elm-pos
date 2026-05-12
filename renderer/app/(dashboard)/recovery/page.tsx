@@ -36,7 +36,7 @@ const TYPE_CONFIG = {
 // --- Page ---------------------------------------------------------------------
 
 export default function RecoveryPage() {
-  const { business, user } = useAuthStore();
+  const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const can = useCan();
   const isOwnerOrAdmin = can('delete_data');
@@ -263,7 +263,7 @@ export default function RecoveryPage() {
               previewLoading={previewLoading && previewId === snap.id}
               previewData={previewId === snap.id ? previewData : null}
               onPreview={() => handlePreview(snap)}
-              onRestore={() => { setRestoring(snap); setRestoreResult(null); }}
+              onRestore={() => { setRestoring(snap); setRestoreResult(null); setRestoreTables(new Set(['products', 'categories', 'coupons'])); }}
               onDelete={() => handleDelete(snap)}
             />
           ))

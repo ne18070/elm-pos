@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Building2, Printer, Wifi, ChevronDown, MessageCircle, 
-  UserCircle, ArrowRight, Package, Archive, ShieldCheck, 
+import {
+  Building2, Printer, Wifi, ChevronDown, MessageCircle,
+  UserCircle, Package, Archive, ShieldCheck,
   Briefcase, Globe, Settings2, Wrench
 } from 'lucide-react';
 
@@ -32,7 +32,7 @@ import { AccountSection } from './AccountSection';
 function SettingsSection({ 
   id, title, icon: Icon, isOpen, onToggle, children, badge 
 }: { 
-  id: string; title: string; icon: any; isOpen: boolean; onToggle: (id: string) => void; children: React.ReactNode; badge?: string;
+  id: string; title: string; icon: React.ComponentType<{ className?: string }>; isOpen: boolean; onToggle: (id: string) => void; children: React.ReactNode; badge?: string;
 }) {
   return (
     <div className="card overflow-hidden transition-all duration-300">

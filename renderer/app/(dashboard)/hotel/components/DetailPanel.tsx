@@ -7,7 +7,6 @@ import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import type { HotelReservation, HotelService } from '@services/supabase/hotel';
 import { nightsBetween } from '@services/supabase/hotel';
 import type { Business } from '@pos-types';
-import { useAuthStore } from '@/store/auth';
 import { useCan } from '@/hooks/usePermission';
 import { PayMethod, fmt, fmtMoney, resStatusStyle, resStatusLabel, sourceLabel, sourceBadgeStyle } from './hotel-helpers';
 
@@ -51,7 +50,7 @@ export function DetailPanel({
   const can = useCan();
   const res     = reservation;
   const nights  = nightsBetween(res.check_in, res.check_out);
-  const balance = res.total - res.paid_amount;
+  const balance = Math.max(0, res.total - res.paid_amount);
   const canUpdate = res.status === 'confirmed' || res.status === 'checked_in';
 
   return (
@@ -83,7 +82,6 @@ export function DetailPanel({
               title="Envoyer par WhatsApp"
               onClick={() => {
                 if (!business) return;
-                const balance = Math.max(0, res.total - res.paid_amount);
                 const msg = [
                   `*Réservation — ${business.name}*`,
                   `Client : ${res.guest?.full_name}`,
@@ -136,7 +134,7 @@ export function DetailPanel({
         {/* Client */}
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
-            {res.guest?.full_name.charAt(0).toUpperCase() ?? '?'}
+            {res.guest?.full_name?.charAt(0).toUpperCase() || '?'}
           </div>
           <div>
             <p className="text-sm font-semibold text-content-primary">{res.guest?.full_name}</p>
@@ -245,6 +243,7 @@ export function DetailPanel({
                 className="input flex-1 h-9 text-sm"
                 type="number"
                 min={0}
+                max={balance}
                 placeholder={`Reste: ${fmtMoney(balance, currency)}`}
                 value={payForm.amount}
                 onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
