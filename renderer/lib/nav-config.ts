@@ -18,6 +18,11 @@ export const NAV_SECTIONS: {
       { href: '/services',          icon: Wrench,        label: 'Prestations',        permission: 'view_services'          },
       { href: '/contrats',          icon: FileSignature, label: 'Contrats & Location',   permission: 'view_contrats'          },
       { href: '/voitures',          icon: Car,           label: 'Vente de Voitures',  permission: 'view_voitures'          },
+    ]
+  },
+  {
+    label: 'Restauration',
+    items: [
       { href: '/menu-du-jour',      icon: CalendarDays,  label: 'Menu du jour',       permission: 'view_menu_du_jour'      },
     ]
   },

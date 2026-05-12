@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Stocks · Compta · Location · Juridique',
+    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Restaurant · Stocks · Compta · Location · Juridique',
     template: '%s | ELM (Sénégal)',
   },
   description:
-    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons et WhatsApp natif. La solution de référence à Dakar et dans tout le Sénégal.',
+    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, gestion restaurant (plan de salle, menu du jour), stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons et WhatsApp natif. La solution de référence à Dakar et dans tout le Sénégal.',
   applicationName: 'ELM Sénégal',
   keywords: [
     // Fonctionnalités core
@@ -155,6 +155,7 @@ const jsonLd = {
       provider: { '@id': `${BASE_URL}/#organization` },
       featureList: [
         'Caisse tactile (espèces, Wave, Orange Money, carte)',
+        'Gestion restaurant (plan de salle, menu du jour)',
         'Reçus WhatsApp instantanés',
         'Gestion des stocks en temps réel',
         'Alertes de rupture de stock',

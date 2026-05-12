@@ -193,8 +193,9 @@ export default function MenuDuJourPage() {
   const canBroadcast = hasWaConfig && selected.size > 0 && isToday && canManage;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      {/* Header */}
+    <div className="h-full overflow-y-auto">
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
+        {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-badge-orange border border-orange-700/40 flex items-center justify-center">
@@ -342,7 +343,7 @@ export default function MenuDuJourPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-content-primary text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {broadcasting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {broadcasting ? 'Envoi en cours…' : 'Diffuser sur WhatsApp'}
+                {broadcasting ? 'Envoi en cours…' : 'Diffuser sur WhatsApp Manuellement'}
               </button>
             )}
 
@@ -419,6 +420,7 @@ export default function MenuDuJourPage() {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }

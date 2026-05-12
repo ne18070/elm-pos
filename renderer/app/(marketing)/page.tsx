@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Car,
   CalendarCheck,
+  Utensils,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
@@ -321,6 +322,14 @@ const SECTEURS: {
     border: 'border-surface-border',
     title: 'Commerce & Distribution',
     desc: 'Stocks, revendeurs, fournisseurs, prix de gros.',
+  },
+  {
+    icon: Utensils,
+    iconColor: 'text-status-orange',
+    iconBg: 'bg-badge-orange',
+    border: 'border-orange-500/20',
+    title: 'Restaurant / Café',
+    desc: 'Menu du jour, plan de salle, commandes en cuisine et WhatsApp.',
   },
   {
     icon: ShoppingCart,
@@ -758,6 +767,14 @@ function ModulesShowcase() {
           title="Factures PDF sur WhatsApp"
           desc="Modernisez votre relation client. Plus besoin d'imprimer systématiquement: envoyez les reçus professionnels directement sur le téléphone de vos clients en un clic."
           img="/screenshots/22-whatsapp-integration.png"
+        />
+
+        <ModuleFeature
+          subtitle="Restauration"
+          title="Plan de salle & Menu du jour"
+          desc="Gérez vos tables en temps réel. Publiez votre menu du jour et diffusez-le instantanément à tous vos contacts sur WhatsApp pour booster vos ventes du midi."
+          img="/screenshots/06-menu-du-jour.png"
+          reverse
         />
 
         <ModuleFeature

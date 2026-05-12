@@ -83,7 +83,9 @@
       "Bash(ls \"C:/Users/lamine-m/AppData/Local/\" | grep -i android 2>/dev/null || echo \"NO_ANDROID\")",
       "Bash(find /c/Users/lamine-m -name \"adb.exe\" 2>/dev/null | head -5)",
       "Read(//c/Users/lamine-m/**)",
-      "Bash(find /c/Users/lamine-m -name \"build-tools\" -type d 2>/dev/null | head -5)"
+      "Bash(find /c/Users/lamine-m -name \"build-tools\" -type d 2>/dev/null | head -5)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\\\(dashboard\\)\" -Recurse -ErrorAction SilentlyContinue)",
+      "PowerShell(head -50)"
     ]
   }
 }
