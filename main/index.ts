@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, shell, net, screen, protocol } from 'electron';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 
 // Doit être appelé AVANT app.whenReady()
 if (!process.env.ELECTRON_DEV && process.env.NODE_ENV !== 'development') {
@@ -197,7 +198,10 @@ app.whenReady().then(async () => {
       // ex: /display/ → /display/index.html
       if (!urlPath || urlPath.endsWith('/')) urlPath += 'index.html';
       const filePath = path.join(outDir, urlPath);
-      return net.fetch('file://' + filePath);
+      // pathToFileURL génère file:///C:/... sur Windows (backslashes → forward slashes).
+      // net.fetch('file://' + windowsPath) produisait des URLs invalides → chunks JS non chargés
+      // → Next.js faisait une vraie navigation → rechargement complet de la sidebar.
+      return net.fetch(pathToFileURL(filePath).href);
     });
   }
 
@@ -225,8 +229,31 @@ app.on('window-all-closed', () => {
 
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, url) => {
-    const allowed = ['http://localhost:3000', 'file://', 'elmpos://'];
-    if (!allowed.some((o) => url.startsWith(o))) {
+    if (isDev) {
+      // Dev : bloquer tout ce qui n'est pas localhost
+      if (!url.startsWith('http://localhost:3000')) event.preventDefault();
+      return;
+    }
+
+    // Production : la navigation initiale vers la racine est légitime.
+    // Toute autre navigation vers une route interne (elmpos://./xxx) est un hard-navigate
+    // déclenché par un fallback du router Next.js (ex: chunk JS non chargé).
+    // On l'intercepte et on la convertit en pushState pour garder la sidebar montée.
+    if (url.startsWith('elmpos://') && url !== 'elmpos://./' ) {
+      event.preventDefault();
+      const urlPath = new URL(url).pathname;
+      contents.executeJavaScript(
+        `(function(){` +
+        `  var p = ${JSON.stringify(urlPath)};` +
+        `  window.history.pushState({}, '', p);` +
+        `  window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));` +
+        `})()`
+      ).catch(() => {});
+      return;
+    }
+
+    // Bloquer tout le reste (URLs externes)
+    if (!url.startsWith('elmpos://') && !url.startsWith('http://localhost:3000')) {
       event.preventDefault();
     }
   });

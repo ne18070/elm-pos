@@ -162,9 +162,13 @@ export function BusinessSwitcher({
             expanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none w-0 overflow-hidden"
           )}>
             <div className="min-w-0 text-left">
-              <p className="text-sm font-semibold text-content-primary truncate leading-tight">
-                {business?.name ?? 'Mon établissement'}
-              </p>
+              {business ? (
+                <p className="text-sm font-semibold text-content-primary truncate leading-tight">
+                  {business.name}
+                </p>
+              ) : (
+                <div className="h-3.5 w-28 rounded bg-surface-hover animate-pulse" />
+              )}
               {business?.organization_name && business.organization_name !== business.name && (
                 <p className="text-[10px] text-content-brand/70 truncate leading-tight font-medium">
                   {business.organization_name}

@@ -57,15 +57,21 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'elm-pos-auth',
-      // user + businesses → localStorage (partagé entre onglets, persiste au redémarrage)
-      // business actif   → sessionStorage (isolé par onglet)
+      // user + businesses + business → localStorage (persiste au redémarrage)
+      // sessionStorage écrase business si présent (isolation multi-onglets navigateur)
       partialize: (state) => ({
         user:       state.user,
+        business:   state.business,
         businesses: state.businesses,
       }),
       onRehydrateStorage: () => (state) => {
-        // Restaurer le business actif depuis sessionStorage après hydratation
-        if (state) state.business = readBusinessFromSession();
+        // sessionStorage a priorité sur localStorage (isolation multi-onglets navigateur).
+        // En Electron (redémarrage), sessionStorage est vide → on garde le business
+        // déjà présent dans l'état (depuis localStorage via readInitialState).
+        if (state) {
+          const fromSession = readBusinessFromSession();
+          if (fromSession) state.business = fromSession;
+        }
       },
     }
   )

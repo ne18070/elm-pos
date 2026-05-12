@@ -32,15 +32,21 @@ import type { PermissionKey } from '@/lib/permissions';
 import { NAV_SECTIONS, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
 
 import { autoRecordDeparture } from '@services/supabase/staff';
+import type { Business } from '@pos-types';
 
 // Visibility filtering logic
-function useVisibleNav(can: (p: PermissionKey) => boolean) {
+// Quand business est null (chargement initial), on affiche tous les items pour éviter
+// le flash "Paramètres uniquement" causé par le cycle d'hydratation Zustand.
+// Les pages elles-mêmes gèrent leur propre contrôle d'accès.
+function useVisibleNav(can: (p: PermissionKey) => boolean, business: Business | null) {
   return useMemo(() => {
     return NAV_SECTIONS.map(section => ({
       ...section,
-      items: section.items.filter(({ permission }) => !permission || can(permission as PermissionKey))
+      items: section.items.filter(({ permission }) =>
+        !permission || !business || can(permission as PermissionKey)
+      )
     })).filter(section => section.items.length > 0);
-  }, [can]);
+  }, [can, business]);
 }
 
 
@@ -96,7 +102,7 @@ function SidebarContent({
     router.push('/login');
   }
 
-  const visibleSections = useVisibleNav(can);
+  const visibleSections = useVisibleNav(can, business);
 
   const [version, setVersion] = useState<string>('');
 
