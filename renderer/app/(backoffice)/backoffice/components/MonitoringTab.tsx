@@ -396,56 +396,58 @@ function OwnerRow({
   const totalProducts  = group.businesses.reduce((s, b) => s + b.products_count, 0);
 
   return (
-    <div className={cn('rounded-xl border overflow-hidden transition-colors relative', expiringSoon ? 'border-status-warning bg-badge-warning' : 'border-surface-border bg-surface-card')}>
-      {/* Owner header row */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-4 px-4 py-3 pr-10 hover:bg-surface-hover transition-colors text-left"
-      >
-        {/* Expand icon */}
-        <ChevronDown className={cn('w-4 h-4 text-content-secondary shrink-0 transition-transform', expanded && 'rotate-180')} />
+    <div className={cn('rounded-xl border overflow-hidden transition-colors', expiringSoon ? 'border-status-warning bg-badge-warning' : 'border-surface-border bg-surface-card')}>
+      {/* Header — relative scoped ici pour que le bouton delete reste centré sur cette ligne seulement */}
+      <div className="relative">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full flex items-center gap-4 px-4 py-3 pr-10 hover:bg-surface-hover transition-colors text-left"
+        >
+          {/* Expand icon */}
+          <ChevronDown className={cn('w-4 h-4 text-content-secondary shrink-0 transition-transform', expanded && 'rotate-180')} />
 
-        {/* Owner info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-content-primary truncate">
-            {expiringSoon && <AlertTriangle className="w-3.5 h-3.5 text-status-warning inline mr-1.5 -mt-0.5" />}
-            {group.owner_name ?? '-'}
-          </p>
-          <p className="text-xs text-content-muted truncate">{group.owner_email ?? ''}</p>
-        </div>
+          {/* Owner info */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-content-primary truncate">
+              {expiringSoon && <AlertTriangle className="w-3.5 h-3.5 text-status-warning inline mr-1.5 -mt-0.5" />}
+              {group.owner_name ?? '-'}
+            </p>
+            <p className="text-xs text-content-muted truncate">{group.owner_email ?? ''}</p>
+          </div>
 
-        {/* Plan + status */}
-        <div className="hidden sm:flex items-center gap-2 shrink-0">
-          <span className="text-xs text-content-secondary">{group.plan_label ?? '-'}</span>
-          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs border', STATUS_STYLE[st])}>
-            {STATUS_LABEL[st]}
-          </span>
-        </div>
+          {/* Plan + status */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <span className="text-xs text-content-secondary">{group.plan_label ?? '-'}</span>
+            <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs border', STATUS_STYLE[st])}>
+              {STATUS_LABEL[st]}
+            </span>
+          </div>
 
-        {/* Expiry */}
-        <div className="hidden md:block text-xs shrink-0">
-          <span className={expiringSoon ? 'text-status-warning font-medium' : 'text-content-muted'}>
-            {fmtDate(expiry)}
-            {expiringSoon && days !== null && <span className="ml-1">({days}j)</span>}
-          </span>
-        </div>
+          {/* Expiry */}
+          <div className="hidden md:block text-xs shrink-0">
+            <span className={expiringSoon ? 'text-status-warning font-medium' : 'text-content-muted'}>
+              {fmtDate(expiry)}
+              {expiringSoon && days !== null && <span className="ml-1">({days}j)</span>}
+            </span>
+          </div>
 
-        {/* Quick stats */}
-        <div className="hidden lg:flex items-center gap-4 text-xs text-content-muted shrink-0">
-          <span><span className="text-status-orange font-medium">{totalProducts}</span> produits</span>
-          <span><span className="text-status-success font-medium">{totalOrders30d}</span> cmd/30j</span>
-          <span className="text-content-muted">{group.businesses.length} établ.</span>
-        </div>
-      </button>
+          {/* Quick stats */}
+          <div className="hidden lg:flex items-center gap-4 text-xs text-content-muted shrink-0">
+            <span><span className="text-status-orange font-medium">{totalProducts}</span> produits</span>
+            <span><span className="text-status-success font-medium">{totalOrders30d}</span> cmd/30j</span>
+            <span className="text-content-muted">{group.businesses.length} établ.</span>
+          </div>
+        </button>
 
-      {/* Delete button — outside the expand button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onDeleteClick(group); }}
-        title="Supprimer l'organisation"
-        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+        {/* Delete — ancré sur le header uniquement */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDeleteClick(group); }}
+          title="Supprimer l'organisation"
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Businesses list */}
       {expanded && (

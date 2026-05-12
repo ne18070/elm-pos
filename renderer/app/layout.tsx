@@ -183,6 +183,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/*
+          Script bloquant (sans async/defer) : s'exécute avant le premier pixel peint.
+          Lit le thème depuis localStorage et pose data-theme AVANT que le CSS s'applique,
+          ce qui évite le flash de mode sombre lors des navigations en mode clair.
+          Format Zustand persist : { state: { theme: 'light'|'dark'|'auto' } }
+        */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var s=JSON.parse(localStorage.getItem('elm-pos-theme')||'{}');var t=s&&s.state&&s.state.theme;if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(t==='dark'){document.documentElement.removeAttribute('data-theme');}else{var h=new Date().getHours();if(h>=7&&h<19){document.documentElement.setAttribute('data-theme','light');}}}catch(e){}})();` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
