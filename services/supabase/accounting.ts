@@ -174,10 +174,157 @@ export async function deleteManualEntry(entryId: string): Promise<void> {
 
 // --- Synchronisation depuis les ventes/achats --------------------------------
 
+interface _OrderRow {
+  id: string; created_at: string; updated_at: string;
+  status: string; subtotal: number; tax_amount: number;
+  discount_amount: number; total: number; order_channel: string;
+}
+interface _PayRow { order_id: string; method: string; amount: number; }
+interface _LineInput { entry_id: string; account_code: string; account_name: string; debit: number; credit: number; }
+
+function _payMethodToAccount(method: string): { code: string; name: string } {
+  switch (method) {
+    case 'card':         return { code: '521', name: 'Banques – comptes courants' };
+    case 'mobile_money': return { code: '576', name: 'Mobile Money' };
+    case 'room_charge':  return { code: '411', name: 'Clients' };
+    default:             return { code: '571', name: 'Caisse' };
+  }
+}
+
 export async function syncAccounting(businessId: string): Promise<number> {
-  const { data, error } = await rpc('sync_accounting', { p_business_id: businessId });
-  if (error) throw new Error(error.message);
-  return (data as number) ?? 0;
+  // Collect already-synced IDs to avoid duplicates
+  const { data: existing } = await db('journal_entries')
+    .select('source_id')
+    .eq('business_id', businessId)
+    .in('source', ['order', 'refund']);
+  const synced = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+
+  // Fetch all relevant orders
+  const { data: orders, error: oErr } = await (supabase as any)
+    .from('orders')
+    .select('id, created_at, updated_at, status, subtotal, tax_amount, discount_amount, total, order_channel')
+    .eq('business_id', businessId)
+    .in('status', ['paid', 'pending', 'refunded'])
+    .order('created_at', { ascending: true });
+  if (oErr) throw new Error(oErr.message);
+
+  const orderList = (orders ?? []) as _OrderRow[];
+  const unsynced  = orderList.filter((o) => !synced.has(o.id));
+  if (unsynced.length === 0) return 0;
+
+  // Batch-fetch payments for unsynced orders
+  const ids = unsynced.map((o) => o.id);
+  const { data: allPayments } = await (supabase as any)
+    .from('payments')
+    .select('order_id, method, amount')
+    .in('order_id', ids);
+
+  const payMap: Record<string, _PayRow[]> = {};
+  for (const p of (allPayments ?? []) as _PayRow[]) {
+    (payMap[p.order_id] ??= []).push(p);
+  }
+
+  let count = 0;
+
+  // ── Orders ──────────────────────────────────────────────────────────────────
+  for (const o of unsynced) {
+    const isRefund  = o.status === 'refunded';
+    const entryDate = (isRefund ? o.updated_at : o.created_at).slice(0, 10);
+    const ref       = '#' + o.id.slice(0, 8).toUpperCase();
+    const isRS      = o.order_channel === 'room_service';
+    const desc      = isRefund
+      ? `Remboursement ${ref}`
+      : `${isRS ? 'Room Service' : 'Vente'} ${ref}`;
+    const source    = isRefund ? 'refund' : 'order';
+
+    const { data: entry, error: eErr } = await db('journal_entries')
+      .insert({ business_id: businessId, entry_date: entryDate, reference: ref, description: desc, source, source_id: o.id })
+      .select('id').single();
+    if (eErr) throw new Error(eErr.message);
+    if (!entry) continue;
+
+    const lines: _LineInput[] = [];
+    const total    = Number(o.total);
+    const subtotal = Number(o.subtotal);
+    const tax      = Number(o.tax_amount);
+    const discount = Number(o.discount_amount);
+    const pays     = (payMap[o.id] ?? []).filter((p) => p.method !== 'free' && Number(p.amount) > 0);
+
+    if (!isRefund) {
+      // Debit: one line per payment method
+      if (pays.length > 0) {
+        for (const p of pays) {
+          const acc = _payMethodToAccount(p.method);
+          lines.push({ entry_id: entry.id, account_code: acc.code, account_name: acc.name, debit: Number(p.amount), credit: 0 });
+        }
+      } else if (total > 0) {
+        // Fallback if payments table has no record
+        lines.push({ entry_id: entry.id, account_code: '571', account_name: 'Caisse', debit: total, credit: 0 });
+      }
+      if (discount > 0) {
+        lines.push({ entry_id: entry.id, account_code: '7091', account_name: 'RRR accordés sur ventes', debit: discount, credit: 0 });
+      }
+      // Credit: revenue account (706 for room service, 701 for regular sales)
+      const revCode = isRS ? '706' : '701';
+      const revName = isRS ? 'Services rendus' : 'Ventes de marchandises';
+      if (subtotal > 0) lines.push({ entry_id: entry.id, account_code: revCode, account_name: revName, debit: 0, credit: subtotal });
+      if (tax > 0)      lines.push({ entry_id: entry.id, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: 0, credit: tax });
+    } else {
+      // Refund: reverse of the original sale
+      if (subtotal > 0) lines.push({ entry_id: entry.id, account_code: '701', account_name: 'Ventes de marchandises', debit: subtotal, credit: 0 });
+      if (tax > 0)      lines.push({ entry_id: entry.id, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: tax, credit: 0 });
+      if (total > 0)    lines.push({ entry_id: entry.id, account_code: '571', account_name: 'Caisse', debit: 0, credit: total });
+    }
+
+    if (lines.length > 0) {
+      const { error: lErr } = await db('journal_lines').insert(lines);
+      if (lErr) throw new Error(lErr.message);
+    }
+    count++;
+  }
+
+  // ── Stock purchases (achats) ─────────────────────────────────────────────
+  const { data: syncedStock } = await db('journal_entries')
+    .select('source_id')
+    .eq('business_id', businessId)
+    .eq('source', 'stock');
+  const syncedStockSet = new Set((syncedStock ?? []).map((e: { source_id: string }) => e.source_id));
+
+  const { data: stockRows, error: sErr } = await (supabase as any)
+    .from('stock_entries')
+    .select('id, created_at, quantity, cost_per_unit, supplier, product:products(name)')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: true });
+  if (sErr) throw new Error(sErr.message);
+
+  for (const s of (stockRows ?? []) as {
+    id: string; created_at: string; quantity: number;
+    cost_per_unit: number; supplier: string | null;
+    product: { name: string } | null;
+  }[]) {
+    if (syncedStockSet.has(s.id)) continue;
+    const totalCost = Math.round(Number(s.quantity) * Number(s.cost_per_unit) * 100) / 100;
+    if (totalCost <= 0) continue;
+
+    const supplier  = s.supplier ?? 'Fournisseur';
+    const product   = s.product?.name ?? 'Produit';
+    const entryDate = s.created_at.slice(0, 10);
+
+    const { data: entry, error: eErr } = await db('journal_entries')
+      .insert({ business_id: businessId, entry_date: entryDate, description: `Achat – ${product} / ${supplier}`, source: 'stock', source_id: s.id })
+      .select('id').single();
+    if (eErr) throw new Error(eErr.message);
+    if (!entry) continue;
+
+    const { error: lErr } = await db('journal_lines').insert([
+      { entry_id: entry.id, account_code: '601', account_name: 'Achats de marchandises', debit: totalCost, credit: 0 },
+      { entry_id: entry.id, account_code: '401', account_name: 'Fournisseurs',           debit: 0,         credit: totalCost },
+    ]);
+    if (lErr) throw new Error(lErr.message);
+    count++;
+  }
+
+  return count;
 }
 
 // --- Balance des comptes ------------------------------------------------------

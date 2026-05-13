@@ -420,7 +420,7 @@ export function OrderPanel({
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-900/20 border border-indigo-700 animate-in fade-in slide-in-from-bottom-2">
               <Utensils className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-indigo-300 truncate">Table {selectedTable?.name || 'chargement...'}</p>
+                <p className="text-xs font-bold text-indigo-600 truncate">Table {selectedTable?.name || 'chargement...'}</p>
                 <p className="text-[10px] text-content-primary uppercase font-semibold">{selectedTable?.floor?.name}</p>
               </div>
               <button

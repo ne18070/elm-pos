@@ -191,6 +191,10 @@ export function hasFeature(business: Business | null | undefined, feature: strin
   if (feature === 'retail' || feature === 'pos') {
     return bTypes.includes('restaurant') || bTypes.includes('hotel') || bTypes.includes('retail');
   }
+  // Les hôtels peuvent activer le module restaurant (bar, room service, menu du jour…)
+  if (feature === 'restaurant') {
+    return bTypes.includes('hotel');
+  }
   if (feature === 'dossiers' || feature === 'honoraires') {
     return bTypes.includes('juridique');
   }

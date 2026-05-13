@@ -86,7 +86,11 @@
       "Bash(find /c/Users/lamine-m -name \"build-tools\" -type d 2>/dev/null | head -5)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\\\(dashboard\\)\" -Recurse -ErrorAction SilentlyContinue)",
       "PowerShell(head -50)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\" -Recurse -Filter \"*education*\" -ErrorAction SilentlyContinue)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\" -Recurse -Filter \"*education*\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\supabase\\\\migrations\" | Where-Object { $_.Name -match \"\\(hotel|restaurant|floor|room\\)\" } | Select-Object Name | Sort-Object Name)",
+      "Bash(supabase db *)",
+      "Bash(supabase migration *)",
+      "Bash(awk '{print $1}')"
     ]
   }
 }

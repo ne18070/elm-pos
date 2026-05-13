@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Building2, Printer, Wifi, ChevronDown, MessageCircle,
   UserCircle, Package, Archive, ShieldCheck,
-  Briefcase, Globe, Settings2, Wrench
+  Briefcase, Globe, Settings2, Wrench, UtensilsCrossed
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth';
@@ -26,6 +26,8 @@ import { PrinterSection } from './PrinterSection';
 import { CashDrawerSection } from './CashDrawerSection';
 import { WhatsAppSettingsSection } from './WhatsAppSettingsSection';
 import { AccountSection } from './AccountSection';
+import { RestaurantSettingsSection } from './RestaurantSettingsSection';
+import { hasFeature } from '@/lib/permissions';
 
 // --- Local Components --------------------------------------------------------
 
@@ -174,6 +176,12 @@ export default function SettingsPage() {
           {isManager && (
             <SettingsSection id="stock" title="Unités de stock" icon={Package} isOpen={openSections.stock} onToggle={toggle} badge="Manager+">
               <StockUnitsSection />
+            </SettingsSection>
+          )}
+
+          {isManager && hasFeature(business, 'restaurant') && (
+            <SettingsSection id="restaurant" title="Zones & Plan de salle" icon={UtensilsCrossed} isOpen={openSections.restaurant} onToggle={toggle} badge="Restaurant / Hôtel">
+              <RestaurantSettingsSection />
             </SettingsSection>
           )}
         </div>
