@@ -24,7 +24,7 @@ const PERMISSIONS_MAP = {
   view_clients:           { label: 'Accès base clients',           group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'] }, 
   view_products:          { label: 'Accès catalogue produits',     group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['stock', 'retail'] },
   view_approvisionnement: { label: 'Accès stocks/entrées',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['approvisionnement', 'stock'] },
-  view_revendeurs:        { label: 'Accès réseau revendeurs',      group: 'navigation', defaultRoles: ['admin', 'owner'], feature: ['revendeurs', 'retail'] },
+  view_revendeurs:        { label: 'Accès réseau revendeurs',      group: 'navigation', defaultRoles: ['admin', 'owner'], feature: ['revendeurs'] },
   view_hotel:             { label: 'Accès module hôtel',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'hotel' },
   view_categories:        { label: 'Accès catégories produits',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['stock', 'retail'] },
   view_coupons:           { label: 'Accès coupons/remises',        group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['coupons', 'retail'] },
@@ -99,10 +99,10 @@ const PERMISSIONS_MAP = {
   manage_coupons:         { label: 'Gérer les coupons',            group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['coupons', 'retail'] },
 
   // Revendeurs
-  manage_revendeurs:      { label: 'Gérer les revendeurs',         group: 'gestion',    defaultRoles: ['admin', 'owner'],             feature: ['revendeurs', 'retail'] },
-  manage_reseller_clients: { label: 'Gérer clients revendeurs',     group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs', 'retail'] },
-  manage_reseller_offers:  { label: 'Gérer offres revendeurs',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs', 'retail'] },
-  print_reseller_bl:      { label: 'Imprimer bons de livraison',    group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['revendeurs', 'retail'] },
+  manage_revendeurs:      { label: 'Gérer les revendeurs',         group: 'gestion',    defaultRoles: ['admin', 'owner'],             feature: ['revendeurs'] },
+  manage_reseller_clients: { label: 'Gérer clients revendeurs',     group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs'] },
+  manage_reseller_offers:  { label: 'Gérer offres revendeurs',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs'] },
+  print_reseller_bl:      { label: 'Imprimer bons de livraison',    group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['revendeurs'] },
 
   // Hôtel
   manage_rooms:           { label: 'Gérer les chambres',           group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'hotel' },
