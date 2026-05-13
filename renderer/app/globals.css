@@ -90,6 +90,20 @@
   }
 }
 
+@layer base {
+  /* Densification globale des tableaux */
+  table thead th {
+    font-size: 11px;
+    padding-top: 0.5rem;    /* py-2 */
+    padding-bottom: 0.5rem;
+  }
+  table tbody td {
+    font-size: 13px;
+    padding-top: 0.375rem;  /* py-1.5 */
+    padding-bottom: 0.375rem;
+  }
+}
+
 @layer components {
   .card {
     @apply bg-surface-card rounded-xl shadow-card border border-surface-border/30;
@@ -97,16 +111,16 @@
 
   .btn-primary {
     @apply bg-brand-600 hover:bg-brand-500 active:bg-brand-700
-           text-white font-bold rounded-xl
-           px-4 py-2.5 transition-all duration-150
+           text-white text-sm font-bold rounded-lg
+           px-3 py-1.5 transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed
            shadow-lg shadow-brand-500/10 active:scale-95;
   }
 
   .btn-secondary {
     @apply bg-surface-input hover:bg-surface-border active:bg-surface-card
-           font-bold rounded-xl
-           px-4 py-2.5 transition-all duration-150
+           text-sm font-bold rounded-lg
+           px-3 py-1.5 transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed
            border border-surface-border/50
            active:scale-95;
@@ -115,15 +129,15 @@
 
   .btn-danger {
     @apply bg-red-600 hover:bg-red-500 active:bg-red-700
-           text-white font-bold rounded-xl
-           px-4 py-2.5 transition-all duration-150
+           text-white text-sm font-bold rounded-lg
+           px-3 py-1.5 transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed
            shadow-lg shadow-red-500/10 active:scale-95;
   }
 
   .input {
-    @apply bg-surface-input border border-surface-border rounded-xl
-           px-4 py-2.5
+    @apply bg-surface-input border border-surface-border rounded-lg
+           px-3 py-1.5 text-sm
            focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
            transition-all duration-150 w-full;
     color: rgb(var(--text-base));

@@ -99,8 +99,8 @@ export default function ProductsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 sm:p-6 border-b border-surface-border">
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
+      <div className="px-4 py-2 sm:p-4 border-b border-surface-border">
+        <div className="flex items-center justify-between mb-2">
           <div>
             <h1 className="text-xl font-bold text-content-primary">Produits</h1>
             <p className="text-xs text-content-muted mt-0.5">
@@ -204,11 +204,11 @@ export default function ProductsPage() {
       </div>
 
       {/* Contenu */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4">
         {/* Alertes stock bas */}
         {!loading && lowStock.length > 0 && (
-          <div className="mb-4 rounded-xl border border-status-warning bg-badge-warning p-4">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="mb-3 rounded-xl border border-status-warning bg-badge-warning p-3">
+            <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-4 h-4 text-status-warning shrink-0" />
               <p className="text-sm font-semibold text-status-warning">
                 {lowStock.length} article{lowStock.length > 1 ? 's' : ''} avec stock bas (≤ {LOW_STOCK_THRESHOLD})
@@ -236,9 +236,9 @@ export default function ProductsPage() {
         )}
 
         {loading ? (
-          <div className="text-content-secondary text-center py-16">Chargement…</div>
+          <div className="text-content-secondary text-center py-10">Chargement…</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-content-secondary">
+          <div className="flex flex-col items-center justify-center py-10 text-content-secondary">
             <Package className="w-12 h-12 mb-3 opacity-30" />
             <p className="font-medium">Aucun produit trouvé</p>
             {!search && (
@@ -247,12 +247,12 @@ export default function ProductsPage() {
           </div>
         ) : view === 'grid' ? (
           /* -- Vue Grille -- */
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filtered.map((product) => (
               <div
                 key={product.id}
                 onClick={() => setEditProduct(product)}
-                className="card p-4 flex flex-col gap-3 group cursor-pointer hover:border-brand-700 transition-colors"
+                className="card p-3 flex flex-col gap-2 group cursor-pointer hover:border-brand-700 transition-colors"
               >
                 {/* Image */}
                 <div className="aspect-square rounded-lg bg-surface-input flex items-center justify-center overflow-hidden">
@@ -313,14 +313,14 @@ export default function ProductsPage() {
             <table className="w-full">
               <thead className="bg-surface-card border-b border-surface-border">
                 <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
-                  <th className="px-4 py-3 w-12"></th>
-                  <th className="px-4 py-3">Produit</th>
-                  <th className="px-4 py-3 hidden md:table-cell">Catégorie</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">Code-barres / SKU</th>
-                  <th className="px-4 py-3 hidden sm:table-cell">Stock</th>
-                  <th className="px-4 py-3">Prix</th>
-                  <th className="px-4 py-3 w-24">Statut</th>
-                  <th className="px-4 py-3 w-20"></th>
+                  <th className="px-3 py-2 w-12"></th>
+                  <th className="px-3 py-2">Produit</th>
+                  <th className="px-3 py-2 hidden md:table-cell">Catégorie</th>
+                  <th className="px-3 py-2 hidden lg:table-cell">Code-barres / SKU</th>
+                  <th className="px-3 py-2 hidden sm:table-cell">Stock</th>
+                  <th className="px-3 py-2">Prix</th>
+                  <th className="px-3 py-2 w-24">Statut</th>
+                  <th className="px-3 py-2 w-20"></th>
                 </tr>
               </thead>
               <tbody>
@@ -333,8 +333,8 @@ export default function ProductsPage() {
                       ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
                   >
                     {/* Miniature */}
-                    <td className="px-4 py-3">
-                      <div className="w-10 h-10 rounded-lg bg-surface-input overflow-hidden flex items-center justify-center shrink-0">
+                    <td className="px-3 py-2">
+                      <div className="w-8 h-8 rounded-lg bg-surface-input overflow-hidden flex items-center justify-center shrink-0">
                         {product.image_url ? (
                           <img src={product.image_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -344,7 +344,7 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Nom */}
-                    <td className="px-4 py-3 max-w-[200px]">
+                    <td className="px-3 py-2 max-w-[200px]">
                       <p className="font-medium text-content-primary text-sm truncate">{product.name}</p>
                       {product.description && (
                         <p className="text-xs text-content-muted mt-0.5 truncate">{product.description}</p>
@@ -352,7 +352,7 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Catégorie */}
-                    <td className="px-4 py-3 hidden md:table-cell">
+                    <td className="px-3 py-2 hidden md:table-cell">
                       {product.category ? (
                         <span className="text-xs text-content-secondary bg-surface-input px-2 py-1 rounded-lg">
                           {product.category.name}
@@ -363,7 +363,7 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Barcode / SKU */}
-                    <td className="px-4 py-3 hidden lg:table-cell">
+                    <td className="px-3 py-2 hidden lg:table-cell">
                       <div className="space-y-0.5">
                         {product.barcode && (
                           <div className="flex items-center gap-1 text-xs text-content-secondary font-mono">
@@ -381,7 +381,7 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Stock */}
-                    <td className="px-4 py-3 hidden sm:table-cell">
+                    <td className="px-3 py-2 hidden sm:table-cell">
                       {product.track_stock ? (
                         <span className={`text-sm font-medium ${
                           (product.stock ?? 0) === 0
@@ -398,14 +398,14 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Prix */}
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <span className="text-content-brand font-semibold text-sm">
                         {formatCurrency(product.price, business?.currency)}
                       </span>
                     </td>
 
                     {/* Statut actif */}
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${
                         product.is_active
                           ? 'bg-badge-success text-status-success border-status-success'
@@ -416,7 +416,7 @@ export default function ProductsPage() {
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         {can('edit_product') && (
                           <button

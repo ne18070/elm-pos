@@ -187,8 +187,8 @@ export default function CaissePage() {
     : `${sessionDuration}m`;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+      <div className="max-w-3xl mx-auto space-y-4">
 
         {/* En-tête - Point 5: Improved mobile layout */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -248,7 +248,7 @@ export default function CaissePage() {
           ] as const).map(({ id, label }) => (
             <button
               key={id} onClick={() => setTab(id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-none
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-none
                 ${tab === id ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
             >
               {label}
@@ -262,9 +262,9 @@ export default function CaissePage() {
             {!session ? (
               <div className="space-y-4">
                 {/* État fermé */}
-                <div className="card p-8 flex flex-col items-center gap-3 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-surface-input flex items-center justify-center">
-                    <Lock className="w-8 h-8 text-content-muted" />
+                <div className="card p-5 flex flex-col items-center gap-3 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-surface-input flex items-center justify-center">
+                    <Lock className="w-6 h-6 text-content-muted" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-content-primary">Caisse fermée</p>
@@ -276,9 +276,9 @@ export default function CaissePage() {
                 </div>
 
                 {/* Conditions / guide d'ouverture */}
-                <div className="card p-5 border-l-4 border-brand-500 space-y-4">
+                <div className="card p-4 border-l-4 border-brand-500 space-y-3">
                   <p className="text-sm font-semibold text-content-primary">Comment ça fonctionne ?</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { n: 1, title: 'Ouvrir la caisse', body: "Indiquez le montant d'espèces déjà présent dans le tiroir — c'est le fond de caisse de départ." },
                       { n: 2, title: 'Encaisser normalement', body: 'Toutes les ventes de la session sont comptabilisées automatiquement en temps réel.' },
@@ -418,12 +418,12 @@ export default function CaissePage() {
             </div>
 
             {loadingHistory ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
               </div>
             ) : filteredHistory.length === 0 ? (
-              <div className="card p-12 flex flex-col items-center gap-3 text-center">
-                <History className="w-10 h-10 text-content-muted" />
+              <div className="card p-8 flex flex-col items-center gap-3 text-center">
+                <History className="w-8 h-8 text-content-muted" />
                 <p className="text-content-muted">Aucune clôture enregistrée avec ces filtres</p>
               </div>
             ) : (

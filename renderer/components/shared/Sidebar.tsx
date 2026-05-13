@@ -192,9 +192,9 @@ function SidebarContent({
                     {active && (
                       <div className="absolute left-0 w-1 h-5 bg-brand-500 rounded-r-full" />
                     )}
-                    <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
+                    <div className="w-8 h-8 flex items-center justify-center shrink-0 relative">
                       <Icon className={cn(
-                        "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
+                        "w-4 h-4 transition-transform duration-200 group-hover:scale-110",
                         active ? "text-content-brand" : "text-content-secondary group-hover:text-content-primary"
                       )} />
                       {badge > 0 && (
@@ -215,7 +215,7 @@ function SidebarContent({
                       expanded ? "opacity-100 ml-2" : "opacity-0 w-0 pointer-events-none"
                     )}>
                       <span className={cn(
-                        "text-sm font-medium truncate",
+                        "text-xs font-medium truncate",
                         active ? "text-content-brand" : ""
                       )}>{label}</span>
                       {badge > 0 && (
@@ -281,14 +281,14 @@ function SidebarContent({
               pathname.startsWith('/help') ? 'bg-brand-500/10 text-content-brand' : 'text-content-secondary hover:text-content-primary hover:bg-white/5'
             )}
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
             )}>
-              <span className="text-sm font-medium">Centre d'aide</span>
+              <span className="text-xs font-medium">Centre d'aide</span>
             </div>
           </Link>
 
@@ -300,14 +300,14 @@ function SidebarContent({
             )}
             aria-label="Signaler un problème"
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform text-status-warning" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
             )}>
-              <span className="text-sm font-medium">Signaler un problème</span>
+              <span className="text-xs font-medium">Signaler un problème</span>
             </div>
           </button>
 
@@ -321,14 +321,14 @@ function SidebarContent({
             )}
             aria-label="Ouvrir l'écran client"
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <Monitor className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
             )}>
-              <span className="text-sm font-medium">Écran client</span>
+              <span className="text-xs font-medium">Écran client</span>
             </div>
           </button>
         </div>

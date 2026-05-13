@@ -114,10 +114,10 @@ export default function ServicesPage() {
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Header */}
-      <div className="flex flex-col gap-3 px-4 py-4 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-6">
+      <div className="flex flex-col gap-2 px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-brand-500/20 flex items-center justify-center">
-            <Wrench className="w-5 h-5 text-content-brand" />
+          <div className="w-7 h-7 rounded-lg bg-brand-500/20 flex items-center justify-center">
+            <Wrench className="w-4 h-4 text-content-brand" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-content-primary">Prestations de service</h1>
@@ -150,14 +150,14 @@ export default function ServicesPage() {
       )}
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 overflow-x-auto px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 md:px-6">
+      <div className="flex items-center gap-1 overflow-x-auto px-4 py-1 bg-surface-card border-b border-surface-border shrink-0 md:px-4">
         {([
           { key: 'orders',   icon: Wrench,     label: 'Ordres de travail', desc: 'Créer & suivre les bons de prestation' },
           { key: 'catalog',  icon: Package2,   label: 'Catalogue',         desc: 'Prestations types & tarifs' },
           { key: 'subjects', icon: History,    label: 'Historique',        desc: 'Par véhicule, appareil ou client' },
         ] as const).map(({ key, icon: Icon, label, desc }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={cn('flex items-start gap-2.5 px-4 py-2.5 rounded-xl text-left transition-colors min-w-0 flex-shrink-0', tab === key
+            className={cn('flex items-start gap-2 px-3 py-2 rounded-xl text-left transition-colors min-w-0 flex-shrink-0', tab === key
               ? 'bg-brand-500/15 text-content-brand border border-brand-500/30'
               : 'text-content-secondary hover:text-content-primary hover:bg-surface-hover')}>
             <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -191,7 +191,7 @@ export default function ServicesPage() {
         )}
 
         {tab === 'subjects' && (
-          <div className="flex-1 overflow-hidden p-6">
+          <div className="flex-1 overflow-hidden p-4">
              <SubjectsTab businessId={businessId} currency={currency} />
           </div>
         )}
