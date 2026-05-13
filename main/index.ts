@@ -20,6 +20,7 @@ import { registerHardwareHandlers } from './ipc/hardware';
 import { registerOrderHandlers } from './ipc/orders';
 import { registerSyncHandlers, startSyncEngine, onNetworkOnline } from './ipc/sync';
 import { registerSubscriptionHandlers } from './ipc/subscription';
+import { registerDbImportHandlers } from './ipc/db-import';
 import { initLocalDb } from './store/local-db';
 
 const isDev =
@@ -182,6 +183,7 @@ async function initialize(): Promise<void> {
   registerOrderHandlers(ipcMain);
   registerSyncHandlers(ipcMain);
   registerSubscriptionHandlers(ipcMain);
+  registerDbImportHandlers(ipcMain);
   registerDisplayHandlers();
 }
 

@@ -3,6 +3,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 // ─── Canaux IPC autorisés ────────────────────────────────────────────────────
 
 const ALLOWED_INVOKE_CHANNELS = new Set([
+  'db-import:test',
+  'db-import:tables',
+  'db-import:schema',
+  'db-import:rows',
   'hardware:printer:status',
   'hardware:printer:print',
   'hardware:printer:test',
@@ -175,6 +179,16 @@ const api = {
     getStatus: () => ipcRenderer.invoke('display:status'),
     /** Récupère le dernier état connu (pour sync initiale depuis l'écran client) */
     getState:  () => ipcRenderer.invoke('display:get-state'),
+  },
+
+  // ─── Import DB externe ───────────────────────────────────────────────────────
+
+  dbImport: {
+    test:   (cfg: unknown) => ipcRenderer.invoke('db-import:test',   cfg),
+    tables: (cfg: unknown) => ipcRenderer.invoke('db-import:tables', cfg),
+    schema: (cfg: unknown, table: string) => ipcRenderer.invoke('db-import:schema', cfg, table),
+    rows:   (cfg: unknown, table: string, limit: number, offset: number) =>
+              ipcRenderer.invoke('db-import:rows', cfg, table, limit, offset),
   },
 
   // ─── App ─────────────────────────────────────────────────────────────────────

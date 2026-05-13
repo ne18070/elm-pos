@@ -2,7 +2,7 @@ import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
-  GraduationCap
+  GraduationCap, DatabaseZap
 } from 'lucide-react';
 import type { PermissionKey } from './permissions';
 
@@ -78,6 +78,7 @@ export const NAV_SECTIONS: {
       { href: '/whatsapp',          icon: MessageCircle, label: 'WhatsApp Business',  permission: 'view_whatsapp'          },
       { href: '/staff',             icon: UsersRound,    label: 'Équipe & Paie',      permission: 'view_staff'             },
       { href: '/recovery',          icon: History,       label: 'Récupération Données', permission: 'view_recovery'         },
+      { href: '/import',            icon: DatabaseZap,   label: 'Import base de données', permission: 'view_import'         },
       { href: '/activity',          icon: ScrollText,    label: 'Journal Audit',      permission: 'view_activity'          },
       { href: '/settings',          icon: Settings,      label: 'Paramètres',         permission: 'view_settings'          },
     ]
