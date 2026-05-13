@@ -63,7 +63,11 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
                       <td className="px-4 py-3 text-content-primary font-mono text-xs hidden sm:table-cell">{e.reference ?? '—'}</td>
                       <td className="px-4 py-3 text-content-primary max-w-[200px] truncate">{e.description}</td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <span className={`inline-flex text-xs px-2 py-0.5 rounded-full border font-medium ${src.color}`}>{src.label}</span>
+                        <span
+                          className={`inline-flex items-center text-xs px-2.5 py-1 rounded-md border font-semibold bg-opacity-100 ${src.color}`}
+                        >
+                          {src.label}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-content-primary">{formatCurrency(totalDebit, currency)}</td>
                       <td className="px-4 py-3 text-right font-mono text-sm text-content-primary">{formatCurrency(totalCredit, currency)}</td>

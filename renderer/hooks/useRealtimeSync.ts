@@ -22,7 +22,8 @@ export type RealtimeTable =
   | 'coupons'
   | 'cash_sessions'
   | 'contracts'
-  | 'whatsapp_messages';
+  | 'whatsapp_messages'
+  | 'service_orders';
 
 export function dispatchTableChanged(table: RealtimeTable, detail?: unknown) {
   window.dispatchEvent(
@@ -152,6 +153,17 @@ export function useRealtimeSync() {
             })
           );
         }
+      }
+    );
+
+    // -- service_orders -------------------------------------------------------
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'service_orders',
+        filter: `business_id=eq.${businessId}` },
+      (payload) => {
+        addEvent({ table: 'service_orders', eventType: payload.eventType, at: new Date() });
+        dispatchTableChanged('service_orders', { eventType: payload.eventType, record: payload.new });
       }
     );
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getServiceOrders, getServiceOrderCounts, ServiceOrder, ServiceOrderStatus } from '@services/supabase/service-orders';
-import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { playNewOrderChime } from '@/lib/admin-sound';
@@ -87,27 +86,22 @@ export function useServiceOrders({
     loadOrders();
   }, [loadOrders, refreshTrigger]);
 
-  // Realtime: rafraîchissement automatique à chaque changement d'OT
+  // Realtime: écoute le channel central (useRealtimeSync) via event système.
+  // Évite un second channel Supabase dupliqué pour service_orders.
   const loadOrdersRef = useRef(loadOrders);
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
 
   useEffect(() => {
-    if (!businessId) return;
-    const channel = supabase
-      .channel(`svc-orders-live-${businessId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_orders', filter: `business_id=eq.${businessId}` },
-        (payload) => {
-          loadOrdersRef.current();
-          if (payload.eventType === 'INSERT' && soundEnabledRef.current) {
-            playNewOrderChime();
-          }
-        },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [businessId]);
+    function onChanged(e: Event) {
+      const detail = (e as CustomEvent<{ eventType: string }>).detail;
+      loadOrdersRef.current();
+      if (detail?.eventType === 'INSERT' && soundEnabledRef.current) {
+        playNewOrderChime();
+      }
+    }
+    window.addEventListener('elm-pos:service_orders:changed', onChanged);
+    return () => window.removeEventListener('elm-pos:service_orders:changed', onChanged);
+  }, []);
 
   return {
     orders,
