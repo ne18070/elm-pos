@@ -7,12 +7,13 @@ import {
   Calendar, User, FileText, Loader2, GitBranch,
   Car, Package2, Bell, BellOff, Plus,
   Play, History, XCircle, CreditCard,
-  Volume2, VolumeX, Star, ShoppingBag, ArrowRight,
+  Volume2, VolumeX, Star, ShoppingBag, ArrowRight, Store,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn, formatCurrency, displayCurrency } from '@/lib/utils';
 import { PublicHeader } from '@/components/shared/PublicHeader';
 import { getPublicServiceCatalog } from '@services/supabase/services-public';
+import { getBoutiqueProducts } from '@services/supabase/boutique';
 import type { WorkflowInstance, WorkflowNode } from '@pos-types';
 
 interface BusinessInfo {
@@ -161,7 +162,8 @@ export default function PublicTrackingView() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const soundEnabledRef = useRef(true);
 
-  const [promoItems, setPromoItems] = useState<{ name: string; price: number }[]>([]);
+  const [promoItems,     setPromoItems]     = useState<{ name: string; price: number }[]>([]);
+  const [boutiqueItems,  setBoutiqueItems]  = useState<{ name: string; price: number }[]>([]);
 
   const [rating, setRating]           = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -358,11 +360,17 @@ export default function PublicTrackingView() {
           })
           .catch(() => {});
 
-        // Charger quelques produits/services pour la bande promo (silencieux)
+        // Charger produits/services pour les bandes promo (silencieux, en parallèle)
         const bid = result.service?.business_id;
         if (bid) {
           getPublicServiceCatalog(bid)
             .then(items => setPromoItems(
+              items.slice(0, 10).map((i: any) => ({ name: i.name, price: i.price }))
+            ))
+            .catch(() => {});
+
+          getBoutiqueProducts(bid)
+            .then(items => setBoutiqueItems(
               items.slice(0, 10).map((i: any) => ({ name: i.name, price: i.price }))
             ))
             .catch(() => {});
@@ -577,6 +585,35 @@ export default function PublicTrackingView() {
                   <span key={i} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 bg-surface-hover border border-surface-border rounded-full text-[11px] whitespace-nowrap">
                     <span className="text-content-secondary font-medium">{item.name}</span>
                     <span className="font-bold text-brand-600">{formatCurrency(item.price, cur)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bande promo boutique */}
+        {type === 'service' && service?.business_id && boutiqueItems.length > 0 && (
+          <div className="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 pt-3 pb-2">
+              <div className="flex items-center gap-2">
+                <Store className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold text-content-primary">Notre boutique</span>
+              </div>
+              <a
+                href={`/boutique/${service.business_id}`}
+                target='_blank'
+                className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:gap-2 transition-all"
+              >
+                Voir tout <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+            <div className="overflow-hidden pb-3">
+              <div className="flex animate-marquee w-max gap-2 px-4" style={{ animationDelay: '-20s' }}>
+                {[...boutiqueItems, ...boutiqueItems].map((item, i) => (
+                  <span key={i} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 bg-surface-hover border border-surface-border rounded-full text-[11px] whitespace-nowrap">
+                    <span className="text-content-secondary font-medium">{item.name}</span>
+                    <span className="font-bold text-emerald-600">{formatCurrency(item.price, cur)}</span>
                   </span>
                 ))}
               </div>
