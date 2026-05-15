@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Building2, Printer, Wifi, ChevronDown, MessageCircle,
   UserCircle, Package, Archive, ShieldCheck,
-  Briefcase, Globe, Settings2, Wrench, UtensilsCrossed
+  Briefcase, Globe, Settings2, Wrench, UtensilsCrossed, Gift
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth';
@@ -27,6 +27,7 @@ import { CashDrawerSection } from './CashDrawerSection';
 import { WhatsAppSettingsSection } from './WhatsAppSettingsSection';
 import { AccountSection } from './AccountSection';
 import { RestaurantSettingsSection } from './RestaurantSettingsSection';
+import { LoyaltySettingsSection } from './LoyaltySettingsSection';
 import { hasFeature } from '@/lib/permissions';
 
 // --- Local Components --------------------------------------------------------
@@ -184,6 +185,10 @@ export default function SettingsPage() {
               <RestaurantSettingsSection />
             </SettingsSection>
           )}
+
+          <SettingsSection id="loyalty" title="Programme de fidélité" icon={Gift} isOpen={openSections.loyalty} onToggle={toggle}>
+            <LoyaltySettingsSection />
+          </SettingsSection>
         </div>
 
         {/* --- Category: Hardware --- */}

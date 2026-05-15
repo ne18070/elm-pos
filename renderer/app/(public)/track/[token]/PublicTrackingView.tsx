@@ -10,7 +10,7 @@ import {
   Volume2, VolumeX, Star,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, displayCurrency } from '@/lib/utils';
 import { PublicHeader } from '@/components/shared/PublicHeader';
 import type { WorkflowInstance, WorkflowNode } from '@pos-types';
 
@@ -27,6 +27,18 @@ interface ServiceOrderEvent {
   label:      string;
   actor_name: string | null;
   created_at: string;
+}
+
+interface LoyaltyData {
+  client_name:    string;
+  balance:        number;
+  total_earned:   number;
+  total_redeemed: number;
+  config: {
+    earn_per:    number;
+    point_value: number;
+    min_redeem:  number;
+  };
 }
 
 interface TrackingData {
@@ -138,6 +150,7 @@ export default function PublicTrackingView() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [data, setData]       = useState<TrackingData | null>(null);
+  const [loyalty, setLoyalty] = useState<LoyaltyData | null>(null);
   const eventsEndRef            = useRef<HTMLDivElement>(null);
 
   const [pushState, setPushState] = useState<'idle' | 'subscribing' | 'subscribed' | 'denied' | 'unsupported'>('idle');
@@ -333,6 +346,13 @@ export default function PublicTrackingView() {
         } as TrackingData);
 
         void (supabase as any).rpc('increment_tracking_view', { t: token });
+
+        // Charger la carte fidélité en parallèle (silencieux si non disponible)
+        (supabase as any).rpc('get_public_loyalty', { p_token: String(token) })
+          .then(({ data: ldata }: any) => {
+            if (ldata?.success) setLoyalty(ldata as LoyaltyData);
+          })
+          .catch(() => {});
       } catch (e) {
         console.error(e);
         setError("Une erreur est survenue lors de la récupération des données.");
@@ -704,6 +724,111 @@ export default function PublicTrackingView() {
                 </div>
               )}
             </div>
+          </section>
+        )}
+
+        {/* Carte fidélité */}
+        {type === 'service' && loyalty && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <Star className="w-5 h-5 text-yellow-500 fill-yellow-400" />
+              <h3 className="font-bold text-content-primary">Votre carte fidélité</h3>
+            </div>
+
+            {/* La carte */}
+            <div className="relative overflow-hidden rounded-3xl shadow-lg"
+              style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)' }}>
+              {/* Décor cercles */}
+              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5" />
+              <div className="absolute -bottom-8 -left-8  w-32 h-32 rounded-full bg-white/5" />
+
+              <div className="relative p-6 space-y-5">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Programme fidélité</p>
+                    <p className="text-lg font-black text-white mt-0.5">{loyalty.client_name}</p>
+                  </div>
+                  <div className="flex gap-0.5">
+                    {[1,2,3].map(i => (
+                      <Star key={i} className={cn('w-4 h-4', i <= (loyalty.total_earned >= 1500 ? 3 : loyalty.total_earned >= 500 ? 2 : 1) ? 'fill-yellow-400 text-yellow-400' : 'text-indigo-600 fill-indigo-600')} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Solde */}
+                <div className="text-center py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-300 mb-1">Solde disponible</p>
+                  <div className="flex items-baseline justify-center gap-2">
+                    <span className="text-5xl font-black text-white tabular-nums">{loyalty.balance}</span>
+                    <span className="text-xl font-bold text-indigo-300">pts</span>
+                  </div>
+                  <p className="text-indigo-200 text-sm mt-1">
+                    ≈ <span className="font-bold text-white">{(loyalty.balance * loyalty.config.point_value).toLocaleString('fr-FR')} {displayCurrency(cur)}</span> de remise
+                  </p>
+                </div>
+
+                {/* Barre de progression */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] font-semibold text-indigo-300">
+                    <span>{loyalty.balance} / {loyalty.config.min_redeem} pts pour racheter</span>
+                    <span>{Math.min(100, Math.round(loyalty.balance / loyalty.config.min_redeem * 100))}%</span>
+                  </div>
+                  <div className="h-2 bg-indigo-900/50 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-300 transition-all duration-700"
+                      style={{ width: `${Math.min(100, loyalty.balance / loyalty.config.min_redeem * 100)}%` }}
+                    />
+                  </div>
+                  {loyalty.balance >= loyalty.config.min_redeem ? (
+                    <p className="text-[11px] font-bold text-yellow-300 text-center">
+                      ✓ Remise disponible — présentez ce lien à l'atelier
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-indigo-400 text-center">
+                      Encore {loyalty.config.min_redeem - loyalty.balance} pts avant votre prochaine remise
+                    </p>
+                  )}
+                </div>
+
+                {/* Stats footer */}
+                <div className="flex justify-between pt-2 border-t border-indigo-700/50 text-[10px]">
+                  <div className="text-center">
+                    <p className="text-indigo-400 uppercase tracking-wider font-semibold">Cumulé</p>
+                    <p className="text-white font-black text-base">{loyalty.total_earned}</p>
+                    <p className="text-indigo-400">pts</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-indigo-400 uppercase tracking-wider font-semibold">Échangé</p>
+                    <p className="text-white font-black text-base">{loyalty.total_redeemed}</p>
+                    <p className="text-indigo-400">pts</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-indigo-400 uppercase tracking-wider font-semibold">1 pt vaut</p>
+                    <p className="text-white font-black text-base">{loyalty.config.point_value}</p>
+                    <p className="text-indigo-400">{displayCurrency(cur)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-indigo-400 uppercase tracking-wider font-semibold">Expire</p>
+                    <p className="text-white font-black text-base">31 déc</p>
+                    <p className="text-indigo-400">{new Date().getFullYear() + 1}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pts gagnés cette visite */}
+            {service!.status === 'paye' && loyalty.config.earn_per && (
+              <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-2xl px-5 py-3 flex items-center gap-3">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400 shrink-0" />
+                <p className="text-sm text-content-primary">
+                  Cette visite vous a rapporté{' '}
+                  <span className="font-black text-yellow-600 dark:text-yellow-400">
+                    +{Math.floor(service!.total / loyalty.config.earn_per)} pts
+                  </span>
+                </p>
+              </div>
+            )}
           </section>
         )}
 

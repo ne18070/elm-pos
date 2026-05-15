@@ -2,6 +2,7 @@ import { supabase as _supabase } from './client';
 import { syncServiceOrdersAccounting } from './accounting';
 import { logAction } from './logger';
 import { upsertClientByPhone } from './clients';
+import { getLoyaltyConfig, earnPoints } from './loyalty';
 const db = _supabase as any;
 
 type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
@@ -584,7 +585,7 @@ export async function payServiceOrder(
 ): Promise<void> {
   const { data: current, error: fetchErr } = await db
     .from('service_orders')
-    .select('id, business_id, order_number, total, paid_amount, client_name')
+    .select('id, business_id, order_number, total, paid_amount, client_name, client_phone')
     .eq('id', id)
     .single();
   if (fetchErr) throw new Error(fetchErr.message);
@@ -622,6 +623,14 @@ export async function payServiceOrder(
       await syncServiceOrdersAccounting(order.business_id);
     } catch (syncError) {
       console.warn('[service-orders] accounting sync failed', syncError);
+    }
+    if (current.client_name) {
+      try {
+        const cfg = await getLoyaltyConfig(order.business_id);
+        await earnPoints(order.business_id, current.client_name, current.client_phone ?? null, order.total, cfg, id);
+      } catch (loyaltyError) {
+        console.warn('[service-orders] loyalty earn failed', loyaltyError);
+      }
     }
   }
 
