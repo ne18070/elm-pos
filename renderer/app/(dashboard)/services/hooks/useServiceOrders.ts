@@ -87,21 +87,59 @@ export function useServiceOrders({
   }, [loadOrders, refreshTrigger]);
 
   // Realtime: écoute le channel central (useRealtimeSync) via event système.
-  // Évite un second channel Supabase dupliqué pour service_orders.
   const loadOrdersRef = useRef(loadOrders);
   useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
 
-  useEffect(() => {
-    function onChanged(e: Event) {
-      const detail = (e as CustomEvent<{ eventType: string }>).detail;
-      loadOrdersRef.current();
-      if (detail?.eventType === 'INSERT' && soundEnabledRef.current) {
-        playNewOrderChime();
-      }
-    }
-    window.addEventListener('elm-pos:service_orders:changed', onChanged);
-    return () => window.removeEventListener('elm-pos:service_orders:changed', onChanged);
+  // Refresh counts only (1 RPC vs 7 queries)
+  const refreshCountsRef = useRef({ businessId, dateFilter, search });
+  useEffect(() => { refreshCountsRef.current = { businessId, dateFilter, search }; }, [businessId, dateFilter, search]);
+
+  const refreshCounts = useCallback(async () => {
+    const { businessId: bid, dateFilter: df, search: s } = refreshCountsRef.current;
+    if (!bid) return;
+    try {
+      const c = await getServiceOrderCounts(bid, { date: df || undefined, search: s || undefined });
+      setCounts(c);
+    } catch { /* non-bloquant */ }
   }, []);
+
+  useEffect(() => {
+    let insertDebounce: ReturnType<typeof setTimeout> | null = null;
+
+    function onChanged(e: Event) {
+      const { eventType, record } = (e as CustomEvent<{ eventType: string; record?: ServiceOrder }>).detail ?? {};
+
+      if (eventType === 'INSERT') {
+        // Son immédiat, rechargement différé (items non inclus dans le payload)
+        if (soundEnabledRef.current) playNewOrderChime();
+        if (insertDebounce) clearTimeout(insertDebounce);
+        insertDebounce = setTimeout(() => loadOrdersRef.current(), 300);
+        return;
+      }
+
+      if (eventType === 'UPDATE' && record) {
+        // Mise à jour chirurgicale : on merge les champs de l'ordre sans retoucher les items déjà chargés
+        setOrders(prev => prev.map(o => o.id === record.id ? { ...o, ...record } : o));
+        refreshCounts();
+        return;
+      }
+
+      if (eventType === 'DELETE' && record) {
+        setOrders(prev => prev.filter(o => o.id !== (record as any).id));
+        refreshCounts();
+        return;
+      }
+
+      // Fallback pour tout autre cas
+      loadOrdersRef.current();
+    }
+
+    window.addEventListener('elm-pos:service_orders:changed', onChanged);
+    return () => {
+      window.removeEventListener('elm-pos:service_orders:changed', onChanged);
+      if (insertDebounce) clearTimeout(insertDebounce);
+    };
+  }, [refreshCounts]);
 
   return {
     orders,

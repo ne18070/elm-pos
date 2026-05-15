@@ -105,15 +105,16 @@ export function PayModal({ order, currency, onClose, onPaid }: {
         );
       }
 
-      // 2. Enregistrer le paiement
-      if (balanceAfterLoyalty === 0) {
-        // Les points couvrent tout — on enregistre la remise comme paiement pour clôturer l'OT
-        await payServiceOrder(order.id, loyaltyDiscount, 'loyalty', { userId: user?.id, userName: user?.full_name });
-      } else {
-        await payServiceOrder(order.id, parsedAmount, method, { userId: user?.id, userName: user?.full_name });
-      }
+      // 2. Enregistrer le paiement (atomique)
+      const payResult = balanceAfterLoyalty === 0
+        ? await payServiceOrder(order.id, loyaltyDiscount, 'loyalty', { userId: user?.id, userName: user?.full_name })
+        : await payServiceOrder(order.id, parsedAmount, method, { userId: user?.id, userName: user?.full_name });
 
       onPaid();
+
+      if (payResult.loyaltyError) {
+        notifError('Paiement enregistré, mais les points de fidélité n\'ont pas pu être attribués. Vérifiez le profil client.');
+      }
     } catch (e: any) {
       setErreur(toUserError(e));
     } finally {
