@@ -16,7 +16,7 @@ import {
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
-import { getLoyaltyConfig, getClientBalance } from '@services/supabase/loyalty';
+import { buildLoyaltyForReceipt } from '@/lib/loyalty-print';
 import { shareServiceOrderViaWhatsApp } from '@/lib/share-service-order';
 import { getPublicSiteUrl } from '@/lib/public-links';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
@@ -229,17 +229,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
     if (!canShareOrder) { deny(); return; }
     if (!business) return;
 
-    let loyalty: { points_earned?: number; new_balance?: number } | undefined;
-    if (order.client_name && order.status === 'paye') {
-      try {
-        const cfg = await getLoyaltyConfig(order.business_id);
-        if (cfg.is_active) {
-          const pointsEarned = Math.floor(order.total / cfg.earn_per);
-          const newBalance   = await getClientBalance(order.business_id, order.client_name);
-          if (pointsEarned > 0) loyalty = { points_earned: pointsEarned, new_balance: newBalance };
-        }
-      } catch { /* non-bloquant */ }
-    }
+    const loyalty = await buildLoyaltyForReceipt(order.business_id, order.client_name, order.total, order.status);
 
     printHtml(generateServiceOrderReceipt({
       id: order.id, order_number: order.order_number, created_at: order.created_at,

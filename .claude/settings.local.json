@@ -92,7 +92,8 @@
       "Bash(supabase migration *)",
       "Bash(awk '{print $1}')",
       "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\({deps: p.dependencies, devDeps: Object.keys\\(p.devDependencies||{}\\)}, null, 2\\)\\)\")",
-      "Bash(mkdir \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\.vscode\" 2>nul; echo done)"
+      "Bash(mkdir \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\.vscode\" 2>nul; echo done)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\lib\\\\\" | Select-Object Name)"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"
