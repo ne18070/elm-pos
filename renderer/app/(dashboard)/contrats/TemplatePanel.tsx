@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { Loader2, Eye, Bold, Italic, List, Heading2, Minus, Type, PenLine } from 'lucide-react';
 import { SlidePanel, Field } from './SharedComponents';

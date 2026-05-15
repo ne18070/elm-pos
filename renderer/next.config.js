@@ -72,9 +72,9 @@ const nextConfig = {
     };
 
     // jspdf optional peer deps — not used, stub them out so webpack doesn't fail
-    config.resolve.alias['canvg']      = false;
+    config.resolve.alias['canvg']       = false;
     config.resolve.alias['html2canvas'] = false;
-    config.resolve.alias['dompurify']  = false;
+    // NOTE: dompurify is NOT stubbed — the app uses it directly in contract views
 
     return config;
   },

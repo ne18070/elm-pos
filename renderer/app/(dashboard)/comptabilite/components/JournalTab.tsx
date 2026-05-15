@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Plus, Trash2, ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { JournalEntry } from '@services/supabase/accounting';
@@ -52,8 +53,8 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
                 const totalCredit = e.lines?.reduce((s, l) => s + l.credit, 0) ?? 0;
                 const isOpen      = expandedEntry === e.id;
                 return (
-                  <>
-                    <tr key={e.id}
+                  <React.Fragment key={e.id}>
+                    <tr
                       className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
                       onClick={() => setExpandedEntry(isOpen ? null : e.id)}>
                       <td className="px-3 py-3 text-content-primary">
@@ -80,8 +81,8 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
                         )}
                       </td>
                     </tr>
-                    {isOpen && e.lines?.map((line, li) => (
-                      <tr key={li} className="bg-surface-input/50 border-b border-surface-border">
+                    {isOpen && e.lines?.map((line) => (
+                      <tr key={line.id ?? line.account_code} className="bg-surface-input/50 border-b border-surface-border">
                         <td></td>
                         <td colSpan={2} className="px-4 py-2 font-mono text-xs text-content-brand">{line.account_code}</td>
                         <td className="px-4 py-2 text-xs text-content-primary italic">{line.account_name}</td>
@@ -95,7 +96,7 @@ export function JournalTab({ entries, expandedEntry, setExpandedEntry, currency,
                         <td></td>
                       </tr>
                     ))}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
