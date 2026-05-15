@@ -16,6 +16,7 @@ import {
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
+import { getLoyaltyConfig, getClientBalance } from '@services/supabase/loyalty';
 import { shareServiceOrderViaWhatsApp } from '@/lib/share-service-order';
 import { getPublicSiteUrl } from '@/lib/public-links';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
@@ -224,9 +225,22 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
     }
   }
 
-  function handlePrint() {
+  async function handlePrint() {
     if (!canShareOrder) { deny(); return; }
     if (!business) return;
+
+    let loyalty: { points_earned?: number; new_balance?: number } | undefined;
+    if (order.client_name && order.status === 'paye') {
+      try {
+        const cfg = await getLoyaltyConfig(order.business_id);
+        if (cfg.is_active) {
+          const pointsEarned = Math.floor(order.total / cfg.earn_per);
+          const newBalance   = await getClientBalance(order.business_id, order.client_name);
+          if (pointsEarned > 0) loyalty = { points_earned: pointsEarned, new_balance: newBalance };
+        }
+      } catch { /* non-bloquant */ }
+    }
+
     printHtml(generateServiceOrderReceipt({
       id: order.id, order_number: order.order_number, created_at: order.created_at,
       started_at: order.started_at, finished_at: order.finished_at, paid_at: order.paid_at,
@@ -237,6 +251,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
       status: order.status, notes: order.notes,
       items: (order.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
       total: order.total, paid_amount: order.paid_amount, payment_method: order.payment_method,
+      loyalty,
     }, business as any));
   }
 

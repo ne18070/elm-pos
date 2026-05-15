@@ -1670,6 +1670,7 @@ export interface ServiceReceiptData {
   paid_amount:      number;
   payment_method?:  string | null;
   payments?:        Array<{ amount: number; method: string; paid_at: string }>;
+  loyalty?:         { points_used?: number; discount?: number; points_earned?: number; new_balance?: number };
 }
 
 export function generateServiceOrderReceipt(data: ServiceReceiptData, business: Business): string {
@@ -1784,6 +1785,18 @@ ${(() => {
 </table>
 
 ${data.status === 'paye' ? '<div class="center"><span class="stamp">PAYÉ</span></div>' : ''}
+
+${(() => {
+  const loy = data.loyalty;
+  if (!loy || (!loy.points_used && !loy.points_earned)) return '';
+  return `<hr>
+<div class="center" style="font-style:italic;font-size:10px">
+  ★ Programme fidélité
+  ${loy.points_used ? `<div>Remise utilisée : -${fmt(loy.discount ?? 0, cur)} (${loy.points_used} pts)</div>` : ''}
+  ${loy.points_earned ? `<div>Points gagnés : +${loy.points_earned} pts</div>` : ''}
+  ${loy.new_balance !== undefined ? `<div>Solde : ${loy.new_balance} pts</div>` : ''}
+</div>`;
+})()}
 
 ${data.notes ? `<hr><div class="label" style="font-style:italic">Note : ${data.notes}</div>` : ''}
 

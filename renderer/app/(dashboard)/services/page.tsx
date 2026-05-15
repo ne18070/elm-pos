@@ -17,6 +17,7 @@ import {
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { getLoyaltyConfig, getClientBalance } from '@services/supabase/loyalty';
 
 // Components
 import { ServiceOrdersTab } from './components/ServiceOrdersTab';
@@ -70,10 +71,23 @@ export default function ServicesPage() {
     }
   }
 
-  function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
+  async function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
     e.stopPropagation();
     if (!canShareOrder) return;
     if (!business) return;
+
+    let loyalty: { points_earned?: number; new_balance?: number } | undefined;
+    if (o.client_name && o.status === 'paye') {
+      try {
+        const cfg = await getLoyaltyConfig(o.business_id);
+        if (cfg.is_active) {
+          const pointsEarned = Math.floor(o.total / cfg.earn_per);
+          const newBalance   = await getClientBalance(o.business_id, o.client_name);
+          if (pointsEarned > 0) loyalty = { points_earned: pointsEarned, new_balance: newBalance };
+        }
+      } catch { /* non-bloquant */ }
+    }
+
     printHtml(generateServiceOrderReceipt({
       id: o.id, order_number: o.order_number, created_at: o.created_at,
       started_at: o.started_at, finished_at: o.finished_at, paid_at: o.paid_at,
@@ -85,6 +99,7 @@ export default function ServicesPage() {
       items: (o.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
       total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,
       payments: o.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
+      loyalty,
     }, business as any));
   }
 
