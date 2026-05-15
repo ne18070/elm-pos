@@ -66,6 +66,7 @@ export async function printReceiptBrowser(
         resellerName:        data.reseller_name,
         resellerClientName:  data.reseller_client_name,
         resellerClientPhone: data.reseller_client_phone,
+        loyalty:             data.loyalty,
       }
     );
 

@@ -302,6 +302,13 @@ export interface HardwareStatus {
   nfc: NfcStatus;
 }
 
+export interface LoyaltyReceiptData {
+  points_used?:   number;  // pts rachetés cette transaction
+  discount?:      number;  // valeur CFA des pts rachetés
+  points_earned?: number;  // pts gagnés grâce à cet achat
+  new_balance?:   number;  // solde après transaction
+}
+
 export interface ReceiptData {
   order: Order;
   business: Business;
@@ -311,6 +318,7 @@ export interface ReceiptData {
   /** Mode grossiste : nom du client du revendeur (affiché à droite) */
   reseller_client_name?: string;
   reseller_client_phone?: string;
+  loyalty?: LoyaltyReceiptData;
 }
 
 // ─── IPC Channel Types ────────────────────────────────────────────────────────

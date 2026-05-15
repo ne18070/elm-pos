@@ -108,6 +108,7 @@ export async function redeemPoints(
   points:          number,
   config:          LoyaltyConfig,
   serviceOrderId?: string,
+  orderId?:        string,
 ): Promise<{ pointsUsed: number; cashValue: number }> {
   const balance = await getClientBalance(businessId, clientName);
   const toUse   = Math.min(points, balance);
@@ -125,6 +126,7 @@ export async function redeemPoints(
     type:             'redeem',
     points:           -toUse,
     service_order_id: serviceOrderId ?? null,
+    order_id:         orderId ?? null,
     note:             `Remise ${cashValue.toLocaleString('fr-FR')} CFA`,
   });
   if (error) throw new Error(error.message);

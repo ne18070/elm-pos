@@ -1,4 +1,4 @@
-import type { Order, Business } from '../../types';
+import type { Order, Business, LoyaltyReceiptData } from '../../types';
 import type { Staff, StaffPayment, StaffAttendance } from '../../services/supabase/staff';
 import { formatCurrency } from './utils';
 
@@ -69,6 +69,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   check:   'Chèque',
   bank:    'Virement',
   partial: 'Paiement mixte',
+  loyalty: 'Remise fidélité',
 };
 
 const fmt = formatCurrency;
@@ -101,7 +102,7 @@ function paymentLines(order: Order, currency: string): string {
 
 // --- Template 1 : Ticket thermique (80mm) ------------------------------------
 
-export function generateThermalReceipt(order: Order, business: Business): string {
+export function generateThermalReceipt(order: Order, business: Business, extra?: { loyalty?: LoyaltyReceiptData }): string {
   const cur  = business.currency ?? 'XOF';
   const paid = paidAmount(order);
   const change = Math.max(0, paid - order.total);
@@ -207,6 +208,15 @@ export function generateThermalReceipt(order: Order, business: Business): string
 
   ${order.coupon_notes ? `<hr class="divider"><div class="small center" style="font-style:italic">${order.coupon_notes}</div>` : ''}
   ${order.notes ? `<hr class="divider"><div class="small" style="font-style:italic">Note : ${order.notes}</div>` : ''}
+
+  ${extra?.loyalty && (extra.loyalty.points_used || extra.loyalty.points_earned) ? `
+  <hr class="divider">
+  <div class="center small" style="font-style:italic">
+    ★ Programme fidélité
+    ${extra.loyalty.points_used ? `<div>Remise utilisée : -${fmt(extra.loyalty.discount ?? 0, cur)} (${extra.loyalty.points_used} pts)</div>` : ''}
+    ${extra.loyalty.points_earned ? `<div>Points gagnés : +${extra.loyalty.points_earned} pts</div>` : ''}
+    ${extra.loyalty.new_balance !== undefined ? `<div>Solde : ${extra.loyalty.new_balance} pts</div>` : ''}
+  </div>` : ''}
 
   <hr class="divider">
 
