@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Store, Utensils, Car, Gavel, Hotel, LayoutGrid,
-  ChevronRight, CheckCircle2, Loader2,
+  ChevronRight, CheckCircle2, Loader2, GraduationCap
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { trackEvent } from '@/lib/analytics';
@@ -48,6 +48,14 @@ const SECTORS = [
     label: 'Hôtel / Hébergement',
     desc:  'Chambres, réservations, check-in',
     icon:  Hotel,
+    color: 'text-status-info',
+    bg:    'bg-badge-info',
+  },
+  {
+    id:    'education',
+    label: 'Éducation / École',
+    desc:  'Élèves, classes, scolarité, notes',
+    icon:  GraduationCap,
     color: 'text-status-info',
     bg:    'bg-badge-info',
   },
@@ -225,7 +233,7 @@ export default function OnboardingPage() {
         <p className="text-center text-xs text-content-muted mt-12">
           Besoin d'aide ?{' '}
           <a
-            href="https://wa.me/33746436801"
+            href="https://wa.me/221772211126"
             className="text-content-brand hover:underline"
           >
             Contactez-nous sur WhatsApp

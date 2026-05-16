@@ -14,6 +14,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { trackAuth } from '@/lib/analytics';
+import { isCapacitor } from '@/lib/platform';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -165,30 +166,40 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      {/* Grille de fond */}
-      <div
-        className="fixed inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-        }}
-      />
+    <div className={cn(
+      'min-h-screen flex items-center justify-center p-4',
+      isCapacitor && 'pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]'
+    )}>
+      {/* Grille de fond — masquée sur mobile natif */}
+      {!isCapacitor && (
+        <div
+          className="fixed inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+      )}
 
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
+          <div className={cn(
+            'bg-white rounded-2xl flex items-center justify-center p-3 shadow-2xl overflow-hidden border-2 border-white/20 mb-6',
+            isCapacitor ? 'w-28 h-28' : 'w-24 h-24'
+          )}>
             <img src="/logo.png" alt="ELM Logo" className="w-full h-full object-contain" />
           </div>
           <p className="text-content-secondary text-sm mt-1">Connectez-vous à votre compte</p>
-          <p className="text-xs text-content-muted mt-2">
-            Pas encore de compte ?{' '}
-            <a href="/signup" className="text-content-brand hover:text-content-brand transition-colors">
-              Créer un compte
-            </a>
-          </p>
+          {!isCapacitor && (
+            <p className="text-xs text-content-muted mt-2">
+              Pas encore de compte ?{' '}
+              <a href="/signup" className="text-content-brand hover:text-content-brand transition-colors">
+                Créer un compte
+              </a>
+            </p>
+          )}
         </div>
 
         {/* Carte */}
@@ -266,11 +277,13 @@ export default function LoginPage() {
           <p className="text-[10px] font-medium text-content-muted tracking-widest uppercase">
             ELM - Entreprise Lifecycle Management v{version || '1.0.0'}
           </p>
-          <p className="text-xs text-slate-700">
-            <a href="/privacy" className="hover:text-content-secondary transition-colors">
-              Politique de confidentialité
-            </a>
-          </p>
+          {!isCapacitor && (
+            <p className="text-xs text-slate-700">
+              <a href="/privacy" className="hover:text-content-secondary transition-colors">
+                Politique de confidentialité
+              </a>
+            </p>
+          )}
         </div>
       </div>
     </div>

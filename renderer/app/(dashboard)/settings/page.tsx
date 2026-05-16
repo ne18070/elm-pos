@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Building2, Printer, Wifi, ChevronDown, MessageCircle, 
-  UserCircle, ArrowRight, Package, Archive, ShieldCheck, 
-  Briefcase, Globe, Settings2, Wrench
+import {
+  Building2, Printer, Wifi, ChevronDown, MessageCircle,
+  UserCircle, Package, Archive, ShieldCheck,
+  Briefcase, Globe, Settings2, Wrench, UtensilsCrossed, Gift
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth';
@@ -26,13 +26,16 @@ import { PrinterSection } from './PrinterSection';
 import { CashDrawerSection } from './CashDrawerSection';
 import { WhatsAppSettingsSection } from './WhatsAppSettingsSection';
 import { AccountSection } from './AccountSection';
+import { RestaurantSettingsSection } from './RestaurantSettingsSection';
+import { LoyaltySettingsSection } from './LoyaltySettingsSection';
+import { hasFeature } from '@/lib/permissions';
 
 // --- Local Components --------------------------------------------------------
 
 function SettingsSection({ 
   id, title, icon: Icon, isOpen, onToggle, children, badge 
 }: { 
-  id: string; title: string; icon: any; isOpen: boolean; onToggle: (id: string) => void; children: React.ReactNode; badge?: string;
+  id: string; title: string; icon: React.ComponentType<{ className?: string }>; isOpen: boolean; onToggle: (id: string) => void; children: React.ReactNode; badge?: string;
 }) {
   return (
     <div className="card overflow-hidden transition-all duration-300">
@@ -176,6 +179,16 @@ export default function SettingsPage() {
               <StockUnitsSection />
             </SettingsSection>
           )}
+
+          {isManager && hasFeature(business, 'restaurant') && (
+            <SettingsSection id="restaurant" title="Zones & Plan de salle" icon={UtensilsCrossed} isOpen={openSections.restaurant} onToggle={toggle} badge="Restaurant / Hôtel">
+              <RestaurantSettingsSection />
+            </SettingsSection>
+          )}
+
+          <SettingsSection id="loyalty" title="Programme de fidélité" icon={Gift} isOpen={openSections.loyalty} onToggle={toggle}>
+            <LoyaltySettingsSection />
+          </SettingsSection>
         </div>
 
         {/* --- Category: Hardware --- */}

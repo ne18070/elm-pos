@@ -4,34 +4,51 @@ import { useState } from 'react';
 import { Loader2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency } from '@/lib/utils';
-import type { Order } from '@pos-types';
+import { toUserError } from '@/lib/user-error';
+import type { Order, Refund } from '@pos-types';
 
 interface RefundModalProps {
-  order: Order;
+  order:    Order;
   currency: string;
+  refunds?: Refund[];   // remboursements déjà effectués sur cette commande
   onConfirm: (amount: number, reason: string) => Promise<void>;
-  onClose: () => void;
+  onClose:   () => void;
 }
 
-export function RefundModal({ order, currency, onConfirm, onClose }: RefundModalProps) {
-  const [type, setType] = useState<'full' | 'partial'>('full');
-  const [amount, setAmount] = useState(String(order.total));
+export function RefundModal({ order, currency, refunds = [], onConfirm, onClose }: RefundModalProps) {
+  const [type,   setType]   = useState<'full' | 'partial'>('full');
+  const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error,   setError]   = useState('');
 
-  const refundAmount = type === 'full' ? order.total : parseFloat(amount) || 0;
-  const isPartial = type === 'partial';
-  const isValid = refundAmount > 0 && refundAmount <= order.total;
+  const alreadyRefunded = refunds.reduce((s, r) => s + r.amount, 0);
+  const maxRefundable   = Math.max(0, Math.round((order.total - alreadyRefunded) * 100) / 100);
+
+  const refundAmount = type === 'full' ? maxRefundable : (parseFloat(amount) || 0);
+
+  const amountError =
+    type === 'partial' && parseFloat(amount) > 0 && parseFloat(amount) > maxRefundable
+      ? `Dépasse le remboursable (${formatCurrency(maxRefundable, currency)})`
+      : null;
+
+  const isValid =
+    refundAmount > 0 &&
+    refundAmount <= maxRefundable + 0.01 &&
+    reason.trim().length >= 3 &&
+    !amountError;
 
   async function handleConfirm() {
-    if (!isValid) return;
+    if (!isValid) {
+      if (!reason.trim()) { setError('Le motif du remboursement est obligatoire'); return; }
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      await onConfirm(refundAmount, reason);
+      await onConfirm(refundAmount, reason.trim());
     } catch (err) {
-      setError(String(err));
+      setError(toUserError(err));
     } finally {
       setLoading(false);
     }
@@ -58,15 +75,27 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
     >
       <div className="space-y-4">
         {/* Récap commande */}
-        <div className="bg-surface-input rounded-xl p-3 text-sm">
+        <div className="bg-surface-input rounded-xl p-3 text-sm space-y-1">
           <div className="flex justify-between text-content-secondary">
             <span>Commande</span>
             <span className="font-mono">#{order.id.slice(0, 8).toUpperCase()}</span>
           </div>
-          <div className="flex justify-between text-content-primary font-semibold mt-1">
+          <div className="flex justify-between text-content-primary font-semibold">
             <span>Total payé</span>
             <span>{formatCurrency(order.total, currency)}</span>
           </div>
+          {alreadyRefunded > 0 && (
+            <>
+              <div className="flex justify-between text-status-purple text-xs">
+                <span>Déjà remboursé</span>
+                <span>-{formatCurrency(alreadyRefunded, currency)}</span>
+              </div>
+              <div className="flex justify-between font-bold border-t border-surface-border pt-1">
+                <span className="text-content-primary">Remboursable</span>
+                <span className="text-status-purple">{formatCurrency(maxRefundable, currency)}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Type de remboursement */}
@@ -76,53 +105,58 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
             {(['full', 'partial'] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => {
-                  setType(t);
-                  if (t === 'full') setAmount(String(order.total));
-                }}
+                onClick={() => { setType(t); setAmount(''); setError(''); }}
                 className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
                   ${type === t
                     ? 'border-purple-500 bg-badge-purple text-status-purple'
                     : 'border-surface-border text-content-secondary hover:border-slate-500'}`}
               >
-                {t === 'full' ? 'Total' : 'Partiel'}
+                {t === 'full' ? `Total (${formatCurrency(maxRefundable, currency)})` : 'Partiel'}
               </button>
             ))}
           </div>
         </div>
 
         {/* Montant partiel */}
-        {isPartial && (
+        {type === 'partial' && (
           <div>
-            <label className="label">Montant à rembourser</label>
+            <label className="label">
+              Montant à rembourser
+              <span className="text-content-muted text-[10px] ml-1">
+                (max {formatCurrency(maxRefundable, currency)})
+              </span>
+            </label>
             <input
               type="number"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => { setAmount(e.target.value); setError(''); }}
               className="input"
               min="0.01"
-              max={order.total}
+              max={maxRefundable}
               step="any"
               autoFocus
             />
-            {parseFloat(amount) > order.total && (
-              <p className="text-xs text-status-error mt-1">
-                Dépasse le total de la commande
-              </p>
+            {amountError && (
+              <p className="text-xs text-status-error mt-1">{amountError}</p>
             )}
           </div>
         )}
 
-        {/* Raison */}
+        {/* Motif (obligatoire) */}
         <div>
-          <label className="label">Motif du remboursement</label>
+          <label className="label">
+            Motif du remboursement <span className="text-status-error">*</span>
+          </label>
           <textarea
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => { setReason(e.target.value); setError(''); }}
             className="input resize-none"
             rows={2}
-            placeholder="Ex: Produit défectueux, erreur de commande..."
+            placeholder="Ex : Produit défectueux, erreur de commande…"
           />
+          {reason.trim().length > 0 && reason.trim().length < 3 && (
+            <p className="text-xs text-content-muted mt-1">Motif trop court</p>
+          )}
         </div>
 
         {/* Avertissement remboursement total */}
@@ -144,4 +178,3 @@ export function RefundModal({ order, currency, onConfirm, onClose }: RefundModal
     </Modal>
   );
 }
-

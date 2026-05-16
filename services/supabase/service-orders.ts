@@ -2,6 +2,7 @@ import { supabase as _supabase } from './client';
 import { syncServiceOrdersAccounting } from './accounting';
 import { logAction } from './logger';
 import { upsertClientByPhone } from './clients';
+import { getLoyaltyConfig, earnPoints } from './loyalty';
 const db = _supabase as any;
 
 type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
@@ -348,7 +349,7 @@ export async function getServiceOrders(
   const to = from + pageSize - 1;
   let q = db
     .from('service_orders')
-    .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)', { count: 'exact' })
+    .select('*, items:service_order_items(id, name, quantity)', { count: 'exact' })
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
     .range(from, to);
@@ -383,30 +384,24 @@ export async function getServiceOrderCounts(
   businessId: string,
   opts?: { date?: string; search?: string }
 ): Promise<Record<ServiceOrderStatus | 'all', number>> {
-  const statuses: Array<ServiceOrderStatus | 'all'> = ['all', 'attente', 'en_cours', 'pause', 'termine', 'paye', 'annule'];
+  const { data, error } = await db.rpc('get_service_order_counts', {
+    p_business_id: businessId,
+    p_date:        opts?.date   || null,
+    p_search:      opts?.search?.trim().replace(/[%_,]/g, ' ') || null,
+  });
+  if (error) throw new Error(error.message);
 
-  const applyFilters = (status: ServiceOrderStatus | 'all') => {
-    let q = db
-      .from('service_orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', businessId);
-
-    if (status !== 'all') q = q.eq('status', status);
-    if (opts?.date) q = q.gte('created_at', `${opts.date}T00:00:00Z`).lte('created_at', `${opts.date}T23:59:59Z`);
-    if (opts?.search?.trim()) {
-      const term = opts.search.trim().replace(/[%_,]/g, ' ');
-      q = q.or(`subject_ref.ilike.%${term}%,subject_info.ilike.%${term}%,client_name.ilike.%${term}%,client_phone.ilike.%${term}%`);
-    }
-    return q;
+  const raw = (data ?? {}) as Partial<Record<ServiceOrderStatus, number>>;
+  const all = (Object.values(raw) as number[]).reduce((s, n) => s + n, 0);
+  return {
+    all,
+    attente:  raw.attente  ?? 0,
+    en_cours: raw.en_cours ?? 0,
+    pause:    raw.pause    ?? 0,
+    termine:  raw.termine  ?? 0,
+    paye:     raw.paye     ?? 0,
+    annule:   raw.annule   ?? 0,
   };
-
-  const results = await Promise.all(statuses.map(async status => {
-    const { error, count } = await applyFilters(status);
-    if (error) throw new Error(error.message);
-    return [status, count ?? 0] as const;
-  }));
-
-  return Object.fromEntries(results) as Record<ServiceOrderStatus | 'all', number>;
 }
 
 export interface CreateServiceOrderInput {
@@ -581,68 +576,58 @@ export async function payServiceOrder(
   amount: number,
   paymentMethod: string,
   actor?: ServiceOrderActor
-): Promise<void> {
-  const { data: current, error: fetchErr } = await db
-    .from('service_orders')
-    .select('id, business_id, order_number, total, paid_amount, client_name')
-    .eq('id', id)
-    .single();
-  if (fetchErr) throw new Error(fetchErr.message);
-
-  const newPaidAmount = (current.paid_amount ?? 0) + amount;
-  const isFullyPaid   = newPaidAmount >= current.total;
-
-  const updates: any = {
-    paid_amount:    newPaidAmount,
-    payment_method: paymentMethod,
-  };
-  if (isFullyPaid) {
-    updates.status  = 'paye';
-    updates.paid_at = new Date().toISOString();
-  }
-
-  const { data: order, error } = await db
-    .from('service_orders')
-    .update(updates)
-    .eq('id', id)
-    .select('id, business_id, order_number, total, paid_amount, payment_method, client_name')
-    .single();
+): Promise<{ isFullyPaid: boolean; loyaltyError?: string }> {
+  // Atomic: lock row + update order + insert payment in one DB transaction
+  const { data, error } = await db.rpc('pay_service_order', {
+    p_id:     id,
+    p_amount: amount,
+    p_method: paymentMethod,
+  });
   if (error) throw new Error(error.message);
 
-  await db.from('service_order_payments').insert({
-    order_id:    id,
-    business_id: current.business_id,
-    amount,
-    method:      paymentMethod,
-    paid_at:     updates.paid_at ?? new Date().toISOString(),
-  });
+  const result = data as {
+    id: string; business_id: string; order_number: number;
+    total: number; new_paid_amount: number; is_fully_paid: boolean;
+    client_name: string | null; client_phone: string | null;
+  };
 
-  if (order && isFullyPaid) {
-    try {
-      await syncServiceOrdersAccounting(order.business_id);
-    } catch (syncError) {
-      console.warn('[service-orders] accounting sync failed', syncError);
+  // Side-effects run after the transaction commits — failures don't affect payment
+  let loyaltyError: string | undefined;
+  if (result.is_fully_paid) {
+    // Accounting sync: fire-and-forget
+    syncServiceOrdersAccounting(result.business_id).catch(e =>
+      console.warn('[service-orders] accounting sync failed', e)
+    );
+
+    // Loyalty: surface the error to the caller instead of swallowing it
+    if (result.client_name) {
+      try {
+        const cfg = await getLoyaltyConfig(result.business_id);
+        await earnPoints(result.business_id, result.client_name, result.client_phone ?? null, result.total, cfg, id);
+      } catch (e: any) {
+        loyaltyError = e?.message ?? 'Erreur attribution points';
+      }
     }
   }
 
-  if (order) {
-    logAction({
-      business_id: current.business_id,
-      action:      isFullyPaid ? 'service_order.paid' : 'service_order.acompte',
-      entity_type: 'service_order',
-      entity_id:   id,
-      user_id:     actor?.userId,
-      user_name:   actor?.userName,
-      metadata: {
-        order_number:   current.order_number,
-        amount,
-        payment_method: paymentMethod,
-        total:          current.total,
-        paid_amount:    newPaidAmount,
-        client_name:    current.client_name ?? null,
-      },
-    });
-  }
+  logAction({
+    business_id: result.business_id,
+    action:      result.is_fully_paid ? 'service_order.paid' : 'service_order.acompte',
+    entity_type: 'service_order',
+    entity_id:   id,
+    user_id:     actor?.userId,
+    user_name:   actor?.userName,
+    metadata: {
+      order_number:   result.order_number,
+      amount,
+      payment_method: paymentMethod,
+      total:          result.total,
+      paid_amount:    result.new_paid_amount,
+      client_name:    result.client_name ?? null,
+    },
+  });
+
+  return { isFullyPaid: result.is_fully_paid, loyaltyError };
 }
 
 export async function updateServiceOrder(

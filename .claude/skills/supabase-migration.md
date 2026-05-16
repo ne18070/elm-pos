@@ -53,6 +53,11 @@ CREATE POLICY "<table_name>_delete" ON public.<table_name>
       SELECT id FROM public.businesses WHERE owner_id = auth.uid()
     )
   );
+
+-- Explicit grants for Data API (Required starting May/Oct 2026)
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.<table_name> TO authenticated;
+GRANT ALL ON TABLE public.<table_name> TO service_role;
+-- GRANT SELECT ON TABLE public.<table_name> TO anon; -- Only if table is publicly readable
 ```
 
 For SECURITY DEFINER RPCs (used to bypass RLS for superadmin operations):
@@ -75,6 +80,11 @@ BEGIN
   -- Function body
 END;
 $$;
+
+-- Explicit grants for Functions
+GRANT EXECUTE ON FUNCTION public.<fn_name>() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.<fn_name>() TO service_role;
+-- GRANT EXECUTE ON FUNCTION public.<fn_name>() TO anon; -- Only if function is publicly callable
 ```
 
 4. After creating the file, note that the migration must be applied via `supabase db push` or the Supabase dashboard.

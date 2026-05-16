@@ -1,6 +1,11 @@
 node_modules/
 dist/
 release/
+
+# Android signing — ne jamais committer
+*.jks
+*.keystore
+android/keystore.properties
 .next/
 renderer/.next/
 renderer/out/

@@ -43,7 +43,7 @@ export default function PrivacyPage() {
               <a href="mailto:contact@elm-app.click" className="text-content-brand hover:text-content-brand">
                 contact@elm-app.click
               </a>{' '}ou sur WhatsApp au{' '}
-              <a href="https://wa.me/33746436801" className="text-content-brand hover:text-content-brand">
+              <a href="https://wa.me/221772211126" className="text-content-brand hover:text-content-brand">
                 +33 7 46 43 68 01
               </a>.
             </p>

@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Stocks · Compta · Location · Juridique',
+    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Restaurant · École · Stocks · Compta · Location · Juridique',
     template: '%s | ELM (Sénégal)',
   },
   description:
-    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, stocks, comptabilité OHADA, location de véhicules, réservations hôtels, dossiers juridiques, livraisons et WhatsApp natif. La solution de référence à Dakar et dans tout le Sénégal.',
+    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, gestion scolaire (élèves, classes, bulletins), gestion restaurant, stocks, comptabilité OHADA, location de véhicules, réservations hôtels et dossiers juridiques. La solution de référence au Sénégal',
   applicationName: 'ELM Sénégal',
   keywords: [
     // Fonctionnalités core
@@ -44,6 +44,10 @@ export const metadata: Metadata = {
     'location voiture Sénégal', 'contrat location véhicule Sénégal', 'gestion flotte Sénégal',
     // Réservations
     'réservation hôtel Sénégal', 'gestion réservations Sénégal', 'logiciel hôtellerie Sénégal',
+    // École & Éducation
+    'logiciel gestion scolaire Sénégal', 'gestion école Dakar', 'système suivi élèves Sénégal',
+    'paiement scolarité en ligne Sénégal', 'bulletins scolaires numériques Sénégal',
+    'gestion centre de formation Sénégal',
     // Juridique
     'logiciel cabinet juridique Sénégal', 'gestion dossiers juridiques Sénégal', 'honoraires avocat Sénégal',
     'dossiers juridiques OHADA Sénégal', 'suivi affaires juridiques Sénégal',
@@ -155,6 +159,8 @@ const jsonLd = {
       provider: { '@id': `${BASE_URL}/#organization` },
       featureList: [
         'Caisse tactile (espèces, Wave, Orange Money, carte)',
+        'Gestion scolaire (élèves, classes, bulletins, scolarité)',
+        'Gestion restaurant (plan de salle, menu du jour)',
         'Reçus WhatsApp instantanés',
         'Gestion des stocks en temps réel',
         'Alertes de rupture de stock',
@@ -182,6 +188,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/*
+          Script bloquant (sans async/defer) : s'exécute avant le premier pixel peint.
+          Lit le thème depuis localStorage et pose data-theme AVANT que le CSS s'applique,
+          ce qui évite le flash de mode sombre lors des navigations en mode clair.
+          Format Zustand persist : { state: { theme: 'light'|'dark'|'auto' } }
+        */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var s=JSON.parse(localStorage.getItem('elm-pos-theme')||'{}');var t=s&&s.state&&s.state.theme;if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(t==='dark'){document.documentElement.removeAttribute('data-theme');}else{var h=new Date().getHours();if(h>=7&&h<19){document.documentElement.setAttribute('data-theme','light');}}}catch(e){}})();` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

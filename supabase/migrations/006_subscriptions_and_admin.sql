@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS payment_settings (
   id               int         PRIMARY KEY DEFAULT 1,
   wave_qr_url      text,
   om_qr_url        text,
-  whatsapp_number  text        DEFAULT '+33746436801',
+  whatsapp_number  text        DEFAULT '+221772211126',
   updated_at       timestamptz DEFAULT now()
 );
 INSERT INTO payment_settings (id) VALUES (1) ON CONFLICT DO NOTHING;

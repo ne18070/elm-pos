@@ -31,7 +31,7 @@ export interface Organization {
 
 // ─── Business ─────────────────────────────────────────────────────────────────
 
-export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique';
+export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique' | 'education';
 
 export interface Business {
   id: string;
@@ -168,6 +168,7 @@ export interface Order {
   delivery_address?: string | null;
   delivery_location?: { latitude: number; longitude: number; name?: string; address?: string } | null;
   livreur_id?: string | null;
+  student_id?: string | null;
   // joined
   cashier?: User;
   livreur?: import('../services/supabase/livreurs').Livreur;
@@ -301,6 +302,13 @@ export interface HardwareStatus {
   nfc: NfcStatus;
 }
 
+export interface LoyaltyReceiptData {
+  points_used?:   number;  // pts rachetés cette transaction
+  discount?:      number;  // valeur CFA des pts rachetés
+  points_earned?: number;  // pts gagnés grâce à cet achat
+  new_balance?:   number;  // solde après transaction
+}
+
 export interface ReceiptData {
   order: Order;
   business: Business;
@@ -310,6 +318,7 @@ export interface ReceiptData {
   /** Mode grossiste : nom du client du revendeur (affiché à droite) */
   reseller_client_name?: string;
   reseller_client_phone?: string;
+  loyalty?: LoyaltyReceiptData;
 }
 
 // ─── IPC Channel Types ────────────────────────────────────────────────────────
@@ -410,4 +419,52 @@ export interface Notification {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   duration?: number;
+}
+
+// ─── Éducation & Formation ────────────────────────────────────────────────────
+
+export interface Classroom {
+  id:           string;
+  business_id:  string;
+  name:         string;
+  level?:       string;
+  capacity:     number;
+  teacher?:     string;
+  created_at:   string;
+  updated_at:   string;
+}
+
+export interface Student {
+  id:           string;
+  business_id:  string;
+  classroom_id?: string | null;
+  first_name:   string;
+  last_name:    string;
+  birth_date?:  string;
+  gender?:      string;
+  parent_name?: string;
+  parent_phone?: string;
+  parent_email?: string;
+  address?:     string;
+  photo_url?:   string;
+  status:       'active' | 'suspended' | 'graduated';
+  created_at:   string;
+  updated_at:   string;
+  // joined
+  classroom?:   Classroom;
+}
+
+export interface Grade {
+  id:              string;
+  business_id:     string;
+  student_id:      string;
+  subject:         string;
+  score:           number;
+  max_score:       number;
+  evaluation_date: string;
+  term?:           string;
+  comment?:        string;
+  created_at:      string;
+  // joined
+  student?:        Student;
 }

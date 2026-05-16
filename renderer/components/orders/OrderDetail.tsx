@@ -549,6 +549,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         <RefundModal
           order={order}
           currency={currency}
+          refunds={refunds}
           onConfirm={handleRefund}
           onClose={() => setShowRefundModal(false)}
         />

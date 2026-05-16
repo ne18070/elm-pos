@@ -71,7 +71,32 @@
       "Bash(Sort-Object)",
       "Bash(Select-String -Pattern \"hotel\")",
       "Bash(Select-Object -First 40)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k\\) for k in deps if 'qr' in k.lower\\(\\) or 'qrcode' in k.lower\\(\\)]\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}; [print\\(k\\) for k in deps if 'qr' in k.lower\\(\\) or 'qrcode' in k.lower\\(\\)]\")",
+      "Bash(attrib \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\android\\\\app\\\\src\\\\main\\\\res\\\\mipmap-anydpi-v26\\\\ic_launcher_round.xml\")",
+      "Bash(Remove-Item \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\android\\\\app\\\\src\\\\main\\\\res\\\\mipmap-anydpi-v26\\\\ic_launcher_round.xml\" -Force)",
+      "PowerShell(node -e \"const j = require\\('./scripts/icon-gen/node_modules/jimp'\\); console.log\\(Object.keys\\(j\\).slice\\(0,10\\)\\); console.log\\(typeof j.read, typeof j.Jimp\\)\")",
+      "PowerShell(node -e \"const {Jimp} = require\\('./scripts/icon-gen/node_modules/jimp'\\); console.log\\(Object.getOwnPropertyNames\\(Jimp\\).filter\\(k => !k.startsWith\\('_'\\)\\).slice\\(0,15\\)\\)\")",
+      "PowerShell(node -e \"const {Jimp} = require\\('./scripts/icon-gen/node_modules/jimp'\\); const j = new Jimp\\({width:10,height:10}\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(j\\)\\).filter\\(k=>!k.startsWith\\('_'\\)\\)\\)\")",
+      "PowerShell(node -e \"const {Jimp} = require\\('./scripts/icon-gen/node_modules/jimp'\\); const j = new Jimp\\({width:10,height:10}\\); console.log\\(j.write.toString\\(\\).slice\\(0,200\\)\\)\")",
+      "Bash(ls \"C:/Users/lamine-m/AppData/Local/Android\" 2>/dev/null || echo \"NOT_FOUND\")",
+      "Read(//c/Users/lamine-m/AppData/Local/**)",
+      "Bash(ls \"C:/Users/lamine-m/AppData/Local/\" | grep -i android 2>/dev/null || echo \"NO_ANDROID\")",
+      "Bash(find /c/Users/lamine-m -name \"adb.exe\" 2>/dev/null | head -5)",
+      "Read(//c/Users/lamine-m/**)",
+      "Bash(find /c/Users/lamine-m -name \"build-tools\" -type d 2>/dev/null | head -5)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\\\(dashboard\\)\" -Recurse -ErrorAction SilentlyContinue)",
+      "PowerShell(head -50)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\" -Recurse -Filter \"*education*\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\supabase\\\\migrations\" | Where-Object { $_.Name -match \"\\(hotel|restaurant|floor|room\\)\" } | Select-Object Name | Sort-Object Name)",
+      "Bash(supabase db *)",
+      "Bash(supabase migration *)",
+      "Bash(awk '{print $1}')",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\({deps: p.dependencies, devDeps: Object.keys\\(p.devDependencies||{}\\)}, null, 2\\)\\)\")",
+      "Bash(mkdir \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\.vscode\" 2>nul; echo done)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\lib\\\\\" | Select-Object Name)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"
     ]
   }
 }

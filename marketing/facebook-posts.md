@@ -249,4 +249,4 @@ La différence entre un commerçant qui survit et un entrepreneur qui grandit, c
 
 ---
 
-*© ELM APP · elm-app.click · Contact : wa.me/33746436801*
+*© ELM APP · elm-app.click · Contact : wa.me/221772211126*

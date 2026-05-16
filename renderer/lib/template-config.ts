@@ -1,4 +1,4 @@
-import type { Order, Business } from '../../types';
+import type { Order, Business, LoyaltyReceiptData } from '../../types';
 
 // --- Block types --------------------------------------------------------------
 
@@ -287,7 +287,7 @@ function amountInWords(amount: number, currency: string): string {
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Espèces', mobile: 'Mobile Money', card: 'Carte bancaire',
-  check: 'Chèque', bank: 'Virement', partial: 'Paiement mixte',
+  check: 'Chèque', bank: 'Virement', partial: 'Paiement mixte', loyalty: 'Remise fidélité',
 };
 
 const CURRENCY_LABEL: Record<string, string> = { XOF: 'FCFA', XAF: 'FCFA' };
@@ -345,7 +345,7 @@ type RenderCtx = {
   order:     any;
   business:  any;
   config:    TemplateConfig;
-  extra?:    { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string };
+  extra?:    { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string; loyalty?: LoyaltyReceiptData };
   cur:       string;
   paid:      number;
   change:    number;
@@ -502,6 +502,19 @@ function renderPayment(ctx: RenderCtx, isThermal: boolean): string {
     order.notes        ? `<hr class="divider"><div class="small" style="font-style:italic">Note : ${order.notes}</div>` : '',
   ].join('');
   if (!config.showPaymentDetails) return notesHtml;
+  const loyaltyHtml = (() => {
+    const loy = ctx.extra?.loyalty;
+    if (!loy || (!loy.points_used && !loy.points_earned)) return '';
+    return `
+    <hr class="divider">
+    <div class="center small" style="font-style:italic">
+      ★ Programme fidélité
+      ${loy.points_used ? `<div>Remise utilisée : -${fmt(loy.discount ?? 0, cur)} (${loy.points_used} pts)</div>` : ''}
+      ${loy.points_earned ? `<div>Points gagnés : +${loy.points_earned} pts</div>` : ''}
+      ${loy.new_balance !== undefined ? `<div>Solde : ${loy.new_balance} pts</div>` : ''}
+    </div>`;
+  })();
+
   return `
     <table data-section="payment">
       ${((order.payments ?? []) as any[]).map((p: any) =>
@@ -510,6 +523,7 @@ function renderPayment(ctx: RenderCtx, isThermal: boolean): string {
       ${config.showChange  && ctx.change    > 0    ? `<tr><td>Rendu monnaie</td><td style="text-align:right">${fmt(ctx.change,    cur)}</td></tr>` : ''}
       ${config.showBalance && ctx.remaining > 0.01 ? `<tr style="color:#e53e3e"><td>Reste à payer</td><td style="text-align:right">${fmt(ctx.remaining, cur)}</td></tr>` : ''}
     </table>
+    ${loyaltyHtml}
     ${notesHtml}`;
 }
 
@@ -549,7 +563,7 @@ function renderFooter(ctx: RenderCtx, isThermal: boolean): string {
 
 function buildBody(
   order: any, business: any, config: TemplateConfig,
-  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string }
+  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string; loyalty?: LoyaltyReceiptData }
 ): string {
   const cur       = (business.currency as string) ?? 'XOF';
   const paid      = paidAmount(order);
@@ -696,7 +710,7 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
 
 export function renderTemplate(
   order: any, business: any, config: TemplateConfig,
-  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string }
+  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string; loyalty?: LoyaltyReceiptData }
 ): string {
   const isThermal = config.format === 'thermal';
   const isTwoCols = config.copies === 2 && (config.format === 'a4-landscape' || config.format === 'a5-portrait');

@@ -86,3 +86,35 @@ export async function createTable(table: Partial<RestaurantTable>): Promise<Rest
   if (error) throw new Error(error.message);
   return data;
 }
+
+export async function updateFloor(floorId: string, data: Partial<RestaurantFloor>): Promise<void> {
+  const { error } = await supabase
+    .from('restaurant_floors')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', floorId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteFloor(floorId: string): Promise<void> {
+  const { error } = await supabase
+    .from('restaurant_floors')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', floorId);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateTable(tableId: string, data: Partial<RestaurantTable>): Promise<void> {
+  const { error } = await supabase
+    .from('restaurant_tables')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', tableId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteTable(tableId: string): Promise<void> {
+  const { error } = await supabase
+    .from('restaurant_tables')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', tableId);
+  if (error) throw new Error(error.message);
+}

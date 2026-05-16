@@ -17,92 +17,16 @@ import {
   Users,
   Receipt,
   Globe,
-  UserCircle,
   Loader2,
-  ChevronRight,
   Car,
   CalendarCheck,
+  Utensils,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
 import { displayCurrency } from '@/lib/utils';
 
-function Nav() {
-  const { user } = useAuthStore();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', fn);
-    return () => window.removeEventListener('scroll', fn);
-  }, []);
-
-  return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? 'theme-dark bg-surface-card border-b border-surface-border py-2.5 shadow-xl'
-          : 'theme-dark bg-surface-card/95 border-b border-surface-border py-5 backdrop-blur-md'
-      }`}
-    >
-      <div className="max-w-6xl mx-auto px-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-14 h-14 rounded-xl bg-white overflow-hidden flex items-center justify-center p-1.5 transition-all duration-300 ${
-              scrolled ? 'border border-surface-border shadow-md' : 'border border-surface-border shadow-2xl'
-            }`}
-          >
-            <img src="/logo.png" alt="ELM" className="w-full h-full object-contain" />
-          </div>
-        </div>
-
-        <nav
-          className={`hidden md:flex items-center gap-8 text-sm font-medium transition-colors duration-300 ${
-            scrolled ? 'text-content-muted' : 'text-content-secondary'
-          }`}
-        >
-          <a href="#features" className="hover:text-brand-300 transition-colors">Fonctionnalités</a>
-          <a href="#secteurs" className="hover:text-brand-300 transition-colors">Secteurs</a>
-          <a href="#tarifs" className="hover:text-brand-300 transition-colors">Tarifs</a>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          {user ? (
-            <Link
-              href="/pos"
-              className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-lg transition-all duration-300 ${
-                scrolled
-                  ? 'text-content-primary bg-surface hover:bg-surface-hover'
-                  : 'text-content-primary bg-surface-card/70 hover:bg-surface-card'
-              }`}
-            >
-              <UserCircle className="w-3.5 h-3.5" />
-              {user.full_name?.split(' ')[0] ?? 'Mon espace'}
-              <ChevronRight className="w-3.5 h-3.5 text-content-secondary" />
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className={`text-sm transition-colors duration-300 hidden sm:block ${
-                  scrolled ? 'text-content-muted hover:text-content-primary' : 'text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                Connexion
-              </Link>
-              <Link
-                href="/signup"
-                className="text-sm font-semibold text-content-primary bg-brand-600 hover:bg-brand-500 px-4 py-1.5 rounded-lg transition-colors"
-              >
-                Essai gratuit
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
 
 function Hero() {
   const { user } = useAuthStore();
@@ -149,6 +73,7 @@ function Hero() {
               { label: 'Multi-établissements', icon: Globe },
               { label: 'Hôtellerie', icon: BedDouble },
               { label: 'Dossiers juridiques', icon: Scale },
+              { label: 'Gestion scolaire', icon: GraduationCap },
             ].map((tag) => (
               <span
                 key={tag.label}
@@ -251,6 +176,11 @@ const FEATURES = [
     title: 'Dossiers juridiques',
     desc: "Suivi des procédures OHADA, gestion documentaire et facturation d'honoraires.",
   },
+  {
+    icon: GraduationCap,
+    title: 'Gestion scolaire',
+    desc: 'Suivi des élèves, gestion des classes, bulletins de notes et paiements de scolarité.',
+  },
 ];
 
 function Features() {
@@ -323,6 +253,14 @@ const SECTEURS: {
     desc: 'Stocks, revendeurs, fournisseurs, prix de gros.',
   },
   {
+    icon: Utensils,
+    iconColor: 'text-status-orange',
+    iconBg: 'bg-badge-orange',
+    border: 'border-orange-500/20',
+    title: 'Restaurant / Café',
+    desc: 'Menu du jour, plan de salle, commandes en cuisine et WhatsApp.',
+  },
+  {
     icon: ShoppingCart,
     iconColor: 'text-brand-300',
     iconBg: 'bg-badge-info',
@@ -345,6 +283,14 @@ const SECTEURS: {
     border: 'border-surface-border',
     title: 'Hôtellerie',
     desc: 'Réservations, check-in/out, services additionnels.',
+  },
+  {
+    icon: GraduationCap,
+    iconColor: 'text-brand-300',
+    iconBg: 'bg-badge-info',
+    border: 'border-surface-border',
+    title: 'Éducation & Formation',
+    desc: 'Gestion des élèves, classes, scolarité et bulletins scolaires.',
   },
   {
     icon: Scale,
@@ -666,7 +612,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-6 text-xs text-content-muted">
           <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialité</Link>
-          <a href="https://wa.me/33746436801" className="hover:text-content-secondary transition-colors">WhatsApp</a>
+          <a href="https://wa.me/221772211126" className="hover:text-content-secondary transition-colors">WhatsApp</a>
           <a href="mailto:contact@elm-app.click" className="hover:text-content-secondary transition-colors">Contact</a>
           <span className="flex items-center gap-1.5">
             <Globe className="w-3 h-3" /> Sénégal - Afrique
@@ -691,7 +637,7 @@ function FloatingActions() {
   return (
     <div className="fixed right-4 bottom-4 z-50 flex flex-col gap-3">
       <a
-        href="https://wa.me/33746436801"
+        href="https://wa.me/221772211126"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contacter sur WhatsApp"
@@ -761,6 +707,14 @@ function ModulesShowcase() {
         />
 
         <ModuleFeature
+          subtitle="Restauration"
+          title="Plan de salle & Menu du jour"
+          desc="Gérez vos tables en temps réel. Publiez votre menu du jour et diffusez-le instantanément à tous vos contacts sur WhatsApp pour booster vos ventes du midi."
+          img="/screenshots/06-menu-du-jour.png"
+          reverse
+        />
+
+        <ModuleFeature
           subtitle="Pilotage stratégique"
           title="Tableaux de bord en temps réel"
           desc="Prenez des décisions basées sur des chiffres réels. Suivez votre chiffre d'affaires, vos marges nettes et vos produits les plus vendus grâce à des graphiques dynamiques et précis."
@@ -827,6 +781,13 @@ function ModulesShowcase() {
           img="/screenshots/14-hotel-management.png"
           reverse
         />
+
+        <ModuleFeature
+          subtitle="Éducation & Formation"
+          title="Gestion scolaire complète"
+          desc="Gérez vos élèves, vos classes et vos professeurs au même endroit. Suivez les paiements de scolarité et générez des bulletins de notes numériques en quelques clics."
+          img="/screenshots/33-gestion-scolaire.png"
+        />
       </div>
     </section>
   );
@@ -835,7 +796,6 @@ function ModulesShowcase() {
 export default function LandingPage() {
   return (
     <div className="theme-dark min-h-screen bg-surface">
-      <Nav />
       <Hero />
       <Features />
       <ModulesShowcase />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -13,7 +13,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
 import { setMonitoringUser, trackAuth } from '@/lib/analytics';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service', '/delete-account', '/delete-data'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -23,6 +23,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
   const router = useRouter();
   const pathname = usePathname();
+  // Ref pour lire le pathname courant dans les callbacks sans les en faire dépendre.
+  // Évite de re-créer checkSession (et de relancer l'useEffect) à chaque navigation.
+  const pathnameRef = useRef(pathname);
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
 
   const loadAllData = useCallback(async (sessionUser: { id: string }, profile: any) => {
     setUser(profile as never);
@@ -33,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profile.is_superadmin) {
       setLoading(false);
       setLoaded(true);
-      if (!pathname.startsWith('/backoffice') && !isPublic(pathname)) router.replace('/backoffice');
+      if (!pathnameRef.current.startsWith('/backoffice') && !isPublic(pathnameRef.current)) router.replace('/backoffice');
       return;
     }
 
@@ -99,15 +103,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoaded(true);
     setCashLoaded(true);
     setLoading(false);
-  }, [setUser, setBusiness, setBusinesses, setLoading, setLoaded, setSubscription, setPlans, setPaymentSettings, setCashSession, setOverrides, setCashLoaded, pathname, router]);
+  }, [setUser, setBusiness, setBusinesses, setLoading, setLoaded, setSubscription, setPlans, setPaymentSettings, setCashSession, setOverrides, setCashLoaded, router]);
 
   const checkSession = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     if (!session?.user) {
       setLoaded(true);
       setLoading(false);
-      if (!isPublic(pathname)) {
+      if (!isPublic(pathnameRef.current)) {
         clear();
         resetPermissions();
         router.replace('/login');
@@ -128,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!fallbackProfile) {
         clear();
         setLoading(false);
-        if (!isPublic(pathname)) router.replace('/login');
+        if (!isPublic(pathnameRef.current)) router.replace('/login');
         return;
       }
       await loadAllData(session.user, fallbackProfile);
@@ -136,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     await loadAllData(session.user, profile);
-  }, [clear, loadAllData, pathname, resetPermissions, router, setLoaded, setLoading]);
+  }, [clear, loadAllData, resetPermissions, router, setLoaded, setLoading]);
 
   useEffect(() => {
     checkSession();
@@ -162,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Silencieux — normal, pas un événement de sécurité
         }
 
-        if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathname)) {
+        if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathnameRef.current)) {
           clear();
           resetPermissions();
           router.replace('/login');
@@ -175,7 +179,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('online', onFocus);
     };
-  }, [checkSession, clear, pathname, resetPermissions, router]);
+  // checkSession est stable (ses deps sont des actions Zustand + router — jamais recréés).
+  // Ne pas mettre pathname ici : évite de relancer checkSession() à chaque navigation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkSession]);
 
   return <>{children}</>;
 }

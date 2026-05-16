@@ -25,9 +25,14 @@
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "electron-rebuild"
+    "postinstall": "electron-rebuild",
+    "mobile:build": "cross-env ELECTRON_BUILD=1 yarn build:next && npx cap sync",
+    "mobile:ios": "npx cap open ios",
+    "mobile:android": "npx cap open android",
+    "mobile:icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
+    "@capacitor/core": "^8.3.3",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.45.0",
     "@types/papaparse": "^5.5.2",
@@ -41,8 +46,10 @@
     "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.400.0",
+    "mysql2": "^3.22.3",
     "next": "^14.2.0",
     "papaparse": "^5.5.3",
+    "pg": "^8.20.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-is": "^18.3.0",
@@ -58,6 +65,10 @@
     "escpos-usb": "^3.0.0-alpha"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.3.3",
+    "@capacitor/ios": "^8.3.3",
     "@playwright/test": "^1.59.1",
     "@types/better-sqlite3": "^7.6.11",
     "@types/dompurify": "^3.2.0",

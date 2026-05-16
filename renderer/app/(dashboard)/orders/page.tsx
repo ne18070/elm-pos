@@ -93,7 +93,7 @@ export default function OrdersPage() {
     <div className="flex h-full overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 sm:p-6 border-b border-surface-border space-y-3">
+        <div className="px-4 py-2 sm:p-4 border-b border-surface-border space-y-2">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-content-primary">Commandes</h1>
@@ -164,13 +164,13 @@ export default function OrdersPage() {
             <table className="w-full">
               <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
                 <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
-                  <th className="px-4 py-3 whitespace-nowrap">Commande</th>
-                  <th className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">Date</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Client / Caissier</th>
-                  <th className="px-4 py-3 whitespace-nowrap hidden md:table-cell">Articles</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Total</th>
-                  <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Versé / Reste</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Statut</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Commande</th>
+                  <th className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">Date</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Client / Caissier</th>
+                  <th className="px-3 py-2 whitespace-nowrap hidden md:table-cell">Articles</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Total</th>
+                  <th className="px-3 py-2 whitespace-nowrap hidden lg:table-cell">Versé / Reste</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Statut</th>
                 </tr>
               </thead>
               <tbody>
@@ -188,7 +188,7 @@ export default function OrdersPage() {
                         ${selectedOrder?.id === order.id ? 'bg-surface-hover' : ''}
                         ${partial ? 'border-l-2 border-l-amber-600' : ''}`}
                     >
-                      <td className="px-4 py-3 font-mono text-xs text-content-primary whitespace-nowrap">
+                      <td className="px-3 py-2 font-mono text-xs text-content-primary whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {(order as { source?: string }).source === 'whatsapp' && (
                             <span title="Commande WhatsApp">
@@ -199,12 +199,12 @@ export default function OrdersPage() {
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 text-xs text-content-secondary whitespace-nowrap hidden sm:table-cell">
+                      <td className="px-3 py-2 text-xs text-content-secondary whitespace-nowrap hidden sm:table-cell">
                         {format(new Date(order.created_at), 'dd MMM, HH:mm', { locale: fr })}
                       </td>
 
                       {/* Client + Caissier */}
-                      <td className="px-4 py-3 max-w-[180px]">
+                      <td className="px-3 py-2 max-w-[180px]">
                         {order.customer_name ? (
                           <div className="space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 min-w-0">
@@ -226,16 +226,16 @@ export default function OrdersPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-sm text-content-secondary whitespace-nowrap hidden md:table-cell">
+                      <td className="px-3 py-2 text-sm text-content-secondary whitespace-nowrap hidden md:table-cell">
                         {qty} article{qty !== 1 ? 's' : ''}
                       </td>
 
-                      <td className="px-4 py-3 text-sm font-semibold text-content-primary whitespace-nowrap">
+                      <td className="px-3 py-2 text-sm font-semibold text-content-primary whitespace-nowrap">
                         {fmt(order.total)}
                       </td>
 
                       {/* Versé / Reste */}
-                      <td className="px-4 py-3 text-sm hidden lg:table-cell whitespace-nowrap">
+                      <td className="px-3 py-2 text-sm hidden lg:table-cell whitespace-nowrap">
                         {partial ? (
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1 text-content-brand">
@@ -253,7 +253,7 @@ export default function OrdersPage() {
                       </td>
 
                       {/* Statut */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         {partial ? (
                           <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/20 text-status-warning border-status-warning whitespace-nowrap">
                             Acompte

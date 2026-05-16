@@ -51,11 +51,10 @@ const nextConfig = {
   }),
 
   env: {
-    SUPABASE_URL: process.env.SUPABASE_URL || process.env.SUPABASE_URL,
+    SUPABASE_URL:                  process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY:             process.env.SUPABASE_ANON_KEY             || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click',
-    SUPABASE_URL: process.env.SUPABASE_URL || process.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SITE_URL:          process.env.NEXT_PUBLIC_SITE_URL          || 'https://www.elm-app.click',
   },
   webpack: (config) => {
     config.resolve.alias = {
@@ -71,6 +70,11 @@ const nextConfig = {
       crypto: false, path: false, os: false,
       stream: false, child_process: false,
     };
+
+    // jspdf optional peer deps — not used, stub them out so webpack doesn't fail
+    config.resolve.alias['canvg']       = false;
+    config.resolve.alias['html2canvas'] = false;
+    // NOTE: dompurify is NOT stubbed — the app uses it directly in contract views
 
     return config;
   },

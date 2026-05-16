@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Wrench, Plus, Share2, Package2, History, AlertCircle } from 'lucide-react';
+import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
@@ -11,12 +11,12 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { cn } from '@/lib/utils';
 import {
   type ServiceOrder,
-  type ServiceCatalogItem,
   type ServiceOrderStatus,
   getServiceOrderById,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { buildLoyaltyForReceipt } from '@/lib/loyalty-print';
 
 // Components
 import { ServiceOrdersTab } from './components/ServiceOrdersTab';
@@ -51,6 +51,8 @@ export default function ServicesPage() {
   const [showNewOT, setShowNewOT] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
 
   // We load catalog here because it's needed by multiple components (New OT, Order Detail)
   const { catalog, refresh: refreshCatalog } = useServiceCatalog(businessId);
@@ -65,27 +67,37 @@ export default function ServicesPage() {
     try {
       await navigator.clipboard.writeText(url);
       success('Lien public copié !');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch {
       notifError('Impossible de copier le lien public');
     }
   }
 
-  function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
+  async function handlePrintOrder(o: ServiceOrder, e: React.MouseEvent) {
     e.stopPropagation();
     if (!canShareOrder) return;
     if (!business) return;
-    printHtml(generateServiceOrderReceipt({
-      id: o.id, order_number: o.order_number, created_at: o.created_at,
-      started_at: o.started_at, finished_at: o.finished_at, paid_at: o.paid_at,
-      subject_ref: o.subject_ref,
-      subject_info: o.subject_info ?? undefined,
-      client_name: o.client_name, client_phone: o.client_phone,
-      assigned_name: o.assigned_name,
-      status: o.status, notes: o.notes,
-      items: (o.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
-      total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,
-      payments: o.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
-    }, business as any));
+
+    setPrintingOrderId(o.id);
+    try {
+      const loyalty = await buildLoyaltyForReceipt(o.business_id, o.client_name, o.total, o.status);
+      printHtml(generateServiceOrderReceipt({
+        id: o.id, order_number: o.order_number, created_at: o.created_at,
+        started_at: o.started_at, finished_at: o.finished_at, paid_at: o.paid_at,
+        subject_ref: o.subject_ref,
+        subject_info: o.subject_info ?? undefined,
+        client_name: o.client_name, client_phone: o.client_phone,
+        assigned_name: o.assigned_name,
+        status: o.status, notes: o.notes,
+        items: (o.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
+        total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,
+        payments: o.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
+        loyalty,
+      }, business as any));
+    } finally {
+      setPrintingOrderId(null);
+    }
   }
 
   async function refreshOrdersAndSelection() {
@@ -94,7 +106,7 @@ export default function ServicesPage() {
     try {
       const fresh = await getServiceOrderById(selectedOrder.id);
       if (fresh) setSelectedOrder(fresh);
-    } catch (e) {
+    } catch {
       notifError('Impossible de rafraîchir le détail de cet OT');
     }
   }
@@ -114,10 +126,10 @@ export default function ServicesPage() {
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Header */}
-      <div className="flex flex-col gap-3 px-4 py-4 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-6">
+      <div className="flex flex-col gap-2 px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-brand-500/20 flex items-center justify-center">
-            <Wrench className="w-5 h-5 text-content-brand" />
+          <div className="w-7 h-7 rounded-lg bg-brand-500/20 flex items-center justify-center">
+            <Wrench className="w-4 h-4 text-content-brand" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-content-primary">Prestations de service</h1>
@@ -127,8 +139,12 @@ export default function ServicesPage() {
         <div className="flex w-full items-center gap-2 sm:w-auto">
           {canShareOrder && (
             <button onClick={copyPublicLink}
-              className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-sm font-medium hover:bg-surface-hover sm:flex-none">
-              <Share2 className="w-4 h-4" />Partager
+              className={cn('flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors sm:flex-none',
+                copied
+                  ? 'border-status-success text-status-success bg-badge-success'
+                  : 'border-surface-border text-content-secondary hover:bg-surface-hover')}>
+              {copied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+              {copied ? 'Copié !' : 'Partager'}
             </button>
           )}
           {canCreateOrder && (
@@ -140,7 +156,6 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      {/* Point 6: Cash session indicator */}
       {!cashSession && (
         <div className="bg-status-error/10 border-b border-status-error/20 px-4 py-2 flex items-center justify-center gap-2 text-status-error text-xs font-medium shrink-0">
           <AlertCircle className="w-4 h-4" />
@@ -150,19 +165,22 @@ export default function ServicesPage() {
       )}
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 overflow-x-auto px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 md:px-6">
+      <div className="flex items-center gap-1 overflow-x-auto px-4 py-1 bg-surface-card border-b border-surface-border shrink-0 md:px-4">
         {([
-          { key: 'orders',   icon: Wrench,     label: 'Ordres de travail', desc: 'Créer & suivre les bons de prestation' },
-          { key: 'catalog',  icon: Package2,   label: 'Catalogue',         desc: 'Prestations types & tarifs' },
-          { key: 'subjects', icon: History,    label: 'Historique',        desc: 'Par véhicule, appareil ou client' },
-        ] as const).map(({ key, icon: Icon, label, desc }) => (
+          { key: 'orders',   icon: Wrench,   label: 'Ordres de travail', short: 'OT',         desc: 'Créer & suivre les bons de prestation' },
+          { key: 'catalog',  icon: Package2, label: 'Catalogue',          short: 'Catalogue',  desc: 'Prestations types & tarifs' },
+          { key: 'subjects', icon: History,  label: 'Historique',         short: 'Historique', desc: 'Par véhicule, appareil ou client' },
+        ] as const).map(({ key, icon: Icon, label, short, desc }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={cn('flex items-start gap-2.5 px-4 py-2.5 rounded-xl text-left transition-colors min-w-0 flex-shrink-0', tab === key
-              ? 'bg-brand-500/15 text-content-brand border border-brand-500/30'
+            className={cn('flex items-start gap-2 px-3 py-2 rounded-xl text-left transition-colors min-w-0 flex-shrink-0', tab === key
+              ? 'bg-brand-500/20 text-content-brand border border-brand-500/50'
               : 'text-content-secondary hover:text-content-primary hover:bg-surface-hover')}>
             <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold leading-tight">{label}</p>
+              <p className="text-sm font-semibold leading-tight">
+                <span className="sm:hidden">{short}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </p>
               <p className="text-xs opacity-70 leading-tight mt-0.5 hidden sm:block">{desc}</p>
             </div>
           </button>
@@ -178,6 +196,7 @@ export default function ServicesPage() {
             onSelectOrder={setSelectedOrder}
             onNewOrder={() => setShowNewOT(true)}
             onPrintOrder={handlePrintOrder}
+            printingOrderId={printingOrderId}
             refreshTrigger={refreshTrigger}
             initialStatus={initialStatus}
           />
@@ -191,7 +210,7 @@ export default function ServicesPage() {
         )}
 
         {tab === 'subjects' && (
-          <div className="flex-1 overflow-hidden p-6">
+          <div className="flex-1 overflow-hidden p-4">
              <SubjectsTab businessId={businessId} currency={currency} />
           </div>
         )}

@@ -5,6 +5,34 @@ import { cn } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Check, Plus, Building2, Loader2 } from 'lucide-react';
+
+// Affiche le logo d'un établissement — fallback initiale → icône si URL cassée.
+// object-cover remplit le carré quel que soit le ratio.
+// Fond blanc quand logo présent pour éviter le brand-600 derrière les PNG transparents.
+function BusinessLogo({ name, logoUrl, size = 8 }: { name: string; logoUrl: string | null; size?: number }) {
+  const [imgError, setImgError] = useState(false);
+  const showImg = !!logoUrl && !imgError;
+  const letter  = name?.charAt(0)?.toUpperCase() || null;
+
+  return (
+    <div className={`w-${size} h-${size} rounded-lg flex items-center justify-center shrink-0 overflow-hidden shadow-sm
+      ${showImg ? 'bg-white' : 'bg-brand-600'}`}
+    >
+      {showImg ? (
+        <img
+          src={logoUrl!}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : letter ? (
+        <span className="text-xs font-bold text-content-primary">{letter}</span>
+      ) : (
+        <Building2 className="w-4 h-4 text-content-primary" />
+      )}
+    </div>
+  );
+}
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCartStore } from '@/store/cart';
@@ -66,12 +94,13 @@ export function BusinessSwitcher({
 
   async function handleSwitch(businessId: string) {
     if (businessId === business?.id) { setOpen(false); return; }
+    if (!user) return;
     setSwitching(businessId);
     try {
       await switchBusiness(businessId);
 
       const { data: profile } = await supabase
-        .from('users').select('*').eq('id', user!.id).single();
+        .from('users').select('*').eq('id', user.id).single();
       if (profile) setUser(profile as never);
 
       const { data: biz } = await supabase
@@ -103,21 +132,25 @@ export function BusinessSwitcher({
   }
 
   async function handleCreated(newBiz: Business) {
+    if (!user) return;
     setShowCreate(false);
     setBusiness(newBiz);
 
-    const { data: profile } = await supabase
-      .from('users').select('*').eq('id', user!.id).single();
-    if (profile) setUser(profile as never);
+    let profile: { role?: string } | null = null;
+    try {
+      const { data } = await supabase
+        .from('users').select('*').eq('id', user.id).single();
+      profile = data;
+      if (profile) setUser(profile as never);
+    } catch { /* non critique, on continue avec le rôle actuel */ }
 
     try {
       const memberships = await getMyBusinesses();
       setBusinesses(memberships);
     } catch { /* migration pas encore appliquée */ }
 
-    // Charger l'abonnement par owner (un seul abonnement par compte)
     try {
-      const sub = await getSubscription(user!.id, newBiz.id);
+      const sub = await getSubscription(user.id, newBiz.id);
       setSubscription(sub);
       if (sub?.status === 'trial') {
         success(`"${newBiz.name}" créé — essai gratuit de 7 jours activé !`);
@@ -131,7 +164,7 @@ export function BusinessSwitcher({
     setCashSession(null);
     setCashLoaded(true);
     clear();
-    router.replace(getDefaultRoute(profile?.role as any, newBiz));
+    router.replace(getDefaultRoute((profile?.role ?? user.role) as any, newBiz));
   }
 
   return (
@@ -149,11 +182,7 @@ export function BusinessSwitcher({
         >
           {/* Icône établissement - Fixed width to keep it centered when collapsed */}
           <div className="w-10 h-10 flex items-center justify-center shrink-0 transition-all duration-300">
-            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-sm overflow-hidden p-1">
-              {business?.logo_url
-                ? <img src={business.logo_url} alt={business.name} className="w-full h-full object-contain" />
-                : <Building2 className="w-4 h-4 text-content-primary" />}
-            </div>
+            <BusinessLogo name={business?.name ?? ''} logoUrl={business?.logo_url ?? null} size={8} />
           </div>
 
           {/* Nom + chevron */}
@@ -162,9 +191,13 @@ export function BusinessSwitcher({
             expanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none w-0 overflow-hidden"
           )}>
             <div className="min-w-0 text-left">
-              <p className="text-sm font-semibold text-content-primary truncate leading-tight">
-                {business?.name ?? 'Mon établissement'}
-              </p>
+              {business ? (
+                <p className="text-sm font-semibold text-content-primary truncate leading-tight">
+                  {business.name}
+                </p>
+              ) : (
+                <div className="h-3.5 w-28 rounded bg-surface-hover animate-pulse" />
+              )}
               {business?.organization_name && business.organization_name !== business.name && (
                 <p className="text-[10px] text-content-brand/70 truncate leading-tight font-medium">
                   {business.organization_name}
@@ -209,14 +242,10 @@ export function BusinessSwitcher({
                     className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left
                       ${isActive ? 'bg-badge-brand' : 'hover:bg-surface-hover'}`}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden
-                                    text-sm font-bold p-1
-                      ${isActive ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-primary'}`}>
+                    <div className="w-8 h-8 shrink-0">
                       {isLoading
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : biz.logo_url
-                          ? <img src={biz.logo_url} alt={biz.name} className="w-full h-full object-contain" />
-                          : biz.name.charAt(0).toUpperCase()}
+                        ? <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-content-primary" /></div>
+                        : <BusinessLogo name={biz.name} logoUrl={biz.logo_url ?? null} size={8} />}
                     </div>
 
                     <div className="flex-1 min-w-0">

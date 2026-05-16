@@ -13,7 +13,8 @@ import { useCan } from '@/hooks/usePermission';
 import { getProducts } from '@services/supabase/products';
 import { getDailyMenu, saveDailyMenu, clearDailyMenu } from '@services/supabase/daily-menu';
 import { getWhatsAppConfig, broadcastDailyMenu, getBroadcastLog, type BroadcastResult, type BroadcastLog } from '@services/supabase/whatsapp';
-import type { Product } from '@pos-types';
+import { getFloors } from '@services/supabase/restaurant';
+import type { Product, RestaurantFloor } from '@pos-types';
 
 export default function MenuDuJourPage() {
   const { business, user } = useAuthStore();
@@ -21,6 +22,8 @@ export default function MenuDuJourPage() {
   const can = useCan();
 
   const [date, setDate]             = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [zones, setZones]           = useState<RestaurantFloor[]>([]);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [products, setProducts]     = useState<Product[]>([]);
   const [selected, setSelected]     = useState<Set<string>>(new Set());
   const [note, setNote]             = useState('');
@@ -35,13 +38,19 @@ export default function MenuDuJourPage() {
   const [broadcastLog, setBroadcastLog]       = useState<BroadcastLog[]>([]);
   const [hasWaConfig, setHasWaConfig]         = useState(false);
 
+  // Charger les zones une seule fois
+  useEffect(() => {
+    if (!business?.id) return;
+    getFloors(business.id).then(setZones).catch(() => {});
+  }, [business?.id]);
+
   const load = useCallback(async () => {
     if (!business?.id) return;
     setLoading(true);
     try {
       const [prods, menu, waCfg, log] = await Promise.all([
         getProducts(business.id),
-        getDailyMenu(business.id, date),
+        getDailyMenu(business.id, date, selectedZoneId),
         getWhatsAppConfig(business.id),
         getBroadcastLog(business.id, date),
       ]);
@@ -64,16 +73,16 @@ export default function MenuDuJourPage() {
     } finally {
       setLoading(false);
     }
-  }, [business?.id, date, notifError]);
+  }, [business?.id, date, selectedZoneId, notifError]);
 
   useEffect(() => { load(); }, [load]);
-  // Reset quand on change de date
+  // Reset quand on change de date ou de zone
   useEffect(() => {
     setBroadcastResult(null);
     setBroadcastLog([]);
     setImageUrl(null);
     setImagePreview(null);
-  }, [date]);
+  }, [date, selectedZoneId]);
 
   function shiftDate(days: number) {
     const d = new Date(date);
@@ -119,7 +128,7 @@ export default function MenuDuJourPage() {
         custom_price: null,
         sort_order: i,
       }));
-      await saveDailyMenu(business.id, date, note.trim() || null, items, imageUrl);
+      await saveDailyMenu(business.id, date, note.trim() || null, items, imageUrl, selectedZoneId);
       success('Menu du jour enregistré');
     } catch (err) {
       notifError(toUserError(err));
@@ -132,7 +141,7 @@ export default function MenuDuJourPage() {
     if (!business?.id) return;
     setSaving(true);
     try {
-      await clearDailyMenu(business.id, date);
+      await clearDailyMenu(business.id, date, selectedZoneId);
       setSelected(new Set());
       setNote('');
       setImageUrl(null);
@@ -193,8 +202,9 @@ export default function MenuDuJourPage() {
   const canBroadcast = hasWaConfig && selected.size > 0 && isToday && canManage;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      {/* Header */}
+    <div className="h-full overflow-y-auto">
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
+        {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-badge-orange border border-orange-700/40 flex items-center justify-center">
@@ -222,6 +232,38 @@ export default function MenuDuJourPage() {
           </button>
         </div>
       </div>
+
+      {/* Sélecteur de zone — visible uniquement si des zones existent */}
+      {zones.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Zone :</span>
+          <div className="flex items-center gap-1 flex-wrap">
+            <button
+              onClick={() => setSelectedZoneId(null)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                selectedZoneId === null
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-surface-input text-content-secondary hover:text-content-primary'
+              }`}
+            >
+              Général
+            </button>
+            {zones.map((z) => (
+              <button
+                key={z.id}
+                onClick={() => setSelectedZoneId(z.id)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                  selectedZoneId === z.id
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-surface-input text-content-secondary hover:text-content-primary'
+                }`}
+              >
+                {z.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-12 text-content-secondary">
@@ -342,7 +384,7 @@ export default function MenuDuJourPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-content-primary text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {broadcasting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {broadcasting ? 'Envoi en cours…' : 'Diffuser sur WhatsApp'}
+                {broadcasting ? 'Envoi en cours…' : 'Diffuser sur WhatsApp Manuellement'}
               </button>
             )}
 
@@ -419,6 +461,7 @@ export default function MenuDuJourPage() {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }

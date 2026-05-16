@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store, User, Search, Utensils } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, Tag, X, Clock, AlertTriangle, Gift, Store, User, Search, Utensils, Package, Truck, SplitSquareHorizontal } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
@@ -13,6 +13,7 @@ import { WholesaleSelector } from './WholesaleSelector';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { ResellerOffer } from '@services/supabase/resellers';
 import type { CartItem, Coupon } from '@pos-types';
+import type { OrderChannel } from '@/store/cart';
 
 export interface SelectedClient {
   id: string;
@@ -27,11 +28,12 @@ interface OrderPanelProps {
   businessId: string;
   onCheckout: () => void;
   onShowHeld: () => void;
+  onSplit?: () => void;
   isRestaurant?: boolean;
 }
 
-export function OrderPanel({ 
-  taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld,
+export function OrderPanel({
+  taxRate, taxInclusive, currency, businessId, onCheckout, onShowHeld, onSplit,
   isRestaurant
 }: OrderPanelProps) {
   const {
@@ -41,7 +43,9 @@ export function OrderPanel({
     holdCurrentOrder, heldOrders,
     selectedClient, setSelectedClient,
     selectedTable: tableId, setSelectedTable: onTableClear,
-    wholesaleCtx, setWholesaleCtx: onWholesaleChange
+    wholesaleCtx, setWholesaleCtx: onWholesaleChange,
+    orderChannel, setOrderChannel,
+    deliveryAddress, setDeliveryAddress,
   } = useCartStore();
   
   const [tables, setTables] = useState<import('@pos-types').RestaurantTable[]>([]);
@@ -416,7 +420,7 @@ export function OrderPanel({
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-900/20 border border-indigo-700 animate-in fade-in slide-in-from-bottom-2">
               <Utensils className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-indigo-300 truncate">Table {selectedTable?.name || 'chargement...'}</p>
+                <p className="text-xs font-bold text-indigo-600 truncate">Table {selectedTable?.name || 'chargement...'}</p>
                 <p className="text-[10px] text-content-primary uppercase font-semibold">{selectedTable?.floor?.name}</p>
               </div>
               <button
@@ -525,8 +529,51 @@ export function OrderPanel({
           </div>
         </div>
 
+        {/* Canal de commande (restaurant) */}
+        {isRestaurant && (
+          <div className="px-4 py-3 border-t border-surface-border space-y-2">
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { ch: 'salle',    icon: Utensils, label: 'Salle'      },
+                { ch: 'emporter', icon: Package,  label: 'Emporter'   },
+                { ch: 'livraison',icon: Truck,    label: 'Livraison'  },
+              ] as { ch: OrderChannel; icon: any; label: string }[]).map(({ ch, icon: Icon, label }) => (
+                <button
+                  key={ch}
+                  onClick={() => setOrderChannel(ch)}
+                  className={`flex flex-col items-center gap-1 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-wide transition-all
+                    ${orderChannel === ch
+                      ? 'border-brand-500 bg-badge-brand text-content-brand'
+                      : 'border-surface-border text-content-secondary hover:border-slate-500'}`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+            {orderChannel === 'livraison' && (
+              <input
+                type="text"
+                value={deliveryAddress}
+                onChange={e => setDeliveryAddress(e.target.value)}
+                placeholder="Adresse de livraison…"
+                className="input text-sm h-9"
+              />
+            )}
+          </div>
+        )}
+
         {/* Bouton paiement */}
-        <div className="p-4 border-t border-surface-border">
+        <div className="p-4 border-t border-surface-border space-y-2">
+          {isRestaurant && onSplit && items.length > 0 && (
+            <button
+              onClick={onSplit}
+              className="w-full h-9 text-xs flex items-center justify-center gap-2 rounded-xl border border-surface-border text-content-secondary hover:border-brand-500 hover:text-content-brand transition-colors font-medium"
+            >
+              <SplitSquareHorizontal className="w-3.5 h-3.5" />
+              Partager l'addition
+            </button>
+          )}
           <button
             onClick={onCheckout}
             disabled={hasOverStock}

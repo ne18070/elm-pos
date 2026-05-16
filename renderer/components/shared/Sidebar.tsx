@@ -29,18 +29,45 @@ import { useSidebarStore } from '@/store/sidebar';
 
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions';
-import { NAV_SECTIONS, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
+import { getNavSections, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
+import type { BusinessType } from '@pos-types';
 
 import { autoRecordDeparture } from '@services/supabase/staff';
+import type { Business } from '@pos-types';
 
-// Visibility filtering logic
-function useVisibleNav(can: (p: PermissionKey) => boolean) {
+const BTYPE_KEY = 'elm_btype';
+
+function useCachedBusinessType(business: Business | null): BusinessType | null {
+  const [cached, setCached] = useState<BusinessType | null>(null);
+
+  // Read cache after hydration (localStorage unavailable on server)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BTYPE_KEY) as BusinessType | null;
+      if (stored) setCached(stored);
+    } catch {}
+  }, []);
+
+  // Write cache whenever business type is known
+  useEffect(() => {
+    if (business?.type) {
+      setCached(business.type);
+      try { localStorage.setItem(BTYPE_KEY, business.type); } catch {}
+    }
+  }, [business?.type]);
+
+  return business?.type ?? cached;
+}
+
+function useVisibleNav(can: (p: PermissionKey) => boolean, business: Business | null, type: BusinessType | null) {
   return useMemo(() => {
-    return NAV_SECTIONS.map(section => ({
+    return getNavSections(type).map(section => ({
       ...section,
-      items: section.items.filter(({ permission }) => !permission || can(permission as PermissionKey))
+      items: section.items.filter(({ permission }) =>
+        !permission || !business || can(permission as PermissionKey)
+      )
     })).filter(section => section.items.length > 0);
-  }, [can]);
+  }, [can, business, type]);
 }
 
 
@@ -96,7 +123,8 @@ function SidebarContent({
     router.push('/login');
   }
 
-  const visibleSections = useVisibleNav(can);
+  const businessType = useCachedBusinessType(business);
+  const visibleSections = useVisibleNav(can, business, businessType);
 
   const [version, setVersion] = useState<string>('');
 
@@ -186,9 +214,9 @@ function SidebarContent({
                     {active && (
                       <div className="absolute left-0 w-1 h-5 bg-brand-500 rounded-r-full" />
                     )}
-                    <div className="w-10 h-10 flex items-center justify-center shrink-0 relative">
+                    <div className="w-8 h-8 flex items-center justify-center shrink-0 relative">
                       <Icon className={cn(
-                        "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
+                        "w-4 h-4 transition-transform duration-200 group-hover:scale-110",
                         active ? "text-content-brand" : "text-content-secondary group-hover:text-content-primary"
                       )} />
                       {badge > 0 && (
@@ -209,7 +237,7 @@ function SidebarContent({
                       expanded ? "opacity-100 ml-2" : "opacity-0 w-0 pointer-events-none"
                     )}>
                       <span className={cn(
-                        "text-sm font-medium truncate",
+                        "text-xs font-medium truncate",
                         active ? "text-content-brand" : ""
                       )}>{label}</span>
                       {badge > 0 && (
@@ -275,14 +303,14 @@ function SidebarContent({
               pathname.startsWith('/help') ? 'bg-brand-500/10 text-content-brand' : 'text-content-secondary hover:text-content-primary hover:bg-white/5'
             )}
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
             )}>
-              <span className="text-sm font-medium">Centre d'aide</span>
+              <span className="text-xs font-medium">Centre d'aide</span>
             </div>
           </Link>
 
@@ -294,14 +322,14 @@ function SidebarContent({
             )}
             aria-label="Signaler un problème"
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <HelpCircle className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform text-status-warning" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
             )}>
-              <span className="text-sm font-medium">Signaler un problème</span>
+              <span className="text-xs font-medium">Signaler un problème</span>
             </div>
           </button>
 
@@ -315,14 +343,14 @@ function SidebarContent({
             )}
             aria-label="Ouvrir l'écran client"
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <Monitor className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
             </div>
             <div className={cn(
               "transition-all duration-300 truncate",
               expanded ? "opacity-100 ml-2" : "opacity-0 w-0"
             )}>
-              <span className="text-sm font-medium">Écran client</span>
+              <span className="text-xs font-medium">Écran client</span>
             </div>
           </button>
         </div>

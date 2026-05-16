@@ -15,16 +15,16 @@ export interface PermissionMeta {
 
 const PERMISSIONS_MAP = {
   // -- Navigation (Pages)
-  view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'caisse', 'retail'] },
-  view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['caisse', 'retail'] },
-  view_orders:            { label: 'Accès commandes/ventes',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'caisse', 'retail'] },
+  view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  view_orders:            { label: 'Accès commandes/ventes',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_services:          { label: 'Accès prestations service',    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
   view_livraisons:        { label: 'Accès suivi livraisons',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['livraison', 'delivery'] },
   view_livreurs:          { label: 'Accès gestion livreurs',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['livraison', 'delivery'] },
   view_clients:           { label: 'Accès base clients',           group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'] }, 
   view_products:          { label: 'Accès catalogue produits',     group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['stock', 'retail'] },
   view_approvisionnement: { label: 'Accès stocks/entrées',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['approvisionnement', 'stock'] },
-  view_revendeurs:        { label: 'Accès réseau revendeurs',      group: 'navigation', defaultRoles: ['admin', 'owner'], feature: ['revendeurs', 'retail'] },
+  view_revendeurs:        { label: 'Accès réseau revendeurs',      group: 'navigation', defaultRoles: ['admin', 'owner'], feature: ['revendeurs'] },
   view_hotel:             { label: 'Accès module hôtel',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'hotel' },
   view_categories:        { label: 'Accès catégories produits',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['stock', 'retail'] },
   view_coupons:           { label: 'Accès coupons/remises',        group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['coupons', 'retail'] },
@@ -32,19 +32,30 @@ const PERMISSIONS_MAP = {
   view_depenses:          { label: 'Accès suivi dépenses',         group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['expenses', 'comptabilite'] },
   view_comptabilite:      { label: 'Accès états comptables',       group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'comptabilite' },
   view_activity:          { label: 'Accès journal audit',          group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] }, 
-  view_recovery:          { label: 'Accès récupération données',   group: 'admin',      defaultRoles: ['admin', 'owner'] }, 
+  view_recovery:          { label: 'Accès récupération données',   group: 'admin',      defaultRoles: ['admin', 'owner'] },
+  view_import:            { label: 'Accès import base de données',  group: 'admin',      defaultRoles: ['admin', 'owner'] },
   view_dossiers:          { label: 'Accès dossiers juridiques',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'dossiers' },
   view_honoraires:        { label: 'Accès facturation honoraires', group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'honoraires' },
   view_contrats:          { label: 'Accès contrats location',      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'contrats' },
   view_voitures:          { label: 'Accès vente voitures',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'voitures' },
   view_staff:             { label: 'Accès personnel & RH',         group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   view_team_tracking:     { label: 'Accès tracking équipe',        group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
-  view_menu_du_jour:      { label: 'Accès menu du jour',           group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'restaurant' },
+  view_menu_du_jour:           { label: 'Accès menu du jour',             group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
+  view_commandes_emporter:     { label: 'Accès commandes emporter/livraison', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
+  
+  // Éducation
+  view_eleves:            { label: 'Accès base élèves',            group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['eleves', 'education'] },
+  view_classes:           { label: 'Accès gestion classes',        group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['classes', 'education'] },
+  view_scolarite:         { label: 'Accès suivi scolarité',        group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['scolarite', 'education'] },
+  view_notes:             { label: 'Accès notes & bulletins',      group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['notes', 'education'] },
+  manage_education:       { label: 'Gérer les fiches élèves/classes', group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'education' },
+  add_grade:              { label: 'Saisir les notes',             group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'notes' },
+
   view_whatsapp:          { label: 'Accès support WhatsApp',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'whatsapp' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
 
   // -- Actions Générales
-  manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['caisse', 'retail'] },
+  manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_financials:        { label: 'Voir marges & bénéfices',      group: 'finance',    defaultRoles: ['admin', 'owner'] },
   manage_team:            { label: 'Gérer l\'équipe (inviter/rôles)', group: 'admin',      defaultRoles: ['admin', 'owner'] },
   manage_settings:        { label: 'Modifier config business',     group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] },
@@ -89,10 +100,10 @@ const PERMISSIONS_MAP = {
   manage_coupons:         { label: 'Gérer les coupons',            group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['coupons', 'retail'] },
 
   // Revendeurs
-  manage_revendeurs:      { label: 'Gérer les revendeurs',         group: 'gestion',    defaultRoles: ['admin', 'owner'],             feature: ['revendeurs', 'retail'] },
-  manage_reseller_clients: { label: 'Gérer clients revendeurs',     group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs', 'retail'] },
-  manage_reseller_offers:  { label: 'Gérer offres revendeurs',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs', 'retail'] },
-  print_reseller_bl:      { label: 'Imprimer bons de livraison',    group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['revendeurs', 'retail'] },
+  manage_revendeurs:      { label: 'Gérer les revendeurs',         group: 'gestion',    defaultRoles: ['admin', 'owner'],             feature: ['revendeurs'] },
+  manage_reseller_clients: { label: 'Gérer clients revendeurs',     group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs'] },
+  manage_reseller_offers:  { label: 'Gérer offres revendeurs',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['revendeurs'] },
+  print_reseller_bl:      { label: 'Imprimer bons de livraison',    group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['revendeurs'] },
 
   // Hôtel
   manage_rooms:           { label: 'Gérer les chambres',           group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'hotel' },
@@ -178,11 +189,18 @@ export function hasFeature(business: Business | null | undefined, feature: strin
   if (bTypes.includes(feature)) return true;
   
   // Héritage strict
-  if (feature === 'retail' || feature === 'pos' || feature === 'caisse') {
+  if (feature === 'retail' || feature === 'pos') {
     return bTypes.includes('restaurant') || bTypes.includes('hotel') || bTypes.includes('retail');
+  }
+  // Les hôtels peuvent activer le module restaurant (bar, room service, menu du jour…)
+  if (feature === 'restaurant') {
+    return bTypes.includes('hotel');
   }
   if (feature === 'dossiers' || feature === 'honoraires') {
     return bTypes.includes('juridique');
+  }
+  if (['eleves', 'classes', 'scolarite', 'notes'].includes(feature)) {
+    return bTypes.includes('education');
   }
   return false;
 }

@@ -140,19 +140,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck, business]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
+  // MobileLayout est monté dès le premier rendu — le sidebar ne disparaît jamais,
+  // même lors d'un rechargement complet ou d'une vérification d'auth en cours.
+  // Le spinner s'affiche dans la zone de contenu uniquement, pas à la place du layout entier.
   return (
     <MobileLayout>
-      {children}
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+        </div>
+      ) : user ? children : null}
     </MobileLayout>
   );
 }
