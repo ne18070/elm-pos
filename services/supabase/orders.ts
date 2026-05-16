@@ -13,6 +13,7 @@ export interface CreateOrderInput {
   payment_method: PaymentMethod;
   payment_amount: number;
   tax_rate: number;
+  tax_inclusive?: boolean;
   coupons?: Coupon[];
   notes?: string;
   /** Informations client (obligatoires pour les acomptes) */
@@ -36,8 +37,15 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     ? calculateDiscount(coupons, subtotal)
     : input.cart.discount_amount;
   const taxable = subtotal - discount;
-  const tax = Math.round(taxable * input.tax_rate) / 100;
-  const total = taxable + tax;
+  let tax: number;
+  let total: number;
+  if (input.tax_inclusive) {
+    tax   = input.tax_rate > 0 ? Math.round(taxable * input.tax_rate / (100 + input.tax_rate) * 100) / 100 : 0;
+    total = taxable;
+  } else {
+    tax   = Math.round(taxable * input.tax_rate) / 100;
+    total = taxable + tax;
+  }
 
   // Premier coupon (backward compat)
   const firstCoupon = coupons[0] ?? null;
