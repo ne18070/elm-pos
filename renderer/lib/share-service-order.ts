@@ -1,6 +1,6 @@
+'use client';
 import { formatCurrency } from './utils';
-import { generateServiceOrderReceipt } from './invoice-templates';
-import { htmlToPdfBlob } from './pdf-utils';
+import { generateServiceOrderPdf } from './pdf-utils';
 import { supabase } from './supabase';
 import { getPublicSiteUrl } from './public-links';
 import { triggerWhatsAppShare } from './whatsapp-direct';
@@ -19,26 +19,7 @@ export async function generateServiceOrderLink(
   business: Business
 ): Promise<string> {
   const orderRef = `OT-${String(order.order_number).padStart(4, '0')}`;
-  
-  const receiptData = {
-    id:              order.id,
-    order_number:    order.order_number,
-    created_at:      order.created_at,
-    subject_ref:     order.subject_ref,
-    subject_info:    order.subject_info,
-    client_name:     order.client_name,
-    client_phone:    order.client_phone,
-    status:          order.status,
-    notes:           order.notes,
-    items:           (order.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
-    total:           order.total,
-    paid_amount:     order.paid_amount,
-    payment_method:  order.payment_method,
-    payments:        order.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
-  };
-
-  const html = generateServiceOrderReceipt(receiptData, business);
-  const pdfBlob = await htmlToPdfBlob(html);
+  const pdfBlob = await generateServiceOrderPdf(order, business);
   const filename = `${orderRef}.pdf`;
   const filePath = `services/${business.id}/${order.id}/${filename}`;
 

@@ -25,18 +25,13 @@ export function isMobileDevice(): boolean {
 }
 
 /**
- * Triggers a direct WhatsApp share via wa.me.
- * On mobile, uses window.location.href to bypass popup blockers.
- * On desktop, uses window.open to keep the current app state.
+ * Ouvre WhatsApp dans un nouvel onglet (wa.me).
+ * Sur mobile le navigateur redirige vers l'app ; sur desktop ça ouvre WhatsApp Web.
+ * La page POS reste intacte dans l'onglet d'origine.
  */
 export function triggerWhatsAppShare(phone: string | null | undefined, message: string): void {
   const cleanPhone = normalizeWhatsAppPhone(phone);
-  const encodedMessage = encodeURIComponent(message);
-  const waUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-
-  if (isMobileDevice()) {
-    window.location.href = waUrl;
-  } else {
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
-  }
+  const encodedMsg = encodeURIComponent(message);
+  const url        = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
 }

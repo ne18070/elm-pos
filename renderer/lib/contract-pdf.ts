@@ -12,8 +12,11 @@ export async function generateContractPdf(
     import('jspdf'),
     import('html2canvas'),
   ]);
-  const jsPDF       = jsPDFModule.default;
-  const html2canvas = html2canvasModule.default;
+  const jsPDF = (jsPDFModule as any).jsPDF ?? (jsPDFModule as any).default ?? jsPDFModule;
+  const html2canvas: (el: HTMLElement, opts?: object) => Promise<HTMLCanvasElement> =
+    typeof (html2canvasModule as any).default === 'function'
+      ? (html2canvasModule as any).default
+      : (html2canvasModule as any);
 
   const today = new Date().toLocaleDateString('fr-FR');
 

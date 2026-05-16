@@ -1,3 +1,4 @@
+'use client';
 /**
  * Partage de factures
  * - WhatsApp via wa.me (fallback text)
@@ -5,8 +6,7 @@
  */
 
 import { formatCurrency } from './utils';
-import { generateThermalReceipt } from './invoice-templates';
-import { htmlToPdfBlob } from './pdf-utils';
+import { generateReceiptPdf } from './pdf-utils';
 import { supabase } from './supabase';
 import { buildPublicDocumentUrl } from './public-links';
 import { triggerWhatsAppShare } from './whatsapp-direct';
@@ -52,8 +52,7 @@ export async function generateInvoiceLink(
   business: Business
 ): Promise<string> {
   const orderRef = order.id.slice(0, 8).toUpperCase();
-  const html = generateThermalReceipt(order, business);
-  const pdfBlob = await htmlToPdfBlob(html);
+  const pdfBlob = await generateReceiptPdf(order, business);
   const filename = `facture-${orderRef}-${Date.now()}.pdf`;
   const filePath = `${business.id}/${order.id}/${filename}`;
 
