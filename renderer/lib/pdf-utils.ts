@@ -1,79 +1,62 @@
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
-
-async function waitForDocumentResources(doc: Document): Promise<void> {
-  const fonts = doc.fonts?.ready ?? Promise.resolve();
-  const images = Array.from(doc.images).map((img) => {
-    if (img.complete) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-    });
-  });
-
-  await Promise.all([fonts, ...images]);
-}
-
 /**
- * Converts an HTML string to a PDF Blob.
- * 
- * @param html The HTML content to render.
- * @param options Rendering options.
- * @returns A Promise resolving to a Blob of the PDF.
+ * htmlToPdfBlob : rend un document HTML complet en PDF (Blob).
+ * Suit le même pattern que contract-pdf.ts : imports dynamiques + div dans le
+ * document principal (html2canvas ne peut pas capturer le contenu d'un iframe).
  */
 export async function htmlToPdfBlob(
   html: string,
-  options: { width?: number; filename?: string; marginMm?: number } = {}
+  options: { width?: number; marginMm?: number } = {}
 ): Promise<Blob> {
-  const pdfWidth = 80;
-  const marginMm = options.marginMm ?? 4;
-  const imageWidth = pdfWidth - marginMm * 2;
+  const [jsPDFModule, html2canvasModule] = await Promise.all([
+    import('jspdf'),
+    import('html2canvas'),
+  ]);
+  const jsPDF       = jsPDFModule.default;
+  const html2canvas = html2canvasModule.default;
+
+  const pdfWidth     = 80;
+  const marginMm     = options.marginMm ?? 4;
+  const imageWidth   = pdfWidth - marginMm * 2;
   const renderWidthPx = options.width ?? 320;
 
-  // Render in a real document so <html>, <head>, <body> and @page styles are parsed correctly.
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'absolute';
-  iframe.style.left = '-10000px';
-  iframe.style.top = '0';
-  iframe.style.width = `${renderWidthPx}px`;
-  iframe.style.height = '1px';
-  iframe.style.border = '0';
-  iframe.style.pointerEvents = 'none';
-  document.body.appendChild(iframe);
+  // Extraire le <style> et le contenu du <body> du document HTML complet
+  const styleMatch   = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const bodyMatch    = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  const styleContent = styleMatch ? styleMatch[1] : '';
+  const bodyContent  = bodyMatch  ? bodyMatch[1]  : html;
+
+  // Supprimer les règles @page (inapplicables à un div)
+  const cleanedStyle = styleContent.replace(/@page\s*\{[^}]*\}/g, '');
+
+  const container = document.createElement('div');
+  container.style.cssText = `position:absolute;left:-10000px;top:0;width:${renderWidthPx}px;background:white;`;
+  container.innerHTML = `<style>${cleanedStyle}</style>${bodyContent}`;
+  document.body.appendChild(container);
+
+  // Attendre le chargement des images
+  await Promise.all(
+    Array.from(container.querySelectorAll('img')).map((img) => {
+      if ((img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        (img as HTMLImageElement).onload  = () => resolve();
+        (img as HTMLImageElement).onerror = () => resolve();
+      });
+    })
+  );
 
   try {
-    const doc = iframe.contentDocument;
-    if (!doc) throw new Error('Impossible de preparer le PDF');
-
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    await waitForDocumentResources(doc);
-
-    const target = doc.body;
-    const rect = target.getBoundingClientRect();
-    const captureWidth = Math.ceil(Math.max(target.scrollWidth, target.offsetWidth, rect.width));
-    const captureHeight = Math.ceil(Math.max(target.scrollHeight, target.offsetHeight, rect.height));
-
-    iframe.style.height = `${captureHeight}px`;
-
-    const canvas = await html2canvas(target, {
-      scale: 2, // Higher scale for better quality
+    const canvas = await html2canvas(container, {
+      scale: 2,
       useCORS: true,
+      allowTaint: false,
       logging: false,
       backgroundColor: '#ffffff',
-      width: captureWidth,
-      height: captureHeight,
-      windowWidth: Math.max(renderWidthPx, captureWidth),
-      windowHeight: captureHeight,
     });
 
-    const imgData = canvas.toDataURL('image/png');
-    
+    const imgData    = canvas.toDataURL('image/png');
     const imageHeight = (canvas.height * imageWidth) / canvas.width;
-    const pdfHeight = imageHeight + marginMm * 2;
-    
+    const pdfHeight  = imageHeight + marginMm * 2;
+
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -81,9 +64,8 @@ export async function htmlToPdfBlob(
     });
 
     pdf.addImage(imgData, 'PNG', marginMm, marginMm, imageWidth, imageHeight);
-    
     return pdf.output('blob');
   } finally {
-    document.body.removeChild(iframe);
+    document.body.removeChild(container);
   }
 }
