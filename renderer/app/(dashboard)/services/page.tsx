@@ -81,18 +81,20 @@ export default function ServicesPage() {
 
     setPrintingOrderId(o.id);
     try {
-      const loyalty = await buildLoyaltyForReceipt(o.business_id, o.client_name, o.total, o.status);
+      const full = await getServiceOrderById(o.id).catch(() => o);
+      const order = full ?? o;
+      const loyalty = await buildLoyaltyForReceipt(order.business_id, order.client_name, order.total, order.status);
       printHtml(generateServiceOrderReceipt({
-        id: o.id, order_number: o.order_number, created_at: o.created_at,
-        started_at: o.started_at, finished_at: o.finished_at, paid_at: o.paid_at,
-        subject_ref: o.subject_ref,
-        subject_info: o.subject_info ?? undefined,
-        client_name: o.client_name, client_phone: o.client_phone,
-        assigned_name: o.assigned_name,
-        status: o.status, notes: o.notes,
-        items: (o.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
-        total: o.total, paid_amount: o.paid_amount, payment_method: o.payment_method,
-        payments: o.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
+        id: order.id, order_number: order.order_number, created_at: order.created_at,
+        started_at: order.started_at, finished_at: order.finished_at, paid_at: order.paid_at,
+        subject_ref: order.subject_ref,
+        subject_info: order.subject_info ?? undefined,
+        client_name: order.client_name, client_phone: order.client_phone,
+        assigned_name: order.assigned_name,
+        status: order.status, notes: order.notes,
+        items: (order.items ?? []).map(i => ({ name: i.name, price: i.price, quantity: i.quantity, total: i.total })),
+        total: order.total, paid_amount: order.paid_amount, payment_method: order.payment_method,
+        payments: order.payments?.map(p => ({ amount: p.amount, method: p.method, paid_at: p.paid_at })),
         loyalty,
       }, business as any));
     } finally {
@@ -193,7 +195,14 @@ export default function ServicesPage() {
           <ServiceOrdersTab
             businessId={businessId}
             currency={currency}
-            onSelectOrder={setSelectedOrder}
+            onSelectOrder={async (order) => {
+              try {
+                const full = await getServiceOrderById(order.id);
+                setSelectedOrder(full ?? order);
+              } catch {
+                setSelectedOrder(order);
+              }
+            }}
             onNewOrder={() => setShowNewOT(true)}
             onPrintOrder={handlePrintOrder}
             printingOrderId={printingOrderId}

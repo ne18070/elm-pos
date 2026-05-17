@@ -239,7 +239,8 @@ export async function generateServiceOrderPdf(
   // Articles / prestations
   for (const item of order.items ?? []) {
     line(8, item.name, MX, 'left', true);
-    row(`  ${item.quantity} × ${fmt(item.price)}`, fmt(item.total));
+    const qtyLabel = item.quantity > 1 ? `  × ${item.quantity}` : '';
+    row(qtyLabel, fmt(item.total));
   }
   y += 1; hr();
 
@@ -249,6 +250,24 @@ export async function generateServiceOrderPdf(
   const remaining = Math.max(0, order.total - order.paid_amount);
   if (remaining > 0.01) row('Reste dû', fmt(remaining));
   row('TOTAL', fmt(order.total), 10, true);
+
+  // Tampon PAYÉ
+  if (order.status === 'paye') {
+    y += 3;
+    const stampW = 32;
+    const stampH = 10;
+    const stampX = (W - stampW) / 2;
+    pdf.setLineWidth(0.8);
+    pdf.setDrawColor(0, 140, 0);
+    pdf.rect(stampX, y, stampW, stampH);
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 140, 0);
+    pdf.text('PAYÉ', W / 2, y + 7, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+    pdf.setDrawColor(100);
+    y += stampH + 3;
+  }
 
   // Notes
   if (order.notes) {
