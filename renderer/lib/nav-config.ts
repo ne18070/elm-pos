@@ -2,7 +2,7 @@ import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
-  GraduationCap, DatabaseZap
+  GraduationCap, DatabaseZap, Bot
 } from 'lucide-react';
 import type { PermissionKey } from './permissions';
 import type { BusinessType } from '@pos-types';
@@ -97,6 +97,7 @@ const S_FINANCE: NavSection = {
 const S_ADMIN: NavSection = {
   label: 'Administration',
   items: [
+    { href: '/assistant', icon: Bot,          label: 'Assistant IA',          permission: 'view_ai_assistant' },
     { href: '/clients',   icon: Users,        label: 'Base Clients',           permission: 'view_clients'   },
     { href: '/coupons',   icon: Tag,          label: 'Coupons & Remises',      permission: 'view_coupons'   },
     { href: '/whatsapp',  icon: MessageCircle,label: 'WhatsApp Business',      permission: 'view_whatsapp'  },

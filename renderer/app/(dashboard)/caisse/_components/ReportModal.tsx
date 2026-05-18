@@ -125,7 +125,7 @@ export function ReportModal({ data, onClose }: { data: ReportData; onClose: () =
             )}
 
             <p className="text-center text-[10px] text-gray-400 border-t border-dashed border-gray-200 pt-1 mt-1">
-              {isZ ? 'Document définitif' : 'Non définitif'} · elm-pos
+              {isZ ? 'Document définitif' : 'Non définitif'} · elm-app
             </p>
           </div>
         </div>

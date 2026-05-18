@@ -55,6 +55,15 @@ export default function PosPage() {
   const { business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
   const router = useRouter();
+  const { warning } = useNotificationStore();
+
+  const handleCheckout = useCallback(() => {
+    if (!cashSession) {
+      warning('Ouvrez une session de caisse avant d\'encaisser.');
+      return;
+    }
+    setPaymentOpen(true);
+  }, [cashSession, warning]);
 
   // Point 1: Restore sidebar on leave
   useEffect(() => {
@@ -85,7 +94,7 @@ export default function PosPage() {
       // Don't trigger if a button is focused (Space usually clicks buttons)
       if ((e.key === 'F12' || (e.key === ' ' && !isInput && active?.tagName !== 'BUTTON')) && cartItems.length > 0 && !paymentOpen) {
         e.preventDefault();
-        setPaymentOpen(true);
+        handleCheckout();
       }
       
       // Esc : Clear search or close modals
@@ -97,7 +106,7 @@ export default function PosPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cartItems.length, paymentOpen, searchQuery]);
+  }, [cartItems.length, paymentOpen, searchQuery, handleCheckout]);
 
   // Les hôtels sans POS activé sont redirigés vers /hotel
   useEffect(() => {
@@ -105,7 +114,6 @@ export default function PosPage() {
       router.replace('/hotel');
     }
   }, [business, router]);
-  const { warning } = useNotificationStore();
 
   const { sendPaymentConfirm } = useCustomerDisplay({
     businessName: business?.name ?? 'ELM (Sénégal)',
@@ -233,7 +241,7 @@ export default function PosPage() {
           <OrderPanel
             taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
-            onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)} onSplit={() => setSplitOpen(true)}
+            onCheckout={handleCheckout} onShowHeld={() => setHeldDrawerOpen(true)} onSplit={() => setSplitOpen(true)}
             isRestaurant={isRestaurant}
           />
         </div>
@@ -323,7 +331,7 @@ export default function PosPage() {
             <OrderPanel
               taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
               currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
-              onCheckout={() => setPaymentOpen(true)} onShowHeld={() => setHeldDrawerOpen(true)} onSplit={() => setSplitOpen(true)}
+              onCheckout={handleCheckout} onShowHeld={() => setHeldDrawerOpen(true)} onSplit={() => setSplitOpen(true)}
               isRestaurant={isRestaurant}
             />
           </div>

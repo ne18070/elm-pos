@@ -30,7 +30,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.supabase.co https://api.qrserver.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:11434 http://localhost:11434",
       "font-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",
@@ -55,6 +55,8 @@ const nextConfig = {
     SUPABASE_ANON_KEY:             process.env.SUPABASE_ANON_KEY             || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SITE_URL:          process.env.NEXT_PUBLIC_SITE_URL          || 'https://www.elm-app.click',
+    NEXT_PUBLIC_LOCAL_AI_BASE_URL: process.env.NEXT_PUBLIC_LOCAL_AI_BASE_URL || 'http://127.0.0.1:11434',
+    NEXT_PUBLIC_LOCAL_AI_MODEL:    process.env.NEXT_PUBLIC_LOCAL_AI_MODEL    || 'llama3.2:3b',
   },
   webpack: (config) => {
     config.resolve.alias = {
