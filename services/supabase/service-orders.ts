@@ -370,6 +370,23 @@ export async function getServiceOrders(
   return { data: data ?? [], count: count ?? 0 };
 }
 
+/** Retourne le nombre d'OT "en_cours" démarrés avant il y a `days` jours calendaires. */
+export async function getStaleOrderCount(businessId: string, days = 3): Promise<number> {
+  // Comparer par jour calendaire UTC : seuil=1 → tout OT démarré avant aujourd'hui (minuit UTC)
+  const cutoff = new Date();
+  cutoff.setUTCHours(0, 0, 0, 0);
+  cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1));
+  const { count, error } = await db
+    .from('service_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .eq('status', 'en_cours')
+    .not('started_at', 'is', null)
+    .lt('started_at', cutoff.toISOString());
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export async function getServiceOrderById(id: string): Promise<ServiceOrder | null> {
   const { data, error } = await db
     .from('service_orders')

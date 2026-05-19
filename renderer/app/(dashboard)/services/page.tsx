@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle } from 'lucide-react';
+import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle, Settings2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
@@ -13,9 +13,12 @@ import {
   type ServiceOrder,
   type ServiceOrderStatus,
   getServiceOrderById,
+  getStaleOrderCount,
 } from '@services/supabase/service-orders';
+
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
+import { updateBusiness } from '@services/supabase/business';
 import { buildLoyaltyForReceipt } from '@/lib/loyalty-print';
 
 // Components
@@ -33,7 +36,7 @@ type PageTab = 'orders' | 'catalog' | 'subjects';
 const VALID_STATUSES = new Set(['attente', 'en_cours', 'termine', 'paye', 'annule']);
 
 export default function ServicesPage() {
-  const { business } = useAuthStore();
+  const { business, setBusiness } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
   const can = useCan();
   const { success, error: notifError } = useNotificationStore();
@@ -53,9 +56,44 @@ export default function ServicesPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [copied, setCopied] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
+  const [staleCount, setStaleCount] = useState(0);
+  const [staleDays, setStaleDays] = useState<number>(() =>
+    Math.max(1, business?.brand_config?.stale_ot_days ?? 3),
+  );
+  const [showStaleCfg, setShowStaleCfg] = useState(false);
+  const cfgRef = useRef<HTMLDivElement>(null);
+
+  // Sync when another session updates brand_config via realtime
+  useEffect(() => {
+    const days = business?.brand_config?.stale_ot_days;
+    if (days) setStaleDays(Math.max(1, days));
+  }, [business?.brand_config?.stale_ot_days]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    getStaleOrderCount(businessId, staleDays).then(setStaleCount).catch(() => {});
+  }, [businessId, refreshTrigger, staleDays]);
+
+  useEffect(() => {
+    if (!showStaleCfg) return;
+    function onOutsideClick(e: MouseEvent) {
+      if (cfgRef.current && !cfgRef.current.contains(e.target as Node)) setShowStaleCfg(false);
+    }
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, [showStaleCfg]);
+
+  async function handleStaleDaysChange(val: number) {
+    const days = Math.max(1, Math.min(30, val || 1));
+    setStaleDays(days);
+    if (!business || !businessId) return;
+    const brand_config = { ...(business.brand_config ?? {}), stale_ot_days: days };
+    setBusiness({ ...business, brand_config });
+    await updateBusiness(businessId, { brand_config }).catch(() => {});
+  }
 
   // We load catalog here because it's needed by multiple components (New OT, Order Detail)
-  const { catalog, refresh: refreshCatalog } = useServiceCatalog(businessId);
+  const { catalog } = useServiceCatalog(businessId);
 
   const canShareOrder = can('share_service_order');
   const canCreateOrder = can('create_service_order');
@@ -150,10 +188,49 @@ export default function ServicesPage() {
             </button>
           )}
           {canCreateOrder && (
-            <button onClick={() => setShowNewOT(true)}
-              className="flex flex-1 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold shadow-sm sm:flex-none">
-              <Plus className="w-4 h-4" />Nouvel OT
-            </button>
+            <div className="flex items-center gap-1 flex-1 sm:flex-none">
+              <button
+                onClick={() => { if (!staleCount) setShowNewOT(true); }}
+                disabled={staleCount > 0}
+                title={staleCount > 0 ? `${staleCount} OT en cours depuis +${staleDays} j — clôturez-les avant d'en créer un nouveau` : undefined}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors',
+                  staleCount > 0
+                    ? 'bg-status-warning/20 text-status-warning border border-status-warning/40 cursor-not-allowed'
+                    : 'bg-brand-500 hover:bg-brand-600 text-white',
+                )}
+              >
+                <Plus className="w-4 h-4" />Nouvel OT
+                {staleCount > 0 && <span className="ml-1 rounded-full bg-status-warning text-white text-[10px] font-bold px-1.5 py-0.5">{staleCount}</span>}
+              </button>
+              {/* Gear to configure the stale-days threshold */}
+              <div ref={cfgRef} className="relative shrink-0">
+                <button
+                  onClick={() => setShowStaleCfg(v => !v)}
+                  className="p-2 rounded-lg text-content-muted hover:text-content-primary hover:bg-surface-hover"
+                  title="Configurer le seuil"
+                >
+                  <Settings2 className="w-4 h-4" />
+                </button>
+                {showStaleCfg && (
+                  <div className="absolute right-0 top-full mt-1 z-30 w-60 rounded-xl border border-surface-border bg-surface-card shadow-lg p-3">
+                    <p className="text-xs font-semibold text-content-primary mb-1">Seuil de blocage</p>
+                    <p className="text-xs text-content-muted mb-2">Bloquer si un OT « en cours » n'est pas mis à jour depuis :</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={staleDays}
+                        onChange={e => handleStaleDaysChange(parseInt(e.target.value, 10))}
+                        className="input w-20 text-center"
+                      />
+                      <span className="text-sm text-content-secondary">jours</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -163,6 +240,15 @@ export default function ServicesPage() {
           <AlertCircle className="w-4 h-4" />
           Attention : Aucune session de caisse n'est ouverte. L'encaissement sera impossible.
           <Link href="/caisse" className="underline ml-2">Ouvrir la caisse</Link>
+        </div>
+      )}
+      {staleCount > 0 && (
+        <div className="bg-status-warning/10 border-b border-status-warning/30 px-4 py-2 flex items-center gap-2 text-status-warning text-xs font-medium shrink-0">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            <strong>{staleCount} OT « en cours »</strong> n'ont pas été mis à jour depuis plus de {staleDays} jours.
+            Clôturez-les avant de créer un nouvel OT.
+          </span>
         </div>
       )}
 
@@ -203,11 +289,12 @@ export default function ServicesPage() {
                 setSelectedOrder(order);
               }
             }}
-            onNewOrder={() => setShowNewOT(true)}
+            onNewOrder={() => { if (!staleCount) setShowNewOT(true); }}
             onPrintOrder={handlePrintOrder}
             printingOrderId={printingOrderId}
             refreshTrigger={refreshTrigger}
             initialStatus={initialStatus}
+            onStatusChange={() => setRefreshTrigger(prev => prev + 1)}
           />
         )}
 

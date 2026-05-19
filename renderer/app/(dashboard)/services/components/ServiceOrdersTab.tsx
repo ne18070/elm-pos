@@ -77,6 +77,7 @@ export function ServiceOrdersTab({
   printingOrderId,
   refreshTrigger = 0,
   initialStatus,
+  onStatusChange,
 }: {
   businessId: string;
   currency: string;
@@ -86,6 +87,7 @@ export function ServiceOrdersTab({
   printingOrderId?: string | null;
   refreshTrigger?: number;
   initialStatus?: ServiceOrderStatus | 'all';
+  onStatusChange?: () => void;
 }) {
   const { user, business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
@@ -153,6 +155,7 @@ export function ServiceOrdersTab({
       await updateServiceOrderStatus(id, status, { userId: user?.id, userName: user?.full_name });
       const order = orders.find(o => o.id === id);
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      onStatusChange?.();
       success('Statut mis à jour');
       // Push notification client (fire-and-forget)
       if (order) {
