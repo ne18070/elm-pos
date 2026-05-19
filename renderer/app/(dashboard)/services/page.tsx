@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle, Settings2 } from 'lucide-react';
+import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle, Settings2, MessageCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
@@ -25,13 +25,14 @@ import { buildLoyaltyForReceipt } from '@/lib/loyalty-print';
 import { ServiceOrdersTab } from './components/ServiceOrdersTab';
 import { CatalogTab } from './components/CatalogTab';
 import { SubjectsTab } from './components/SubjectsTab';
+import { CampaignsTab } from './components/CampaignsTab';
 import { NewServiceOrderModal } from './components/NewServiceOrderModal';
 import { OrderDetailPanel } from './components/OrderDetailPanel';
 
 // Hooks
 import { useServiceCatalog } from './hooks/useServiceCatalog';
 
-type PageTab = 'orders' | 'catalog' | 'subjects';
+type PageTab = 'orders' | 'catalog' | 'subjects' | 'campagnes';
 
 const VALID_STATUSES = new Set(['attente', 'en_cours', 'termine', 'paye', 'annule']);
 
@@ -255,9 +256,10 @@ export default function ServicesPage() {
       {/* Tab bar */}
       <div className="flex items-center gap-1 overflow-x-auto px-4 py-1 bg-surface-card border-b border-surface-border shrink-0 md:px-4">
         {([
-          { key: 'orders',   icon: Wrench,   label: 'Ordres de travail', short: 'OT',         desc: 'Créer & suivre les bons de prestation' },
-          { key: 'catalog',  icon: Package2, label: 'Catalogue',          short: 'Catalogue',  desc: 'Prestations types & tarifs' },
-          { key: 'subjects', icon: History,  label: 'Historique',         short: 'Historique', desc: 'Par véhicule, appareil ou client' },
+          { key: 'orders',    icon: Wrench,          label: 'Ordres de travail', short: 'OT',         desc: 'Créer & suivre les bons de prestation' },
+          { key: 'catalog',  icon: Package2,         label: 'Catalogue',          short: 'Catalogue',  desc: 'Prestations types & tarifs' },
+          { key: 'subjects', icon: History,          label: 'Historique',         short: 'Historique', desc: 'Par véhicule, appareil ou client' },
+          { key: 'campagnes',icon: MessageCircle,    label: 'Campagnes WA',       short: 'WhatsApp',   desc: 'Composer & envoyer des messages clients' },
         ] as const).map(({ key, icon: Icon, label, short, desc }) => (
           <button key={key} onClick={() => setTab(key)}
             className={cn('flex items-start gap-2 px-3 py-2 rounded-xl text-left transition-colors min-w-0 flex-shrink-0', tab === key
@@ -309,6 +311,10 @@ export default function ServicesPage() {
           <div className="flex-1 overflow-hidden p-4">
              <SubjectsTab businessId={businessId} currency={currency} />
           </div>
+        )}
+
+        {tab === 'campagnes' && (
+          <CampaignsTab businessId={businessId} />
         )}
       </div>
 

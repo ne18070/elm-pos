@@ -370,6 +370,41 @@ export async function getServiceOrders(
   return { data: data ?? [], count: count ?? 0 };
 }
 
+export interface ServiceOrderClient {
+  name:        string;
+  phone:       string;
+  lastRef:     string;
+  lastService: string;
+  lastStatus:  string;
+  lastTotal:   number;
+}
+
+/** Retourne la liste dédupliquée des clients ayant au moins un OT, avec leur dernier OT. */
+export async function getDistinctServiceClients(businessId: string): Promise<ServiceOrderClient[]> {
+  const { data, error } = await db
+    .from('service_orders')
+    .select('client_name, client_phone, order_number, status, total, items:service_order_items(name)')
+    .eq('business_id', businessId)
+    .not('client_phone', 'is', null)
+    .not('client_name', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error || !data) return [];
+  const seen = new Map<string, ServiceOrderClient>();
+  for (const row of data) {
+    if (!row.client_phone || seen.has(row.client_phone)) continue;
+    seen.set(row.client_phone, {
+      name:        row.client_name,
+      phone:       row.client_phone,
+      lastRef:     `OT-${String(row.order_number).padStart(4, '0')}`,
+      lastService: (row.items as { name: string }[])?.[0]?.name ?? '',
+      lastStatus:  row.status,
+      lastTotal:   row.total ?? 0,
+    });
+  }
+  return Array.from(seen.values());
+}
+
 /** Retourne le nombre d'OT "en_cours" démarrés avant il y a `days` jours calendaires. */
 export async function getStaleOrderCount(businessId: string, days = 3): Promise<number> {
   // Comparer par jour calendaire UTC : seuil=1 → tout OT démarré avant aujourd'hui (minuit UTC)
