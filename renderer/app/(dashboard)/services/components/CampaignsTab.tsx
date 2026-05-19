@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   MessageCircle, Plus, Save, Trash2, Search, ChevronRight,
   X, Send, Users, Eye, EyeOff, ExternalLink,
-  CheckCircle2, Circle, ChevronLeft, Copy,
+  CheckCircle2, Circle, ChevronLeft, Copy, Sparkles, Loader2,
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { getDistinctServiceClients, type ServiceOrderClient } from '@services/supabase/service-orders';
+import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,20 +130,6 @@ function insertAtCursor(ta: HTMLTextAreaElement, text: string, body: string): { 
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function CategoryPill({ cat, active, onClick }: { cat: typeof CATEGORIES[0]; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-        active ? cat.color : 'text-content-muted bg-surface-hover border-surface-border hover:text-content-secondary',
-      )}
-    >
-      {cat.label}
-    </button>
-  );
-}
-
 function StatusDot({ status }: { status: string }) {
   const colors: Record<string, string> = {
     attente: 'bg-status-warning', en_cours: 'bg-status-info',
@@ -179,6 +166,12 @@ export function CampaignsTab({ businessId }: { businessId: string }) {
   const [editBody,        setEditBody]        = useState('');
   const [isDirty,         setIsDirty]         = useState(false);
   const [showPreview,     setShowPreview]     = useState(false);
+
+  // ── IA generation state ───────────────────────────────────────────────────
+  const [showAiInput,  setShowAiInput]  = useState(false);
+  const [aiPrompt,     setAiPrompt]     = useState('');
+  const [aiLoading,    setAiLoading]    = useState(false);
+  const aiInputRef = useRef<HTMLInputElement>(null);
 
   // ── Clients state ────────────────────────────────────────────────────────
   const [clients,         setClients]         = useState<ServiceOrderClient[]>([]);
@@ -363,6 +356,36 @@ export function CampaignsTab({ businessId }: { businessId: string }) {
     setSendQueue([]);
     setSentPhones(new Set());
     setSendIndex(0);
+  }
+
+  // ── AI generation ─────────────────────────────────────────────────────
+  async function generateWithAI() {
+    const trimmed = aiPrompt.trim();
+    if (!trimmed || aiLoading) return;
+    setAiLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { notifError('Non authentifié.'); return; }
+      const res = await fetch('/api/ai/template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ businessId, description: trimmed, businessName: bizName }),
+      });
+      const json = await res.json() as { template?: string; error?: string };
+      if (!res.ok) { notifError(json.error ?? 'Erreur IA'); return; }
+      if (json.template) {
+        setEditBody(json.template);
+        setIsDirty(true);
+        setShowAiInput(false);
+        setAiPrompt('');
+        success('Message généré avec l\'IA ✨');
+      }
+    } catch {
+      notifError('Impossible de joindre l\'IA.');
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   // ── Filtered templates ─────────────────────────────────────────────────
@@ -678,7 +701,46 @@ export function CampaignsTab({ businessId }: { businessId: string }) {
             <span className="text-[10px] font-semibold text-content-muted uppercase tracking-wide">
               Ajouter une info personnalisée — cliquez pour insérer
             </span>
+            <button
+              onClick={() => { setShowAiInput(v => !v); setTimeout(() => aiInputRef.current?.focus(), 50); }}
+              className={cn(
+                'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-colors',
+                showAiInput
+                  ? 'bg-purple-500/15 text-purple-500 border border-purple-500/30'
+                  : 'text-content-muted hover:text-content-secondary hover:bg-surface-hover border border-transparent',
+              )}
+            >
+              <Sparkles className="w-3 h-3" />
+              Générer avec l'IA
+            </button>
           </div>
+          {showAiInput && (
+            <div className="px-3 pb-2">
+              <div className="flex items-center gap-1.5">
+                <input
+                  ref={aiInputRef}
+                  type="text"
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') generateWithAI();
+                    if (e.key === 'Escape') { setShowAiInput(false); setAiPrompt(''); }
+                  }}
+                  placeholder="Décrivez le message… ex : rappel que l'OT est terminé et prêt à récupérer"
+                  disabled={aiLoading}
+                  className="flex-1 text-xs px-2.5 py-1.5 rounded-lg bg-surface-input border border-surface-border text-content-primary placeholder:text-content-muted outline-none focus:border-purple-500/50 disabled:opacity-50"
+                />
+                <button
+                  onClick={generateWithAI}
+                  disabled={!aiPrompt.trim() || aiLoading}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                >
+                  {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {aiLoading ? 'Génère…' : 'Générer'}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex gap-1.5 flex-wrap px-3 pb-2">
             {VARIABLES.map(v => (
               <button
