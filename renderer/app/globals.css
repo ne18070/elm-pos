@@ -35,7 +35,7 @@
     /* Text tokens */
     --text-base:        248 250 252;  /* slate-50 */
     --text-secondary:   148 163 184;  /* slate-400 */
-    --text-placeholder: 71 85 105;   /* slate-600 */
+    --text-placeholder: 100 116 139;  /* slate-500 */
 
     /* Status tokens — texte & icônes (dark : couleurs vives) */
     --color-success:  74 222 128;   /* green-400 */
@@ -241,7 +241,7 @@
   --surface-hover:  30 41 59;
   --text-base:        241 245 249;
   --text-secondary:   148 163 184;
-  --text-placeholder: 71 85 105;
+  --text-placeholder: 100 116 139;  /* slate-500 — un cran plus lisible */
   color-scheme: dark;
 }
 

@@ -13,7 +13,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
 import { setMonitoringUser, trackAuth } from '@/lib/analytics';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service', '/delete-account', '/delete-data'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service', '/delete-account', '/delete-data', '/developers'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

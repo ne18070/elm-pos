@@ -99,7 +99,18 @@
       "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('renderer/lib/pdf-utils.ts','utf8'\\); const lines=c.split\\('\\\\n'\\); lines.slice\\(10,15\\).forEach\\(\\(l,i\\)=>console.log\\(i+11,JSON.stringify\\(l\\)\\)\\);\")",
       "Bash(node -e ' *)",
       "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('renderer/lib/pdf-utils.ts','utf8'\\); const lines=c.split\\('\\\\n'\\); lines.slice\\(10,16\\).forEach\\(\\(l,i\\)=>console.log\\(i+11,JSON.stringify\\(l\\)\\)\\);\")",
-      "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('renderer/lib/pdf-utils.ts','utf8'\\); const lines=c.split\\('\\\\n'\\); lines.slice\\(10,16\\).forEach\\(\\(l,i\\)=>{ const bytes=[...l].map\\(ch=>ch.codePointAt\\(0\\).toString\\(16\\).padStart\\(4,'0'\\)\\); console.log\\(i+11, bytes.join\\(' '\\)\\); }\\);\")"
+      "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('renderer/lib/pdf-utils.ts','utf8'\\); const lines=c.split\\('\\\\n'\\); lines.slice\\(10,16\\).forEach\\(\\(l,i\\)=>{ const bytes=[...l].map\\(ch=>ch.codePointAt\\(0\\).toString\\(16\\).padStart\\(4,'0'\\)\\); console.log\\(i+11, bytes.join\\(' '\\)\\); }\\);\")",
+      "Bash(npm run *)",
+      "Bash(cat next.config.ts)",
+      "Bash(cat next.config.js)",
+      "Bash(cat next.config.mjs)",
+      "Bash(grep \"\\\\`\\\\|fetch\\\\|router\\\\|href\\\\|Link\\\\|window\\\\.open\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\api\\\\\" -Recurse | Select-Object FullName, PSIsContainer | Sort-Object FullName)",
+      "Bash(Get-Content services\\\\supabase\\\\database.types.ts -TotalCount 1)",
+      "Bash(Get-Content services\\\\supabase\\\\database.types.ts)",
+      "Bash(restaurant)",
+      "Bash(room)",
+      "Bash(reserv\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"

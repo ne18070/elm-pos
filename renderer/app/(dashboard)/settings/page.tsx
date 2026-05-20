@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Building2, Printer, Wifi, ChevronDown, MessageCircle,
   UserCircle, Package, Archive, ShieldCheck,
-  Briefcase, Globe, Settings2, Wrench, UtensilsCrossed, Gift
+  Briefcase, Globe, Settings2, Wrench, UtensilsCrossed, Gift, Code2
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/auth';
@@ -28,6 +28,7 @@ import { WhatsAppSettingsSection } from './WhatsAppSettingsSection';
 import { AccountSection } from './AccountSection';
 import { RestaurantSettingsSection } from './RestaurantSettingsSection';
 import { LoyaltySettingsSection } from './LoyaltySettingsSection';
+import { ApiKeysSection } from './ApiKeysSection';
 import { hasFeature } from '@/lib/permissions';
 
 // --- Local Components --------------------------------------------------------
@@ -227,6 +228,12 @@ export default function SettingsPage() {
           {isAdmin && (
             <SettingsSection id="wa" title="WhatsApp Business API" icon={MessageCircle} isOpen={openSections.wa} onToggle={toggle} badge="Administrateur">
               <WhatsAppSettingsSection />
+            </SettingsSection>
+          )}
+
+          {isOwner && (
+            <SettingsSection id="api" title="Intégrations API" icon={Code2} isOpen={openSections.api} onToggle={toggle} badge="Propriétaire">
+              <ApiKeysSection />
             </SettingsSection>
           )}
         </div>
