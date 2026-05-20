@@ -362,7 +362,7 @@ function CopyButton({ text, size = 'sm' }: { text: string; size?: 'sm' | 'xs' })
 
 function CodeBlock({ code, lang }: { code: string; lang?: string }) {
   return (
-    <div className="relative group rounded-lg overflow-hidden" style={{ border: '1px solid #1e293b' }}>
+    <div className="relative group rounded-lg min-w-0" style={{ border: '1px solid #1e293b', overflow: 'clip' }}>
       {lang && (
         <div className="flex items-center justify-between px-4 py-1.5" style={{ background: '#0f172a', borderBottom: '1px solid #1e293b' }}>
           <span className="text-[10px] font-mono font-semibold uppercase tracking-widest" style={{ color: '#475569' }}>{lang}</span>
@@ -389,7 +389,7 @@ function CodeBlock({ code, lang }: { code: string; lang?: string }) {
           <CopyButton text={code} size="xs" />
         </div>
       )}
-      <pre className="px-4 py-3 text-sm font-mono overflow-x-auto leading-relaxed" style={{ background: '#0f172a', color: '#94a3b8' }}>
+      <pre className="px-4 py-3 text-sm font-mono overflow-x-auto leading-relaxed" style={{ background: '#0f172a', color: '#94a3b8', whiteSpace: 'pre', wordBreak: 'normal', overflowWrap: 'normal' }}>
         <code>{code}</code>
       </pre>
     </div>
@@ -398,7 +398,7 @@ function CodeBlock({ code, lang }: { code: string; lang?: string }) {
 
 function InlineCode({ children }: { children: React.ReactNode }) {
   return (
-    <code className="text-brand-400 bg-surface-input px-1.5 py-0.5 rounded text-[13px] font-mono">
+    <code className="text-brand-600 bg-surface-input px-1.5 py-0.5 rounded text-[13px] font-mono">
       {children}
     </code>
   );
@@ -470,11 +470,11 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
           )}
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted mb-2">cURL</p>
               <CodeBlock code={curlExample} lang="bash" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted mb-2">JavaScript</p>
               <CodeBlock code={jsExample} lang="js" />
             </div>
@@ -527,7 +527,7 @@ export default function DevelopersPage() {
               <Zap className="w-3 h-3" />
               120 req / min
             </div>
-            <span className="text-xs font-mono font-semibold text-brand-400 border border-brand-500/30 rounded-md px-2.5 py-1">
+            <span className="text-xs font-mono font-semibold text-brand-600 border border-brand-500/30 rounded-md px-2.5 py-1">
               v1.0
             </span>
           </div>
@@ -548,7 +548,7 @@ export default function DevelopersPage() {
                     onClick={() => scrollTo(id)}
                     className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm text-left transition-colors ${
                       activeSection === id
-                        ? 'bg-brand-500/10 text-brand-400'
+                        ? 'bg-brand-500/10 text-brand-600'
                         : 'text-content-secondary hover:text-content-primary hover:bg-surface-hover'
                     }`}
                   >
@@ -586,7 +586,7 @@ export default function DevelopersPage() {
           {/* Overview */}
           <section id="overview">
             <h2 className="text-xl font-bold text-content-primary mb-6 flex items-center gap-2.5">
-              <BookOpen className="w-5 h-5 text-brand-400" />
+              <BookOpen className="w-5 h-5 text-brand-600" />
               Vue d&apos;ensemble
             </h2>
 
@@ -630,7 +630,7 @@ export default function DevelopersPage() {
           {/* Auth */}
           <section id="auth">
             <h2 className="text-xl font-bold text-content-primary mb-6 flex items-center gap-2.5">
-              <KeyRound className="w-5 h-5 text-brand-400" />
+              <KeyRound className="w-5 h-5 text-brand-600" />
               Authentification
             </h2>
 
@@ -710,7 +710,7 @@ export default function DevelopersPage() {
           {/* Error codes */}
           <section id="errors">
             <h2 className="text-xl font-bold text-content-primary mb-6 flex items-center gap-2.5">
-              <AlertCircle className="w-5 h-5 text-brand-400" />
+              <AlertCircle className="w-5 h-5 text-brand-600" />
               Codes d&apos;erreur
             </h2>
 
@@ -771,7 +771,7 @@ export default function DevelopersPage() {
               href="https://wa.me/221772211126"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-400 hover:underline"
+              className="text-brand-600 hover:underline"
             >
               Questions ? Contactez le support
             </a>
