@@ -3,6 +3,7 @@ import { validateApiKey, getApiKey, apiError, handleAuthError, corsHeaders } fro
 import { getSupabaseAdmin as getAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
+export function generateStaticParams() { return [{ id: '_' }]; }
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });

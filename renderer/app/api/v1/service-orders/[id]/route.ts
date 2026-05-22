@@ -3,6 +3,7 @@ import { validateApiKey, getApiKey, apiError, handleAuthError, corsHeaders } fro
 import { getSupabaseAdmin as getAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
+export function generateStaticParams() { return [{ id: '_' }]; }
 
 const VALID_STATUSES = ['attente', 'en_cours', 'pause', 'termine', 'paye', 'annule'];
 
