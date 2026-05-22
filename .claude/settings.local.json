@@ -110,7 +110,20 @@
       "Bash(Get-Content services\\\\supabase\\\\database.types.ts)",
       "Bash(restaurant)",
       "Bash(room)",
-      "Bash(reserv\")"
+      "Bash(reserv\")",
+      "Bash(gh pr *)",
+      "PowerShell(gh pr list)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\" -Recurse -Directory)",
+      "Bash(Select-Object -First 30)",
+      "Bash(Format-Table FullName)",
+      "Bash(sed -n '80,95p' services/supabase/loyalty.ts)",
+      "Bash(sed -n '115,130p' services/supabase/loyalty.ts)",
+      "Bash(sed -n '210,220p' services/supabase/contracts.ts)",
+      "Bash(sed -n '471,480p' services/supabase/contracts.ts)",
+      "Bash(sed -n '491,500p' services/supabase/contracts.ts)",
+      "Bash(sed -n '50,75p' services/supabase/loyalty.ts)",
+      "Bash(sed -n '135,175p' services/supabase/loyalty.ts)",
+      "Bash(git commit -m ' *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"
