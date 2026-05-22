@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useMemo, useEffect } from 'react';
 import { X, Car, AlertCircle, Loader2, Eye } from 'lucide-react';
 import { SlidePanel, Field } from './SharedComponents';

@@ -3,7 +3,7 @@ import {
   Search, X, RefreshCw, Wrench, Plus, Play,
   CheckCircle2, CreditCard, Printer, User,
   ChevronLeft, ChevronRight, UserRoundCheck, Coins, Star,
-  Volume2, VolumeX,
+  Volume2, VolumeX, Loader2,
 } from 'lucide-react';
 import { unlockAdminAudio, playConfirmTone } from '@/lib/admin-sound';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -74,16 +74,20 @@ export function ServiceOrdersTab({
   onSelectOrder,
   onNewOrder,
   onPrintOrder,
+  printingOrderId,
   refreshTrigger = 0,
   initialStatus,
+  onStatusChange,
 }: {
   businessId: string;
   currency: string;
   onSelectOrder: (order: ServiceOrder) => void;
   onNewOrder: () => void;
   onPrintOrder: (order: ServiceOrder, e: React.MouseEvent) => void;
+  printingOrderId?: string | null;
   refreshTrigger?: number;
   initialStatus?: ServiceOrderStatus | 'all';
+  onStatusChange?: () => void;
 }) {
   const { user, business } = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
@@ -151,6 +155,7 @@ export function ServiceOrdersTab({
       await updateServiceOrderStatus(id, status, { userId: user?.id, userName: user?.full_name });
       const order = orders.find(o => o.id === id);
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+      onStatusChange?.();
       success('Statut mis à jour');
       // Push notification client (fire-and-forget)
       if (order) {
@@ -314,8 +319,11 @@ export function ServiceOrdersTab({
                     )}
                     {canShareOrder && (
                     <button onClick={e => onPrintOrder(order, e)}
-                      className="px-4 flex items-center justify-center text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors">
-                      <Printer className="w-3.5 h-3.5" />
+                      disabled={printingOrderId === order.id}
+                      className="px-4 flex items-center justify-center text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors disabled:opacity-50">
+                      {printingOrderId === order.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Printer className="w-3.5 h-3.5" />}
                     </button>
                     )}
                   </div>
@@ -332,7 +340,7 @@ export function ServiceOrdersTab({
                     <th className="px-4 py-3 text-left">OT</th>
                     <th className="px-4 py-3 text-left">Date</th>
                     <th className="px-4 py-3 text-left">Client</th>
-                    <th className="px-4 py-3 text-left">Reference</th>
+                    <th className="px-4 py-3 text-left">Référence</th>
                     <th className="px-4 py-3 text-left">Prestations</th>
                     <th className="px-4 py-3 text-left">Statut</th>
                     <th className="px-4 py-3 text-left">Avis</th>
@@ -384,7 +392,7 @@ export function ServiceOrdersTab({
                             {canUpdateStatus && order.status === 'attente' && (
                               <button onClick={e => quickTransition(order.id, 'en_cours', e)}
                                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-status-info hover:bg-badge-info">
-                                <Play className="h-3.5 w-3.5" />Demarrer
+                                <Play className="h-3.5 w-3.5" />Démarrer
                               </button>
                             )}
                             {canUpdateStatus && order.status === 'en_cours' && (
@@ -405,9 +413,12 @@ export function ServiceOrdersTab({
                             )}
                             {canShareOrder && (
                               <button onClick={e => onPrintOrder(order, e)}
-                                className="rounded-lg p-2 text-content-secondary hover:bg-surface-hover hover:text-content-primary"
+                                disabled={printingOrderId === order.id}
+                                className="rounded-lg p-2 text-content-secondary hover:bg-surface-hover hover:text-content-primary disabled:opacity-50"
                                 title="Imprimer">
-                                <Printer className="h-4 w-4" />
+                                {printingOrderId === order.id
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <Printer className="h-4 w-4" />}
                               </button>
                             )}
                           </div>
@@ -422,12 +433,12 @@ export function ServiceOrdersTab({
 
           <div className="flex flex-col gap-3 text-sm text-content-secondary sm:flex-row sm:items-center sm:justify-between mt-4">
             <span>
-              {totalCount === 0 ? '0 resultat' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalCount)} sur ${totalCount}`}
+              {totalCount === 0 ? '0 résultat' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalCount)} sur ${totalCount}`}
             </span>
             <div className="flex items-center justify-between gap-2 sm:justify-end">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-surface-border px-3 py-2 font-medium disabled:opacity-40 hover:bg-surface-hover transition-colors">
-                <ChevronLeft className="h-4 w-4" />Precedent
+                <ChevronLeft className="h-4 w-4" />Précédent
               </button>
               <span className="min-w-[100px] text-center">Page {page} / {totalPages}</span>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}

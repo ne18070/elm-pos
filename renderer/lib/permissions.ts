@@ -53,6 +53,7 @@ const PERMISSIONS_MAP = {
 
   view_whatsapp:          { label: 'Accès support WhatsApp',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'whatsapp' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
+  view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
 
   // -- Actions Générales
   manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },

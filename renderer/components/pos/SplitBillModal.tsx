@@ -91,6 +91,7 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, onClo
         payment_amount: total,
         payments:       payments.map(p => ({ method: p.method, amount: p.amount })),
         tax_rate:       taxRate,
+        tax_inclusive:  taxInclusive,
         coupons:        cart.coupons,
         notes:          cart.notes,
         table_id:       tableId,

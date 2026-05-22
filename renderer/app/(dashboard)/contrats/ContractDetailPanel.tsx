@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useRef } from 'react';
 import {
   ChevronLeft, Pencil, Upload, Loader2, ExternalLink, Banknote, AlertCircle, XCircle,

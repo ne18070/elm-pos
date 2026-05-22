@@ -152,7 +152,7 @@ export default function BillingPage() {
                     (days === 0 ? "Expire aujourd'hui"
                       : `${days} jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}`)}
                   {(status === 'expired' || status === 'none') &&
-                    'Souscrivez un abonnement pour continuer à utiliser elm-pos.'}
+                    'Souscrivez un abonnement pour continuer à utiliser elm-app.'}
                 </p>
                 {subscription?.payment_note && (
                   <p className="text-xs text-content-primary mt-1 italic">{subscription.payment_note}</p>

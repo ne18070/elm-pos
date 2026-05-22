@@ -29,24 +29,45 @@ import { useSidebarStore } from '@/store/sidebar';
 
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions';
-import { NAV_SECTIONS, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
+import { getNavSections, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
+import type { BusinessType } from '@pos-types';
 
 import { autoRecordDeparture } from '@services/supabase/staff';
 import type { Business } from '@pos-types';
 
-// Visibility filtering logic
-// Quand business est null (chargement initial), on affiche tous les items pour éviter
-// le flash "Paramètres uniquement" causé par le cycle d'hydratation Zustand.
-// Les pages elles-mêmes gèrent leur propre contrôle d'accès.
-function useVisibleNav(can: (p: PermissionKey) => boolean, business: Business | null) {
+const BTYPE_KEY = 'elm_btype';
+
+function useCachedBusinessType(business: Business | null): BusinessType | null {
+  const [cached, setCached] = useState<BusinessType | null>(null);
+
+  // Read cache after hydration (localStorage unavailable on server)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BTYPE_KEY) as BusinessType | null;
+      if (stored) setCached(stored);
+    } catch {}
+  }, []);
+
+  // Write cache whenever business type is known
+  useEffect(() => {
+    if (business?.type) {
+      setCached(business.type);
+      try { localStorage.setItem(BTYPE_KEY, business.type); } catch {}
+    }
+  }, [business?.type]);
+
+  return business?.type ?? cached;
+}
+
+function useVisibleNav(can: (p: PermissionKey) => boolean, business: Business | null, type: BusinessType | null) {
   return useMemo(() => {
-    return NAV_SECTIONS.map(section => ({
+    return getNavSections(type).map(section => ({
       ...section,
       items: section.items.filter(({ permission }) =>
         !permission || !business || can(permission as PermissionKey)
       )
     })).filter(section => section.items.length > 0);
-  }, [can, business]);
+  }, [can, business, type]);
 }
 
 
@@ -102,7 +123,8 @@ function SidebarContent({
     router.push('/login');
   }
 
-  const visibleSections = useVisibleNav(can, business);
+  const businessType = useCachedBusinessType(business);
+  const visibleSections = useVisibleNav(can, business, businessType);
 
   const [version, setVersion] = useState<string>('');
 

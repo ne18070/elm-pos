@@ -1,0 +1,96 @@
+import { NextRequest } from 'next/server';
+import { validateApiKey, getApiKey, apiError, handleAuthError, corsHeaders } from '@/lib/api-v1-auth';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+
+function getAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  return createClient(url, key);
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders() });
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { businessId } = await validateApiKey(getApiKey(request), 'read:resellers');
+    const admin = getAdmin();
+    const sp = request.nextUrl.searchParams;
+    const page   = Math.max(1, parseInt(sp.get('page')  ?? '1', 10));
+    const limit  = Math.min(100, Math.max(1, parseInt(sp.get('limit') ?? '50', 10)));
+    const search = sp.get('search') ?? '';
+    const zone   = sp.get('zone')   ?? '';
+    const type   = sp.get('type')   ?? '';
+    const active = sp.get('active') ?? '';
+
+    let query = admin
+      .from('resellers')
+      .select('*', { count: 'exact' })
+      .eq('business_id', businessId)
+      .order('name')
+      .range((page - 1) * limit, page * limit - 1);
+
+    if (search) query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+    if (zone)   query = query.eq('zone', zone);
+    if (type)   query = query.eq('type', type);
+    if (active === 'true')  query = query.eq('is_active', true);
+    if (active === 'false') query = query.eq('is_active', false);
+
+    const { data, error, count } = await query;
+    if (error) return apiError(error.message, 502);
+
+    return Response.json(
+      { data: data ?? [], total: count ?? 0, page, limit },
+      { headers: corsHeaders() },
+    );
+  } catch (err) {
+    return handleAuthError(err);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { businessId } = await validateApiKey(getApiKey(request), 'write:resellers');
+    const admin = getAdmin();
+
+    let body: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      address?: string;
+      zone?: string;
+      notes?: string;
+      type?: string;
+      chef_id?: string;
+      is_active?: boolean;
+    };
+    try { body = await request.json(); } catch { return apiError('Invalid JSON body.', 400); }
+
+    if (!body.name?.trim()) return apiError('"name" is required.', 400);
+
+    const { data, error } = await admin
+      .from('resellers')
+      .insert({
+        business_id: businessId,
+        name:        body.name.trim(),
+        phone:       body.phone       ?? null,
+        email:       body.email       ?? null,
+        address:     body.address     ?? null,
+        zone:        body.zone        ?? null,
+        notes:       body.notes       ?? null,
+        type:        body.type        ?? 'gros',
+        chef_id:     body.chef_id     ?? null,
+        is_active:   body.is_active   ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) return apiError(error.message, 502);
+    return Response.json({ data }, { status: 201, headers: corsHeaders() });
+  } catch (err) {
+    return handleAuthError(err);
+  }
+}

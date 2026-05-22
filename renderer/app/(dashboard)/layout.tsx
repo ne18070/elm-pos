@@ -19,6 +19,7 @@ import { StartupAlertsModal } from '@/components/shared/StartupAlertsModal';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { updateStaffHeartbeat } from '@services/supabase/staff';
 import { useSidebarStore } from '@/store/sidebar';
+import { AssistantWidget } from '@/components/shared/AssistantWidget';
 
 function MobileLayout({ children }: { children: React.ReactNode }) {
   const setDrawerOpen = useSidebarStore(s => s.setDrawerOpen);
@@ -39,6 +40,7 @@ function MobileLayout({ children }: { children: React.ReactNode }) {
         </main>
         <MobileBottomNav />
       </div>
+      <AssistantWidget />
     </div>
   );
 }
@@ -131,14 +133,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Protection des routes par permission
     const currentNavItem = NAV_ITEMS.find((item) => pathname.startsWith(item.href));
     if (currentNavItem?.permission) {
-      const { overrides } = usePermissionsStore.getState();
-      const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides, business);
-      if (!hasAccess) {
-        // Rediriger vers la page par défaut autorisée pour cet utilisateur
-        router.replace(getDefaultRoute(user.role, business, overrides));
+      const { overrides, } = usePermissionsStore.getState();
+      // Read business from store at call time to avoid stale closure issues;
+      // using business?.id in deps prevents spurious re-runs on reference-only changes.
+      const currentBusiness = useAuthStore.getState().business;
+      const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides, currentBusiness);
+      if (!hasAccess && currentBusiness) {
+        const defaultRoute = getDefaultRoute(user.role, currentBusiness, overrides);
+        if (defaultRoute !== pathname) {
+          router.replace(defaultRoute);
+        }
       }
     }
-  }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck, business]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isLoading, isSuperAdmin, subLoaded, pathname, effectiveStatus, router, isOnline, offlineCheck, business?.id]);
 
   // MobileLayout est monté dès le premier rendu — le sidebar ne disparaît jamais,
   // même lors d'un rechargement complet ou d'une vérification d'auth en cours.

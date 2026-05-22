@@ -30,7 +30,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.supabase.co https://api.qrserver.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:11434 http://localhost:11434",
       "font-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",
@@ -46,7 +46,17 @@ const nextConfig = {
   images: { unoptimized: isElectron },
   ...(isElectron ? {} : {
     async headers() {
-      return [{ source: '/(.*)', headers: securityHeaders }];
+      return [
+        { source: '/(.*)', headers: securityHeaders },
+        {
+          source: '/api/v1/(.*)',
+          headers: [
+            { key: 'Access-Control-Allow-Origin',  value: '*' },
+            { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PATCH, DELETE, OPTIONS' },
+            { key: 'Access-Control-Allow-Headers', value: 'Content-Type, X-API-Key' },
+          ],
+        },
+      ];
     },
   }),
 
@@ -55,6 +65,8 @@ const nextConfig = {
     SUPABASE_ANON_KEY:             process.env.SUPABASE_ANON_KEY             || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SITE_URL:          process.env.NEXT_PUBLIC_SITE_URL          || 'https://www.elm-app.click',
+    NEXT_PUBLIC_LOCAL_AI_BASE_URL: process.env.NEXT_PUBLIC_LOCAL_AI_BASE_URL || 'http://127.0.0.1:11434',
+    NEXT_PUBLIC_LOCAL_AI_MODEL:    process.env.NEXT_PUBLIC_LOCAL_AI_MODEL    || 'llama3.2:3b',
   },
   webpack: (config) => {
     config.resolve.alias = {
@@ -72,9 +84,9 @@ const nextConfig = {
     };
 
     // jspdf optional peer deps — not used, stub them out so webpack doesn't fail
-    config.resolve.alias['canvg']      = false;
+    config.resolve.alias['canvg']       = false;
     config.resolve.alias['html2canvas'] = false;
-    config.resolve.alias['dompurify']  = false;
+    // NOTE: dompurify is NOT stubbed — the app uses it directly in contract views
 
     return config;
   },

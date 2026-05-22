@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble, Link } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble, Link, Star, Gift } from 'lucide-react';
 import { useCustomersStore } from '@/store/customers';
 import type { SavedCustomer } from '@/store/customers';
 import { Modal } from '@/components/ui/Modal';
@@ -15,6 +15,7 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
 import { createOrder } from '@services/supabase/orders';
+import { getLoyaltyConfig, getClientBalance, redeemPoints, type LoyaltyConfig } from '@services/supabase/loyalty';
 import { enqueueToSync, printReceipt, openCashDrawer } from '@/lib/ipc';
 import { getIntouchConfig, processIntouchPayment, waitForPayment } from '@services/supabase/intouch';
 import type { IntouchConfig, IntouchPaymentRequest, IntouchPaymentResponse } from '@services/supabase/intouch';
@@ -123,9 +124,32 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     taxInclusive
   );
 
+  // ── Fidélité ──────────────────────────────────────────────────────────────────
+  const [loyaltyConfig,  setLoyaltyConfig]  = useState<LoyaltyConfig | null>(null);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [useLoyalty,     setUseLoyalty]     = useState(false);
+
+  useEffect(() => {
+    if (!business?.id || !customerName.trim()) { setLoyaltyConfig(null); setLoyaltyBalance(0); setUseLoyalty(false); return; }
+    Promise.all([
+      getLoyaltyConfig(business.id),
+      getClientBalance(business.id, customerName.trim()),
+    ]).then(([cfg, bal]) => {
+      if (cfg.is_active) { setLoyaltyConfig(cfg); setLoyaltyBalance(bal); }
+      else               { setLoyaltyConfig(null); setLoyaltyBalance(0); }
+    }).catch(() => {});
+  }, [business?.id, customerName]);
+
+  const maxRedeemablePoints = loyaltyConfig
+    ? Math.min(loyaltyBalance, Math.floor(total / loyaltyConfig.point_value))
+    : 0;
+  const loyaltyDiscount  = useLoyalty && loyaltyConfig ? maxRedeemablePoints * loyaltyConfig.point_value : 0;
+  const canUseLoyalty    = !!loyaltyConfig && maxRedeemablePoints >= (loyaltyConfig.min_redeem ?? 1);
+  const effectiveTotal   = Math.max(0, total - loyaltyDiscount);
+
   const montantRecuNum = parseFloat(montantRecu) || 0;
-  const rendu          = methode === 'cash' && montantRecu ? computeChange(montantRecuNum, total) : 0;
-  const suggestions    = suggestRoundAmounts(total);
+  const rendu          = methode === 'cash' && montantRecu ? computeChange(montantRecuNum, effectiveTotal) : 0;
+  const suggestions    = suggestRoundAmounts(effectiveTotal);
 
   const acompteNum     = parseFloat(acompte) || 0;
   const acompteRecuNum = parseFloat(acompteRecu) || 0;
@@ -178,16 +202,27 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   async function submitSimple() {
     if (!user || !business) return;
     setChargement(true);
-    // Use ref for immediate access to avoid race condition (Point 4)
     const reservation = reservationRef.current;
     try {
+      // Construire les lignes de paiement (loyalty + méthode principale)
+      const loyaltyPayments = useLoyalty && loyaltyDiscount > 0
+        ? [{ method: 'loyalty', amount: loyaltyDiscount }]
+        : [];
+      const cashPaymentAmount = methode === 'cash' ? montantRecuNum : effectiveTotal;
+      const mainPayments = effectiveTotal > 0
+        ? [{ method: methode, amount: effectiveTotal }]
+        : [];
+      const allPayments = [...loyaltyPayments, ...mainPayments];
+
       const order = await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
         cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
-        payment_method: methode,
-        payment_amount: methode === 'cash' ? montantRecuNum : total,
+        payment_method: effectiveTotal === 0 ? 'loyalty' as any : methode,
+        payment_amount: effectiveTotal === 0 ? loyaltyDiscount : cashPaymentAmount,
+        payments:       allPayments.length > 1 ? allPayments : undefined,
         tax_rate:       taxRate,
+        tax_inclusive:  taxInclusive,
         coupons:        cart.coupons,
         notes:          cart.notes,
         customer_name:    (methode === 'room_charge' ? reservation?.guest?.full_name : customerName.trim()) || undefined,
@@ -197,6 +232,15 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         order_channel:    orderChannel !== 'salle' ? orderChannel : undefined,
         delivery_address: deliveryAddress.trim() || undefined,
       });
+
+      // Déduire les points fidélité après création de l'ordre
+      if (useLoyalty && loyaltyConfig && maxRedeemablePoints >= loyaltyConfig.min_redeem && customerName.trim()) {
+        try {
+          await redeemPoints(business.id, customerName.trim(), customerPhone.trim() || null, maxRedeemablePoints, loyaltyConfig, undefined, order.id);
+        } catch (e) {
+          console.warn('[pos] loyalty redeem failed', e);
+        }
+      }
       if (customerName.trim() && methode !== 'room_charge') saveCustomer(customerName, customerPhone);
       setOrdreId(order.id);
       setOrdre(order);
@@ -207,6 +251,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         reseller_name:        wholesaleCtx?.reseller.name,
         reseller_client_name: wholesaleCtx?.client?.name,
         reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
+        loyalty: useLoyalty && loyaltyConfig && maxRedeemablePoints > 0 ? {
+          points_used:  maxRedeemablePoints,
+          discount:     loyaltyDiscount,
+          new_balance:  Math.max(0, loyaltyBalance - maxRedeemablePoints),
+        } : undefined,
       }).catch(() => notifWarning('Reçu non imprimé —imprimante indisponible'));
       // Ouvre le tiroir-caisse uniquement pour les paiements en espèces
       if (methode === 'cash') openCashDrawer().catch(() => {});
@@ -292,6 +341,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         payment_method: 'partial',
         payment_amount: acompteNum,
         tax_rate:       taxRate,
+        tax_inclusive:  taxInclusive,
         coupons:        cart.coupons,
         notes:          cart.notes,
         customer_name:  customerName.trim() || undefined,
@@ -346,13 +396,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     });
     if (orderError) { setErreur(formatOrderError(orderError)); return; }
 
-    const payError = validatePayment({
+    const payError = effectiveTotal === 0 ? null : validatePayment({
       orderId:   'new',
       method:    methode,
-      amount:    total,
+      amount:    effectiveTotal,
       received:  methode === 'cash' ? montantRecuNum : undefined,
-      // Passe undefined si vide → la validation ne bloque pas (champ optionnel sans Intouch)
-      // Passe la valeur si remplie → la validation vérifie la cohérence (non vide)
       reference: txReference.trim() || undefined,
       phone:     methode === 'mobile_money' ? (intouchPhone.trim() || undefined) : undefined,
     });
@@ -446,11 +494,53 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         <div className="space-y-5">
           <div>
             <p className="label">Total à encaisser</p>
-            <p className="text-3xl font-bold text-content-brand">{fmt(total)}</p>
+            <p className="text-3xl font-bold text-content-brand">{fmt(effectiveTotal)}</p>
             {discountAmount > 0 && (
               <p className="text-xs text-status-success mt-0.5">Remise appliquée : -{fmt(discountAmount)}</p>
             )}
+            {loyaltyDiscount > 0 && (
+              <p className="text-xs text-yellow-500 mt-0.5 flex items-center gap-1">
+                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                Remise fidélité : -{fmt(loyaltyDiscount)}
+              </p>
+            )}
           </div>
+
+          {/* Identification client pour fidélité */}
+          <div>
+            <label className="label">
+              Client
+              <span className="text-content-muted text-[10px] ml-1">(optionnel — active la fidélité)</span>
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => { setCustomerName(e.target.value); setUseLoyalty(false); }}
+              placeholder="Ex : Mamadou Diallo"
+              className="input"
+            />
+          </div>
+
+          {/* Bouton fidélité */}
+          {canUseLoyalty && (
+            <button
+              onClick={() => setUseLoyalty(v => !v)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors text-sm ${
+                useLoyalty
+                  ? 'bg-yellow-400/10 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
+                  : 'bg-surface-input border-surface-border text-content-secondary hover:bg-surface-hover'
+              }`}
+            >
+              <span className="flex items-center gap-2 font-semibold">
+                <Gift className="w-4 h-4" />
+                Utiliser les points de fidélité
+              </span>
+              <span className="flex items-center gap-1.5 text-xs font-bold">
+                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                {loyaltyBalance} pts → -{fmt(maxRedeemablePoints * loyaltyConfig!.point_value)}
+              </span>
+            </button>
+          )}
 
           <div>
             <p className="label">Moyen de paiement</p>
@@ -502,12 +592,13 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             onClick={() => {
               if (methode === 'partial') setStep('partiel');
               else if (methode === 'room_charge') setStep('room');
+              else if (effectiveTotal === 0) preConfirmerSimple();
               else if (methode === 'mobile_money' && intouchConfig?.is_active) setStep('intouch');
               else setStep('montant');
             }}
             className="btn-primary w-full h-11"
           >
-            Continuer
+            {effectiveTotal === 0 ? 'Confirmer (réglé par points)' : 'Continuer'}
           </button>
         </div>
       )}
@@ -529,8 +620,17 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 <span>TVA</span><span>{fmt(taxAmount)}</span>
               </div>
             )}
+            {loyaltyDiscount > 0 && (
+              <div className="flex justify-between text-sm text-yellow-500">
+                <span className="flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  Fidélité ({maxRedeemablePoints} pts)
+                </span>
+                <span>-{fmt(loyaltyDiscount)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-content-primary pt-1 border-t border-surface-border">
-              <span>Total</span><span className="text-content-brand">{fmt(total)}</span>
+              <span>Total</span><span className="text-content-brand">{fmt(effectiveTotal)}</span>
             </div>
           </div>
 
@@ -554,7 +654,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   </button>
                 ))}
               </div>
-              {montantRecu && montantRecuNum >= total && (
+              {montantRecu && montantRecuNum >= effectiveTotal && (
                 <div className="mt-3 p-3 rounded-xl bg-badge-success border border-status-success text-center">
                   <p className="text-xs text-content-secondary">Monnaie à rendre</p>
                   <p className="text-2xl font-bold text-status-success">{fmt(rendu)}</p>
@@ -603,7 +703,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             <button onClick={() => setStep('methode')} className="btn-secondary flex-1 h-11">Retour</button>
             <button
               onClick={preConfirmerSimple}
-              disabled={chargement || (methode === 'cash' && (!montantRecu || montantRecuNum < total))}
+              disabled={chargement || (methode === 'cash' && (!montantRecu || montantRecuNum < effectiveTotal))}
               className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
             >
               {chargement && <Loader2 className="w-4 h-4 animate-spin" />}
