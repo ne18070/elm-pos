@@ -1,6 +1,5 @@
-import { supabase as _supabase } from './client';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
+import { supabase } from './client';
+import type { TablesInsert } from './database.types';
 import type { Business, Organization, UserRole, BusinessType } from '../../types';
 
 export interface BusinessMembership {
@@ -34,7 +33,7 @@ export async function getOrganization(orgId: string): Promise<Organization> {
 
 /** Toutes les organizations (superadmin) avec leurs établissements */
 export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusinesses[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .rpc('get_all_organizations_admin');
   if (error) throw new Error(error.message);
 
@@ -55,7 +54,7 @@ export async function getAllOrganizationsAdmin(): Promise<OrganizationWithBusine
 
 /** Établissements sans organization (superadmin) */
 export async function getUnassignedBusinesses(): Promise<Business[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('businesses')
     .select('*')
     .is('organization_id', null)
@@ -72,7 +71,7 @@ export async function createOrganizationAdmin(data: {
   currency?: string;
   country?: string;
 }): Promise<Organization> {
-  const { data: result, error } = await (supabase as any)
+  const { data: result, error } = await supabase
     .from('organizations')
     .insert({
       legal_name:   data.legal_name,
@@ -92,7 +91,7 @@ export async function updateOrganization(
   orgId: string,
   patch: Partial<Organization>
 ): Promise<void> {
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('organizations')
     .update(patch)
     .eq('id', orgId);
@@ -117,7 +116,7 @@ export async function createOrganization(data: {
   else if (data.type === 'hotel')  features = ['hotel', 'retail', 'expenses'];
   else if (data.type === 'service') features = ['legal', 'expenses'];
 
-  const { data: result, error } = await (supabase as any)
+  const { data: result, error } = await supabase
     .from('businesses')
     .insert({
       ...data,
@@ -125,12 +124,12 @@ export async function createOrganization(data: {
       tax_rate: data.tax_rate || 0,
       features,
       types: [data.type],
-    })
+    } as unknown as TablesInsert<'businesses'>)
     .select()
     .single();
 
   if (error) throw new Error(error.message);
-  return result as Business;
+  return result as unknown as Business;
 }
 
 // --- Multi-établissements -----------------------------------------------------
@@ -179,7 +178,7 @@ export async function updateBusiness(
 ): Promise<void> {
   const { error } = await supabase
     .from('businesses')
-    .update(patch)
+    .update(patch as unknown as TablesInsert<'businesses'>)
     .eq('id', businessId);
   if (error) throw new Error(error.message);
 }
@@ -254,13 +253,13 @@ export async function uploadBusinessLogo(businessId: string, file: File): Promis
   const ext  = file.name.split('.').pop() ?? 'png';
   const path = `${businessId}/logo.${ext}`;
   
-  const { error: upErr } = await (supabase as any).storage
+  const { error: upErr } = await supabase.storage
     .from('business-logos')
     .upload(path, file, { upsert: true, contentType: file.type });
     
   if (upErr) throw new Error(upErr.message);
   
-  const { data: urlData } = (supabase as any).storage
+  const { data: urlData } = supabase.storage
     .from('business-logos')
     .getPublicUrl(path);
     

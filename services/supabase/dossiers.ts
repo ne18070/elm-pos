@@ -1,7 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
+import type { TablesInsert } from './database.types';
 import { logAction } from './logger';
 
-const supabase = _supabase as any;
 
 export interface Dossier {
   id:             string;
@@ -57,7 +57,7 @@ export async function getDossiers(businessId: string): Promise<Dossier[]> {
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data ?? []) as unknown as Dossier[];
 }
 
 // ─── Time Tracking ────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ export async function getDossierTimeEntries(dossierId: string): Promise<DossierT
     .eq('dossier_id', dossierId)
     .order('date_record', { ascending: false });
   if (error) throw error;
-  return data || [];
+  return (data ?? []) as unknown as DossierTimeEntry[];
 }
 
 export async function createDossierTimeEntry(businessId: string, payload: Partial<DossierTimeEntry>): Promise<DossierTimeEntry> {
@@ -78,12 +78,12 @@ export async function createDossierTimeEntry(businessId: string, payload: Partia
 
   const { data, error } = await supabase
     .from('dossier_time_entries')
-    .insert({ ...payload, business_id: businessId, user_id: user.id })
+    .insert({ ...payload, business_id: businessId, user_id: user.id } as unknown as TablesInsert<'dossier_time_entries'>)
     .select('*, users(full_name)')
     .single();
-  
+
   if (error) throw error;
-  return data;
+  return data as unknown as DossierTimeEntry;
 }
 
 export async function deleteDossierTimeEntry(id: string): Promise<void> {
@@ -153,36 +153,38 @@ export async function billTimeEntries(businessId: string, dossierId: string, ent
 export async function createDossier(businessId: string, payload: Partial<Dossier>): Promise<Dossier> {
   const { data, error } = await supabase
     .from('dossiers')
-    .insert({ ...payload, business_id: businessId })
+    .insert({ ...payload, business_id: businessId } as unknown as TablesInsert<'dossiers'>)
     .select()
     .single();
   if (error) throw error;
+  const row = data as unknown as Dossier;
   await logAction({
     business_id: businessId,
     action: 'dossier.created',
     entity_type: 'dossier',
-    entity_id: data.id,
-    metadata: { reference: data.reference, client_name: data.client_name }
+    entity_id: row.id,
+    metadata: { reference: row.reference, client_name: row.client_name }
   });
-  return data;
+  return row;
 }
 
 export async function updateDossier(businessId: string, id: string, payload: Partial<Dossier>): Promise<Dossier> {
   const { data, error } = await supabase
     .from('dossiers')
-    .update({ ...payload, updated_at: new Date().toISOString() })
+    .update({ ...payload, updated_at: new Date().toISOString() } as unknown as TablesInsert<'dossiers'>)
     .eq('id', id)
     .select()
     .single();
   if (error) throw error;
+  const row = data as unknown as Dossier;
   await logAction({
     business_id: businessId,
     action: 'dossier.updated',
     entity_type: 'dossier',
     entity_id: id,
-    metadata: { reference: data.reference, client_name: data.client_name }
+    metadata: { reference: row.reference, client_name: row.client_name }
   });
-  return data;
+  return row;
 }
 
 export async function updateDossierStatus(businessId: string, id: string, reference: string, status: string): Promise<void> {
@@ -213,7 +215,7 @@ export async function getHonorairesByDossier(dossierId: string): Promise<Honorai
 export async function createHonoraire(businessId: string, payload: Partial<HonoraireLine>): Promise<HonoraireLine> {
   const { data, error } = await supabase
     .from('honoraires_cabinet')
-    .insert({ ...payload, business_id: businessId })
+    .insert({ ...payload, business_id: businessId } as unknown as TablesInsert<'honoraires_cabinet'>)
     .select()
     .single();
   if (error) throw error;
@@ -224,7 +226,7 @@ export async function createHonoraire(businessId: string, payload: Partial<Honor
     entity_id: payload.dossier_id!,
     metadata: { montant: payload.montant, type_prestation: payload.type_prestation }
   });
-  return data;
+  return data as unknown as HonoraireLine;
 }
 
 /**

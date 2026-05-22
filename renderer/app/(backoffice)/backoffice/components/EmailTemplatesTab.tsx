@@ -140,7 +140,7 @@ export function EmailTemplatesTab() {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={editing.is_active}
+                    checked={editing.is_active ?? undefined}
                     onChange={(e) => setEditing((t) => t && { ...t, is_active: e.target.checked })}
                     className="w-4 h-4 accent-brand-500"
                   />

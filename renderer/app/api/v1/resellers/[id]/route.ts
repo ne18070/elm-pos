@@ -1,14 +1,8 @@
 import { NextRequest } from 'next/server';
 import { validateApiKey, getApiKey, apiError, handleAuthError, corsHeaders } from '@/lib/api-v1-auth';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin as getAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
-
-function getAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-  return createClient(url, key);
-}
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });

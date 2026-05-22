@@ -32,10 +32,10 @@ export interface PaymentSettings {
 // -- Lecture -------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 export async function getSubscription(_userId?: string, _businessId?: string | null): Promise<Subscription | null> {
-  const { data, error } = await (supabase as any).rpc('get_my_subscription');
+  const { data, error } = await supabase.rpc('get_my_subscription');
   if (!error && data && (data as Subscription[]).length > 0) {
     return (data as Subscription[])[0];
   }
@@ -103,9 +103,9 @@ export interface SubscriptionRow {
 }
 
 export async function getAllSubscriptions(): Promise<SubscriptionRow[]> {
-  const { data, error } = await (supabase as any).rpc('get_all_subscriptions');
+  const { data, error } = await supabase.rpc('get_all_subscriptions');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as SubscriptionRow[];
 }
 
 export async function activateSubscription(
@@ -114,11 +114,11 @@ export async function activateSubscription(
   days:       number,
   note?:      string
 ): Promise<void> {
-  const { error } = await (supabase as any).rpc('activate_subscription', {
+  const { error } = await supabase.rpc('activate_subscription', {
     p_business_id: businessId,
     p_plan_id:     planId,
     p_days:        days,
-    p_note:        note ?? null,
+    p_note:        note ?? undefined,
   });
   if (error) throw new Error(error.message);
 }
@@ -136,7 +136,7 @@ export async function upsertPlan(plan: Partial<Plan> & { id?: string }): Promise
     const { error } = await db.from('plans').update(plan).eq('id', plan.id);
     if (error) throw new Error(error.message);
   } else {
-    const { error } = await db.from('plans').insert(plan);
+    const { error } = await db.from('plans').insert(plan as unknown as import('./database.types').TablesInsert<'plans'>);
     if (error) throw new Error(error.message);
   }
 }
@@ -191,7 +191,7 @@ export async function getSubscriptionRequests(): Promise<SubscriptionRequest[]> 
     plan_label:    r.plans?.label    ?? '-',
     plan_price:    r.plans?.price    ?? null,
     plan_currency: r.plans?.currency ?? null,
-  }));
+  })) as unknown as SubscriptionRequest[];
 }
 
 export async function getMySubscriptionRequests(businessId: string): Promise<SubscriptionRequest[]> {
@@ -208,7 +208,7 @@ export async function getMySubscriptionRequests(businessId: string): Promise<Sub
     plan_label:    r.plans?.label    ?? '-',
     plan_price:    r.plans?.price    ?? null,
     plan_currency: r.plans?.currency ?? null,
-  }));
+  })) as unknown as SubscriptionRequest[];
 }
 
 export async function approveSubscriptionRequest(
@@ -316,7 +316,7 @@ export async function getPublicSubscriptionRequests(): Promise<PublicSubscriptio
     plan_label:    r.plans?.label    ?? '-',
     plan_price:    r.plans?.price    ?? null,
     plan_currency: r.plans?.currency ?? null,
-  }));
+  })) as unknown as PublicSubscriptionRequest[];
 }
 
 export async function rejectPublicRequest(requestId: string, note?: string, req?: Pick<PublicSubscriptionRequest, 'email' | 'business_name'>): Promise<void> {

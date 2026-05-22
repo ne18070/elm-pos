@@ -1,5 +1,4 @@
-import { supabase as _supabase } from './client';
-const supabase = _supabase as any;
+import { supabase } from './client';
 
 // ─── Proxy abstraction (IPC Electron ou Edge Function) ────────────────────────
 
@@ -25,7 +24,7 @@ async function callProxy(
   }
 
   // Navigateur → Edge Function
-  const { data: { session } } = await (supabase as any).auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   const res = await supabase.functions.invoke('db-proxy', {
     body: { action, config, ...extra },
     headers: session?.access_token
@@ -138,7 +137,7 @@ export async function getImportConfigs(businessId: string): Promise<ImportConfig
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ImportConfig[];
 }
 
 export async function saveImportConfig(
@@ -147,11 +146,11 @@ export async function saveImportConfig(
 ): Promise<ImportConfig> {
   const { data, error } = await supabase
     .from('import_configs')
-    .insert({ ...cfg, business_id: businessId })
+    .insert({ ...cfg, business_id: businessId } as unknown as import('./database.types').TablesInsert<'import_configs'>)
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as ImportConfig;
 }
 
 export async function updateImportConfig(
@@ -160,7 +159,7 @@ export async function updateImportConfig(
 ): Promise<void> {
   const { error } = await supabase
     .from('import_configs')
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({ ...patch, updated_at: new Date().toISOString() } as unknown as import('./database.types').TablesUpdate<'import_configs'>)
     .eq('id', id);
   if (error) throw new Error(error.message);
 }

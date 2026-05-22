@@ -1,6 +1,5 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 import { logAction } from './logger';
 import { q } from './q';
 import { calculateDiscount } from '../pricing';
@@ -166,8 +165,8 @@ export async function refundOrder(input: RefundInput): Promise<void> {
   await q(supabase.rpc('refund_order', {
     p_order_id:    input.orderId,
     p_amount:      input.amount,
-    p_reason:      input.reason ?? null,
-    p_refunded_by: input.refundedBy ?? null,
+    p_reason:      input.reason ?? undefined,
+    p_refunded_by: input.refundedBy ?? undefined,
   }));
 }
 

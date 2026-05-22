@@ -57,7 +57,7 @@ async function _insert(input: LogInput): Promise<void> {
       }
     }
 
-    await (supabase as any).from('activity_logs').insert({
+    await supabase.from('activity_logs').insert({
       business_id: input.business_id,
       user_id:     uid ?? null,
       user_name:   uname ?? null,
@@ -65,7 +65,7 @@ async function _insert(input: LogInput): Promise<void> {
       entity_type: input.entity_type ?? null,
       entity_id:   input.entity_id   ?? null,
       metadata:    input.metadata    ?? null,
-    });
+    } as unknown as import('./database.types').TablesInsert<'activity_logs'>);
   } catch {
     // Le logger ne doit jamais faire crasher l'application
   }

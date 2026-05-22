@@ -1,9 +1,8 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import { syncServiceOrdersAccounting } from './accounting';
 import { logAction } from './logger';
 import { upsertClientByPhone } from './clients';
 import { getLoyaltyConfig, earnPoints } from './loyalty';
-const db = _supabase as any;
 
 type ServiceOrderActor = { userId?: string; userName?: string; role?: string };
 
@@ -124,14 +123,14 @@ export interface TechnicianWorkspaceData {
 // ── Catalogue ────────────────────────────────────────────────────────────────
 
 export async function getServiceCategories(businessId: string): Promise<ServiceCategory[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_categories')
     .select('*')
     .eq('business_id', businessId)
     .order('sort_order')
     .order('name');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceCategory[];
 }
 
 export async function upsertServiceCategory(
@@ -145,18 +144,18 @@ export async function upsertServiceCategory(
     sort_order:  input.sort_order ?? 0,
   };
   if (input.id) payload.id = input.id;
-  const { data, error } = await db.from('service_categories').upsert(payload).select().single();
+  const { data, error } = await supabase.from('service_categories').upsert(payload).select().single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as ServiceCategory;
 }
 
 export async function deleteServiceCategory(id: string): Promise<void> {
-  const { error } = await db.from('service_categories').delete().eq('id', id);
+  const { error } = await supabase.from('service_categories').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
 export async function getServiceCatalog(businessId: string): Promise<ServiceCatalogItem[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_catalog')
     .select('*')
     .eq('business_id', businessId)
@@ -164,18 +163,18 @@ export async function getServiceCatalog(businessId: string): Promise<ServiceCata
     .order('sort_order')
     .order('name');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceCatalogItem[];
 }
 
 export async function getAllServiceCatalog(businessId: string): Promise<ServiceCatalogItem[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_catalog')
     .select('*, service_category:service_categories(id, name, color)')
     .eq('business_id', businessId)
     .order('sort_order')
     .order('name');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceCatalogItem[];
 }
 
 export async function upsertServiceCatalogItem(
@@ -193,18 +192,18 @@ export async function upsertServiceCatalogItem(
     is_active:    true,
   };
   if (input.id) payload.id = input.id;
-  const { data, error } = await db.from('service_catalog').upsert(payload, { onConflict: 'id' }).select().single();
+  const { data, error } = await supabase.from('service_catalog').upsert(payload, { onConflict: 'id' }).select().single();
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function toggleServiceCatalogItem(id: string, isActive: boolean): Promise<void> {
-  const { error } = await db.from('service_catalog').update({ is_active: isActive }).eq('id', id);
+  const { error } = await supabase.from('service_catalog').update({ is_active: isActive }).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
 export async function deleteServiceCatalogItem(id: string): Promise<void> {
-  const { error } = await db.from('service_catalog').delete().eq('id', id);
+  const { error } = await supabase.from('service_catalog').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
@@ -226,18 +225,18 @@ export interface ServiceOrderSummary {
 }
 
 export async function getOrdersSummary(businessId: string): Promise<ServiceOrderSummary[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_orders')
     .select('id, order_number, subject_id, subject_ref, subject_type, subject_info, client_name, client_phone, status, total, paid_amount, created_at')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceOrderSummary[];
 }
 
 export async function getOrdersByClientName(businessId: string, clientName: string): Promise<ServiceOrder[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_orders')
     .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
     .eq('business_id', businessId)
@@ -245,13 +244,13 @@ export async function getOrdersByClientName(businessId: string, clientName: stri
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceOrder[];
 }
 
 // ── Sujets de service ────────────────────────────────────────────────────────
 
 export async function searchSubjects(businessId: string, ref: string): Promise<ServiceSubject[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_subjects')
     .select('*')
     .eq('business_id', businessId)
@@ -259,7 +258,7 @@ export async function searchSubjects(businessId: string, ref: string): Promise<S
     .order('created_at', { ascending: false })
     .limit(10);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceSubject[];
 }
 
 export async function getClientVisitStats(
@@ -267,7 +266,7 @@ export async function getClientVisitStats(
   clientNames: string[]
 ): Promise<Map<string, { count: number; lastVisit: string | null }>> {
   if (!clientNames.length) return new Map();
-  const { data } = await db
+  const { data } = await supabase
     .from('service_orders')
     .select('client_name, created_at')
     .eq('business_id', businessId)
@@ -287,7 +286,7 @@ export async function getClientVisitStats(
 }
 
 export async function getSubjectHistory(businessId: string, subjectId: string): Promise<ServiceOrder[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_orders')
     .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
     .eq('business_id', businessId)
@@ -295,25 +294,25 @@ export async function getSubjectHistory(businessId: string, subjectId: string): 
     .order('created_at', { ascending: false })
     .limit(20);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceOrder[];
 }
 
 export async function getSubjects(businessId: string): Promise<ServiceSubject[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_subjects')
     .select('*')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as ServiceSubject[];
 }
 
 async function upsertSubject(
   businessId: string,
   input: { reference: string; type_sujet: SubjectType; designation?: string }
 ): Promise<ServiceSubject> {
-  const { data: existing } = await db
+  const { data: existing } = await supabase
     .from('service_subjects')
     .select('id')
     .eq('business_id', businessId)
@@ -328,13 +327,13 @@ async function upsertSubject(
   };
   if (existing?.id) payload.id = existing.id;
 
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_subjects')
     .upsert(payload, { onConflict: 'id' })
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as ServiceSubject;
 }
 
 // ── Ordres de travail ────────────────────────────────────────────────────────
@@ -347,7 +346,7 @@ export async function getServiceOrders(
   const pageSize = Math.max(1, opts?.pageSize ?? 25);
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-  let q = db
+  let q = supabase
     .from('service_orders')
     .select('*, items:service_order_items(id, name, quantity)', { count: 'exact' })
     .eq('business_id', businessId)
@@ -367,7 +366,7 @@ export async function getServiceOrders(
 
   const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return { data: data ?? [], count: count ?? 0 };
+  return { data: (data ?? []) as unknown as ServiceOrder[], count: count ?? 0 };
 }
 
 export interface ServiceOrderClient {
@@ -381,7 +380,7 @@ export interface ServiceOrderClient {
 
 /** Retourne la liste dédupliquée des clients ayant au moins un OT, avec leur dernier OT. */
 export async function getDistinctServiceClients(businessId: string): Promise<ServiceOrderClient[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_orders')
     .select('client_name, client_phone, order_number, status, total, items:service_order_items(name)')
     .eq('business_id', businessId)
@@ -394,7 +393,7 @@ export async function getDistinctServiceClients(businessId: string): Promise<Ser
   for (const row of data) {
     if (!row.client_phone || seen.has(row.client_phone)) continue;
     seen.set(row.client_phone, {
-      name:        row.client_name,
+      name:        row.client_name ?? '',
       phone:       row.client_phone,
       lastRef:     `OT-${String(row.order_number).padStart(4, '0')}`,
       lastService: (row.items as { name: string }[])?.[0]?.name ?? '',
@@ -411,7 +410,7 @@ export async function getStaleOrderCount(businessId: string, days = 3): Promise<
   const cutoff = new Date();
   cutoff.setUTCHours(0, 0, 0, 0);
   cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1));
-  const { count, error } = await db
+  const { count, error } = await supabase
     .from('service_orders')
     .select('id', { count: 'exact', head: true })
     .eq('business_id', businessId)
@@ -423,23 +422,23 @@ export async function getStaleOrderCount(businessId: string, days = 3): Promise<
 }
 
 export async function getServiceOrderById(id: string): Promise<ServiceOrder | null> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('service_orders')
     .select('*, items:service_order_items(*), payments:service_order_payments(id, amount, method, paid_at)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data ?? null;
+  return (data ?? null) as unknown as ServiceOrder | null;
 }
 
 export async function getServiceOrderCounts(
   businessId: string,
   opts?: { date?: string; search?: string }
 ): Promise<Record<ServiceOrderStatus | 'all', number>> {
-  const { data, error } = await db.rpc('get_service_order_counts', {
+  const { data, error } = await supabase.rpc('get_service_order_counts', {
     p_business_id: businessId,
-    p_date:        opts?.date   || null,
-    p_search:      opts?.search?.trim().replace(/[%_,]/g, ' ') || null,
+    p_date:        opts?.date   || undefined,
+    p_search:      opts?.search?.trim().replace(/[%_,]/g, ' ') || undefined,
   });
   if (error) throw new Error(error.message);
 
@@ -489,7 +488,7 @@ export async function createServiceOrder(input: CreateServiceOrderInput): Promis
 
   const total = input.items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const { data: order, error: orderErr } = await db
+  const { data: order, error: orderErr } = await supabase
     .from('service_orders')
     .insert({
       business_id:   input.businessId,
@@ -506,13 +505,13 @@ export async function createServiceOrder(input: CreateServiceOrderInput): Promis
       total,
       paid_amount:   0,
       status:        'attente',
-    })
+    } as unknown as import('./database.types').TablesInsert<'service_orders'>)
     .select()
     .single();
   if (orderErr) throw new Error(orderErr.message);
 
   if (input.items.length > 0) {
-    const { error: itemErr } = await db.from('service_order_items').insert(
+    const { error: itemErr } = await supabase.from('service_order_items').insert(
       input.items.map(i => ({
         order_id:   order.id,
         service_id: i.service_id ?? null,
@@ -547,7 +546,7 @@ export async function createServiceOrder(input: CreateServiceOrderInput): Promis
       id: idx + '', order_id: order.id, service_id: i.service_id ?? null,
       name: i.name, price: i.price, quantity: i.quantity, total: i.price * i.quantity,
     })),
-  };
+  } as unknown as ServiceOrder;
 }
 
 export async function updateServiceOrderStatus(
@@ -559,7 +558,7 @@ export async function updateServiceOrderStatus(
   if (status === 'en_cours') updates.started_at  = new Date().toISOString();
   if (status === 'termine')  updates.finished_at = new Date().toISOString();
   if (status === 'paye')     updates.paid_at     = new Date().toISOString();
-  const { data: order, error } = await db
+  const { data: order, error } = await supabase
     .from('service_orders')
     .update(updates)
     .eq('id', id)
@@ -585,7 +584,7 @@ export async function getOrCreateServiceTechnicianToken(
   serviceOrderId: string,
   staffId: string,
 ): Promise<string> {
-  const { data, error } = await db.rpc('get_or_create_service_technician_token', {
+  const { data, error } = await supabase.rpc('get_or_create_service_technician_token', {
     p_business_id: businessId,
     p_service_order_id: serviceOrderId,
     p_staff_id: staffId,
@@ -595,12 +594,13 @@ export async function getOrCreateServiceTechnicianToken(
 }
 
 export async function getTechnicianServiceOrders(token: string): Promise<TechnicianWorkspaceData> {
-  const { data, error } = await db.rpc('get_technician_service_orders', { p_token: token });
+  const { data, error } = await supabase.rpc('get_technician_service_orders', { p_token: token });
   if (error) throw new Error(error.message);
-  if (!data || data.error) {
-    throw new Error(data?.error === 'expired_token' ? 'Lien expiré' : 'Lien invalide');
+  const result = data as unknown as (TechnicianWorkspaceData & { error?: string }) | null;
+  if (!result || result.error) {
+    throw new Error(result?.error === 'expired_token' ? 'Lien expiré' : 'Lien invalide');
   }
-  return data as TechnicianWorkspaceData;
+  return result;
 }
 
 export async function updateTechnicianServiceOrderStatus(
@@ -608,14 +608,15 @@ export async function updateTechnicianServiceOrderStatus(
   orderId: string,
   status: Extract<ServiceOrderStatus, 'en_cours' | 'pause' | 'termine'>,
 ): Promise<void> {
-  const { data, error } = await db.rpc('update_technician_service_order_status', {
+  const { data, error } = await supabase.rpc('update_technician_service_order_status', {
     p_token: token,
     p_order_id: orderId,
     p_status: status,
   });
   if (error) throw new Error(error.message);
-  if (!data?.success) {
-    const code = data?.error;
+  const res = data as unknown as { success?: boolean; error?: string } | null;
+  if (!res?.success) {
+    const code = res?.error;
     if (code === 'invalid_transition') throw new Error('Transition non autorisée');
     if (code === 'closed_order') throw new Error("Cet ordre de travail n'est plus modifiable");
     if (code === 'not_assigned') throw new Error("Cet ordre de travail n'est plus assigné à ce technicien");
@@ -630,7 +631,7 @@ export async function payServiceOrder(
   actor?: ServiceOrderActor
 ): Promise<{ isFullyPaid: boolean; loyaltyError?: string }> {
   // Atomic: lock row + update order + insert payment in one DB transaction
-  const { data, error } = await db.rpc('pay_service_order', {
+  const { data, error } = await supabase.rpc('pay_service_order', {
     p_id:     id,
     p_amount: amount,
     p_method: paymentMethod,
@@ -693,7 +694,7 @@ export async function updateServiceOrder(
   },
   actor?: ServiceOrderActor
 ): Promise<void> {
-  const { data: before, error: beforeErr } = await db
+  const { data: before, error: beforeErr } = await supabase
     .from('service_orders')
     .select('id, business_id, order_number, status, total, paid_amount, payment_method, subject_ref, subject_type, subject_info, client_name, client_phone, notes')
     .eq('id', id)
@@ -706,7 +707,7 @@ export async function updateServiceOrder(
 
   let previousItems: Array<{ service_id: string | null; name: string; price: number; quantity: number; total: number }> = [];
   if (input.items !== undefined) {
-    const { data: itemsData, error: itemsErr } = await db
+    const { data: itemsData, error: itemsErr } = await supabase
       .from('service_order_items')
       .select('service_id, name, price, quantity, total')
       .eq('order_id', id)
@@ -729,9 +730,9 @@ export async function updateServiceOrder(
     const total = input.items.reduce((s, i) => s + i.price * i.quantity, 0);
     updates.total = total;
     if (before?.status === 'paye') updates.paid_amount = total;
-    await db.from('service_order_items').delete().eq('order_id', id);
+    await supabase.from('service_order_items').delete().eq('order_id', id);
     if (input.items.length > 0) {
-      await db.from('service_order_items').insert(
+      await supabase.from('service_order_items').insert(
         input.items.map(i => ({
           order_id:   id,
           service_id: i.service_id ?? null,
@@ -745,7 +746,7 @@ export async function updateServiceOrder(
   }
 
   if (Object.keys(updates).length > 0) {
-    const { data: order, error } = await db
+    const { data: order, error } = await supabase
       .from('service_orders')
       .update(updates)
       .eq('id', id)
@@ -806,7 +807,7 @@ export async function updateServiceOrder(
 }
 
 export async function cancelServiceOrder(id: string, actor?: ServiceOrderActor): Promise<void> {
-  const { data: order, error } = await db
+  const { data: order, error } = await supabase
     .from('service_orders')
     .update({ status: 'annule' })
     .eq('id', id)

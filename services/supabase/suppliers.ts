@@ -1,7 +1,6 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 export interface Supplier {
   id:         string;
@@ -41,7 +40,7 @@ export async function upsertSupplier(
 
   const { data, error } = await supabase
     .from('suppliers')
-    .upsert(payload, { onConflict: 'id' })
+    .upsert(payload as unknown as import('./database.types').TablesInsert<'suppliers'>, { onConflict: 'id' })
     .select()
     .single();
   if (error) throw new Error(error.message);

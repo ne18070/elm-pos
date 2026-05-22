@@ -18,7 +18,7 @@ export async function getOrCreateTrackingToken(
   const col = type === 'service_order' ? 'service_order_id' : 'dossier_id';
 
   // 1. Chercher un token existant valide
-  const { data: existing } = await (supabase as any)
+  const { data: existing } = await supabase
     .from('client_tracking_tokens')
     .select('token')
     .eq(col, entityId)
@@ -32,21 +32,21 @@ export async function getOrCreateTrackingToken(
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 30);
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('client_tracking_tokens')
     .insert({
-      [col]:       entityId,
+      [col]:        entityId,
       token,
-      client_phone:     clientPhone || null,
-      expires_at:       expiresAt.toISOString(),
-    });
+      client_phone: clientPhone || null,
+      expires_at:   expiresAt.toISOString(),
+    } as unknown as import('./database.types').TablesInsert<'client_tracking_tokens'>);
 
   if (error) throw new Error(error.message);
   return token;
 }
 
 export async function validateTrackingToken(token: string): Promise<TrackingTokenInfo> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('client_tracking_tokens')
     .select('id, token, dossier_id, service_order_id, client_phone, expires_at, view_count')
     .eq('token', token)
@@ -59,7 +59,7 @@ export async function validateTrackingToken(token: string): Promise<TrackingToke
   let businesses = { name: '', logo_url: null as string | null };
 
   if (data.dossier_id) {
-    const { data: dossier, error: dossierError } = await (supabase as any)
+    const { data: dossier, error: dossierError } = await supabase
       .from('dossiers')
       .select('business_id, businesses(name, logo_url)')
       .eq('id', data.dossier_id)
@@ -68,7 +68,7 @@ export async function validateTrackingToken(token: string): Promise<TrackingToke
     businessId = dossier.business_id;
     businesses = dossier.businesses ?? businesses;
   } else if (data.service_order_id) {
-    const { data: serviceOrder, error: serviceError } = await (supabase as any)
+    const { data: serviceOrder, error: serviceError } = await supabase
       .from('service_orders')
       .select('business_id, businesses(name, logo_url)')
       .eq('id', data.service_order_id)
@@ -81,7 +81,7 @@ export async function validateTrackingToken(token: string): Promise<TrackingToke
   }
 
   // Update last_viewed and view_count
-  await (supabase as any)
+  await supabase
     .from('client_tracking_tokens')
     .update({ 
       last_viewed: new Date().toISOString(),

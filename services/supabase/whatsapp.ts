@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import { q } from './q';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // --- Types --------------------------------------------------------------------
 
@@ -79,7 +78,7 @@ export async function getWhatsAppConfig(businessId: string): Promise<WhatsAppCon
     .select('*')
     .eq('business_id', businessId)
     .maybeSingle();
-  return data ?? null;
+  return (data ?? null) as unknown as WhatsAppConfig | null;
 }
 
 export async function upsertWhatsAppConfig(
@@ -123,7 +122,7 @@ export async function getConversations(
 
   const { data, error } = await supabase.rpc('get_whatsapp_conversations', {
     p_business_id: businessId,
-    p_search:      filter?.search      || null,
+    p_search:      filter?.search      || undefined,
     p_unread_only: filter?.unreadOnly  ?? false,
     p_limit:       pageSize,
     p_offset:      offset,

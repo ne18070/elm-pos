@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import { addStockEntry } from './stock';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 export type POStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
 
@@ -96,7 +95,7 @@ export async function updatePOStatus(id: string, status: POStatus): Promise<void
   const updates: Record<string, unknown> = { status };
   if (status === 'ordered')  updates.ordered_at  = new Date().toISOString();
   if (status === 'received') updates.received_at = new Date().toISOString();
-  const { error } = await supabase.from('purchase_orders').update(updates).eq('id', id);
+  const { error } = await supabase.from('purchase_orders').update(updates as unknown as import('./database.types').TablesUpdate<'purchase_orders'>).eq('id', id);
   if (error) throw new Error(error.message);
 }
 

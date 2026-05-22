@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 
 // Tables not yet in database.types.ts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,28 +86,28 @@ export async function getStaff(businessId: string): Promise<Staff[]> {
     .eq('business_id', businessId)
     .order('name');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as Staff[];
 }
 
 export async function createStaff(businessId: string, form: StaffForm): Promise<Staff> {
   const { data, error } = await supabase
     .from('staff')
-    .insert({ ...form, business_id: businessId })
+    .insert({ ...form, business_id: businessId } as unknown as import('./database.types').TablesInsert<'staff'>)
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as Staff;
 }
 
 export async function updateStaff(id: string, form: Partial<StaffForm>): Promise<Staff> {
   const { data, error } = await supabase
     .from('staff')
-    .update({ ...form, updated_at: new Date().toISOString() })
+    .update({ ...form, updated_at: new Date().toISOString() } as unknown as import('./database.types').TablesUpdate<'staff'>)
     .eq('id', id)
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as Staff;
 }
 
 export async function deleteStaff(id: string): Promise<void> {
@@ -134,7 +133,7 @@ export async function getAttendanceForMonth(
     .gte('date', start)
     .lte('date', end);
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as StaffAttendance[];
 }
 
 export async function upsertAttendance(record: {
@@ -149,11 +148,11 @@ export async function upsertAttendance(record: {
 }): Promise<StaffAttendance> {
   const { data, error } = await supabase
     .from('staff_attendance')
-    .upsert(record, { onConflict: 'staff_id,date' })
+    .upsert(record as unknown as import('./database.types').TablesInsert<'staff_attendance'>, { onConflict: 'staff_id,date' })
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as StaffAttendance;
 }
 
 export async function deleteAttendance(id: string): Promise<void> {
@@ -182,7 +181,7 @@ export async function getPayments(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as StaffPayment[];
 }
 
 export async function createPayment(input: {
@@ -203,11 +202,11 @@ export async function createPayment(input: {
 }): Promise<StaffPayment> {
   const { data, error } = await supabase
     .from('staff_payments')
-    .insert(input)
+    .insert(input as unknown as import('./database.types').TablesInsert<'staff_payments'>)
     .select('*, staff(name, position, salary_type, salary_rate)')
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as StaffPayment;
 }
 
 export async function markPaymentPaid(
@@ -408,8 +407,9 @@ export async function autoRecordDeparture(businessId: string, userId: string): P
 
     await upsertAttendance({
       ...existing,
+      status: existing.status as AttendanceStatus,
       clock_out: clockOut,
-      hours_worked: hours > 0 ? hours : 8,
+      hours_worked: (hours ?? 0) > 0 ? hours : 8,
       notes: (existing.notes ? existing.notes + ' | ' : '') + 'Départ auto à la déconnexion',
     });
 

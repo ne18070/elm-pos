@@ -31,14 +31,14 @@ export async function getAnalyticsSummary(
       .eq('order.status', 'paid')
       .gte('order.created_at' as never, `${startDate}T00:00:00Z`),
 
-    (supabase as any)
+    supabase
       .from('service_orders')
       .select('id, total, paid_amount, paid_at, created_at')
       .eq('business_id', businessId)
       .eq('status', 'paye')
       .gte('paid_at', `${startDate}T00:00:00Z`),
 
-    (supabase as any)
+    supabase
       .from('service_order_items')
       .select(`
         service_id,
@@ -361,7 +361,7 @@ export async function getDailySales(
     .eq('status', 'paid')
     .gte('created_at', `${date}T00:00:00Z`)
     .lte('created_at', `${date}T23:59:59Z`),
-    (supabase as any)
+    supabase
       .from('service_orders')
       .select('paid_amount, total')
       .eq('business_id', businessId)
@@ -415,13 +415,13 @@ export async function getHotelAnalytics(
   const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
 
   const [resResult, roomsResult] = await Promise.all([
-    (supabase as any)
+    supabase
       .from('hotel_reservations')
       .select('*, room:hotel_rooms(number, type)')
       .eq('business_id', businessId)
       .eq('status', 'checked_out')
       .gte('actual_check_out', `${startDate}T00:00:00Z`),
-    (supabase as any)
+    supabase
       .from('hotel_rooms')
       .select('status')
       .eq('business_id', businessId)
@@ -496,21 +496,21 @@ export async function getJuridiqueAnalytics(
   const sixMonthsAgo = fmt2(sub2(new Date(), 180), 'yyyy-MM-01');
 
   const [dossiersRes, feesRes, allDossiersRes, historyRes] = await Promise.all([
-    (supabase as any)
+    supabase
       .from('dossiers')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', `${startDate}T00:00:00Z`),
-    (supabase as any)
+    supabase
       .from('honoraires_cabinet')
       .select('*')
       .eq('business_id', businessId)
       .gte('date_facture', startDate),
-    (supabase as any)
+    supabase
       .from('dossiers')
       .select('status')
       .eq('business_id', businessId),
-    (supabase as any)
+    supabase
       .from('honoraires_cabinet')
       .select('montant, date_facture')
       .eq('business_id', businessId)
@@ -535,7 +535,7 @@ export async function getJuridiqueAnalytics(
   const active_dossiers  = allDossiers.filter((d: any) => !['clôturé', 'archivé'].includes(d.status)).length;
   const todayStr = new Date().toISOString().split('T')[0];
   
-  const { data: upcomingRes } = await (supabase as any)
+  const { data: upcomingRes } = await supabase
     .from('dossiers')
     .select('id')
     .eq('business_id', businessId)
@@ -603,17 +603,17 @@ export async function getVoituresAnalytics(
   days = 30,
 ): Promise<VoituresAnalyticsSummary> {
   const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
-  const db = (supabase as any);
+  const db = supabase;
 
   const [parcResult, venteResult, leadsResult] = await Promise.all([
-    db.from('voitures').select('statut').eq('business_id', businessId),
-    db.from('voitures')
+    supabase.from('voitures').select('statut').eq('business_id', businessId),
+    supabase.from('voitures')
       .select('id, marque, modele, annee, prix, updated_at')
       .eq('business_id', businessId)
       .eq('statut', 'vendu')
       .gte('updated_at', `${startDate}T00:00:00Z`)
       .order('updated_at', { ascending: false }),
-    db.from('voiture_leads')
+    supabase.from('voiture_leads')
       .select('statut')
       .eq('business_id', businessId)
       .gte('created_at', `${startDate}T00:00:00Z`),
@@ -652,8 +652,6 @@ export async function getPrevPeriodCA(
 ): Promise<PrevPeriodCA> {
   const end   = format(subDays(new Date(), days), 'yyyy-MM-dd');
   const start = format(subDays(new Date(), days * 2), 'yyyy-MM-dd');
-  const db    = supabase as any;
-
   const [ordersRes, serviceOrdersRes, feesRes, hotelRes] = await Promise.all([
     supabase
       .from('orders')
@@ -662,29 +660,29 @@ export async function getPrevPeriodCA(
       .eq('status', 'paid')
       .gte('created_at', `${start}T00:00:00Z`)
       .lt('created_at',  `${end}T23:59:59Z`),
-    db.from('service_orders')
+    supabase.from('service_orders')
       .select('paid_amount, total')
       .eq('business_id', businessId)
       .eq('status', 'paye')
       .gte('paid_at', `${start}T00:00:00Z`)
       .lt('paid_at',  `${end}T23:59:59Z`),
     hasJuridique
-      ? db.from('honoraires_cabinet').select('montant')
+      ? supabase.from('honoraires_cabinet').select('montant')
           .eq('business_id', businessId)
           .gte('date_facture', start).lte('date_facture', end)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [] as { montant: number }[], error: null }),
     hasHotel
-      ? db.from('hotel_reservations').select('total')
+      ? supabase.from('hotel_reservations').select('total')
           .eq('business_id', businessId).eq('status', 'checked_out')
           .gte('actual_check_out', `${start}T00:00:00Z`)
           .lt('actual_check_out',  `${end}T23:59:59Z`)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [] as { total: number }[], error: null }),
   ]);
 
   if (ordersRes.error) throw new Error(ordersRes.error.message);
   if (serviceOrdersRes.error) throw new Error(serviceOrdersRes.error.message);
-  if (feesRes.error) throw new Error(feesRes.error.message);
-  if (hotelRes.error) throw new Error(hotelRes.error.message);
+  if (feesRes.error) throw new Error((feesRes as { error: { message: string } | null }).error?.message ?? '');
+  if (hotelRes.error) throw new Error((hotelRes as { error: { message: string } | null }).error?.message ?? '');
 
   const ordersData = (ordersRes.data ?? []) as any[];
   const serviceOrdersData = (serviceOrdersRes.data ?? []) as any[];
@@ -787,15 +785,13 @@ export async function getServicesAnalytics(
   days = 30,
 ): Promise<ServicesAnalyticsSummary> {
   const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
-  const db = supabase as any;
-
   const [ordersRes, itemsRes] = await Promise.all([
-    db
+    supabase
       .from('service_orders')
       .select('id, total, paid_amount, status, created_at, paid_at')
       .eq('business_id', businessId)
       .gte('created_at', `${startDate}T00:00:00Z`),
-    db
+    supabase
       .from('service_order_items')
       .select('name, quantity, total, order:service_orders!inner(business_id, status, paid_at)')
       .eq('order.business_id', businessId)
@@ -869,14 +865,12 @@ export async function getApprovisionnementAnalytics(
   days = 30,
 ): Promise<ApprovAnalyticsSummary> {
   const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
-  const db        = supabase as any;
-
   const [entriesRes, poRes] = await Promise.all([
-    db.from('stock_entries')
+    supabase.from('stock_entries')
       .select('quantity, cost_per_unit, supplier, created_at, product:products(id, name)')
       .eq('business_id', businessId)
       .gte('created_at', `${startDate}T00:00:00Z`),
-    db.from('purchase_orders')
+    supabase.from('purchase_orders')
       .select('id')
       .eq('business_id', businessId)
       .eq('status', 'received')

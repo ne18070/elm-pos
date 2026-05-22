@@ -1,7 +1,6 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 export interface VehicleOwnerReportItem {
   client_name?: string | null;
@@ -50,5 +49,5 @@ export interface VehicleOwnerReport {
 export async function getVehicleOwnerReport(token: string): Promise<VehicleOwnerReport | null> {
   const { data, error } = await supabase.rpc('get_vehicle_owner_report', { p_token: token });
   if (error) throw new Error(error.message);
-  return data ?? null;
+  return (data ?? null) as unknown as VehicleOwnerReport | null;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
@@ -18,12 +18,6 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY ?? '';
 const GROQ_MODEL = process.env.GROQ_MODEL ?? 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
   restaurant: 'restauration (menus, commandes salle/emporter, tickets)',
@@ -84,8 +78,13 @@ function compactMessages(messages: ChatMessage[]) {
 
 export async function POST(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  const admin = getSupabaseAdmin();
-  if (!admin || !token) {
+  if (!token) {
+    return NextResponse.json({ error: 'Configuration IA serveur incomplète.' }, { status: 500 });
+  }
+  let admin: ReturnType<typeof getSupabaseAdmin>;
+  try {
+    admin = getSupabaseAdmin();
+  } catch {
     return NextResponse.json({ error: 'Configuration IA serveur incomplète.' }, { status: 500 });
   }
   if (!GROQ_API_KEY) {

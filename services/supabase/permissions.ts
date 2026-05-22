@@ -7,7 +7,7 @@ export interface PermissionOverride {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 export async function getMyPermissions(businessId: string): Promise<Record<string, boolean>> {
   const { data, error } = await db.rpc('get_my_permissions', { p_business_id: businessId });

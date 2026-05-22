@@ -61,13 +61,13 @@ export async function addStockEntry(input: AddStockEntryInput): Promise<void> {
     p_business_id:    input.businessId,
     p_product_id:     input.productId,
     p_quantity:       input.quantity,
-    p_packaging_qty:  input.packagingQty  ?? null,
-    p_packaging_size: input.packagingSize ?? null,
-    p_packaging_unit: input.packagingUnit ?? null,
-    p_supplier:       input.supplier      ?? null,
-    p_cost_per_unit:  input.costPerUnit   ?? null,
-    p_notes:          input.notes         ?? null,
-    p_created_by:     input.createdBy     ?? null,
+    p_packaging_qty:  input.packagingQty  ?? undefined,
+    p_packaging_size: input.packagingSize ?? undefined,
+    p_packaging_unit: input.packagingUnit ?? undefined,
+    p_supplier:       input.supplier      ?? undefined,
+    p_cost_per_unit:  input.costPerUnit   ?? undefined,
+    p_notes:          input.notes         ?? undefined,
+    p_created_by:     input.createdBy     ?? undefined,
   });
   if (error) throw new Error(error.message);
   logAction({

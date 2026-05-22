@@ -25,7 +25,7 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB par fichier
 // --- Lecture ------------------------------------------------------------------
 
 export async function getFichiers(dossierId: string): Promise<DossierFichier[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('dossier_fichiers')
     .select('*')
     .eq('dossier_id', dossierId)
@@ -44,8 +44,8 @@ export async function getSignedUrl(storagePath: string): Promise<string> {
 
 export async function getStorageInfo(businessId: string): Promise<StorageInfo> {
   const [quotaRes, usedRes] = await Promise.all([
-    (supabase as any).from('businesses').select('storage_quota_bytes').eq('id', businessId).single(),
-    (supabase as any).from('dossier_fichiers').select('taille_bytes').eq('business_id', businessId),
+    supabase.from('businesses').select('storage_quota_bytes').eq('id', businessId).single(),
+    supabase.from('dossier_fichiers').select('taille_bytes').eq('business_id', businessId),
   ]);
   if (quotaRes.error) throw new Error(quotaRes.error.message);
   if (usedRes.error) throw new Error(usedRes.error.message);
@@ -95,7 +95,7 @@ export async function uploadFichier(
   // Enregistrer en base
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('dossier_fichiers')
     .insert({
       dossier_id:   dossierId,
@@ -125,7 +125,7 @@ export async function deleteFichier(fichier: DossierFichier): Promise<void> {
   // Supprimer du storage d'abord
   await supabase.storage.from(BUCKET).remove([fichier.storage_path]);
   // Supprimer de la base (le trigger met à jour storage_used_bytes)
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('dossier_fichiers')
     .delete()
     .eq('id', fichier.id);

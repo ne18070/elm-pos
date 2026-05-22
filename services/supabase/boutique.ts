@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import { findPublicBusinessByRef } from './public-business-ref';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,7 +106,7 @@ export async function getBoutiqueProducts(businessId: string): Promise<BoutiqueP
     .eq('business_id', businessId)
     .eq('is_active', true)
     .order('name');
-  return (data ?? []) as BoutiqueProduct[];
+  return (data ?? []) as unknown as BoutiqueProduct[];
 }
 
 export async function createBoutiqueOrder(
@@ -132,7 +131,7 @@ export async function createBoutiqueOrder(
     },
   });
   if (error) throw new Error(error.message);
-  return data as BoutiqueOrderResult;
+  return data as unknown as BoutiqueOrderResult;
 }
 
 export async function getBoutiqueOrder(
@@ -142,5 +141,5 @@ export async function getBoutiqueOrder(
     p_token: token,
   });
   if (error || !data) return null;
-  return data as BoutiqueOrderDetail;
+  return data as unknown as BoutiqueOrderDetail;
 }

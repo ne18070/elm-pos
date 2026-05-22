@@ -1,12 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _db  = (s: unknown) => (s as any).from.bind(s);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _rpc = (s: unknown) => (s as any).rpc.bind(s);
-
 import { supabase } from './client';
 
-const db  = _db(supabase);
-const rpc = _rpc(supabase);
+const db  = supabase.from.bind(supabase);
+const rpc = supabase.rpc.bind(supabase);
 
 // --- Types --------------------------------------------------------------------
 
@@ -161,7 +156,7 @@ export async function createManualEntry(input: CreateEntryInput): Promise<Journa
     .insert(input.lines.map((l) => ({ ...l, entry_id: entry.id })));
   if (linesErr) throw new Error(linesErr.message);
 
-  return { ...entry, lines: input.lines } as JournalEntry;
+  return { ...entry, lines: input.lines } as unknown as JournalEntry;
 }
 
 export async function deleteManualEntry(entryId: string): Promise<void> {
@@ -197,10 +192,10 @@ export async function syncAccounting(businessId: string): Promise<number> {
     .select('source_id')
     .eq('business_id', businessId)
     .in('source', ['order', 'refund']);
-  const synced = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+  const synced = new Set((existing ?? []).map((e: { source_id: string | null }) => e.source_id));
 
   // Fetch all relevant orders
-  const { data: orders, error: oErr } = await (supabase as any)
+  const { data: orders, error: oErr } = await supabase
     .from('orders')
     .select('id, created_at, updated_at, status, subtotal, tax_amount, discount_amount, total, order_channel')
     .eq('business_id', businessId)
@@ -214,7 +209,7 @@ export async function syncAccounting(businessId: string): Promise<number> {
 
   // Batch-fetch payments for unsynced orders
   const ids = unsynced.map((o) => o.id);
-  const { data: allPayments } = await (supabase as any)
+  const { data: allPayments } = await supabase
     .from('payments')
     .select('order_id, method, amount')
     .in('order_id', ids);
@@ -288,9 +283,9 @@ export async function syncAccounting(businessId: string): Promise<number> {
     .select('source_id')
     .eq('business_id', businessId)
     .eq('source', 'stock');
-  const syncedStockSet = new Set((syncedStock ?? []).map((e: { source_id: string }) => e.source_id));
+  const syncedStockSet = new Set((syncedStock ?? []).map((e: { source_id: string | null }) => e.source_id));
 
-  const { data: stockRows, error: sErr } = await (supabase as any)
+  const { data: stockRows, error: sErr } = await supabase
     .from('stock_entries')
     .select('id, created_at, quantity, cost_per_unit, supplier, product:products(name)')
     .eq('business_id', businessId)
@@ -336,8 +331,8 @@ export async function getTrialBalance(
 ): Promise<TrialBalanceLine[]> {
   const { data, error } = await rpc('get_trial_balance', {
     p_business_id: businessId,
-    p_date_from:   dateFrom ?? null,
-    p_date_to:     dateTo   ?? null,
+    p_date_from:   dateFrom,
+    p_date_to:     dateTo,
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as TrialBalanceLine[];
@@ -400,7 +395,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
     .select('source_id')
     .eq('business_id', businessId)
     .eq('source', 'hotel');
-  const syncedSet = new Set((existingAll ?? []).map((e: { source_id: string }) => e.source_id));
+  const syncedSet = new Set((existingAll ?? []).map((e: { source_id: string | null }) => e.source_id));
 
   let count = 0;
 
@@ -409,7 +404,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
   // Chaque paiement reçu génère : Débit 571/521 · Crédit 706
   const syncedPayments = syncedSet; // même ensemble : source='hotel', source_id=uuid
 
-  const { data: payments, error: payErr } = await (supabase as any)
+  const { data: payments, error: payErr } = await supabase
     .from('hotel_payments')
     .select('id, amount, method, paid_at, reservation_id')
     .eq('business_id', businessId);
@@ -419,7 +414,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
   const reservationIds = [...new Set((payments ?? []).map((p: { reservation_id: string }) => p.reservation_id))];
   let resInfoMap: Record<string, { room: string; guest: string }> = {};
   if (reservationIds.length > 0) {
-    const { data: resInfo } = await (supabase as any)
+    const { data: resInfo } = await supabase
       .from('hotel_reservations')
       .select('id, room:hotel_rooms!room_id(number), guest:hotel_guests!guest_id(full_name)')
       .in('id', reservationIds);
@@ -457,7 +452,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
 
   // --- 2. Sync réservations clôturées SANS hotel_payments ------------------
   // (rétrocompatibilité + séjours sans paiement enregistré)
-  const { data: reservations, error: resErr } = await (supabase as any)
+  const { data: reservations, error: resErr } = await supabase
     .from('hotel_reservations')
     .select('id, actual_check_out, check_out, total, paid_amount, room:hotel_rooms(number), guest:hotel_guests(full_name)')
     .eq('business_id', businessId)
@@ -472,7 +467,7 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
     if (syncedSet.has(res.id)) continue; // déjà sync (ancienne logique)
 
     // Vérifier s'il existe des hotel_payments pour cette réservation
-    const { data: hasPay } = await (supabase as any)
+    const { data: hasPay } = await supabase
       .from('hotel_payments')
       .select('id')
       .eq('reservation_id', res.id)
@@ -622,9 +617,9 @@ export async function syncHonorairesAccounting(businessId: string): Promise<numb
     .select('source_id')
     .eq('business_id', businessId)
     .eq('source', 'honoraires');
-  const synced = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+  const synced = new Set((existing ?? []).map((e: { source_id: string | null }) => e.source_id));
 
-  const { data: rows, error } = await (supabase as any)
+  const { data: rows, error } = await supabase
     .from('honoraires_cabinet')
     .select('id, client_name, type_prestation, date_facture, montant_paye, status')
     .eq('business_id', businessId)
@@ -684,9 +679,9 @@ export async function syncServiceOrdersAccounting(businessId: string): Promise<n
     .select('source_id')
     .eq('business_id', businessId)
     .eq('source', 'service_order');
-  const synced = new Set((existing ?? []).map((e: { source_id: string }) => e.source_id));
+  const synced = new Set((existing ?? []).map((e: { source_id: string | null }) => e.source_id));
 
-  const { data: rows, error } = await (supabase as any)
+  const { data: rows, error } = await supabase
     .from('service_orders')
     .select('id, order_number, paid_amount, payment_method, paid_at, subject_ref, client_name')
     .eq('business_id', businessId)

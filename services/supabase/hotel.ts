@@ -140,7 +140,7 @@ export async function getRooms(businessId: string): Promise<HotelRoom[]> {
     .order('floor', { nullsFirst: true })
     .order('number');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as HotelRoom[];
 }
 
 export async function createRoom(
@@ -149,11 +149,11 @@ export async function createRoom(
 ): Promise<HotelRoom> {
   const { data, error } = await supabase
     .from('hotel_rooms')
-    .insert({ ...payload, business_id: businessId })
+    .insert({ ...payload, business_id: businessId } as unknown as import('./database.types').TablesInsert<'hotel_rooms'>)
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as HotelRoom;
 }
 
 export async function updateRoom(
@@ -162,12 +162,12 @@ export async function updateRoom(
 ): Promise<HotelRoom> {
   const { data, error } = await supabase
     .from('hotel_rooms')
-    .update(payload)
+    .update(payload as unknown as import('./database.types').TablesUpdate<'hotel_rooms'>)
     .eq('id', id)
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as HotelRoom;
 }
 
 // Soft-delete : on conserve l'historique des réservations liées
@@ -247,7 +247,7 @@ export async function getRoomConflicts(
     p_room_id:    roomId,
     p_check_in:   checkIn,
     p_check_out:  checkOut,
-    p_exclude_id: excludeId ?? null,
+    p_exclude_id: excludeId,
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as RoomConflict[];
@@ -582,7 +582,7 @@ export async function markRoomClean(
     .single();
   if (error) throw new Error(error.message);
   await addCleaningLog(businessId, roomId, 'cleaned', opts);
-  return data;
+  return data as unknown as HotelRoom;
 }
 
 export async function sendRoomToMaintenance(
@@ -598,7 +598,7 @@ export async function sendRoomToMaintenance(
     .single();
   if (error) throw new Error(error.message);
   await addCleaningLog(businessId, roomId, 'maintenance_start', opts);
-  return data;
+  return data as unknown as HotelRoom;
 }
 
 export async function markMaintenanceDone(
@@ -614,7 +614,7 @@ export async function markMaintenanceDone(
     .single();
   if (error) throw new Error(error.message);
   await addCleaningLog(businessId, roomId, 'maintenance_end', opts);
-  return data;
+  return data as unknown as HotelRoom;
 }
 
 export async function assignRoomCleaner(
@@ -633,7 +633,7 @@ export async function assignRoomCleaner(
   if (cleanerId) {
     await addCleaningLog(businessId, roomId, 'assigned', { cleanerId, userId: opts?.userId });
   }
-  return data;
+  return data as unknown as HotelRoom;
 }
 
 async function _recalcServiceTotal(reservationId: string): Promise<void> {

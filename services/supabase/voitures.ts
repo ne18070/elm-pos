@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import { findPublicBusinessByRef } from './public-business-ref';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +88,7 @@ export async function getVoitures(businessId: string): Promise<Voiture[]> {
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as Voiture[];
 }
 
 export async function createVoiture(
@@ -102,7 +101,7 @@ export async function createVoiture(
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as Voiture;
 }
 
 export async function updateVoiture(
@@ -141,7 +140,7 @@ export async function getLeads(businessId: string): Promise<VoitureLead[]> {
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as VoitureLead[];
 }
 
 export async function updateLeadStatut(id: string, statut: LeadStatut): Promise<void> {
@@ -176,7 +175,7 @@ export async function getPublicVoitures(businessId: string): Promise<Voiture[]> 
     .neq('statut', 'vendu')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as Voiture[];
 }
 
 export async function createLead(

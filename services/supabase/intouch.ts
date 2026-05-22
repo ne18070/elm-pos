@@ -1,7 +1,6 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,7 +44,7 @@ export async function getIntouchConfig(businessId: string): Promise<IntouchConfi
     .select('*')
     .eq('business_id', businessId)
     .maybeSingle();
-  return data ?? null;
+  return (data ?? null) as unknown as IntouchConfig | null;
 }
 
 /**
@@ -58,7 +57,7 @@ export async function upsertIntouchConfig(
   const { data, error } = await supabase
     .from('intouch_configs')
     .upsert(
-      { business_id: businessId, ...form },
+      { business_id: businessId, ...form } as unknown as import('./database.types').TablesInsert<'intouch_configs'>,
       { onConflict: 'business_id' }
     )
     .select()
@@ -131,10 +130,10 @@ export async function checkPaymentStatus(externalRef: string): Promise<IntouchPa
 
   return {
     success:        data.status === 'SUCCESS',
-    transaction_id: data.transaction_id,
+    transaction_id: data.transaction_id ?? undefined,
     external_reference: externalRef,
     status:         data.status as any,
-    error:          data.error_message
+    error:          data.error_message ?? undefined
   };
 }
 

@@ -1,7 +1,4 @@
-import { supabase as supabaseRaw } from '../../renderer/lib/supabase';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = supabaseRaw as any;
+import { supabase } from './client';
 
 export interface RefItem {
   id:         string;
@@ -59,7 +56,7 @@ export async function upsertRefItem(
 ): Promise<void> {
   const { error } = await supabase
     .from('reference_data')
-    .upsert({ ...item, category }, { onConflict: 'business_id,category,value' });
+    .upsert({ ...item, category } as unknown as import('./database.types').TablesInsert<'reference_data'>, { onConflict: 'business_id,category,value' });
   if (error) throw new Error(error.message);
 }
 

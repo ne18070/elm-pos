@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import type { RestaurantFloor, RestaurantTable, TableStatus } from '../../types';
 
 // tables added via migration 077 - not in database.types.ts yet
-const supabase = _supabase as any;
 
 // ─── Floors ───────────────────────────────────────────────────────────────────
 
@@ -15,18 +14,18 @@ export async function getFloors(businessId: string): Promise<RestaurantFloor[]> 
     .order('position', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []) as unknown as RestaurantFloor[];
 }
 
 export async function createFloor(floor: Partial<RestaurantFloor>): Promise<RestaurantFloor> {
   const { data, error } = await supabase
     .from('restaurant_floors')
-    .insert(floor)
+    .insert(floor as unknown as import('./database.types').TablesInsert<'restaurant_floors'>)
     .select()
     .single();
 
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as RestaurantFloor;
 }
 
 // ─── Tables ───────────────────────────────────────────────────────────────────
@@ -45,7 +44,7 @@ export async function getTables(businessId: string, floorId?: string): Promise<R
   const { data, error } = await query.order('name', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return (data || []) as unknown as RestaurantTable[];
 }
 
 export async function updateTableStatus(tableId: string, status: TableStatus, orderId?: string | null): Promise<void> {
@@ -79,12 +78,12 @@ export async function updateTablePosition(
 export async function createTable(table: Partial<RestaurantTable>): Promise<RestaurantTable> {
   const { data, error } = await supabase
     .from('restaurant_tables')
-    .insert(table)
+    .insert(table as unknown as import('./database.types').TablesInsert<'restaurant_tables'>)
     .select()
     .single();
 
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as RestaurantTable;
 }
 
 export async function updateFloor(floorId: string, data: Partial<RestaurantFloor>): Promise<void> {
@@ -106,7 +105,7 @@ export async function deleteFloor(floorId: string): Promise<void> {
 export async function updateTable(tableId: string, data: Partial<RestaurantTable>): Promise<void> {
   const { error } = await supabase
     .from('restaurant_tables')
-    .update({ ...data, updated_at: new Date().toISOString() })
+    .update({ ...data, updated_at: new Date().toISOString() } as unknown as import('./database.types').TablesUpdate<'restaurant_tables'>)
     .eq('id', tableId);
   if (error) throw new Error(error.message);
 }

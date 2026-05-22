@@ -1,7 +1,7 @@
 import { supabase } from './client';
 import { q } from './q';
 
-const db = supabase as any;
+const db = supabase;
 
 export interface CashSession {
   id: string;
@@ -41,7 +41,7 @@ export async function getCurrentSession(businessId: string): Promise<CashSession
     .eq('status', 'open')
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as CashSession | null;
 }
 
 export async function getSessionHistory(businessId: string): Promise<CashSession[]> {
@@ -73,7 +73,7 @@ export async function closeSession(
   return q<CashSession>(db.rpc('close_cash_session', {
     p_session_id:  sessionId,
     p_actual_cash: actualCash,
-    p_notes:       notes ?? null,
+    p_notes:       notes ?? undefined,
   }));
 }
 

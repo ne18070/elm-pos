@@ -1,5 +1,4 @@
-import { supabase as _supabase } from './client';
-const db = _supabase as any;
+import { supabase } from './client';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,7 +52,7 @@ function nextDecember31(): string {
 // ── Config ────────────────────────────────────────────────────────────────────
 
 export async function getLoyaltyConfig(businessId: string): Promise<LoyaltyConfig> {
-  const { data } = await db
+  const { data } = await supabase
     .from('loyalty_config')
     .select('*')
     .eq('business_id', businessId)
@@ -62,7 +61,7 @@ export async function getLoyaltyConfig(businessId: string): Promise<LoyaltyConfi
 }
 
 export async function saveLoyaltyConfig(config: LoyaltyConfig): Promise<void> {
-  const { error } = await db
+  const { error } = await supabase
     .from('loyalty_config')
     .upsert({ ...config, updated_at: new Date().toISOString() }, { onConflict: 'business_id' });
   if (error) throw new Error(error.message);
@@ -83,7 +82,7 @@ export async function earnPoints(
   const points = Math.floor(orderAmount / config.earn_per);
   if (points <= 0) return 0;
 
-  const { error } = await db.from('loyalty_transactions').insert({
+  const { error } = await supabase.from('loyalty_transactions').insert({
     business_id:      businessId,
     client_name:      clientName.trim(),
     client_phone:     clientPhone ?? null,
@@ -119,7 +118,7 @@ export async function redeemPoints(
 
   const cashValue = toUse * config.point_value;
 
-  const { error } = await db.from('loyalty_transactions').insert({
+  const { error } = await supabase.from('loyalty_transactions').insert({
     business_id:      businessId,
     client_name:      clientName.trim(),
     client_phone:     clientPhone ?? null,
@@ -137,7 +136,7 @@ export async function redeemPoints(
 
 export async function getClientBalance(businessId: string, clientName: string): Promise<number> {
   const today = new Date().toISOString().split('T')[0];
-  const { data } = await db
+  const { data } = await supabase
     .from('loyalty_transactions')
     .select('points, type, expires_at')
     .eq('business_id', businessId)
@@ -157,21 +156,21 @@ export async function getClientLoyaltyHistory(
   businessId:  string,
   clientName:  string,
 ): Promise<LoyaltyTransaction[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('loyalty_transactions')
     .select('*')
     .eq('business_id', businessId)
     .ilike('client_name', clientName.trim())
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as LoyaltyTransaction[];
 }
 
 // ── All clients (for ranking table) ──────────────────────────────────────────
 
 export async function getAllClientsLoyalty(businessId: string): Promise<ClientLoyalty[]> {
   const today = new Date().toISOString().split('T')[0];
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('loyalty_transactions')
     .select('client_name, client_phone, points, type, expires_at')
     .eq('business_id', businessId);

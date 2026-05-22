@@ -1,6 +1,5 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 export type TicketType = 'bug' | 'suggestion' | 'question' | 'feedback';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -107,7 +106,7 @@ export async function getAllTicketsAdmin(): Promise<SupportTicket[]> {
 export async function updateTicketAdmin(ticketId: string, updates: Partial<SupportTicket>): Promise<void> {
   const { error } = await supabase
     .from('support_tickets')
-    .update(updates)
+    .update(updates as unknown as import('./database.types').TablesUpdate<'support_tickets'>)
     .eq('id', ticketId);
 
   if (error) throw new Error(error.message);

@@ -109,7 +109,7 @@ export async function toggleUserBlock(
   blocked: boolean
 ): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).rpc('toggle_user_block', {
+  const { error } = await supabase.rpc('toggle_user_block', {
     p_business_id: businessId,
     p_user_id:     userId,
     p_blocked:     blocked,
@@ -123,7 +123,7 @@ export async function adminResetUserPassword(
   newPassword: string
 ): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).rpc('admin_reset_user_password', {
+  const { error } = await supabase.rpc('admin_reset_user_password', {
     p_business_id:  business_id,
     p_user_id:      user_id,
     p_new_password: newPassword,
@@ -228,7 +228,7 @@ export async function inviteUser(payload: InvitePayload): Promise<void> {
 
   // Ajouter/lier à ce business (fonctionne pour nouveau ET utilisateur existant)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: rpcError } = await (supabase as any).rpc('assign_user_to_business', {
+  const { error: rpcError } = await supabase.rpc('assign_user_to_business', {
     p_email:       payload.email,
     p_full_name:   payload.full_name,
     p_role:        payload.role,

@@ -1,6 +1,5 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -52,17 +51,17 @@ export async function getLeaveTypes(businessId: string): Promise<LeaveType[]> {
     .eq('business_id', businessId)
     .order('name');
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as LeaveType[];
 }
 
 export async function upsertLeaveType(type: Partial<LeaveType>): Promise<LeaveType> {
   const { data, error } = await supabase
     .from('leave_types')
-    .upsert(type)
+    .upsert(type as unknown as import('./database.types').TablesInsert<'leave_types'>)
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as LeaveType;
 }
 
 // ─── Leave Requests ──────────────────────────────────────────────────────────
@@ -79,17 +78,17 @@ export async function getLeaveRequests(businessId: string, options?: { staff_id?
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as unknown as LeaveRequest[];
 }
 
 export async function createLeaveRequest(request: Omit<LeaveRequest, 'id' | 'created_at' | 'status'>): Promise<LeaveRequest> {
   const { data, error } = await supabase
     .from('leave_requests')
-    .insert(request)
+    .insert(request as unknown as import('./database.types').TablesInsert<'leave_requests'>)
     .select('*, staff(name), leave_type:leave_type_id(*)')
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as LeaveRequest;
 }
 
 export async function updateLeaveRequestStatus(id: string, status: LeaveStatus, notes?: string, adminId?: string): Promise<void> {

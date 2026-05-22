@@ -1,7 +1,6 @@
-import { supabase as supabaseRaw } from '../../renderer/lib/supabase';
+import { supabase } from './client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = supabaseRaw as any;
 
 export interface BusinessTypeRow {
   id:           string;

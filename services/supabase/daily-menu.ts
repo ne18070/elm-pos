@@ -1,8 +1,7 @@
-import { supabase as _supabase } from './client';
+import { supabase } from './client';
 import { q } from './q';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const supabase = _supabase as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,12 +112,12 @@ export async function saveDailyMenu(
 
   if (existing?.id) {
     await q<{ id: string }>(
-      supabase.from('daily_menus').update(payload).eq('id', existing.id).select('id').single(),
+      supabase.from('daily_menus').update(payload as unknown as import('./database.types').TablesUpdate<'daily_menus'>).eq('id', existing.id).select('id').single(),
     );
     menuId = existing.id;
   } else {
     const inserted = await q<{ id: string }>(
-      supabase.from('daily_menus').insert(payload).select('id').single(),
+      supabase.from('daily_menus').insert(payload as unknown as import('./database.types').TablesInsert<'daily_menus'>).select('id').single(),
     );
     menuId = inserted.id;
   }

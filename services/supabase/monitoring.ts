@@ -2,7 +2,7 @@ import { supabase } from './client';
 import { getAllSubscriptions, type SubscriptionRow } from './subscriptions';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 export interface BusinessMonitorRow extends SubscriptionRow {
   orders_30d:     number;
@@ -243,7 +243,7 @@ export async function getCEOStats(): Promise<CEOStats> {
   for (const e of (events7d.data ?? [])) {
     if (funnel.hasOwnProperty(e.event_name)) (funnel as any)[e.event_name]++;
     if (e.event_name === 'signup_started') {
-      const day = e.created_at.slice(0, 10);
+      const day = (e.created_at ?? '').slice(0, 10);
       signupsByDay[day] = (signupsByDay[day] ?? 0) + 1;
     }
   }
@@ -366,7 +366,7 @@ export async function getCTOStats(): Promise<CTOStats> {
 
     // db_health: RPC may return a single object or an array with one row
     const rawDbHealth = dbHealthRes.status === 'fulfilled' ? (dbHealthRes.value.data ?? null) : null;
-    const dbHealth: DbHealth | null = Array.isArray(rawDbHealth) ? (rawDbHealth[0] ?? null) : rawDbHealth;
+    const dbHealth: DbHealth | null = Array.isArray(rawDbHealth) ? ((rawDbHealth[0] ?? null) as unknown as DbHealth | null) : rawDbHealth as unknown as DbHealth | null;
 
     return {
       latency:            { p50, p95 },
@@ -375,7 +375,7 @@ export async function getCTOStats(): Promise<CTOStats> {
       total_errors_24h:   vitals.filter((v: any) => v.level === 'error').length,
       errors_by_category: errorsByCategory,
       top_errors:         topErrors,
-      alert_log:          alertLogRes.status === 'fulfilled' ? (alertLogRes.value.data ?? []) : [],
+      alert_log:          alertLogRes.status === 'fulfilled' ? ((alertLogRes.value.data ?? []) as unknown as import('./monitoring').AlertLogEntry[]) : [],
       db_health:          dbHealth,
       slow_queries:       [],
     };
