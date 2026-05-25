@@ -32,7 +32,8 @@ export function toUserError(err: unknown): string {
   if (msg.includes('not found') || msg.includes('no rows')) {
     return 'Élément introuvable.';
   }
-  if (msg.includes('jwt') || msg.includes('token') || msg.includes('session expired') ||
+  if (msg.includes('session_not_found') || msg.includes('session from session_id') ||
+      msg.includes('jwt') || msg.includes('token') || msg.includes('session expired') ||
       msg.includes('invalid token') || msg.includes('401')) {
     return 'Session expirée. Veuillez vous reconnecter.';
   }

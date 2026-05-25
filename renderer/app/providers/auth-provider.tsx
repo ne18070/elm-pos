@@ -106,6 +106,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [setUser, setBusiness, setBusinesses, setLoading, setLoaded, setSubscription, setPlans, setPaymentSettings, setCashSession, setOverrides, setCashLoaded, router]);
 
   const checkSession = useCallback(async () => {
+    // getUser() validates the JWT server-side — catches session_not_found & revoked sessions
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+
+    if (!authUser || userError) {
+      await supabase.auth.signOut().catch(() => {});
+      clear();
+      resetPermissions();
+      setLoaded(true);
+      setLoading(false);
+      if (!isPublic(pathnameRef.current)) router.replace('/login');
+      return;
+    }
+
+    // Still read the full session from cache (free, already validated above)
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
@@ -135,11 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isPublic(pathnameRef.current)) router.replace('/login');
         return;
       }
-      await loadAllData(session.user, fallbackProfile);
+      await loadAllData(session.user, { ...fallbackProfile, email: authUser.email ?? fallbackProfile.email });
       return;
     }
 
-    await loadAllData(session.user, profile);
+    // authUser.email is authoritative — public.users.email may lag if the DB trigger
+    // hasn't been applied yet (migration 090_sync_email_on_auth_update.sql)
+    await loadAllData(session.user, { ...profile, email: authUser.email ?? profile.email });
   }, [clear, loadAllData, resetPermissions, router, setLoaded, setLoading]);
 
   useEffect(() => {
@@ -162,8 +178,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           trackAuth('logout', { reason: event === 'SIGNED_OUT' ? 'explicit' : 'session_expired' });
         }
 
-        if (event === 'TOKEN_REFRESHED') {
-          // Silencieux — normal, pas un événement de sécurité
+        if (event === 'USER_UPDATED' && session?.user) {
+          // Sync auth email → public.users (belt-and-suspenders: migration 090 does this server-side too)
+          await supabase
+            .from('users')
+            .update({ email: session.user.email })
+            .eq('id', session.user.id)
+            .catch(() => {});
+          // Full reload picks up the merged authUser.email via checkSession
+          checkSession().catch(() => {});
         }
 
         if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathnameRef.current)) {

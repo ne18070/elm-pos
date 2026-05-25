@@ -177,6 +177,28 @@ export default function AdminPage() {
   const [pwForm,    setPwForm]    = useState({ newPw: '', confirmPw: '' });
   const [savingPw,  setSavingPw]  = useState(false);
 
+  const [emailForm,   setEmailForm]   = useState({ newEmail: '' });
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  async function handleChangeEmail() {
+    const email = emailForm.newEmail.trim();
+    if (!email || !email.includes('@')) {
+      notifError('Veuillez entrer une adresse e-mail valide.');
+      return;
+    }
+    setSavingEmail(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) throw error;
+      setEmailForm({ newEmail: '' });
+      success('Un e-mail de confirmation a été envoyé à la nouvelle adresse.');
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
   async function handleChangePassword() {
     if (!pwForm.newPw || pwForm.newPw.length < 6) {
       notifError('Le mot de passe doit contenir au moins 6 caractères.');
@@ -370,10 +392,33 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="label">E-mail</label>
+                <label className="label">E-mail actuel</label>
                 <input type="email" value={user?.email ?? ''} className="input opacity-50" disabled />
-                <p className="text-xs text-content-muted mt-1">L'e-mail ne peut pas être modifié ici.</p>
               </div>
+              {user?.role === 'owner' && (
+                <div className="space-y-2 pt-1">
+                  <label className="label">Changer l'e-mail</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={emailForm.newEmail}
+                      onChange={(e) => setEmailForm({ newEmail: e.target.value })}
+                      className="input flex-1"
+                      placeholder="nouvelle@adresse.com"
+                      autoComplete="email"
+                    />
+                    <button
+                      onClick={handleChangeEmail}
+                      disabled={savingEmail || !emailForm.newEmail}
+                      className="btn-primary flex items-center gap-2 shrink-0"
+                    >
+                      {savingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Envoyer
+                    </button>
+                  </div>
+                  <p className="text-xs text-content-muted">Un lien de confirmation sera envoyé à la nouvelle adresse.</p>
+                </div>
+              )}
               <button
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
