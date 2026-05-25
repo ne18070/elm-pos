@@ -180,11 +180,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (event === 'USER_UPDATED' && session?.user) {
           // Sync auth email → public.users (belt-and-suspenders: migration 090 does this server-side too)
-          await supabase
-            .from('users')
-            .update({ email: session.user.email })
-            .eq('id', session.user.id)
-            .catch(() => {});
+          try {
+            await supabase
+              .from('users')
+              .update({ email: session.user.email })
+              .eq('id', session.user.id);
+          } catch { /* non critique */ }
           // Full reload picks up the merged authUser.email via checkSession
           checkSession().catch(() => {});
         }
