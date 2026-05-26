@@ -81,7 +81,11 @@ export function MonitoringProvider({ children }: { children: React.ReactNode }) 
     const originalFetch = window.fetch.bind(window);
 
     window.fetch = async function patchedFetch(input, init) {
-      const url = typeof input === 'string' ? input : (input as Request).url;
+      const url = input instanceof URL
+        ? input.href
+        : typeof input === 'string'
+          ? input
+          : (input as Request).url ?? '';
       const startMs = Date.now();
 
       let response: Response;
@@ -98,7 +102,8 @@ export function MonitoringProvider({ children }: { children: React.ReactNode }) 
       const latencyMs = Date.now() - startMs;
 
       // Skip: auth internals, monitoring self-inserts, realtime
-      const isInternal = url.includes('/auth/v1/')
+      const isInternal = !url
+        || url.includes('/auth/v1/')
         || url.includes('monitoring_vitals')
         || url.includes('/realtime/v1/');
 

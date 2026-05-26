@@ -28,6 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathnameRef = useRef(pathname);
   useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
 
+  // Prevents concurrent checkSession calls from racing on the Supabase auth lock
+  const checkingRef = useRef(false);
+
   const loadAllData = useCallback(async (sessionUser: { id: string }, profile: any) => {
     setUser(profile as never);
     // Alimenter le cache monitoring — élimine les appels getUser() sur chaque log d'erreur
@@ -106,6 +109,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [setUser, setBusiness, setBusinesses, setLoading, setLoaded, setSubscription, setPlans, setPaymentSettings, setCashSession, setOverrides, setCashLoaded, router]);
 
   const checkSession = useCallback(async () => {
+    if (checkingRef.current) return;
+    checkingRef.current = true;
+    try {
     // getUser() validates the JWT server-side — catches session_not_found & revoked sessions
     const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
@@ -156,6 +162,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // authUser.email is authoritative — public.users.email may lag if the DB trigger
     // hasn't been applied yet (migration 090_sync_email_on_auth_update.sql)
     await loadAllData(session.user, { ...profile, email: authUser.email ?? profile.email });
+    } finally {
+      checkingRef.current = false;
+    }
   }, [clear, loadAllData, resetPermissions, router, setLoaded, setLoading]);
 
   useEffect(() => {
