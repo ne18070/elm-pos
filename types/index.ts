@@ -49,6 +49,7 @@ export interface Business {
   currency: string;
   tax_rate: number;
   tax_inclusive: boolean;
+  timezone: string;
   webhook_whitelist?: string[];
   receipt_footer?: string;
   stock_units?: string[];

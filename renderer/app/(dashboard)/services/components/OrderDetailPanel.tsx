@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
 import { useCashSessionStore } from '@/store/cashSession';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, fmtInTz } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
   updateServiceOrderStatus, cancelServiceOrder, updateServiceOrder,
@@ -22,7 +22,7 @@ import { getPublicSiteUrl } from '@/lib/public-links';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { getStaff, type Staff } from '@services/supabase/staff';
 import { useServiceOrderForm } from '../hooks/useServiceOrderForm';
-import { SUBJECT_TYPES, PAY_METHODS, subjectTypeCfg, fmtDateTime } from '../constants';
+import { SUBJECT_TYPES, PAY_METHODS, subjectTypeCfg } from '../constants';
 import { StatusBadge, OTNumber } from './StatusBadge';
 import { PayModal } from './PayModal';
 import { ConfirmModal } from '@/components/ui/Modal';
@@ -41,6 +41,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
   businessId: string; onClose: () => void; onRefresh: () => void;
 }) {
   const { business, businesses, user } = useAuthStore();
+  const tz = business?.timezone ?? 'Africa/Dakar';
   const { session: cashSession } = useCashSessionStore();
   const can = useCan();
   const { success, error: notifError } = useNotificationStore();
@@ -504,18 +505,25 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                       <span className="text-xs font-semibold text-content-secondary">{label}</span>
                     </div>
                     <span className="text-xs font-mono text-content-primary">
-                      {ts ? fmtDateTime(ts) : '—'}
+                      {ts ? fmtInTz(ts, tz) : '—'}
                     </span>
                   </div>
                 ))}
                 {/* Durée totale si démarré et terminé */}
                 {order.started_at && order.finished_at && (() => {
-                  const mins = Math.round((new Date(order.finished_at).getTime() - new Date(order.started_at).getTime()) / 60000);
+                  const diffMs = new Date(order.finished_at).getTime() - new Date(order.started_at).getTime();
+                  const diffSec = Math.round(diffMs / 1000);
+                  const mins = Math.floor(diffSec / 60);
                   const h = Math.floor(mins / 60), m = mins % 60;
+                  const label = diffSec <= 0
+                    ? '—'
+                    : diffSec < 60
+                      ? `${diffSec}s`
+                      : `${h > 0 ? `${h}h ` : ''}${m}min`;
                   return (
                     <div className="flex items-center justify-between px-4 py-2 bg-surface-hover">
                       <span className="text-[10px] font-black text-content-secondary uppercase tracking-widest">Durée intervention</span>
-                      <span className="text-xs font-bold text-content-brand">{h > 0 ? `${h}h ` : ''}{m}min</span>
+                      <span className="text-xs font-bold text-content-brand">{label}</span>
                     </div>
                   );
                 })()}
@@ -554,7 +562,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                     <div>
                       <span className="text-status-success text-sm">Versement {i + 1}</span>
                       <span className="text-xs text-content-muted ml-2">
-                        {PAY_METHODS.find(m => m.value === p.method)?.label ?? p.method} · {fmtDateTime(p.paid_at)}
+                        {PAY_METHODS.find(m => m.value === p.method)?.label ?? p.method} · {fmtInTz(p.paid_at, tz)}
                       </span>
                     </div>
                     <span className="font-semibold text-status-success">-{formatCurrency(p.amount, currency)}</span>

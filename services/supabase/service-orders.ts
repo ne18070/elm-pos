@@ -554,10 +554,10 @@ export async function updateServiceOrderStatus(
   status: ServiceOrderStatus,
   actor?: ServiceOrderActor
 ): Promise<void> {
+  // Timestamps (started_at, finished_at, paid_at) are set by the DB trigger
+  // trg_service_order_status_timestamps using NOW() — never use new Date() here
+  // because the client clock can be wrong (wrong system time, etc.)
   const updates: any = { status };
-  if (status === 'en_cours') updates.started_at  = new Date().toISOString();
-  if (status === 'termine')  updates.finished_at = new Date().toISOString();
-  if (status === 'paye')     updates.paid_at     = new Date().toISOString();
   const { data: order, error } = await supabase
     .from('service_orders')
     .update(updates)

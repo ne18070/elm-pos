@@ -29,6 +29,25 @@ export function formatDate(date: string | Date): string {
   }).format(new Date(date));
 }
 
+/**
+ * Format a UTC ISO timestamp in the business's timezone so the displayed time
+ * always reflects when the action actually happened at the business location,
+ * regardless of where the viewer's browser is.
+ *
+ * @param iso  - UTC ISO string from the DB (e.g. "2026-05-25T13:56:07.079+00:00")
+ * @param tz   - IANA timezone string from business.timezone (e.g. "Africa/Dakar")
+ */
+export function fmtInTz(iso: string | null | undefined, tz = 'Africa/Dakar'): string {
+  if (!iso) return '—';
+  const safeZone = (() => {
+    try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return tz; } catch { return 'UTC'; }
+  })();
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { timeZone: safeZone, day: '2-digit', month: 'short', year: 'numeric' })
+    + ' · '
+    + d.toLocaleTimeString('fr-FR', { timeZone: safeZone, hour: '2-digit', minute: '2-digit' });
+}
+
 export function generateId(): string {
   return crypto.randomUUID();
 }

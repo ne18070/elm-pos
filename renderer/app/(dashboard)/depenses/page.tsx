@@ -1,7 +1,7 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, TrendingDown, Trash2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -339,9 +339,8 @@ export default function DepensesPage() {
                   const amount     = debitLine?.debit ?? 0;
                   const isOpen     = expanded === e.id;
                   return (
-                    <>
+                    <React.Fragment key={e.id}>
                       <tr
-                        key={e.id}
                         className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
                         onClick={() => setExpanded(isOpen ? null : e.id)}
                       >
@@ -383,7 +382,7 @@ export default function DepensesPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
