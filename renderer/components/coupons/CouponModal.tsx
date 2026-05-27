@@ -144,21 +144,32 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
         <div>
           <label className="label">Type de coupon</label>
           <div className="grid grid-cols-3 gap-2">
-            {(['percentage', 'fixed', 'free_item'] as CouponType[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => update('type', t)}
-                className={`py-2.5 px-2 rounded-xl border text-xs font-medium transition-colors flex flex-col items-center gap-1 ${
-                  form.type === t
-                    ? 'border-brand-500 bg-badge-brand text-content-brand'
-                    : 'border-surface-border text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                {t === 'free_item' && <Gift className="w-3.5 h-3.5" />}
-                {t === 'percentage' ? '% Réduction' : t === 'fixed' ? 'Montant fixe' : 'Article offert'}
-              </button>
-            ))}
+            {(['percentage', 'fixed', 'free_item'] as CouponType[]).map((t) => {
+              const isActive = form.type === t;
+              const labels: Record<string, string> = {
+                percentage: '% Réduction',
+                fixed: 'Montant fixe',
+                free_item: 'Article offert',
+              };
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => update('type', t)}
+                  className={[
+                    'py-3 px-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center gap-1.5',
+                    isActive
+                      ? 'border-brand-500 bg-badge-brand text-content-brand scale-[1.02] shadow-md'
+                      : 'border-surface-border/80 bg-surface-input text-content-primary hover:border-brand-500/50 hover:bg-surface-hover',
+                  ].join(' ')}
+                >
+                  {t === 'percentage' && <span className="text-base font-black">%</span>}
+                  {t === 'fixed'      && <span className="text-base font-black">F</span>}
+                  {t === 'free_item'  && <Gift className="w-4 h-4" />}
+                  <span>{labels[t]}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
