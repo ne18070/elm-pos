@@ -1,7 +1,8 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader2, Gift, Package } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useNotificationStore } from '@/store/notifications';
@@ -23,6 +24,15 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
   const [loading, setLoading] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const productInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+
+  const updateDropdownPos = useCallback(() => {
+    if (productInputRef.current) {
+      const r = productInputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+  }, []);
   const [freeProduct, setFreeProduct] = useState<Product | null>(
     coupon?.free_item_product_id
       ? null // will be resolved lazily if needed
@@ -185,17 +195,21 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
               <label className="label">Produit offert (stock)</label>
               <div className="relative">
                 <input
+                  ref={productInputRef}
                   type="text"
                   value={productSearch}
-                  onChange={(e) => { setProductSearch(e.target.value); setShowProductDropdown(true); setFreeProduct(null); update('free_item_product_id', ''); }}
-                  onFocus={() => setShowProductDropdown(true)}
+                  onChange={(e) => { setProductSearch(e.target.value); setShowProductDropdown(true); setFreeProduct(null); update('free_item_product_id', ''); updateDropdownPos(); }}
+                  onFocus={() => { setShowProductDropdown(true); updateDropdownPos(); }}
                   onBlur={() => setTimeout(() => setShowProductDropdown(false), 150)}
                   placeholder="Rechercher le produit à offrir…"
                   className="input w-full"
                   autoComplete="off"
                 />
-                {showProductDropdown && filteredProducts.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                {showProductDropdown && filteredProducts.length > 0 && createPortal(
+                  <div
+                    style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+                    className="bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl"
+                  >
                     {filteredProducts.map((p) => (
                       <button
                         key={p.id}
@@ -212,7 +226,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                         </div>
                       </button>
                     ))}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {freeProduct && (
