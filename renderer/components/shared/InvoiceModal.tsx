@@ -74,11 +74,11 @@ export function InvoiceModal({
         ],
         business_id: business.id,
       };
-      setPreviewHtml(renderTemplate(MOCK_ORDER, business, selected));
+      setPreviewHtml(renderTemplate(MOCK_ORDER, business, selected, undefined, isDistributeur ? docType : undefined));
     } catch {
       setPreviewHtml('');
     }
-  }, [selected, business]);
+  }, [selected, business, isDistributeur, docType]);
 
   function reloadTemplates() {
     if (!business) return;

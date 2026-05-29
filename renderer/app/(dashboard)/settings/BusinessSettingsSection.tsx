@@ -7,23 +7,23 @@ import { updateBusiness, uploadBusinessLogo, deleteBusinessLogo } from '@service
 import { normalizeSlug, isValidUrl } from './settings-utils';
 import { toUserError } from '@/lib/user-error';
 
+const DEFAULT_ECHEANCE_RULES: EcheanceRule[] = [
+  { max:    500_000, label: 'Paiement comptant'    },
+  { max:  1_000_000, label: 'Échéance : 2 jours'  },
+  { max:  2_500_000, label: 'Échéance : 5 jours'  },
+  { max: 10_000_000, label: 'Échéance : 7 jours'  },
+  { max: 20_000_000, label: 'Échéance : 10 jours' },
+  { max: 50_000_000, label: 'Échéance : 16 jours' },
+  {                  label: 'Échéance : 30 jours' },
+];
+
 export function BusinessSettingsSection() {
   const { business, setBusiness } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
-  
+
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-
-  const DEFAULT_ECHEANCE_RULES: EcheanceRule[] = [
-    { max:    500_000, label: 'Paiement comptant'    },
-    { max:  1_000_000, label: 'Échéance : 2 jours'  },
-    { max:  2_500_000, label: 'Échéance : 5 jours'  },
-    { max: 10_000_000, label: 'Échéance : 7 jours'  },
-    { max: 20_000_000, label: 'Échéance : 10 jours' },
-    { max: 50_000_000, label: 'Échéance : 16 jours' },
-    {                  label: 'Échéance : 30 jours' },
-  ];
 
   const [form, setForm] = useState({
     name:           business?.name ?? '',
@@ -65,21 +65,37 @@ export function BusinessSettingsSection() {
   }, [business]);
 
   const updateRule = useCallback((i: number, patch: Partial<EcheanceRule>) => {
-    setEcheanceRules(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+    setEcheanceRules(prev => prev.map((r, idx) => {
+      if (idx !== i) return r;
+      const updated = { ...r, ...patch };
+      // A non-last rule with max cleared would become a second fallback and shadow all
+      // rules below it. Enforce max must be a positive number for non-last rules.
+      if (patch.max !== undefined && patch.max !== null) {
+        updated.max = patch.max > 0 ? patch.max : r.max;
+      }
+      return updated;
+    }));
     setIsDirty(true);
   }, []);
 
   const addRule = useCallback(() => {
     setEcheanceRules(prev => {
-      // Insert before the last (fallback) entry
+      // Always insert a bounded rule (with a placeholder max) before the fallback.
+      // If the array has only the fallback entry, still ensure the new rule has a max
+      // so we don't create two max==null fallback entries.
       const last = prev[prev.length - 1];
-      return [...prev.slice(0, -1), { max: undefined, label: '' }, last];
+      const prevMax = prev.length >= 2 ? (prev[prev.length - 2].max ?? 0) : 0;
+      return [...prev.slice(0, -1), { max: prevMax + 1_000_000, label: '' }, last];
     });
     setIsDirty(true);
   }, []);
 
   const removeRule = useCallback((i: number) => {
-    setEcheanceRules(prev => prev.filter((_, idx) => idx !== i));
+    setEcheanceRules(prev => {
+      // Never delete the last (fallback) entry
+      if (i >= prev.length - 1) return prev;
+      return prev.filter((_, idx) => idx !== i);
+    });
     setIsDirty(true);
   }, []);
 
@@ -103,7 +119,7 @@ export function BusinessSettingsSection() {
       const brand_config = {
         ...(business.brand_config ?? {}),
         echeance_enabled: echeanceEnabled,
-        echeance_rules:   echeanceEnabled ? echeanceRules : undefined,
+        echeance_rules:   echeanceEnabled ? echeanceRules : null,
       };
 
       await updateBusiness(business.id, {
@@ -442,6 +458,8 @@ export function BusinessSettingsSection() {
                   currency:       business.currency ?? 'XOF',
                   receipt_footer: business.receipt_footer ?? '',
                 });
+                setEcheanceEnabled((business.brand_config?.echeance_enabled as boolean | undefined) ?? false);
+                setEcheanceRules((business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE_RULES);
                 setIsDirty(false);
               }
             }}

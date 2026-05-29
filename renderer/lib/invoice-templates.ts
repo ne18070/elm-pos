@@ -1837,7 +1837,7 @@ const DEFAULT_ECHEANCE: EcheanceRule[] = [
 function echeance(total: number, business: Business): string {
   const rules: EcheanceRule[] =
     (business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE;
-  const match = rules.find(r => r.max == null || total < r.max);
+  const match = rules.find(r => r.max == null || total <= r.max);
   return match?.label ?? rules[rules.length - 1]?.label ?? 'Paiement comptant';
 }
 
@@ -1943,20 +1943,20 @@ export function generateDistributeurInvoice(
         <div class="totals-box">
           <div class="tot-row">
             <span>TOTAL HT :</span>
-            <span>${fmt(totalHT, cur)} F</span>
+            <span>${fmt(totalHT, cur)}</span>
           </div>
           <div class="tot-row">
             <span>TVA 18% :</span>
-            <span>${fmt(totalTVA, cur)} F</span>
+            <span>${fmt(totalTVA, cur)}</span>
           </div>
           <div class="tot-row tot-final">
             <span>NET À PAYER :</span>
-            <span>${fmt(order.total, cur)} F</span>
+            <span>${fmt(order.total, cur)}</span>
           </div>
           ${paid > 0 ? `<div class="tot-row" style="color:#16a34a;font-size:8px">
-            <span>Reçu :</span><span>${fmt(paid, cur)} F</span></div>` : ''}
+            <span>Reçu :</span><span>${fmt(paid, cur)}</span></div>` : ''}
           ${remaining > 0.01 ? `<div class="tot-row" style="color:#c0392b;font-size:8px">
-            <span>Reste dû :</span><span>${fmt(remaining, cur)} F</span></div>` : ''}
+            <span>Reste dû :</span><span>${fmt(remaining, cur)}</span></div>` : ''}
         </div>
       </div>
 

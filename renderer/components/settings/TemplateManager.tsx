@@ -153,10 +153,9 @@ function SubGroup({ sectionKey, onActivate, label, children }: {
 
 // --- Block row in the Blocs panel ---------------------------------------------
 
-function BlockRow({ block, index, total, isEditing, onDragStart, onDragOver, onDrop, onToggle, onEdit, onDelete }: {
+function BlockRow({ block, index, isEditing, onDragStart, onDragOver, onDrop, onToggle, onEdit, onDelete }: {
   block:       TemplateBlock;
   index:       number;
-  total:       number;
   isEditing:   boolean;
   onDragStart: (i: number) => void;
   onDragOver:  (e: React.DragEvent, i: number) => void;
@@ -383,7 +382,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
   }
 
   // -- Drag & drop ------------------------------------------------------------
-  function handleDragOver(e: React.DragEvent, targetIdx: number) {
+  function handleDragOver(e: React.DragEvent, _targetIdx: number) {
     e.preventDefault();
   }
   function handleDrop(targetIdx: number) {
@@ -449,7 +448,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     if (importRef.current) importRef.current.value = '';
   }
 
-  const supportsLandscapeCopies = selected && (selected.format === 'a4-landscape' || selected.format === 'a5-portrait' || selected.format === 'a4-distributeur');
+  const supportsLandscapeCopies = selected && (selected.format === 'a4-landscape' || selected.format === 'a5-portrait');
   const isThermal      = selected?.format === 'thermal';
   const isDistributeur = selected?.format === 'a4-distributeur';
   const scale     = isThermal ? 0.65 : 0.45;
@@ -543,7 +542,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                     {blocks.map((block, i) => (
                       <div key={block.id}>
                         <BlockRow
-                          block={block} index={i} total={blocks.length}
+                          block={block} index={i}
                           isEditing={editingBlockId === block.id}
                           onDragStart={(idx) => { dragIdx.current = idx; }}
                           onDragOver={handleDragOver}
@@ -718,8 +717,10 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                 </div>
                 <button
                   onClick={() => {
-                    const win = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
-                    if (win) { win.document.open(); win.document.write(baseHtml); win.document.close(); }
+                    const blob = new Blob([baseHtml], { type: 'text/html' });
+                    const url  = URL.createObjectURL(blob);
+                    const win  = window.open(url, '_blank', 'width=900,height=700,scrollbars=yes');
+                    if (win) win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
                   }}
                   className="btn-secondary flex items-center gap-1.5 text-xs py-1"
                 >
