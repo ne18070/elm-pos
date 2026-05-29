@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Save, Loader2, Upload, ImageIcon, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Save, Loader2, Upload, ImageIcon, X, ToggleLeft, ToggleRight, Plus, Trash2, Clock } from 'lucide-react';
+import type { EcheanceRule } from '@/lib/invoice-templates';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { updateBusiness, uploadBusinessLogo, deleteBusinessLogo } from '@services/supabase/business';
@@ -14,6 +15,16 @@ export function BusinessSettingsSection() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  const DEFAULT_ECHEANCE_RULES: EcheanceRule[] = [
+    { max:    500_000, label: 'Paiement comptant'    },
+    { max:  1_000_000, label: 'Échéance : 2 jours'  },
+    { max:  2_500_000, label: 'Échéance : 5 jours'  },
+    { max: 10_000_000, label: 'Échéance : 7 jours'  },
+    { max: 20_000_000, label: 'Échéance : 10 jours' },
+    { max: 50_000_000, label: 'Échéance : 16 jours' },
+    {                  label: 'Échéance : 30 jours' },
+  ];
+
   const [form, setForm] = useState({
     name:           business?.name ?? '',
     public_slug:    business?.public_slug ?? '',
@@ -26,6 +37,13 @@ export function BusinessSettingsSection() {
     currency:       business?.currency ?? 'XOF',
     receipt_footer: business?.receipt_footer ?? '',
   });
+
+  const [echeanceEnabled, setEcheanceEnabled] = useState<boolean>(
+    (business?.brand_config?.echeance_enabled as boolean | undefined) ?? false
+  );
+  const [echeanceRules, setEcheanceRules] = useState<EcheanceRule[]>(
+    (business?.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE_RULES
+  );
 
   useEffect(() => {
     if (business) {
@@ -41,8 +59,29 @@ export function BusinessSettingsSection() {
         currency:       business.currency ?? 'XOF',
         receipt_footer: business.receipt_footer ?? '',
       });
+      setEcheanceEnabled((business.brand_config?.echeance_enabled as boolean | undefined) ?? false);
+      setEcheanceRules((business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE_RULES);
     }
   }, [business]);
+
+  const updateRule = useCallback((i: number, patch: Partial<EcheanceRule>) => {
+    setEcheanceRules(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+    setIsDirty(true);
+  }, []);
+
+  const addRule = useCallback(() => {
+    setEcheanceRules(prev => {
+      // Insert before the last (fallback) entry
+      const last = prev[prev.length - 1];
+      return [...prev.slice(0, -1), { max: undefined, label: '' }, last];
+    });
+    setIsDirty(true);
+  }, []);
+
+  const removeRule = useCallback((i: number) => {
+    setEcheanceRules(prev => prev.filter((_, idx) => idx !== i));
+    setIsDirty(true);
+  }, []);
 
   const handleChange = (patch: Partial<typeof form>) => {
     setForm(prev => ({ ...prev, ...patch }));
@@ -61,17 +100,25 @@ export function BusinessSettingsSection() {
     
     setSaving(true);
     try {
+      const brand_config = {
+        ...(business.brand_config ?? {}),
+        echeance_enabled: echeanceEnabled,
+        echeance_rules:   echeanceEnabled ? echeanceRules : undefined,
+      };
+
       await updateBusiness(business.id, {
         ...form,
         public_slug: slug,
         tax_rate: tax,
+        brand_config,
       });
-      
+
       setBusiness({
         ...business,
         ...form,
         public_slug: slug,
         tax_rate: tax,
+        brand_config,
       });
       
       setIsDirty(false);
@@ -244,6 +291,94 @@ export function BusinessSettingsSection() {
           rows={2}
           placeholder="Merci de votre visite !"
         />
+      </div>
+
+      {/* ── Échéance ─────────────────────────────────────────────────────── */}
+      <div className="pt-4 border-t border-surface-border space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-content-secondary" />
+            <span className="text-sm font-semibold text-content-primary">Échéance sur factures</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setEcheanceEnabled(v => !v); setIsDirty(true); }}
+            className="flex items-center gap-2 text-sm text-content-primary transition-colors"
+          >
+            {echeanceEnabled
+              ? <ToggleRight className="w-6 h-6 text-content-brand" />
+              : <ToggleLeft  className="w-6 h-6 text-content-muted" />}
+            <span className={echeanceEnabled ? 'text-content-brand font-medium' : 'text-content-muted'}>
+              {echeanceEnabled ? 'Activée' : 'Désactivée'}
+            </span>
+          </button>
+        </div>
+
+        {echeanceEnabled && (
+          <div className="rounded-xl border border-surface-border overflow-hidden">
+            <div className="bg-surface px-4 py-2 border-b border-surface-border">
+              <p className="text-xs text-content-secondary">
+                Règles appliquées du haut vers le bas. La dernière ligne (sans seuil) est le cas par défaut.
+              </p>
+            </div>
+
+            <div className="divide-y divide-surface-border">
+              {echeanceRules.map((rule, i) => {
+                const isLast = i === echeanceRules.length - 1;
+                return (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="flex items-center gap-2 flex-1">
+                      {!isLast ? (
+                        <>
+                          <span className="text-xs text-content-muted shrink-0">Si total &lt;</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={rule.max ?? ''}
+                            onChange={e => updateRule(i, { max: e.target.value ? Number(e.target.value) : undefined })}
+                            className="input w-32 text-right text-sm"
+                            placeholder="500000"
+                          />
+                          <span className="text-xs text-content-muted shrink-0">F →</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-content-muted shrink-0 w-[calc(128px+6rem)]">Sinon →</span>
+                      )}
+                      <input
+                        type="text"
+                        value={rule.label}
+                        onChange={e => updateRule(i, { label: e.target.value })}
+                        className="input flex-1 text-sm"
+                        placeholder="ex: Échéance : 7 jours"
+                      />
+                    </div>
+                    {!isLast && (
+                      <button
+                        type="button"
+                        onClick={() => removeRule(i)}
+                        className="p-1.5 rounded-lg text-content-muted hover:text-status-error hover:bg-badge-error transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="px-4 py-2 border-t border-surface-border">
+              <button
+                type="button"
+                onClick={addRule}
+                className="flex items-center gap-1.5 text-xs text-content-brand hover:text-content-brand/80 font-medium transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Ajouter une règle
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="pt-4 border-t border-surface-border">

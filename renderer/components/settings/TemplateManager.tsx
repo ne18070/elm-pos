@@ -52,11 +52,26 @@ const PRIMARY_PRESETS = ['#1e293b', '#1a1a2e', '#0f172a', '#1c1917', '#052e16', 
 const ACCENT_PRESETS  = ['#22c55e', '#4f46e5', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
 
 const FORMAT_LABELS: Record<TemplateConfig['format'], string> = {
-  thermal: 'Thermique 80mm', 'a4-landscape': 'A4 Paysage', 'a4-portrait': 'A4 Portrait', 'a5-portrait': 'A5',
+  thermal:           'Ticket thermique',
+  'a4-landscape':    'A4 Paysage',
+  'a4-portrait':     'A4 Portrait',
+  'a5-portrait':     'A5 Portrait',
+  'a4-distributeur': 'Facture Distributeur',
+};
+
+const FORMAT_DESC: Record<TemplateConfig['format'], string> = {
+  thermal:           'Imprimante à rouleau 80 mm. Reçu rapide pour clients en caisse.',
+  'a4-landscape':    'Feuille A4 en largeur, 1 ou 2 exemplaires côte à côte. Facture complète avec SKU, remises et signatures.',
+  'a4-portrait':     'Feuille A4 en hauteur, exemplaire unique. Idéal pour les devis et factures formelles.',
+  'a5-portrait':     'Format demi-A4. Compact, 1 ou 2 exemplaires. Bon compromis entre lisibilité et économie de papier.',
+  'a4-distributeur': 'Mise en page fixe : colonnes Réf · Qtés · PU · HT · TTC, TVA 18 %, échéance et montant en lettres. Format distributeur FMCG.',
 };
 const FORMAT_BADGE: Record<TemplateConfig['format'], string> = {
-  thermal: 'bg-badge-orange text-orange-300', 'a4-landscape': 'bg-badge-brand text-content-brand',
-  'a4-portrait': 'bg-badge-info text-blue-300', 'a5-portrait': 'bg-badge-purple text-status-purple',
+  thermal:           'bg-badge-orange text-orange-300',
+  'a4-landscape':    'bg-badge-brand text-content-brand',
+  'a4-portrait':     'bg-badge-info text-blue-300',
+  'a5-portrait':     'bg-badge-purple text-status-purple',
+  'a4-distributeur': 'bg-badge-success text-status-success',
 };
 
 const SECTION_HIGHLIGHT: Record<string, string | null> = {
@@ -434,8 +449,9 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
     if (importRef.current) importRef.current.value = '';
   }
 
-  const supportsLandscapeCopies = selected && (selected.format === 'a4-landscape' || selected.format === 'a5-portrait');
-  const isThermal = selected?.format === 'thermal';
+  const supportsLandscapeCopies = selected && (selected.format === 'a4-landscape' || selected.format === 'a5-portrait' || selected.format === 'a4-distributeur');
+  const isThermal      = selected?.format === 'thermal';
+  const isDistributeur = selected?.format === 'a4-distributeur';
   const scale     = isThermal ? 0.65 : 0.45;
   const iframeW   = isThermal ? '80mm' : '200%';
   const iframeH   = '900px';
@@ -506,8 +522,23 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
+                {/* -- Notice format fixe (Distributeur) -- */}
+                {isDistributeur && (
+                  <div className="rounded-xl border border-surface-border bg-surface-input p-4 space-y-2">
+                    <p className="text-sm font-semibold text-content-primary">Mise en page fixe</p>
+                    <p className="text-xs text-content-secondary leading-relaxed">
+                      Le format <strong>A4 Distributeur</strong> utilise une disposition prédéfinie :
+                      colonnes Réf · Désignation · Qtés · P.U · HT · TTC, deux exemplaires côte à côte (Client / Boutique),
+                      TVA 18 % calculée automatiquement, montant en lettres et échéance configurable dans les paramètres.
+                    </p>
+                    <p className="text-xs text-content-muted">
+                      Seul le <strong>nom du modèle</strong> est personnalisable ici. Le reste (en-tête, logo, pied de page) provient du profil de l&apos;établissement.
+                    </p>
+                  </div>
+                )}
+
                 {/* -- Blocs & ordre -- */}
-                <Section title="Blocs & ordre" defaultOpen>
+                {!isDistributeur && <Section title="Blocs & ordre" defaultOpen>
                   <div className="space-y-1.5">
                     {blocks.map((block, i) => (
                       <div key={block.id}>
@@ -539,7 +570,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                       <ImageIcon className="w-3.5 h-3.5" /> + Image
                     </button>
                   </div>
-                </Section>
+                </Section>}
 
                 {/* -- Général -- */}
                 <Section title="Général" sectionKey="general" onActivate={setActiveSection}>
@@ -550,11 +581,14 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   </div>
                   <div>
                     <label className="label">Format</label>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div className="grid grid-cols-1 gap-2 mt-1">
                       {(Object.keys(FORMAT_LABELS) as TemplateConfig['format'][]).map((f) => (
                         <button key={f} type="button" onClick={() => updateSelected({ format: f })}
-                          className={`px-3 py-2 rounded-lg border text-sm text-left transition-all ${selected.format === f ? 'border-brand-600 bg-brand-600/10 text-content-primary' : 'border-surface-border text-content-secondary hover:border-brand-600 hover:bg-surface-hover'}`}>
-                          {FORMAT_LABELS[f]}
+                          className={`px-3 py-2.5 rounded-lg border text-left transition-all ${selected.format === f ? 'border-brand-600 bg-brand-600/10' : 'border-surface-border hover:border-brand-600 hover:bg-surface-hover'}`}>
+                          <p className={`text-sm font-semibold ${selected.format === f ? 'text-content-primary' : 'text-content-secondary'}`}>
+                            {FORMAT_LABELS[f]}
+                          </p>
+                          <p className="text-xs text-content-muted mt-0.5 leading-snug">{FORMAT_DESC[f]}</p>
                         </button>
                       ))}
                     </div>
@@ -574,6 +608,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                   )}
                 </Section>
 
+                {!isDistributeur && <>
                 {/* -- Style -- */}
                 <Section title="Style" sectionKey="style" onActivate={setActiveSection}>
                   <ColorField label="Couleur principale (en-tête tableau)" value={selected.primaryColor}
@@ -665,6 +700,7 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                     </div>
                   </Section>
                 )}
+                </>}
 
               </div>
             </div>

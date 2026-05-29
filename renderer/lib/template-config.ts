@@ -1,4 +1,5 @@
 import type { Order, Business, LoyaltyReceiptData } from '../../types';
+import { generateDistributeurInvoice, type DistributeurInvoiceType } from './invoice-templates';
 
 // --- Block types --------------------------------------------------------------
 
@@ -54,7 +55,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
 export interface TemplateConfig {
   id:     string;
   name:   string;
-  format: 'thermal' | 'a4-landscape' | 'a4-portrait' | 'a5-portrait';
+  format: 'thermal' | 'a4-landscape' | 'a4-portrait' | 'a5-portrait' | 'a4-distributeur';
   copies: 1 | 2;
   blocks?: TemplateBlock[];
 
@@ -183,7 +184,45 @@ export const DEFAULT_A4_DUPLICATE: TemplateConfig = {
   copy2Color: '#4f46e5',
 };
 
-export const BUILTIN_TEMPLATES: TemplateConfig[] = [DEFAULT_THERMAL, DEFAULT_A4_DUPLICATE];
+export const DEFAULT_A4_DISTRIBUTEUR: TemplateConfig = {
+  id: 'a4-distributeur-default',
+  name: 'Facture Distributeur',
+  format: 'a4-distributeur',
+  copies: 2,
+  blocks: DEFAULT_BLOCKS.map(b => ({ ...b })),
+  primaryColor: '#1e293b',
+  accentColor: '#4f46e5',
+  fontFamily: 'sans',
+  showLogo: true,
+  showAddress: true,
+  showPhone: true,
+  showEmail: false,
+  headerExtra: '',
+  showReceiptNum: true,
+  showDate: true,
+  showCashier: true,
+  showCustomer: true,
+  showUnitPrice: true,
+  showItemDiscount: false,
+  showItemNotes: true,
+  showSubtotal: false,
+  showCoupon: false,
+  showTax: true,
+  showAmountInWords: true,
+  showPaymentDetails: true,
+  showChange: false,
+  showBalance: true,
+  showSignatures: true,
+  showQRCode: false,
+  footerText: '',
+  showCopyLabel: true,
+  copy1Label: '✦ EXEMPLAIRE CLIENT ✦',
+  copy2Label: '✦ EXEMPLAIRE BOUTIQUE ✦',
+  copy1Color: '#16a34a',
+  copy2Color: '#4f46e5',
+};
+
+export const BUILTIN_TEMPLATES: TemplateConfig[] = [DEFAULT_THERMAL, DEFAULT_A4_DUPLICATE, DEFAULT_A4_DISTRIBUTEUR];
 
 // --- Storage helpers ----------------------------------------------------------
 
@@ -710,8 +749,12 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
 
 export function renderTemplate(
   order: any, business: any, config: TemplateConfig,
-  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string; loyalty?: LoyaltyReceiptData }
+  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string; loyalty?: LoyaltyReceiptData },
+  docType?: DistributeurInvoiceType,
 ): string {
+  if (config.format === 'a4-distributeur') {
+    return generateDistributeurInvoice(order, business, docType ?? 'FACTURE');
+  }
   const isThermal = config.format === 'thermal';
   const isTwoCols = config.copies === 2 && (config.format === 'a4-landscape' || config.format === 'a5-portrait');
   const css   = isThermal ? thermalCss(config) : a4Css(config, isTwoCols);

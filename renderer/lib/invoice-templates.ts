@@ -1810,6 +1810,263 @@ ${data.notes ? `<hr><div class="label" style="font-style:italic">Note : ${data.n
 </body></html>`;
 }
 
+// --- Facture Distributeur (format ETSOMB) ------------------------------------
+// A4 paysage · 2 exemplaires côte à côte · colonnes Réf/Désignation/Qtés/PU/HT/TTC
+// Échéance automatique · TVA 18% · montant en lettres
+
+export type DistributeurInvoiceType = 'FACTURE' | 'BON DE FACTURE';
+
+// Règle d'échéance stockée dans business.brand_config.echeance_rules
+// Exemple : [{ max: 500000, label: "Paiement comptant" }, { max: 1000000, label: "Échéance : 2 jours" }, { label: "Échéance : 30 jours" }]
+// La dernière entrée (sans `max`) est le fallback.
+export interface EcheanceRule {
+  max?: number;   // seuil exclusif — si absent : s'applique à tout le reste
+  label: string;
+}
+
+const DEFAULT_ECHEANCE: EcheanceRule[] = [
+  { max:    500_000, label: 'Paiement comptant'    },
+  { max:  1_000_000, label: 'Échéance : 2 jours'  },
+  { max:  2_500_000, label: 'Échéance : 5 jours'  },
+  { max: 10_000_000, label: 'Échéance : 7 jours'  },
+  { max: 20_000_000, label: 'Échéance : 10 jours' },
+  { max: 50_000_000, label: 'Échéance : 16 jours' },
+  {                  label: 'Échéance : 30 jours' },
+];
+
+function echeance(total: number, business: Business): string {
+  const rules: EcheanceRule[] =
+    (business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE;
+  const match = rules.find(r => r.max == null || total < r.max);
+  return match?.label ?? rules[rules.length - 1]?.label ?? 'Paiement comptant';
+}
+
+// TTC → HT (hors TVA 18%)
+function toHT(ttc: number): number { return ttc / 1.18; }
+// TTC → montant TVA
+function toTVA(ttc: number): number { return ttc - toHT(ttc); }
+
+export function generateDistributeurInvoice(
+  order: Order,
+  business: Business,
+  type: DistributeurInvoiceType = 'FACTURE',
+): string {
+  const cur  = business.currency ?? 'XOF';
+  const paid = paidAmount(order);
+  const remaining = Math.max(0, order.total - paid);
+  const totalHT = toHT(order.total);
+  const totalTVA = toTVA(order.total);
+
+  function buildCopy(copyLabel: string, accent: string): string {
+    const rows = (order.items ?? []).map((item, idx) => {
+      const ref  = item.product?.sku ?? '';
+      const ttc  = item.total;
+      const ht   = toHT(ttc);
+      const bg   = idx % 2 === 0 ? '#fff' : '#f9fafb';
+      return `
+        <tr style="background:${bg}">
+          <td class="td-sm td-ref">${ref}</td>
+          <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:8px;color:#888;font-style:italic">${item.notes}</span>` : ''}</td>
+          <td class="td-sm td-c">${item.quantity}</td>
+          <td class="td-sm td-r">${fmt(item.price, cur)}</td>
+          <td class="td-sm td-r">${fmt(ht, cur)}</td>
+          <td class="td-sm td-r td-bold">${fmt(ttc, cur)}</td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <!-- EN-TÊTE -->
+      <div class="header">
+        <div class="biz">
+          ${business.logo_url ? `<img src="${business.logo_url}" class="logo">` : ''}
+          <div>
+            <div class="biz-name">${business.organization_name || business.denomination || business.name}</div>
+            ${(business.organization_name || business.denomination) !== business.name
+              ? `<div class="biz-sub">${business.denomination || business.name}</div>` : ''}
+            ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
+            ${business.phone   ? `<div class="biz-detail">${business.phone}</div>` : ''}
+            ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}
+          </div>
+        </div>
+        <div class="meta">
+          <div class="meta-num">${order.id.replace(/-/g,'').toUpperCase().slice(0,10)}</div>
+          <div class="meta-date">${fmtDate(order.created_at)}</div>
+          ${order.cashier?.full_name ? `<div class="meta-ref">${order.cashier.full_name}</div>` : ''}
+        </div>
+      </div>
+
+      <!-- CLIENT -->
+      <div class="client-row">
+        <div class="client-box">
+          <span class="lbl">Client : </span>
+          <span class="val-name">${order.customer_name ?? '—'}</span>
+          ${order.customer_phone ? `<span class="val-phone"> · ${order.customer_phone}</span>` : ''}
+        </div>
+      </div>
+
+      <!-- TITRE -->
+      <div class="doc-title">${type}</div>
+
+      <!-- TABLEAU -->
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th class="th th-ref">Réf.</th>
+            <th class="th th-left">Désignation</th>
+            <th class="th">Qtés</th>
+            <th class="th">P.U</th>
+            <th class="th">Montant HT</th>
+            <th class="th">Montant TTC</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr class="tfoot-row">
+            <td colspan="4" class="td-sm">TOTAL</td>
+            <td class="td-sm td-r td-bold">${fmt(totalHT, cur)}</td>
+            <td class="td-sm td-r td-bold">${fmt(order.total, cur)}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- PIED -->
+      <div class="footer-grid">
+        <div class="words-box">
+          <div class="words">
+            Arrêtée à la somme de :<br>
+            <strong>${amountInWords(order.total, cur)}</strong>
+          </div>
+          ${(business.brand_config?.echeance_enabled as boolean | undefined)
+              ? `<div class="echeance">${echeance(order.total, business)}</div>`
+              : ''}
+        </div>
+        <div class="totals-box">
+          <div class="tot-row">
+            <span>TOTAL HT :</span>
+            <span>${fmt(totalHT, cur)} F</span>
+          </div>
+          <div class="tot-row">
+            <span>TVA 18% :</span>
+            <span>${fmt(totalTVA, cur)} F</span>
+          </div>
+          <div class="tot-row tot-final">
+            <span>NET À PAYER :</span>
+            <span>${fmt(order.total, cur)} F</span>
+          </div>
+          ${paid > 0 ? `<div class="tot-row" style="color:#16a34a;font-size:8px">
+            <span>Reçu :</span><span>${fmt(paid, cur)} F</span></div>` : ''}
+          ${remaining > 0.01 ? `<div class="tot-row" style="color:#c0392b;font-size:8px">
+            <span>Reste dû :</span><span>${fmt(remaining, cur)} F</span></div>` : ''}
+        </div>
+      </div>
+
+      <!-- SIGNATURE -->
+      <div class="sig-row">
+        <div class="sig-box"><div class="sig-line"></div><p class="sig-lbl">Cachet et signature</p></div>
+      </div>
+
+      <!-- LABEL EXEMPLAIRE -->
+      <div class="copy-label" style="color:${accent};border-color:${accent}">${copyLabel}</div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>${type} — ${business.name}</title>
+<style>
+  @page { size: A4 landscape; margin: 5mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10px;
+    color: #1a1a1a;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    width: 100%;
+    min-height: 190mm;
+  }
+
+  .copy { padding: 5mm 6mm; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+  .copy:first-child { border-right: 2px dashed #aaa; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
+  .biz { display: flex; gap: 6px; align-items: flex-start; }
+  .logo { max-width: 70px; max-height: 50px; object-fit: contain; }
+  .biz-name { font-size: 12px; font-weight: 800; color: #111; }
+  .biz-sub { font-size: 9px; font-weight: 700; color: #333; }
+  .biz-detail { font-size: 8px; color: #666; line-height: 1.4; }
+  .meta { text-align: right; }
+  .meta-num { font-size: 11px; font-weight: 800; color: #111; }
+  .meta-date { font-size: 9px; color: #555; }
+  .meta-ref { font-size: 8px; color: #777; }
+
+  /* Client */
+  .client-row { margin: 3px 0; }
+  .client-box { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 4px; padding: 3px 8px; font-size: 9px; }
+  .lbl { color: #555; }
+  .val-name { font-weight: 700; font-size: 10px; }
+  .val-phone { color: #666; }
+
+  /* Titre document */
+  .doc-title {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border-top: 2px solid #111;
+    border-bottom: 2px solid #111;
+    padding: 2px 0;
+    margin: 3px 0;
+  }
+
+  /* Tableau */
+  .tbl { width: 100%; border-collapse: collapse; border: 2px solid #111; font-size: 9px; }
+  .th { background: #1e293b; color: #e2e8f0; padding: 3px 4px; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .th-left { text-align: left; }
+  .th-ref { text-align: left; width: 70px; }
+  .td-sm { padding: 2px 4px; border-top: 1px solid #ddd; border-right: 1px solid #ddd; vertical-align: top; }
+  .td-ref { width: 70px; font-family: monospace; font-size: 8px; color: #444; }
+  .td-c { text-align: center; font-weight: 600; }
+  .td-r { text-align: right; }
+  .td-bold { font-weight: 700; }
+  .tfoot-row { background: #e2e8f0; font-weight: 800; border-top: 2px solid #111; }
+  .tfoot-row td { padding: 3px 4px; border-right: 1px solid #aaa; }
+
+  /* Pied */
+  .footer-grid { display: grid; grid-template-columns: 1fr 180px; gap: 6px; margin-top: 5px; }
+  .words-box { border: 2px solid #111; border-radius: 4px; padding: 4px 6px; background: #f9fafb; }
+  .words { font-size: 8px; line-height: 1.5; color: #222; }
+  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #ccc; font-weight: 800; font-size: 9px; text-transform: uppercase; }
+  .totals-box { border: 2px solid #111; border-radius: 4px; padding: 4px 6px; background: #eff6ff; }
+  .tot-row { display: flex; justify-content: space-between; font-size: 9px; padding: 1px 0; }
+  .tot-final { font-weight: 800; font-size: 10px; border-top: 1px solid #111; padding-top: 3px; margin-top: 2px; }
+
+  /* Signature */
+  .sig-row { display: flex; justify-content: flex-end; margin-top: 6px; }
+  .sig-box { width: 120px; text-align: center; }
+  .sig-line { border-top: 1.5px solid #111; height: 22px; }
+  .sig-lbl { font-size: 8px; color: #555; margin-top: 2px; }
+
+  /* Exemplaire */
+  .copy-label {
+    text-align: center; font-size: 8px; font-weight: 800;
+    letter-spacing: .12em; text-transform: uppercase;
+    border: 1.5px solid; border-radius: 3px;
+    padding: 1px 6px; align-self: center; margin-top: auto;
+  }
+</style>
+</head><body>
+
+  <div class="copy">${buildCopy('✦ EXEMPLAIRE CLIENT ✦', '#16a34a')}</div>
+  <div class="copy">${buildCopy('✦ EXEMPLAIRE BOUTIQUE ✦', '#4f46e5')}</div>
+
+</body></html>`;
+}
+
 // --- Ouvrir et imprimer -------------------------------------------------------
 
 export function printHtml(html: string): void {

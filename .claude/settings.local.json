@@ -132,7 +132,8 @@
       "Bash(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\ETSOMB-FRONTEND\\\\src\\\\pages\" -Include \"*facture*\" -ErrorAction SilentlyContinue)",
       "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\api\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\" -or $_.Extension -eq \".tsx\"} | Select-Object -ExpandProperty FullName | Select-Object -First 20)",
       "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\services\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\" -or $_.Extension -eq \".tsx\"} | Select-Object -ExpandProperty FullName | Select-Object -First 30)",
-      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\api\\\\v1\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\"} | Select-Object -ExpandProperty FullName | Sort-Object)"
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\api\\\\v1\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\"} | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('include', d.get\\('compilerOptions',{}\\)\\), indent=2\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"
