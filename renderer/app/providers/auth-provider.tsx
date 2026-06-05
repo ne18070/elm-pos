@@ -170,8 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     checkSession();
 
+    // Debounce focus/online: coalesce rapid events into a single checkSession call
+    // to avoid hammering the auth lock on every window switch.
+    let focusTimer: ReturnType<typeof setTimeout> | null = null;
     const onFocus = () => {
-      checkSession().catch(() => {});
+      if (focusTimer) clearTimeout(focusTimer);
+      focusTimer = setTimeout(() => { checkSession().catch(() => {}); }, 300);
     };
 
     window.addEventListener('focus', onFocus);
@@ -195,8 +199,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .update({ email: session.user.email })
               .eq('id', session.user.id);
           } catch { /* non critique */ }
-          // Full reload picks up the merged authUser.email via checkSession
-          checkSession().catch(() => {});
+          // Use the session from the event directly — avoids a redundant getUser()
+          // network call (and its auth lock acquisition) on top of the one autoRefreshToken
+          // just completed.
+          if (!checkingRef.current) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            if (profile) await loadAllData(session.user, { ...profile, email: session.user.email ?? profile.email });
+          }
         }
 
         if ((event === 'SIGNED_OUT' || !session) && !isPublic(pathnameRef.current)) {
@@ -211,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('online', onFocus);
+      if (focusTimer) clearTimeout(focusTimer);
     };
   // checkSession est stable (ses deps sont des actions Zustand + router — jamais recréés).
   // Ne pas mettre pathname ici : évite de relancer checkSession() à chaque navigation.

@@ -133,7 +133,11 @@
       "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\api\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\" -or $_.Extension -eq \".tsx\"} | Select-Object -ExpandProperty FullName | Select-Object -First 20)",
       "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\services\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\" -or $_.Extension -eq \".tsx\"} | Select-Object -ExpandProperty FullName | Select-Object -First 30)",
       "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\elm-pos\\\\renderer\\\\app\\\\api\\\\v1\" -ErrorAction SilentlyContinue | Where-Object {$_.Extension -eq \".ts\"} | Select-Object -ExpandProperty FullName | Sort-Object)",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('include', d.get\\('compilerOptions',{}\\)\\), indent=2\\)\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('include', d.get\\('compilerOptions',{}\\)\\), indent=2\\)\\)\")",
+      "Bash(grep -v \"^$\")",
+      "PowerShell(cd \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\ETSOMB-FRONTEND\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"shortid|byString|currency\\\\.js|helpers\\\\.ts|SelectAsync|AutoComplete|OrderForm|useMoney|calculate\\\\.ts\" } | Select-Object -First 20)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\ETSOMB-FRONTEND\"; $result = npx tsc --noEmit 2>&1; $result | Where-Object { $_ -notmatch \"shortid|byString|currency|helpers\\\\.ts|SelectAsync|AutoCompleteAsync|OrderForm|useMoney|calculate\" } | Select-Object -First 20)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); deps=d.get\\('dependencies',{}\\); print\\(deps.get\\('@supabase/supabase-js','not found'\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"
