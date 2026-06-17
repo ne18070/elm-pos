@@ -137,7 +137,10 @@
       "Bash(grep -v \"^$\")",
       "PowerShell(cd \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\ETSOMB-FRONTEND\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"shortid|byString|currency\\\\.js|helpers\\\\.ts|SelectAsync|AutoComplete|OrderForm|useMoney|calculate\\\\.ts\" } | Select-Object -First 20)",
       "PowerShell(Set-Location \"C:\\\\Users\\\\lamine-m\\\\Documents\\\\build\\\\PERSO\\\\ETSOMB-FRONTEND\"; $result = npx tsc --noEmit 2>&1; $result | Where-Object { $_ -notmatch \"shortid|byString|currency|helpers\\\\.ts|SelectAsync|AutoCompleteAsync|OrderForm|useMoney|calculate\" } | Select-Object -First 20)",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); deps=d.get\\('dependencies',{}\\); print\\(deps.get\\('@supabase/supabase-js','not found'\\)\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); deps=d.get\\('dependencies',{}\\); print\\(deps.get\\('@supabase/supabase-js','not found'\\)\\)\")",
+      "Bash(mkdir -p \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/commands\")",
+      "Bash(mv \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/skills/\"* \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/commands/\")",
+      "Bash(rmdir \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/skills\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"
