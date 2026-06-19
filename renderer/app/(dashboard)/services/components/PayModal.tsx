@@ -7,7 +7,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { useCashSessionStore } from '@/store/cashSession';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
-import { payServiceOrder, type ServiceOrder } from '@services/supabase/service-orders';
+import { payServiceOrder, saveDelayNote, type ServiceOrder } from '@services/supabase/service-orders';
 import { getLoyaltyConfig, getClientBalance, redeemPoints, type LoyaltyConfig } from '@services/supabase/loyalty';
 import { computeChange, suggestRoundAmounts } from '@domain/payment.service';
 
@@ -30,6 +30,13 @@ export function PayModal({ order, currency, onClose, onPaid }: {
   const { error: notifError }  = useNotificationStore();
 
   const balance = order.total - order.paid_amount;
+
+  const paymentDelayDays = order.finished_at
+    ? Math.floor((Date.now() - new Date(order.finished_at).getTime()) / 86_400_000)
+    : null;
+  const hasDelay = paymentDelayDays !== null && paymentDelayDays >= 1;
+
+  const [delayNote, setDelayNote] = useState(order.delay_note ?? '');
 
   const [amount,    setAmount]    = useState(String(balance));
   const [method,    setMethod]    = useState<ServicePayMethod>('cash');
@@ -110,6 +117,10 @@ export function PayModal({ order, currency, onClose, onPaid }: {
         ? await payServiceOrder(order.id, loyaltyDiscount, 'loyalty', { userId: user?.id, userName: user?.full_name })
         : await payServiceOrder(order.id, parsedAmount, method, { userId: user?.id, userName: user?.full_name });
 
+      if (hasDelay && delayNote.trim()) {
+        await saveDelayNote(order.id, delayNote);
+      }
+
       onPaid();
 
       if (payResult.loyaltyError) {
@@ -135,6 +146,29 @@ export function PayModal({ order, currency, onClose, onPaid }: {
         </div>
 
         <div className="p-5 space-y-4">
+
+          {/* Retard d'encaissement */}
+          {hasDelay && (
+            <div className="rounded-xl bg-status-warning/10 border border-status-warning/30 overflow-hidden">
+              <div className="p-3 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-status-warning leading-relaxed">
+                  <strong>Paiement en retard.</strong>{' '}
+                  Cet OT est terminé depuis{' '}
+                  {paymentDelayDays === 1 ? 'hier' : `${paymentDelayDays} jours`}.
+                </p>
+              </div>
+              <div className="px-3 pb-3">
+                <textarea
+                  value={delayNote}
+                  onChange={e => setDelayNote(e.target.value)}
+                  placeholder="Expliquez le motif du retard (optionnel)…"
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-surface-input border border-status-warning/30 text-content-primary text-xs resize-none placeholder:text-content-muted focus:outline-none focus:border-status-warning"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Alerte session caisse */}
           {!cashSession && (

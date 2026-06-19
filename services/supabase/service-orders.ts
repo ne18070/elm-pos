@@ -89,6 +89,7 @@ export interface ServiceOrder {
   created_at:       string;
   client_rating?:   number | null;
   client_feedback?: string | null;
+  delay_note?:      string | null;
   items?:           ServiceOrderItem[];
   payments?:        ServiceOrderPayment[];
 }
@@ -402,6 +403,26 @@ export async function getDistinctServiceClients(businessId: string): Promise<Ser
     });
   }
   return Array.from(seen.values());
+}
+
+/** Retourne le nombre d'OT "termine" non encore encaissés. */
+export async function getUnpaidTerminatedCount(businessId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('service_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .eq('status', 'termine');
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/** Sauvegarde la note explicative du retard d'encaissement sur un OT. */
+export async function saveDelayNote(id: string, note: string): Promise<void> {
+  const { error } = await supabase
+    .from('service_orders')
+    .update({ delay_note: note.trim() || null } as any)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 /** Retourne le nombre d'OT "en_cours" démarrés avant il y a `days` jours calendaires. */

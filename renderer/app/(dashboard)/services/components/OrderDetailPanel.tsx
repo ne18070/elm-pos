@@ -486,6 +486,14 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
             </div>
           )}
 
+          {/* Note de retard de paiement */}
+          {!editing && order.delay_note && (
+            <div className="rounded-xl bg-status-warning/10 border border-status-warning/30 p-4">
+              <p className="text-xs text-status-warning font-semibold uppercase tracking-wider mb-1">Motif du retard d'encaissement</p>
+              <p className="text-sm text-status-warning italic">{order.delay_note}</p>
+            </div>
+          )}
+
           {/* Timeline */}
           {!editing && (
             <div className="rounded-xl border border-surface-border overflow-hidden">

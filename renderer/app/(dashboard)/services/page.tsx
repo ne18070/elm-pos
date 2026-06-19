@@ -14,6 +14,7 @@ import {
   type ServiceOrderStatus,
   getServiceOrderById,
   getStaleOrderCount,
+  getUnpaidTerminatedCount,
 } from '@services/supabase/service-orders';
 
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
@@ -58,6 +59,7 @@ export default function ServicesPage() {
   const [copied, setCopied] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
   const [staleCount, setStaleCount] = useState(0);
+  const [unpaidTerminatedCount, setUnpaidTerminatedCount] = useState(0);
   const [staleDays, setStaleDays] = useState<number>(() =>
     Math.max(1, business?.brand_config?.stale_ot_days ?? 3),
   );
@@ -73,6 +75,7 @@ export default function ServicesPage() {
   useEffect(() => {
     if (!businessId) return;
     getStaleOrderCount(businessId, staleDays).then(setStaleCount).catch(() => {});
+    getUnpaidTerminatedCount(businessId).then(setUnpaidTerminatedCount).catch(() => {});
   }, [businessId, refreshTrigger, staleDays]);
 
   useEffect(() => {
@@ -191,18 +194,18 @@ export default function ServicesPage() {
           {canCreateOrder && (
             <div className="flex items-center gap-1 flex-1 sm:flex-none">
               <button
-                onClick={() => { if (!staleCount) setShowNewOT(true); }}
-                disabled={staleCount > 0}
-                title={staleCount > 0 ? `${staleCount} OT en cours depuis +${staleDays} j — clôturez-les avant d'en créer un nouveau` : undefined}
+                onClick={() => { if (!staleCount && !unpaidTerminatedCount) setShowNewOT(true); }}
+                disabled={staleCount > 0 || unpaidTerminatedCount > 0}
+                title={staleCount > 0 ? `${staleCount} OT en cours depuis +${staleDays} j — clôturez-les avant d'en créer un nouveau` : unpaidTerminatedCount > 0 ? `${unpaidTerminatedCount} OT terminé(s) non encaissé(s) — payez-les avant d'en créer un nouveau` : undefined}
                 className={cn(
                   'flex flex-1 items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors',
-                  staleCount > 0
+                  staleCount > 0 || unpaidTerminatedCount > 0
                     ? 'bg-status-warning/20 text-status-warning border border-status-warning/40 cursor-not-allowed'
                     : 'bg-brand-500 hover:bg-brand-600 text-white',
                 )}
               >
                 <Plus className="w-4 h-4" />Nouvel OT
-                {staleCount > 0 && <span className="ml-1 rounded-full bg-status-warning text-white text-[10px] font-bold px-1.5 py-0.5">{staleCount}</span>}
+                {(staleCount > 0 || unpaidTerminatedCount > 0) && <span className="ml-1 rounded-full bg-status-warning text-white text-[10px] font-bold px-1.5 py-0.5">{staleCount + unpaidTerminatedCount}</span>}
               </button>
               {/* Gear to configure the stale-days threshold */}
               <div ref={cfgRef} className="relative shrink-0">
@@ -252,6 +255,15 @@ export default function ServicesPage() {
           </span>
         </div>
       )}
+      {unpaidTerminatedCount > 0 && (
+        <div className="bg-status-warning/10 border-b border-status-warning/30 px-4 py-2 flex items-center gap-2 text-status-warning text-xs font-medium shrink-0">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            <strong>{unpaidTerminatedCount} OT « terminé »</strong> non encaissé{unpaidTerminatedCount > 1 ? 's' : ''}.
+            Payez-les avant de créer un nouvel OT.
+          </span>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex items-center gap-1 overflow-x-auto px-4 py-1 bg-surface-card border-b border-surface-border shrink-0 md:px-4">
@@ -291,7 +303,7 @@ export default function ServicesPage() {
                 setSelectedOrder(order);
               }
             }}
-            onNewOrder={() => { if (!staleCount) setShowNewOT(true); }}
+            onNewOrder={() => { if (!staleCount && !unpaidTerminatedCount) setShowNewOT(true); }}
             onPrintOrder={handlePrintOrder}
             printingOrderId={printingOrderId}
             refreshTrigger={refreshTrigger}
