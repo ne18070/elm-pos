@@ -413,7 +413,7 @@ export async function getUnpaidTerminatedCount(businessId: string): Promise<numb
     .select('id', { count: 'exact', head: true })
     .eq('business_id', businessId)
     .eq('status', 'termine')
-    .eq('is_credit', false);
+    .eq('is_credit' as any, false);
   if (error) return 0;
   return count ?? 0;
 }
