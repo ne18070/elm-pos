@@ -90,6 +90,7 @@ export interface ServiceOrder {
   client_rating?:   number | null;
   client_feedback?: string | null;
   delay_note?:      string | null;
+  is_credit?:       boolean | null;
   items?:           ServiceOrderItem[];
   payments?:        ServiceOrderPayment[];
 }
@@ -405,15 +406,25 @@ export async function getDistinctServiceClients(businessId: string): Promise<Ser
   return Array.from(seen.values());
 }
 
-/** Retourne le nombre d'OT "termine" non encore encaissés. */
+/** Retourne le nombre d'OT "termine" non encore encaissés (hors crédits accordés). */
 export async function getUnpaidTerminatedCount(businessId: string): Promise<number> {
   const { count, error } = await supabase
     .from('service_orders')
     .select('id', { count: 'exact', head: true })
     .eq('business_id', businessId)
-    .eq('status', 'termine');
+    .eq('status', 'termine')
+    .eq('is_credit', false);
   if (error) return 0;
   return count ?? 0;
+}
+
+/** Bascule le flag crédit d'un OT. */
+export async function toggleServiceOrderCredit(id: string, isCredit: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('service_orders')
+    .update({ is_credit: isCredit } as any)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 /** Sauvegarde la note explicative du retard d'encaissement sur un OT. */

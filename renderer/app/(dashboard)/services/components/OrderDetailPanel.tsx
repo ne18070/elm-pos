@@ -12,7 +12,7 @@ import { cn, formatCurrency, fmtInTz } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
   updateServiceOrderStatus, cancelServiceOrder, updateServiceOrder,
-  getOrCreateServiceTechnicianToken,
+  getOrCreateServiceTechnicianToken, toggleServiceOrderCredit,
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
@@ -257,6 +257,11 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
             <div className="flex items-center gap-2 flex-wrap">
               <OTNumber n={order.order_number} />
               <StatusBadge status={order.status} />
+              {order.is_credit && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                  Crédit
+                </span>
+              )}
               {order.subject_type && <SubjectTypePill type={order.subject_type} />}
             </div>
             {order.subject_ref && <p className="text-sm font-mono font-bold text-content-primary mt-0.5">{order.subject_ref}</p>}
@@ -629,13 +634,37 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                   </button>
                 )}
                 {canCollectPayment && order.status === 'termine' && (
-                  <button 
+                  <button
                     onClick={() => setShowPay(true)}
                     disabled={!cashSession}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-status-success hover:opacity-90 text-white text-sm font-bold disabled:bg-surface-input disabled:text-content-muted disabled:cursor-not-allowed"
                     title={!cashSession ? 'Ouvrez une session de caisse pour encaisser' : undefined}
                   >
                     <CreditCard className="w-4 h-4" />Encaisser
+                  </button>
+                )}
+                {canUpdateStatus && order.status === 'termine' && (
+                  <button
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await toggleServiceOrderCredit(order.id, !order.is_credit);
+                        onRefresh?.();
+                      } catch (e: any) {
+                        notifError(toUserError(e));
+                      } finally { setBusy(false); }
+                    }}
+                    disabled={busy}
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors disabled:opacity-40',
+                      order.is_credit
+                        ? 'bg-blue-500/15 border-blue-500/30 text-blue-400 hover:bg-blue-500/25'
+                        : 'border-surface-border text-content-secondary hover:bg-surface-hover',
+                    )}
+                    title={order.is_credit ? 'Retirer le statut crédit' : 'Marquer comme paiement différé (crédit)'}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    {order.is_credit ? 'Crédit ✓' : 'Crédit'}
                   </button>
                 )}
                 {canCancelOrder && order.status !== 'paye' && order.status !== 'annule' && (

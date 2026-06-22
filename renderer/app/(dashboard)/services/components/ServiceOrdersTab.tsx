@@ -246,7 +246,12 @@ export function ServiceOrdersTab({
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <OTNumber n={order.order_number} />
-                      <StatusBadge status={order.status} />
+                      <div className="flex items-center gap-1.5">
+                        {order.is_credit && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400">Crédit</span>
+                        )}
+                        <StatusBadge status={order.status} />
+                      </div>
                     </div>
 
                     {order.subject_ref && (
@@ -373,7 +378,14 @@ export function ServiceOrdersTab({
                             {items.length > 2 ? ` +${items.length - 2}` : ''}
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.status} /></td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {order.is_credit && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400">Crédit</span>
+                            )}
+                            <StatusBadge status={order.status} />
+                          </div>
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3">
                           {order.client_rating ? (
                             <div className="flex gap-0.5">
