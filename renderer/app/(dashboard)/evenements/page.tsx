@@ -151,9 +151,11 @@ export default function EvenementsPage() {
               <option key={ev.id} value={ev.id}>{ev.name}</option>
             ))}
           </select>
-          <button onClick={() => setShowNewEvent(true)} className="btn-secondary h-9 text-sm flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> Événement
-          </button>
+          {can('manage_evenements') && (
+            <button onClick={() => setShowNewEvent(true)} className="btn-secondary h-9 text-sm flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> Événement
+            </button>
+          )}
           {eventId && can('manage_evenements') && (
             <button onClick={() => setShowImport(true)} className="btn-primary h-9 text-sm flex items-center gap-1.5">
               <Upload className="w-4 h-4" /> Importer
@@ -173,12 +175,16 @@ export default function EvenementsPage() {
             <div>
               <p className="text-lg font-semibold text-content-primary">Aucun événement</p>
               <p className="text-sm text-content-secondary mt-1 max-w-sm">
-                Créez un événement puis importez la liste de vos invités pour démarrer le check-in.
+                {can('manage_evenements')
+                  ? "Créez un événement puis importez la liste de vos invités pour démarrer le check-in."
+                  : "Aucun événement n'est disponible pour le moment. Contactez un administrateur."}
               </p>
             </div>
-            <button onClick={() => setShowNewEvent(true)} className="btn-primary flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Créer un événement
-            </button>
+            {can('manage_evenements') && (
+              <button onClick={() => setShowNewEvent(true)} className="btn-primary flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Créer un événement
+              </button>
+            )}
           </div>
         )}
 
