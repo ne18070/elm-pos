@@ -1604,6 +1604,111 @@ export type Database = {
         }
         Relationships: []
       }
+      event_guests: {
+        Row: {
+          business_id: string
+          category: string | null
+          checked_in_at: string | null
+          checked_in_by: string | null
+          company: string | null
+          created_at: string
+          event_id: string
+          full_name: string
+          id: string
+          notes: string | null
+          pass_code: string | null
+          phone: string | null
+          status: string
+        }
+        Insert: {
+          business_id: string
+          category?: string | null
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          company?: string | null
+          created_at?: string
+          event_id: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          pass_code?: string | null
+          phone?: string | null
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          category?: string | null
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          company?: string | null
+          created_at?: string
+          event_id?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          pass_code?: string | null
+          phone?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_guests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_guests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_guests_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          business_id: string
+          created_at: string
+          event_date: string | null
+          id: string
+          location: string | null
+          name: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       honoraires_cabinet: {
         Row: {
           business_id: string
@@ -5840,6 +5945,7 @@ export type Database = {
       auto_snapshot_all_businesses: { Args: never; Returns: undefined }
       cancel_order: { Args: { p_order_id: string }; Returns: undefined }
       check_email_exists: { Args: { p_email: string }; Returns: boolean }
+      check_in_guest: { Args: { p_guest_id: string }; Returns: unknown }
       check_rate_limit: {
         Args: { p_key: string; p_max_count: number; p_window_seconds?: number }
         Returns: boolean

@@ -2,7 +2,7 @@ import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
-  GraduationCap, DatabaseZap, Bot
+  GraduationCap, DatabaseZap, Bot, Ticket
 } from 'lucide-react';
 import type { PermissionKey } from './permissions';
 import type { BusinessType } from '@pos-types';
@@ -94,6 +94,13 @@ const S_FINANCE: NavSection = {
   ],
 };
 
+const S_EVENEMENTS: NavSection = {
+  label: 'Événements',
+  items: [
+    { href: '/evenements', icon: Ticket, label: 'Check-in Invités', permission: 'view_evenements' },
+  ],
+};
+
 const S_ADMIN: NavSection = {
   label: 'Administration',
   items: [
@@ -112,12 +119,12 @@ const S_ADMIN: NavSection = {
 // ─── Nav par type d'établissement ─────────────────────────────────────────────
 
 export const NAV_BY_TYPE: Record<BusinessType, NavSection[]> = {
-  retail:     [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_ADMIN],
-  restaurant: [S_VENTES_SIMPLE, S_RESTAURATION, S_STOCK, S_LIVRAISON, S_FINANCE, S_ADMIN],
-  hotel:      [S_VENTES_SIMPLE, S_HEBERGEMENT, S_RESTAURATION, S_STOCK, S_FINANCE, S_ADMIN],
-  service:    [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_ADMIN],
-  juridique:  [S_JURIDIQUE,     S_FINANCE,  S_ADMIN],
-  education:  [S_SCOLARITE,     S_FINANCE,  S_ADMIN],
+  retail:     [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
+  restaurant: [S_VENTES_SIMPLE, S_RESTAURATION, S_STOCK, S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
+  hotel:      [S_VENTES_SIMPLE, S_HEBERGEMENT, S_RESTAURATION, S_STOCK, S_FINANCE, S_EVENEMENTS, S_ADMIN],
+  service:    [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
+  juridique:  [S_JURIDIQUE,     S_FINANCE,  S_EVENEMENTS, S_ADMIN],
+  education:  [S_SCOLARITE,     S_FINANCE,  S_EVENEMENTS, S_ADMIN],
 };
 
 export function getNavSections(type: BusinessType | null | undefined): NavSection[] {

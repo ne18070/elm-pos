@@ -52,6 +52,8 @@ const PERMISSIONS_MAP = {
   add_grade:              { label: 'Saisir les notes',             group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'notes' },
 
   view_whatsapp:          { label: 'Accès support WhatsApp',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'whatsapp' },
+  view_evenements:        { label: 'Accès gestion événements',     group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'evenements' },
+  manage_evenements:      { label: 'Gérer événements & invités',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'evenements' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
   view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
 
