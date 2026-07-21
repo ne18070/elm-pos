@@ -1,5 +1,6 @@
 # ELM APP — Caisse Multi-Établissements
 
+
 Système de caisse (POS) **desktop + web** complet, production-grade, multi-établissements.
 Construit avec **Electron + Next.js + Supabase**.
 
