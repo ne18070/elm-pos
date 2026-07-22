@@ -38,6 +38,7 @@ export default function EvenementsPage() {
 
   const [selected, setSelected] = useState<EventGuest | null>(null);
   const [checking, setChecking] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'used'>('all');
 
   const [showImport, setShowImport]     = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
@@ -88,16 +89,30 @@ export default function EvenementsPage() {
     finally { setSavingEvent(false); }
   }
 
-  const results = useMemo(() => {
-    const term = normalize(query.trim());
-    if (term.length < 2) return [];
-    return guests
-      .filter((g) => normalize(g.full_name).includes(term) || (g.company && normalize(g.company).includes(term)))
-      .slice(0, 25);
-  }, [guests, query]);
-
   const total  = guests.length;
   const used   = guests.filter((g) => g.status === 'used').length;
+  const pending = total - used;
+
+  const isSearching = query.trim().length >= 2;
+  const canBrowseList = can('manage_evenements');
+
+  const results = useMemo(() => {
+    const term = normalize(query.trim());
+    const byStatus = (g: EventGuest) => statusFilter === 'all' || g.status === statusFilter;
+    if (!isSearching) {
+      // La liste complète (avec filtre validé/non validé) est réservée à l'admin —
+      // le staff au poste de check-in reste sur la recherche rapide uniquement.
+      if (!canBrowseList) return [];
+      return guests
+        .filter(byStatus)
+        .sort((a, b) => a.full_name.localeCompare(b.full_name))
+        .slice(0, 300);
+    }
+    return guests
+      .filter(byStatus)
+      .filter((g) => normalize(g.full_name).includes(term) || (g.company && normalize(g.company).includes(term)))
+      .slice(0, 25);
+  }, [guests, query, statusFilter, isSearching, canBrowseList]);
 
   async function handleCheckIn(guest: EventGuest) {
     setChecking(true);
@@ -214,38 +229,66 @@ export default function EvenementsPage() {
               />
             </div>
 
-            {/* Résultats */}
-            {query.trim().length >= 2 && (
-              <div className="space-y-2">
-                {results.length === 0 && (
-                  <p className="text-center text-content-muted py-6">Aucun invité trouvé pour « {query} »</p>
-                )}
-                {results.map((g) => (
+            {/* Filtres de statut — réservé à l'admin/manager */}
+            {total > 0 && canBrowseList && (
+              <div className="flex items-center gap-2">
+                {([
+                  ['all',     `Tous (${total})`],
+                  ['pending', `Non validés (${pending})`],
+                  ['used',    `Validés (${used})`],
+                ] as const).map(([value, label]) => (
                   <button
-                    key={g.id}
-                    onClick={() => setSelected(g)}
-                    className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-all active:scale-[0.99]
-                      ${g.status === 'used'
-                        ? 'bg-badge-warning border-status-warning'
-                        : 'bg-surface-input border-surface-border hover:border-slate-500'}`}
+                    key={value}
+                    onClick={() => setStatusFilter(value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                      ${statusFilter === value
+                        ? 'bg-brand-600 border-brand-600 text-content-primary'
+                        : 'bg-surface-input border-surface-border text-content-secondary hover:text-content-primary'}`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-surface-card flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
-                      {g.full_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-content-primary truncate">{g.full_name}</p>
-                      <div className="flex items-center gap-2 text-xs text-content-secondary truncate">
-                        {g.company && <span className="truncate">{g.company}</span>}
-                        {g.phone && <span className="truncate">· {g.phone}</span>}
-                      </div>
-                    </div>
-                    {g.status === 'used'
-                      ? <span className="shrink-0 text-xs font-medium text-status-warning flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Déjà validé</span>
-                      : <span className="shrink-0 text-xs font-medium text-status-success">Valider →</span>}
+                    {label}
                   </button>
                 ))}
               </div>
             )}
+
+            {/* Résultats */}
+            <div className="space-y-2">
+              {results.length === 0 && (isSearching || canBrowseList) && (
+                <p className="text-center text-content-muted py-6">
+                  {isSearching ? <>Aucun invité trouvé pour « {query} »</> : 'Aucun invité pour ce filtre'}
+                </p>
+              )}
+              {results.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelected(g)}
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-all active:scale-[0.99]
+                    ${g.status === 'used'
+                      ? 'bg-badge-warning border-status-warning'
+                      : 'bg-surface-input border-surface-border hover:border-slate-500'}`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-surface-card flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
+                    {g.full_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-content-primary truncate">{g.full_name}</p>
+                    <div className="flex items-center gap-2 text-xs text-content-secondary truncate">
+                      {g.category && <span className="truncate">{g.category}</span>}
+                      {g.company && <span className="truncate">· {g.company}</span>}
+                      {g.phone && <span className="truncate">· {g.phone}</span>}
+                    </div>
+                  </div>
+                  {g.status === 'used'
+                    ? <span className="shrink-0 text-xs font-medium text-status-warning flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Déjà validé</span>
+                    : <span className="shrink-0 text-xs font-medium text-status-success">Valider →</span>}
+                </button>
+              ))}
+              {!isSearching && canBrowseList && guests.filter((g) => statusFilter === 'all' || g.status === statusFilter).length > 300 && (
+                <p className="text-center text-content-muted text-xs py-2">
+                  Affichage limité aux 300 premiers — utilisez la recherche pour affiner
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>
