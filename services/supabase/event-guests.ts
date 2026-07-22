@@ -74,7 +74,28 @@ export async function importGuests(
   businessId: string,
   eventId: string,
   rows: GuestImportRow[],
+  options?: { replace?: boolean; expectedExisting?: number },
 ): Promise<number> {
+  // Remplace la liste existante de l'événement — supprime aussi l'historique
+  // de check-in des invités déjà validés, donc à utiliser uniquement pour
+  // corriger un import erroné, pas pour ajouter des invités en cours d'événement.
+  if (options?.replace) {
+    const { data: deleted, error: delErr } = await supabase
+      .from('event_guests')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('business_id', businessId)
+      .select('id');
+    if (delErr) throw new Error(delErr.message);
+    // La RLS ne permet la suppression qu'aux owners/admins : si des invités
+    // existaient mais qu'aucun n'a été supprimé, l'utilisateur n'a pas les
+    // droits — mieux vaut bloquer que d'ajouter des doublons en silence.
+    if ((options.expectedExisting ?? 0) > 0 && (deleted?.length ?? 0) === 0) {
+      throw new Error(
+        "Impossible de remplacer la liste : seuls les propriétaires/administrateurs peuvent supprimer les invités existants. Demandez à un admin de le faire, ou décochez l'option pour ajouter à la liste actuelle."
+      );
+    }
+  }
   if (rows.length === 0) return 0;
   const payload = rows.map((r) => ({
     business_id: businessId,

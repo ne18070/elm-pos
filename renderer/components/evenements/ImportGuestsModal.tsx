@@ -7,10 +7,11 @@ import Papa from 'papaparse';
 import { importGuests, type GuestImportRow } from '@services/supabase/event-guests';
 
 interface ImportGuestsModalProps {
-  businessId: string;
-  eventId:    string;
-  onClose:    () => void;
-  onDone:     (count: number) => void;
+  businessId:    string;
+  eventId:       string;
+  existingCount: number;
+  onClose:       () => void;
+  onDone:        (count: number) => void;
 }
 
 // --- Détection des colonnes -----------------------------------------------------
@@ -91,7 +92,7 @@ function rowsToGuests(raw: Record<string, string>[], mapping: Record<MappableFie
     .filter((g) => g.full_name.length > 0);
 }
 
-export function ImportGuestsModal({ businessId, eventId, onClose, onDone }: ImportGuestsModalProps) {
+export function ImportGuestsModal({ businessId, eventId, existingCount, onClose, onDone }: ImportGuestsModalProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [rawRows, setRawRows]     = useState<Record<string, string>[] | null>(null);
   const [headers, setHeaders]     = useState<string[]>([]);
@@ -99,6 +100,7 @@ export function ImportGuestsModal({ businessId, eventId, onClose, onDone }: Impo
   const [fileName, setFileName]   = useState('');
   const [importing, setImporting] = useState(false);
   const [error, setError]         = useState<string | null>(null);
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
   function onParsed(rows: Record<string, string>[]) {
     const hdrs = rows.length > 0 ? Object.keys(rows[0]) : [];
@@ -152,7 +154,10 @@ export function ImportGuestsModal({ businessId, eventId, onClose, onDone }: Impo
     setImporting(true);
     setError(null);
     try {
-      const count = await importGuests(businessId, eventId, guests);
+      const count = await importGuests(businessId, eventId, guests, {
+        replace: replaceExisting,
+        expectedExisting: existingCount,
+      });
       onDone(count);
     } catch (e: any) {
       setError(e?.message ?? 'Erreur pendant l\'import');
@@ -200,6 +205,27 @@ export function ImportGuestsModal({ businessId, eventId, onClose, onDone }: Impo
           {error && (
             <div className="p-3 rounded-xl bg-badge-error border border-status-error text-sm text-status-error">
               {error}
+            </div>
+          )}
+
+          {existingCount > 0 && (
+            <div className="space-y-2">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={replaceExisting}
+                  onChange={(e) => setReplaceExisting(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 shrink-0"
+                />
+                <span className="text-sm text-content-primary">
+                  Remplacer les {existingCount} invité{existingCount > 1 ? 's' : ''} déjà importé{existingCount > 1 ? 's' : ''} pour cet événement
+                </span>
+              </label>
+              {replaceExisting && (
+                <p className="text-xs text-status-warning pl-6">
+                  Supprime définitivement la liste actuelle, y compris le statut des invités déjà validés à l&apos;entrée. À utiliser pour corriger un import erroné — pas pour ajouter des invités en cours d&apos;événement.
+                </p>
+              )}
             </div>
           )}
 
@@ -285,7 +311,11 @@ export function ImportGuestsModal({ businessId, eventId, onClose, onDone }: Impo
             className="btn-primary flex items-center gap-2 disabled:opacity-50"
           >
             {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {importing ? 'Import en cours…' : `Importer ${guests ? guests.length : 0} invité(s)`}
+            {importing
+              ? 'Import en cours…'
+              : replaceExisting
+                ? `Remplacer par ${guests ? guests.length : 0} invité(s)`
+                : `Importer ${guests ? guests.length : 0} invité(s)`}
           </button>
         </div>
       </div>

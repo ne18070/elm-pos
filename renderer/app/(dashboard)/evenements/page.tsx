@@ -408,6 +408,7 @@ export default function EvenementsPage() {
         <ImportGuestsModal
           businessId={business.id}
           eventId={eventId}
+          existingCount={guests.length}
           onClose={() => setShowImport(false)}
           onDone={(count) => {
             setShowImport(false);
