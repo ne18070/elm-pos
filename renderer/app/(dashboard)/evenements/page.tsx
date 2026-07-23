@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Upload, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users } from 'lucide-react';
+import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users } from 'lucide-react';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -23,6 +23,30 @@ function normalize(s: string): string {
       return code < COMBINING_DIACRITIC_MIN || code > COMBINING_DIACRITIC_MAX;
     })
     .join('');
+}
+
+function exportGuestsCSV(guests: EventGuest[], eventName: string) {
+  const header = 'nom,entreprise,telephone,categorie,statut,date_validation';
+  const rows = guests.map((g) =>
+    [
+      g.full_name,
+      g.company ?? '',
+      g.phone ?? '',
+      g.category ?? '',
+      g.status === 'used' ? 'Validé' : 'En attente',
+      g.checked_in_at ? new Date(g.checked_in_at).toLocaleString('fr-FR') : '',
+    ]
+      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+      .join(',')
+  );
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safeName = normalize(eventName).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'evenement';
+  a.download = `invites_${safeName}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 export default function EvenementsPage() {
@@ -174,6 +198,14 @@ export default function EvenementsPage() {
           {eventId && can('manage_evenements') && (
             <button onClick={() => setShowImport(true)} className="btn-primary h-9 text-sm flex items-center gap-1.5">
               <Upload className="w-4 h-4" /> Importer
+            </button>
+          )}
+          {eventId && can('manage_evenements') && guests.length > 0 && (
+            <button
+              onClick={() => exportGuestsCSV(guests, events.find((ev) => ev.id === eventId)?.name ?? 'evenement')}
+              className="btn-secondary h-9 text-sm flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" /> Exporter
             </button>
           )}
         </div>
