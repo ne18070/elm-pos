@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users } from 'lucide-react';
+import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -63,6 +63,8 @@ export default function EvenementsPage() {
   const [selected, setSelected] = useState<EventGuest | null>(null);
   const [checking, setChecking] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'used'>('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const [showImport, setShowImport]     = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
@@ -123,20 +125,19 @@ export default function EvenementsPage() {
   const results = useMemo(() => {
     const term = normalize(query.trim());
     const byStatus = (g: EventGuest) => statusFilter === 'all' || g.status === statusFilter;
-    if (!isSearching) {
-      // La liste complète (avec filtre validé/non validé) est réservée à l'admin —
-      // le staff au poste de check-in reste sur la recherche rapide uniquement.
-      if (!canBrowseList) return [];
-      return guests
-        .filter(byStatus)
-        .sort((a, b) => a.full_name.localeCompare(b.full_name))
-        .slice(0, 300);
-    }
+    // La liste complète (avec filtre validé/non validé) est réservée à l'admin —
+    // le staff au poste de check-in reste sur la recherche rapide uniquement.
+    if (!isSearching && !canBrowseList) return [];
     return guests
       .filter(byStatus)
-      .filter((g) => normalize(g.full_name).includes(term) || (g.company && normalize(g.company).includes(term)))
-      .slice(0, 25);
+      .filter((g) => !term || normalize(g.full_name).includes(term) || (g.company && normalize(g.company).includes(term)))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
   }, [guests, query, statusFilter, isSearching, canBrowseList]);
+
+  const totalPages     = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const paginatedGuests = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [query, statusFilter, eventId]);
 
   async function handleCheckIn(guest: EventGuest) {
     setChecking(true);
@@ -236,7 +237,7 @@ export default function EvenementsPage() {
         )}
 
         {eventId && (
-          <div className="max-w-2xl mx-auto space-y-5">
+          <div className="max-w-3xl mx-auto space-y-5">
 
             {/* Stats */}
             <div className="flex items-center justify-between px-1">
@@ -284,43 +285,113 @@ export default function EvenementsPage() {
             )}
 
             {/* Résultats */}
-            <div className="space-y-2">
-              {results.length === 0 && (isSearching || canBrowseList) && (
+            {results.length === 0 ? (
+              (isSearching || canBrowseList) && (
                 <p className="text-center text-content-muted py-6">
                   {isSearching ? <>Aucun invité trouvé pour « {query} »</> : 'Aucun invité pour ce filtre'}
                 </p>
-              )}
-              {results.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => setSelected(g)}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-all active:scale-[0.99]
-                    ${g.status === 'used'
-                      ? 'bg-badge-warning border-status-warning'
-                      : 'bg-surface-input border-surface-border hover:border-slate-500'}`}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-surface-card flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
-                    {g.full_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-content-primary truncate">{g.full_name}</p>
-                    <div className="flex items-center gap-2 text-xs text-content-secondary truncate">
-                      {g.category && <span className="truncate">{g.category}</span>}
-                      {g.company && <span className="truncate">· {g.company}</span>}
-                      {g.phone && <span className="truncate">· {g.phone}</span>}
+              )
+            ) : (
+              <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card flex flex-col">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-surface-border bg-surface-input text-[10px] font-black uppercase tracking-widest text-content-secondary">
+                      <th className="px-4 py-3 text-left">Invité</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">Entreprise</th>
+                      <th className="px-4 py-3 text-left hidden md:table-cell">Téléphone</th>
+                      <th className="px-4 py-3 text-left hidden lg:table-cell">Catégorie</th>
+                      <th className="px-4 py-3 text-right">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-border">
+                    {paginatedGuests.map((g) => (
+                      <tr
+                        key={g.id}
+                        onClick={() => setSelected(g)}
+                        className="group cursor-pointer hover:bg-surface-hover/40 transition-colors"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
+                              {g.full_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-content-primary truncate">{g.full_name}</p>
+                              <p className="text-xs text-content-secondary truncate sm:hidden">
+                                {[g.company, g.phone].filter(Boolean).join(' · ')}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-content-secondary hidden sm:table-cell truncate max-w-[160px]">
+                          {g.company || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-content-secondary hidden md:table-cell whitespace-nowrap">
+                          {g.phone || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-content-secondary hidden lg:table-cell">
+                          {g.category || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {g.status === 'used'
+                            ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
+                            : <span className="text-xs font-medium text-status-success group-hover:underline">Valider →</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-surface-border bg-surface-input text-sm">
+                    <span className="text-xs text-content-secondary">
+                      {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, results.length)} sur {results.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="p-1.5 rounded-lg border border-surface-border text-content-secondary hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                        .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                          if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((p, i) =>
+                          p === '...' ? (
+                            <span key={`ellipsis-${i}`} className="px-1 text-content-muted text-xs">…</span>
+                          ) : (
+                            <button
+                              key={p}
+                              onClick={() => setPage(p as number)}
+                              className={`min-w-[30px] h-[30px] rounded-lg text-xs font-semibold transition-colors ${
+                                page === p
+                                  ? 'bg-brand-600 text-white'
+                                  : 'border border-surface-border text-content-secondary hover:bg-surface-hover'
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          )
+                        )}
+                      <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="p-1.5 rounded-lg border border-surface-border text-content-secondary hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  {g.status === 'used'
-                    ? <span className="shrink-0 text-xs font-medium text-status-warning flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Déjà validé</span>
-                    : <span className="shrink-0 text-xs font-medium text-status-success">Valider →</span>}
-                </button>
-              ))}
-              {!isSearching && canBrowseList && guests.filter((g) => statusFilter === 'all' || g.status === statusFilter).length > 300 && (
-                <p className="text-center text-content-muted text-xs py-2">
-                  Affichage limité aux 300 premiers — utilisez la recherche pour affiner
-                </p>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
