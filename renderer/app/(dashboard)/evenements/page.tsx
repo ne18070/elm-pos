@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -293,7 +293,44 @@ export default function EvenementsPage() {
               )
             ) : (
               <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card flex flex-col">
-                <div className="overflow-x-auto">
+
+                {/* Mobile — liste empilée, tout tient à l'écran sans scroll horizontal */}
+                <div className="sm:hidden divide-y divide-surface-border">
+                  {paginatedGuests.map((g) => {
+                    const isActive = selected?.id === g.id;
+                    const isChecking = isActive && checking;
+                    return (
+                      <button
+                        key={g.id}
+                        onClick={() => setSelected(g)}
+                        aria-current={isActive}
+                        className={`w-full flex items-center gap-3 p-3 text-left transition-colors active:bg-surface-hover/70 border-l-4
+                          ${isActive ? 'bg-brand-500/10 border-l-brand-600' : 'border-l-transparent'}`}
+                      >
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold
+                          ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-content-brand'}`}>
+                          {g.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-content-primary truncate">{g.full_name}</p>
+                          <p className="text-xs text-content-secondary truncate">
+                            {[g.category, g.company, g.phone].filter(Boolean).join(' · ') || '—'}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          {isChecking
+                            ? <Loader2 className="w-4 h-4 animate-spin text-content-brand" />
+                            : g.status === 'used'
+                              ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
+                              : <span className="text-xs font-medium text-status-success">Valider →</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop / tablette — tableau complet */}
+                <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-surface-border bg-surface-input text-[10px] font-black uppercase tracking-widest text-content-secondary">
@@ -305,22 +342,25 @@ export default function EvenementsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
-                    {paginatedGuests.map((g) => (
+                    {paginatedGuests.map((g) => {
+                      const isActive = selected?.id === g.id;
+                      const isChecking = isActive && checking;
+                      return (
                       <tr
                         key={g.id}
                         onClick={() => setSelected(g)}
-                        className="group cursor-pointer hover:bg-surface-hover/40 transition-colors"
+                        aria-current={isActive}
+                        className={`group cursor-pointer transition-colors active:bg-surface-hover/70
+                          ${isActive ? 'bg-brand-500/10 border-l-4 border-l-brand-600' : 'border-l-4 border-l-transparent hover:bg-surface-hover/40'}`}
                       >
                         <td className="px-4 py-3 max-w-[220px]">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold
+                              ${isActive ? 'bg-brand-600 text-white' : 'bg-surface-input text-content-brand'}`}>
                               {g.full_name.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
                               <p className="font-semibold text-content-primary truncate">{g.full_name}</p>
-                              <p className="text-xs text-content-secondary truncate sm:hidden">
-                                {[g.company, g.phone].filter(Boolean).join(' · ')}
-                              </p>
                             </div>
                           </div>
                         </td>
@@ -334,12 +374,15 @@ export default function EvenementsPage() {
                           {g.category || '—'}
                         </td>
                         <td className="px-4 py-3 text-right whitespace-nowrap">
-                          {g.status === 'used'
-                            ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
-                            : <span className="text-xs font-medium text-status-success group-hover:underline">Valider →</span>}
+                          {isChecking
+                            ? <span className="inline-flex items-center gap-1 text-xs font-medium text-content-brand"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Validation…</span>
+                            : g.status === 'used'
+                              ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
+                              : <span className="text-xs font-medium text-status-success group-hover:underline">Valider →</span>}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
                 </div>

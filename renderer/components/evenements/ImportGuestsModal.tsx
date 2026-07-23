@@ -128,11 +128,25 @@ export function ImportGuestsModal({ businessId, eventId, existingCount, onClose,
       };
       reader.readAsArrayBuffer(file);
     } else {
-      Papa.parse<Record<string, string>>(file, {
-        header:         true,
-        skipEmptyLines: true,
-        complete: (res) => onParsed(res.data),
-      });
+      // Excel enregistre souvent le CSV en Windows-1252 (ANSI) plutôt qu'en UTF-8 —
+      // les accents deviennent des "�" si on décode en UTF-8 strict. On détecte
+      // l'encodage réel avant de parser.
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buffer = e.target!.result as ArrayBuffer;
+        let text: string;
+        try {
+          text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+        } catch {
+          text = new TextDecoder('windows-1252').decode(buffer);
+        }
+        Papa.parse<Record<string, string>>(text, {
+          header:         true,
+          skipEmptyLines: true,
+          complete: (res) => onParsed(res.data),
+        });
+      };
+      reader.readAsArrayBuffer(file);
     }
   }
 
