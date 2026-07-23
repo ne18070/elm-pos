@@ -293,14 +293,15 @@ export default function EvenementsPage() {
               )
             ) : (
               <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card flex flex-col">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr className="border-b border-surface-border bg-surface-input text-[10px] font-black uppercase tracking-widest text-content-secondary">
                       <th className="px-4 py-3 text-left">Invité</th>
                       <th className="px-4 py-3 text-left hidden sm:table-cell">Entreprise</th>
                       <th className="px-4 py-3 text-left hidden md:table-cell">Téléphone</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Catégorie</th>
-                      <th className="px-4 py-3 text-right">Statut</th>
+                      <th className="px-4 py-3 text-right whitespace-nowrap">Statut</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
@@ -310,7 +311,7 @@ export default function EvenementsPage() {
                         onClick={() => setSelected(g)}
                         className="group cursor-pointer hover:bg-surface-hover/40 transition-colors"
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 max-w-[220px]">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-xl bg-surface-input flex items-center justify-center shrink-0 text-sm font-bold text-content-brand">
                               {g.full_name.charAt(0).toUpperCase()}
@@ -329,10 +330,10 @@ export default function EvenementsPage() {
                         <td className="px-4 py-3 text-xs text-content-secondary hidden md:table-cell whitespace-nowrap">
                           {g.phone || '—'}
                         </td>
-                        <td className="px-4 py-3 text-xs text-content-secondary hidden lg:table-cell">
+                        <td className="px-4 py-3 text-xs text-content-secondary hidden lg:table-cell truncate max-w-[140px]">
                           {g.category || '—'}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
                           {g.status === 'used'
                             ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
                             : <span className="text-xs font-medium text-status-success group-hover:underline">Valider →</span>}
@@ -341,6 +342,7 @@ export default function EvenementsPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
 
                 {/* Pagination */}
                 {totalPages > 1 && (
