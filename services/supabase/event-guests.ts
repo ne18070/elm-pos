@@ -10,6 +10,7 @@ export interface EventItem {
   name:        string;
   event_date:  string | null;
   location:    string | null;
+  archived_at: string | null;
   created_at:  string;
 }
 
@@ -43,9 +44,35 @@ export interface GuestImportRow {
 
 export async function listEvents(businessId: string): Promise<EventItem[]> {
   const rows = await q<EventItem[]>(
-    supabase.from('events').select('*').eq('business_id', businessId).order('created_at', { ascending: false }),
+    supabase.from('events').select('*').eq('business_id', businessId).is('archived_at', null)
+      .order('created_at', { ascending: false }),
   );
   return rows ?? [];
+}
+
+export async function listArchivedEvents(businessId: string): Promise<EventItem[]> {
+  const rows = await q<EventItem[]>(
+    supabase.from('events').select('*').eq('business_id', businessId).not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false }),
+  );
+  return rows ?? [];
+}
+
+/** Masque l'événement de la liste active sans rien supprimer — réversible via unarchiveEvent. */
+export async function archiveEvent(businessId: string, eventId: string): Promise<void> {
+  await q(
+    supabase.from('events')
+      .update({ archived_at: new Date().toISOString() } as unknown as TablesInsert<'events'>)
+      .eq('id', eventId).eq('business_id', businessId),
+  );
+}
+
+export async function unarchiveEvent(businessId: string, eventId: string): Promise<void> {
+  await q(
+    supabase.from('events')
+      .update({ archived_at: null } as unknown as TablesInsert<'events'>)
+      .eq('id', eventId).eq('business_id', businessId),
+  );
 }
 
 export async function createEvent(
@@ -59,6 +86,26 @@ export async function createEvent(
       .select()
       .single(),
   );
+}
+
+/**
+ * Supprime un événement et, par cascade (ON DELETE CASCADE), tous ses invités
+ * et leur historique de check-in. La RLS restreint cette action aux
+ * owners/admins — si l'utilisateur n'a pas ce rôle, la suppression est
+ * silencieusement ignorée par la RLS (0 ligne affectée) : on le détecte pour
+ * ne pas laisser croire que l'événement a été supprimé.
+ */
+export async function deleteEvent(businessId: string, eventId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', eventId)
+    .eq('business_id', businessId)
+    .select('id');
+  if (error) throw new Error(error.message);
+  if ((data?.length ?? 0) === 0) {
+    throw new Error("Seuls les propriétaires/administrateurs peuvent supprimer un événement.");
+  }
 }
 
 // --- Guests -----------------------------------------------------------------------

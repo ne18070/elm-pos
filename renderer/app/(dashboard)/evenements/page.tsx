@@ -2,14 +2,16 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight, Loader2, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 import { ImportGuestsModal } from '@/components/evenements/ImportGuestsModal';
 import {
-  listEvents, createEvent, listGuests, checkInGuest, undoCheckIn,
+  listEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent, listArchivedEvents,
+  listGuests, checkInGuest, undoCheckIn,
   type EventItem, type EventGuest,
 } from '@services/supabase/event-guests';
 
@@ -53,12 +55,17 @@ export default function EvenementsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const can = useCan();
+  const { askConfirm, ConfirmDialog } = useConfirm();
 
   const [events, setEvents]     = useState<EventItem[]>([]);
   const [eventId, setEventId]   = useState<string | null>(null);
   const [guests, setGuests]     = useState<EventGuest[]>([]);
   const [loading, setLoading]   = useState(true);
   const [query, setQuery]       = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [showArchived, setShowArchived]     = useState(false);
+  const [archivedEvents, setArchivedEvents] = useState<EventItem[]>([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
 
   const [selected, setSelected] = useState<EventGuest | null>(null);
   const [checking, setChecking] = useState(false);
@@ -113,6 +120,64 @@ export default function EvenementsPage() {
       success('Événement créé');
     } catch (e) { notifError(toUserError(e)); }
     finally { setSavingEvent(false); }
+  }
+
+  function handleDeleteEvent(ev: EventItem) {
+    askConfirm(
+      `Supprimer définitivement « ${ev.name} » ? Tous ses invités et l'historique de check-in seront perdus.`,
+      async () => {
+        if (!business) return;
+        setDeleting(true);
+        try {
+          await deleteEvent(business.id, ev.id);
+          const remaining = events.filter((e) => e.id !== ev.id);
+          setEvents(remaining);
+          setEventId(remaining[0]?.id ?? null);
+          success('Événement supprimé');
+        } catch (e) { notifError(toUserError(e)); }
+        finally { setDeleting(false); }
+      },
+      { confirmLabel: 'Supprimer', danger: true }
+    );
+  }
+
+  function handleArchiveEvent(ev: EventItem) {
+    askConfirm(
+      `Archiver « ${ev.name} » ? Il n'apparaîtra plus dans la liste active mais ses invités et l'historique de check-in restent intacts — vous pourrez le restaurer depuis les archives.`,
+      async () => {
+        if (!business) return;
+        setDeleting(true);
+        try {
+          await archiveEvent(business.id, ev.id);
+          const remaining = events.filter((e) => e.id !== ev.id);
+          setEvents(remaining);
+          setEventId(remaining[0]?.id ?? null);
+          success('Événement archivé');
+        } catch (e) { notifError(toUserError(e)); }
+        finally { setDeleting(false); }
+      },
+      { confirmLabel: 'Archiver', danger: false }
+    );
+  }
+
+  async function openArchived() {
+    if (!business) return;
+    setShowArchived(true);
+    setLoadingArchived(true);
+    try {
+      setArchivedEvents(await listArchivedEvents(business.id));
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setLoadingArchived(false); }
+  }
+
+  async function handleUnarchive(ev: EventItem) {
+    if (!business) return;
+    try {
+      await unarchiveEvent(business.id, ev.id);
+      setArchivedEvents((prev) => prev.filter((e) => e.id !== ev.id));
+      setEvents((prev) => [{ ...ev, archived_at: null }, ...prev]);
+      success('Événement restauré');
+    } catch (e) { notifError(toUserError(e)); }
   }
 
   const total  = guests.length;
@@ -207,6 +272,35 @@ export default function EvenementsPage() {
               className="btn-secondary h-9 text-sm flex items-center gap-1.5"
             >
               <Download className="w-4 h-4" /> Exporter
+            </button>
+          )}
+          {can('manage_evenements') && (
+            <button onClick={openArchived} className="btn-secondary h-9 text-sm flex items-center gap-1.5">
+              <Archive className="w-4 h-4" /> Archives
+            </button>
+          )}
+          {eventId && can('manage_evenements') && (
+            <button
+              onClick={() => {
+                const ev = events.find((e) => e.id === eventId);
+                if (ev) handleArchiveEvent(ev);
+              }}
+              disabled={deleting}
+              className="btn-secondary h-9 text-sm flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Archive className="w-4 h-4" /> Archiver
+            </button>
+          )}
+          {eventId && can('manage_evenements') && (
+            <button
+              onClick={() => {
+                const ev = events.find((e) => e.id === eventId);
+                if (ev) handleDeleteEvent(ev);
+              }}
+              disabled={deleting}
+              className="h-9 px-3 text-sm rounded-xl border border-status-error text-status-error hover:bg-badge-error flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" /> Supprimer
             </button>
           )}
         </div>
@@ -565,6 +659,39 @@ export default function EvenementsPage() {
           }}
         />
       )}
+
+      {/* -- Événements archivés -- */}
+      <SideDrawer
+        isOpen={showArchived}
+        onClose={() => setShowArchived(false)}
+        title="Événements archivés"
+        maxWidth="max-w-sm"
+      >
+        {loadingArchived ? (
+          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-content-muted" /></div>
+        ) : archivedEvents.length === 0 ? (
+          <p className="text-center text-content-muted py-8 text-sm">Aucun événement archivé</p>
+        ) : (
+          <div className="space-y-2">
+            {archivedEvents.map((ev) => (
+              <div key={ev.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-surface-border bg-surface-input/30">
+                <div className="min-w-0">
+                  <p className="font-medium text-content-primary truncate">{ev.name}</p>
+                  {ev.event_date && <p className="text-xs text-content-secondary">{new Date(ev.event_date).toLocaleDateString('fr-FR')}</p>}
+                </div>
+                <button
+                  onClick={() => handleUnarchive(ev)}
+                  className="btn-secondary h-8 text-xs shrink-0 flex items-center gap-1.5"
+                >
+                  <ArchiveRestore className="w-3.5 h-3.5" /> Restaurer
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </SideDrawer>
+
+      <ConfirmDialog />
     </div>
   );
 }
