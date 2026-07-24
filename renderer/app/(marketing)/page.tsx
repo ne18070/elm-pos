@@ -26,10 +26,12 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
 import { displayCurrency } from '@/lib/utils';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 
 
 function Hero() {
-  const { user } = useAuthStore();
+  const { user, business } = useAuthStore();
+  const spaceHref = user ? getDefaultRoute(user.role, business) : '/login';
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center px-5 overflow-hidden bg-surface">
@@ -88,7 +90,7 @@ function Hero() {
           <div className="flex flex-col sm:flex-row items-start gap-3">
             {user ? (
               <Link
-                href="/pos"
+                href={spaceHref}
                 className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
               >
                 Accéder à mon espace <ArrowRight className="w-4 h-4" />
@@ -569,7 +571,8 @@ function Tarifs() {
 }
 
 function CtaFinal() {
-  const { user } = useAuthStore();
+  const { user, business } = useAuthStore();
+  const spaceHref = user ? getDefaultRoute(user.role, business) : '/login';
   return (
     <section className="py-24 px-5 bg-surface border-t border-surface-border">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
@@ -579,7 +582,7 @@ function CtaFinal() {
         </div>
         {user ? (
           <Link
-            href="/pos"
+            href={spaceHref}
             className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl text-sm transition-colors shrink-0"
           >
             Accéder à mon espace <ArrowRight className="w-4 h-4" />
