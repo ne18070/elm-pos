@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight, Loader2, Trash2, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Upload, Download, Search, Ticket, CheckCircle2, XCircle, Building2, Phone, Undo2, Users, ChevronLeft, ChevronRight, Loader2, Trash2, Archive, ArchiveRestore, Pencil } from 'lucide-react';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -10,8 +10,8 @@ import { useCan } from '@/hooks/usePermission';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
 import { ImportGuestsModal } from '@/components/evenements/ImportGuestsModal';
 import {
-  listEvents, createEvent, deleteEvent, archiveEvent, unarchiveEvent, listArchivedEvents,
-  listGuests, checkInGuest, undoCheckIn,
+  listEvents, createEvent, updateEvent, deleteEvent, archiveEvent, unarchiveEvent, listArchivedEvents,
+  listGuests, updateGuest, checkInGuest, undoCheckIn,
   type EventItem, type EventGuest,
 } from '@services/supabase/event-guests';
 
@@ -75,8 +75,13 @@ export default function EvenementsPage() {
 
   const [showImport, setShowImport]     = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({ name: '', event_date: '', location: '' });
   const [savingEvent, setSavingEvent]   = useState(false);
+
+  const [editingGuest, setEditingGuest] = useState<EventGuest | null>(null);
+  const [guestForm, setGuestForm] = useState({ full_name: '', company: '', phone: '', category: '' });
+  const [savingGuest, setSavingGuest]   = useState(false);
 
   useEffect(() => {
     if (!business) return;
@@ -108,18 +113,32 @@ export default function EvenementsPage() {
     if (!business || !newEvent.name.trim()) return;
     setSavingEvent(true);
     try {
-      const created = await createEvent(business.id, {
+      const payload = {
         name: newEvent.name.trim(),
         event_date: newEvent.event_date || null,
         location: newEvent.location.trim() || null,
-      });
-      setEvents((prev) => [created, ...prev]);
-      setEventId(created.id);
+      };
+      if (editingEventId) {
+        await updateEvent(business.id, editingEventId, payload);
+        setEvents((prev) => prev.map((e) => e.id === editingEventId ? { ...e, ...payload } : e));
+        success('Événement modifié');
+      } else {
+        const created = await createEvent(business.id, payload);
+        setEvents((prev) => [created, ...prev]);
+        setEventId(created.id);
+        success('Événement créé');
+      }
       setShowNewEvent(false);
+      setEditingEventId(null);
       setNewEvent({ name: '', event_date: '', location: '' });
-      success('Événement créé');
     } catch (e) { notifError(toUserError(e)); }
     finally { setSavingEvent(false); }
+  }
+
+  function openEditEvent(ev: EventItem) {
+    setEditingEventId(ev.id);
+    setNewEvent({ name: ev.name, event_date: ev.event_date ?? '', location: ev.location ?? '' });
+    setShowNewEvent(true);
   }
 
   function handleDeleteEvent(ev: EventItem) {
@@ -234,6 +253,36 @@ export default function EvenementsPage() {
     finally { setChecking(false); }
   }
 
+  function openEditGuest(g: EventGuest) {
+    setEditingGuest(g);
+    setGuestForm({
+      full_name: g.full_name,
+      company:   g.company ?? '',
+      phone:     g.phone ?? '',
+      category:  g.category ?? '',
+    });
+  }
+
+  async function handleSaveGuestEdit() {
+    if (!editingGuest || !guestForm.full_name.trim()) return;
+    setSavingGuest(true);
+    try {
+      const patch = {
+        full_name: guestForm.full_name.trim(),
+        company:   guestForm.company.trim() || null,
+        phone:     guestForm.phone.trim() || null,
+        category:  guestForm.category.trim() || null,
+      };
+      await updateGuest(editingGuest.id, patch);
+      const updated = { ...editingGuest, ...patch };
+      setGuests((prev) => prev.map((g) => g.id === editingGuest.id ? updated : g));
+      if (selected?.id === editingGuest.id) setSelected(updated);
+      setEditingGuest(null);
+      success('Invité modifié');
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setSavingGuest(false); }
+  }
+
   return (
     <div className="h-full flex flex-col">
 
@@ -257,8 +306,23 @@ export default function EvenementsPage() {
             ))}
           </select>
           {can('manage_evenements') && (
-            <button onClick={() => setShowNewEvent(true)} className="btn-secondary h-9 text-sm flex items-center gap-1.5">
+            <button
+              onClick={() => { setEditingEventId(null); setNewEvent({ name: '', event_date: '', location: '' }); setShowNewEvent(true); }}
+              className="btn-secondary h-9 text-sm flex items-center gap-1.5"
+            >
               <Plus className="w-4 h-4" /> Événement
+            </button>
+          )}
+          {eventId && can('manage_evenements') && (
+            <button
+              onClick={() => {
+                const ev = events.find((e) => e.id === eventId);
+                if (ev) openEditEvent(ev);
+              }}
+              className="h-9 w-9 shrink-0 rounded-xl border border-surface-border text-content-secondary hover:text-content-primary hover:bg-surface-input flex items-center justify-center transition-colors"
+              title="Modifier l'événement"
+            >
+              <Pencil className="w-4 h-4" />
             </button>
           )}
           {eventId && can('manage_evenements') && (
@@ -394,11 +458,14 @@ export default function EvenementsPage() {
                     const isActive = selected?.id === g.id;
                     const isChecking = isActive && checking;
                     return (
-                      <button
+                      <div
                         key={g.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelected(g)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') setSelected(g); }}
                         aria-current={isActive}
-                        className={`w-full flex items-center gap-3 p-3 text-left transition-colors active:bg-surface-hover/70 border-l-4
+                        className={`w-full flex items-center gap-3 p-3 text-left transition-colors active:bg-surface-hover/70 border-l-4 cursor-pointer
                           ${isActive ? 'bg-brand-500/10 border-l-brand-600' : 'border-l-transparent'}`}
                       >
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold
@@ -411,6 +478,13 @@ export default function EvenementsPage() {
                             {[g.category, g.company, g.phone].filter(Boolean).join(' · ') || '—'}
                           </p>
                         </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditGuest(g); }}
+                          className="shrink-0 p-1.5 text-content-muted hover:text-content-primary rounded-lg hover:bg-surface-hover transition-colors"
+                          title="Modifier"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                         <div className="shrink-0">
                           {isChecking
                             ? <Loader2 className="w-4 h-4 animate-spin text-content-brand" />
@@ -418,7 +492,7 @@ export default function EvenementsPage() {
                               ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
                               : <span className="text-xs font-medium text-status-success">Valider →</span>}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -433,6 +507,7 @@ export default function EvenementsPage() {
                       <th className="px-4 py-3 text-left hidden md:table-cell">Téléphone</th>
                       <th className="px-4 py-3 text-left hidden lg:table-cell">Catégorie</th>
                       <th className="px-4 py-3 text-right whitespace-nowrap">Statut</th>
+                      <th className="px-2 py-3 w-9"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
@@ -473,6 +548,15 @@ export default function EvenementsPage() {
                             : g.status === 'used'
                               ? <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning"><CheckCircle2 className="w-3.5 h-3.5" /> Validé</span>
                               : <span className="text-xs font-medium text-status-success group-hover:underline">Valider →</span>}
+                        </td>
+                        <td className="px-2 py-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openEditGuest(g); }}
+                            className="p-1.5 text-content-muted hover:text-content-primary rounded-lg hover:bg-surface-hover transition-colors"
+                            title="Modifier"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                       );
@@ -597,11 +681,11 @@ export default function EvenementsPage() {
         )}
       </SideDrawer>
 
-      {/* -- Panneau nouvel événement -- */}
+      {/* -- Panneau nouvel événement / édition -- */}
       <SideDrawer
         isOpen={showNewEvent}
-        onClose={() => setShowNewEvent(false)}
-        title="Nouvel événement"
+        onClose={() => { setShowNewEvent(false); setEditingEventId(null); }}
+        title={editingEventId ? "Modifier l'événement" : 'Nouvel événement'}
         maxWidth="max-w-sm"
         footer={
           <button
@@ -609,7 +693,7 @@ export default function EvenementsPage() {
             disabled={savingEvent || !newEvent.name.trim()}
             className="btn-primary w-full h-10"
           >
-            {savingEvent ? 'Création…' : 'Créer l\'événement'}
+            {savingEvent ? 'Enregistrement…' : editingEventId ? 'Enregistrer' : 'Créer l\'événement'}
           </button>
         }
       >
@@ -689,6 +773,59 @@ export default function EvenementsPage() {
             ))}
           </div>
         )}
+      </SideDrawer>
+
+      {/* -- Panneau édition invité -- */}
+      <SideDrawer
+        isOpen={!!editingGuest}
+        onClose={() => setEditingGuest(null)}
+        title="Modifier l'invité"
+        maxWidth="max-w-sm"
+        footer={
+          <button
+            onClick={handleSaveGuestEdit}
+            disabled={savingGuest || !guestForm.full_name.trim()}
+            className="btn-primary w-full h-10 disabled:opacity-50"
+          >
+            {savingGuest ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="label">Nom <span className="text-status-error">*</span></label>
+            <input
+              className="input"
+              value={guestForm.full_name}
+              onChange={(e) => setGuestForm((f) => ({ ...f, full_name: e.target.value }))}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="label">Entreprise</label>
+            <input
+              className="input"
+              value={guestForm.company}
+              onChange={(e) => setGuestForm((f) => ({ ...f, company: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="label">Téléphone</label>
+            <input
+              className="input"
+              value={guestForm.phone}
+              onChange={(e) => setGuestForm((f) => ({ ...f, phone: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="label">Catégorie</label>
+            <input
+              className="input"
+              value={guestForm.category}
+              onChange={(e) => setGuestForm((f) => ({ ...f, category: e.target.value }))}
+            />
+          </div>
+        </div>
       </SideDrawer>
 
       <ConfirmDialog />

@@ -88,6 +88,17 @@ export async function createEvent(
   );
 }
 
+export async function updateEvent(
+  businessId: string,
+  eventId: string,
+  data: { name: string; event_date?: string | null; location?: string | null },
+): Promise<void> {
+  await q(
+    supabase.from('events').update(data as unknown as TablesInsert<'events'>)
+      .eq('id', eventId).eq('business_id', businessId),
+  );
+}
+
 /**
  * Supprime un événement et, par cascade (ON DELETE CASCADE), tous ses invités
  * et leur historique de check-in. La RLS restreint cette action aux
@@ -169,6 +180,15 @@ export async function checkInGuest(guestId: string): Promise<EventGuest | null> 
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as unknown as EventGuest[];
   return rows[0] ?? null;
+}
+
+export async function updateGuest(
+  guestId: string,
+  data: { full_name: string; company?: string | null; phone?: string | null; category?: string | null },
+): Promise<void> {
+  await q(
+    supabase.from('event_guests').update(data as unknown as TablesInsert<'event_guests'>).eq('id', guestId),
+  );
 }
 
 export async function undoCheckIn(guestId: string): Promise<void> {
