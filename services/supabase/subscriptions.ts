@@ -172,11 +172,14 @@ export async function submitSubscriptionRequest(
   businessId: string,
   planId:     string,
   receiptUrl: string,
-): Promise<void> {
-  const { error } = await db
+): Promise<string> {
+  const { data, error } = await db
     .from('subscription_requests')
-    .insert({ business_id: businessId, plan_id: planId, receipt_url: receiptUrl });
+    .insert({ business_id: businessId, plan_id: planId, receipt_url: receiptUrl })
+    .select('id')
+    .single();
   if (error) throw new Error(error.message);
+  return data.id as string;
 }
 
 export async function getSubscriptionRequests(): Promise<SubscriptionRequest[]> {

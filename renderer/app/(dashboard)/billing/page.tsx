@@ -1,12 +1,12 @@
 'use client';
-import { toUserError } from '@/lib/user-error';
 import { displayCurrency } from '@/lib/utils';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle, Clock, Loader2, RefreshCw, Send, Calendar,
   AlertTriangle, ChevronDown, Package, RotateCcw, FileText,
+  Smartphone, XCircle,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -14,10 +14,15 @@ import { useSubscriptionStore } from '@/store/subscription';
 import { useAuthStore } from '@/store/auth';
 import {
   getPlans, getSubscription, getMySubscriptionRequests,
-  submitSubscriptionRequest, getEffectiveStatus,
+  getEffectiveStatus,
   type Plan, type SubscriptionRequest,
 } from '@services/supabase/subscriptions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
+
+type PayStatus = 'idle' | 'initiating' | 'waiting' | 'failed';
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS  = 5 * 60 * 1000;
 
 // -- Status badge config -------------------------------------------------------
 
@@ -30,20 +35,38 @@ const REQ_STATUS: Record<string, { label: string; bg: string; text: string; bord
 // -- Page ----------------------------------------------------------------------
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    }>
+      <BillingPageInner />
+    </Suspense>
+  );
+}
+
+function BillingPageInner() {
   const { effectiveStatus, trialDaysRemaining, subscription, setSubscription } = useSubscriptionStore();
   const { business, user } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading]           = useState(true);
   const [checking, setChecking]         = useState(false);
   const [allPlans, setAllPlans]         = useState<Plan[]>([]);
   const [period, setPeriod]             = useState<'monthly' | 'annual'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [step, setStep]                 = useState<'form' | 'sent'>('form');
-  const [submitting, setSubmitting]     = useState(false);
-  const [submitError, setSubmitError]   = useState('');
+  const [step, setStep]                 = useState<'form' | 'payment' | 'sent'>('form');
   const [myRequests, setMyRequests]     = useState<SubscriptionRequest[]>([]);
   const [showRenew, setShowRenew]       = useState(false);
+
+  // Paiement PayDunya
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [payStatus, setPayStatus] = useState<PayStatus>('idle');
+  const [payError, setPayError]   = useState('');
+  const [payPhone, setPayPhone]   = useState('');
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const status     = effectiveStatus();
   const days       = trialDaysRemaining();
@@ -67,19 +90,82 @@ export default function BillingPage() {
     }
   }
 
-  async function handleSubmit() {
-    if (!business || !selectedPlan) return;
-    setSubmitting(true);
-    setSubmitError('');
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (!ref || !business) return;
+    setRequestId(ref);
+    if (searchParams.get('paid') === '1') {
+      setStep('payment');
+      setPayStatus('waiting');
+      startPolling(ref);
+    } else if (searchParams.get('cancelled') === '1') {
+      setStep('payment');
+      setPayStatus('failed');
+      setPayError('Paiement annulé.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id]);
+
+  useEffect(() => () => { if (pollTimer.current) clearInterval(pollTimer.current); }, []);
+
+  function startPolling(ref: string) {
+    if (pollTimer.current) clearInterval(pollTimer.current);
+    const startedAt = Date.now();
+    pollTimer.current = setInterval(async () => {
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        if (pollTimer.current) clearInterval(pollTimer.current);
+        setPayStatus('failed');
+        setPayError("Délai dépassé — si vous avez payé, contactez le support, votre accès sera activé manuellement.");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/billing/paydunya-status?ref=${ref}`);
+        const json = await res.json();
+        if (json?.data?.status === 'completed') {
+          if (pollTimer.current) clearInterval(pollTimer.current);
+          setStep('sent');
+          if (business) getMySubscriptionRequests(business.id).then(setMyRequests).catch(() => {});
+        } else if (json?.data?.status === 'failed' || json?.data?.status === 'cancelled') {
+          if (pollTimer.current) clearInterval(pollTimer.current);
+          setPayStatus('failed');
+          setPayError('Le paiement a échoué ou a été annulé.');
+        }
+      } catch { /* on continue de sonder */ }
+    }, POLL_INTERVAL_MS);
+  }
+
+  function handleSubmit() {
+    if (!selectedPlan) return;
+    // Pas d'écriture en base ici — la demande n'est créée que si le paiement
+    // PayDunya démarre réellement (dans handlePay), pour ne jamais laisser une
+    // demande fantôme dans le backoffice si le client abandonne avant de payer.
+    setStep('payment');
+  }
+
+  async function handlePay() {
+    if (!selectedPlan || !business) return;
+    setPayStatus('initiating');
+    setPayError('');
     try {
-      await submitSubscriptionRequest(business.id, selectedPlan.id, '');
-      setStep('sent');
-      const reqs = await getMySubscriptionRequests(business.id);
-      setMyRequests(reqs);
+      const res = await fetch('/api/billing/paydunya-initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: business.id,
+          plan_id: selectedPlan.id,
+          customer_name: user?.full_name ?? business.name,
+          customer_email: user?.email ?? '',
+          customer_phone: payPhone.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Échec du paiement.');
+      if (!json.data.redirect_url) throw new Error('URL de paiement manquante.');
+      // Redirection pleine page vers la page de paiement hébergée PayDunya.
+      window.location.href = json.data.redirect_url;
     } catch (e) {
-      setSubmitError(toUserError(e));
-    } finally {
-      setSubmitting(false);
+      setPayStatus('failed');
+      setPayError(String(e instanceof Error ? e.message : e));
     }
   }
 
@@ -333,9 +419,9 @@ export default function BillingPage() {
                   <Clock className="w-5 h-5 text-content-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-content-primary">Activation par notre équipe</p>
+                  <p className="text-sm font-semibold text-content-primary">Paiement immédiat via PayDunya</p>
                   <p className="text-xs text-content-secondary mt-1">
-                    Une fois votre demande envoyée, notre équipe vous contactera sous 24h pour finaliser le règlement et activer votre accès.
+                    Étape suivante : payez via Orange Money, Wave, Free Money, Expresso ou Djamo. Votre accès sera activé sous 24h après confirmation du paiement.
                   </p>
                 </div>
               </div>
@@ -351,18 +437,65 @@ export default function BillingPage() {
                 </div>
               )}
 
-              {submitError && <p className="text-sm text-status-error">{submitError}</p>}
-
               <button
                 onClick={handleSubmit}
-                disabled={!selectedPlan || submitting}
+                disabled={!selectedPlan}
                 className="btn-primary w-full flex items-center justify-center gap-2 h-11"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {submitting ? 'Envoi en cours…' : "Envoyer ma demande d'activation"}
+                <Send className="w-4 h-4" />
+                Continuer vers le paiement →
               </button>
             </div>
           </>
+        )}
+
+        {/* -- Paiement PayDunya -- */}
+        {step === 'payment' && (
+          <div className="card p-6 space-y-5">
+            <h2 className="font-bold text-content-primary text-lg">Paiement</h2>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">
+              <span className="text-sm text-content-primary">{selectedPlan?.label}</span>
+              <span className="font-bold text-content-brand">
+                {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
+              </span>
+            </div>
+
+            {payStatus === 'waiting' ? (
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <Loader2 className="w-10 h-10 animate-spin text-brand-500" />
+                <div>
+                  <p className="font-semibold text-content-primary">En attente de confirmation…</p>
+                  <p className="text-sm text-content-secondary mt-1 max-w-sm">
+                    Nous vérifions votre paiement auprès de PayDunya, cela peut prendre quelques secondes.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="label">Numéro de téléphone</label>
+                  <input type="tel" value={payPhone} onChange={(e) => setPayPhone(e.target.value)}
+                    className="input" placeholder="77 000 00 00" />
+                </div>
+
+                {payStatus === 'failed' && payError && (
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-badge-error border border-status-error text-sm text-status-error">
+                    <XCircle className="w-4 h-4 shrink-0 mt-0.5" /> {payError}
+                  </div>
+                )}
+
+                <button onClick={handlePay} disabled={payStatus === 'initiating'}
+                  className="btn-primary w-full flex items-center justify-center gap-2 h-11 disabled:opacity-50">
+                  {payStatus === 'initiating' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                  {payStatus === 'initiating' ? 'Initialisation…' : `Payer ${selectedPlan?.price.toLocaleString('fr-FR')} ${displayCurrency(selectedPlan?.currency ?? '')}`}
+                </button>
+                <p className="text-xs text-content-muted text-center">
+                  Vous serez redirigé vers PayDunya pour choisir Orange Money, Wave ou un autre moyen de paiement.
+                </p>
+              </>
+            )}
+          </div>
         )}
 
         {/* -- Confirmation envoi -- */}
@@ -372,13 +505,13 @@ export default function BillingPage() {
               <CheckCircle className="w-8 h-8 text-status-success" />
             </div>
             <div>
-              <p className="text-lg font-bold text-content-primary">Demande envoyée !</p>
+              <p className="text-lg font-bold text-content-primary">Paiement confirmé !</p>
               <p className="text-sm text-content-secondary mt-1">
-                Notre équipe vous contactera très prochainement pour finaliser votre abonnement.
+                Votre paiement a bien été reçu via PayDunya. Votre accès sera activé sous 24h.
               </p>
             </div>
             <button onClick={() => setStep('form')} className="btn-secondary text-sm">
-              Modifier ma demande
+              Nouvelle demande
             </button>
           </div>
         )}

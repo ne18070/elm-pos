@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, Layers, Users, CreditCard, 
+import {
+  LayoutDashboard, Layers, Users, CreditCard,
   Settings, Megaphone, Mail, LogOut, ChevronLeft,
   ChevronRight, Search, Bell, BarChart2, Smartphone,
-  Command, Package, Grid3X3, HelpCircle
+  Command, Package, Grid3X3, HelpCircle, KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
@@ -78,6 +78,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
     { label: 'Plans & Tarifs', href: '/backoffice/plans', icon: BarChart2 },
     { label: 'Support Client', href: '/backoffice/support', icon: HelpCircle, badge: supportCount },
     { label: 'Marketing', href: '/backoffice/marketing', icon: Megaphone },
+    { label: 'Doc API PayDunya', href: '/backoffice/paydunya-docs', icon: KeyRound },
     { label: 'Paramètres', href: '/backoffice/settings', icon: Settings },
   ];
 
