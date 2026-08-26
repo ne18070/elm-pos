@@ -21,11 +21,36 @@ export type ClientForm = Omit<Client, 'id' | 'business_id' | 'created_at'>;
 
 export async function getClients(businessId: string): Promise<Client[]> {
   const rows = await q<Client[]>(
-    // Filet de sécurité — pas une vraie pagination : au-delà de ça, la liste
-    // clients doit passer par une recherche côté serveur plutôt qu'un fetch complet.
+    // Filet de sécurité — pas une vraie pagination : utilisé par les
+    // sélecteurs client (caisse, contrats, dossiers) et l'export CSV, qui ont
+    // besoin de la liste complète. Pour la liste paginée, voir getClientsPage.
     supabase.from('clients').select('*').eq('business_id', businessId).order('name').limit(5000),
   );
   return rows ?? [];
+}
+
+/** Page paginée + recherche serveur — utilisée par l'écran de gestion des clients. */
+export async function getClientsPage(
+  businessId: string,
+  options?: { search?: string; limit?: number; offset?: number },
+): Promise<{ clients: Client[]; count: number }> {
+  const limit  = options?.limit ?? 20;
+  const offset = options?.offset ?? 0;
+
+  let query = supabase
+    .from('clients')
+    .select('*', { count: 'exact' })
+    .eq('business_id', businessId)
+    .order('name');
+
+  const term = options?.search?.trim().replace(/[,()]/g, ' ');
+  if (term) {
+    query = query.or(`name.ilike.%${term}%,phone.ilike.%${term}%,representative_name.ilike.%${term}%`);
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return { clients: (data ?? []) as Client[], count: count ?? 0 };
 }
 
 export async function createClient(businessId: string, form: ClientForm): Promise<Client> {

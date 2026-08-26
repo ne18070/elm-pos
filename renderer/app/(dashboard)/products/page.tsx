@@ -1,9 +1,8 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink } from 'lucide-react';
-import { useProducts } from '@/hooks/useProducts';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlerts';
@@ -13,26 +12,102 @@ import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { ProductModal } from '@/components/products/ProductModal';
 import { ImportProductsModal } from '@/components/products/ImportProductsModal';
 import { BarcodePrintModal } from '@/components/products/BarcodePrintModal';
-import { deleteProduct } from '@services/supabase/products';
+import { deleteProduct, getProducts, getProductsPage } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
 type ViewMode = 'grid' | 'list';
+const PAGE_SIZE = 24;
+
+function matchesSearch(p: Product, term: string): boolean {
+  if (!term) return true;
+  const t = term.toLowerCase();
+  return p.name.toLowerCase().includes(t) || !!p.barcode?.includes(term) || !!p.sku?.toLowerCase().includes(t);
+}
+
+function exportProductsCSV(products: Product[]) {
+  const headers = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
+  const rows = products.map((p) => [
+    p.name,
+    p.description ?? '',
+    String(p.price),
+    p.category?.name ?? '',
+    p.barcode ?? '',
+    p.sku ?? '',
+    String(p.stock ?? ''),
+    p.track_stock ? 'oui' : 'non',
+    p.is_active ? 'oui' : 'non',
+  ]);
+  const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `produits_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function ProductsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const can = useCan();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [view, setView] = useState<ViewMode>('list');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showBarcode, setShowBarcode] = useState(false);
+  const [barcodeProducts, setBarcodeProducts] = useState<Product[]>([]);
+  const [loadingBarcodeSet, setLoadingBarcodeSet] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const { products, loading, refetch } = useProducts(business?.id ?? '');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [count, setCount]       = useState(0);
+  const [loading, setLoading]   = useState(true);
+  const [page, setPage]         = useState(1);
+
   const { lowStock } = useLowStockAlerts(business?.id ?? '');
+
+  const load = useCallback(async () => {
+    if (!business) return;
+    setLoading(true);
+    try {
+      const { products: rows, count: total } = await getProductsPage(business.id, {
+        search: debouncedSearch,
+        limit:  PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      });
+      setProducts(rows);
+      setCount(total);
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id, page, debouncedSearch]);
+
+  // Débounce la recherche pour éviter une requête réseau à chaque frappe.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Rafraîchit la page courante si un autre poste modifie le catalogue.
+  useEffect(() => {
+    const handler = () => load();
+    window.addEventListener('elm-pos:products:changed', handler);
+    return () => window.removeEventListener('elm-pos:products:changed', handler);
+  }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   const shopUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/boutique/${business?.id ?? ''}`
@@ -48,36 +123,34 @@ export default function ProductsPage() {
     }
   }
 
-  function exportCSV() {
-    const headers = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
-    const rows = filtered.map((p) => [
-      p.name,
-      p.description ?? '',
-      String(p.price),
-      p.category?.name ?? '',
-      p.barcode ?? '',
-      p.sku ?? '',
-      String(p.stock ?? ''),
-      p.track_stock ? 'oui' : 'non',
-      p.is_active ? 'oui' : 'non',
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `produits_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function handleExportCSV() {
+    if (!business) return;
+    setExporting(true);
+    try {
+      // Le CSV porte sur l'ensemble du catalogue correspondant à la recherche
+      // en cours, pas seulement la page affichée à l'écran.
+      const all = await getProducts(business.id);
+      exportProductsCSV(all.filter((p) => matchesSearch(p, debouncedSearch)));
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setExporting(false);
+    }
   }
 
-  const filtered = products.filter(
-    (p) =>
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode?.includes(search) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase())
-  );
+  async function openBarcodeModal() {
+    if (!business) return;
+    setLoadingBarcodeSet(true);
+    try {
+      const all = await getProducts(business.id);
+      setBarcodeProducts(all.filter((p) => matchesSearch(p, debouncedSearch)));
+      setShowBarcode(true);
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setLoadingBarcodeSet(false);
+    }
+  }
 
   async function handleDelete(product: Product, e: React.MouseEvent) {
     e.stopPropagation();
@@ -85,7 +158,10 @@ export default function ProductsPage() {
     try {
       await deleteProduct(product.id);
       success(`"${product.name}" supprimé`);
-      refetch();
+      // Dernier produit de sa page : recule d'une page plutôt que de se
+      // retrouver sur une page devenue vide.
+      if (products.length === 1 && page > 1) setPage((p) => p - 1);
+      else load();
     } catch (err) {
       notifError(toUserError(err));
     }
@@ -105,7 +181,7 @@ export default function ProductsPage() {
             <h1 className="text-xl font-bold text-content-primary">Produits</h1>
             <p className="text-xs text-content-muted mt-0.5">
               Catalogue complet — prix, stock, code-barres et catégories
-              {!loading && ` · ${filtered.length} produit${filtered.length !== 1 ? 's' : ''}${search ? ` filtrés sur ${products.length}` : ''}`}
+              {!loading && ` · ${count} produit${count !== 1 ? 's' : ''}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -121,21 +197,23 @@ export default function ProductsPage() {
             )}
             {can('print_barcodes') && (
               <button
-                onClick={() => setShowBarcode(true)}
-                className="btn-secondary flex items-center gap-2"
+                onClick={openBarcodeModal}
+                disabled={loadingBarcodeSet}
+                className="btn-secondary flex items-center gap-2 disabled:opacity-50"
                 title="Imprimer codes-barres"
               >
-                <Barcode className="w-4 h-4" />
+                {loadingBarcodeSet ? <Loader2 className="w-4 h-4 animate-spin" /> : <Barcode className="w-4 h-4" />}
                 <span className="hidden sm:inline">Codes-barres</span>
               </button>
             )}
             {can('export_products') && (
               <button
-                onClick={exportCSV}
-                className="btn-secondary flex items-center gap-2"
+                onClick={handleExportCSV}
+                disabled={exporting}
+                className="btn-secondary flex items-center gap-2 disabled:opacity-50"
                 title="Exporter en CSV"
               >
-                <Download className="w-4 h-4" />
+                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 <span className="hidden sm:inline">Exporter CSV</span>
               </button>
             )}
@@ -237,7 +315,7 @@ export default function ProductsPage() {
 
         {loading ? (
           <div className="text-content-secondary text-center py-10">Chargement…</div>
-        ) : filtered.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-content-secondary">
             <Package className="w-12 h-12 mb-3 opacity-30" />
             <p className="font-medium">Aucun produit trouvé</p>
@@ -248,7 +326,7 @@ export default function ProductsPage() {
         ) : view === 'grid' ? (
           /* -- Vue Grille -- */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filtered.map((product) => (
+            {products.map((product) => (
               <div
                 key={product.id}
                 onClick={() => setEditProduct(product)}
@@ -324,7 +402,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((product, i) => (
+                {products.map((product, i) => (
                   <tr
                     key={product.id}
                     onClick={() => setEditProduct(product)}
@@ -444,6 +522,55 @@ export default function ProductsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between px-1 py-4 text-sm">
+            <span className="text-xs text-content-secondary">
+              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, count)} sur {count}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1.5 rounded-lg border border-surface-border text-content-secondary hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${i}`} className="px-1 text-content-muted text-xs">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`min-w-[30px] h-[30px] rounded-lg text-xs font-semibold transition-colors ${
+                        page === p
+                          ? 'bg-brand-600 text-white'
+                          : 'border border-surface-border text-content-secondary hover:bg-surface-hover'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-1.5 rounded-lg border border-surface-border text-content-secondary hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {(showCreate || editProduct) && (
@@ -451,7 +578,16 @@ export default function ProductsPage() {
           product={editProduct}
           businessId={business?.id ?? ''}
           onClose={() => { setShowCreate(false); setEditProduct(null); }}
-          onSaved={() => { setShowCreate(false); setEditProduct(null); refetch(); }}
+          onSaved={() => {
+            const wasCreate = showCreate;
+            setShowCreate(false);
+            setEditProduct(null);
+            // Une création peut atterrir sur n'importe quelle page selon le tri
+            // alphabétique — repartir de la page 1 est le seul moyen fiable de
+            // la retrouver immédiatement.
+            if (wasCreate && page !== 1) setPage(1);
+            else load();
+          }}
         />
       )}
 
@@ -459,16 +595,16 @@ export default function ProductsPage() {
         <ImportProductsModal
           businessId={business?.id ?? ''}
           onClose={() => setShowImport(false)}
-          onImported={() => { setShowImport(false); refetch(); }}
+          onImported={() => { setShowImport(false); if (page === 1) load(); else setPage(1); }}
         />
       )}
 
       {showBarcode && (
         <BarcodePrintModal
-          products={filtered}
+          products={barcodeProducts}
           currency={business?.currency ?? 'XOF'}
           onClose={() => setShowBarcode(false)}
-          onRefetch={refetch}
+          onRefetch={() => { openBarcodeModal(); load(); }}
         />
       )}
 

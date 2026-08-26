@@ -13,7 +13,7 @@ import { useCan } from '@/hooks/usePermission';
 import { ClientsImportModal } from '@/components/clients/ImportModal';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 import {
-  getClients, createClient, updateClient, deleteClient,
+  getClients, getClientsPage, createClient, updateClient, deleteClient,
   type Client, type ClientForm,
 } from '@services/supabase/clients';
 import { getReferenceData, type RefItem } from '@services/supabase/reference-data';
@@ -50,10 +50,13 @@ export default function ClientsPage() {
   const can = useCan();
 
   const [clients, setClients]     = useState<Client[]>([]);
+  const [count, setCount]         = useState(0);
   const [typesClient, setTypesClient] = useState<RefItem[]>([]);
   const [search, setSearch]       = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -64,17 +67,56 @@ export default function ClientsPage() {
 
   useEffect(() => {
     if (!business) return;
-    load();
     getReferenceData('type_client', business.id).then(setTypesClient);
   }, [business]);
+
+  // Débounce la recherche pour éviter une requête réseau à chaque frappe.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Repart à la page 1 dès que le terme de recherche (débounced) change.
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!business) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business, page, debouncedSearch]);
 
   async function load() {
     if (!business) return;
     setLoading(true);
     try {
-      setClients(await getClients(business.id));
+      const { clients: rows, count: total } = await getClientsPage(business.id, {
+        search: debouncedSearch,
+        limit:  PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      });
+      setClients(rows);
+      setCount(total);
     } catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
+  }
+
+  async function handleExport() {
+    if (!business) return;
+    setExporting(true);
+    try {
+      // Le CSV porte sur l'ensemble des clients correspondant à la recherche
+      // en cours, pas seulement la page affichée à l'écran.
+      const all = await getClients(business.id);
+      const term = debouncedSearch.trim().toLowerCase();
+      const toExport = term
+        ? all.filter((c) =>
+            c.name.toLowerCase().includes(term) ||
+            (c.phone ?? '').includes(debouncedSearch.trim()) ||
+            (c.representative_name ?? '').toLowerCase().includes(term))
+        : all;
+      exportCSV(toExport);
+    } catch (e) { notifError(toUserError(e)); }
+    finally { setExporting(false); }
   }
 
   function openPanel(item: Client | null) {
@@ -99,15 +141,20 @@ export default function ClientsPage() {
     setSaving(true);
     try {
       if (panel?.item) {
-        const updated = await updateClient(panel.item.id, form);
-        setClients((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+        await updateClient(panel.item.id, form);
         success('Client mis à jour');
+        setPanel(null);
+        await load();
       } else {
-        const created = await createClient(business.id, form);
-        setClients((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+        await createClient(business.id, form);
         success('Client ajouté');
+        setPanel(null);
+        // setPage(1) déclenche déjà un rechargement via l'effet ci-dessus —
+        // si on est déjà page 1, rien ne changera d'état donc on recharge
+        // nous-même pour voir apparaître le nouveau client.
+        if (page === 1) await load();
+        else setPage(1);
       }
-      setPanel(null);
     } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   }
@@ -116,22 +163,15 @@ export default function ClientsPage() {
     if (!confirm('Supprimer ce client ?')) return;
     try {
       await deleteClient(id);
-      setClients((prev) => prev.filter((c) => c.id !== id));
       success('Entité supprimée');
+      // Dernier élément de sa page : recule d'une page plutôt que de se
+      // retrouver sur une page devenue vide.
+      if (clients.length === 1 && page > 1) setPage((p) => p - 1);
+      else await load();
     } catch (e) { notifError(toUserError(e)); }
   }
 
-  const filtered = clients.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone ?? '').includes(search) ||
-    (c.representative_name ?? '').toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // Reset à la page 1 quand la recherche change
-  useEffect(() => { setPage(1); }, [search]);
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   const isMoral = form.type === 'personne_morale' || form.type === 'association';
 
@@ -142,7 +182,7 @@ export default function ClientsPage() {
       <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-3 flex-wrap bg-surface">
         <div>
           <h1 className="text-xl font-bold text-content-primary">Clients</h1>
-          <p className="text-xs text-content-secondary">Carnet de contacts — historique d'achats, fidélité et coordonnées · {clients.length} client{clients.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-content-secondary">Carnet de contacts — historique d'achats, fidélité et coordonnées · {count} client{count !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
@@ -154,13 +194,14 @@ export default function ClientsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          {clients.length > 0 && can('export_clients') && (
+          {count > 0 && can('export_clients') && (
             <button
-              onClick={() => exportCSV(clients)}
-              className="btn-secondary h-9 text-sm flex items-center gap-1.5 px-3"
+              onClick={handleExport}
+              disabled={exporting}
+              className="btn-secondary h-9 text-sm flex items-center gap-1.5 px-3 disabled:opacity-50"
               title="Exporter en CSV"
             >
-              <Download className="w-4 h-4" />
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               <span className="hidden sm:inline">Exporter</span>
             </button>
           )}
@@ -187,7 +228,7 @@ export default function ClientsPage() {
       {/* -- Corps -- */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-surface">
 
-        {!loading && clients.length === 0 && (
+        {!loading && count === 0 && !debouncedSearch && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-5">
             <div className="w-20 h-20 rounded-3xl bg-surface-input flex items-center justify-center border border-surface-border">
               <Building2 className="w-10 h-10 text-content-secondary" />
@@ -204,9 +245,16 @@ export default function ClientsPage() {
           </div>
         )}
 
+        {!loading && count === 0 && debouncedSearch && (
+          <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+            <Search className="w-10 h-10 text-content-muted" />
+            <p className="text-sm text-content-secondary">Aucun client ne correspond à « {debouncedSearch} ».</p>
+          </div>
+        )}
+
         {loading && <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>}
 
-        {filtered.length > 0 && (
+        {!loading && clients.length > 0 && (
         <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card flex flex-col">
           <table className="w-full text-sm">
             <thead>
@@ -221,7 +269,7 @@ export default function ClientsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
-              {paginated.map((c) => {
+              {clients.map((c) => {
                 const isEntity = c.type === 'personne_morale' || c.type === 'association';
                 return (
                   <tr key={c.id} className="group hover:bg-surface-hover/40 transition-colors">
@@ -289,7 +337,7 @@ export default function ClientsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-surface-border bg-surface-input text-sm">
               <span className="text-xs text-content-secondary">
-                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length}
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, count)} sur {count}
               </span>
               <div className="flex items-center gap-1">
                 <button

@@ -41,11 +41,37 @@ export async function getProducts(businessId: string): Promise<Product[]> {
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('name')
-      // Filet de sécurité — pas une vraie pagination : un catalogue plus
-      // large que ça doit passer par une recherche/scan côté POS plutôt que
-      // de tout charger en mémoire au démarrage de la caisse.
+      // Filet de sécurité — pas une vraie pagination : utilisé par la caisse
+      // (recherche locale instantanée) et les sélecteurs produit (coupons,
+      // stock), qui ont besoin du catalogue entier en mémoire. Pour la liste
+      // paginée de gestion des produits, voir getProductsPage ci-dessous.
       .limit(5000) as never,
   );
+}
+
+/** Page paginée + recherche serveur — utilisé par l'écran de gestion des produits. */
+export async function getProductsPage(
+  businessId: string,
+  options?: { search?: string; limit?: number; offset?: number },
+): Promise<{ products: Product[]; count: number }> {
+  const limit  = options?.limit ?? 20;
+  const offset = options?.offset ?? 0;
+
+  let query = supabase
+    .from('products')
+    .select('*, category:categories(*)', { count: 'exact' })
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .order('name');
+
+  const term = options?.search?.trim().replace(/[,()]/g, ' ');
+  if (term) {
+    query = query.or(`name.ilike.%${term}%,barcode.ilike.%${term}%,sku.ilike.%${term}%`);
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return { products: (data ?? []) as unknown as Product[], count: count ?? 0 };
 }
 
 export async function getProductByBarcode(
