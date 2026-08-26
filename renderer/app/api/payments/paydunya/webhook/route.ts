@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createHash } from 'crypto';
 import qs from 'qs';
-import { getPaydunyaSettings, activeKeys, confirmInvoice, updateTransactionStatus, getTransactionByToken, autoActivatePaidRequest } from '@/lib/server/paydunya';
+import { getPaydunyaSettings, activeKeys, confirmInvoice, updateTransactionStatus, autoActivatePaidRequest } from '@/lib/server/paydunya';
 
 export const runtime = 'nodejs';
 
@@ -45,8 +45,6 @@ export async function POST(request: NextRequest) {
 
     const confirm = await confirmInvoice(settings, data.invoice.token);
     if (confirm.status !== 'pending') {
-      const before = await getTransactionByToken(data.invoice.token);
-      const alreadyProcessed = before?.status === 'completed';
       const tx = await updateTransactionStatus(data.invoice.token, confirm.status, confirm.raw);
 
       // Cas /subscribe (public_subscription_requests) et /billing
@@ -64,11 +62,13 @@ export async function POST(request: NextRequest) {
       // arbitraire tout en réutilisant l'id d'une vraie demande d'abonnement
       // pour la faire activer.
       //
-      // alreadyProcessed empêche un IPN dupliqué (PayDunya retente parfois la
-      // notification) de ré-appliquer cette étape plusieurs fois.
+      // Pas de garde "déjà traité" ici basée sur le statut de la transaction :
+      // ce champ peut déjà valoir 'completed' via /api/payments/paydunya/status
+      // (?live=1) sans que l'activation n'ait jamais eu lieu. L'idempotence
+      // réelle vit dans autoActivatePaidRequest, via une transition atomique
+      // status 'pending' → 'approved' sur la ligne de demande elle-même.
       if (
         confirm.status === 'completed' &&
-        !alreadyProcessed &&
         tx?.external_reference &&
         tx.provider === 'paydunya-hosted-checkout'
       ) {

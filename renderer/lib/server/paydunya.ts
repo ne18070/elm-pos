@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 // Module serveur uniquement — importer exclusivement depuis app/api/*.
@@ -284,6 +285,29 @@ export async function recordTransaction(data: {
   return row as unknown as PaydunyaTransaction;
 }
 
+/**
+ * Met à jour redirect_url/raw_initiate_response après coup — utilisé par le
+ * proxy SOFTPAY pour enregistrer la transaction (statut 'pending' par défaut)
+ * immédiatement après la création de la facture PayDunya, avant même de
+ * déclencher le SOFTPAY : si l'IPN du webhook arrivait avant que la ligne
+ * n'existe, updateTransactionStatus ne trouverait aucune ligne à mettre à jour.
+ */
+export async function updateTransactionInitiateResult(
+  id: string,
+  data: { redirect_url: string | null; raw_initiate_response: unknown },
+): Promise<void> {
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
+    .from('paydunya_transactions')
+    .update({
+      redirect_url: data.redirect_url,
+      raw_initiate_response: data.raw_initiate_response as never,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateTransactionStatus(
   invoiceToken: string,
   status: 'completed' | 'failed' | 'cancelled',
@@ -491,34 +515,49 @@ interface PublicRequestRow {
 }
 
 /**
- * Appelée depuis le webhook une fois un paiement 'paydunya-hosted-checkout'
- * confirmé. Le filtre `.eq('status', 'pending')` sert aussi de garde
- * d'idempotence : un IPN dupliqué retrouve la demande déjà 'approved' et ne
- * fait rien la deuxième fois.
+ * Appelée à la fois par le webhook IPN et par /api/payments/paydunya/status
+ * (?live=1) dès qu'un paiement 'paydunya-hosted-checkout' est confirmé — les
+ * deux chemins peuvent découvrir la confirmation en premier selon l'ordre
+ * d'arrivée, donc les deux doivent pouvoir déclencher l'activation.
+ *
+ * Idempotence : la garde `.eq('status', 'pending')` est combinée DANS LA MÊME
+ * requête UPDATE qui fait passer `status` à 'approved' (pas dans une requête
+ * séparée après coup). Deux appels concurrents (IPN dupliqué, webhook + poll
+ * live=1 en même temps) ne peuvent donc pas tous les deux matcher la ligne :
+ * Postgres sérialise les UPDATE concurrents sur une même ligne, un seul verra
+ * `status = 'pending'` au moment de son UPDATE. C'est ce qui empêche
+ * activate_subscription d'être appelée deux fois pour un seul paiement.
  */
 export async function autoActivatePaidRequest(externalReference: string, invoiceToken: string): Promise<void> {
   const admin = getSupabaseAdmin();
   const now = new Date().toISOString();
-  const patch = { payment_status: 'paid', paydunya_invoice_token: invoiceToken, payment_confirmed_at: now };
+  const paidPatch = { payment_status: 'paid', paydunya_invoice_token: invoiceToken, payment_confirmed_at: now };
 
   // Cas /billing : renouvellement d'un business déjà existant.
   const { data: bizReq } = await admin
     .from('subscription_requests')
-    .update(patch)
+    .update({ ...paidPatch, status: 'approved', processed_at: now })
     .eq('id', externalReference)
     .eq('status', 'pending')
     .select('id, business_id, plan_id')
     .maybeSingle();
   if (bizReq) {
     const { data: plan } = await admin.from('plans').select('duration_days').eq('id', bizReq.plan_id).single();
-    if (plan?.duration_days) {
-      await admin.rpc('activate_subscription', {
-        p_business_id: bizReq.business_id,
-        p_plan_id: bizReq.plan_id,
-        p_days: plan.duration_days,
-        p_note: 'Paiement PayDunya automatique',
-      });
-      await admin.from('subscription_requests').update({ status: 'approved', processed_at: now }).eq('id', bizReq.id);
+    if (!plan?.duration_days) return;
+
+    const { error: rpcError } = await admin.rpc('activate_subscription', {
+      p_business_id: bizReq.business_id,
+      p_plan_id: bizReq.plan_id,
+      p_days: plan.duration_days,
+      p_note: 'Paiement PayDunya automatique',
+    });
+    if (rpcError) {
+      // L'activation a échoué (ex: RPC mal configurée, business sans owner) —
+      // on revient à 'pending' plutôt que de laisser 'approved' mentir sur
+      // l'état réel : la demande redevient visible pour un traitement manuel,
+      // et le paiement reste marqué 'paid' donc pas perdu.
+      await admin.from('subscription_requests').update({ status: 'pending', processed_at: null }).eq('id', bizReq.id);
+      throw new Error(`activate_subscription a échoué pour subscription_requests ${bizReq.id}: ${rpcError.message}`);
     }
     return;
   }
@@ -528,7 +567,7 @@ export async function autoActivatePaidRequest(externalReference: string, invoice
   // backoffice, mais entièrement via le client admin (pas de session à relayer).
   const { data: pubReq } = await admin
     .from('public_subscription_requests')
-    .update(patch)
+    .update({ ...paidPatch, status: 'approved', processed_at: now })
     .eq('id', externalReference)
     .eq('status', 'pending')
     .select('id, business_name, denomination, full_name, email, phone, plan_id')
@@ -536,7 +575,13 @@ export async function autoActivatePaidRequest(externalReference: string, invoice
   if (!pubReq?.plan_id) return;
 
   const { data: plan } = await admin.from('plans').select('label, duration_days').eq('id', pubReq.plan_id).single();
-  if (!plan?.duration_days) return;
+  if (!plan?.duration_days) {
+    await admin.from('public_subscription_requests').update({ status: 'pending', processed_at: null }).eq('id', pubReq.id);
+    return;
+  }
+
+  const revertToPending = () =>
+    admin.from('public_subscription_requests').update({ status: 'pending', processed_at: null }).eq('id', pubReq.id);
 
   const password = Math.random().toString(36).slice(-10) + 'A1!';
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
@@ -545,10 +590,9 @@ export async function autoActivatePaidRequest(externalReference: string, invoice
     email_confirm: true,
     user_metadata: { full_name: pubReq.full_name || pubReq.business_name },
   });
-  // Le compte n'a pas pu être créé (email déjà utilisé, etc.) — la demande
-  // reste "payée" mais non approuvée, visible dans la file du backoffice
-  // pour un traitement manuel plutôt que de perdre le paiement en silence.
-  if (authError || !authData.user) return;
+  // Le compte n'a pas pu être créé (email déjà utilisé, etc.) — revenir à
+  // 'pending' pour un traitement manuel plutôt que de perdre le paiement.
+  if (authError || !authData.user) { await revertToPending(); return; }
   const userId = authData.user.id;
 
   await admin.from('users').upsert(
@@ -561,23 +605,30 @@ export async function autoActivatePaidRequest(externalReference: string, invoice
     .insert({ name: pubReq.business_name, denomination: pubReq.denomination || pubReq.business_name, owner_id: userId, type: 'retail' })
     .select('id')
     .single();
-  if (!biz) return;
+  if (!biz) { await revertToPending(); return; }
 
-  await admin.from('business_members').insert({ business_id: biz.id, user_id: userId, role: 'owner' });
-  await admin.from('users').update({ business_id: biz.id }).eq('id', userId);
+  await Promise.all([
+    admin.from('business_members').insert({ business_id: biz.id, user_id: userId, role: 'owner' }),
+    admin.from('users').update({ business_id: biz.id }).eq('id', userId),
+  ]);
 
-  await admin.rpc('activate_subscription', {
+  const { error: rpcError } = await admin.rpc('activate_subscription', {
     p_business_id: biz.id,
     p_plan_id: pubReq.plan_id,
     p_days: plan.duration_days,
     p_note: 'Paiement PayDunya automatique',
   });
-
-  await admin.from('public_subscription_requests').update({ status: 'approved', processed_at: now }).eq('id', pubReq.id);
+  if (rpcError) {
+    // Le compte existe déjà à ce stade (createUser a réussi) — on ne peut pas
+    // proprement revenir à 'pending' sans laisser un compte orphelin sans
+    // abonnement. On laisse 'approved' mais on ne prétend pas que tout a
+    // fonctionné : l'erreur remonte pour être investiguée manuellement.
+    throw new Error(`activate_subscription a échoué pour public_subscription_requests ${pubReq.id} (compte ${userId} déjà créé) : ${rpcError.message}`);
+  }
 
   const expiresAt = new Date(Date.now() + plan.duration_days * 86_400_000);
   const { sendEmail } = await import('@services/resend');
-  sendEmail({
+  await sendEmail({
     type: 'subscription_approved',
     to: pubReq.email,
     subject: '✅ Votre accès ELM APP est activé',
@@ -599,14 +650,9 @@ export function assertValidProxyKey(request: Request, settings: PaydunyaSettings
   if (!expected) {
     throw Object.assign(new Error('Le proxy PayDunya n\'a pas de clé API configurée côté serveur.'), { status: 503 });
   }
-  if (provided.length !== expected.length || !timingSafeEqualStr(provided, expected)) {
+  const providedBuf = Buffer.from(provided);
+  const expectedBuf = Buffer.from(expected);
+  if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
     throw Object.assign(new Error('Clé API invalide.'), { status: 401 });
   }
-}
-
-function timingSafeEqualStr(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
 }

@@ -49,8 +49,8 @@ function InlineCode({ children }: { children: React.ReactNode }) {
 }
 
 const METHOD_STYLE: Record<string, string> = {
-  GET:  'bg-sky-500/10 text-sky-700 border-sky-500/30',
-  POST: 'bg-green-500/10 text-green-700 border-green-500/30',
+  GET:  'bg-badge-info text-status-info border-status-info/30',
+  POST: 'bg-badge-success text-status-success border-status-success/30',
 };
 
 function EndpointCard({ method, path, description, children, defaultOpen }: {
@@ -295,7 +295,7 @@ export default function PaydunyaDocsPage() {
 
         <div className="rounded-xl border border-surface-border overflow-hidden opacity-80">
           <div className="w-full flex items-center gap-3 px-4 py-3">
-            <span className="shrink-0 px-2 py-0.5 rounded border text-[11px] font-bold font-mono min-w-[52px] text-center bg-green-500/10 text-green-700 border-green-500/30">POST</span>
+            <span className="shrink-0 px-2 py-0.5 rounded border text-[11px] font-bold font-mono min-w-[52px] text-center bg-badge-success text-status-success border-status-success/30">POST</span>
             <code className="flex-1 text-sm text-content-primary font-mono">/api/payments/paydunya/webhook</code>
             <Webhook className="w-3.5 h-3.5 text-content-muted shrink-0" />
           </div>

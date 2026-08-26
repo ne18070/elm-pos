@@ -4,6 +4,13 @@ import { logAction } from './logger';
 import { q } from './q';
 import type { Product, Category } from '../../types';
 
+/** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
+ *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
+ *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
+function toIlikeTerm(raw: string): string {
+  return raw.trim().replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export async function getCategories(businessId: string): Promise<Category[]> {
@@ -64,7 +71,7 @@ export async function getProductsPage(
     .eq('is_active', true)
     .order('name');
 
-  const term = options?.search?.trim().replace(/[,()]/g, ' ');
+  const term = toIlikeTerm(options?.search ?? '');
   if (term) {
     query = query.or(`name.ilike.%${term}%,barcode.ilike.%${term}%,sku.ilike.%${term}%`);
   }

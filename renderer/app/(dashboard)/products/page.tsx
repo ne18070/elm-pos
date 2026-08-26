@@ -1,7 +1,7 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -96,9 +96,23 @@ export default function ProductsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => { setPage(1); }, [debouncedSearch]);
+  // Le ref évite un fetch inutile avec l'ancien numéro de page pendant que le
+  // setPage(1) n'a pas encore été appliqué (les deux effets dépendent tous
+  // deux de debouncedSearch/load et se déclenchent dans le même commit) —
+  // sans lui, une recherche tapée depuis une page &gt; 1 ferait clignoter "aucun
+  // résultat" et doublerait la requête réseau.
+  const skipNextLoad = useRef(false);
+  useEffect(() => {
+    if (page !== 1) {
+      skipNextLoad.current = true;
+      setPage(1);
+    }
+  }, [debouncedSearch]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (skipNextLoad.current) { skipNextLoad.current = false; return; }
+    load();
+  }, [load]);
 
   // Rafraîchit la page courante si un autre poste modifie le catalogue.
   useEffect(() => {
@@ -603,8 +617,12 @@ export default function ProductsPage() {
         <BarcodePrintModal
           products={barcodeProducts}
           currency={business?.currency ?? 'XOF'}
-          onClose={() => setShowBarcode(false)}
-          onRefetch={() => { openBarcodeModal(); load(); }}
+          // La table paginée en arrière-plan n'est pas visible tant que ce
+          // modal est ouvert — un seul refetch (la table) suffit à la
+          // fermeture plutôt que de recharger aussi le catalogue complet à
+          // chaque clic sur "Régénérer" à l'intérieur du modal.
+          onClose={() => { setShowBarcode(false); load(); }}
+          onRefetch={openBarcodeModal}
         />
       )}
 

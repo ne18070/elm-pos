@@ -457,6 +457,12 @@ function BillingPageInner() {
         {/* -- Paiement PayDunya -- */}
         {step === 'payment' && (
           <div className="card p-6 space-y-5">
+            {payStatus !== 'waiting' && payStatus !== 'initiating' && (
+              <button onClick={() => setStep('form')} className="text-sm text-content-secondary hover:text-content-primary transition-colors">
+                ← Retour
+              </button>
+            )}
+
             <h2 className="font-bold text-content-primary text-lg">Paiement</h2>
 
             <div className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-surface-border">

@@ -1,7 +1,7 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Plus, Search, Phone, Mail, Pencil, Trash2,
   Check, Upload, Download, Building2, UserCircle2,
@@ -76,11 +76,23 @@ export default function ClientsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Repart à la page 1 dès que le terme de recherche (débounced) change.
-  useEffect(() => { setPage(1); }, [debouncedSearch]);
+  // Repart à la page 1 dès que le terme de recherche (débounced) change. Le
+  // ref évite un premier fetch inutile avec l'ancien numéro de page pendant
+  // que le setPage(1) ci-dessous n'a pas encore été appliqué (les deux effets
+  // se déclenchent dans le même commit puisqu'ils dépendent tous deux de
+  // debouncedSearch) — sans lui, une recherche tapée depuis la page 3 ferait
+  // clignoter "aucun résultat" et doublerait la requête réseau.
+  const skipNextLoad = useRef(false);
+  useEffect(() => {
+    if (page !== 1) {
+      skipNextLoad.current = true;
+      setPage(1);
+    }
+  }, [debouncedSearch]);
 
   useEffect(() => {
     if (!business) return;
+    if (skipNextLoad.current) { skipNextLoad.current = false; return; }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business, page, debouncedSearch]);
@@ -141,10 +153,10 @@ export default function ClientsPage() {
     setSaving(true);
     try {
       if (panel?.item) {
-        await updateClient(panel.item.id, form);
+        const updated = await updateClient(panel.item.id, form);
+        setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
         success('Client mis à jour');
         setPanel(null);
-        await load();
       } else {
         await createClient(business.id, form);
         success('Client ajouté');
@@ -165,9 +177,13 @@ export default function ClientsPage() {
       await deleteClient(id);
       success('Entité supprimée');
       // Dernier élément de sa page : recule d'une page plutôt que de se
-      // retrouver sur une page devenue vide.
+      // retrouver sur une page devenue vide. Sinon, retire localement plutôt
+      // que de refaire un aller-retour réseau pour une simple suppression.
       if (clients.length === 1 && page > 1) setPage((p) => p - 1);
-      else await load();
+      else {
+        setClients((prev) => prev.filter((c) => c.id !== id));
+        setCount((c) => Math.max(0, c - 1));
+      }
     } catch (e) { notifError(toUserError(e)); }
   }
 

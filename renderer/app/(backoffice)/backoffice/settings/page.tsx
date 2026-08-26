@@ -252,8 +252,8 @@ export default function SettingsPage() {
             {/* Clés Test / Production */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {([
-                { prefix: 'test' as const, label: 'Clés API de Test', color: 'bg-blue-500' },
-                { prefix: 'live' as const, label: 'Clés API de Production', color: 'bg-red-500' },
+                { prefix: 'test' as const, label: 'Clés API de Test', color: 'bg-status-info' },
+                { prefix: 'live' as const, label: 'Clés API de Production', color: 'bg-status-error' },
               ]).map(({ prefix, label, color }) => (
                 <div key={prefix} className="card p-6 space-y-3">
                   <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">

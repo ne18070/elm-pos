@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiError, corsHeaders } from '@/lib/api-v1-auth';
 import {
   getPaydunyaSettings, assertValidProxyKey, createInvoice, initiateSoftpay, recordTransaction,
-  type SoftpayMethod,
+  updateTransactionInitiateResult, type SoftpayMethod,
 } from '@/lib/server/paydunya';
 
 export const runtime = 'nodejs';
@@ -63,32 +63,11 @@ export async function POST(request: NextRequest) {
       callbackUrl,
     });
 
-    let softpay;
-    try {
-      softpay = await initiateSoftpay(settings, provider, invoice.token, {
-        name:  body.customer_name.trim(),
-        email: body.customer_email.trim(),
-        phone: body.customer_phone.trim(),
-      });
-    } catch (softpayErr) {
-      // La facture existe déjà côté PayDunya même si SOFTPAY est refusé ici —
-      // on l'enregistre quand même (status 'pending' par défaut) pour que le
-      // webhook retrouve la transaction si le client règle malgré tout via la
-      // page PayDunya elle-même, plutôt que de laisser un paiement sans trace.
-      await recordTransaction({
-        external_reference: body.external_reference,
-        invoice_token: invoice.token,
-        provider,
-        amount: body.amount,
-        customer_name: body.customer_name.trim(),
-        customer_email: body.customer_email.trim(),
-        customer_phone: body.customer_phone.trim(),
-        redirect_url: null,
-        raw_initiate_response: { error: softpayErr instanceof Error ? softpayErr.message : String(softpayErr) },
-      }).catch(() => {});
-      throw softpayErr;
-    }
-
+    // Enregistrée AVANT initiateSoftpay (statut 'pending' par défaut) : si
+    // l'IPN du webhook arrive très vite après que le client ait validé le
+    // paiement (USSD free-money/expresso notamment), la ligne doit déjà
+    // exister pour qu'updateTransactionStatus la retrouve par invoice_token —
+    // sinon la confirmation de paiement matcherait 0 ligne et serait perdue.
     const tx = await recordTransaction({
       external_reference: body.external_reference,
       invoice_token: invoice.token,
@@ -97,6 +76,26 @@ export async function POST(request: NextRequest) {
       customer_name: body.customer_name.trim(),
       customer_email: body.customer_email.trim(),
       customer_phone: body.customer_phone.trim(),
+      redirect_url: null,
+      raw_initiate_response: null,
+    });
+
+    let softpay;
+    try {
+      softpay = await initiateSoftpay(settings, provider, invoice.token, {
+        name:  body.customer_name.trim(),
+        email: body.customer_email.trim(),
+        phone: body.customer_phone.trim(),
+      });
+    } catch (softpayErr) {
+      await updateTransactionInitiateResult(tx.id, {
+        redirect_url: null,
+        raw_initiate_response: { error: softpayErr instanceof Error ? softpayErr.message : String(softpayErr) },
+      }).catch(() => {});
+      throw softpayErr;
+    }
+
+    await updateTransactionInitiateResult(tx.id, {
       redirect_url: softpay.redirectUrl ?? null,
       raw_initiate_response: softpay.raw,
     });

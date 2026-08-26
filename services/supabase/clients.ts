@@ -19,6 +19,13 @@ export interface Client {
 
 export type ClientForm = Omit<Client, 'id' | 'business_id' | 'created_at'>;
 
+/** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
+ *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
+ *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
+function toIlikeTerm(raw: string): string {
+  return raw.trim().replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
 export async function getClients(businessId: string): Promise<Client[]> {
   const rows = await q<Client[]>(
     // Filet de sécurité — pas une vraie pagination : utilisé par les
@@ -43,7 +50,7 @@ export async function getClientsPage(
     .eq('business_id', businessId)
     .order('name');
 
-  const term = options?.search?.trim().replace(/[,()]/g, ' ');
+  const term = toIlikeTerm(options?.search ?? '');
   if (term) {
     query = query.or(`name.ilike.%${term}%,phone.ilike.%${term}%,representative_name.ilike.%${term}%`);
   }
