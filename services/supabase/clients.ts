@@ -19,11 +19,45 @@ export interface Client {
 
 export type ClientForm = Omit<Client, 'id' | 'business_id' | 'created_at'>;
 
+/** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
+ *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
+ *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
+function toIlikeTerm(raw: string): string {
+  return raw.trim().replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
 export async function getClients(businessId: string): Promise<Client[]> {
   const rows = await q<Client[]>(
-    supabase.from('clients').select('*').eq('business_id', businessId).order('name'),
+    // Filet de sécurité — pas une vraie pagination : utilisé par les
+    // sélecteurs client (caisse, contrats, dossiers) et l'export CSV, qui ont
+    // besoin de la liste complète. Pour la liste paginée, voir getClientsPage.
+    supabase.from('clients').select('*').eq('business_id', businessId).order('name').limit(5000),
   );
   return rows ?? [];
+}
+
+/** Page paginée + recherche serveur — utilisée par l'écran de gestion des clients. */
+export async function getClientsPage(
+  businessId: string,
+  options?: { search?: string; limit?: number; offset?: number },
+): Promise<{ clients: Client[]; count: number }> {
+  const limit  = options?.limit ?? 20;
+  const offset = options?.offset ?? 0;
+
+  let query = supabase
+    .from('clients')
+    .select('*', { count: 'exact' })
+    .eq('business_id', businessId)
+    .order('name');
+
+  const term = toIlikeTerm(options?.search ?? '');
+  if (term) {
+    query = query.or(`name.ilike.%${term}%,phone.ilike.%${term}%,representative_name.ilike.%${term}%`);
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return { clients: (data ?? []) as Client[], count: count ?? 0 };
 }
 
 export async function createClient(businessId: string, form: ClientForm): Promise<Client> {

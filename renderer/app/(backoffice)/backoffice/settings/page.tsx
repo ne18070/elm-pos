@@ -1,20 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Loader2, Save, Upload, Smartphone, 
-  Mail, Grid3X3, CreditCard, ShieldCheck
+import {
+  Loader2, Save, Upload, Smartphone,
+  Mail, Grid3X3, CreditCard, ShieldCheck, KeyRound, Copy, Check, RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
-import { 
+import {
   getPaymentSettings, upsertPaymentSettings, uploadQrCode,
-  type PaymentSettings 
+  type PaymentSettings
 } from '@services/supabase/subscriptions';
+import {
+  getPaydunyaSettingsAdmin, upsertPaydunyaSettingsAdmin, generateProxyApiKey,
+  type PaydunyaSettingsAdmin,
+} from '@services/supabase/paydunya-admin';
 import { ModulesTab } from '../components/ModulesTab';
 import { EmailTemplatesTab } from '../components/EmailTemplatesTab';
 
-type SettingsTab = 'paiement' | 'modules' | 'emails';
+type SettingsTab = 'paiement' | 'paydunya' | 'modules' | 'emails';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('paiement');
@@ -25,17 +29,62 @@ export default function SettingsPage() {
   const [paymentForm, setPaymentForm] = useState({ wave_qr_url: '', om_qr_url: '', whatsapp_number: '' });
   const [uploading, setUploading] = useState<'wave' | 'om' | null>(null);
 
+  // PayDunya State
+  const [pdLoading, setPdLoading] = useState(true);
+  const [pdSaving, setPdSaving]   = useState(false);
+  const [pdCopied, setPdCopied]   = useState(false);
+  const [pdForm, setPdForm] = useState<PaydunyaSettingsAdmin>({
+    mode: 'test',
+    master_key: '',
+    test_private_key: '', test_public_key: '', test_token: '',
+    live_private_key: '', live_public_key: '', live_token: '',
+    store_name: 'ELM', store_logo_url: '', store_website_url: '', proxy_api_key: '',
+  });
+
   useEffect(() => {
     if (activeTab === 'paiement') {
       getPaymentSettings().then((s) => {
-        setPaymentForm({ 
-          wave_qr_url: s?.wave_qr_url ?? '', 
-          om_qr_url: s?.om_qr_url ?? '', 
-          whatsapp_number: s?.whatsapp_number ?? '' 
+        setPaymentForm({
+          wave_qr_url: s?.wave_qr_url ?? '',
+          om_qr_url: s?.om_qr_url ?? '',
+          whatsapp_number: s?.whatsapp_number ?? ''
         });
       }).finally(() => setPaymentLoading(false));
     }
+    if (activeTab === 'paydunya') {
+      getPaydunyaSettingsAdmin()
+        .then((s) => setPdForm({
+          ...s,
+          master_key: s.master_key ?? '',
+          test_private_key: s.test_private_key ?? '', test_public_key: s.test_public_key ?? '', test_token: s.test_token ?? '',
+          live_private_key: s.live_private_key ?? '', live_public_key: s.live_public_key ?? '', live_token: s.live_token ?? '',
+          store_logo_url: s.store_logo_url ?? '', store_website_url: s.store_website_url ?? '', proxy_api_key: s.proxy_api_key ?? '',
+        }))
+        .catch((e) => alert(toUserError(e)))
+        .finally(() => setPdLoading(false));
+    }
   }, [activeTab]);
+
+  async function handleSavePaydunya() {
+    setPdSaving(true);
+    try {
+      await upsertPaydunyaSettingsAdmin(pdForm);
+      alert('Paramètres PayDunya enregistrés');
+    } catch (e) { alert(toUserError(e)); }
+    finally { setPdSaving(false); }
+  }
+
+  function handleGenerateProxyKey() {
+    if (pdForm.proxy_api_key && !confirm('Générer une nouvelle clé invalidera l\'ancienne pour toutes vos applications externes. Continuer ?')) return;
+    setPdForm((f) => ({ ...f, proxy_api_key: generateProxyApiKey() }));
+  }
+
+  function handleCopyProxyKey() {
+    if (!pdForm.proxy_api_key) return;
+    navigator.clipboard.writeText(pdForm.proxy_api_key);
+    setPdCopied(true);
+    setTimeout(() => setPdCopied(false), 1500);
+  }
 
   async function handleUpload(type: 'wave' | 'om', file: File) {
     setUploading(type);
@@ -57,6 +106,7 @@ export default function SettingsPage() {
 
   const TABS = [
     { id: 'paiement', label: 'Paiement Global', icon: CreditCard },
+    { id: 'paydunya', label: 'PayDunya', icon: KeyRound },
     { id: 'modules', label: 'Modules & Types', icon: Grid3X3 },
     { id: 'emails', label: 'Templates Email', icon: Mail },
   ];
@@ -140,10 +190,156 @@ export default function SettingsPage() {
               disabled={paymentSaving} 
               className="btn-primary w-full h-14 text-sm font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-brand-500/20"
             >
-              {paymentSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />} 
+              {paymentSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
               Sauvegarder les configurations
             </button>
           </div>
+        )}
+
+        {activeTab === 'paydunya' && (
+          pdLoading ? (
+            <div className="flex justify-center py-16"><Loader2 size={28} className="animate-spin text-content-muted" /></div>
+          ) : (
+          <div className="max-w-2xl space-y-6">
+
+            {/* Mode actif */}
+            <div className="card p-6 space-y-3">
+              <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">
+                <ShieldCheck size={16} className="text-content-brand" /> Mode actif
+              </h3>
+              <p className="text-xs text-content-muted">
+                Détermine quel jeu de clés (Test ou Production) est utilisé par les paiements réels — les deux jeux restent enregistrés en permanence.
+              </p>
+              <div className="flex gap-2">
+                {(['test', 'live'] as const).map((m) => (
+                  <button key={m} onClick={() => setPdForm((f) => ({ ...f, mode: m }))}
+                    className={cn(
+                      'flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all border',
+                      pdForm.mode === m
+                        ? m === 'live' ? 'bg-red-600 border-red-600 text-white' : 'bg-brand-600 border-brand-600 text-content-primary'
+                        : 'border-surface-border text-content-muted hover:text-content-primary'
+                    )}>
+                    {m === 'test' ? 'Test (sandbox)' : 'Production (argent réel)'}
+                  </button>
+                ))}
+              </div>
+              {pdForm.mode === 'live' && (
+                <p className="text-[10px] text-status-error font-semibold uppercase tracking-wide">
+                  ⚠ Mode production actif — les paiements initiés déplaceront de l'argent réel.
+                </p>
+              )}
+            </div>
+
+            {/* Clé Master (unique, partagée Test + Production) */}
+            <div className="card p-6 space-y-3">
+              <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">
+                <KeyRound size={16} className="text-content-brand" /> Clé Principale (Master Key)
+              </h3>
+              <p className="text-xs text-content-muted">
+                PayDunya n'attribue qu'une seule clé principale par application — partagée entre Test et Production.
+              </p>
+              <input
+                type="text"
+                value={pdForm.master_key ?? ''}
+                onChange={(e) => setPdForm((f) => ({ ...f, master_key: e.target.value }))}
+                className="input h-10 text-xs font-mono"
+                placeholder="..."
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Clés Test / Production */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {([
+                { prefix: 'test' as const, label: 'Clés API de Test', color: 'bg-status-info' },
+                { prefix: 'live' as const, label: 'Clés API de Production', color: 'bg-status-error' },
+              ]).map(({ prefix, label, color }) => (
+                <div key={prefix} className="card p-6 space-y-3">
+                  <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">
+                    <div className={cn('w-2 h-2 rounded-full', color)} /> {label}
+                  </h3>
+                  {([
+                    ['private_key', 'Clé Privée'],
+                    ['public_key', 'Clé Publique'],
+                    ['token', 'Token'],
+                  ] as const).map(([field, fLabel]) => {
+                    const key = `${prefix}_${field}` as keyof PaydunyaSettingsAdmin;
+                    return (
+                      <div key={field}>
+                        <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">{fLabel}</label>
+                        <input
+                          type="text"
+                          value={(pdForm[key] as string) ?? ''}
+                          onChange={(e) => setPdForm((f) => ({ ...f, [key]: e.target.value }))}
+                          className="input h-10 text-xs font-mono"
+                          placeholder={`${prefix}_...`}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {/* Boutique */}
+            <div className="card p-6 space-y-4">
+              <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">
+                <CreditCard size={16} className="text-content-brand" /> Fiche boutique (affichée sur la page de paiement PayDunya)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Nom</label>
+                  <input type="text" value={pdForm.store_name} onChange={(e) => setPdForm((f) => ({ ...f, store_name: e.target.value }))} className="input h-10" />
+                </div>
+                <div>
+                  <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Site web</label>
+                  <input type="text" value={pdForm.store_website_url ?? ''} onChange={(e) => setPdForm((f) => ({ ...f, store_website_url: e.target.value }))} className="input h-10" placeholder="https://elm-app.click" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Logo (URL)</label>
+                  <input type="text" value={pdForm.store_logo_url ?? ''} onChange={(e) => setPdForm((f) => ({ ...f, store_logo_url: e.target.value }))} className="input h-10" placeholder="https://.../logo.png" />
+                </div>
+              </div>
+            </div>
+
+            {/* Clé proxy pour applications externes */}
+            <div className="card p-6 space-y-3">
+              <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">
+                <KeyRound size={16} className="text-content-brand" /> Clé API du proxy (applications externes)
+              </h3>
+              <p className="text-xs text-content-muted">
+                À fournir à tes autres applications pour qu'elles appellent <span className="font-mono text-content-secondary">/api/payments/paydunya/*</span> (header <span className="font-mono text-content-secondary">X-API-Key</span>). Ne jamais partager les clés PayDunya elles-mêmes.
+              </p>
+              <div className="flex items-center gap-2">
+                <input type="text" readOnly value={pdForm.proxy_api_key ?? ''} placeholder="Aucune clé générée"
+                  className="input h-10 text-xs font-mono flex-1" />
+                <button onClick={handleCopyProxyKey} disabled={!pdForm.proxy_api_key}
+                  className="btn-secondary h-10 w-10 flex items-center justify-center shrink-0 disabled:opacity-30">
+                  {pdCopied ? <Check size={16} className="text-status-success" /> : <Copy size={16} />}
+                </button>
+                <button onClick={handleGenerateProxyKey}
+                  className="btn-secondary h-10 px-4 flex items-center gap-2 text-xs font-semibold shrink-0">
+                  <RefreshCw size={14} /> {pdForm.proxy_api_key ? 'Régénérer' : 'Générer'}
+                </button>
+              </div>
+              <a href="/backoffice/paydunya-docs" className="text-xs text-content-brand hover:underline inline-block">
+                Voir la documentation d'intégration →
+              </a>
+            </div>
+
+            <button
+              onClick={handleSavePaydunya}
+              disabled={pdSaving}
+              className="btn-primary w-full h-14 text-sm font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-brand-500/20"
+            >
+              {pdSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+              Sauvegarder PayDunya
+            </button>
+          </div>
+          )
         )}
 
         {activeTab === 'modules' && <ModulesTab />}

@@ -4,6 +4,13 @@ import { logAction } from './logger';
 import { q } from './q';
 import type { Product, Category } from '../../types';
 
+/** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
+ *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
+ *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
+function toIlikeTerm(raw: string): string {
+  return raw.trim().replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export async function getCategories(businessId: string): Promise<Category[]> {
@@ -40,8 +47,38 @@ export async function getProducts(businessId: string): Promise<Product[]> {
       .select('*, category:categories(*)')
       .eq('business_id', businessId)
       .eq('is_active', true)
-      .order('name') as never,
+      .order('name')
+      // Filet de sécurité — pas une vraie pagination : utilisé par la caisse
+      // (recherche locale instantanée) et les sélecteurs produit (coupons,
+      // stock), qui ont besoin du catalogue entier en mémoire. Pour la liste
+      // paginée de gestion des produits, voir getProductsPage ci-dessous.
+      .limit(5000) as never,
   );
+}
+
+/** Page paginée + recherche serveur — utilisé par l'écran de gestion des produits. */
+export async function getProductsPage(
+  businessId: string,
+  options?: { search?: string; limit?: number; offset?: number },
+): Promise<{ products: Product[]; count: number }> {
+  const limit  = options?.limit ?? 20;
+  const offset = options?.offset ?? 0;
+
+  let query = supabase
+    .from('products')
+    .select('*, category:categories(*)', { count: 'exact' })
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .order('name');
+
+  const term = toIlikeTerm(options?.search ?? '');
+  if (term) {
+    query = query.or(`name.ilike.%${term}%,barcode.ilike.%${term}%,sku.ilike.%${term}%`);
+  }
+
+  const { data, error, count } = await query.range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+  return { products: (data ?? []) as unknown as Product[], count: count ?? 0 };
 }
 
 export async function getProductByBarcode(

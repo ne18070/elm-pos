@@ -1,32 +1,43 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
-  QrCode, CheckCircle, Loader2,
-  Send, X, FileImage,
+  CheckCircle, Loader2, Smartphone, XCircle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { displayCurrency } from '@/lib/utils';
-import {
-  getPlans, getPaymentSettings,
-  type Plan, type PaymentSettings,
-} from '@services/supabase/subscriptions';
+import { getPlans, type Plan } from '@services/supabase/subscriptions';
 import { sendEmail } from '@services/resend';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
 type Step = 'info' | 'payment' | 'sent';
+type PayStatus = 'idle' | 'initiating' | 'waiting' | 'completed' | 'failed';
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS  = 5 * 60 * 1000;
 
 const isFree = (plan: Plan | null) => plan !== null && plan.price === 0;
 
 export default function SubscribePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    }>
+      <SubscribePageInner />
+    </Suspense>
+  );
+}
+
+function SubscribePageInner() {
   const [loading, setLoading]     = useState(true);
   const [allPlans, setAllPlans]   = useState<Plan[]>([]);
   const [period, setPeriod]       = useState<'monthly' | 'annual'>('monthly');
-  const [settings, setSettings]   = useState<PaymentSettings | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [showQr, setShowQr]       = useState<'wave' | 'om' | null>(null);
   const [step, setStep]           = useState<Step>('info');
 
   // Formulaire client
@@ -36,11 +47,15 @@ export default function SubscribePage() {
   const [email, setEmail]               = useState('');
   const [phone, setPhone]               = useState('');
 
-  // Reçu
-  const [receiptFile, setReceiptFile]     = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Paiement PayDunya
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [payStatus, setPayStatus] = useState<PayStatus>('idle');
+  const [payError, setPayError]   = useState('');
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const searchParams = useSearchParams();
 
   // Validation
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -110,21 +125,68 @@ export default function SubscribePage() {
   }
 
   useEffect(() => {
-    Promise.all([
-      getPlans().catch(() => [] as Plan[]),
-      getPaymentSettings().catch(() => null),
-    ])
-      .then(([p, s]) => { setAllPlans(p); setSettings(s); const first = p.find((pl: Plan) => pl.price > 0 && pl.duration_days < 300); if (first) setSelectedPlan(first); })
+    getPlans().catch(() => [] as Plan[])
+      .then((p) => { setAllPlans(p); const first = p.find((pl: Plan) => pl.price > 0 && pl.duration_days < 300); if (first) setSelectedPlan(first); })
       .finally(() => setLoading(false));
   }, []);
 
-  function handleReceiptChange(file: File) {
-    setReceiptFile(file);
-    setReceiptPreview(URL.createObjectURL(file));
+  // Reprise après redirection Wave (le client revient sur /subscribe?paid=1&ref=...)
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (!ref) return;
+    setRequestId(ref);
+    if (searchParams.get('paid') === '1') {
+      setStep('payment');
+      setPayStatus('waiting');
+      startPolling(ref);
+    } else if (searchParams.get('cancelled') === '1') {
+      setStep('payment');
+      setPayStatus('failed');
+      setPayError('Paiement annulé.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => () => { if (pollTimer.current) clearInterval(pollTimer.current); }, []);
+
+  function startPolling(ref: string) {
+    if (pollTimer.current) clearInterval(pollTimer.current);
+    const startedAt = Date.now();
+    pollTimer.current = setInterval(async () => {
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        if (pollTimer.current) clearInterval(pollTimer.current);
+        setPayStatus('failed');
+        setPayError("Délai dépassé — si vous avez payé, contactez-nous, votre accès sera activé manuellement.");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/subscribe/paydunya-status?ref=${ref}`);
+        const json = await res.json();
+        if (json?.data?.status === 'completed') {
+          if (pollTimer.current) clearInterval(pollTimer.current);
+          setPayStatus('completed');
+          setStep('sent');
+        } else if (json?.data?.status === 'failed' || json?.data?.status === 'cancelled') {
+          if (pollTimer.current) clearInterval(pollTimer.current);
+          setPayStatus('failed');
+          setPayError('Le paiement a échoué ou a été annulé.');
+        }
+      } catch { /* on continue de sonder */ }
+    }, POLL_INTERVAL_MS);
   }
 
   async function handleSubmit() {
     if (!selectedPlan) return;
+
+    if (!isFree(selectedPlan)) {
+      // Plan payant : pas d'écriture en base ici — la demande n'est créée que
+      // si le paiement PayDunya démarre réellement (dans handlePay), pour ne
+      // jamais laisser une demande fantôme dans le backoffice si le client
+      // abandonne avant de payer.
+      setStep('payment');
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -136,9 +198,9 @@ export default function SubscribePage() {
         phone:         phone.trim(),
         plan_id:       selectedPlan.id,
         receipt_url:   null,
-        // Password retiré ici
       });
       if (error) throw new Error(error.message);
+
       sendEmail({
         type:    'subscription_received',
         to:      email.trim().toLowerCase(),
@@ -153,9 +215,34 @@ export default function SubscribePage() {
     }
   }
 
-  /* PAYMENT STEP BYPASSED — will be re-enabled once payment API is ready
-  async function handleSubmitWithReceipt() { ... }
-  */
+  async function handlePay() {
+    if (!selectedPlan) return;
+    setPayStatus('initiating');
+    setPayError('');
+    try {
+      const res = await fetch('/api/subscribe/paydunya-initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: businessName.trim(),
+          denomination: denomination.trim() || undefined,
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          plan_id: selectedPlan.id,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Échec du paiement.');
+      if (!json.data.redirect_url) throw new Error('URL de paiement manquante.');
+      // Redirection pleine page vers la page de paiement hébergée PayDunya
+      // (tous moyens de paiement — Orange Money, Wave, cartes… choisis par le client sur place).
+      window.location.href = json.data.redirect_url;
+    } catch (e) {
+      setPayStatus('failed');
+      setPayError(String(e instanceof Error ? e.message : e));
+    }
+  }
 
   if (loading) {
     return (
@@ -194,7 +281,9 @@ export default function SubscribePage() {
               <CheckCircle className="w-10 h-10 text-status-success" />
             </div>
             <div>
-              <p className="text-xl font-bold text-content-primary">Demande envoyée !</p>
+              <p className="text-xl font-bold text-content-primary">
+                {isFree(selectedPlan) ? 'Demande envoyée !' : 'Paiement confirmé !'}
+              </p>
               {isFree(selectedPlan) ? (
                 <p className="text-sm text-content-secondary mt-2 max-w-sm">
                   Votre inscription au plan gratuit a bien été reçue.
@@ -202,12 +291,13 @@ export default function SubscribePage() {
                 </p>
               ) : (
                 <p className="text-sm text-content-secondary mt-2 max-w-sm">
-                  Nous avons bien reçu votre demande et votre reçu de paiement.
-                  Votre accès sera activé sous <strong className="text-content-primary">24h</strong>.
+                  Votre paiement a bien été reçu — votre compte est déjà activé.
                 </p>
               )}
               <p className="text-xs text-content-muted mt-3">
-                Un email de confirmation sera envoyé à <span className="text-content-primary">{email}</span>
+                {isFree(selectedPlan)
+                  ? <>Un email de confirmation sera envoyé à <span className="text-content-primary">{email}</span></>
+                  : <>Vos identifiants de connexion viennent d&apos;être envoyés à <span className="text-content-primary">{email}</span></>}
               </p>
             </div>
           </div>
@@ -371,14 +461,14 @@ export default function SubscribePage() {
               {submitting ? 'Envoi en cours…' : isFree(selectedPlan) ? "S'inscrire gratuitement →" : 'Envoyer ma demande →'}
             </button>
           </div>
-        ) : null /* PAYMENT STEP BYPASSED */}
-
-        {false && step === 'payment' && (
-          /* -- Étape 2 : Paiement + reçu — désactivé temporairement -- */
+        ) : step === 'payment' ? (
+          /* -- Étape 2 : Paiement PayDunya (Orange Money / Wave) -- */
           <div className="space-y-6">
-            <button onClick={() => setStep('info')} className="text-sm text-content-secondary hover:text-content-primary transition-colors">
-              ← Retour
-            </button>
+            {payStatus !== 'waiting' && payStatus !== 'initiating' && (
+              <button onClick={() => setStep('info')} className="text-sm text-content-secondary hover:text-content-primary transition-colors">
+                ← Retour
+              </button>
+            )}
 
             <div className="card p-6 space-y-5">
               <h2 className="font-bold text-content-primary text-lg">Paiement</h2>
@@ -391,72 +481,43 @@ export default function SubscribePage() {
                 </span>
               </div>
 
-              <ol className="space-y-3">
-                {[
-                  { n: 1, text: 'Scannez le QR code Wave ou Orange Money ci-dessous' },
-                  { n: 2, text: `Effectuez le paiement de ${selectedPlan?.price.toLocaleString('fr-FR') ?? '—'} ${displayCurrency(selectedPlan?.currency ?? '')}` },
-                  { n: 3, text: 'Prenez une photo de votre reçu de paiement' },
-                  { n: 4, text: 'Joignez le reçu et envoyez votre demande' },
-                ].map(({ n, text }) => (
-                  <li key={n} className="flex items-start gap-3">
-                    <span className="w-6 h-6 rounded-full bg-brand-600 text-content-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
-                    <span className="text-sm text-content-primary">{text}</span>
-                  </li>
-                ))}
-              </ol>
-
-              {/* QR Codes */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'wave' as const, label: 'Wave',         url: settings?.wave_qr_url, color: 'border-blue-700 bg-badge-info' },
-                  { key: 'om'   as const, label: 'Orange Money', url: settings?.om_qr_url,   color: 'border-orange-700 bg-badge-orange' },
-                ].map(({ key, label, url, color }) => (
-                  <button key={key} onClick={() => url && setShowQr(key)} disabled={!url}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
-                      ${url ? `${color} hover:opacity-90 cursor-pointer` : 'border-surface-border opacity-30'}`}>
-                    <QrCode className="w-8 h-8 text-content-primary" />
-                    <span className="text-sm font-medium text-content-primary">{label}</span>
-                    {!url && <span className="text-xs text-content-muted">Bientôt disponible</span>}
-                  </button>
-                ))}
-              </div>
-
-              {/* Upload reçu */}
-              <div className="space-y-3 pt-2 border-t border-surface-border">
-                <p className="text-sm font-semibold text-content-primary">Joindre votre reçu</p>
-
-                {receiptPreview ? (
-                  <div className="relative w-fit">
-                    <img src={receiptPreview ?? undefined} alt="reçu" className="h-36 w-auto rounded-xl border border-surface-border object-cover" />
-                    <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
-                      <X className="w-3.5 h-3.5 text-content-primary" />
-                    </button>
+              {payStatus === 'waiting' ? (
+                <div className="flex flex-col items-center gap-4 py-6 text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-brand-500" />
+                  <div>
+                    <p className="font-semibold text-content-primary">En attente de confirmation…</p>
+                    <p className="text-sm text-content-secondary mt-1 max-w-sm">
+                      Nous vérifions votre paiement auprès de PayDunya, cela peut prendre quelques secondes.
+                    </p>
                   </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center gap-2 w-full h-32
-                                    border-2 border-dashed border-surface-border rounded-xl
-                                    cursor-pointer hover:border-brand-500 transition-colors">
-                    <FileImage className="w-8 h-8 text-content-muted" />
-                    <span className="text-sm text-content-secondary">Cliquez pour choisir une image</span>
-                    <span className="text-xs text-content-muted">PNG, JPG, PDF</span>
-                    <input type="file" accept="image/*,.pdf" className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleReceiptChange(e.target.files[0])} />
-                  </label>
-                )}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="label">Numéro de téléphone</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                      className="input" placeholder="77 000 00 00" />
+                  </div>
 
-                {submitError && <p className="text-sm text-status-error">{submitError}</p>}
+                  {payStatus === 'failed' && payError && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-badge-error border border-status-error text-sm text-status-error">
+                      <XCircle className="w-4 h-4 shrink-0 mt-0.5" /> {payError}
+                    </div>
+                  )}
 
-                <button onClick={handleSubmit} disabled={!receiptFile || submitting}
-                  className="btn-primary w-full flex items-center justify-center gap-2 h-11">
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  {submitting ? 'Envoi en cours…' : 'Envoyer ma demande'}
-                </button>
-                <p className="text-xs text-content-muted text-center">Traitement sous 24h après réception.</p>
-              </div>
+                  <button onClick={handlePay} disabled={(payStatus as PayStatus) === 'initiating'}
+                    className="btn-primary w-full flex items-center justify-center gap-2 h-11 disabled:opacity-50">
+                    {payStatus === 'initiating' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                    {payStatus === 'initiating' ? 'Initialisation…' : `Payer ${selectedPlan?.price.toLocaleString('fr-FR')} ${displayCurrency(selectedPlan?.currency ?? '')}`}
+                  </button>
+                  <p className="text-xs text-content-muted text-center">
+                    Vous serez redirigé vers PayDunya pour choisir Orange Money, Wave ou un autre moyen de paiement.
+                  </p>
+                </>
+              )}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Pied de page */}
@@ -466,18 +527,6 @@ export default function SubscribePage() {
           Politique de confidentialité
         </a>
       </p>
-
-      {/* Modal QR agrandi */}
-      {showQr && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowQr(null)}>
-          <div className="bg-white rounded-2xl p-4 max-w-xs w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={showQr === 'wave' ? settings?.wave_qr_url! : settings?.om_qr_url!} alt="QR" className="w-full h-auto rounded-xl" />
-            <p className="text-center text-sm text-slate-700 font-medium mt-3">
-              {showQr === 'wave' ? 'Wave' : 'Orange Money'} — {selectedPlan?.price.toLocaleString('fr-FR')} {displayCurrency(selectedPlan?.currency ?? '')}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

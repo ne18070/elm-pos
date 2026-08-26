@@ -242,9 +242,10 @@ export default function EvenementsPage() {
   }
 
   async function handleUndo(guest: EventGuest) {
+    if (!business) return;
     setChecking(true);
     try {
-      await undoCheckIn(guest.id);
+      await undoCheckIn(business.id, guest.id);
       const reverted = { ...guest, status: 'pending' as const, checked_in_at: null, checked_in_by: null };
       setGuests((prev) => prev.map((g) => g.id === guest.id ? reverted : g));
       setSelected(reverted);
@@ -264,7 +265,7 @@ export default function EvenementsPage() {
   }
 
   async function handleSaveGuestEdit() {
-    if (!editingGuest || !guestForm.full_name.trim()) return;
+    if (!business || !editingGuest || !guestForm.full_name.trim()) return;
     setSavingGuest(true);
     try {
       const patch = {
@@ -273,7 +274,7 @@ export default function EvenementsPage() {
         phone:     guestForm.phone.trim() || null,
         category:  guestForm.category.trim() || null,
       };
-      await updateGuest(editingGuest.id, patch);
+      await updateGuest(business.id, editingGuest.id, patch);
       const updated = { ...editingGuest, ...patch };
       setGuests((prev) => prev.map((g) => g.id === editingGuest.id ? updated : g));
       if (selected?.id === editingGuest.id) setSelected(updated);
