@@ -21,7 +21,9 @@ export type ClientForm = Omit<Client, 'id' | 'business_id' | 'created_at'>;
 
 export async function getClients(businessId: string): Promise<Client[]> {
   const rows = await q<Client[]>(
-    supabase.from('clients').select('*').eq('business_id', businessId).order('name'),
+    // Filet de sécurité — pas une vraie pagination : au-delà de ça, la liste
+    // clients doit passer par une recherche côté serveur plutôt qu'un fetch complet.
+    supabase.from('clients').select('*').eq('business_id', businessId).order('name').limit(5000),
   );
   return rows ?? [];
 }

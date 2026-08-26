@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
@@ -34,15 +34,6 @@ export async function generateApiKey(): Promise<{ raw: string; prefix: string; h
   return { raw, prefix, hash };
 }
 
-// ─── Admin Supabase client ────────────────────────────────────────────────────
-
-function getAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase admin credentials not configured.');
-  return createClient(url, key);
-}
-
 // ─── In-memory rate limiter: 120 requests/minute per key hash ────────────────
 
 type RateBucket = { count: number; windowStart: number };
@@ -64,7 +55,7 @@ function checkRateLimit(keyHash: string): boolean {
 
 // ─── Subscription check ───────────────────────────────────────────────────────
 
-async function assertActiveSubscription(admin: ReturnType<typeof getAdmin>, businessId: string): Promise<void> {
+async function assertActiveSubscription(admin: ReturnType<typeof getSupabaseAdmin>, businessId: string): Promise<void> {
   const { data: sub } = await admin
     .from('subscriptions')
     .select('status, trial_ends_at, expires_at')
@@ -110,7 +101,7 @@ export async function validateApiKey(rawKey: string, requiredScope?: string): Pr
     throw Object.assign(new Error('Invalid API key format.'), { status: 401 });
   }
 
-  const admin = getAdmin();
+  const admin = getSupabaseAdmin();
   const keyHash = await sha256(rawKey);
 
   if (!checkRateLimit(keyHash)) {

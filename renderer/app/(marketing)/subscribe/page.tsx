@@ -291,12 +291,13 @@ function SubscribePageInner() {
                 </p>
               ) : (
                 <p className="text-sm text-content-secondary mt-2 max-w-sm">
-                  Votre paiement a bien été reçu.
-                  Votre accès sera activé sous <strong className="text-content-primary">24h</strong>.
+                  Votre paiement a bien été reçu — votre compte est déjà activé.
                 </p>
               )}
               <p className="text-xs text-content-muted mt-3">
-                Un email de confirmation sera envoyé à <span className="text-content-primary">{email}</span>
+                {isFree(selectedPlan)
+                  ? <>Un email de confirmation sera envoyé à <span className="text-content-primary">{email}</span></>
+                  : <>Vos identifiants de connexion viennent d&apos;être envoyés à <span className="text-content-primary">{email}</span></>}
               </p>
             </div>
           </div>

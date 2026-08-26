@@ -63,11 +63,31 @@ export async function POST(request: NextRequest) {
       callbackUrl,
     });
 
-    const softpay = await initiateSoftpay(settings, provider, invoice.token, {
-      name:  body.customer_name.trim(),
-      email: body.customer_email.trim(),
-      phone: body.customer_phone.trim(),
-    });
+    let softpay;
+    try {
+      softpay = await initiateSoftpay(settings, provider, invoice.token, {
+        name:  body.customer_name.trim(),
+        email: body.customer_email.trim(),
+        phone: body.customer_phone.trim(),
+      });
+    } catch (softpayErr) {
+      // La facture existe déjà côté PayDunya même si SOFTPAY est refusé ici —
+      // on l'enregistre quand même (status 'pending' par défaut) pour que le
+      // webhook retrouve la transaction si le client règle malgré tout via la
+      // page PayDunya elle-même, plutôt que de laisser un paiement sans trace.
+      await recordTransaction({
+        external_reference: body.external_reference,
+        invoice_token: invoice.token,
+        provider,
+        amount: body.amount,
+        customer_name: body.customer_name.trim(),
+        customer_email: body.customer_email.trim(),
+        customer_phone: body.customer_phone.trim(),
+        redirect_url: null,
+        raw_initiate_response: { error: softpayErr instanceof Error ? softpayErr.message : String(softpayErr) },
+      }).catch(() => {});
+      throw softpayErr;
+    }
 
     const tx = await recordTransaction({
       external_reference: body.external_reference,

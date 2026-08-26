@@ -40,7 +40,11 @@ export async function getProducts(businessId: string): Promise<Product[]> {
       .select('*, category:categories(*)')
       .eq('business_id', businessId)
       .eq('is_active', true)
-      .order('name') as never,
+      .order('name')
+      // Filet de sécurité — pas une vraie pagination : un catalogue plus
+      // large que ça doit passer par une recherche/scan côté POS plutôt que
+      // de tout charger en mémoire au démarrage de la caisse.
+      .limit(5000) as never,
   );
 }
 

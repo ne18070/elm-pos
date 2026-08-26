@@ -476,6 +476,121 @@ export async function createAndPayPublicRequest(params: CreateAndPayPublicParams
   return { ...result, requestId: inserted.id };
 }
 
+// ─── Activation automatique post-paiement ─────────────────────────────────────
+// Jusqu'ici, un paiement PayDunya confirmé ne faisait que marquer la demande
+// "payée" — un superadmin devait ensuite valider manuellement dans le
+// backoffice pour activer réellement l'abonnement. Puisque le paiement est
+// déjà vérifié côté serveur (confirmInvoice, jamais le corps de l'IPN), la
+// validation manuelle n'apporte plus rien pour le flow PayDunya : on active
+// directement ici, via le client admin (bypass RLS — appel non authentifié
+// déclenché par PayDunya, donc pas de session utilisateur disponible).
+
+interface PublicRequestRow {
+  id: string; business_name: string; denomination: string | null;
+  full_name: string | null; email: string; phone: string | null; plan_id: string | null;
+}
+
+/**
+ * Appelée depuis le webhook une fois un paiement 'paydunya-hosted-checkout'
+ * confirmé. Le filtre `.eq('status', 'pending')` sert aussi de garde
+ * d'idempotence : un IPN dupliqué retrouve la demande déjà 'approved' et ne
+ * fait rien la deuxième fois.
+ */
+export async function autoActivatePaidRequest(externalReference: string, invoiceToken: string): Promise<void> {
+  const admin = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const patch = { payment_status: 'paid', paydunya_invoice_token: invoiceToken, payment_confirmed_at: now };
+
+  // Cas /billing : renouvellement d'un business déjà existant.
+  const { data: bizReq } = await admin
+    .from('subscription_requests')
+    .update(patch)
+    .eq('id', externalReference)
+    .eq('status', 'pending')
+    .select('id, business_id, plan_id')
+    .maybeSingle();
+  if (bizReq) {
+    const { data: plan } = await admin.from('plans').select('duration_days').eq('id', bizReq.plan_id).single();
+    if (plan?.duration_days) {
+      await admin.rpc('activate_subscription', {
+        p_business_id: bizReq.business_id,
+        p_plan_id: bizReq.plan_id,
+        p_days: plan.duration_days,
+        p_note: 'Paiement PayDunya automatique',
+      });
+      await admin.from('subscription_requests').update({ status: 'approved', processed_at: now }).eq('id', bizReq.id);
+    }
+    return;
+  }
+
+  // Cas /subscribe : nouveau prospect sans compte — crée le compte, le
+  // business et l'appartenance, comme le fait approvePublicRequest() côté
+  // backoffice, mais entièrement via le client admin (pas de session à relayer).
+  const { data: pubReq } = await admin
+    .from('public_subscription_requests')
+    .update(patch)
+    .eq('id', externalReference)
+    .eq('status', 'pending')
+    .select('id, business_name, denomination, full_name, email, phone, plan_id')
+    .maybeSingle<PublicRequestRow>();
+  if (!pubReq?.plan_id) return;
+
+  const { data: plan } = await admin.from('plans').select('label, duration_days').eq('id', pubReq.plan_id).single();
+  if (!plan?.duration_days) return;
+
+  const password = Math.random().toString(36).slice(-10) + 'A1!';
+  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+    email: pubReq.email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: pubReq.full_name || pubReq.business_name },
+  });
+  // Le compte n'a pas pu être créé (email déjà utilisé, etc.) — la demande
+  // reste "payée" mais non approuvée, visible dans la file du backoffice
+  // pour un traitement manuel plutôt que de perdre le paiement en silence.
+  if (authError || !authData.user) return;
+  const userId = authData.user.id;
+
+  await admin.from('users').upsert(
+    { id: userId, email: pubReq.email, full_name: pubReq.full_name || pubReq.business_name, role: 'owner' },
+    { onConflict: 'id' },
+  );
+
+  const { data: biz } = await admin
+    .from('businesses')
+    .insert({ name: pubReq.business_name, denomination: pubReq.denomination || pubReq.business_name, owner_id: userId, type: 'retail' })
+    .select('id')
+    .single();
+  if (!biz) return;
+
+  await admin.from('business_members').insert({ business_id: biz.id, user_id: userId, role: 'owner' });
+  await admin.from('users').update({ business_id: biz.id }).eq('id', userId);
+
+  await admin.rpc('activate_subscription', {
+    p_business_id: biz.id,
+    p_plan_id: pubReq.plan_id,
+    p_days: plan.duration_days,
+    p_note: 'Paiement PayDunya automatique',
+  });
+
+  await admin.from('public_subscription_requests').update({ status: 'approved', processed_at: now }).eq('id', pubReq.id);
+
+  const expiresAt = new Date(Date.now() + plan.duration_days * 86_400_000);
+  const { sendEmail } = await import('@services/resend');
+  sendEmail({
+    type: 'subscription_approved',
+    to: pubReq.email,
+    subject: '✅ Votre accès ELM APP est activé',
+    data: {
+      business_name: pubReq.business_name,
+      email: pubReq.email,
+      password,
+      plan_label: plan.label ?? 'Pro',
+      expires_at: expiresAt.toISOString(),
+    },
+  }).catch(() => {});
+}
+
 // ─── Auth du proxy API (pour les applications externes) ──────────────────────
 
 export function assertValidProxyKey(request: Request, settings: PaydunyaSettings): void {

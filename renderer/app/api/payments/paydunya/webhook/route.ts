@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createHash } from 'crypto';
 import qs from 'qs';
-import { getPaydunyaSettings, activeKeys, confirmInvoice, updateTransactionStatus } from '@/lib/server/paydunya';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getPaydunyaSettings, activeKeys, confirmInvoice, updateTransactionStatus, getTransactionByToken, autoActivatePaidRequest } from '@/lib/server/paydunya';
 
 export const runtime = 'nodejs';
 
@@ -46,24 +45,34 @@ export async function POST(request: NextRequest) {
 
     const confirm = await confirmInvoice(settings, data.invoice.token);
     if (confirm.status !== 'pending') {
+      const before = await getTransactionByToken(data.invoice.token);
+      const alreadyProcessed = before?.status === 'completed';
       const tx = await updateTransactionStatus(data.invoice.token, confirm.status, confirm.raw);
 
       // Cas /subscribe (public_subscription_requests) et /billing
       // (subscription_requests) : si cette transaction correspond à une
-      // demande (external_reference = son id), on la marque payée. Chaque
-      // update ne touche 0 ligne si l'id n'existe pas dans cette table-là —
-      // jamais d'erreur, jamais bloquant pour l'accusé de réception IPN.
-      if (confirm.status === 'completed' && tx?.external_reference) {
-        const admin = getSupabaseAdmin();
-        const patch = {
-          payment_status: 'paid',
-          paydunya_invoice_token: data.invoice.token,
-          payment_confirmed_at: new Date().toISOString(),
-        };
-        await Promise.allSettled([
-          admin.from('public_subscription_requests').update(patch).eq('id', tx.external_reference),
-          admin.from('subscription_requests').update(patch).eq('id', tx.external_reference),
-        ]);
+      // demande (external_reference = son id), on marque la demande payée et
+      // on active immédiatement l'abonnement (voir autoActivatePaidRequest) —
+      // plus besoin d'une validation manuelle superadmin pour un paiement déjà
+      // vérifié côté serveur.
+      //
+      // Restreint au provider 'paydunya-hosted-checkout' : c'est le seul flow
+      // où le montant facturé est résolu côté serveur depuis plans.price (voir
+      // payExistingRequest). Le proxy SOFTPAY externe (/api/payments/paydunya/
+      // initiate) laisse l'appelant choisir amount et external_reference —
+      // sans ce filtre, un détenteur de clé proxy pourrait régler un montant
+      // arbitraire tout en réutilisant l'id d'une vraie demande d'abonnement
+      // pour la faire activer.
+      //
+      // alreadyProcessed empêche un IPN dupliqué (PayDunya retente parfois la
+      // notification) de ré-appliquer cette étape plusieurs fois.
+      if (
+        confirm.status === 'completed' &&
+        !alreadyProcessed &&
+        tx?.external_reference &&
+        tx.provider === 'paydunya-hosted-checkout'
+      ) {
+        await autoActivatePaidRequest(tx.external_reference, data.invoice.token);
       }
     }
 

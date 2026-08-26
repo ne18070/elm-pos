@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import { q } from './q';
-import type { TablesInsert } from './database.types';
+import type { TablesInsert, TablesUpdate } from './database.types';
 
 // --- Types --------------------------------------------------------------------
 
@@ -60,19 +60,27 @@ export async function listArchivedEvents(businessId: string): Promise<EventItem[
 
 /** Masque l'événement de la liste active sans rien supprimer — réversible via unarchiveEvent. */
 export async function archiveEvent(businessId: string, eventId: string): Promise<void> {
-  await q(
+  const rows = await q<{ id: string }[]>(
     supabase.from('events')
-      .update({ archived_at: new Date().toISOString() } as unknown as TablesInsert<'events'>)
-      .eq('id', eventId).eq('business_id', businessId),
+      .update({ archived_at: new Date().toISOString() } as unknown as TablesUpdate<'events'>)
+      .eq('id', eventId).eq('business_id', businessId)
+      .select('id'),
   );
+  if ((rows?.length ?? 0) === 0) {
+    throw new Error("Impossible d'archiver : événement introuvable ou droits insuffisants.");
+  }
 }
 
 export async function unarchiveEvent(businessId: string, eventId: string): Promise<void> {
-  await q(
+  const rows = await q<{ id: string }[]>(
     supabase.from('events')
-      .update({ archived_at: null } as unknown as TablesInsert<'events'>)
-      .eq('id', eventId).eq('business_id', businessId),
+      .update({ archived_at: null } as unknown as TablesUpdate<'events'>)
+      .eq('id', eventId).eq('business_id', businessId)
+      .select('id'),
   );
+  if ((rows?.length ?? 0) === 0) {
+    throw new Error("Impossible de restaurer : événement introuvable ou droits insuffisants.");
+  }
 }
 
 export async function createEvent(
@@ -93,10 +101,14 @@ export async function updateEvent(
   eventId: string,
   data: { name: string; event_date?: string | null; location?: string | null },
 ): Promise<void> {
-  await q(
-    supabase.from('events').update(data as unknown as TablesInsert<'events'>)
-      .eq('id', eventId).eq('business_id', businessId),
+  const rows = await q<{ id: string }[]>(
+    supabase.from('events').update(data as unknown as TablesUpdate<'events'>)
+      .eq('id', eventId).eq('business_id', businessId)
+      .select('id'),
   );
+  if ((rows?.length ?? 0) === 0) {
+    throw new Error("Impossible de modifier : événement introuvable ou droits insuffisants.");
+  }
 }
 
 /**
@@ -183,19 +195,29 @@ export async function checkInGuest(guestId: string): Promise<EventGuest | null> 
 }
 
 export async function updateGuest(
+  businessId: string,
   guestId: string,
   data: { full_name: string; company?: string | null; phone?: string | null; category?: string | null },
 ): Promise<void> {
-  await q(
-    supabase.from('event_guests').update(data as unknown as TablesInsert<'event_guests'>).eq('id', guestId),
+  const rows = await q<{ id: string }[]>(
+    supabase.from('event_guests').update(data as unknown as TablesUpdate<'event_guests'>)
+      .eq('id', guestId).eq('business_id', businessId)
+      .select('id'),
   );
+  if ((rows?.length ?? 0) === 0) {
+    throw new Error("Impossible de modifier : invité introuvable ou droits insuffisants.");
+  }
 }
 
-export async function undoCheckIn(guestId: string): Promise<void> {
-  await q(
+export async function undoCheckIn(businessId: string, guestId: string): Promise<void> {
+  const rows = await q<{ id: string }[]>(
     supabase
       .from('event_guests')
-      .update({ status: 'pending', checked_in_at: null, checked_in_by: null } as unknown as TablesInsert<'event_guests'>)
-      .eq('id', guestId),
+      .update({ status: 'pending', checked_in_at: null, checked_in_by: null } as unknown as TablesUpdate<'event_guests'>)
+      .eq('id', guestId).eq('business_id', businessId)
+      .select('id'),
   );
+  if ((rows?.length ?? 0) === 0) {
+    throw new Error("Impossible d'annuler : invité introuvable ou droits insuffisants.");
+  }
 }

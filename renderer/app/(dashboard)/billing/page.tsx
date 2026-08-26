@@ -1,5 +1,6 @@
 'use client';
 import { displayCurrency } from '@/lib/utils';
+import { supabase } from '@services/supabase/client';
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -147,9 +148,13 @@ function BillingPageInner() {
     setPayStatus('initiating');
     setPayError('');
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/billing/paydunya-initiate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+        },
         body: JSON.stringify({
           business_id: business.id,
           plan_id: selectedPlan.id,
@@ -421,7 +426,7 @@ function BillingPageInner() {
                 <div>
                   <p className="text-sm font-semibold text-content-primary">Paiement immédiat via PayDunya</p>
                   <p className="text-xs text-content-secondary mt-1">
-                    Étape suivante : payez via Orange Money, Wave, Free Money, Expresso ou Djamo. Votre accès sera activé sous 24h après confirmation du paiement.
+                    Étape suivante : payez via Orange Money, Wave, Free Money, Expresso ou Djamo. Votre accès est activé automatiquement dès confirmation du paiement.
                   </p>
                 </div>
               </div>
@@ -507,7 +512,7 @@ function BillingPageInner() {
             <div>
               <p className="text-lg font-bold text-content-primary">Paiement confirmé !</p>
               <p className="text-sm text-content-secondary mt-1">
-                Votre paiement a bien été reçu via PayDunya. Votre accès sera activé sous 24h.
+                Votre paiement a bien été reçu. Votre accès est déjà activé.
               </p>
             </div>
             <button onClick={() => setStep('form')} className="btn-secondary text-sm">
