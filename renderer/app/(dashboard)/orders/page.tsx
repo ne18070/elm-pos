@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
@@ -32,6 +32,8 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 const TABS: FilterTab[] = ['all', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
 
+const PAGE_SIZE = 50;
+
 function getPaidAmount(order: Order): number {
   return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
 }
@@ -49,6 +51,7 @@ export default function OrdersPage() {
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
   const [showImport, setShowImport] = useState(false);
+  const [page, setPage]             = useState(1);
 
   // Pour le filtre "acompte", on charge tout puis on filtre côté client
   const dbStatus = tab === 'all' || tab === 'acompte' ? undefined : tab as OrderStatus;
@@ -74,6 +77,13 @@ export default function OrdersPage() {
   // Compteur acomptes pour le badge
   const acompteCount = orders.filter(isAcompte).length;
 
+  // Pagination (sur la liste déjà filtrée par onglet/recherche)
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [tab, search]);
+
   // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp
   useEffect(() => {
     if (!orders.length) return;
@@ -96,7 +106,12 @@ export default function OrdersPage() {
         <div className="px-4 py-2 sm:p-4 border-b border-surface-border space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-content-primary">Commandes</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-content-primary flex items-center gap-2">
+                Commandes
+                <span className="text-xs font-medium text-content-secondary bg-surface-input rounded-full px-2 py-0.5">
+                  {filtered.length} commande{filtered.length !== 1 ? 's' : ''}
+                </span>
+              </h1>
               <p className="text-xs text-content-secondary mt-0.5">Historique de toutes les ventes · "Acompte" = commande partiellement payée</p>
             </div>
             <div className="flex items-center gap-2">
@@ -174,7 +189,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => {
+                {paginated.map((order) => {
                   const partial   = isAcompte(order);
                   const paidAmt   = getPaidAmount(order);
                   const remaining = order.total - paidAmt;
@@ -271,6 +286,33 @@ export default function OrdersPage() {
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && filtered.length > 0 && pageCount > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-surface-border">
+            <p className="text-xs text-content-secondary">
+              Page {currentPage} / {pageCount} · {filtered.length} commande{filtered.length !== 1 ? 's' : ''}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="btn-secondary flex items-center gap-1 text-sm px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Précédent</span>
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                disabled={currentPage >= pageCount}
+                className="btn-secondary flex items-center gap-1 text-sm px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <span className="hidden sm:inline">Suivant</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Panneau détail */}
