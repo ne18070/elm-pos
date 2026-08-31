@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -10,6 +10,7 @@ import { formatCurrency } from '@/lib/utils';
 import { OrderDetail } from '@/components/orders/OrderDetail';
 import { InvoiceModal } from '@/components/shared/InvoiceModal';
 import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
+import { getOrderById } from '@services/supabase/orders';
 import type { Order, OrderStatus } from '@pos-types';
 
 type FilterTab = OrderStatus | 'all' | 'acompte';
@@ -33,6 +34,12 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 const TABS: FilterTab[] = ['all', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
 
 const PAGE_SIZE = 50;
+// "Acompte" (paiement partiel) n'est pas une colonne en base — c'est calculé
+// (payé < total) à partir des lignes payments de chaque commande. Impossible
+// à filtrer/paginer côté SQL sans vue dédiée : on se limite donc aux
+// ACOMPTE_FETCH_LIMIT commandes les plus récentes pour cet onglet et le badge
+// de comptage, plutôt que de charger tout l'historique en mémoire.
+const ACOMPTE_FETCH_LIMIT = 3000;
 
 function getPaidAmount(order: Order): number {
   return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
@@ -50,52 +57,77 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [page, setPage]             = useState(1);
 
-  // Pour le filtre "acompte", on charge tout puis on filtre côté client
-  const dbStatus = tab === 'all' || tab === 'acompte' ? undefined : tab as OrderStatus;
-  const { orders, loading, refetch } = useOrders(business?.id ?? '', { status: dbStatus });
+  const isAcompteTab = tab === 'acompte';
+  const dbStatus = tab === 'all' || isAcompteTab ? undefined : tab as OrderStatus;
 
-  const filtered = orders.filter((o) => {
-    // Filtre acompte
-    if (tab === 'acompte' && !isAcompte(o)) return false;
+  // Remet la page à 1 dès que l'onglet ou la recherche change — fait
+  // directement pendant le rendu (pattern React recommandé pour "ajuster un
+  // state suite au changement d'un autre"), pas dans un useEffect séparé :
+  // useOrders ci-dessous lit `page` dans CE MÊME rendu pour construire son
+  // offset, donc un reset après coup (effect) laisserait passer un premier
+  // fetch avec l'ancien offset avant de le corriger — flash "aucune commande"
+  // et requête réseau doublée. Ajusté pendant le rendu, useOrders ne voit
+  // jamais la valeur périmée.
+  const prevTabSearchRef = useRef([tab, debouncedSearch]);
+  let effectivePage = page;
+  if (prevTabSearchRef.current[0] !== tab || prevTabSearchRef.current[1] !== debouncedSearch) {
+    prevTabSearchRef.current = [tab, debouncedSearch];
+    if (page !== 1) { effectivePage = 1; setPage(1); }
+  }
 
-    // Recherche : ID, caissier, nom ou téléphone client
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        o.id.toLowerCase().includes(q) ||
-        o.cashier?.full_name?.toLowerCase().includes(q) ||
-        o.customer_name?.toLowerCase().includes(q) ||
-        o.customer_phone?.includes(q)
-      );
-    }
-    return true;
-  });
+  // Liste principale affichée : pagination réelle côté serveur pour les
+  // onglets à statut direct. Pour "acompte" (calculé, non filtrable en SQL —
+  // voir ACOMPTE_FETCH_LIMIT), on récupère un lot borné des commandes les
+  // plus récentes et on filtre/pagine côté client à l'intérieur de ce lot.
+  const { orders, count, loading, refetch } = useOrders(
+    business?.id ?? '',
+    isAcompteTab
+      ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch }
+      : { status: dbStatus, limit: PAGE_SIZE, offset: (effectivePage - 1) * PAGE_SIZE, search: debouncedSearch },
+  );
 
-  // Compteur acomptes pour le badge
-  const acompteCount = orders.filter(isAcompte).length;
+  // Source dédiée au badge de comptage "acompte" — indépendante de l'onglet
+  // actif, mais désactivée (businessId vide) quand l'onglet acompte est déjà
+  // ouvert : `orders` ci-dessus sert alors directement de source, pas besoin
+  // de la récupérer deux fois.
+  const { orders: acompteBadgeSource } = useOrders(
+    isAcompteTab ? '' : (business?.id ?? ''),
+    { limit: ACOMPTE_FETCH_LIMIT },
+  );
+  const acompteCount = (isAcompteTab ? orders : acompteBadgeSource).filter(isAcompte).length;
 
-  // Pagination (sur la liste déjà filtrée par onglet/recherche)
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  // Sur l'onglet acompte, `orders` contient jusqu'à ACOMPTE_FETCH_LIMIT
+  // commandes déjà filtrées par recherche côté serveur — reste à appliquer le
+  // filtre acompte et la pagination localement. Sur les autres onglets, le
+  // serveur a déjà renvoyé exactement la page demandée.
+  const filtered  = isAcompteTab ? orders.filter(isAcompte) : orders;
+  const pageCount = isAcompteTab ? Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)) : Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const currentPage = Math.min(effectivePage, pageCount);
+  const paginated = isAcompteTab ? filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE) : filtered;
+  const totalCount = isAcompteTab ? filtered.length : count;
 
-  useEffect(() => { setPage(1); }, [tab, search]);
-
-  // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp
+  // Débounce la recherche pour éviter une requête réseau à chaque frappe.
   useEffect(() => {
-    if (!orders.length) return;
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp.
+  // Fait un fetch direct par id plutôt que de chercher dans la page chargée :
+  // la commande visée peut être sur n'importe quelle page/onglet.
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order');
     if (!orderId) return;
-    const order = orders.find((o) => o.id === orderId);
-    if (order) {
+    getOrderById(orderId).then((order) => {
       setTab('all');
       setSelectedOrder(order);
-    }
-  }, [orders]);
+    }).catch(() => {});
+  }, []);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency);
 
@@ -109,7 +141,7 @@ export default function OrdersPage() {
               <h1 className="text-lg sm:text-xl font-bold text-content-primary flex items-center gap-2">
                 Commandes
                 <span className="text-xs font-medium text-content-secondary bg-surface-input rounded-full px-2 py-0.5">
-                  {filtered.length} commande{filtered.length !== 1 ? 's' : ''}
+                  {totalCount} commande{totalCount !== 1 ? 's' : ''}
                 </span>
               </h1>
               <p className="text-xs text-content-secondary mt-0.5">Historique de toutes les ventes · "Acompte" = commande partiellement payée</p>
@@ -131,7 +163,7 @@ export default function OrdersPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
             <input
               type="text"
-              placeholder="Rechercher par ID, caissier, nom client ou téléphone…"
+              placeholder="Rechercher par ID, nom ou téléphone client…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="input pl-10 w-full"
@@ -291,7 +323,7 @@ export default function OrdersPage() {
         {!loading && filtered.length > 0 && pageCount > 1 && (
           <div className="flex items-center justify-between px-4 py-2 border-t border-surface-border">
             <p className="text-xs text-content-secondary">
-              Page {currentPage} / {pageCount} · {filtered.length} commande{filtered.length !== 1 ? 's' : ''}
+              Page {currentPage} / {pageCount} · {totalCount} commande{totalCount !== 1 ? 's' : ''}
             </p>
             <div className="flex items-center gap-2">
               <button

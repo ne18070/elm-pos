@@ -105,9 +105,16 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
   return order;
 }
 
+/** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
+ *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
+ *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
+function toIlikeTerm(raw: string): string {
+  return raw.trim().replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+}
+
 export async function getOrders(
   businessId: string,
-  options?: { status?: string; limit?: number; offset?: number; date?: string }
+  options?: { status?: string; limit?: number; offset?: number; date?: string; search?: string }
 ): Promise<{ orders: Order[]; count: number }> {
   let query = supabase
     .from('orders')
@@ -126,14 +133,27 @@ export async function getOrders(
       .gte('created_at', `${options.date}T00:00:00Z`)
       .lte('created_at', `${options.date}T23:59:59Z`);
   }
-  if (options?.limit) query = query.limit(options.limit);
-  if (options?.offset) {
-    query = query.range(options.offset, options.offset + (options.limit ?? 20) - 1);
+
+  const term = toIlikeTerm(options?.search ?? '');
+  if (term) {
+    // `id::text` : cast PostgREST explicite — `id` est de type uuid, ilike
+    // exige du texte. Ne couvre pas le nom du caissier (table jointe) : le
+    // filtrer proprement demanderait une jointure !inner dédiée.
+    query = query.or(`id::text.ilike.%${term}%,customer_name.ilike.%${term}%,customer_phone.ilike.%${term}%`);
+  }
+
+  // .range() seul pour la pagination — ne jamais combiner avec .limit() sur
+  // la même requête (l'un des deux écrase silencieusement l'effet de l'autre
+  // selon l'ordre d'appel, cause du bug historique où offset=0 ignorait
+  // totalement la pagination car `if (options?.offset)` traite 0 comme faux).
+  if (options?.limit) {
+    const offset = options.offset ?? 0;
+    query = query.range(offset, offset + options.limit - 1);
   }
 
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return { orders: data as unknown as Order[], count: count ?? 0 };
+  return { orders: (data ?? []) as unknown as Order[], count: count ?? 0 };
 }
 
 export async function getOrderById(id: string): Promise<Order> {
