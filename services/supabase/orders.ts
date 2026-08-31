@@ -136,10 +136,13 @@ export async function getOrders(
 
   const term = toIlikeTerm(options?.search ?? '');
   if (term) {
-    // `id::text` : cast PostgREST explicite — `id` est de type uuid, ilike
-    // exige du texte. Ne couvre pas le nom du caissier (table jointe) : le
-    // filtrer proprement demanderait une jointure !inner dédiée.
-    query = query.or(`id::text.ilike.%${term}%,customer_name.ilike.%${term}%,customer_phone.ilike.%${term}%`);
+    // id_text (colonne générée, migration 097) : `id` est de type uuid — un
+    // cast inline (`id::text.ilike...`) est rejeté par PostgREST à l'intérieur
+    // de la grammaire or=(...) (PGRST100 "unexpected :"), d'où la colonne
+    // texte dédiée plutôt qu'un cast à la volée. Ne couvre pas le nom du
+    // caissier (table jointe) : le filtrer proprement demanderait une
+    // jointure !inner dédiée.
+    query = query.or(`id_text.ilike.%${term}%,customer_name.ilike.%${term}%,customer_phone.ilike.%${term}%`);
   }
 
   // .range() seul pour la pagination — ne jamais combiner avec .limit() sur
