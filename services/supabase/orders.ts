@@ -114,7 +114,17 @@ function toIlikeTerm(raw: string): string {
 
 export async function getOrders(
   businessId: string,
-  options?: { status?: string; limit?: number; offset?: number; date?: string; search?: string }
+  options?: {
+    status?:   string;
+    limit?:    number;
+    offset?:   number;
+    /** Un seul jour (YYYY-MM-DD) — ignoré si dateFrom/dateTo est fourni. */
+    date?:     string;
+    /** Plage de dates (YYYY-MM-DD, bornes incluses). */
+    dateFrom?: string;
+    dateTo?:   string;
+    search?:   string;
+  }
 ): Promise<{ orders: Order[]; count: number }> {
   let query = supabase
     .from('orders')
@@ -132,6 +142,9 @@ export async function getOrders(
     query = query
       .gte('created_at', `${options.date}T00:00:00Z`)
       .lte('created_at', `${options.date}T23:59:59Z`);
+  } else {
+    if (options?.dateFrom) query = query.gte('created_at', `${options.dateFrom}T00:00:00Z`);
+    if (options?.dateTo)   query = query.lte('created_at', `${options.dateTo}T23:59:59Z`);
   }
 
   const term = toIlikeTerm(options?.search ?? '');

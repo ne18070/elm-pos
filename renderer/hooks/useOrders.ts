@@ -5,11 +5,13 @@ import { getOrders } from '@services/supabase/orders';
 import type { Order } from '@pos-types';
 
 interface UseOrdersOptions {
-  status?: string;
-  limit?:  number;
-  offset?: number;
-  date?:   string;
-  search?: string;
+  status?:   string;
+  limit?:    number;
+  offset?:   number;
+  date?:     string;
+  dateFrom?: string;
+  dateTo?:   string;
+  search?:   string;
 }
 
 export function useOrders(businessId: string, options?: UseOrdersOptions) {
@@ -32,7 +34,7 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, options?.status, options?.date, options?.limit, options?.offset, options?.search]);
+  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

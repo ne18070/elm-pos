@@ -58,24 +58,32 @@ export default function OrdersPage() {
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [dateFrom, setDateFrom]     = useState('');
+  const [dateTo, setDateTo]         = useState('');
   const [showImport, setShowImport] = useState(false);
   const [page, setPage]             = useState(1);
 
   const isAcompteTab = tab === 'acompte';
   const dbStatus = tab === 'all' || isAcompteTab ? undefined : tab as OrderStatus;
+  const dateRange = { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined };
 
-  // Remet la page à 1 dès que l'onglet ou la recherche change — fait
-  // directement pendant le rendu (pattern React recommandé pour "ajuster un
-  // state suite au changement d'un autre"), pas dans un useEffect séparé :
-  // useOrders ci-dessous lit `page` dans CE MÊME rendu pour construire son
-  // offset, donc un reset après coup (effect) laisserait passer un premier
-  // fetch avec l'ancien offset avant de le corriger — flash "aucune commande"
-  // et requête réseau doublée. Ajusté pendant le rendu, useOrders ne voit
-  // jamais la valeur périmée.
-  const prevTabSearchRef = useRef([tab, debouncedSearch]);
+  // Remet la page à 1 dès qu'un filtre (onglet, recherche, dates) change —
+  // fait directement pendant le rendu (pattern React recommandé pour
+  // "ajuster un state suite au changement d'un autre"), pas dans un
+  // useEffect séparé : useOrders ci-dessous lit `page` dans CE MÊME rendu
+  // pour construire son offset, donc un reset après coup (effect) laisserait
+  // passer un premier fetch avec l'ancien offset avant de le corriger —
+  // flash "aucune commande" et requête réseau doublée. Ajusté pendant le
+  // rendu, useOrders ne voit jamais la valeur périmée.
+  const prevFiltersRef = useRef([tab, debouncedSearch, dateFrom, dateTo]);
   let effectivePage = page;
-  if (prevTabSearchRef.current[0] !== tab || prevTabSearchRef.current[1] !== debouncedSearch) {
-    prevTabSearchRef.current = [tab, debouncedSearch];
+  if (
+    prevFiltersRef.current[0] !== tab ||
+    prevFiltersRef.current[1] !== debouncedSearch ||
+    prevFiltersRef.current[2] !== dateFrom ||
+    prevFiltersRef.current[3] !== dateTo
+  ) {
+    prevFiltersRef.current = [tab, debouncedSearch, dateFrom, dateTo];
     if (page !== 1) { effectivePage = 1; setPage(1); }
   }
 
@@ -86,8 +94,8 @@ export default function OrdersPage() {
   const { orders, count, loading, refetch } = useOrders(
     business?.id ?? '',
     isAcompteTab
-      ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch }
-      : { status: dbStatus, limit: PAGE_SIZE, offset: (effectivePage - 1) * PAGE_SIZE, search: debouncedSearch },
+      ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch, ...dateRange }
+      : { status: dbStatus, limit: PAGE_SIZE, offset: (effectivePage - 1) * PAGE_SIZE, search: debouncedSearch, ...dateRange },
   );
 
   // Source dédiée au badge de comptage "acompte" — indépendante de l'onglet
@@ -96,7 +104,7 @@ export default function OrdersPage() {
   // de la récupérer deux fois.
   const { orders: acompteBadgeSource } = useOrders(
     isAcompteTab ? '' : (business?.id ?? ''),
-    { limit: ACOMPTE_FETCH_LIMIT },
+    { limit: ACOMPTE_FETCH_LIMIT, ...dateRange },
   );
   const acompteCount = (isAcompteTab ? orders : acompteBadgeSource).filter(isAcompte).length;
 
@@ -168,6 +176,38 @@ export default function OrdersPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="input pl-10 w-full"
             />
+          </div>
+
+          {/* Filtre de dates */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs text-content-secondary">
+              Du
+              <input
+                type="date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="input h-8 text-sm py-0"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-content-secondary">
+              Au
+              <input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="input h-8 text-sm py-0"
+              />
+            </label>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="text-xs text-content-brand hover:underline"
+              >
+                Réinitialiser
+              </button>
+            )}
           </div>
 
           {/* Onglets filtre */}
