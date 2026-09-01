@@ -445,7 +445,7 @@ function renderReceiptInfo(ctx: RenderCtx, isThermal: boolean): string {
         ${config.showCashier && order.cashier?.full_name ? `<tr><td>Caissier</td><td class="right">${order.cashier.full_name}</td></tr>` : ''}
         ${config.showCustomer && order.customer_name     ? `<tr><td>Client</td><td class="right">${order.customer_name}</td></tr>` : ''}
         ${config.showCustomer && order.customer_phone    ? `<tr><td>Tél.</td><td class="right">${order.customer_phone}</td></tr>` : ''}
-        ${extra?.resellerName       ? `<tr><td>Réf</td><td class="right bold">${extra.resellerName}</td></tr>` : ''}
+        ${extra?.resellerName       ? `<tr><td>RÉFÉRENCE</td><td class="right bold">${extra.resellerName}</td></tr>` : ''}
         ${extra?.resellerClientName ? `<tr><td>→ Client</td><td class="right">${extra.resellerClientName}</td></tr>` : ''}
       </table>
       <hr class="divider">`;
@@ -456,7 +456,7 @@ function renderReceiptInfo(ctx: RenderCtx, isThermal: boolean): string {
     <div class="parties-row" data-section="receipt">
       ${extra?.resellerName ? `
       <div class="party-box party-left">
-        <div class="party-label">Réf</div>
+        <div class="party-label">Référence</div>
         <div class="party-name">${extra.resellerName}</div>
       </div>` : '<div></div>'}
       ${extra?.resellerClientName || (config.showCustomer && order.customer_name) ? `

@@ -91,9 +91,15 @@ export function InvoiceModal({
 
   function getHtml(): string {
     if (!business || !selected) return '';
-    const o = order as Order & { reseller_name?: string; reseller_client_name?: string; reseller_client_phone?: string };
-    const extra = o.reseller_name
-      ? { resellerName: o.reseller_name, resellerClientName: o.reseller_client_name ?? undefined, resellerClientPhone: o.reseller_client_phone ?? undefined }
+    // `order` vient de getOrders/getOrderById : le revendeur et son client sont
+    // imbriqués via la jointure Supabase (`reseller`, `reseller_client`), pas
+    // des champs plats `reseller_name` / `reseller_client_name`.
+    const extra = order.reseller?.name
+      ? {
+          resellerName:         order.reseller.name,
+          resellerClientName:   order.reseller_client?.name ?? undefined,
+          resellerClientPhone:  order.reseller_client?.phone ?? undefined,
+        }
       : undefined;
     return renderTemplate(order, business, selected, extra, isDistributeur ? docType : undefined);
   }
