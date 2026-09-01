@@ -44,7 +44,7 @@ const MOCK_BUSINESS = {
   id: 'biz', name: 'Mon Magasin', address: 'Av. de la Paix, Dakar',
   phone: '+221 77 000 00 00', email: 'contact@magasin.sn',
   logo_url: null, currency: 'XOF', receipt_footer: 'Merci de votre visite !',
-  brand_config: { distributeur_header_extra: 'NINEA : 001234567 2N3 — RC : SN-DKR-2020-B-1234' },
+  rib: 'NINEA : 001234567 2N3\nRC : SN-DKR-2020-B-1234',
 };
 
 // --- Constants ----------------------------------------------------------------

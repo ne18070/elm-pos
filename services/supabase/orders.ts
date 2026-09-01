@@ -139,7 +139,7 @@ export async function getOrders(
   let query = supabase
     .from('orders')
     .select(
-      `*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`,
+      `*, items:order_items(*, product:products(sku)), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`,
       { count: 'exact' }
     )
     .eq('business_id', businessId)
@@ -192,7 +192,7 @@ export async function getOrderById(id: string): Promise<Order> {
   return q<Order>(
     supabase
       .from('orders')
-      .select(`*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`)
+      .select(`*, items:order_items(*, product:products(sku)), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`)
       .eq('id', id)
       .single() as never,
   );

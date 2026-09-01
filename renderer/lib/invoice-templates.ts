@@ -1858,11 +1858,12 @@ export function generateDistributeurInvoice(
   const totalHT = toHT(order.total);
   const totalTVA = toTVA(order.total);
 
-  // Mentions légales de l'en-tête (NINEA, registre de commerce, etc.) — texte
-  // libre saisi dans Réglages → Établissement, stocké dans brand_config (pas de
-  // colonne dédiée). Les sauts de ligne sont conservés. Bloc omis si vide.
-  const headerExtra = (business.brand_config?.distributeur_header_extra as string | undefined)?.trim();
-  const legalLine = headerExtra ? headerExtra.replace(/\n/g, '<br>') : '';
+  // Ligne d'en-tête NINEA/RC/coordonnées bancaires — réutilise le champ
+  // « RIB / Coordonnées bancaires » de Réglages → Établissement (business.rib)
+  // plutôt qu'un champ dédié : texte libre, un seul endroit à tenir à jour.
+  // Sauts de ligne conservés. Bloc omis si vide.
+  const rib = business.rib?.trim();
+  const legalLine = rib ? rib.replace(/\n/g, '<br>') : '';
 
   // Référence (revendeur) + client — même logique que le modèle A4 paysage :
   // sur une vente revendeur le vrai client est reseller_client, sinon customer_name.
