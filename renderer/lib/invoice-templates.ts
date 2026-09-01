@@ -1850,12 +1850,25 @@ export function generateDistributeurInvoice(
   order: Order,
   business: Business,
   type: DistributeurInvoiceType = 'FACTURE',
+  extra?: { resellerName?: string; resellerClientName?: string; resellerClientPhone?: string },
 ): string {
   const cur  = business.currency ?? 'XOF';
   const paid = paidAmount(order);
   const remaining = Math.max(0, order.total - paid);
   const totalHT = toHT(order.total);
   const totalTVA = toTVA(order.total);
+
+  // Mentions légales de l'en-tête (NINEA, registre de commerce, etc.) — texte
+  // libre saisi dans Réglages → Établissement, stocké dans brand_config (pas de
+  // colonne dédiée). Les sauts de ligne sont conservés. Bloc omis si vide.
+  const headerExtra = (business.brand_config?.distributeur_header_extra as string | undefined)?.trim();
+  const legalLine = headerExtra ? headerExtra.replace(/\n/g, '<br>') : '';
+
+  // Référence (revendeur) + client — même logique que le modèle A4 paysage :
+  // sur une vente revendeur le vrai client est reseller_client, sinon customer_name.
+  const refName     = extra?.resellerName?.trim();
+  const clientName  = extra?.resellerClientName?.trim() || order.customer_name || '—';
+  const clientPhone = extra?.resellerClientPhone?.trim() || order.customer_phone || '';
 
   function buildCopy(copyLabel: string): string {
     const rows = (order.items ?? []).map((item) => {
@@ -1865,7 +1878,7 @@ export function generateDistributeurInvoice(
       return `
         <tr>
           <td class="td-sm td-ref">${ref}</td>
-          <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:8px;color:#000;font-style:italic">${item.notes}</span>` : ''}</td>
+          <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:9px;color:#000;font-style:italic">${item.notes}</span>` : ''}</td>
           <td class="td-sm td-c">${item.quantity}</td>
           <td class="td-sm td-r">${fmt(item.price, cur)}</td>
           <td class="td-sm td-r">${fmt(ht, cur)}</td>
@@ -1885,6 +1898,7 @@ export function generateDistributeurInvoice(
             ${business.address ? `<div class="biz-detail">${business.address}</div>` : ''}
             ${business.phone   ? `<div class="biz-detail">${business.phone}</div>` : ''}
             ${business.email   ? `<div class="biz-detail">${business.email}</div>` : ''}
+            ${legalLine ? `<div class="biz-detail biz-legal">${legalLine}</div>` : ''}
           </div>
         </div>
         <div class="meta">
@@ -1894,12 +1908,16 @@ export function generateDistributeurInvoice(
         </div>
       </div>
 
-      <!-- CLIENT -->
+      <!-- RÉFÉRENCE + CLIENT -->
       <div class="client-row">
+        ${refName ? `<div class="client-box">
+          <span class="lbl">Référence : </span>
+          <span class="val-name">${refName}</span>
+        </div>` : ''}
         <div class="client-box">
           <span class="lbl">Client : </span>
-          <span class="val-name">${order.customer_name ?? '—'}</span>
-          ${order.customer_phone ? `<span class="val-phone"> · ${order.customer_phone}</span>` : ''}
+          <span class="val-name">${clientName}</span>
+          ${clientPhone ? `<span class="val-phone"> · ${clientPhone}</span>` : ''}
         </div>
       </div>
 
@@ -1952,9 +1970,9 @@ export function generateDistributeurInvoice(
             <span>NET À PAYER :</span>
             <span>${fmt(order.total, cur)}</span>
           </div>
-          ${paid > 0 ? `<div class="tot-row" style="font-size:8px">
+          ${paid > 0 ? `<div class="tot-row" style="font-size:9.5px">
             <span>Reçu :</span><span>${fmt(paid, cur)}</span></div>` : ''}
-          ${remaining > 0.01 ? `<div class="tot-row" style="font-weight:600;font-size:8px">
+          ${remaining > 0.01 ? `<div class="tot-row" style="font-weight:600;font-size:9.5px">
             <span>Reste dû :</span><span>${fmt(remaining, cur)}</span></div>` : ''}
         </div>
       </div>
@@ -1978,7 +1996,7 @@ export function generateDistributeurInvoice(
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    font-size: 10px;
+    font-size: 11.5px;
     color: #000;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1987,76 +2005,77 @@ export function generateDistributeurInvoice(
     min-height: 190mm;
   }
 
-  .copy { padding: 5mm 6mm; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+  .copy { padding: 5mm 5mm; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
   .copy:first-child { border-right: 2px dashed #aaa; }
 
   /* Header */
   .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
   .biz { display: flex; gap: 6px; align-items: flex-start; }
   .logo { max-width: 70px; max-height: 50px; object-fit: contain; }
-  .biz-name { font-size: 12px; font-weight: 800; color: #000; }
-  .biz-sub { font-size: 9px; font-weight: 700; color: #000; }
-  .biz-detail { font-size: 8px; color: #000; line-height: 1.4; }
+  .biz-name { font-size: 14px; font-weight: 800; color: #000; }
+  .biz-sub { font-size: 10.5px; font-weight: 700; color: #000; }
+  .biz-detail { font-size: 9.5px; color: #000; line-height: 1.4; }
+  .biz-legal { font-weight: 700; margin-top: 1px; }
   .meta { text-align: right; }
-  .meta-num { font-size: 11px; font-weight: 800; color: #000; }
-  .meta-date { font-size: 9px; color: #000; }
-  .meta-ref { font-size: 8px; color: #000; }
+  .meta-num { font-size: 13px; font-weight: 800; color: #000; }
+  .meta-date { font-size: 10.5px; color: #000; }
+  .meta-ref { font-size: 9.5px; color: #000; }
 
-  /* Client */
-  .client-row { margin: 3px 0; }
-  .client-box { border: 1px solid #000; border-radius: 4px; padding: 3px 8px; font-size: 9px; }
+  /* Référence + Client */
+  .client-row { display: flex; gap: 6px; margin: 3px 0; }
+  .client-box { flex: 1; border: 1px solid #000; border-radius: 4px; padding: 4px 9px; font-size: 10.5px; }
   .lbl { color: #000; }
-  .val-name { font-weight: 700; font-size: 10px; color: #000; }
+  .val-name { font-weight: 700; font-size: 11.5px; color: #000; }
   .val-phone { color: #000; }
 
   /* Titre document */
   .doc-title {
     text-align: center;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 800;
     letter-spacing: .08em;
     text-transform: uppercase;
     border-top: 2px solid #000;
     border-bottom: 2px solid #000;
-    padding: 2px 0;
+    padding: 3px 0;
     margin: 3px 0;
     color: #000;
   }
 
   /* Tableau */
-  .tbl { width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 9px; }
-  .th { color: #000; padding: 3px 4px; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #000; }
+  .tbl { width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 10.5px; }
+  .th { color: #000; padding: 4px 5px; text-align: right; font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #000; }
   .th-left { text-align: left; }
   .th-ref { text-align: left; width: 70px; }
-  .td-sm { padding: 2px 4px; border-top: 1px solid #000; border-right: 1px solid #000; vertical-align: top; color: #000; }
-  .td-ref { width: 70px; font-family: monospace; font-size: 8px; color: #000; }
+  .td-sm { padding: 3px 5px; border-top: 1px solid #000; border-right: 1px solid #000; vertical-align: top; color: #000; }
+  .td-ref { width: 70px; font-family: monospace; font-size: 9.5px; color: #000; }
   .td-c { text-align: center; font-weight: 600; }
   .td-r { text-align: right; }
   .td-bold { font-weight: 700; }
   .tfoot-row { font-weight: 800; border-top: 2px solid #000; color: #000; }
-  .tfoot-row td { padding: 3px 4px; border-right: 1px solid #000; }
+  .tfoot-row td { padding: 4px 5px; border-right: 1px solid #000; }
 
   /* Pied */
-  .footer-grid { display: grid; grid-template-columns: 1fr 180px; gap: 6px; margin-top: 5px; }
-  .words-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; }
-  .words { font-size: 8px; line-height: 1.5; color: #000; }
-  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #000; font-weight: 800; font-size: 9px; text-transform: uppercase; color: #000; }
-  .totals-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; }
-  .tot-row { display: flex; justify-content: space-between; font-size: 9px; padding: 1px 0; color: #000; }
-  .tot-final { font-weight: 800; font-size: 10px; border-top: 1px solid #000; padding-top: 3px; margin-top: 2px; }
+  .footer-grid { display: grid; grid-template-columns: 1fr 200px; gap: 6px; margin-top: 5px; }
+  .words-box { border: 2px solid #000; border-radius: 4px; padding: 5px 7px; }
+  .words { font-size: 9.5px; line-height: 1.5; color: #000; }
+  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #000; font-weight: 800; font-size: 10.5px; text-transform: uppercase; color: #000; }
+  .totals-box { border: 2px solid #000; border-radius: 4px; padding: 5px 7px; }
+  .tot-row { display: flex; justify-content: space-between; font-size: 10.5px; padding: 1px 0; color: #000; }
+  .tot-final { font-weight: 800; font-size: 12px; border-top: 1px solid #000; padding-top: 3px; margin-top: 2px; }
 
   /* Signature */
   .sig-row { display: flex; justify-content: flex-end; margin-top: 6px; }
-  .sig-box { width: 120px; text-align: center; }
+  .sig-box { width: 130px; text-align: center; }
   .sig-line { border-top: 1.5px solid #000; height: 22px; }
-  .sig-lbl { font-size: 8px; color: #000; margin-top: 2px; }
+  .sig-lbl { font-size: 9.5px; color: #000; margin-top: 2px; }
 
   /* Exemplaire */
   .copy-label {
-    text-align: center; font-size: 8px; font-weight: 800;
+    text-align: center; font-size: 9.5px; font-weight: 800;
     letter-spacing: .12em; text-transform: uppercase;
     border: 1.5px solid #000; border-radius: 3px;
-    padding: 1px 6px; align-self: center; margin-top: auto;
+    padding: 2px 7px; align-self: center; margin-top: auto;
     color: #000;
   }
 </style>

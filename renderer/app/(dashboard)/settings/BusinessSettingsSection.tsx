@@ -44,6 +44,11 @@ export function BusinessSettingsSection() {
   const [echeanceRules, setEcheanceRules] = useState<EcheanceRule[]>(
     (business?.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE_RULES
   );
+  // Mentions légales libres pour l'en-tête de la facture distributeur (NINEA,
+  // registre de commerce…). Stocké dans brand_config.
+  const [distributeurHeaderExtra, setDistributeurHeaderExtra] = useState<string>(
+    (business?.brand_config?.distributeur_header_extra as string | undefined) ?? ''
+  );
 
   useEffect(() => {
     if (business) {
@@ -61,6 +66,7 @@ export function BusinessSettingsSection() {
       });
       setEcheanceEnabled((business.brand_config?.echeance_enabled as boolean | undefined) ?? false);
       setEcheanceRules((business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE_RULES);
+      setDistributeurHeaderExtra((business.brand_config?.distributeur_header_extra as string | undefined) ?? '');
     }
   }, [business]);
 
@@ -120,6 +126,7 @@ export function BusinessSettingsSection() {
         ...(business.brand_config ?? {}),
         echeance_enabled: echeanceEnabled,
         echeance_rules:   echeanceEnabled ? echeanceRules : null,
+        distributeur_header_extra: distributeurHeaderExtra.trim() || null,
       };
 
       await updateBusiness(business.id, {
@@ -309,6 +316,24 @@ export function BusinessSettingsSection() {
         />
       </div>
 
+      {/* ── Facture distributeur ─────────────────────────────────────────── */}
+      <div className="pt-4 border-t border-surface-border">
+        <label className="label">
+          Mentions légales en-tête — facture distributeur
+          <span className="text-content-muted font-normal"> (texte libre)</span>
+        </label>
+        <textarea
+          value={distributeurHeaderExtra}
+          onChange={(e) => { setDistributeurHeaderExtra(e.target.value); setIsDirty(true); }}
+          className="input resize-none"
+          rows={2}
+          placeholder="Ex : NINEA : 001234567 2N3 — RC : SN-DKR-2020-B-1234"
+        />
+        <p className="mt-1 text-xs text-content-muted">
+          Affiché sous les coordonnées, dans l&apos;en-tête de la facture distributeur. Une ligne = une ligne sur la facture.
+        </p>
+      </div>
+
       {/* ── Échéance ─────────────────────────────────────────────────────── */}
       <div className="pt-4 border-t border-surface-border space-y-3">
         <div className="flex items-center justify-between">
@@ -460,6 +485,7 @@ export function BusinessSettingsSection() {
                 });
                 setEcheanceEnabled((business.brand_config?.echeance_enabled as boolean | undefined) ?? false);
                 setEcheanceRules((business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE_RULES);
+                setDistributeurHeaderExtra((business.brand_config?.distributeur_header_extra as string | undefined) ?? '');
                 setIsDirty(false);
               }
             }}

@@ -752,7 +752,7 @@ export function renderTemplate(
   docType?: DistributeurInvoiceType,
 ): string {
   if (config.format === 'a4-distributeur') {
-    return generateDistributeurInvoice(order, business, docType ?? 'FACTURE');
+    return generateDistributeurInvoice(order, business, docType ?? 'FACTURE', extra);
   }
   const isThermal = config.format === 'thermal';
   const isTwoCols = config.copies === 2 && (config.format === 'a4-landscape' || config.format === 'a5-portrait');
