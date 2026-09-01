@@ -108,9 +108,10 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [acompteConfirme, setAcompteConfirme] = useState(0);
   const [totalConfirme, setTotalConfirme]     = useState(0);
 
-  // Informations client (acompte) —pré-rempli si un client est sélectionné dans le panier
-  const [customerName, setCustomerName]         = useState(prefilledCustomer?.name ?? '');
-  const [customerPhone, setCustomerPhone]       = useState(prefilledCustomer?.phone ?? '');
+  // Informations client (acompte / bon de livraison) — pré-rempli si un client est déjà
+  // sélectionné dans le panier (fiche client) ou via le sélecteur revendeur.
+  const [customerName, setCustomerName]         = useState(prefilledCustomer?.name ?? wholesaleCtx?.client?.name ?? '');
+  const [customerPhone, setCustomerPhone]       = useState(prefilledCustomer?.phone ?? wholesaleCtx?.client?.phone ?? '');
   const [customerSuggestions, setCustomerSuggestions] = useState<SavedCustomer[]>([]);
   const [showSuggestions, setShowSuggestions]         = useState(false);
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
