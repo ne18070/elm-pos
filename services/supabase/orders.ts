@@ -20,6 +20,9 @@ export interface CreateOrderInput {
   customer_phone?: string;
   hotel_reservation_id?: string;
   table_id?: string;
+  /** Vente de gros : revendeur lié et, optionnellement, son client */
+  reseller_id?: string | null;
+  reseller_client_id?: string | null;
   /** Pour paiement partiel : liste détaillée des lignes de paiement */
   payments?: Array<{ method: string; amount: number }>;
   order_channel?: 'salle' | 'emporter' | 'livraison';
@@ -85,6 +88,8 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       customer_name:    input.customer_name    ?? null,
       customer_phone:   input.customer_phone   ?? null,
       table_id:         input.table_id         ?? null,
+      reseller_id:        input.reseller_id        ?? null,
+      reseller_client_id: input.reseller_client_id ?? null,
       order_channel:    input.order_channel    ?? 'salle',
       delivery_address: input.delivery_address ?? null,
     },
@@ -129,7 +134,7 @@ export async function getOrders(
   let query = supabase
     .from('orders')
     .select(
-      `*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email)`,
+      `*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`,
       { count: 'exact' }
     )
     .eq('business_id', businessId)
@@ -176,7 +181,7 @@ export async function getOrderById(id: string): Promise<Order> {
   return q<Order>(
     supabase
       .from('orders')
-      .select(`*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email)`)
+      .select(`*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`)
       .eq('id', id)
       .single() as never,
   );

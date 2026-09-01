@@ -26,6 +26,8 @@ export interface CreateOrderPayload {
   taxInclusive?: boolean; // true = prix TTC saisis
   notes?: string;
   tableId?: string;
+  resellerId?: string | null;       // vente de gros : revendeur lié
+  resellerClientId?: string | null; // client du revendeur (optionnel)
 }
 
 export type OrderValidationError =
@@ -162,6 +164,8 @@ export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string,
     coupon_codes: coupons.map((c) => c.code),
     notes:       payload.notes ?? payload.cart.notes,
     table_id:    payload.tableId ?? null,
+    reseller_id:        payload.resellerId ?? null,
+    reseller_client_id: payload.resellerClientId ?? null,
   };
 }
 

@@ -140,7 +140,10 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); deps=d.get\\('dependencies',{}\\); print\\(deps.get\\('@supabase/supabase-js','not found'\\)\\)\")",
       "Bash(mkdir -p \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/commands\")",
       "Bash(mv \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/skills/\"* \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/commands/\")",
-      "Bash(rmdir \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/skills\")"
+      "Bash(rmdir \"c:/Users/lamine-m/Documents/build/PERSO/elm-pos/.claude/skills\")",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(yarn lint *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\lamine-m\\Documents\\build\\PERSO\\elm-pos"

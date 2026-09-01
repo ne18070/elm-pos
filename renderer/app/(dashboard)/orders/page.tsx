@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload, ChevronLeft, ChevronRight, Store } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
@@ -253,7 +253,7 @@ export default function OrdersPage() {
                 <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
                   <th className="px-3 py-2 whitespace-nowrap">Commande</th>
                   <th className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">Date</th>
-                  <th className="px-3 py-2 whitespace-nowrap">Client / Caissier</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Client / Revendeur</th>
                   <th className="px-3 py-2 whitespace-nowrap hidden md:table-cell">Articles</th>
                   <th className="px-3 py-2 whitespace-nowrap">Total</th>
                   <th className="px-3 py-2 whitespace-nowrap hidden lg:table-cell">Versé / Reste</th>
@@ -290,7 +290,7 @@ export default function OrdersPage() {
                         {format(new Date(order.created_at), 'dd MMM, HH:mm', { locale: fr })}
                       </td>
 
-                      {/* Client + Caissier */}
+                      {/* Client + Revendeur + Caissier */}
                       <td className="px-3 py-2 max-w-[180px]">
                         {order.customer_name ? (
                           <div className="space-y-0.5 min-w-0">
@@ -310,6 +310,15 @@ export default function OrdersPage() {
                           </div>
                         ) : (
                           <p className="text-sm text-content-primary truncate">{order.cashier?.full_name ?? '—'}</p>
+                        )}
+                        {order.reseller && (
+                          <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                            <Store className="w-3 h-3 text-brand-400 shrink-0" />
+                            <span className="text-xs font-medium text-brand-400 truncate">
+                              {order.reseller.name}
+                              {order.reseller_client && <span className="text-content-muted"> · {order.reseller_client.name}</span>}
+                            </span>
+                          </div>
                         )}
                       </td>
 

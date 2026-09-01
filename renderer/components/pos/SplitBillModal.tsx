@@ -13,12 +13,14 @@ import { openCashDrawer } from '@/lib/ipc';
 import { computeOrderTotals } from '@domain/order.service';
 import { PAYMENT_METHOD_LABELS } from '@domain/payment.service';
 import type { PaymentMethod } from '@pos-types';
+import type { WholesaleContext } from './WholesaleSelector';
 
 interface Props {
   taxRate: number;
   taxInclusive: boolean;
   currency: string;
   tableId?: string;
+  wholesaleCtx?: WholesaleContext | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -31,7 +33,7 @@ interface PersonPayment {
 
 const METHODS: PaymentMethod[] = ['cash', 'card', 'mobile_money'];
 
-export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, onClose, onSuccess }: Props) {
+export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, wholesaleCtx, onClose, onSuccess }: Props) {
   const [n, setN]                     = useState(2);
   const [stage, setStage]             = useState<'config' | 'collect' | 'done'>('config');
   const [personIdx, setPersonIdx]     = useState(0);
@@ -95,6 +97,8 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, onClo
         coupons:        cart.coupons,
         notes:          cart.notes,
         table_id:       tableId,
+        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
         order_channel:  cart.orderChannel !== 'salle' ? cart.orderChannel : undefined,
       });
       if (payments.some(p => p.method === 'cash')) {

@@ -274,6 +274,20 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             </div>
           )}
 
+          {/* Revendeur (vente de gros) */}
+          {order.reseller && (
+            <div className="bg-brand-500/10 border border-brand-500/40 rounded-xl px-3 py-2.5 space-y-0.5">
+              <p className="label text-brand-400">Revendeur</p>
+              <p className="text-sm font-semibold text-content-primary">{order.reseller.name}</p>
+              {order.reseller_client && (
+                <p className="text-sm text-content-secondary">
+                  Client : {order.reseller_client.name}
+                  {order.reseller_client.phone ? ` · ${order.reseller_client.phone}` : ''}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Caissier */}
           <div>
             <p className="label">Caissier</p>

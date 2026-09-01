@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble, Link, Star, Gift } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, Loader2, CheckCircle, SplitSquareHorizontal, MonitorCheck, User, Download, MessageCircle, BedDouble, Link, Star, Gift, Truck } from 'lucide-react';
 import { useCustomersStore } from '@/store/customers';
 import type { SavedCustomer } from '@/store/customers';
 import { Modal } from '@/components/ui/Modal';
 import { NumpadModal } from '@/components/ui/NumpadModal';
 import { useCartStore } from '@/store/cart';
+import { useCashSessionStore } from '@/store/cashSession';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
@@ -49,7 +50,7 @@ interface PaymentModalProps {
   tableId?: string;
 }
 
-type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes' | 'intouch';
+type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes' | 'intouch' | 'livraison_note';
 
 const SIMPLE_METHODES: PaymentMethod[] = ['cash', 'card', 'mobile_money'];
 const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', 'mobile_money'];
@@ -66,10 +67,14 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [ordre, setOrdre]             = useState<Order | null>(null);
   const [erreur, setErreur]           = useState('');
   const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | 'intouch' | null>(null);
+  // Bon de livraison : commande livrée sans encaissement, réglée plus tard par l'admin
+  const [deliveryNote, setDeliveryNote] = useState(false);
+  const [deliveryNoteAddress, setDeliveryNoteAddress] = useState('');
 
   const cart = useCartStore();
   const orderChannel    = cart.orderChannel;
   const deliveryAddress = cart.deliveryAddress;
+  const { session: cashSession } = useCashSessionStore();
   const { user, business } = useAuthStore();
   const { success: notifSuccess, warning: notifWarning, error: notifError } = useNotificationStore();
 
@@ -229,6 +234,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         customer_phone:   (methode === 'room_charge' ? reservation?.guest?.phone : customerPhone.trim()) || undefined,
         hotel_reservation_id: reservation?.id,
         table_id:         tableId,
+        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
         order_channel:    orderChannel !== 'salle' ? orderChannel : undefined,
         delivery_address: deliveryAddress.trim() || undefined,
       });
@@ -275,6 +282,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         taxInclusive,
         notes:         cart.notes,
         tableId:       tableId,
+        resellerId:       wholesaleCtx?.reseller.id ?? null,
+        resellerClientId: wholesaleCtx?.client?.id ?? null,
       });
       if (reservation) {
         (dbPayload as any).hotel_reservation_id = reservation.id;
@@ -291,6 +300,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // -- DB : Intouch ----------------------------------------------------------
   async function submitIntouch() {
     if (!user || !business) return;
+    if (!cashSession) { setErreur('Ouvrez une session de caisse avant d\'encaisser.'); return; }
     if (!intouchPhone.trim()) { setErreur('Numéro de téléphone requis'); return; }
     setChargement(true);
     setErreur('');
@@ -347,6 +357,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         customer_name:  customerName.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
         table_id:       tableId,
+        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
       });
       setOrdreId(order.id);
       setOrdre(order);
@@ -367,6 +379,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         taxRate,
         notes:         cart.notes,
         tableId:       tableId,
+        resellerId:       wholesaleCtx?.reseller.id ?? null,
+        resellerClientId: wholesaleCtx?.client?.id ?? null,
       });
       (dbPayload as Record<string, unknown>).customer_name  = customerName.trim() || null;
       (dbPayload as Record<string, unknown>).customer_phone = customerPhone.trim() || null;
@@ -380,10 +394,82 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     }
   }
 
+  // -- DB : bon de livraison (aucun encaissement) ---------------------------
+  // Crée la commande en statut `pending` (0 F payé). Elle part directement dans
+  // la file Livraisons et l'admin l'encaisse ensuite via « Encaisser le solde »
+  // dans le détail de la commande.
+  async function submitDeliveryNote() {
+    if (!user || !business) return;
+    setErreur('');
+    if (!customerName.trim()) { setErreur('Le nom du client est obligatoire pour un bon de livraison'); return; }
+    setTotalConfirme(total);
+    setChargement(true);
+    try {
+      const order = await createOrder({
+        business_id:    business.id,
+        cashier_id:     user.id,
+        cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
+        payment_method: 'partial',
+        payment_amount: 0,
+        tax_rate:       taxRate,
+        tax_inclusive:  taxInclusive,
+        coupons:        cart.coupons,
+        notes:          cart.notes,
+        customer_name:  customerName.trim(),
+        customer_phone: customerPhone.trim() || undefined,
+        table_id:       tableId,
+        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
+        order_channel:    'livraison',
+        delivery_address: deliveryNoteAddress.trim() || deliveryAddress.trim() || undefined,
+      });
+      setOrdreId(order.id);
+      setOrdre(order);
+      saveCustomer(customerName, customerPhone);
+      printReceipt({
+        order,
+        business,
+        cashier_name:          user.full_name,
+        reseller_name:         wholesaleCtx?.reseller.name,
+        reseller_client_name:  wholesaleCtx?.client?.name,
+        reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
+      }).catch(() => notifWarning('Reçu non imprimé —imprimante indisponible'));
+      notifSuccess('Bon de livraison créé');
+      cart.clear();
+      setStep('succes');
+    } catch {
+      const dbPayload = buildOrderDbPayload({
+        businessId:    business.id,
+        cashierId:     user.id,
+        cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
+        paymentMethod: 'partial',
+        paymentAmount: 0,
+        taxRate,
+        taxInclusive,
+        notes:         cart.notes,
+        tableId:       tableId,
+        resellerId:       wholesaleCtx?.reseller.id ?? null,
+        resellerClientId: wholesaleCtx?.client?.id ?? null,
+      });
+      (dbPayload as Record<string, unknown>).customer_name    = customerName.trim();
+      (dbPayload as Record<string, unknown>).customer_phone   = customerPhone.trim() || null;
+      (dbPayload as Record<string, unknown>).order_channel    = 'livraison';
+      (dbPayload as Record<string, unknown>).delivery_address = deliveryNoteAddress.trim() || deliveryAddress.trim() || null;
+      await enqueueToSync('create_order', dbPayload);
+      saveCustomer(customerName, customerPhone);
+      notifWarning('Hors ligne —bon de livraison enregistré, synchronisation automatique à la reconnexion');
+      cart.clear();
+      setStep('succes');
+    } finally {
+      setChargement(false);
+    }
+  }
+
   // -- Pré-confirmation : valide, envoie au display, attend le client --------
   function preConfirmerSimple() {
     if (!user || !business) return;
     setErreur('');
+    if (!cashSession) { setErreur('Ouvrez une session de caisse avant d\'encaisser.'); return; }
 
     const orderError = validateOrderPayload({
       businessId:    business.id,
@@ -415,6 +501,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     if (!user || !business) return;
     setErreur('');
 
+    if (!cashSession) { setErreur('Ouvrez une session de caisse avant d\'encaisser.'); return; }
     if (!customerName.trim()) { setErreur('Le nom du client est obligatoire pour un acompte'); return; }
     if (acompteNum <= 0) { setErreur('Veuillez saisir un montant'); return; }
     if (acompteNum >= total - 0.01) { setErreur('Pour un paiement complet, utilisez un autre mode'); return; }
@@ -481,10 +568,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   return (
     <Modal
       title={step === 'succes'
-        ? (methode === 'partial' ? 'Acompte enregistré' : 'Paiement réussi')
+        ? (deliveryNote ? 'Bon de livraison créé' : methode === 'partial' ? 'Acompte enregistré' : 'Paiement réussi')
         : step === 'attente'
           ? 'Validation client'
-          : 'Encaissement'}
+          : step === 'livraison_note'
+            ? 'Bon de livraison'
+            : 'Encaissement'}
       onClose={onClose}
       size="sm"
       guard={step !== 'succes'}
@@ -588,18 +677,132 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             </div>
           </div>
 
+          {!cashSession && (
+            <p className="text-xs text-status-warning bg-badge-warning border border-status-warning rounded-xl px-3 py-2">
+              Aucune session de caisse ouverte — seul le bon de livraison est possible.
+            </p>
+          )}
+
+          {erreur && (
+            <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-3 py-2">{erreur}</p>
+          )}
+
           <button
             onClick={() => {
+              if (!cashSession) { setErreur('Ouvrez une session de caisse avant d\'encaisser.'); return; }
               if (methode === 'partial') setStep('partiel');
               else if (methode === 'room_charge') setStep('room');
               else if (effectiveTotal === 0) preConfirmerSimple();
               else if (methode === 'mobile_money' && intouchConfig?.is_active) setStep('intouch');
               else setStep('montant');
             }}
-            className="btn-primary w-full h-11"
+            disabled={!cashSession}
+            className="btn-primary w-full h-11 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {effectiveTotal === 0 ? 'Confirmer (réglé par points)' : 'Continuer'}
           </button>
+
+          {/* Bon de livraison : livrer maintenant, encaisser plus tard */}
+          <div className="pt-1 border-t border-surface-border">
+            <button
+              onClick={() => {
+                setDeliveryNote(true);
+                setErreur('');
+                setDeliveryNoteAddress(deliveryAddress);
+                setStep('livraison_note');
+              }}
+              className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border border-surface-border
+                         text-content-secondary hover:border-brand-500 hover:text-content-brand transition-colors text-sm font-medium"
+            >
+              <Truck className="w-4 h-4" />
+              Livrer sans encaisser · bon de livraison
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* -- Étape : bon de livraison (sans encaissement) ------------------- */}
+      {step === 'livraison_note' && (
+        <div className="space-y-5">
+          <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
+            <span className="text-content-secondary text-sm">Total à régler plus tard</span>
+            <span className="text-2xl font-bold text-content-brand">{fmt(total)}</span>
+          </div>
+
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-badge-warning border border-status-warning text-xs text-status-warning">
+            <Truck className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              Aucun encaissement maintenant. La commande part en livraison et l'administrateur
+              encaissera la facture plus tard depuis le détail de la commande.
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-content-secondary mb-1 block">
+                Nom du client <span className="text-status-error">*</span>
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => { setCustomerName(e.target.value); setErreur(''); }}
+                placeholder="Ex : Mamadou Diallo"
+                className="input"
+                autoFocus
+                autoComplete="off"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-content-secondary mb-1 block">
+                Téléphone <span className="text-content-muted text-[10px]">(optionnel)</span>
+              </label>
+              <input
+                type="tel"
+                inputMode="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="Ex : 77 000 00 00"
+                className="input"
+                autoComplete="off"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-content-secondary mb-1 block">
+                Adresse de livraison <span className="text-content-muted text-[10px]">(optionnel)</span>
+              </label>
+              <input
+                type="text"
+                value={deliveryNoteAddress}
+                onChange={(e) => setDeliveryNoteAddress(e.target.value)}
+                placeholder="Ex : Sacré-Cœur 3, villa 12"
+                className="input"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          {erreur && (
+            <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-3 py-2">{erreur}</p>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setDeliveryNote(false); setErreur(''); setStep('methode'); }}
+              className="btn-secondary flex-1 h-11"
+            >
+              Retour
+            </button>
+            <button
+              onClick={submitDeliveryNote}
+              disabled={chargement || !customerName.trim()}
+              className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
+            >
+              {chargement && <Loader2 className="w-4 h-4 animate-spin" />}
+              {chargement ? 'Traitement...' : 'Créer le bon de livraison'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1071,13 +1274,33 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       {step === 'succes' && (
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-            methode === 'partial' ? 'bg-badge-warning' : 'bg-badge-success'
+            (deliveryNote || methode === 'partial') ? 'bg-badge-warning' : 'bg-badge-success'
           }`}>
-            <CheckCircle className={`w-8 h-8 ${methode === 'partial' ? 'text-status-warning' : 'text-status-success'}`} />
+            {deliveryNote
+              ? <Truck className="w-8 h-8 text-status-warning" />
+              : <CheckCircle className={`w-8 h-8 ${methode === 'partial' ? 'text-status-warning' : 'text-status-success'}`} />}
           </div>
 
           <div className="w-full space-y-3">
-            {methode === 'partial' ? (
+            {deliveryNote ? (
+              <>
+                <h3 className="text-xl font-bold text-content-primary">Bon de livraison créé !</h3>
+                {ordreId && <p className="text-sm text-content-secondary">N° {ordreId.slice(0, 8).toUpperCase()}</p>}
+                <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-content-secondary">Total commande</span>
+                    <span className="text-content-primary font-medium">{fmt(totalConfirme)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-surface-border pt-2">
+                    <span className="text-status-warning font-medium">Reste à régler</span>
+                    <span className="text-status-warning font-bold text-lg">{fmt(totalConfirme)}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-content-muted">
+                  Visible dans Livraisons. L'administrateur encaissera la facture depuis le détail de la commande.
+                </p>
+              </>
+            ) : methode === 'partial' ? (
               <>
                 <h3 className="text-xl font-bold text-content-primary">Acompte enregistré !</h3>
                 {ordreId && <p className="text-sm text-content-secondary">N° {ordreId.slice(0, 8).toUpperCase()}</p>}

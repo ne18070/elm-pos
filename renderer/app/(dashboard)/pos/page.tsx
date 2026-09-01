@@ -58,9 +58,11 @@ export default function PosPage() {
   const { warning } = useNotificationStore();
 
   const handleCheckout = useCallback(() => {
+    // On n'empêche plus l'ouverture de la modale : un bon de livraison ne bouge
+    // pas d'espèces et ne requiert pas de session. Le blocage de l'encaissement
+    // réel (cash / carte / mobile money / acompte) est géré dans PaymentModal.
     if (!cashSession) {
-      warning('Ouvrez une session de caisse avant d\'encaisser.');
-      return;
+      warning('Aucune session de caisse — seul le bon de livraison est possible.');
     }
     setPaymentOpen(true);
   }, [cashSession, warning]);
@@ -371,6 +373,7 @@ export default function PosPage() {
           taxInclusive={business?.tax_inclusive ?? false}
           currency={business?.currency ?? 'XOF'}
           tableId={selectedTable?.id}
+          wholesaleCtx={wholesaleCtx}
           onClose={() => setSplitOpen(false)}
           onSuccess={() => {
             setSplitOpen(false);

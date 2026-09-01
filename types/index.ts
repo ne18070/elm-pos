@@ -158,6 +158,8 @@ export interface Order {
   customer_phone?: string;
   hotel_reservation_id?: string;
   table_id?: string;
+  reseller_id?: string | null;
+  reseller_client_id?: string | null;
   created_at: string;
   updated_at: string;
   source?: string;
@@ -173,6 +175,8 @@ export interface Order {
   // joined
   cashier?: User;
   livreur?: import('../services/supabase/livreurs').Livreur;
+  reseller?: { id: string; name: string; type?: string | null } | null;
+  reseller_client?: { id: string; name: string; phone?: string | null } | null;
 }
 
 // ─── Restaurant & Seating ────────────────────────────────────────────────────
