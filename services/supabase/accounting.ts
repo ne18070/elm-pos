@@ -186,59 +186,137 @@ function _payMethodToAccount(method: string): { code: string; name: string } {
   }
 }
 
+const _PAGE_SIZE = 1000;
+
+/**
+ * PostgREST plafonne toute requête sans .range() explicite à 1000 lignes
+ * (db-max-rows par défaut chez Supabase) — silencieusement, sans erreur. Pour
+ * une entreprise avec un historique de plusieurs milliers de commandes,
+ * syncAccounting ne verrait jamais que les 1000 premières et penserait avoir
+ * tout synchronisé. Cette fonction feuillette la requête par pages de 1000
+ * jusqu'à épuisement.
+ */
+async function _fetchAllRows<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await build(from, from + _PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < _PAGE_SIZE) break;
+    from += _PAGE_SIZE;
+  }
+  return all;
+}
+
+/** Découpe un .in(column, ids) en lots — une liste de plusieurs milliers
+ *  d'UUID dans une seule requête risque de dépasser la longueur d'URL max
+ *  acceptée par PostgREST/le proxy en amont. */
+async function _fetchInBatches<T>(
+  ids: string[],
+  batchSize: number,
+  build: (batch: string[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const { data, error } = await build(ids.slice(i, i + batchSize));
+    if (error) throw new Error(error.message);
+    all.push(...(data ?? []));
+  }
+  return all;
+}
+
+/** Insère `rows` par lots de `batchSize` — un seul aller-retour réseau par
+ *  lot plutôt qu'un insert par ligne, indispensable dès que le volume
+ *  dépasse quelques dizaines d'enregistrements. */
+async function _insertInBatches<TReturn = unknown, TRow = unknown>(
+  rows: TRow[],
+  batchSize: number,
+  build: (batch: TRow[]) => PromiseLike<{ data: TReturn[] | null; error: { message: string } | null }>,
+): Promise<TReturn[]> {
+  const all: TReturn[] = [];
+  for (let i = 0; i < rows.length; i += batchSize) {
+    if (rows.length === 0) break;
+    const { data, error } = await build(rows.slice(i, i + batchSize));
+    if (error) throw new Error(error.message);
+    all.push(...(data ?? []));
+  }
+  return all;
+}
+
 export async function syncAccounting(businessId: string): Promise<number> {
-  // Collect already-synced IDs to avoid duplicates
-  const { data: existing } = await db('journal_entries')
-    .select('source_id')
-    .eq('business_id', businessId)
-    .in('source', ['order', 'refund']);
-  const synced = new Set((existing ?? []).map((e: { source_id: string | null }) => e.source_id));
+  // Collect already-synced IDs to avoid duplicates — paginé (voir _fetchAllRows)
+  const existing = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
+    db('journal_entries')
+      .select('source_id')
+      .eq('business_id', businessId)
+      .in('source', ['order', 'refund'])
+      .range(from, to),
+  );
+  const synced = new Set(existing.map((e) => e.source_id));
 
-  // Fetch all relevant orders
-  const { data: orders, error: oErr } = await supabase
-    .from('orders')
-    .select('id, created_at, updated_at, status, subtotal, tax_amount, discount_amount, total, order_channel')
-    .eq('business_id', businessId)
-    .in('status', ['paid', 'pending', 'refunded'])
-    .order('created_at', { ascending: true });
-  if (oErr) throw new Error(oErr.message);
+  // Fetch all relevant orders — paginé, sinon plafonné à 1000 lignes par
+  // PostgREST au-delà desquelles syncAccounting croirait avoir tout traité.
+  const orderList = await _fetchAllRows<_OrderRow>((from, to) =>
+    supabase
+      .from('orders')
+      .select('id, created_at, updated_at, status, subtotal, tax_amount, discount_amount, total, order_channel')
+      .eq('business_id', businessId)
+      .in('status', ['paid', 'pending', 'refunded'])
+      .order('created_at', { ascending: true })
+      .range(from, to),
+  );
+  const unsynced = orderList.filter((o) => !synced.has(o.id));
 
-  const orderList = (orders ?? []) as _OrderRow[];
-  const unsynced  = orderList.filter((o) => !synced.has(o.id));
-  if (unsynced.length === 0) return 0;
-
-  // Batch-fetch payments for unsynced orders
+  // Batch-fetch payments for unsynced orders — par lots de 500 id pour ne pas
+  // dépasser la longueur d'URL max d'une clause .in() sur un historique de
+  // plusieurs milliers de commandes.
   const ids = unsynced.map((o) => o.id);
-  const { data: allPayments } = await supabase
-    .from('payments')
-    .select('order_id, method, amount')
-    .in('order_id', ids);
+  const allPayments = await _fetchInBatches<_PayRow>(ids, 500, (batch) =>
+    supabase.from('payments').select('order_id, method, amount').in('order_id', batch),
+  );
 
   const payMap: Record<string, _PayRow[]> = {};
-  for (const p of (allPayments ?? []) as _PayRow[]) {
+  for (const p of allPayments) {
     (payMap[p.order_id] ??= []).push(p);
   }
 
-  let count = 0;
-
   // ── Orders ──────────────────────────────────────────────────────────────────
+  // Insertion par lots (entries d'abord, puis leurs lignes une fois les id
+  // connus) plutôt qu'un aller-retour réseau par commande : sur un historique
+  // de plusieurs milliers de commandes, la version ligne-par-ligne prenait
+  // littéralement des dizaines de minutes (2 requêtes séquentielles × N
+  // commandes). Ici, tout l'historique tient en une poignée de lots.
+  const entryRows = unsynced.map((o) => {
+    const isRefund = o.status === 'refunded';
+    const ref      = '#' + o.id.slice(0, 8).toUpperCase();
+    const isRS     = o.order_channel === 'room_service';
+    return {
+      business_id: businessId,
+      entry_date:  (isRefund ? o.updated_at : o.created_at).slice(0, 10),
+      reference:   ref,
+      description: isRefund ? `Remboursement ${ref}` : `${isRS ? 'Room Service' : 'Vente'} ${ref}`,
+      source:      isRefund ? 'refund' : 'order',
+      source_id:   o.id,
+    };
+  });
+
+  const insertedEntries = await _insertInBatches(
+    entryRows, 500,
+    (batch) => db('journal_entries').insert(batch).select('id, source_id'),
+  );
+  const entryIdBySourceId = new Map(insertedEntries.map((e) => [e.source_id, e.id]));
+
+  const allLines: _LineInput[] = [];
   for (const o of unsynced) {
-    const isRefund  = o.status === 'refunded';
-    const entryDate = (isRefund ? o.updated_at : o.created_at).slice(0, 10);
-    const ref       = '#' + o.id.slice(0, 8).toUpperCase();
-    const isRS      = o.order_channel === 'room_service';
-    const desc      = isRefund
-      ? `Remboursement ${ref}`
-      : `${isRS ? 'Room Service' : 'Vente'} ${ref}`;
-    const source    = isRefund ? 'refund' : 'order';
+    const entryId = entryIdBySourceId.get(o.id);
+    if (!entryId) continue; // insertion de cette écriture a échoué/sautée — pas de lignes orphelines
 
-    const { data: entry, error: eErr } = await db('journal_entries')
-      .insert({ business_id: businessId, entry_date: entryDate, reference: ref, description: desc, source, source_id: o.id })
-      .select('id').single();
-    if (eErr) throw new Error(eErr.message);
-    if (!entry) continue;
-
-    const lines: _LineInput[] = [];
+    const isRefund = o.status === 'refunded';
+    const isRS     = o.order_channel === 'room_service';
     const total    = Number(o.total);
     const subtotal = Number(o.subtotal);
     const tax      = Number(o.tax_amount);
@@ -250,74 +328,86 @@ export async function syncAccounting(businessId: string): Promise<number> {
       if (pays.length > 0) {
         for (const p of pays) {
           const acc = _payMethodToAccount(p.method);
-          lines.push({ entry_id: entry.id, account_code: acc.code, account_name: acc.name, debit: Number(p.amount), credit: 0 });
+          allLines.push({ entry_id: entryId, account_code: acc.code, account_name: acc.name, debit: Number(p.amount), credit: 0 });
         }
       } else if (total > 0) {
         // Fallback if payments table has no record
-        lines.push({ entry_id: entry.id, account_code: '571', account_name: 'Caisse', debit: total, credit: 0 });
+        allLines.push({ entry_id: entryId, account_code: '571', account_name: 'Caisse', debit: total, credit: 0 });
       }
       if (discount > 0) {
-        lines.push({ entry_id: entry.id, account_code: '7091', account_name: 'RRR accordés sur ventes', debit: discount, credit: 0 });
+        allLines.push({ entry_id: entryId, account_code: '7091', account_name: 'RRR accordés sur ventes', debit: discount, credit: 0 });
       }
       // Credit: revenue account (706 for room service, 701 for regular sales)
       const revCode = isRS ? '706' : '701';
       const revName = isRS ? 'Services rendus' : 'Ventes de marchandises';
-      if (subtotal > 0) lines.push({ entry_id: entry.id, account_code: revCode, account_name: revName, debit: 0, credit: subtotal });
-      if (tax > 0)      lines.push({ entry_id: entry.id, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: 0, credit: tax });
+      if (subtotal > 0) allLines.push({ entry_id: entryId, account_code: revCode, account_name: revName, debit: 0, credit: subtotal });
+      if (tax > 0)      allLines.push({ entry_id: entryId, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: 0, credit: tax });
     } else {
       // Refund: reverse of the original sale
-      if (subtotal > 0) lines.push({ entry_id: entry.id, account_code: '701', account_name: 'Ventes de marchandises', debit: subtotal, credit: 0 });
-      if (tax > 0)      lines.push({ entry_id: entry.id, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: tax, credit: 0 });
-      if (total > 0)    lines.push({ entry_id: entry.id, account_code: '571', account_name: 'Caisse', debit: 0, credit: total });
+      if (subtotal > 0) allLines.push({ entry_id: entryId, account_code: '701', account_name: 'Ventes de marchandises', debit: subtotal, credit: 0 });
+      if (tax > 0)      allLines.push({ entry_id: entryId, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: tax, credit: 0 });
+      if (total > 0)    allLines.push({ entry_id: entryId, account_code: '571', account_name: 'Caisse', debit: 0, credit: total });
     }
-
-    if (lines.length > 0) {
-      const { error: lErr } = await db('journal_lines').insert(lines);
-      if (lErr) throw new Error(lErr.message);
-    }
-    count++;
   }
+  await _insertInBatches(allLines, 1000, (batch) => db('journal_lines').insert(batch));
+
+  let count = insertedEntries.length;
 
   // ── Stock purchases (achats) ─────────────────────────────────────────────
-  const { data: syncedStock } = await db('journal_entries')
-    .select('source_id')
-    .eq('business_id', businessId)
-    .eq('source', 'stock');
-  const syncedStockSet = new Set((syncedStock ?? []).map((e: { source_id: string | null }) => e.source_id));
+  const syncedStock = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
+    db('journal_entries')
+      .select('source_id')
+      .eq('business_id', businessId)
+      .eq('source', 'stock')
+      .range(from, to),
+  );
+  const syncedStockSet = new Set(syncedStock.map((e) => e.source_id));
 
-  const { data: stockRows, error: sErr } = await supabase
-    .from('stock_entries')
-    .select('id, created_at, quantity, cost_per_unit, supplier, product:products(name)')
-    .eq('business_id', businessId)
-    .order('created_at', { ascending: true });
-  if (sErr) throw new Error(sErr.message);
-
-  for (const s of (stockRows ?? []) as {
+  const stockRows = await _fetchAllRows<{
     id: string; created_at: string; quantity: number;
-    cost_per_unit: number; supplier: string | null;
-    product: { name: string } | null;
-  }[]) {
-    if (syncedStockSet.has(s.id)) continue;
+    cost_per_unit: number | null; supplier: string | null;
+    product: { name: string };
+  }>((from, to) =>
+    supabase
+      .from('stock_entries')
+      .select('id, created_at, quantity, cost_per_unit, supplier, product:products(name)')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: true })
+      .range(from, to),
+  );
+
+  const stockCostBySourceId = new Map<string, number>();
+  const stockEntryRows = stockRows.filter((s) => {
+    if (syncedStockSet.has(s.id)) return false;
     const totalCost = Math.round(Number(s.quantity) * Number(s.cost_per_unit) * 100) / 100;
-    if (totalCost <= 0) continue;
+    if (totalCost <= 0) return false;
+    stockCostBySourceId.set(s.id, totalCost);
+    return true;
+  }).map((s) => ({
+    business_id: businessId,
+    entry_date:  s.created_at.slice(0, 10),
+    description: `Achat – ${s.product?.name ?? 'Produit'} / ${s.supplier ?? 'Fournisseur'}`,
+    source:      'stock',
+    source_id:   s.id,
+  }));
 
-    const supplier  = s.supplier ?? 'Fournisseur';
-    const product   = s.product?.name ?? 'Produit';
-    const entryDate = s.created_at.slice(0, 10);
+  const insertedStockEntries = await _insertInBatches(
+    stockEntryRows, 500,
+    (batch) => db('journal_entries').insert(batch).select('id, source_id'),
+  );
 
-    const { data: entry, error: eErr } = await db('journal_entries')
-      .insert({ business_id: businessId, entry_date: entryDate, description: `Achat – ${product} / ${supplier}`, source: 'stock', source_id: s.id })
-      .select('id').single();
-    if (eErr) throw new Error(eErr.message);
-    if (!entry) continue;
-
-    const { error: lErr } = await db('journal_lines').insert([
-      { entry_id: entry.id, account_code: '601', account_name: 'Achats de marchandises', debit: totalCost, credit: 0 },
-      { entry_id: entry.id, account_code: '401', account_name: 'Fournisseurs',           debit: 0,         credit: totalCost },
-    ]);
-    if (lErr) throw new Error(lErr.message);
-    count++;
+  const stockLines: _LineInput[] = [];
+  for (const e of insertedStockEntries) {
+    const totalCost = e.source_id ? stockCostBySourceId.get(e.source_id) : undefined;
+    if (!totalCost) continue;
+    stockLines.push(
+      { entry_id: e.id, account_code: '601', account_name: 'Achats de marchandises', debit: totalCost, credit: 0 },
+      { entry_id: e.id, account_code: '401', account_name: 'Fournisseurs',           debit: 0,         credit: totalCost },
+    );
   }
+  await _insertInBatches(stockLines, 1000, (batch) => db('journal_lines').insert(batch));
+
+  count += insertedStockEntries.length;
 
   return count;
 }
