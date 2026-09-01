@@ -1858,13 +1858,12 @@ export function generateDistributeurInvoice(
   const totalTVA = toTVA(order.total);
 
   function buildCopy(copyLabel: string): string {
-    const rows = (order.items ?? []).map((item, idx) => {
+    const rows = (order.items ?? []).map((item) => {
       const ref  = item.product?.sku ?? '';
       const ttc  = item.total;
       const ht   = toHT(ttc);
-      const bg   = idx % 2 === 0 ? '#fff' : '#f9fafb';
       return `
-        <tr style="background:${bg}">
+        <tr>
           <td class="td-sm td-ref">${ref}</td>
           <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:8px;color:#000;font-style:italic">${item.notes}</span>` : ''}</td>
           <td class="td-sm td-c">${item.quantity}</td>
@@ -2005,7 +2004,7 @@ export function generateDistributeurInvoice(
 
   /* Client */
   .client-row { margin: 3px 0; }
-  .client-box { background: #f5f5f5; border: 1px solid #000; border-radius: 4px; padding: 3px 8px; font-size: 9px; }
+  .client-box { border: 1px solid #000; border-radius: 4px; padding: 3px 8px; font-size: 9px; }
   .lbl { color: #000; }
   .val-name { font-weight: 700; font-size: 10px; color: #000; }
   .val-phone { color: #000; }
@@ -2026,23 +2025,23 @@ export function generateDistributeurInvoice(
 
   /* Tableau */
   .tbl { width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 9px; }
-  .th { background: #f1f5f9; color: #000; padding: 3px 4px; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #000; }
+  .th { color: #000; padding: 3px 4px; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #000; }
   .th-left { text-align: left; }
   .th-ref { text-align: left; width: 70px; }
-  .td-sm { padding: 2px 4px; border-top: 1px solid #ddd; border-right: 1px solid #ddd; vertical-align: top; color: #000; }
+  .td-sm { padding: 2px 4px; border-top: 1px solid #000; border-right: 1px solid #000; vertical-align: top; color: #000; }
   .td-ref { width: 70px; font-family: monospace; font-size: 8px; color: #000; }
   .td-c { text-align: center; font-weight: 600; }
   .td-r { text-align: right; }
   .td-bold { font-weight: 700; }
-  .tfoot-row { background: #e2e8f0; font-weight: 800; border-top: 2px solid #000; color: #000; }
-  .tfoot-row td { padding: 3px 4px; border-right: 1px solid #aaa; }
+  .tfoot-row { font-weight: 800; border-top: 2px solid #000; color: #000; }
+  .tfoot-row td { padding: 3px 4px; border-right: 1px solid #000; }
 
   /* Pied */
   .footer-grid { display: grid; grid-template-columns: 1fr 180px; gap: 6px; margin-top: 5px; }
-  .words-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; background: #f9fafb; }
+  .words-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; }
   .words { font-size: 8px; line-height: 1.5; color: #000; }
-  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #ccc; font-weight: 800; font-size: 9px; text-transform: uppercase; color: #000; }
-  .totals-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; background: #f5f5f5; }
+  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #000; font-weight: 800; font-size: 9px; text-transform: uppercase; color: #000; }
+  .totals-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; }
   .tot-row { display: flex; justify-content: space-between; font-size: 9px; padding: 1px 0; color: #000; }
   .tot-final { font-weight: 800; font-size: 10px; border-top: 1px solid #000; padding-top: 3px; margin-top: 2px; }
 

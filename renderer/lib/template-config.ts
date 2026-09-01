@@ -520,7 +520,7 @@ function renderTotals(ctx: RenderCtx, isThermal: boolean): string {
         ${config.showTax && order.tax_amount > 0 ? `<tr><td>TVA</td><td>${fmt(order.tax_amount, cur)}</td></tr>` : ''}
         <tr class="total-final"><td>TOTAL TTC</td><td>${fmt(order.total, cur)}</td></tr>
         ${config.showAmountInWords ? `
-        <tr><td colspan="2" style="font-size:8px;font-style:italic;color:#000;padding:3px 6px 2px;line-height:1.4;border-bottom:1px solid #e2e8f0">
+        <tr><td colspan="2" style="font-size:8px;font-style:italic;color:#000;padding:3px 6px 2px;line-height:1.4;border-bottom:1px solid #000">
           Arrêté à la somme de : <strong>${amountInWords(order.total, cur)}</strong>
         </td></tr>` : ''}
         ${config.showPaymentDetails ? ((order.payments ?? []) as any[]).map((p: any) =>
@@ -699,7 +699,7 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${fontStack(config.fontFamily)}; font-size: 11px; color: #000; ${bodyLayout} }
     .copy { flex: 1; padding: 6mm 7mm; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
-    .copy:first-child { border-right: 2px dashed #999; }
+    .copy:first-child { border-right: 2px dashed #000; }
     .single-copy { padding: 6mm 7mm; display: flex; flex-direction: column; gap: 6px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
     .biz-info { display: flex; align-items: flex-start; gap: 8px; }
@@ -718,11 +718,10 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
     .party-name { font-weight: 700; color: #000; font-size: 11px; }
     .party-phone { color: #000; font-size: 9px; margin-top: 1px; }
     .items-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    .items-table thead tr { background: #f1f5f9; border-bottom: 2px solid #000; }
+    .items-table thead tr { border-bottom: 2px solid #000; }
     .th { padding: 4px 6px; color: #000; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; text-align: right; }
     .th-left { text-align: left; }
-    .items-table tbody tr { border-bottom: 1px solid #ddd; }
-    .items-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .items-table tbody tr { border-bottom: 1px solid #000; }
     .td-name { padding: 4px 6px; max-width: 100px; }
     .td-num { padding: 4px 6px; text-align: right; white-space: nowrap; }
     .td-bold { font-weight: 700; }
@@ -731,7 +730,7 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
     .totals-table { border-collapse: collapse; min-width: 140px; }
     .totals-table td { padding: 2px 6px; font-size: 10px; }
     .totals-table td:last-child { text-align: right; font-weight: 600; }
-    .total-final { color: #000; font-size: 12px !important; font-weight: 800 !important; background: #f1f5f9; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+    .total-final { color: #000; font-size: 12px !important; font-weight: 800 !important; border-top: 2px solid #000; border-bottom: 2px solid #000; }
     .total-final td { padding: 5px 8px !important; }
     .payment-line td { color: #000; font-size: 9px; }
     .signatures { display: flex; gap: 16px; margin-top: auto; }
@@ -739,7 +738,7 @@ function a4Css(config: TemplateConfig, isTwoCols: boolean): string {
     .sig-label { font-size: 9px; color: #000; margin-bottom: 2px; }
     .sig-line { border-bottom: 1px solid #000; height: 16px; }
     .copy-label { text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; border: 1.5px solid #000; border-radius: 3px; padding: 2px 6px; align-self: center; color: #000; }
-    .coupon-note { font-size: 9px; color: #000; background: #f5f5f5; border: 1px solid #000; border-radius: 3px; padding: 2px 6px; }
+    .coupon-note { font-size: 9px; color: #000; border: 1px solid #000; border-radius: 3px; padding: 2px 6px; }
     .order-note { font-size: 9px; color: #000; font-style: italic; }
     .footer-text { font-size: 9px; color: #000; text-align: center; }
   `;

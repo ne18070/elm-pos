@@ -48,9 +48,6 @@ const MOCK_BUSINESS = {
 
 // --- Constants ----------------------------------------------------------------
 
-const PRIMARY_PRESETS = ['#1e293b', '#1a1a2e', '#0f172a', '#1c1917', '#052e16', '#1e1b4b'];
-const ACCENT_PRESETS  = ['#22c55e', '#4f46e5', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
-
 const FORMAT_LABELS: Record<TemplateConfig['format'], string> = {
   thermal:           'Ticket thermique',
   'a4-landscape':    'A4 Paysage',
@@ -115,27 +112,6 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
         <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${checked ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
       </button>
     </label>
-  );
-}
-
-function ColorField({ label, value, onChange, presets }: {
-  label: string; value: string; onChange: (v: string) => void; presets: string[];
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="label">{label}</label>
-      <div className="flex items-center gap-2">
-        <input type="color" value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-9 h-9 rounded cursor-pointer border-0 bg-transparent p-0" />
-        <span className="text-xs text-content-secondary font-mono">{value}</span>
-      </div>
-      <div className="flex gap-1.5 flex-wrap">
-        {presets.map((c) => (
-          <button key={c} type="button" onClick={() => onChange(c)} style={{ backgroundColor: c }}
-            className={`w-6 h-6 rounded-full border-2 transition-all ${value === c ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`} />
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -610,10 +586,6 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                 {!isDistributeur && <>
                 {/* -- Style -- */}
                 <Section title="Style" sectionKey="style" onActivate={setActiveSection}>
-                  <ColorField label="Couleur principale (en-tête tableau)" value={selected.primaryColor}
-                    onChange={(v) => updateSelected({ primaryColor: v })} presets={PRIMARY_PRESETS} />
-                  <ColorField label="Couleur accentuation (titre, total)" value={selected.accentColor}
-                    onChange={(v) => updateSelected({ accentColor: v })} presets={ACCENT_PRESETS} />
                   <div>
                     <label className="label">Police</label>
                     <div className="flex gap-2 mt-1">
@@ -690,10 +662,6 @@ export function TemplateManager({ businessId, onClose }: { businessId: string; o
                               onChange={(e) => updateSelected(n === 1 ? { copy1Label: e.target.value } : { copy2Label: e.target.value })}
                               className="input" />
                           </div>
-                          <ColorField label="Couleur"
-                            value={n === 1 ? selected.copy1Color : selected.copy2Color}
-                            onChange={(v) => updateSelected(n === 1 ? { copy1Color: v } : { copy2Color: v })}
-                            presets={ACCENT_PRESETS} />
                         </div>
                       ))}
                     </div>
