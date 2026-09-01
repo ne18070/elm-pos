@@ -12,6 +12,8 @@ interface UseOrdersOptions {
   dateFrom?: string;
   dateTo?:   string;
   search?:   string;
+  cashierId?:    string;
+  createdAfter?: string;
 }
 
 export function useOrders(businessId: string, options?: UseOrdersOptions) {
@@ -34,7 +36,7 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search]);
+  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search, options?.cashierId, options?.createdAfter]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

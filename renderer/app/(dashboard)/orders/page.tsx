@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload, ChevronLeft, ChevronRight, Store } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
+import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
 import { OrderDetail } from '@/components/orders/OrderDetail';
@@ -41,6 +42,12 @@ const PAGE_SIZE = 50;
 // de comptage, plutôt que de charger tout l'historique en mémoire.
 const ACOMPTE_FETCH_LIMIT = 3000;
 
+// Un utilisateur sans la permission `view_all_orders` (par défaut : le caissier)
+// ne voit que SES propres ventes (cashier_id = son id) des
+// RESTRICTED_WINDOW_DAYS derniers jours. Le filtre de dates est alors masqué et
+// le plancher created_at est calculé côté serveur, non modifiable depuis l'UI.
+const RESTRICTED_WINDOW_DAYS = 30;
+
 function getPaidAmount(order: Order): number {
   return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
 }
@@ -53,6 +60,8 @@ function isAcompte(order: Order): boolean {
 
 export default function OrdersPage() {
   const { business, user } = useAuthStore();
+  const canViewAllOrders = usePermission('view_all_orders');
+  const restricted = !canViewAllOrders;
   const [tab, setTab]               = useState<FilterTab>('all');
   const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
@@ -66,6 +75,18 @@ export default function OrdersPage() {
   const isAcompteTab = tab === 'acompte';
   const dbStatus = tab === 'all' || isAcompteTab ? undefined : tab as OrderStatus;
   const dateRange = { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined };
+
+  // Périmètre imposé au caissier : ses ventes uniquement, fenêtre glissante de
+  // RESTRICTED_WINDOW_DAYS jours. `restrictedSince` figé au montage pour éviter
+  // un nouvel objet d'options (et donc un refetch) à chaque rendu.
+  const restrictedSince = useMemo(
+    () => (restricted ? new Date(Date.now() - RESTRICTED_WINDOW_DAYS * 86_400_000).toISOString() : undefined),
+    [restricted],
+  );
+  const scopeOpts = restricted ? { cashierId: user?.id, createdAfter: restrictedSince } : undefined;
+  // Si le périmètre est restreint mais l'utilisateur pas encore chargé, on
+  // désactive la requête (businessId vide) plutôt que de tout exposer.
+  const effectiveBusinessId = restricted && !user?.id ? '' : (business?.id ?? '');
 
   // Remet la page à 1 dès qu'un filtre (onglet, recherche, dates) change —
   // fait directement pendant le rendu (pattern React recommandé pour
@@ -92,10 +113,10 @@ export default function OrdersPage() {
   // voir ACOMPTE_FETCH_LIMIT), on récupère un lot borné des commandes les
   // plus récentes et on filtre/pagine côté client à l'intérieur de ce lot.
   const { orders, count, loading, refetch } = useOrders(
-    business?.id ?? '',
+    effectiveBusinessId,
     isAcompteTab
-      ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch, ...dateRange }
-      : { status: dbStatus, limit: PAGE_SIZE, offset: (effectivePage - 1) * PAGE_SIZE, search: debouncedSearch, ...dateRange },
+      ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch, ...dateRange, ...scopeOpts }
+      : { status: dbStatus, limit: PAGE_SIZE, offset: (effectivePage - 1) * PAGE_SIZE, search: debouncedSearch, ...dateRange, ...scopeOpts },
   );
 
   // Source dédiée au badge de comptage "acompte" — indépendante de l'onglet
@@ -103,8 +124,8 @@ export default function OrdersPage() {
   // ouvert : `orders` ci-dessus sert alors directement de source, pas besoin
   // de la récupérer deux fois.
   const { orders: acompteBadgeSource } = useOrders(
-    isAcompteTab ? '' : (business?.id ?? ''),
-    { limit: ACOMPTE_FETCH_LIMIT, ...dateRange },
+    isAcompteTab ? '' : effectiveBusinessId,
+    { limit: ACOMPTE_FETCH_LIMIT, ...dateRange, ...scopeOpts },
   );
   const acompteCount = (isAcompteTab ? orders : acompteBadgeSource).filter(isAcompte).length;
 
@@ -132,10 +153,13 @@ export default function OrdersPage() {
     const orderId = params.get('order');
     if (!orderId) return;
     getOrderById(orderId).then((order) => {
+      // Un caissier au périmètre restreint ne peut pas ouvrir la facture d'un
+      // collègue via un lien direct (?order=…).
+      if (restricted && order.cashier_id !== user?.id) return;
       setTab('all');
       setSelectedOrder(order);
     }).catch(() => {});
-  }, []);
+  }, [restricted, user?.id]);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency);
 
@@ -152,7 +176,11 @@ export default function OrdersPage() {
                   {totalCount} commande{totalCount !== 1 ? 's' : ''}
                 </span>
               </h1>
-              <p className="text-xs text-content-secondary mt-0.5">Historique de toutes les ventes · "Acompte" = commande partiellement payée</p>
+              <p className="text-xs text-content-secondary mt-0.5">
+                {restricted
+                  ? `Vos ventes des ${RESTRICTED_WINDOW_DAYS} derniers jours · "Acompte" = commande partiellement payée`
+                  : 'Historique de toutes les ventes · "Acompte" = commande partiellement payée'}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
@@ -178,37 +206,45 @@ export default function OrdersPage() {
             />
           </div>
 
-          {/* Filtre de dates */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <label className="flex items-center gap-1.5 text-xs text-content-secondary">
-              Du
-              <input
-                type="date"
-                value={dateFrom}
-                max={dateTo || undefined}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="input h-8 text-sm py-0"
-              />
-            </label>
-            <label className="flex items-center gap-1.5 text-xs text-content-secondary">
-              Au
-              <input
-                type="date"
-                value={dateTo}
-                min={dateFrom || undefined}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="input h-8 text-sm py-0"
-              />
-            </label>
-            {(dateFrom || dateTo) && (
-              <button
-                onClick={() => { setDateFrom(''); setDateTo(''); }}
-                className="text-xs text-content-brand hover:underline"
-              >
-                Réinitialiser
-              </button>
-            )}
-          </div>
+          {/* Filtre de dates — masqué quand le périmètre est verrouillé sur les
+              30 derniers jours du caissier (le choix de dates n'aurait aucun effet
+              au-delà de cette fenêtre). */}
+          {restricted ? (
+            <p className="text-xs text-content-muted">
+              Vous voyez uniquement vos propres ventes des {RESTRICTED_WINDOW_DAYS} derniers jours.
+            </p>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="flex items-center gap-1.5 text-xs text-content-secondary">
+                Du
+                <input
+                  type="date"
+                  value={dateFrom}
+                  max={dateTo || undefined}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="input h-8 text-sm py-0"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-content-secondary">
+                Au
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="input h-8 text-sm py-0"
+                />
+              </label>
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={() => { setDateFrom(''); setDateTo(''); }}
+                  className="text-xs text-content-brand hover:underline"
+                >
+                  Réinitialiser
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Onglets filtre */}
           <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 overflow-x-auto">

@@ -129,6 +129,11 @@ export async function getOrders(
     dateFrom?: string;
     dateTo?:   string;
     search?:   string;
+    /** Restreint aux commandes encaissées par ce caissier (son user id). */
+    cashierId?: string;
+    /** Plancher absolu sur created_at (ISO) — cumulé avec date/dateFrom/dateTo,
+     *  jamais élargi par l'utilisateur. Sert à borner la vue d'un caissier. */
+    createdAfter?: string;
   }
 ): Promise<{ orders: Order[]; count: number }> {
   let query = supabase
@@ -142,6 +147,12 @@ export async function getOrders(
 
   if (options?.status && options.status !== 'all') {
     query = query.eq('status', options.status);
+  }
+  if (options?.cashierId) {
+    query = query.eq('cashier_id', options.cashierId);
+  }
+  if (options?.createdAfter) {
+    query = query.gte('created_at', options.createdAfter);
   }
   if (options?.date) {
     query = query

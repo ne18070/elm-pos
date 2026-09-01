@@ -18,6 +18,7 @@ const PERMISSIONS_MAP = {
   view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_orders:            { label: 'Accès commandes/ventes',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  view_all_orders:        { label: 'Voir toutes les factures (sinon : ses ventes des 30 derniers jours)', group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_services:          { label: 'Accès prestations service',    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
   view_livraisons:        { label: 'Accès suivi livraisons',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['livraison', 'delivery'] },
   view_livreurs:          { label: 'Accès gestion livreurs',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['livraison', 'delivery'] },
