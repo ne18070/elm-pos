@@ -21,6 +21,49 @@ export interface SelectedClient {
   phone?: string | null;
 }
 
+/** Champ quantité éditable manuellement (en plus des boutons -/+). */
+function QuantityInput({
+  quantity,
+  onCommit,
+  error,
+}: {
+  quantity: number;
+  onCommit: (qty: number) => boolean;
+  error?: boolean;
+}) {
+  const [value, setValue] = useState(String(quantity));
+
+  useEffect(() => {
+    setValue(String(quantity));
+  }, [quantity]);
+
+  function commit() {
+    const parsed = parseInt(value, 10);
+    if (!Number.isFinite(parsed) || String(parsed) !== value.trim() || parsed === quantity) {
+      setValue(String(quantity));
+      return;
+    }
+    if (!onCommit(parsed)) setValue(String(quantity));
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === '' || /^[0-9]{1,4}$/.test(v)) setValue(v);
+      }}
+      onFocus={(e) => e.target.select()}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      className={`font-semibold w-9 text-center bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand-500 rounded ${error ? 'text-status-error' : 'text-content-primary'}`}
+    />
+  );
+}
+
 interface OrderPanelProps {
   taxRate: number;
   taxInclusive: boolean;
@@ -141,6 +184,13 @@ export function OrderPanel({
 
   function handleQtyDecrease(item: CartItem) {
     updateQuantity(item.product_id, item.variant_id, item.quantity - 1);
+  }
+
+  /** Saisie manuelle de la quantité. Retourne false si refusée (stock insuffisant). */
+  function handleQtyChange(item: CartItem, qty: number): boolean {
+    const result = updateQuantity(item.product_id, item.variant_id, qty);
+    if (!result.ok) warning(result.reason ?? 'Stock insuffisant');
+    return result.ok;
   }
 
   /** Calcule la consommation totale en stock de base pour un item à une quantité donnée */
@@ -294,9 +344,11 @@ export function OrderPanel({
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className={`font-semibold w-6 text-center ${over ? 'text-status-error' : 'text-content-primary'}`}>
-                      {item.quantity}
-                    </span>
+                    <QuantityInput
+                      quantity={item.quantity}
+                      error={over}
+                      onCommit={(qty) => handleQtyChange(item, qty)}
+                    />
                     <button
                       onClick={() => handleQtyIncrease(item)}
                       disabled={limited}
