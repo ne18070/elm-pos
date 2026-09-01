@@ -1857,7 +1857,7 @@ export function generateDistributeurInvoice(
   const totalHT = toHT(order.total);
   const totalTVA = toTVA(order.total);
 
-  function buildCopy(copyLabel: string, accent: string): string {
+  function buildCopy(copyLabel: string): string {
     const rows = (order.items ?? []).map((item, idx) => {
       const ref  = item.product?.sku ?? '';
       const ttc  = item.total;
@@ -1866,7 +1866,7 @@ export function generateDistributeurInvoice(
       return `
         <tr style="background:${bg}">
           <td class="td-sm td-ref">${ref}</td>
-          <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:8px;color:#888;font-style:italic">${item.notes}</span>` : ''}</td>
+          <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:8px;color:#000;font-style:italic">${item.notes}</span>` : ''}</td>
           <td class="td-sm td-c">${item.quantity}</td>
           <td class="td-sm td-r">${fmt(item.price, cur)}</td>
           <td class="td-sm td-r">${fmt(ht, cur)}</td>
@@ -1953,9 +1953,9 @@ export function generateDistributeurInvoice(
             <span>NET À PAYER :</span>
             <span>${fmt(order.total, cur)}</span>
           </div>
-          ${paid > 0 ? `<div class="tot-row" style="color:#16a34a;font-size:8px">
+          ${paid > 0 ? `<div class="tot-row" style="font-size:8px">
             <span>Reçu :</span><span>${fmt(paid, cur)}</span></div>` : ''}
-          ${remaining > 0.01 ? `<div class="tot-row" style="color:#c0392b;font-size:8px">
+          ${remaining > 0.01 ? `<div class="tot-row" style="font-weight:600;font-size:8px">
             <span>Reste dû :</span><span>${fmt(remaining, cur)}</span></div>` : ''}
         </div>
       </div>
@@ -1966,7 +1966,7 @@ export function generateDistributeurInvoice(
       </div>
 
       <!-- LABEL EXEMPLAIRE -->
-      <div class="copy-label" style="color:${accent};border-color:${accent}">${copyLabel}</div>
+      <div class="copy-label">${copyLabel}</div>
     `;
   }
 
@@ -1980,7 +1980,7 @@ export function generateDistributeurInvoice(
   body {
     font-family: 'Segoe UI', Arial, sans-serif;
     font-size: 10px;
-    color: #1a1a1a;
+    color: #000;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0;
@@ -1995,20 +1995,20 @@ export function generateDistributeurInvoice(
   .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 4px; }
   .biz { display: flex; gap: 6px; align-items: flex-start; }
   .logo { max-width: 70px; max-height: 50px; object-fit: contain; }
-  .biz-name { font-size: 12px; font-weight: 800; color: #111; }
-  .biz-sub { font-size: 9px; font-weight: 700; color: #333; }
-  .biz-detail { font-size: 8px; color: #666; line-height: 1.4; }
+  .biz-name { font-size: 12px; font-weight: 800; color: #000; }
+  .biz-sub { font-size: 9px; font-weight: 700; color: #000; }
+  .biz-detail { font-size: 8px; color: #000; line-height: 1.4; }
   .meta { text-align: right; }
-  .meta-num { font-size: 11px; font-weight: 800; color: #111; }
-  .meta-date { font-size: 9px; color: #555; }
-  .meta-ref { font-size: 8px; color: #777; }
+  .meta-num { font-size: 11px; font-weight: 800; color: #000; }
+  .meta-date { font-size: 9px; color: #000; }
+  .meta-ref { font-size: 8px; color: #000; }
 
   /* Client */
   .client-row { margin: 3px 0; }
-  .client-box { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 4px; padding: 3px 8px; font-size: 9px; }
-  .lbl { color: #555; }
-  .val-name { font-weight: 700; font-size: 10px; }
-  .val-phone { color: #666; }
+  .client-box { background: #f5f5f5; border: 1px solid #000; border-radius: 4px; padding: 3px 8px; font-size: 9px; }
+  .lbl { color: #000; }
+  .val-name { font-weight: 700; font-size: 10px; color: #000; }
+  .val-phone { color: #000; }
 
   /* Titre document */
   .doc-title {
@@ -2017,52 +2017,54 @@ export function generateDistributeurInvoice(
     font-weight: 800;
     letter-spacing: .08em;
     text-transform: uppercase;
-    border-top: 2px solid #111;
-    border-bottom: 2px solid #111;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
     padding: 2px 0;
     margin: 3px 0;
+    color: #000;
   }
 
   /* Tableau */
-  .tbl { width: 100%; border-collapse: collapse; border: 2px solid #111; font-size: 9px; }
-  .th { background: #1e293b; color: #e2e8f0; padding: 3px 4px; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .tbl { width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 9px; }
+  .th { background: #f1f5f9; color: #000; padding: 3px 4px; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #000; }
   .th-left { text-align: left; }
   .th-ref { text-align: left; width: 70px; }
-  .td-sm { padding: 2px 4px; border-top: 1px solid #ddd; border-right: 1px solid #ddd; vertical-align: top; }
-  .td-ref { width: 70px; font-family: monospace; font-size: 8px; color: #444; }
+  .td-sm { padding: 2px 4px; border-top: 1px solid #ddd; border-right: 1px solid #ddd; vertical-align: top; color: #000; }
+  .td-ref { width: 70px; font-family: monospace; font-size: 8px; color: #000; }
   .td-c { text-align: center; font-weight: 600; }
   .td-r { text-align: right; }
   .td-bold { font-weight: 700; }
-  .tfoot-row { background: #e2e8f0; font-weight: 800; border-top: 2px solid #111; }
+  .tfoot-row { background: #e2e8f0; font-weight: 800; border-top: 2px solid #000; color: #000; }
   .tfoot-row td { padding: 3px 4px; border-right: 1px solid #aaa; }
 
   /* Pied */
   .footer-grid { display: grid; grid-template-columns: 1fr 180px; gap: 6px; margin-top: 5px; }
-  .words-box { border: 2px solid #111; border-radius: 4px; padding: 4px 6px; background: #f9fafb; }
-  .words { font-size: 8px; line-height: 1.5; color: #222; }
-  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #ccc; font-weight: 800; font-size: 9px; text-transform: uppercase; }
-  .totals-box { border: 2px solid #111; border-radius: 4px; padding: 4px 6px; background: #eff6ff; }
-  .tot-row { display: flex; justify-content: space-between; font-size: 9px; padding: 1px 0; }
-  .tot-final { font-weight: 800; font-size: 10px; border-top: 1px solid #111; padding-top: 3px; margin-top: 2px; }
+  .words-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; background: #f9fafb; }
+  .words { font-size: 8px; line-height: 1.5; color: #000; }
+  .echeance { margin-top: 4px; padding-top: 3px; border-top: 1px solid #ccc; font-weight: 800; font-size: 9px; text-transform: uppercase; color: #000; }
+  .totals-box { border: 2px solid #000; border-radius: 4px; padding: 4px 6px; background: #f5f5f5; }
+  .tot-row { display: flex; justify-content: space-between; font-size: 9px; padding: 1px 0; color: #000; }
+  .tot-final { font-weight: 800; font-size: 10px; border-top: 1px solid #000; padding-top: 3px; margin-top: 2px; }
 
   /* Signature */
   .sig-row { display: flex; justify-content: flex-end; margin-top: 6px; }
   .sig-box { width: 120px; text-align: center; }
-  .sig-line { border-top: 1.5px solid #111; height: 22px; }
-  .sig-lbl { font-size: 8px; color: #555; margin-top: 2px; }
+  .sig-line { border-top: 1.5px solid #000; height: 22px; }
+  .sig-lbl { font-size: 8px; color: #000; margin-top: 2px; }
 
   /* Exemplaire */
   .copy-label {
     text-align: center; font-size: 8px; font-weight: 800;
     letter-spacing: .12em; text-transform: uppercase;
-    border: 1.5px solid; border-radius: 3px;
+    border: 1.5px solid #000; border-radius: 3px;
     padding: 1px 6px; align-self: center; margin-top: auto;
+    color: #000;
   }
 </style>
 </head><body>
 
-  <div class="copy">${buildCopy('✦ EXEMPLAIRE CLIENT ✦', '#16a34a')}</div>
-  <div class="copy">${buildCopy('✦ EXEMPLAIRE BOUTIQUE ✦', '#4f46e5')}</div>
+  <div class="copy">${buildCopy('✦ EXEMPLAIRE CLIENT ✦')}</div>
+  <div class="copy">${buildCopy('✦ EXEMPLAIRE BOUTIQUE ✦')}</div>
 
 </body></html>`;
 }
