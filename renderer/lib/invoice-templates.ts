@@ -1883,7 +1883,7 @@ export function generateDistributeurInvoice(
   const clientName  = extra?.resellerClientName?.trim() || order.customer_name || '—';
   const clientPhone = extra?.resellerClientPhone?.trim() || order.customer_phone || '';
 
-  function buildCopy(copyLabel: string): string {
+  function buildCopy(): string {
     const rows = (order.items ?? []).map((item) => {
       const ref  = item.product?.sku ?? '';
       const ttc  = item.total;
@@ -1994,9 +1994,6 @@ export function generateDistributeurInvoice(
       <div class="sig-row">
         <div class="sig-box"><div class="sig-line"></div><p class="sig-lbl">Cachet et signature</p></div>
       </div>
-
-      <!-- LABEL EXEMPLAIRE -->
-      <div class="copy-label">${copyLabel}</div>
     `;
   }
 
@@ -2082,20 +2079,11 @@ export function generateDistributeurInvoice(
   .sig-box { width: 130px; text-align: center; }
   .sig-line { border-top: 1.5px solid #000; height: 22px; }
   .sig-lbl { font-size: 9.5px; color: #000; margin-top: 2px; }
-
-  /* Exemplaire */
-  .copy-label {
-    text-align: center; font-size: 9.5px; font-weight: 800;
-    letter-spacing: .12em; text-transform: uppercase;
-    border: 1.5px solid #000; border-radius: 3px;
-    padding: 2px 7px; align-self: center; margin-top: auto;
-    color: #000;
-  }
 </style>
 </head><body>
 
-  <div class="copy">${buildCopy('✦ EXEMPLAIRE CLIENT ✦')}</div>
-  <div class="copy">${buildCopy('✦ EXEMPLAIRE BOUTIQUE ✦')}</div>
+  <div class="copy">${buildCopy()}</div>
+  <div class="copy">${buildCopy()}</div>
 
 </body></html>`;
 }
