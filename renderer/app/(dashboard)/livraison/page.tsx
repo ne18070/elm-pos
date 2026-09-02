@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Truck, Clock, CheckCircle, Package, UserCheck, X } from 'lucide-react';
+import { RefreshCw, Truck, Clock, CheckCircle, Package, UserCheck, X, CheckCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
@@ -42,6 +42,8 @@ export default function LivraisonPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Order | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDelivering, setBulkDelivering] = useState(false);
 
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
   const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
@@ -118,6 +120,36 @@ export default function LivraisonPage() {
     }
   }
 
+  function toggleOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Livraison groupée : confirme chaque commande sélectionnée. Pas de
+  // notification WhatsApp client ici (N envois) — le flux unitaire s'en charge.
+  async function handleDeliverSelected() {
+    if (!user || selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    if (!confirm(`Confirmer la livraison de ${ids.length} commande${ids.length > 1 ? 's' : ''} ?`)) return;
+    setBulkDelivering(true);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => confirmOrderDelivery(id, user.id)));
+      const ok = results.filter((r) => r.status === 'fulfilled').length;
+      const ko = results.length - ok;
+      if (ok) success(`${ok} commande${ok > 1 ? 's' : ''} livrée${ok > 1 ? 's' : ''} ✓`);
+      if (ko) notifError(`${ko} livraison${ko > 1 ? 's' : ''} en échec`);
+      setSelectedIds(new Set());
+      setSelected(null);
+      fetchOrders(true);
+    } finally {
+      setBulkDelivering(false);
+    }
+  }
+
   function openAssign(order: Order) {
     setAssigningOrder(order);
     setAssignLivreurId((order as Order & { livreur_id?: string }).livreur_id ?? '');
@@ -170,6 +202,22 @@ export default function LivraisonPage() {
 
   const pending = orders.filter((o) => o.delivery_status === 'pending');
   const picking = orders.filter((o) => o.delivery_status === 'picking');
+  const listOrders = [...picking, ...pending];
+  const allSelected = listOrders.length > 0 && listOrders.every((o) => selectedIds.has(o.id));
+
+  // Purge les ids qui ne sont plus dans la liste (livrés ailleurs, temps réel)
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const valid = new Set(orders.map((o) => o.id));
+      const next = new Set([...prev].filter((id) => valid.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [orders]);
+
+  function toggleAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(listOrders.map((o) => o.id)));
+  }
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -196,6 +244,34 @@ export default function LivraisonPage() {
           </div>
         </div>
 
+        {/* Barre de sélection groupée */}
+        {!loading && listOrders.length > 0 && canConfirm && (
+          <div className="px-4 py-2 border-b border-surface-border flex items-center justify-between gap-2">
+            <label className="flex items-center gap-2 text-xs text-content-secondary cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded accent-brand-500"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && !allSelected; }}
+                onChange={toggleAll}
+              />
+              {selectedIds.size > 0
+                ? `${selectedIds.size} sélectionnée${selectedIds.size > 1 ? 's' : ''}`
+                : 'Tout sélectionner'}
+            </label>
+            <button
+              onClick={handleDeliverSelected}
+              disabled={selectedIds.size === 0 || bulkDelivering}
+              className="btn-primary h-8 text-xs flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              {bulkDelivering
+                ? 'Livraison…'
+                : `Livrer la sélection${selectedIds.size ? ` (${selectedIds.size})` : ''}`}
+            </button>
+          </div>
+        )}
+
         {/* Liste */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
@@ -208,7 +284,7 @@ export default function LivraisonPage() {
             </div>
           ) : (
             <>
-              {[...picking, ...pending].map((order) => {
+              {listOrders.map((order) => {
                 const badge = DELIVERY_LABELS[order.delivery_status];
                 const itemCount = order.items?.reduce((s, i) => s + i.quantity, 0) ?? 0;
                 const isSelected = selected?.id === order.id;
@@ -220,15 +296,28 @@ export default function LivraisonPage() {
                 return (
                   <div
                     key={order.id}
-                    className={`w-full text-left rounded-xl border transition-all ${
+                    className={`rounded-xl border transition-all ${
                       isSelected
                         ? 'border-brand-500 bg-badge-brand'
-                        : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
+                        : selectedIds.has(order.id)
+                          ? 'border-brand-500/60 bg-surface-card'
+                          : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
                     }`}
                   >
+                   <div className="flex items-stretch">
+                    {canConfirm && (
+                      <label className="flex items-center pl-3 pr-1 cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded accent-brand-500"
+                          checked={selectedIds.has(order.id)}
+                          onChange={() => toggleOne(order.id)}
+                        />
+                      </label>
+                    )}
                     <button
                       onClick={() => handleSelect(order)}
-                      className="w-full text-left p-4"
+                      className="flex-1 min-w-0 text-left p-4"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -275,6 +364,7 @@ export default function LivraisonPage() {
                         </div>
                       </div>
                     </button>
+                   </div>
 
                     {isDelivery && livreurs.length > 0 && canAssign && (
                       <div className="px-4 pb-3 flex items-center gap-2">

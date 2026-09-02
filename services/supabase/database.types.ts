@@ -3751,7 +3751,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
-          reseller_id: string
+          reseller_id: string | null
         }
         Insert: {
           address?: string | null
@@ -3760,7 +3760,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
-          reseller_id: string
+          reseller_id?: string | null
         }
         Update: {
           address?: string | null
@@ -3769,7 +3769,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
-          reseller_id?: string
+          reseller_id?: string | null
         }
         Relationships: [
           {
@@ -3781,6 +3781,52 @@ export type Database = {
           },
           {
             foreignKeyName: "reseller_clients_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_client_links: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          reseller_client_id: string
+          reseller_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          reseller_client_id: string
+          reseller_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          reseller_client_id?: string
+          reseller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_client_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_client_links_reseller_client_id_fkey"
+            columns: ["reseller_client_id"]
+            isOneToOne: false
+            referencedRelation: "reseller_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_client_links_reseller_id_fkey"
             columns: ["reseller_id"]
             isOneToOne: false
             referencedRelation: "resellers"

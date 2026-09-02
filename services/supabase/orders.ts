@@ -232,8 +232,21 @@ export async function getRefundsForOrder(orderId: string): Promise<Refund[]> {
 
 /**
  * Commandes payées en attente de livraison, avec barcode produit pour le scan.
+ *
+ * `orders.delivery_status` vaut `'pending'` par défaut sur TOUTE commande (même
+ * une vente comptoir sans rien à livrer) : sans bornes, `delivery_status <>
+ * 'delivered'` sélectionne tout l'historique des ventes et la jointure
+ * order_items+products fait dépasser le statement_timeout (erreur 57014).
+ * On borne donc à une fenêtre récente + un plafond de lignes — une file de
+ * picking n'a jamais besoin de plus. Index dédié : migration 099.
  */
-export async function getOrdersForDelivery(businessId: string): Promise<Order[]> {
+export async function getOrdersForDelivery(
+  businessId: string,
+  opts?: { sinceDays?: number; limit?: number },
+): Promise<Order[]> {
+  const sinceDays = opts?.sinceDays ?? 60;
+  const limit     = opts?.limit ?? 500;
+  const since     = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
   return q<Order[]>(
     supabase
       .from('orders')
@@ -248,7 +261,9 @@ export async function getOrdersForDelivery(businessId: string): Promise<Order[]>
       .eq('business_id', businessId)
       .in('status', ['paid', 'pending'])
       .neq('delivery_status', 'delivered')
-      .order('created_at', { ascending: true }) as never,
+      .gte('created_at', since)
+      .order('created_at', { ascending: true })
+      .limit(limit) as never,
   );
 }
 

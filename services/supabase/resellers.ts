@@ -25,12 +25,15 @@ export interface Reseller {
 
 export interface ResellerClient {
   id: string;
-  reseller_id: string;
+  /** Héritage : revendeur créateur. La table de liaison fait foi désormais. */
+  reseller_id?: string | null;
   business_id: string;
   name: string;
   phone?: string | null;
   address?: string | null;
   created_at: string;
+  /** Nombre de revendeurs auxquels ce client est rattaché (si demandé). */
+  link_count?: number;
 }
 
 export interface ResellerOffer {
@@ -77,9 +80,37 @@ export async function deleteReseller(id: string): Promise<void> {
 
 // --- Clients revendeurs -------------------------------------------------------
 
+/** Clients rattachés à un revendeur, via la table de liaison. `link_count` =
+ *  nombre total de revendeurs auxquels chaque client est rattaché. */
 export async function getResellerClients(resellerId: string): Promise<ResellerClient[]> {
+  const links = await q<{ client: ResellerClient | null }[]>(
+    supabase
+      .from('reseller_client_links')
+      .select('client:reseller_clients(*)')
+      .eq('reseller_id', resellerId),
+  );
+  const clients = (links ?? []).map((l) => l.client).filter((c): c is ResellerClient => !!c);
+  if (clients.length === 0) return [];
+
+  // Nombre de rattachements par client (partagé vs exclusif à ce revendeur)
+  const rows = await q<{ reseller_client_id: string }[]>(
+    supabase
+      .from('reseller_client_links')
+      .select('reseller_client_id')
+      .in('reseller_client_id', clients.map((c) => c.id)),
+  );
+  const counts = new Map<string, number>();
+  (rows ?? []).forEach((r) => counts.set(r.reseller_client_id, (counts.get(r.reseller_client_id) ?? 0) + 1));
+
+  return clients
+    .map((c) => ({ ...c, link_count: counts.get(c.id) ?? 1 }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Tous les clients revendeurs du commerce (référentiel partagé). */
+export async function getBusinessResellerClients(businessId: string): Promise<ResellerClient[]> {
   const rows = await q<ResellerClient[]>(
-    supabase.from('reseller_clients').select('*').eq('reseller_id', resellerId).order('name'),
+    supabase.from('reseller_clients').select('*').eq('business_id', businessId).order('name'),
   );
   return rows ?? [];
 }
@@ -87,14 +118,43 @@ export async function getResellerClients(resellerId: string): Promise<ResellerCl
 export async function createResellerClient(
   resellerId: string,
   businessId: string,
-  payload: Omit<ResellerClient, 'id' | 'reseller_id' | 'business_id' | 'created_at'>
+  payload: Omit<ResellerClient, 'id' | 'reseller_id' | 'business_id' | 'created_at' | 'link_count'>
 ): Promise<ResellerClient> {
-  return q<ResellerClient>(
+  const client = await q<ResellerClient>(
     supabase
       .from('reseller_clients')
       .insert({ ...payload, reseller_id: resellerId, business_id: businessId })
       .select()
       .single(),
+  );
+  await linkResellerClient(businessId, resellerId, client.id);
+  return client;
+}
+
+/** Rattache un client existant à un revendeur (no-op si déjà rattaché). */
+export async function linkResellerClient(
+  businessId: string,
+  resellerId: string,
+  clientId: string,
+): Promise<void> {
+  await q(
+    supabase
+      .from('reseller_client_links')
+      .upsert(
+        { business_id: businessId, reseller_id: resellerId, reseller_client_id: clientId },
+        { onConflict: 'reseller_id,reseller_client_id', ignoreDuplicates: true },
+      ),
+  );
+}
+
+/** Détache un client d'un revendeur (le client reste dans le référentiel). */
+export async function unlinkResellerClient(resellerId: string, clientId: string): Promise<void> {
+  await q(
+    supabase
+      .from('reseller_client_links')
+      .delete()
+      .eq('reseller_id', resellerId)
+      .eq('reseller_client_id', clientId),
   );
 }
 

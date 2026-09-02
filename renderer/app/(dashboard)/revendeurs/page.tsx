@@ -16,6 +16,7 @@ import { displayCurrency } from '@/lib/utils';
 import {
   getResellers, createReseller, updateReseller, deleteReseller,
   getResellerClients, createResellerClient, updateResellerClient, deleteResellerClient,
+  getBusinessResellerClients, linkResellerClient, unlinkResellerClient,
   getResellerOffers, createResellerOffer, updateResellerOffer, deleteResellerOffer,
 } from '@services/supabase/resellers';
 import { supabase } from '@/lib/supabase';
@@ -215,6 +216,7 @@ export default function RevendeursPage() {
   const [resellers, setResellers]   = useState<Reseller[]>([]);
   const [selected, setSelected]     = useState<Reseller | null>(null);
   const [clients, setClients]       = useState<ResellerClient[]>([]);
+  const [businessClients, setBusinessClients] = useState<ResellerClient[]>([]);
   const [offers, setOffers]         = useState<ResellerOffer[]>([]);
   const [products, setProducts]     = useState<Product[]>([]);
   const [panel, setPanel]           = useState<Panel>(null);
@@ -235,6 +237,9 @@ export default function RevendeursPage() {
     zone: string; notes: string; type: ResellerType; chef_id: string; is_active: boolean;
   }>({ name: '', phone: '', email: '', address: '', zone: '', notes: '', type: 'gros', chef_id: '', is_active: true });
   const [cForm, setCForm] = useState({ name: '', phone: '', address: '' });
+  const [cMode, setCMode] = useState<'search' | 'new'>('search');
+  const [pickedClientId, setPickedClientId] = useState<string | null>(null);
+  const [clientPickSearch, setClientPickSearch] = useState('');
   const [oForm, setOForm] = useState({ product_id: '', reseller_id: '' as string | null, min_qty: '', bonus_qty: '1', label: '', is_active: true });
 
   useEffect(() => {
@@ -251,12 +256,14 @@ export default function RevendeursPage() {
     if (!business) return;
     setLoading(true);
     try {
-      const [r, o] = await Promise.all([
+      const [r, o, bc] = await Promise.all([
         getResellers(business.id),
         getResellerOffers(business.id),
+        getBusinessResellerClients(business.id),
       ]);
       setResellers(r);
       setOffers(o);
+      setBusinessClients(bc);
       if (r.length > 0 && !selected) setSelected(r[0]);
     } catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
@@ -324,20 +331,32 @@ export default function RevendeursPage() {
 
   function openClientPanel(reseller: Reseller, item: ResellerClient | null) {
     setCForm(item ? { name: item.name, phone: item.phone ?? '', address: item.address ?? '' } : { name: '', phone: '', address: '' });
+    setCMode('search');
+    setPickedClientId(null);
+    setClientPickSearch('');
     setPanel({ type: 'client', reseller, item });
   }
 
   async function saveClient() {
-    if (!business || panel?.type !== 'client' || !cForm.name.trim()) return;
+    if (!business || panel?.type !== 'client') return;
     setSaving(true);
     try {
       if (panel.item) {
+        if (!cForm.name.trim()) { setSaving(false); return; }
         const updated = await updateResellerClient(panel.item.id, cForm);
-        setClients((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+        setClients((prev) => prev.map((c) => c.id === updated.id ? { ...c, ...updated } : c));
+        setBusinessClients((prev) => prev.map((c) => c.id === updated.id ? { ...c, ...updated } : c));
         success('Client mis à jour');
+      } else if (cMode === 'search') {
+        if (!pickedClientId) { setSaving(false); return; }
+        await linkResellerClient(business.id, panel.reseller.id, pickedClientId);
+        await loadClients(panel.reseller.id);
+        success('Client associé au revendeur');
       } else {
+        if (!cForm.name.trim()) { setSaving(false); return; }
         const created = await createResellerClient(panel.reseller.id, business.id, cForm);
-        setClients((prev) => [...prev, created]);
+        setClients((prev) => [...prev, { ...created, link_count: 1 }]);
+        setBusinessClients((prev) => [...prev, created]);
         success('Client ajouté');
       }
       setPanel(null);
@@ -345,25 +364,38 @@ export default function RevendeursPage() {
     finally { setSaving(false); }
   }
 
-  async function removeClient(id: string) {
-    if (!confirm('Supprimer ce client ?')) return;
+  // Corbeille : détache le client du revendeur courant. S'il n'était rattaché
+  // qu'à lui, on propose la suppression définitive.
+  async function unlinkClient(c: ResellerClient) {
+    if (!selected) return;
+    const orphan = (c.link_count ?? 1) <= 1;
+    const msg = orphan
+      ? `${c.name} n'est rattaché qu'à ${selected.name}. Le retirer et le supprimer définitivement ?`
+      : `Retirer ${c.name} de ${selected.name} ? Le client reste chez ses autres revendeurs.`;
+    if (!confirm(msg)) return;
     try {
-      await deleteResellerClient(id);
-      setClients((prev) => prev.filter((c) => c.id !== id));
-      setSelectedClientIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
-      success('Client supprimé');
+      await unlinkResellerClient(selected.id, c.id);
+      if (orphan) await deleteResellerClient(c.id);
+      setClients((prev) => prev.filter((x) => x.id !== c.id));
+      setSelectedClientIds((prev) => { const s = new Set(prev); s.delete(c.id); return s; });
+      if (orphan) setBusinessClients((prev) => prev.filter((x) => x.id !== c.id));
+      success(orphan ? 'Client supprimé' : 'Client retiré du revendeur');
     } catch (e) { notifError(toUserError(e)); }
   }
 
   async function removeSelectedClients() {
-    if (selectedClientIds.size === 0) return;
-    if (!confirm(`Supprimer ${selectedClientIds.size} client(s) ?`)) return;
+    if (selectedClientIds.size === 0 || !selected) return;
+    if (!confirm(`Retirer ${selectedClientIds.size} client(s) de ${selected.name} ? Ceux sans autre revendeur seront supprimés.`)) return;
     setDeletingClients(true);
     try {
-      await Promise.all([...selectedClientIds].map((id) => deleteResellerClient(id)));
+      const ids = [...selectedClientIds];
+      const orphanIds = ids.filter((id) => (clients.find((c) => c.id === id)?.link_count ?? 1) <= 1);
+      await Promise.all(ids.map((id) => unlinkResellerClient(selected.id, id)));
+      if (orphanIds.length) await Promise.all(orphanIds.map((id) => deleteResellerClient(id)));
       setClients((prev) => prev.filter((c) => !selectedClientIds.has(c.id)));
+      if (orphanIds.length) setBusinessClients((prev) => prev.filter((c) => !orphanIds.includes(c.id)));
       setSelectedClientIds(new Set());
-      success(`${selectedClientIds.size} client(s) supprimé(s)`);
+      success(`${ids.length} client(s) retiré(s)`);
     } catch (e) { notifError(toUserError(e)); }
     finally { setDeletingClients(false); }
   }
@@ -440,6 +472,20 @@ export default function RevendeursPage() {
     c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
     (c.phone ?? '').includes(clientSearch) ||
     (c.address ?? '').toLowerCase().includes(clientSearch.toLowerCase())
+  );
+
+  // Clients du référentiel non encore rattachés au revendeur courant
+  const linkedClientIds = new Set(clients.map((c) => c.id));
+  const availablePickClients = businessClients.filter((bc) =>
+    !linkedClientIds.has(bc.id) && (
+      bc.name.toLowerCase().includes(clientPickSearch.toLowerCase()) ||
+      (bc.phone ?? '').includes(clientPickSearch)
+    )
+  );
+  const clientSaveDisabled = saving || (
+    panel?.type === 'client' && !panel.item && cMode === 'search'
+      ? !pickedClientId
+      : !cForm.name.trim()
   );
 
   const isPanelOffer = tab === 'offres' && panel?.type === 'reseller' && panel.item === null && oForm.product_id !== undefined;
@@ -687,7 +733,14 @@ export default function RevendeursPage() {
                           {c.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-content-primary truncate">{c.name}</p>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className="text-sm font-medium text-content-primary truncate">{c.name}</p>
+                            {(c.link_count ?? 1) > 1 && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-surface-input text-content-muted border border-surface-border shrink-0">
+                                {c.link_count} revendeurs
+                              </span>
+                            )}
+                          </div>
                           {c.phone && <p className="text-xs text-content-muted">{c.phone}</p>}
                           {c.address && <p className="text-xs text-content-muted truncate">{c.address}</p>}
                         </div>
@@ -695,7 +748,7 @@ export default function RevendeursPage() {
                           <button onClick={() => openClientPanel(selected, c)} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => removeClient(c.id)} className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error">
+                          <button onClick={() => unlinkClient(c)} title="Retirer de ce revendeur" className="p-1.5 rounded-lg text-content-secondary hover:text-status-error hover:bg-badge-error">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -859,27 +912,100 @@ export default function RevendeursPage() {
         title={panel?.item ? 'Modifier client' : 'Ajouter un client'}
         maxWidth="max-w-sm"
         footer={
-          <button onClick={saveClient} disabled={saving || !cForm.name.trim()} className="btn-primary w-full h-10">
-            {saving ? 'Enregistrement…' : <><Check className="w-4 h-4 mr-2 inline" /> Enregistrer</>}
+          <button onClick={saveClient} disabled={clientSaveDisabled} className="btn-primary w-full h-10">
+            {saving
+              ? 'Enregistrement…'
+              : <><Check className="w-4 h-4 mr-2 inline" /> {panel?.type === 'client' && !panel.item && cMode === 'search' ? 'Associer' : 'Enregistrer'}</>}
           </button>
         }
       >
         <div className="space-y-4">
           {panel?.type === 'client' && (
-            <p className="text-xs text-content-muted">Client de <strong className="text-content-primary">{panel.reseller.name}</strong></p>
+            <p className="text-xs text-content-muted">
+              {panel.item
+                ? <>Client de <strong className="text-content-primary">{panel.reseller.name}</strong></>
+                : <>Ajouter un client à <strong className="text-content-primary">{panel.reseller.name}</strong></>}
+            </p>
           )}
-          <div>
-            <label className="label">Nom <span className="text-status-error">*</span></label>
-            <input className="input" value={cForm.name} onChange={(e) => setCForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Fatou Diop" autoFocus />
-          </div>
-          <div>
-            <label className="label">Téléphone</label>
-            <input className="input" value={cForm.phone} onChange={(e) => setCForm((f) => ({ ...f, phone: e.target.value }))} />
-          </div>
-          <div>
-            <label className="label">Adresse</label>
-            <input className="input" value={cForm.address} onChange={(e) => setCForm((f) => ({ ...f, address: e.target.value }))} />
-          </div>
+
+          {panel?.type === 'client' && !panel.item && (
+            <div className="flex gap-1 bg-surface-input rounded-xl p-1">
+              <button
+                type="button"
+                onClick={() => setCMode('search')}
+                className={`flex-1 h-8 rounded-lg text-xs font-medium transition-colors ${cMode === 'search' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}
+              >
+                Client existant
+              </button>
+              <button
+                type="button"
+                onClick={() => setCMode('new')}
+                className={`flex-1 h-8 rounded-lg text-xs font-medium transition-colors ${cMode === 'new' ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}
+              >
+                Nouveau client
+              </button>
+            </div>
+          )}
+
+          {panel?.type === 'client' && !panel.item && cMode === 'search' ? (
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
+                <input
+                  className="input pl-8"
+                  placeholder="Rechercher un client…"
+                  value={clientPickSearch}
+                  onChange={(e) => setClientPickSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto space-y-1">
+                {availablePickClients.length === 0 ? (
+                  <p className="text-xs text-content-muted text-center py-6">
+                    {businessClients.length === 0
+                      ? 'Aucun client dans la base — créez-en un nouveau.'
+                      : 'Aucun client disponible (tous déjà associés à ce revendeur).'}
+                  </p>
+                ) : availablePickClients.map((c) => {
+                  const active = pickedClientId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setPickedClientId(active ? null : c.id)}
+                      className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-colors ${active ? 'border-brand-600 bg-badge-brand' : 'border-surface-border hover:bg-surface-hover'}`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${active ? 'bg-brand-600 border-brand-600' : 'border-surface-border'}`}>
+                        {active && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-content-primary truncate">{c.name}</p>
+                        {c.phone && <p className="text-xs text-content-muted truncate">{c.phone}</p>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" onClick={() => setCMode('new')} className="text-xs text-content-brand hover:underline">
+                + Le client n'existe pas encore — le créer
+              </button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="label">Nom <span className="text-status-error">*</span></label>
+                <input className="input" value={cForm.name} onChange={(e) => setCForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Fatou Diop" autoFocus />
+              </div>
+              <div>
+                <label className="label">Téléphone</label>
+                <input className="input" value={cForm.phone} onChange={(e) => setCForm((f) => ({ ...f, phone: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label">Adresse</label>
+                <input className="input" value={cForm.address} onChange={(e) => setCForm((f) => ({ ...f, address: e.target.value }))} />
+              </div>
+            </>
+          )}
         </div>
       </SideDrawer>
 

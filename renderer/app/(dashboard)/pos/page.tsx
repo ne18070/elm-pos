@@ -3,8 +3,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { LayoutGrid, List, ShoppingCart, X, Map as MapIcon, Utensils, AlertCircle } from 'lucide-react';
-import type { WholesaleContext } from '@/components/pos/WholesaleSelector';
-import type { SelectedClient } from '@/components/pos/OrderPanel';
 import { ProductGrid } from '@/components/pos/ProductGrid';
 import { OrderPanel } from '@/components/pos/OrderPanel';
 import { PaymentModal } from '@/components/pos/PaymentModal';
@@ -22,7 +20,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
 import { useResizablePanel } from '@/hooks/useResizablePanel';
 import { getProductByBarcode } from '@services/supabase/products';
-import type { Product, RestaurantTable } from '@pos-types';
+import type { Product } from '@pos-types';
 import { hasFeature } from '@/lib/permissions';
 
 import { useSidebarStore } from '@/store/sidebar';

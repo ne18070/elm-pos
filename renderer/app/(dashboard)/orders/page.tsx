@@ -14,9 +14,10 @@ import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
 import { getOrderById } from '@services/supabase/orders';
 import type { Order, OrderStatus } from '@pos-types';
 
-type FilterTab = OrderStatus | 'all' | 'acompte';
+type FilterTab = OrderStatus | 'all' | 'acompte' | 'today';
 
 const TAB_LABELS: Record<FilterTab, string> = {
+  today:     "Aujourd'hui",
   all:       'Toutes',
   paid:      'Payées',
   pending:   'En attente',
@@ -32,7 +33,13 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   refunded:  'bg-purple-500/20 text-status-purple border-purple-700',
 };
 
-const TABS: FilterTab[] = ['all', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
+const TABS: FilterTab[] = ['today', 'all', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
+
+/** Date du jour au format YYYY-MM-DD dans le fuseau local. */
+function todayLocalISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 const PAGE_SIZE = 50;
 // "Acompte" (paiement partiel) n'est pas une colonne en base — c'est calculé
@@ -62,7 +69,7 @@ export default function OrdersPage() {
   const { business, user } = useAuthStore();
   const canViewAllOrders = usePermission('view_all_orders');
   const restricted = !canViewAllOrders;
-  const [tab, setTab]               = useState<FilterTab>('all');
+  const [tab, setTab]               = useState<FilterTab>('today');
   const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
@@ -73,8 +80,13 @@ export default function OrdersPage() {
   const [page, setPage]             = useState(1);
 
   const isAcompteTab = tab === 'acompte';
-  const dbStatus = tab === 'all' || isAcompteTab ? undefined : tab as OrderStatus;
-  const dateRange = { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined };
+  const isTodayTab   = tab === 'today';
+  const dbStatus = tab === 'all' || tab === 'today' || isAcompteTab ? undefined : tab as OrderStatus;
+  // L'onglet "Aujourd'hui" force la plage sur la date du jour et ignore le
+  // sélecteur de dates (masqué dans ce cas).
+  const dateRange = isTodayTab
+    ? { dateFrom: todayLocalISO(), dateTo: todayLocalISO() }
+    : { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined };
 
   // Périmètre imposé au caissier : ses ventes uniquement, fenêtre glissante de
   // RESTRICTED_WINDOW_DAYS jours. `restrictedSince` figé au montage pour éviter
@@ -123,9 +135,11 @@ export default function OrdersPage() {
   // actif, mais désactivée (businessId vide) quand l'onglet acompte est déjà
   // ouvert : `orders` ci-dessus sert alors directement de source, pas besoin
   // de la récupérer deux fois.
+  // Le badge "acompte" reste indépendant de l'onglet "Aujourd'hui" : il suit le
+  // sélecteur de dates s'il est renseigné, sinon toute la fenêtre récente.
   const { orders: acompteBadgeSource } = useOrders(
     isAcompteTab ? '' : effectiveBusinessId,
-    { limit: ACOMPTE_FETCH_LIMIT, ...dateRange, ...scopeOpts },
+    { limit: ACOMPTE_FETCH_LIMIT, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, ...scopeOpts },
   );
   const acompteCount = (isAcompteTab ? orders : acompteBadgeSource).filter(isAcompte).length;
 
@@ -213,6 +227,10 @@ export default function OrdersPage() {
             <p className="text-xs text-content-muted">
               Vous voyez uniquement vos propres ventes des {RESTRICTED_WINDOW_DAYS} derniers jours.
             </p>
+          ) : isTodayTab ? (
+            <p className="text-xs text-content-muted">
+              Ventes du jour uniquement — choisissez « Toutes » pour filtrer par dates.
+            </p>
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
               <label className="flex items-center gap-1.5 text-xs text-content-secondary">
@@ -251,7 +269,7 @@ export default function OrdersPage() {
             {TABS.map((t) => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => { setTab(t); if (t === 'today') { setDateFrom(''); setDateTo(''); } }}
                 className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   tab === t
                     ? t === 'acompte'

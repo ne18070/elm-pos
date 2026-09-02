@@ -70,6 +70,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // Bon de livraison : commande livrée sans encaissement, réglée plus tard par l'admin
   const [deliveryNote, setDeliveryNote] = useState(false);
   const [deliveryNoteAddress, setDeliveryNoteAddress] = useState('');
+  // Validation client sur l'écran secondaire avant encaissement — préférence
+  // caissier persistée. true = l'étape "En attente du client" est sautée.
+  const [skipClientConfirm, setSkipClientConfirm] = useState<boolean>(() => {
+    try { return localStorage.getItem('pos:skip-client-confirm') === '1'; } catch { return false; }
+  });
 
   const cart = useCartStore();
   const orderChannel    = cart.orderChannel;
@@ -176,6 +181,14 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     };
     return () => bc.close();
   }, [step]);
+
+  function toggleClientConfirm() {
+    setSkipClientConfirm((v) => {
+      const next = !v;
+      try { localStorage.setItem('pos:skip-client-confirm', next ? '1' : '0'); } catch { /* noop */ }
+      return next;
+    });
+  }
 
   // -- Envoi de la facture de confirmation à l'écran client ------------------
   function sendConfirmToDisplay(amountPaid?: number) {
@@ -494,6 +507,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     if (payError) { setErreur(formatPaymentError(payError)); return; }
 
     submitRef.current = submitSimple;
+    if (skipClientConfirm) { void submitSimple(); return; }
     sendConfirmToDisplay();
     setStep('attente');
   }
@@ -511,6 +525,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     }
 
     submitRef.current = submitAcompte;
+    if (skipClientConfirm) { void submitAcompte(); return; }
     sendConfirmToDisplay(acompteNum);
     setStep('attente');
   }
@@ -631,6 +646,32 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               </span>
             </button>
           )}
+
+          {/* Validation client sur l'écran secondaire */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!skipClientConfirm}
+            onClick={toggleClientConfirm}
+            className="w-full flex items-center justify-between gap-3 p-3 bg-surface-input border border-surface-border rounded-xl hover:bg-surface-hover transition-colors text-left"
+          >
+            <span className="flex items-center gap-2.5 min-w-0">
+              <MonitorCheck className={`w-4 h-4 shrink-0 ${skipClientConfirm ? 'text-content-muted' : 'text-brand-500'}`} />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-content-primary">Validation client sur l'écran</span>
+                <span className="block text-[11px] text-content-muted">
+                  {skipClientConfirm ? 'Désactivée — encaissement immédiat' : "Le client confirme avant l'encaissement"}
+                </span>
+              </span>
+            </span>
+            <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
+              !skipClientConfirm ? 'bg-brand-600' : 'bg-slate-700'
+            }`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                !skipClientConfirm ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </span>
+          </button>
 
           <div>
             <p className="label">Moyen de paiement</p>
