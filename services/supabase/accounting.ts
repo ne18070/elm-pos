@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import type { Json } from './database.types';
 
 const db  = supabase.from.bind(supabase);
 const rpc = supabase.rpc.bind(supabase);
@@ -115,20 +116,66 @@ export async function getJournalEntries(
   businessId: string,
   opts?: { dateFrom?: string; dateTo?: string; source?: string; limit?: number }
 ): Promise<JournalEntry[]> {
-  let q = db('journal_entries')
-    .select(`*, lines:journal_lines(*)`)
-    .eq('business_id', businessId)
-    .order('entry_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(opts?.limit ?? 500);
+  // PostgREST plafonne toute requête sans .range() à 1000 lignes. Pour un
+  // journal volumineux (import de reprise) on feuillette jusqu'à `limit`.
+  // Tri (entry_date desc, id desc) = adossé à idx_journal_entries_biz_date_id
+  // (migration 105) → indispensable pour ne pas dépasser le statement_timeout
+  // sur une période large.
+  const cap  = Math.min(opts?.limit ?? 1000, 20000);
+  const PAGE = 1000;
+  const all: JournalEntry[] = [];
 
-  if (opts?.dateFrom) q = q.gte('entry_date', opts.dateFrom);
-  if (opts?.dateTo)   q = q.lte('entry_date', opts.dateTo);
-  if (opts?.source)   q = q.eq('source', opts.source);
+  for (let from = 0; from < cap; from += PAGE) {
+    let q = db('journal_entries')
+      .select(`*, lines:journal_lines(*)`)
+      .eq('business_id', businessId)
+      .order('entry_date', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, Math.min(from + PAGE, cap) - 1);
 
-  const { data, error } = await q;
+    if (opts?.dateFrom) q = q.gte('entry_date', opts.dateFrom);
+    if (opts?.dateTo)   q = q.lte('entry_date', opts.dateTo);
+    if (opts?.source)   q = q.eq('source', opts.source);
+
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as JournalEntry[];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
+}
+
+// --- Journal paginé côté serveur (gros volumes) -----------------------------
+
+export interface JournalPage { total: number; rows: JournalEntry[]; }
+
+/** Une page d'écritures + leurs lignes + le total, via RPC (migration 106).
+ *  Évite d'embarquer toute la période et son embed journal_lines côté client. */
+export async function getJournalPage(opts: {
+  from?: string; to?: string; source?: string; limit: number; offset: number;
+}): Promise<JournalPage> {
+  const { data, error } = await rpc('journal_page', {
+    p_from:   opts.from   ?? undefined,
+    p_to:     opts.to     ?? undefined,
+    p_source: opts.source ?? undefined,
+    p_limit:  opts.limit,
+    p_offset: opts.offset,
+  });
   if (error) throw new Error(error.message);
-  return (data ?? []) as JournalEntry[];
+  const d = (data ?? { total: 0, rows: [] }) as unknown as { total: number; rows: JournalEntry[] };
+  return { total: Number(d.total ?? 0), rows: d.rows ?? [] };
+}
+
+/** Groupes de doublons (réf. + date + montant + libellé) sur la période :
+ *  tableau de tableaux d'ids, 1er = à conserver, suivants = en trop. */
+export async function getJournalDuplicateGroups(from?: string, to?: string): Promise<string[][]> {
+  const { data, error } = await rpc('journal_dupes', {
+    p_from: from ?? undefined,
+    p_to:   to   ?? undefined,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as string[][];
 }
 
 export async function createManualEntry(input: CreateEntryInput): Promise<JournalEntry> {
@@ -165,6 +212,21 @@ export async function deleteManualEntry(entryId: string): Promise<void> {
     .eq('id', entryId)
     .eq('source', 'manual');
   if (error) throw new Error(error.message);
+}
+
+/** Supprime des écritures par id, quelle que soit leur source (RPC SECURITY
+ *  DEFINER owner/admin — migration 104). Renvoie le nombre supprimé. */
+export async function deleteJournalEntries(businessId: string, ids: string[]): Promise<number> {
+  let total = 0;
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data, error } = await rpc('delete_journal_entries', {
+      p_business_id: businessId,
+      p_ids: ids.slice(i, i + 500),
+    });
+    if (error) throw new Error(error.message);
+    total += Number(data ?? 0);
+  }
+  return total;
 }
 
 // --- Synchronisation depuis les ventes/achats --------------------------------
@@ -248,12 +310,16 @@ async function _insertInBatches<TReturn = unknown, TRow = unknown>(
 }
 
 export async function syncAccounting(businessId: string): Promise<number> {
-  // Collect already-synced IDs to avoid duplicates — paginé (voir _fetchAllRows)
+  // Collect already-synced IDs to avoid duplicates — paginé (voir _fetchAllRows).
+  // .order('id') OBLIGATOIRE : sans tri explicite, une requête .range() paginée
+  // renvoie les lignes dans un ordre non garanti d'une page à l'autre → des
+  // source_id sautés → commandes ré-insérées → doublon je_biz_source_uidx.
   const existing = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
     db('journal_entries')
       .select('source_id')
       .eq('business_id', businessId)
       .in('source', ['order', 'refund'])
+      .order('id', { ascending: true })
       .range(from, to),
   );
   const synced = new Set(existing.map((e) => e.source_id));
@@ -266,10 +332,16 @@ export async function syncAccounting(businessId: string): Promise<number> {
       .select('id, created_at, updated_at, status, subtotal, tax_amount, discount_amount, total, order_channel')
       .eq('business_id', businessId)
       .in('status', ['paid', 'pending', 'refunded'])
+      // tri sur (created_at, id) : created_at seul n'est pas unique → avec
+      // .range() paginé, une commande à cheval sur une frontière de page peut
+      // ressortir deux fois et provoquer un doublon je_biz_source_uidx.
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
       .range(from, to),
   );
-  const unsynced = orderList.filter((o) => !synced.has(o.id));
+  // Dédoublonnage défensif : une seule écriture par commande.
+  const seenOrder = new Set<string>();
+  const unsynced = orderList.filter((o) => !synced.has(o.id) && !seenOrder.has(o.id) && seenOrder.add(o.id));
 
   // Batch-fetch payments for unsynced orders — par lots de 500 id pour ne pas
   // dépasser la longueur d'URL max d'une clause .in() sur un historique de
@@ -359,6 +431,7 @@ export async function syncAccounting(businessId: string): Promise<number> {
       .select('source_id')
       .eq('business_id', businessId)
       .eq('source', 'stock')
+      .order('id', { ascending: true })   // tri obligatoire pour .range() paginé
       .range(from, to),
   );
   const syncedStockSet = new Set(syncedStock.map((e) => e.source_id));
@@ -373,11 +446,15 @@ export async function syncAccounting(businessId: string): Promise<number> {
       .select('id, created_at, quantity, cost_per_unit, supplier, product:products(name)')
       .eq('business_id', businessId)
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
       .range(from, to),
   );
 
   const stockCostBySourceId = new Map<string, number>();
+  const seenStock = new Set<string>();
   const stockEntryRows = stockRows.filter((s) => {
+    if (seenStock.has(s.id)) return false;
+    seenStock.add(s.id);
     if (syncedStockSet.has(s.id)) return false;
     const totalCost = Math.round(Number(s.quantity) * Number(s.cost_per_unit) * 100) / 100;
     if (totalCost <= 0) return false;
@@ -426,6 +503,184 @@ export async function getTrialBalance(
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as TrialBalanceLine[];
+}
+
+// --- Import mouvements (ancien système) ------------------------------------
+//
+// Reprise de l'historique entrées (achats) / sorties (ventes) :
+//  · 1 écriture par ligne du fichier ;
+//  · réf. = « ID Article » · libellé = « Désignation — Référence » (+ le type
+//    du fichier entre parenthèses s'il n'est pas achat/vente : initial, promo…) ;
+//  · sens & type → nature comptable (le CHECK sur journal_entries.source
+//    n'autorise pas de valeur libre comme « initial » ou « promo ») :
+//      entrée *          → Achat   : D 601 (+ TVA 4451) / C 571   [source stock]
+//      sortie vente      → Vente   : D 571 / C 701 (+ TVA 4441)   [source order]
+//      sortie promo      → Charge promo : D 6234 / C 571, sans TVA [source adjustment]
+//      sortie manuelle   → Charge div. : D 6584 / C 571, sans TVA  [source adjustment]
+//  · TVA 18 % extraite du « Montant TTC » pour les ventes et achats ;
+//  · source_id DÉTERMINISTE (hash des champs stables + rang de la ligne parmi
+//    ses identiques dans le fichier) → ré-importer les mêmes fichiers ne crée
+//    aucun doublon (l'index unique je_biz_source_uidx + ON CONFLICT DO NOTHING).
+//    Deux lignes réellement identiques dans le fichier restent deux écritures.
+
+export interface EtombRow {
+  direction: 'entree' | 'sortie';
+  idArticle: string;       // colonne « ID Article »
+  designation: string;     // colonne « Désignation »
+  refName: string;         // colonne « Référence »
+  date: string;            // YYYY-MM-DD
+  amountTTC: number;       // signé
+  type: string;            // achat / vente / initial / manuelle / promo (info)
+}
+
+export interface EtombImportResult {
+  entriesCreated:     number;
+  rowsSkippedInvalid: number;  // date/montant illisible
+  rowsSkippedZero:    number;  // Montant TTC = 0
+}
+
+const _ETOMB_VAT_RATE = 0.18;
+
+/** Hash déterministe (cyrb128) formaté en chaîne de forme UUID. */
+function _detUuid(input: string): string {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0; i < input.length; i++) {
+    const k = input.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+  }
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  const hex = [h1, h2, h3, h4].map((n) => (n >>> 0).toString(16).padStart(8, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+interface _ImportLine { account_code: string; account_name: string; debit: number; credit: number }
+interface _ImportEntry {
+  sid: string;
+  entry_date: string;
+  reference: string | null;
+  description: string;
+  source: string;
+  lines: _ImportLine[];
+}
+
+/**
+ * @param onProgress rappelé après chaque lot inséré : (écritures faites, total).
+ *
+ * L'insertion passe par la RPC import_journal_entries (migration 103) : une
+ * seule requête ensembliste par lot, en SECURITY DEFINER avec statement_timeout
+ * levé — la version client (insert PostgREST ligne à ligne, sous-requête RLS par
+ * ligne sur journal_lines) dépassait le statement_timeout sur les gros volumes.
+ */
+export async function importEtombMovements(
+  businessId: string,
+  rows: EtombRow[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<EtombImportResult> {
+  const res: EtombImportResult = { entriesCreated: 0, rowsSkippedInvalid: 0, rowsSkippedZero: 0 };
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  // Nature comptable selon sens + type du fichier.
+  const kindOf = (row: EtombRow): 'vente' | 'promo' | 'manuelle' | 'achat' => {
+    if (row.direction === 'entree') return 'achat';
+    const t = row.type.trim().toLowerCase();
+    if (t === 'promo') return 'promo';
+    if (t === 'manuelle') return 'manuelle';
+    return 'vente';
+  };
+  const SOURCE_BY_KIND = { vente: 'order', achat: 'stock', promo: 'adjustment', manuelle: 'adjustment' } as const;
+
+  const entries: _ImportEntry[] = [];
+  const occ = new Map<string, number>();  // rang d'une ligne parmi ses identiques
+  for (const row of rows) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !Number.isFinite(row.amountTTC)) { res.rowsSkippedInvalid++; continue; }
+    if (Math.round(row.amountTTC * 100) === 0) { res.rowsSkippedZero++; continue; }
+
+    const ttc = round2(Math.abs(row.amountTTC));
+    const ht  = round2(ttc / (1 + _ETOMB_VAT_RATE));
+    const vat = round2(ttc - ht);
+    const reverse = row.amountTTC < 0;
+    const lines: _ImportLine[] = [];
+    const push = (code: string, name: string, side: 'D' | 'C', amt: number) => {
+      if (amt <= 0) return;
+      const debit = (side === 'D') !== reverse;
+      lines.push({ account_code: code, account_name: name, debit: debit ? amt : 0, credit: debit ? 0 : amt });
+    };
+    switch (kindOf(row)) {
+      case 'vente':
+        push('571',  'Caisse',                     'D', ttc);
+        push('701',  'Ventes de marchandises',     'C', ht);
+        push('4441', 'TVA facturée (collectée)',   'C', vat);
+        break;
+      case 'achat':
+        push('601',  'Achats de marchandises',     'D', ht);
+        push('4451', 'TVA récupérable sur achats', 'D', vat);
+        push('571',  'Caisse',                     'C', ttc);
+        break;
+      case 'promo':
+        push('6234', 'Primes et cadeaux à la clientèle', 'D', ttc);
+        push('571',  'Caisse',                           'C', ttc);
+        break;
+      case 'manuelle':
+        push('6584', 'Charges diverses',                 'D', ttc);
+        push('571',  'Caisse',                           'C', ttc);
+        break;
+    }
+    if (lines.length === 0) continue;
+
+    const base    = row.refName ? `${row.designation} — ${row.refName}` : (row.designation || 'Mouvement');
+    const t       = row.type.trim().toLowerCase();
+    const isPlain = t === '' || t === 'achat' || t === 'vente';
+
+    // Clé stable de la ligne + rang parmi ses identiques → source_id reproductible
+    const rowKey = `${row.direction}|${row.date}|${row.idArticle}|${row.refName}|${ttc}|${t}`;
+    const rank   = occ.get(rowKey) ?? 0;
+    occ.set(rowKey, rank + 1);
+
+    entries.push({
+      sid:        _detUuid(`etomb:${businessId}:${rowKey}:${rank}`),
+      entry_date: row.date,
+      reference:  row.idArticle || null,
+      description: isPlain ? base : `${base} (${row.type.trim()})`,
+      source:     SOURCE_BY_KIND[kindOf(row)],
+      lines,
+    });
+  }
+  if (entries.length === 0) return res;
+
+  const CHUNK = 3000;
+  for (let i = 0; i < entries.length; i += CHUNK) {
+    const chunk = entries.slice(i, i + CHUNK);
+    const { data, error } = await rpc('import_journal_entries', {
+      p_business_id: businessId,
+      p_entries: chunk as unknown as Json,
+    });
+    if (error) throw new Error(error.message);
+    res.entriesCreated += Number(data ?? chunk.length);
+    onProgress?.(Math.min(i + CHUNK, entries.length), entries.length);
+  }
+  return res;
+}
+
+/** Vide entièrement le journal comptable du commerce (toutes sources). La RPC
+ *  clear_journal (migration 101, SECURITY DEFINER owner/admin) supprime au plus
+ *  p_limit écritures par appel ; on la rappelle jusqu'à ce qu'elle renvoie 0
+ *  pour ne dépendre d'aucune limite de passerelle sur une requête unique. */
+export async function clearJournal(businessId: string): Promise<number> {
+  let total = 0;
+  for (;;) {
+    const { data, error } = await rpc('clear_journal', { p_business_id: businessId });
+    if (error) throw new Error(error.message);
+    const n = Number(data ?? 0);
+    total += n;
+    if (n === 0) break;
+  }
+  return total;
 }
 
 // --- États financiers (calculés côté client depuis la balance) ---------------

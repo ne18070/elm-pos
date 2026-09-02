@@ -204,6 +204,36 @@ export async function cancelOrder(orderId: string): Promise<void> {
   await q(supabase.rpc('cancel_order', { p_order_id: orderId }));
 }
 
+// ─── Édition d'une commande NON encaissée (pending, 0 paiement) ──────────────
+
+export interface UpdatePendingOrderInput {
+  items: Array<{
+    product_id: string;
+    variant_id?: string | null;
+    name: string;
+    price: number;
+    quantity: number;
+    notes?: string | null;
+  }>;
+  tax_rate: number;
+  tax_inclusive?: boolean;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  notes?: string | null;
+}
+
+export async function updatePendingOrder(orderId: string, input: UpdatePendingOrderInput): Promise<Order> {
+  return q<Order>(supabase.rpc('update_pending_order', {
+    p_order_id:       orderId,
+    p_items:          input.items as never,
+    p_tax_rate:       input.tax_rate,
+    p_tax_inclusive:  input.tax_inclusive ?? false,
+    p_customer_name:  input.customer_name  ?? undefined,
+    p_customer_phone: input.customer_phone ?? undefined,
+    p_notes:          input.notes          ?? undefined,
+  }) as never);
+}
+
 // ─── Remboursement ───────────────────────────────────────────────────────────
 
 export interface RefundInput {

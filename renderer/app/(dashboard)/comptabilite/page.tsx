@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer, Download, List, Settings } from 'lucide-react';
+import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer, Download, List, Settings, Upload, Trash2, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { displayCurrency } from '@/lib/utils';
 import { exportToExcel } from '@/lib/export-excel';
@@ -11,8 +11,8 @@ import { useCan } from '@/hooks/usePermission';
 
 import {
   getJournalEntries, syncAccounting, syncHotelAccounting, getTrialBalance,
-  deleteManualEntry, getAccounts, computeIncomeStatement, computeBalanceSheet,
-  syncHonorairesAccounting, syncServiceOrdersAccounting,
+  deleteJournalEntries, getAccounts, computeIncomeStatement, computeBalanceSheet,
+  syncHonorairesAccounting, syncServiceOrdersAccounting, clearJournal,
 } from '@services/supabase/accounting';
 import type { JournalEntry, TrialBalanceLine, Account } from '@services/supabase/accounting';
 
@@ -25,6 +25,7 @@ import { BalanceTab }    from './components/BalanceTab';
 import { EtatsTab }      from './components/EtatsTab';
 import { SettingsTab }   from './components/SettingsTab';
 import { NewEntryModal } from './components/NewEntryModal';
+import { EtombImportModal } from './components/EtombImportModal';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard',   label: 'Tableau de bord', icon: BarChart3 },
@@ -52,8 +53,10 @@ export default function ComptabilitePage() {
   const [balance, setBalance]   = useState<TrialBalanceLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
-  const [expandedEntry, setExpandedEntry]   = useState<string | null>(null);
+  const [reloadToken, setReloadToken]       = useState(0);
   const [showNewEntry, setShowNewEntry]     = useState(false);
+  const [showImport, setShowImport]         = useState(false);
+  const [clearing, setClearing]             = useState(false);
   const [expandedClasses, setExpandedClasses] = useState<Set<number>>(new Set([5, 6, 7]));
 
   const { from, to } = getPeriod(period, customFrom, customTo);
@@ -75,7 +78,7 @@ export default function ComptabilitePage() {
     setLoading(true);
     try {
       const [e, b, a] = await Promise.all([
-        getJournalEntries(business.id, { dateFrom: from, dateTo: to }),
+        getJournalEntries(business.id, { dateFrom: from, dateTo: to, limit: 500 }),
         getTrialBalance(business.id, from, to),
         getAccounts(business.id),
       ]);
@@ -88,6 +91,12 @@ export default function ComptabilitePage() {
       setLoading(false);
     }
   }, [business?.id, from, to, notifErr]);
+
+  // Recharge : load() + signal aux composants auto-paginés (onglet Journal)
+  const reload = useCallback(async () => {
+    await load();
+    setReloadToken((t) => t + 1);
+  }, [load]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -107,7 +116,7 @@ export default function ComptabilitePage() {
       if (errors.length > 0) notifErr(errors.join(' / '));
       if (total > 0) {
         success(`${total} écriture${total > 1 ? 's' : ''} synchronisée${total > 1 ? 's' : ''}`);
-        await load();
+        await reload();
       } else if (errors.length === 0) {
         success('Journal à jour - aucune nouvelle écriture');
       }
@@ -196,12 +205,32 @@ export default function ComptabilitePage() {
     success('Exportation Excel réussie');
   }
 
-  async function handleDeleteEntry(id: string) {
-    if (!confirm('Supprimer cette écriture manuelle ?')) return;
+  async function handleClearJournal() {
+    if (!business?.id) return;
+    if (!confirm('Effacer TOUTES les écritures du journal (ventes, achats, manuelles, imports) ?\n\nAction irréversible. Un « Synchroniser » recréera les écritures issues de la caisse.')) return;
+    if (!confirm('Confirmer définitivement le vidage complet du journal ?')) return;
+    setClearing(true);
     try {
-      await deleteManualEntry(id);
-      success('Écriture supprimée');
-      await load();
+      const n = await clearJournal(business.id);
+      success(`${n} écriture${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''}`);
+      await reload();
+    } catch (err) {
+      notifErr(String(err));
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  async function handleDeleteEntries(ids: string[]) {
+    if (ids.length === 0 || !business?.id) return;
+    const msg = ids.length === 1
+      ? 'Supprimer cette écriture ?'
+      : `Supprimer ${ids.length} écritures ?`;
+    if (!confirm(msg)) return;
+    try {
+      const n = await deleteJournalEntries(business.id, ids);
+      success(`${n} écriture${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''}`);
+      await reload();
     } catch (err) {
       notifErr(String(err));
     }
@@ -436,6 +465,22 @@ export default function ComptabilitePage() {
               <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Synchroniser</span>
             </button>
+            {isOwnerOrAdmin && (
+              <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-2 py-1.5">
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Importer</span>
+              </button>
+            )}
+            {isOwnerOrAdmin && (
+              <button
+                onClick={handleClearJournal}
+                disabled={clearing}
+                className="btn-secondary flex items-center gap-2 py-1.5 text-status-error hover:bg-badge-error"
+              >
+                {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span className="hidden sm:inline">Effacer</span>
+              </button>
+            )}
             <button onClick={handleExport} className="btn-secondary flex items-center gap-2 py-1.5">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Exporter</span>
@@ -473,12 +518,13 @@ export default function ComptabilitePage() {
             )}
             {tab === 'journal' && (
               <JournalTab
-                entries={entries}
-                expandedEntry={expandedEntry}
-                setExpandedEntry={setExpandedEntry}
+                from={from}
+                to={to}
                 currency={currency}
+                canDelete={isOwnerOrAdmin}
+                reloadToken={reloadToken}
                 onNewEntry={() => setShowNewEntry(true)}
-                onDeleteEntry={handleDeleteEntry}
+                onDelete={handleDeleteEntries}
               />
             )}
             {tab === 'grand-livre' && (
@@ -516,7 +562,16 @@ export default function ComptabilitePage() {
           businessId={business.id}
           currency={currency}
           onClose={() => setShowNewEntry(false)}
-          onSaved={() => { setShowNewEntry(false); load(); }}
+          onSaved={() => { setShowNewEntry(false); reload(); }}
+        />
+      )}
+
+      {showImport && business?.id && (
+        <EtombImportModal
+          businessId={business.id}
+          currency={currency}
+          onClose={() => setShowImport(false)}
+          onDone={reload}
         />
       )}
     </div>

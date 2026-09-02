@@ -6004,6 +6004,11 @@ export type Database = {
       cleanup_activity_logs: { Args: { p_keep_days?: number }; Returns: number }
       cleanup_monitoring_vitals: { Args: never; Returns: undefined }
       cleanup_whatsapp_sessions: { Args: never; Returns: undefined }
+      clear_journal: { Args: { p_business_id: string; p_limit?: number }; Returns: number }
+      delete_journal_entries: { Args: { p_business_id: string; p_ids: string[] }; Returns: number }
+      import_journal_entries: { Args: { p_business_id: string; p_entries: Json }; Returns: number }
+      journal_page: { Args: { p_from?: string; p_to?: string; p_source?: string; p_limit?: number; p_offset?: number }; Returns: Json }
+      journal_dupes: { Args: { p_from?: string; p_to?: string }; Returns: Json }
       close_cash_session: {
         Args: { p_actual_cash: number; p_notes?: string; p_session_id: string }
         Returns: {
@@ -6489,6 +6494,18 @@ export type Database = {
       }
       unaccent: { Args: { "": string }; Returns: string }
       update_last_seen: { Args: never; Returns: undefined }
+      update_pending_order: {
+        Args: {
+          p_order_id: string
+          p_items: Json
+          p_tax_rate?: number
+          p_tax_inclusive?: boolean
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
       update_payment_transaction_status: {
         Args: {
           p_error?: string

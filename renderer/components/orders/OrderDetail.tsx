@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle, Link } from 'lucide-react';
+import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle, Link, Pencil, Check, Plus, Minus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
@@ -10,7 +10,9 @@ import { printReceipt } from '@/lib/ipc';
 import { generateInvoiceLink } from '@/lib/share-invoice';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
-import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment } from '@services/supabase/orders';
+import { cancelOrder, refundOrder, getRefundsForOrder, completeOrderPayment, updatePendingOrder } from '@services/supabase/orders';
+import { getProducts } from '@services/supabase/products';
+import type { Product } from '@pos-types';
 import { logAction } from '@services/supabase/logger';
 import { useAuthStore } from '@/store/auth';
 import { useCan } from '@/hooks/usePermission';
@@ -76,6 +78,14 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const [invoiceLink, setInvoiceLink]             = useState('');
   const [refunds, setRefunds]                     = useState<Refund[]>([]);
 
+  // Édition d'une commande non encaissée
+  interface EditLine { key: string; product_id: string; variant_id: string | null; name: string; price: string; quantity: string; notes: string | null }
+  const [editMode, setEditMode]     = useState(false);
+  const [editLines, setEditLines]   = useState<EditLine[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [products, setProducts]     = useState<Product[]>([]);
+  const [addPid, setAddPid]         = useState('');
+
   const can = useCan();
   const fmt              = (n: number) => formatCurrency(n, currency);
   const isAdmin          = can('cancel_orders');
@@ -83,6 +93,95 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const paidAmt          = getPaidAmount(order);
   const remaining        = getRemainingAmount(order);
   const isWhatsAppPending = (order as { source?: string }).source === 'whatsapp' && order.status === 'pending';
+  const canEdit          = isAdmin && order.status === 'pending' && paidAmt <= 0.01;
+
+  const editSubtotal = editLines.reduce((s, l) => s + (parseFloat(l.price) || 0) * (parseFloat(l.quantity) || 0), 0);
+  const editTaxable  = Math.max(0, editSubtotal - (order.discount_amount || 0));
+  const taxRate      = business?.tax_rate ?? 0;
+  const taxInclusive = business?.tax_inclusive ?? false;
+  const editTax      = taxInclusive
+    ? (taxRate > 0 ? Math.round(editTaxable * taxRate / (100 + taxRate) * 100) / 100 : 0)
+    : Math.round(editTaxable * taxRate) / 100;
+  const editTotal    = taxInclusive ? editTaxable : editTaxable + editTax;
+
+  function startEdit() {
+    setEditLines((order.items ?? []).map((it) => ({
+      key: it.id ?? Math.random().toString(36).slice(2),
+      product_id: it.product_id,
+      variant_id: it.variant_id ?? null,
+      name: it.name,
+      price: String(it.price),
+      quantity: String(it.quantity),
+      notes: it.notes ?? null,
+    })));
+    setAddPid('');
+    setEditMode(true);
+    if (products.length === 0 && business?.id) {
+      getProducts(business.id).then(setProducts).catch(() => {});
+    }
+  }
+
+  function setLine(key: string, patch: Partial<EditLine>) {
+    setEditLines((ls) => ls.map((l) => l.key === key ? { ...l, ...patch } : l));
+  }
+  function removeLine(key: string) {
+    setEditLines((ls) => ls.filter((l) => l.key !== key));
+  }
+  function addLine(pid: string) {
+    const p = products.find((x) => x.id === pid);
+    if (!p) return;
+    setEditLines((ls) => [...ls, {
+      key: Math.random().toString(36).slice(2),
+      product_id: p.id,
+      variant_id: null,
+      name: p.name,
+      price: String(p.price ?? 0),
+      quantity: '1',
+      notes: null,
+    }]);
+    setAddPid('');
+  }
+
+  async function handleSaveEdit() {
+    const items = editLines
+      .map((l) => ({
+        product_id: l.product_id,
+        variant_id: l.variant_id,
+        name: l.name,
+        price: parseFloat(l.price) || 0,
+        quantity: parseFloat(l.quantity) || 0,
+        notes: l.notes,
+      }))
+      .filter((i) => i.quantity > 0);
+    if (items.length === 0) { notifError('Ajoutez au moins un article'); return; }
+
+    setSavingEdit(true);
+    try {
+      await updatePendingOrder(order.id, {
+        items,
+        tax_rate: taxRate,
+        tax_inclusive: taxInclusive,
+        customer_name: order.customer_name ?? null,
+        customer_phone: order.customer_phone ?? null,
+      });
+      logAction({
+        business_id: order.business_id,
+        action:      'order.edited',
+        entity_type: 'order',
+        entity_id:   order.id,
+        user_id:     user?.id,
+        user_name:   user?.full_name,
+        metadata:    { items: items.length, total: editTotal },
+      });
+      success('Commande modifiée');
+      setEditMode(false);
+      onRefresh();
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   useEffect(() => {
     if (order.status === 'refunded') {
@@ -296,25 +395,90 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
           {/* Articles */}
           <div>
-            <p className="label">Articles</p>
-            <div className="space-y-2">
-              {order.items?.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-content-primary truncate">{item.name}</p>
-                    <p className="text-content-primary text-xs">{fmt(item.price)} —{item.quantity}</p>
-                  </div>
-                  <p className="text-content-primary font-medium shrink-0 ml-2">{fmt(item.total)}</p>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <p className="label">Articles</p>
+              {canEdit && !editMode && (
+                <button
+                  onClick={startEdit}
+                  className="flex items-center gap-1 text-xs text-content-brand hover:underline"
+                >
+                  <Pencil className="w-3 h-3" /> Modifier
+                </button>
+              )}
             </div>
+
+            {!editMode ? (
+              <div className="space-y-2">
+                {order.items?.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-content-primary truncate">{item.name}</p>
+                      <p className="text-content-primary text-xs">{fmt(item.price)} —{item.quantity}</p>
+                    </div>
+                    <p className="text-content-primary font-medium shrink-0 ml-2">{fmt(item.total)}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {editLines.map((l) => (
+                  <div key={l.key} className="bg-surface-input rounded-lg p-2 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-content-primary truncate flex-1">{l.name}</p>
+                      <button onClick={() => removeLine(l.key)} className="text-content-muted hover:text-status-error shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setLine(l.key, { quantity: String(Math.max(1, (parseFloat(l.quantity) || 1) - 1)) })}
+                          className="w-7 h-7 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center text-content-secondary"
+                        ><Minus className="w-3 h-3" /></button>
+                        <input
+                          type="number" min="0" step="1"
+                          value={l.quantity}
+                          onChange={(e) => setLine(l.key, { quantity: e.target.value })}
+                          className="input h-7 w-14 text-center text-sm px-1"
+                        />
+                        <button
+                          onClick={() => setLine(l.key, { quantity: String((parseFloat(l.quantity) || 0) + 1) })}
+                          className="w-7 h-7 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center text-content-secondary"
+                        ><Plus className="w-3 h-3" /></button>
+                      </div>
+                      <span className="text-content-muted text-xs">×</span>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={l.price}
+                        onChange={(e) => setLine(l.key, { price: e.target.value })}
+                        className="input h-7 flex-1 text-sm px-2"
+                        aria-label="Prix unitaire"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {products.length > 0 && (
+                  <select
+                    value={addPid}
+                    onChange={(e) => { setAddPid(e.target.value); addLine(e.target.value); }}
+                    className="input h-8 text-sm w-full"
+                  >
+                    <option value="">+ Ajouter un article…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name} — {fmt(p.price ?? 0)}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Totaux */}
           <div className="bg-surface-input rounded-xl p-3 space-y-1.5">
             <div className="flex justify-between text-sm text-content-secondary">
               <span>Sous-total</span>
-              <span>{fmt(order.subtotal)}</span>
+              <span>{fmt(editMode ? editSubtotal : order.subtotal)}</span>
             </div>
             {order.discount_amount > 0 && (
               <div className="flex justify-between text-sm text-status-success">
@@ -328,15 +492,15 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                 <span>{order.coupon_notes ?? 'Article offert'}</span>
               </div>
             )}
-            {order.tax_amount > 0 && (
+            {(editMode ? editTax : order.tax_amount) > 0 && (
               <div className="flex justify-between text-sm text-content-secondary">
                 <span>TVA</span>
-                <span>{fmt(order.tax_amount)}</span>
+                <span>{fmt(editMode ? editTax : order.tax_amount)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-content-primary pt-1 border-t border-surface-border">
               <span>Total</span>
-              <span>{fmt(order.total)}</span>
+              <span>{fmt(editMode ? editTotal : order.total)}</span>
             </div>
 
             {/* Solde acompte */}
@@ -454,6 +618,26 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
         {/* Actions */}
         <div className="p-4 border-t border-surface-border space-y-2">
+          {editMode ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditMode(false)}
+                disabled={savingEdit}
+                className="btn-secondary flex-1 h-10 text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit || editLines.length === 0}
+                className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-1.5"
+              >
+                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Enregistrer
+              </button>
+            </div>
+          ) : (
+          <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handlePrint}
@@ -555,6 +739,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               <XCircle className="w-4 h-4" />
               Annuler la commande
             </button>
+          )}
+          </div>
           )}
         </div>
       </div>
