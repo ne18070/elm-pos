@@ -92,6 +92,18 @@ function paidAmount(order: Order): number {
   return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
 }
 
+// Certains produits ont des variantes "Prix", "Prix gros", "Prix détail",
+// "Prix demi-gros", "Prix détaillant"… utilisées comme simple mécanisme
+// interne de tarification (cf. types revendeur gros/demi_gros/detaillant) —
+// leur nom (ajouté au panier en `${product.name} - ${variant.name}`) n'a pas
+// sa place dans la désignation imprimée sur les factures/reçus. Le séparateur
+// saisi n'est pas toujours un tiret ASCII simple (copié depuis Word/Excel, il
+// devient souvent un tiret demi-cadratin/cadratin) — la classe couvre les
+// variantes de tiret courantes plutôt que le seul "-".
+function stripPriceVariantSuffix(name: string): string {
+  return name.replace(/\s*[-‐‑‒–—―−]\s*Prix(?:\s+(?:gros|demi[\s-]?gros|d[ée]taillant|d[ée]tail))?\s*$/i, '');
+}
+
 function paymentLines(order: Order, currency: string): string {
   const payments = order.payments ?? [];
   if (payments.length === 0) return '';
@@ -109,7 +121,7 @@ export function generateThermalReceipt(order: Order, business: Business, extra?:
 
   const itemsHtml = (order.items ?? []).map((item) => `
     <tr>
-      <td colspan="2" style="padding-top:4px;font-weight:600">${item.name}</td>
+      <td colspan="2" style="padding-top:4px;font-weight:600">${stripPriceVariantSuffix(item.name)}</td>
     </tr>
     <tr>
       <td style="padding-left:8px;color:#555">${item.quantity} × ${fmt(item.price, cur)}</td>
@@ -242,7 +254,7 @@ export function generateA4DuplicateInvoice(order: Order, business: Business): st
   function buildCopy(copyLabel: string, highlight: string): string {
     const itemsRows = (order.items ?? []).map((item) => `
       <tr>
-        <td class="td-name">${item.name}${item.notes ? `<br><span class="note">${item.notes}</span>` : ''}</td>
+        <td class="td-name">${stripPriceVariantSuffix(item.name)}${item.notes ? `<br><span class="note">${item.notes}</span>` : ''}</td>
         <td class="td-num">${item.quantity}</td>
         <td class="td-num">${fmt(item.price, cur)}</td>
         ${order.discount_amount > 0 ? `<td class="td-num">${item.discount_amount > 0 ? '-' + fmt(item.discount_amount, cur) : '—'}</td>` : ''}
@@ -1499,7 +1511,7 @@ export function generateResellerBonLivraison(data: ResellerBonLivraisonData, bus
   const itemsRows = data.items.map((item, i) => `
     <tr>
       <td style="text-align:center;color:#718096">${i + 1}</td>
-      <td>${item.name}</td>
+      <td>${stripPriceVariantSuffix(item.name)}</td>
       <td style="text-align:center">${item.quantity} ${item.unit ?? 'pièce'}</td>
       <td style="text-align:right">${fmt(item.price, cur)}</td>
       <td style="text-align:right;font-weight:700">${fmt(item.total, cur)}</td>
@@ -1845,18 +1857,6 @@ function echeance(total: number, business: Business): string {
 function toHT(ttc: number): number { return ttc / 1.18; }
 // TTC → montant TVA
 function toTVA(ttc: number): number { return ttc - toHT(ttc); }
-
-// Certains produits ont des variantes "Prix", "Prix gros", "Prix détail",
-// "Prix demi-gros", "Prix détaillant"… utilisées comme simple mécanisme
-// interne de tarification (cf. types revendeur gros/demi_gros/detaillant) —
-// leur nom (ajouté au panier en `${product.name} - ${variant.name}`) n'a pas
-// sa place dans la désignation imprimée sur la facture distributeur. Le
-// séparateur saisi n'est pas toujours un tiret ASCII simple (copié depuis
-// Word/Excel, il devient souvent un tiret demi-cadratin/cadratin) — la classe
-// couvre les variantes de tiret courantes plutôt que le seul "-".
-function stripPriceVariantSuffix(name: string): string {
-  return name.replace(/\s*[-‐‑‒–—―−]\s*Prix(?:\s+(?:gros|demi[\s-]?gros|d[ée]taillant|d[ée]tail))?\s*$/i, '');
-}
 
 export function generateDistributeurInvoice(
   order: Order,
