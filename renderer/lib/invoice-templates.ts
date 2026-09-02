@@ -1846,6 +1846,14 @@ function toHT(ttc: number): number { return ttc / 1.18; }
 // TTC → montant TVA
 function toTVA(ttc: number): number { return ttc - toHT(ttc); }
 
+// Certains produits ont des variantes "Prix" / "Prix détail" utilisées comme
+// simple mécanisme interne de tarification gros/détail — leur nom (ajouté au
+// panier en `${product.name} - ${variant.name}`) n'a pas sa place dans la
+// désignation imprimée sur la facture distributeur.
+function stripPriceVariantSuffix(name: string): string {
+  return name.replace(/\s*-\s*Prix(?:\s+d[ée]tail)?\s*$/i, '');
+}
+
 export function generateDistributeurInvoice(
   order: Order,
   business: Business,
@@ -1879,7 +1887,7 @@ export function generateDistributeurInvoice(
       return `
         <tr>
           <td class="td-sm td-ref">${ref}</td>
-          <td class="td-sm">${item.name}${item.notes ? `<br><span style="font-size:9px;color:#000;font-style:italic">${item.notes}</span>` : ''}</td>
+          <td class="td-sm">${stripPriceVariantSuffix(item.name)}${item.notes ? `<br><span style="font-size:9px;color:#000;font-style:italic">${item.notes}</span>` : ''}</td>
           <td class="td-sm td-c">${item.quantity}</td>
           <td class="td-sm td-r">${fmt(item.price, cur)}</td>
           <td class="td-sm td-r">${fmt(ht, cur)}</td>
