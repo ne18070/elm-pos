@@ -501,7 +501,7 @@ export function OrderPanel({
               </button>
             </div>
           ) : (
-            <div className="relative">
+            <div className="relative" ref={clientRef}>
               <button
                 onClick={openClientPicker}
                 className="flex items-center gap-2 text-xs text-content-secondary hover:text-content-primary transition-colors py-1"

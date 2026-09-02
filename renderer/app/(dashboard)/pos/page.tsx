@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCashSessionStore } from '@/store/cashSession';
 import { useCustomerDisplay } from '@/hooks/useCustomerDisplay';
+import { useResizablePanel } from '@/hooks/useResizablePanel';
 import { getProductByBarcode } from '@services/supabase/products';
 import type { Product, RestaurantTable } from '@pos-types';
 import { hasFeature } from '@/lib/permissions';
@@ -146,6 +147,20 @@ export default function PosPage() {
 
   const isRestaurant = useMemo(() => hasFeature(business, 'restaurant'), [business]);
 
+  // Largeur ajustable du panneau panier (desktop) — mémorisée par navigateur
+  const {
+    width: cartWidth,
+    dragging: cartResizing,
+    onPointerDown: onCartResizeStart,
+    reset: resetCartWidth,
+  } = useResizablePanel({
+    defaultWidth: 384, // = ancien w-96
+    minWidth: 320,
+    maxWidth: 760,
+    storageKey: 'pos:cart-width',
+    side: 'right',
+  });
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <OfflineBanner />
@@ -163,7 +178,7 @@ export default function PosPage() {
       {/* -- Desktop layout -- */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Gauche : catalogue */}
-        <div className="flex-1 flex flex-col overflow-hidden border-r border-surface-border">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <div className="px-4 pt-3 empty:hidden">
             <OnboardingChecklist />
           </div>
@@ -238,8 +253,23 @@ export default function PosPage() {
             </>
           )}
         </div>
-        {/* Droite : panier */}
-        <div id="pos-cart" className="w-96 flex flex-col bg-surface-card">
+        {/* Poignée de redimensionnement */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onPointerDown={onCartResizeStart}
+          onDoubleClick={resetCartWidth}
+          title="Glisser pour redimensionner · double-clic pour réinitialiser"
+          className={`w-1.5 shrink-0 cursor-col-resize transition-colors ${
+            cartResizing ? 'bg-brand-500' : 'bg-surface-border hover:bg-brand-500/60'
+          }`}
+        />
+        {/* Droite : panier (largeur ajustable) */}
+        <div
+          id="pos-cart"
+          style={{ width: cartWidth }}
+          className={`shrink-0 flex flex-col bg-surface-card ${cartResizing ? '' : 'transition-[width] duration-100'}`}
+        >
           <OrderPanel
             taxRate={business?.tax_rate ?? 0} taxInclusive={business?.tax_inclusive ?? false}
             currency={business?.currency ?? 'XOF'} businessId={business?.id ?? ''}
