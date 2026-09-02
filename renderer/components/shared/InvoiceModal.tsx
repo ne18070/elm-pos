@@ -49,45 +49,12 @@ export function InvoiceModal({
     if (selectedId) localStorage.setItem('invoice_template_id', selectedId);
   }, [selectedId]);
 
-  // Generate mini preview for selected template
-  useEffect(() => {
-    if (!selected || !business) return;
-    try {
-      const MOCK_ORDER = {
-        id: 'preview-0000-0000-0000-000000000000',
-        created_at: new Date().toISOString(),
-        status: 'paid',
-        subtotal: 5800,
-        discount_amount: 0,
-        tax_amount: 0,
-        total: 5800,
-        coupon_code: null,
-        coupon_notes: null,
-        notes: null,
-        cashier: { id: 'x', full_name: 'Caissier' },
-        customer_name: 'Client',
-        customer_phone: null,
-        payments: [{ id: 'p1', method: 'cash', amount: 6000 }],
-        items: [
-          { id: 'i1', name: 'Article A', price: 2500, quantity: 2, total: 5000, discount_amount: 0 },
-          { id: 'i2', name: 'Article B', price: 800, quantity: 1, total: 800, discount_amount: 0 },
-        ],
-        business_id: business.id,
-      };
-      setPreviewHtml(renderTemplate(MOCK_ORDER, business, selected, undefined, isDistributeur ? docType : undefined));
-    } catch {
-      setPreviewHtml('');
-    }
-  }, [selected, business, isDistributeur, docType]);
-
   function reloadTemplates() {
     if (!business) return;
     const fresh = getTemplates(business.id);
     setTemplates(fresh);
     if (!fresh.find((t) => t.id === selectedId)) setSelectedId(fresh[0]?.id ?? '');
   }
-
-  if (!business) return null;
 
   function getHtml(): string {
     if (!business || !selected) return '';
@@ -103,6 +70,21 @@ export function InvoiceModal({
       : undefined;
     return renderTemplate(order, business, selected, extra, isDistributeur ? docType : undefined);
   }
+
+  // Mini aperçu pour le modèle sélectionné — construit à partir de la vraie
+  // commande en cours d'impression (mêmes articles/noms que la facture
+  // finale), pas d'une commande fictive.
+  useEffect(() => {
+    if (!selected || !business) return;
+    try {
+      setPreviewHtml(getHtml());
+    } catch {
+      setPreviewHtml('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, business, order, isDistributeur, docType]);
+
+  if (!business) return null;
 
   function handlePrint() {
     printHtml(getHtml());
