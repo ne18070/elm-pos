@@ -154,13 +154,19 @@ export async function getOrders(
   if (options?.createdAfter) {
     query = query.gte('created_at', options.createdAfter);
   }
+  // `date`/`dateFrom`/`dateTo` sont des dates calendaires locales (YYYY-MM-DD,
+  // ex. "aujourd'hui" au fuseau du navigateur) — on les convertit en bornes
+  // UTC via un Date local plutôt que de suffixer "Z" directement : un simple
+  // `${date}T00:00:00Z` traiterait la date locale comme si elle était déjà en
+  // UTC, décalant la fenêtre de l'offset du fuseau (ex. UTC+1 : les commandes
+  // passées entre 00h00 et 01h00 locales tombaient hors de la plage "aujourd'hui").
   if (options?.date) {
     query = query
-      .gte('created_at', `${options.date}T00:00:00Z`)
-      .lte('created_at', `${options.date}T23:59:59Z`);
+      .gte('created_at', new Date(`${options.date}T00:00:00`).toISOString())
+      .lte('created_at', new Date(`${options.date}T23:59:59.999`).toISOString());
   } else {
-    if (options?.dateFrom) query = query.gte('created_at', `${options.dateFrom}T00:00:00Z`);
-    if (options?.dateTo)   query = query.lte('created_at', `${options.dateTo}T23:59:59Z`);
+    if (options?.dateFrom) query = query.gte('created_at', new Date(`${options.dateFrom}T00:00:00`).toISOString());
+    if (options?.dateTo)   query = query.lte('created_at', new Date(`${options.dateTo}T23:59:59.999`).toISOString());
   }
 
   const term = toIlikeTerm(options?.search ?? '');
