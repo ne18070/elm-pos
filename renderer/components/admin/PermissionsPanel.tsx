@@ -108,12 +108,19 @@ export function PermissionsPanel({ businessId, members }: Props) {
     items: (Object.entries(PERMISSIONS) as [string, any][])
       .filter(([, meta]) => {
         if (meta.group !== group) return false;
-        // Si la permission requiert une feature que l'établissement n'a pas, on la cache
+        // Si la permission requiert une feature que l'établissement n'a pas, on la cache.
+        // Même logique d'héritage que checkPermission/la navigation (hasFeature) :
+        // sinon une perm réellement applicable (ex. view_orders / view_all_orders sur
+        // un resto ou un hôtel, qui héritent de « pos »/« retail ») n'apparaîtrait
+        // jamais dans ce panneau alors qu'elle est bien effective ailleurs.
         if (meta.feature) {
           const required = Array.isArray(meta.feature) ? meta.feature : [meta.feature];
           const bFeatures = business?.features ?? [];
           const bType = business?.type ?? '';
-          if (!required.some((f: string) => bFeatures.includes(f) || bType === f)) return false;
+          const ok = required.some((f: string) =>
+            bFeatures.includes(f) || bType === f || hasFeature(business, f)
+          );
+          if (!ok) return false;
         }
         return true;
       }),
