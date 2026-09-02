@@ -189,7 +189,7 @@ export default function ApprovisionnementPage() {
 
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 border-b border-surface-border space-y-4 shrink-0">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h1 className="text-xl font-bold text-content-primary flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-content-brand" />
