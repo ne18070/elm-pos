@@ -1846,15 +1846,16 @@ function toHT(ttc: number): number { return ttc / 1.18; }
 // TTC → montant TVA
 function toTVA(ttc: number): number { return ttc - toHT(ttc); }
 
-// Certains produits ont des variantes "Prix" / "Prix détail" utilisées comme
-// simple mécanisme interne de tarification gros/détail — leur nom (ajouté au
-// panier en `${product.name} - ${variant.name}`) n'a pas sa place dans la
-// désignation imprimée sur la facture distributeur. Le séparateur saisi n'est
-// pas toujours un tiret ASCII simple (copié depuis Word/Excel, il devient
-// souvent un tiret demi-cadratin/cadratin) — la classe couvre les variantes
-// de tiret courantes plutôt que le seul "-".
+// Certains produits ont des variantes "Prix", "Prix gros", "Prix détail",
+// "Prix demi-gros", "Prix détaillant"… utilisées comme simple mécanisme
+// interne de tarification (cf. types revendeur gros/demi_gros/detaillant) —
+// leur nom (ajouté au panier en `${product.name} - ${variant.name}`) n'a pas
+// sa place dans la désignation imprimée sur la facture distributeur. Le
+// séparateur saisi n'est pas toujours un tiret ASCII simple (copié depuis
+// Word/Excel, il devient souvent un tiret demi-cadratin/cadratin) — la classe
+// couvre les variantes de tiret courantes plutôt que le seul "-".
 function stripPriceVariantSuffix(name: string): string {
-  return name.replace(/\s*[-‐‑‒–—―−]\s*Prix(?:\s+d[ée]tail)?\s*$/i, '');
+  return name.replace(/\s*[-‐‑‒–—―−]\s*Prix(?:\s+(?:gros|demi[\s-]?gros|d[ée]taillant|d[ée]tail))?\s*$/i, '');
 }
 
 export function generateDistributeurInvoice(
