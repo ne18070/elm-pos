@@ -140,7 +140,27 @@ function metaSummary(metadata: Record<string, unknown> | null): string {
   if (metadata.method       !== undefined)  parts.push(`${metadata.method}`);
   if (metadata.reason       !== undefined && metadata.reason)    parts.push(`Motif : ${metadata.reason}`);
   if (metadata.new_role     !== undefined)  parts.push(`→ ${metadata.new_role}`);
-  if (metadata.fields       !== undefined)  parts.push(`Champs : ${(metadata.fields as string[]).join(', ')}`);
+
+  // Détail des champs suivis modifiés : "Stock : 12 → 8"
+  const FIELD_FR: Record<string, string> = { stock: 'Stock', price: 'Prix', track_stock: 'Suivi du stock' };
+  const fmtVal = (v: unknown) =>
+    v === null || v === undefined ? '—'
+      : typeof v === 'boolean' ? (v ? 'oui' : 'non')
+      : String(v);
+  const changes = (metadata.changes && typeof metadata.changes === 'object')
+    ? (metadata.changes as Record<string, { from: unknown; to: unknown }>)
+    : null;
+  if (changes) {
+    const chParts = Object.entries(changes).map(
+      ([k, v]) => `${FIELD_FR[k] ?? k} : ${fmtVal(v.from)} → ${fmtVal(v.to)}`,
+    );
+    if (chParts.length) parts.push(chParts.join(', '));
+  }
+
+  if (metadata.fields !== undefined) {
+    const rest = (metadata.fields as string[]).filter((f) => !changes || !(f in changes));
+    if (rest.length) parts.push(`Champs : ${rest.join(', ')}`);
+  }
   return parts.join(' · ');
 }
 

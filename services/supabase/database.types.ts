@@ -6493,6 +6493,10 @@ export type Database = {
         Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
+      record_stock_adjustment: {
+        Args: { p_product_id: string; p_qty_before: number; p_qty_after: number; p_reason?: string }
+        Returns: Json
+      }
       update_last_seen: { Args: never; Returns: undefined }
       update_pending_order: {
         Args: {
