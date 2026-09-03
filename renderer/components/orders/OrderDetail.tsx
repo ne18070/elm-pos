@@ -89,11 +89,14 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
   const can = useCan();
   const fmt              = (n: number) => formatCurrency(n, currency);
   const isAdmin          = can('cancel_orders');
+  const canEditOrders    = can('edit_orders');
   const partial          = isAcompte(order);
   const paidAmt          = getPaidAmount(order);
   const remaining        = getRemainingAmount(order);
   const isWhatsAppPending = (order as { source?: string }).source === 'whatsapp' && order.status === 'pending';
-  const canEdit          = isAdmin && order.status === 'pending' && paidAmt <= 0.01;
+  // Le caissier (staff) peut modifier une commande tant qu'aucun paiement n'a
+  // été encaissé — le RPC update_pending_order refuse dès qu'un acompte existe.
+  const canEdit          = canEditOrders && order.status === 'pending' && paidAmt <= 0.01;
 
   const editSubtotal = editLines.reduce((s, l) => s + (parseFloat(l.price) || 0) * (parseFloat(l.quantity) || 0), 0);
   const editTaxable  = Math.max(0, editSubtotal - (order.discount_amount || 0));

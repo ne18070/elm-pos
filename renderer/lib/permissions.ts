@@ -64,6 +64,7 @@ const PERMISSIONS_MAP = {
   manage_team:            { label: 'Gérer l\'équipe (inviter/rôles)', group: 'admin',      defaultRoles: ['admin', 'owner'] },
   manage_settings:        { label: 'Modifier config business',     group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] },
   cancel_orders:          { label: 'Annuler des commandes/ventes',  group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'retail' },
+  edit_orders:            { label: 'Modifier une commande en attente (non encaissée)', group: 'gestion', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'retail' },
   manage_expenses:        { label: 'Enregistrer des dépenses',     group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'expenses' },
   delete_expense:         { label: 'Supprimer des dépenses',       group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'expenses' },
   delete_data:            { label: 'Supprimer données critiques',   group: 'admin',      defaultRoles: ['admin', 'owner'] },
