@@ -6,10 +6,11 @@ import {
   getAnalyticsSummary, getDailySales, getCouponStats,
   getHotelAnalytics, getJuridiqueAnalytics, getVoituresAnalytics,
   getRevendeursAnalytics, getApprovisionnementAnalytics, getPrevPeriodCA,
-  getServicesAnalytics,
+  getServicesAnalytics, getVendeursAnalytics,
   type CouponStat, type HotelAnalyticsSummary, type JuridiqueAnalyticsSummary,
   type VoituresAnalyticsSummary, type RevendeursAnalyticsSummary,
-  type ApprovAnalyticsSummary, type PrevPeriodCA, type ServicesAnalyticsSummary
+  type ApprovAnalyticsSummary, type PrevPeriodCA, type ServicesAnalyticsSummary,
+  type VendeursAnalyticsSummary
 } from '@services/supabase/analytics';
 import { supabase } from '@services/supabase/client';
 import type { AnalyticsSummary } from '@pos-types';
@@ -33,6 +34,7 @@ export function useAnalyticsData(business: any, period: number) {
   const [revendeursData, setRevendeursData] = useState<RevendeursAnalyticsSummary | null>(null);
   const [approvData, setApprovData]         = useState<ApprovAnalyticsSummary | null>(null);
   const [servicesData, setServicesData]     = useState<ServicesAnalyticsSummary | null>(null);
+  const [vendeursData, setVendeursData]     = useState<VendeursAnalyticsSummary | null>(null);
   const [audiences, setAudiences]           = useState<any[]>([]);
 
   // Which tabs have been loaded for the current period/business
@@ -130,6 +132,11 @@ export function useAnalyticsData(business: any, period: number) {
                 setApprovData(res);
                 break;
             }
+            case 'vendeurs': {
+                const res = await getVendeursAnalytics(business.id, days);
+                setVendeursData(res);
+                break;
+            }
         }
         setLoadedTabs(prev => new Set([...prev, tab]));
     } catch (e) {
@@ -171,6 +178,7 @@ export function useAnalyticsData(business: any, period: number) {
     revendeursData,
     approvData,
     servicesData,
+    vendeursData,
     audiences,
     stackedDays,
     hasMultiSource,

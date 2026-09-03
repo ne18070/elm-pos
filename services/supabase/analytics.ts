@@ -920,3 +920,95 @@ export async function getApprovisionnementAnalytics(
     monthly:       Array.from(monthMap.entries()).map(([month, s]) => ({ month, ...s })).sort((a, b) => a.month.localeCompare(b.month)),
   };
 }
+
+// --- Vendeurs (caissiers) --------------------------------------------------
+
+export interface SellerStat {
+  id: string;
+  name: string;
+  revenue: number;
+  order_count: number;
+  item_count: number;
+  avg_order: number;
+}
+
+export interface VendeursAnalyticsSummary {
+  total_ca: number;          // CA attribué à un caissier
+  total_orders: number;      // commandes attribuées à un caissier
+  active_sellers: number;
+  avg_order: number;
+  top_seller_name: string | null;
+  unassigned_ca: number;     // ventes POS sans caissier (API, imports…)
+  unassigned_orders: number;
+  sellers: SellerStat[];     // triés par CA décroissant, caissiers réels uniquement
+}
+
+const UNASSIGNED_KEY = 'inconnu';
+
+export async function getVendeursAnalytics(
+  businessId: string,
+  days = 30
+): Promise<VendeursAnalyticsSummary> {
+  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+
+  const [ordersRes, itemsRes] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('total, cashier_id, cashier:users!cashier_id(full_name)')
+      .eq('business_id', businessId)
+      .eq('status', 'paid')
+      .gte('created_at', `${startDate}T00:00:00Z`),
+    supabase
+      .from('order_items')
+      .select('quantity, order:orders!inner(business_id, status, cashier_id, created_at)')
+      .eq('order.business_id', businessId)
+      .eq('order.status', 'paid')
+      .gte('order.created_at' as never, `${startDate}T00:00:00Z`),
+  ]);
+  if (ordersRes.error) throw new Error(ordersRes.error.message);
+  if (itemsRes.error)  throw new Error(itemsRes.error.message);
+
+  const orders = (ordersRes.data ?? []) as unknown as Array<{
+    total: number; cashier_id: string | null; cashier: { full_name: string } | null;
+  }>;
+  const items = (itemsRes.data ?? []) as unknown as Array<{
+    quantity: number; order: { cashier_id: string | null } | null;
+  }>;
+
+  const map = new Map<string, SellerStat>();
+  const keyOf = (id: string | null) => id ?? UNASSIGNED_KEY;
+
+  for (const o of orders) {
+    const k = keyOf(o.cashier_id);
+    const s = map.get(k) ?? { id: k, name: o.cashier?.full_name ?? 'Sans caissier', revenue: 0, order_count: 0, item_count: 0, avg_order: 0 };
+    s.revenue += Number(o.total) || 0;
+    s.order_count += 1;
+    if (o.cashier?.full_name) s.name = o.cashier.full_name;
+    map.set(k, s);
+  }
+  for (const it of items) {
+    const s = map.get(keyOf(it.order?.cashier_id ?? null));
+    if (s) s.item_count += Number(it.quantity) || 0;
+  }
+
+  const unassigned = map.get(UNASSIGNED_KEY);
+
+  const sellers = [...map.values()]
+    .filter((s) => s.id !== UNASSIGNED_KEY)
+    .map((s) => ({ ...s, avg_order: s.order_count > 0 ? s.revenue / s.order_count : 0 }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const total_ca     = sellers.reduce((n, s) => n + s.revenue, 0);
+  const total_orders = sellers.reduce((n, s) => n + s.order_count, 0);
+
+  return {
+    total_ca,
+    total_orders,
+    active_sellers: sellers.length,
+    avg_order: total_orders > 0 ? total_ca / total_orders : 0,
+    top_seller_name: sellers[0]?.name ?? null,
+    unassigned_ca: unassigned?.revenue ?? 0,
+    unassigned_orders: unassigned?.order_count ?? 0,
+    sellers,
+  };
+}

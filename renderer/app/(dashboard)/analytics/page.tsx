@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   TrendingUp, RefreshCw, Store, Tag, BedDouble, Wrench, Download, Car,
-  Package, Users, BarChart, Briefcase
+  Package, Users, BarChart, Briefcase, UserCheck
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { formatCurrency } from '@/lib/utils';
@@ -21,6 +21,7 @@ import { ApprovisionnementTab } from './components/ApprovisionnementTab';
 import { JuridiqueTab } from './components/JuridiqueTab';
 import { HotelTab } from './components/HotelTab';
 import { VoituresTab } from './components/VoituresTab';
+import { VendeursTab } from './components/VendeursTab';
 
 // Hooks
 import { useAnalyticsData } from './hooks/useAnalyticsData';
@@ -32,7 +33,7 @@ const PERIODS = [
   { label: '90 jours',    value: 90 },
 ];
 
-type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique' | 'voitures' | 'revendeurs' | 'appro' | 'services';
+type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique' | 'voitures' | 'revendeurs' | 'appro' | 'services' | 'vendeurs';
 
 interface TabConfig {
     id: Tab;
@@ -60,6 +61,7 @@ export default function AnalyticsPage() {
     revendeursData,
     approvData,
     servicesData,
+    vendeursData,
     audiences,
     stackedDays,
     hasMultiSource,
@@ -107,6 +109,7 @@ export default function AnalyticsPage() {
     { id: 'general',    label: 'Général',      icon: TrendingUp                          },
     { id: 'services',   label: 'Prestations',  icon: Wrench,    show: isService          },
     { id: 'produits',   label: 'Produits',     icon: BarChart,  feature: 'retail'        },
+    { id: 'vendeurs',   label: 'Vendeurs',     icon: UserCheck                           },
     { id: 'grossiste',  label: 'Détail ventes',icon: Store,     feature: 'retail'        },
     { id: 'revendeurs', label: 'Revendeurs',   icon: Users,     feature: 'retail'        },
     { id: 'promos',     label: 'Promos',       icon: Tag,       feature: 'retail'        },
@@ -175,6 +178,10 @@ export default function AnalyticsPage() {
 
         {tab === 'produits' && (
           <ProductsTab loading={loading} data={data} period={period} fmt={fmt} />
+        )}
+
+        {tab === 'vendeurs' && (
+          <VendeursTab loading={loading} vendeursData={vendeursData} period={period} fmt={fmt} />
         )}
 
         {tab === 'services' && (
