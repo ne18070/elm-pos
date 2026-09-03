@@ -155,7 +155,7 @@ export function InvoiceModal({
                   Type de document
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['FACTURE', 'BON DE FACTURE'] as DistributeurInvoiceType[]).map((t) => (
+                  {(['FACTURE', 'BON DE LIVRAISON'] as DistributeurInvoiceType[]).map((t) => (
                     <button
                       key={t}
                       type="button"
