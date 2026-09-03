@@ -97,6 +97,28 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
 
   const editSubtotal = editLines.reduce((s, l) => s + (parseFloat(l.price) || 0) * (parseFloat(l.quantity) || 0), 0);
   const editTaxable  = Math.max(0, editSubtotal - (order.discount_amount || 0));
+
+  // --- Contrôle du stock disponible en édition -------------------------------
+  // La commande "réserve" déjà sa quantité d'origine → budget dispo par produit
+  // = stock actuel + quantité déjà sur la commande.
+  const originalQtyByProduct: Record<string, number> = {};
+  for (const it of order.items ?? []) {
+    originalQtyByProduct[it.product_id] = (originalQtyByProduct[it.product_id] ?? 0) + it.quantity;
+  }
+  const productById = new Map(products.map((p) => [p.id, p]));
+  function stockBudget(pid: string): number {
+    const p = productById.get(pid);
+    if (!p || !p.track_stock) return Infinity;
+    return (p.stock ?? 0) + (originalQtyByProduct[pid] ?? 0);
+  }
+  const usedByProduct: Record<string, number> = {};
+  for (const l of editLines) {
+    usedByProduct[l.product_id] = (usedByProduct[l.product_id] ?? 0) + (parseFloat(l.quantity) || 0);
+  }
+  const overspentPids = new Set(
+    Object.keys(usedByProduct).filter((pid) => usedByProduct[pid] > stockBudget(pid)),
+  );
+  const hasStockError = overspentPids.size > 0;
   const taxRate      = business?.tax_rate ?? 0;
   const taxInclusive = business?.tax_inclusive ?? false;
   const editTax      = taxInclusive
@@ -116,7 +138,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
     })));
     setAddPid('');
     setEditMode(true);
-    if (products.length === 0 && business?.id) {
+    if (business?.id) {
       getProducts(business.id).then(setProducts).catch(() => {});
     }
   }
@@ -154,6 +176,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       }))
       .filter((i) => i.quantity > 0);
     if (items.length === 0) { notifError('Ajoutez au moins un article'); return; }
+    if (hasStockError) { notifError('Quantité supérieure au stock disponible'); return; }
 
     setSavingEdit(true);
     try {
@@ -421,8 +444,13 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
               </div>
             ) : (
               <div className="space-y-2">
-                {editLines.map((l) => (
-                  <div key={l.key} className="bg-surface-input rounded-lg p-2 space-y-1.5">
+                {editLines.map((l) => {
+                  const budget = stockBudget(l.product_id);
+                  const over   = overspentPids.has(l.product_id);
+                  const nextInc = String((parseFloat(l.quantity) || 0) + 1);
+                  const incBlocked = budget !== Infinity && (parseFloat(nextInc) || 0) > budget;
+                  return (
+                  <div key={l.key} className={`bg-surface-input rounded-lg p-2 space-y-1.5 ${over ? 'ring-1 ring-status-error' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm text-content-primary truncate flex-1">{l.name}</p>
                       <button onClick={() => removeLine(l.key)} className="text-content-muted hover:text-status-error shrink-0">
@@ -439,11 +467,12 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                           type="number" min="0" step="1"
                           value={l.quantity}
                           onChange={(e) => setLine(l.key, { quantity: e.target.value })}
-                          className="input h-7 w-14 text-center text-sm px-1"
+                          className={`input h-7 w-14 text-center text-sm px-1 ${over ? 'border-status-error text-status-error' : ''}`}
                         />
                         <button
-                          onClick={() => setLine(l.key, { quantity: String((parseFloat(l.quantity) || 0) + 1) })}
-                          className="w-7 h-7 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center text-content-secondary"
+                          onClick={() => setLine(l.key, { quantity: nextInc })}
+                          disabled={incBlocked}
+                          className="w-7 h-7 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center text-content-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                         ><Plus className="w-3 h-3" /></button>
                       </div>
                       <span className="text-content-muted text-xs">×</span>
@@ -455,8 +484,14 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
                         aria-label="Prix unitaire"
                       />
                     </div>
+                    {budget !== Infinity && (
+                      <p className={`text-[11px] ${over ? 'text-status-error font-medium' : 'text-content-muted'}`}>
+                        {over ? `Stock insuffisant — ${budget} disponible` : `Stock disponible : ${budget}`}
+                      </p>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
 
                 {products.length > 0 && (
                   <select
@@ -619,22 +654,30 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         {/* Actions */}
         <div className="p-4 border-t border-surface-border space-y-2">
           {editMode ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setEditMode(false)}
-                disabled={savingEdit}
-                className="btn-secondary flex-1 h-10 text-sm"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={savingEdit || editLines.length === 0}
-                className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-1.5"
-              >
-                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Enregistrer
-              </button>
+            <div className="space-y-2">
+              {hasStockError && (
+                <div className="flex gap-2 p-2.5 bg-badge-error border border-status-error rounded-xl text-xs text-status-error">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>Une quantité dépasse le stock disponible.</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditMode(false)}
+                  disabled={savingEdit}
+                  className="btn-secondary flex-1 h-10 text-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit || editLines.length === 0 || hasStockError}
+                  className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-1.5"
+                >
+                  {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Enregistrer
+                </button>
+              </div>
             </div>
           ) : (
           <div className="space-y-2">

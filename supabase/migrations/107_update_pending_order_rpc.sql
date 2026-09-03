@@ -28,6 +28,9 @@ DECLARE
   v_paid     numeric;
   v_qty      numeric;
   v_price    numeric;
+  v_pid      uuid;
+  v_stock    numeric;
+  v_track    boolean;
   v_subtotal numeric := 0;
   v_taxable  numeric;
   v_tax      numeric;
@@ -62,19 +65,30 @@ BEGIN
 
   DELETE FROM order_items WHERE order_id = p_order_id;
 
-  -- 2. Nouvelles lignes + décrément du stock
+  -- 2. Nouvelles lignes : contrôle du stock DISPONIBLE (après restauration
+  --    ci-dessus, products.stock reflète déjà la libération des anciennes
+  --    lignes) puis décrément.
   FOR v_row IN SELECT * FROM jsonb_array_elements(p_items) LOOP
     v_qty   := COALESCE((v_row->>'quantity')::numeric, 0);
     v_price := COALESCE((v_row->>'price')::numeric, 0);
+    v_pid   := (v_row->>'product_id')::uuid;
     IF v_qty <= 0 THEN
       RAISE EXCEPTION 'Quantité invalide pour « % »', COALESCE(v_row->>'name', '?');
+    END IF;
+
+    SELECT stock, track_stock INTO v_stock, v_track
+    FROM products WHERE id = v_pid FOR UPDATE;
+
+    IF COALESCE(v_track, false) AND COALESCE(v_stock, 0) < v_qty THEN
+      RAISE EXCEPTION 'Stock insuffisant pour « % » : % en stock, % demandé(s)',
+        COALESCE(v_row->>'name', '?'), COALESCE(v_stock, 0), v_qty;
     END IF;
 
     INSERT INTO order_items
       (order_id, product_id, variant_id, name, price, quantity, discount_amount, total, notes)
     VALUES (
       p_order_id,
-      (v_row->>'product_id')::uuid,
+      v_pid,
       NULLIF(v_row->>'variant_id', '')::uuid,
       COALESCE(v_row->>'name', ''),
       v_price,
@@ -85,8 +99,8 @@ BEGIN
     );
 
     UPDATE products
-    SET stock = GREATEST(0, stock - v_qty), updated_at = NOW()
-    WHERE id = (v_row->>'product_id')::uuid AND track_stock = true;
+    SET stock = stock - v_qty, updated_at = NOW()
+    WHERE id = v_pid AND track_stock = true;
 
     v_subtotal := v_subtotal + v_price * v_qty;
   END LOOP;
