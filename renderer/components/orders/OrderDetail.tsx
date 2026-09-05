@@ -569,64 +569,6 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             </div>
           )}
 
-          {/* Formulaire paiement complémentaire (acompte ou WhatsApp) */}
-          {(partial || isWhatsAppPending) && showCompleteForm && (
-            <div className="bg-badge-warning border border-status-warning rounded-xl p-3 space-y-3">
-              <p className="text-xs text-status-warning font-medium uppercase tracking-wider">
-                Enregistrer le solde ({fmt(remaining)})
-              </p>
-
-              {/* Méthode */}
-              <div className="grid grid-cols-3 gap-1.5">
-                {PAYMENT_METHODES.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setCompleteMethod(m)}
-                    className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all ${
-                      completeMethod === m
-                        ? 'border-brand-500 bg-badge-brand text-content-brand'
-                        : 'border-slate-700 text-content-secondary hover:text-content-primary'
-                    }`}
-                  >
-                    {m === 'cash'         && <Banknote className="w-4 h-4" />}
-                    {m === 'card'         && <CreditCard className="w-4 h-4" />}
-                    {m === 'mobile_money' && <Smartphone className="w-4 h-4" />}
-                    <span>{m === 'cash' ? 'Espèces' : m === 'card' ? 'Carte' : 'Mobile'}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Montant */}
-              <div>
-                <label className="text-xs text-content-secondary mb-1 block">Montant reçu</label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={completeAmount}
-                  onChange={(e) => setCompleteAmount(e.target.value)}
-                  className="input text-center font-bold"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowCompleteForm(false)}
-                  className="btn-secondary flex-1 h-9 text-sm"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleCompletePayment}
-                  disabled={completing}
-                  className="btn-primary flex-1 h-9 text-sm flex items-center justify-center gap-1.5"
-                >
-                  {completing && <Loader2 className="w-3 h-3 animate-spin" />}
-                  Valider
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Historique remboursements */}
           {refunds.length > 0 && (
             <div>
@@ -732,28 +674,86 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
             />
           )}
 
-          {/* Compléter le paiement —acompte */}
-          {partial && !showCompleteForm && (
-            <button
-              onClick={() => setShowCompleteForm(true)}
-              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
-                         bg-amber-600 hover:bg-amber-500 text-content-primary font-medium text-sm transition-colors"
-            >
-              <CreditCard className="w-4 h-4" />
-              Encaisser le solde ({fmt(remaining)})
-            </button>
-          )}
+          {/* Compléter le paiement — acompte ou commande WhatsApp en attente.
+              Le formulaire s'affiche ici, à l'endroit même du bouton qui l'ouvre
+              (footer fixe) — et non plus dans le panneau de contenu défilant
+              au-dessus, où il pouvait apparaître hors champ et donner
+              l'impression que le bouton "Encaisser" ne faisait rien. */}
+          {(partial || isWhatsAppPending) && (
+            showCompleteForm ? (
+              <div className="bg-badge-warning border border-status-warning rounded-xl p-3 space-y-3">
+                <p className="text-xs text-status-warning font-medium uppercase tracking-wider">
+                  Enregistrer le solde ({fmt(remaining)})
+                </p>
 
-          {/* Payer —commande WhatsApp en attente */}
-          {isWhatsAppPending && !showCompleteForm && (
-            <button
-              onClick={() => setShowCompleteForm(true)}
-              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
-                         bg-green-700 hover:bg-green-600 text-content-primary font-medium text-sm transition-colors"
-            >
-              <CreditCard className="w-4 h-4" />
-              Payer ({fmt(order.total)})
-            </button>
+                {/* Méthode */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {PAYMENT_METHODES.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setCompleteMethod(m)}
+                      className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all ${
+                        completeMethod === m
+                          ? 'border-brand-500 bg-badge-brand text-content-brand'
+                          : 'border-slate-700 text-content-secondary hover:text-content-primary'
+                      }`}
+                    >
+                      {m === 'cash'         && <Banknote className="w-4 h-4" />}
+                      {m === 'card'         && <CreditCard className="w-4 h-4" />}
+                      {m === 'mobile_money' && <Smartphone className="w-4 h-4" />}
+                      <span>{m === 'cash' ? 'Espèces' : m === 'card' ? 'Carte' : 'Mobile'}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Montant */}
+                <div>
+                  <label className="text-xs text-content-secondary mb-1 block">Montant reçu</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={completeAmount}
+                    onChange={(e) => setCompleteAmount(e.target.value)}
+                    className="input text-center font-bold"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowCompleteForm(false)}
+                    className="btn-secondary flex-1 h-9 text-sm"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleCompletePayment}
+                    disabled={completing}
+                    className="btn-primary flex-1 h-9 text-sm flex items-center justify-center gap-1.5"
+                  >
+                    {completing && <Loader2 className="w-3 h-3 animate-spin" />}
+                    Valider
+                  </button>
+                </div>
+              </div>
+            ) : partial ? (
+              <button
+                onClick={() => setShowCompleteForm(true)}
+                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
+                           bg-amber-600 hover:bg-amber-500 text-content-primary font-medium text-sm transition-colors"
+              >
+                <CreditCard className="w-4 h-4" />
+                Encaisser le solde ({fmt(remaining)})
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowCompleteForm(true)}
+                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
+                           bg-green-700 hover:bg-green-600 text-content-primary font-medium text-sm transition-colors"
+              >
+                <CreditCard className="w-4 h-4" />
+                Payer ({fmt(order.total)})
+              </button>
+            )
           )}
 
           {isAdmin && order.status === 'paid' && !partial && (
