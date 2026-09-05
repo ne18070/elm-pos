@@ -124,7 +124,7 @@ export default function OrdersPage() {
   // onglets à statut direct. Pour "acompte" (calculé, non filtrable en SQL —
   // voir ACOMPTE_FETCH_LIMIT), on récupère un lot borné des commandes les
   // plus récentes et on filtre/pagine côté client à l'intérieur de ce lot.
-  const { orders, count, loading, refetch } = useOrders(
+  const { orders, count, loading, refetch, patchOrder } = useOrders(
     effectiveBusinessId,
     isAcompteTab
       ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch, ...dateRange, ...scopeOpts }
@@ -461,6 +461,10 @@ export default function OrdersPage() {
           // rouvrir l'ancien objet commande (acompte non soldé) le temps que
           // le refetch réseau se termine en arrière-plan.
           onRefresh={async () => { await refetch(); setSelectedOrder(null); }}
+          // Reflète immédiatement un paiement encaissé dans la liste, sans
+          // attendre le refetch (voir handleCompletePayment) — le refetch
+          // déclenché juste après reste la source de vérité en arrière-plan.
+          onOrderPatched={patchOrder}
           onPrint={(o) => setPrintOrder(o)}
         />
       )}
