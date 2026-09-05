@@ -18,13 +18,21 @@ import { useAuthStore } from '@/store/auth';
 import { useCan } from '@/hooks/usePermission';
 import { useNotificationStore } from '@/store/notifications';
 import { RefundModal } from './RefundModal';
-import type { Order, OrderStatus, Refund, PaymentMethod } from '@pos-types';
+import type { Order, OrderStatus, Refund, PaymentMethod, Payment } from '@pos-types';
 
 interface OrderDetailProps {
   order: Order;
   currency: string;
   onClose: () => void;
-  onRefresh: () => void;
+  /** Doit résoudre une fois la liste des commandes effectivement rafraîchie —
+   *  voir les appels `await onRefresh()` ci-dessous : sans ce await, la liste
+   *  affichée à la réouverture pouvait encore montrer l'ancien état (acompte
+   *  non soldé) le temps que le refetch réseau se termine. */
+  onRefresh: () => void | Promise<void>;
+  /** Applique tout de suite un changement connu localement (ex: paiement du
+   *  solde) à la commande dans la liste, sans attendre le refetch réseau —
+   *  voir handleCompletePayment. */
+  onOrderPatched?: (orderId: string, updater: (order: Order) => Order) => void;
   onPrint?: (order: Order) => void;
 }
 
@@ -65,7 +73,7 @@ function isAcompte(order: Order): boolean {
   return getRemainingAmount(order) > 0.01;
 }
 
-export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: OrderDetailProps) {
+export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatched, onPrint }: OrderDetailProps) {
   const { business, user } = useAuthStore();
   const { success, error: notifError, warning } = useNotificationStore();
   const [showRefundModal, setShowRefundModal]     = useState(false);
@@ -201,7 +209,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       });
       success('Commande modifiée');
       setEditMode(false);
-      onRefresh();
+      await onRefresh();
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -299,7 +307,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         metadata:    { total: order.total },
       });
       success('Commande annulée');
-      onRefresh();
+      await onRefresh();
       onClose();
     } catch (err) {
       notifError(toUserError(err));
@@ -323,7 +331,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       metadata:    { amount, reason: reason || null },
     });
     success(`Remboursement de ${fmt(amount)} enregistré`);
-    onRefresh();
+    await onRefresh();
     onClose();
   }
 
@@ -345,8 +353,24 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         metadata:    { amount, method: completeMethod, fully_paid: amount >= remaining - 0.01 },
       });
       success(`Paiement de ${fmt(amount)} enregistré${amount >= remaining - 0.01 ? ' —commande soldée !' : ''}`);
-      onRefresh();
+      // Reflète le paiement dans la liste tout de suite (on connaît déjà le
+      // montant et la méthode) plutôt que d'attendre un aller-retour réseau
+      // complet juste pour rafraîchir une ligne — le onRefresh() ci-dessous
+      // reste lancé en tâche de fond pour rester la source de vérité.
+      onOrderPatched?.(order.id, (o) => {
+        const newPayment: Payment = {
+          id:       `optimistic-${Date.now()}`,
+          order_id: o.id,
+          method:   completeMethod,
+          amount,
+          paid_at:  new Date().toISOString(),
+        };
+        const payments  = [...(o.payments ?? []), newPayment];
+        const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+        return { ...o, payments, status: totalPaid >= o.total - 0.01 ? 'paid' : o.status };
+      });
       onClose();
+      onRefresh();
     } catch (err) {
       notifError(toUserError(err));
     } finally {

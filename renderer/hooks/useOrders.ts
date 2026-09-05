@@ -48,5 +48,14 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
     return () => window.removeEventListener('elm-pos:orders:changed', handler);
   }, [businessId, fetch]);
 
-  return { orders, count, loading, error, refetch: fetch };
+  // Mise à jour optimiste d'une commande déjà en mémoire (ex: paiement du
+  // solde d'un acompte) — évite d'attendre un aller-retour réseau complet
+  // (refetch) juste pour que la ligne de la liste reflète le nouvel état.
+  // Le refetch en tâche de fond (déclenché en parallèle) reste la source de
+  // vérité et corrige silencieusement cette mise à jour si besoin.
+  const patchOrder = useCallback((id: string, updater: (order: Order) => Order) => {
+    setOrders((prev) => prev.map((o) => (o.id === id ? updater(o) : o)));
+  }, []);
+
+  return { orders, count, loading, error, refetch: fetch, patchOrder };
 }
