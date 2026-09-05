@@ -3,15 +3,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User, Printer, MessageCircle, Upload, ChevronLeft, ChevronRight, Store } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer, Loader2, MessageCircle, Upload, ChevronLeft, ChevronRight, Store } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
+import { toUserError } from '@/lib/user-error';
+import { generateOrdersHistoryReport, printHtml } from '@/lib/invoice-templates';
 import { OrderDetail } from '@/components/orders/OrderDetail';
 import { InvoiceModal } from '@/components/shared/InvoiceModal';
 import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
-import { getOrderById } from '@services/supabase/orders';
+import { getOrderById, getOrders } from '@services/supabase/orders';
 import type { Order, OrderStatus } from '@pos-types';
 
 type FilterTab = OrderStatus | 'all' | 'acompte' | 'today';
@@ -67,6 +70,7 @@ function isAcompte(order: Order): boolean {
 
 export default function OrdersPage() {
   const { business, user } = useAuthStore();
+  const { error: notifError } = useNotificationStore();
   const canViewAllOrders = usePermission('view_all_orders');
   const restricted = !canViewAllOrders;
   const [tab, setTab]               = useState<FilterTab>('today');
@@ -78,6 +82,7 @@ export default function OrdersPage() {
   const [dateTo, setDateTo]         = useState('');
   const [showImport, setShowImport] = useState(false);
   const [page, setPage]             = useState(1);
+  const [printingHistory, setPrintingHistory] = useState(false);
 
   const isAcompteTab = tab === 'acompte';
   const isTodayTab   = tab === 'today';
@@ -177,6 +182,38 @@ export default function OrdersPage() {
 
   const fmt = (n: number) => formatCurrency(n, business?.currency);
 
+  // Imprime l'historique des factures correspondant aux filtres actuellement
+  // affichés (onglet, recherche, dates) — pas seulement la page en cours :
+  // on requête tout le lot correspondant (borné par un plafond de sécurité)
+  // plutôt que les PAGE_SIZE lignes déjà chargées à l'écran.
+  async function handlePrintHistory() {
+    if (!business) return;
+    setPrintingHistory(true);
+    try {
+      const { orders: historyOrders } = await getOrders(effectiveBusinessId, {
+        status: dbStatus,
+        search: debouncedSearch,
+        limit:  5000,
+        ...dateRange,
+        ...scopeOpts,
+      });
+      const list = isAcompteTab ? historyOrders.filter(isAcompte) : historyOrders;
+      const periodLabel = isTodayTab
+        ? `Aujourd'hui — ${format(new Date(), 'dd MMMM yyyy', { locale: fr })}`
+        : (dateFrom || dateTo)
+          ? `Du ${dateFrom ? format(new Date(dateFrom), 'dd/MM/yyyy') : '…'} au ${dateTo ? format(new Date(dateTo), 'dd/MM/yyyy') : '…'}`
+          : 'Toute la période';
+      printHtml(generateOrdersHistoryReport(list, business, {
+        title: `Historique des factures — ${TAB_LABELS[tab]}`,
+        periodLabel,
+      }));
+    } catch (err) {
+      notifError(toUserError(err));
+    } finally {
+      setPrintingHistory(false);
+    }
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -197,6 +234,15 @@ export default function OrdersPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrintHistory}
+                disabled={printingHistory}
+                className="btn-secondary flex items-center gap-1.5 text-sm disabled:opacity-60"
+                title="Imprimer l'historique des factures affichées"
+              >
+                {printingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                <span className="hidden sm:inline">Imprimer l&apos;historique</span>
+              </button>
               <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Importer</span>

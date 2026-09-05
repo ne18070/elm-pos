@@ -2088,6 +2088,131 @@ export function generateDistributeurInvoice(
 </body></html>`;
 }
 
+// --- Historique des factures (liste imprimable) ------------------------------
+
+export interface OrdersHistoryReportOptions {
+  title:        string;
+  periodLabel?: string;
+}
+
+export function generateOrdersHistoryReport(
+  orders:   Order[],
+  business: Business,
+  options:  OrdersHistoryReportOptions,
+): string {
+  const fmt = (n: number) => formatCurrency(n, business.currency);
+  const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const STATUS_LABELS: Record<string, string> = {
+    pending:   'En attente',
+    paid:      'Payée',
+    cancelled: 'Annulée',
+    refunded:  'Remboursée',
+  };
+
+  function paidAmount(o: Order): number {
+    return (o.payments ?? []).reduce((s, p) => s + p.amount, 0);
+  }
+
+  const rows = orders.map((o) => {
+    const paid       = paidAmount(o);
+    const remaining  = Math.max(0, o.total - paid);
+    const isPartial  = o.status !== 'cancelled' && o.status !== 'refunded' && remaining > 0.01;
+    const statusLabel = isPartial ? 'Acompte' : (STATUS_LABELS[o.status] ?? o.status);
+    const created = new Date(o.created_at);
+    const dateStr = created.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
+      ' ' + created.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    return `
+      <tr>
+        <td class="mono">#${o.id.slice(0, 8).toUpperCase()}</td>
+        <td>${dateStr}</td>
+        <td>${o.customer_name ?? o.cashier?.full_name ?? '—'}</td>
+        <td class="r">${fmt(o.total)}</td>
+        <td class="r">${fmt(paid)}</td>
+        <td class="r ${remaining > 0.01 ? 'due' : ''}">${fmt(remaining)}</td>
+        <td>${statusLabel}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const totalFacture = orders.reduce((s, o) => s + o.total, 0);
+  const totalPaye    = orders.reduce((s, o) => s + paidAmount(o), 0);
+  const totalReste   = Math.max(0, totalFacture - totalPaye);
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>${options.title} - ${business.name}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #1f2937; line-height: 1.4; }
+  .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #1f2937; padding-bottom: 12px; }
+  .biz-name { font-size: 18px; font-weight: 800; color: #111827; }
+  .biz-detail { font-size: 10px; color: #6b7280; }
+  .doc-title { text-align: right; }
+  .doc-title h1 { font-size: 16px; font-weight: 800; color: #111827; }
+  .doc-title p { font-size: 11px; color: #4f46e5; font-weight: 700; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { background: #1f2937; color: #ffffff; padding: 7px 10px; text-align: left; font-size: 9px; text-transform: uppercase; }
+  td { padding: 5px 10px; border-bottom: 1px solid #e5e7eb; }
+  .r { text-align: right; }
+  .mono { font-family: monospace; }
+  .due { color: #b45309; font-weight: 700; }
+
+  tfoot td { border-top: 2px solid #1f2937; border-bottom: none; font-weight: 800; padding-top: 8px; }
+
+  .footer { margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 12px; }
+</style>
+</head><body>
+
+<div class="header">
+  <div>
+    <div class="biz-name">${business.name}</div>
+    <div class="biz-detail">${business.address ?? ''}</div>
+    <div class="biz-detail">${business.phone ?? ''}</div>
+  </div>
+  <div class="doc-title">
+    <h1>${options.title.toUpperCase()}</h1>
+    ${options.periodLabel ? `<p>${options.periodLabel}</p>` : ''}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Commande</th>
+      <th>Date</th>
+      <th>Client / Caissier</th>
+      <th class="r">Total</th>
+      <th class="r">Payé</th>
+      <th class="r">Reste</th>
+      <th>Statut</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows || `<tr><td colspan="7" style="text-align:center; padding: 20px; color:#9ca3af;">Aucune facture</td></tr>`}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="3">Total (${orders.length} facture${orders.length !== 1 ? 's' : ''})</td>
+      <td class="r">${fmt(totalFacture)}</td>
+      <td class="r">${fmt(totalPaye)}</td>
+      <td class="r">${fmt(totalReste)}</td>
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="footer">
+  Imprimé le ${printDate} — Document généré par ELM
+</div>
+
+</body></html>`;
+}
+
 // --- Ouvrir et imprimer -------------------------------------------------------
 
 export function printHtml(html: string): void {
