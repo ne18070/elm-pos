@@ -24,7 +24,11 @@ interface OrderDetailProps {
   order: Order;
   currency: string;
   onClose: () => void;
-  onRefresh: () => void;
+  /** Doit résoudre une fois la liste des commandes effectivement rafraîchie —
+   *  voir les appels `await onRefresh()` ci-dessous : sans ce await, la liste
+   *  affichée à la réouverture pouvait encore montrer l'ancien état (acompte
+   *  non soldé) le temps que le refetch réseau se termine. */
+  onRefresh: () => void | Promise<void>;
   onPrint?: (order: Order) => void;
 }
 
@@ -201,7 +205,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       });
       success('Commande modifiée');
       setEditMode(false);
-      onRefresh();
+      await onRefresh();
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -299,7 +303,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         metadata:    { total: order.total },
       });
       success('Commande annulée');
-      onRefresh();
+      await onRefresh();
       onClose();
     } catch (err) {
       notifError(toUserError(err));
@@ -323,7 +327,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
       metadata:    { amount, reason: reason || null },
     });
     success(`Remboursement de ${fmt(amount)} enregistré`);
-    onRefresh();
+    await onRefresh();
     onClose();
   }
 
@@ -345,7 +349,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onPrint }: Or
         metadata:    { amount, method: completeMethod, fully_paid: amount >= remaining - 0.01 },
       });
       success(`Paiement de ${fmt(amount)} enregistré${amount >= remaining - 0.01 ? ' —commande soldée !' : ''}`);
-      onRefresh();
+      await onRefresh();
       onClose();
     } catch (err) {
       notifError(toUserError(err));

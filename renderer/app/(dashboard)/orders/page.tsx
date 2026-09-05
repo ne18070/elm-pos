@@ -456,7 +456,11 @@ export default function OrdersPage() {
           order={selectedOrder}
           currency={business?.currency ?? 'XOF'}
           onClose={() => setSelectedOrder(null)}
-          onRefresh={() => { refetch(); setSelectedOrder(null); }}
+          // Attend que la liste soit effectivement rechargée avant de fermer
+          // le panneau — sinon un clic rapide sur la même ligne pouvait
+          // rouvrir l'ancien objet commande (acompte non soldé) le temps que
+          // le refetch réseau se termine en arrière-plan.
+          onRefresh={async () => { await refetch(); setSelectedOrder(null); }}
           onPrint={(o) => setPrintOrder(o)}
         />
       )}
