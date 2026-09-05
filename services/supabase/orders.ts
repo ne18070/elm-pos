@@ -226,17 +226,23 @@ export interface UpdatePendingOrderInput {
   customer_name?: string | null;
   customer_phone?: string | null;
   notes?: string | null;
+  /** Remplace la remise de la commande (0 pour la retirer). Omis = inchangée. */
+  discount_amount?: number;
+  /** Détache le coupon appliqué (code, notes, compteur d'utilisation libéré). */
+  remove_coupon?: boolean;
 }
 
 export async function updatePendingOrder(orderId: string, input: UpdatePendingOrderInput): Promise<Order> {
   return q<Order>(supabase.rpc('update_pending_order', {
-    p_order_id:       orderId,
-    p_items:          input.items as never,
-    p_tax_rate:       input.tax_rate,
-    p_tax_inclusive:  input.tax_inclusive ?? false,
-    p_customer_name:  input.customer_name  ?? undefined,
-    p_customer_phone: input.customer_phone ?? undefined,
-    p_notes:          input.notes          ?? undefined,
+    p_order_id:        orderId,
+    p_items:           input.items as never,
+    p_tax_rate:        input.tax_rate,
+    p_tax_inclusive:   input.tax_inclusive ?? false,
+    p_customer_name:   input.customer_name  ?? undefined,
+    p_customer_phone:  input.customer_phone ?? undefined,
+    p_notes:           input.notes          ?? undefined,
+    p_discount_amount: input.discount_amount ?? undefined,
+    p_remove_coupon:   input.remove_coupon    ?? false,
   }) as never);
 }
 
