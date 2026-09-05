@@ -93,6 +93,9 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
   const [savingEdit, setSavingEdit] = useState(false);
   const [products, setProducts]     = useState<Product[]>([]);
   const [addPid, setAddPid]         = useState('');
+  // Remise/coupon éditables (voir "Totaux" plus bas et handleSaveEdit)
+  const [editDiscount, setEditDiscount]         = useState('0');
+  const [editRemoveCoupon, setEditRemoveCoupon] = useState(false);
 
   const can = useCan();
   const fmt              = (n: number) => formatCurrency(n, currency);
@@ -107,7 +110,9 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
   const canEdit          = canEditOrders && order.status === 'pending' && paidAmt <= 0.01;
 
   const editSubtotal = editLines.reduce((s, l) => s + (parseFloat(l.price) || 0) * (parseFloat(l.quantity) || 0), 0);
-  const editTaxable  = Math.max(0, editSubtotal - (order.discount_amount || 0));
+  const editDiscountNum      = parseFloat(editDiscount) || 0;
+  const discountExceedsTotal = editDiscountNum > editSubtotal;
+  const editTaxable          = Math.max(0, editSubtotal - editDiscountNum);
 
   // --- Contrôle du stock disponible en édition -------------------------------
   // La commande "réserve" déjà sa quantité d'origine → budget dispo par produit
@@ -148,6 +153,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
       notes: it.notes ?? null,
     })));
     setAddPid('');
+    setEditDiscount(String(order.discount_amount || 0));
+    setEditRemoveCoupon(false);
     setEditMode(true);
     if (business?.id) {
       getProducts(business.id).then(setProducts).catch(() => {});
@@ -188,6 +195,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
       .filter((i) => i.quantity > 0);
     if (items.length === 0) { notifError('Ajoutez au moins un article'); return; }
     if (hasStockError) { notifError('Quantité supérieure au stock disponible'); return; }
+    if (editDiscountNum < 0) { notifError('La remise ne peut pas être négative'); return; }
+    if (discountExceedsTotal) { notifError('La remise dépasse le sous-total'); return; }
 
     setSavingEdit(true);
     try {
@@ -197,6 +206,8 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
         tax_inclusive: taxInclusive,
         customer_name: order.customer_name ?? null,
         customer_phone: order.customer_phone ?? null,
+        discount_amount: editDiscountNum,
+        remove_coupon: editRemoveCoupon,
       });
       logAction({
         business_id: order.business_id,
@@ -205,7 +216,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
         entity_id:   order.id,
         user_id:     user?.id,
         user_name:   user?.full_name,
-        metadata:    { items: items.length, total: editTotal },
+        metadata:    { items: items.length, total: editTotal, discount: editDiscountNum, coupon_removed: editRemoveCoupon },
       });
       success('Commande modifiée');
       setEditMode(false);
@@ -542,17 +553,53 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
               <span>Sous-total</span>
               <span>{fmt(editMode ? editSubtotal : order.subtotal)}</span>
             </div>
-            {order.discount_amount > 0 && (
-              <div className="flex justify-between text-sm text-status-success">
-                <span>Remise {order.coupon_code && `(${order.coupon_code})`}</span>
-                <span>-{fmt(order.discount_amount)}</span>
+            {editMode ? (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-content-secondary shrink-0">Remise</span>
+                  {order.coupon_code && (
+                    editRemoveCoupon ? (
+                      <span className="text-xs text-content-muted italic truncate">
+                        coupon {order.coupon_code} retiré
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-badge-brand text-content-brand text-xs font-medium shrink-0">
+                        {order.coupon_code}
+                        <button
+                          type="button"
+                          onClick={() => { setEditRemoveCoupon(true); setEditDiscount('0'); }}
+                          title="Détacher le coupon de cette commande"
+                          className="hover:text-status-error"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )
+                  )}
+                </div>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={editDiscount}
+                  onChange={(e) => setEditDiscount(e.target.value)}
+                  className={`input h-7 w-24 text-right text-sm px-2 ${discountExceedsTotal ? 'border-status-error text-status-error' : ''}`}
+                  aria-label="Montant de la remise"
+                />
               </div>
-            )}
-            {order.coupon_code && order.discount_amount === 0 && (
-              <div className="flex justify-between text-sm text-status-warning">
-                <span>Offre ({order.coupon_code})</span>
-                <span>{order.coupon_notes ?? 'Article offert'}</span>
-              </div>
+            ) : (
+              <>
+                {order.discount_amount > 0 && (
+                  <div className="flex justify-between text-sm text-status-success">
+                    <span>Remise {order.coupon_code && `(${order.coupon_code})`}</span>
+                    <span>-{fmt(order.discount_amount)}</span>
+                  </div>
+                )}
+                {order.coupon_code && order.discount_amount === 0 && (
+                  <div className="flex justify-between text-sm text-status-warning">
+                    <span>Offre ({order.coupon_code})</span>
+                    <span>{order.coupon_notes ?? 'Article offert'}</span>
+                  </div>
+                )}
+              </>
             )}
             {(editMode ? editTax : order.tax_amount) > 0 && (
               <div className="flex justify-between text-sm text-content-secondary">
@@ -630,6 +677,12 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
                   <span>Une quantité dépasse le stock disponible.</span>
                 </div>
               )}
+              {discountExceedsTotal && (
+                <div className="flex gap-2 p-2.5 bg-badge-error border border-status-error rounded-xl text-xs text-status-error">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>La remise dépasse le sous-total.</span>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => setEditMode(false)}
@@ -640,7 +693,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  disabled={savingEdit || editLines.length === 0 || hasStockError}
+                  disabled={savingEdit || editLines.length === 0 || hasStockError || discountExceedsTotal || editDiscountNum < 0}
                   className="btn-primary flex-1 h-10 text-sm flex items-center justify-center gap-1.5"
                 >
                   {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
