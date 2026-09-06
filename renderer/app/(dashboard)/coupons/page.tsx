@@ -119,7 +119,7 @@ export default function CouponsPage() {
                   <th className="px-4 py-3 hidden sm:table-cell">Utilisations</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Expiration</th>
                   <th className="px-4 py-3">Statut</th>
-                  <th className="px-4 py-3 w-20"></th>
+                  <th className="px-4 py-3 w-24 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,7 +129,7 @@ export default function CouponsPage() {
                   return (
                     <tr
                       key={coupon.id}
-                      className={`border-b border-surface-border last:border-0 transition-colors group
+                      className={`border-b border-surface-border last:border-0 transition-colors
                         ${i % 2 === 0 ? '' : 'bg-surface-card/30'}`}
                     >
                       {/* Code */}
@@ -191,24 +191,28 @@ export default function CouponsPage() {
                         </span>
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions — toujours visibles (pas de hover : app tactile) */}
                       <td className="px-4 py-3">
-                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => setEditCoupon(coupon)}
-                            className="btn-secondary p-1.5"
-                            title="Modifier"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(coupon)}
-                            className="btn-danger p-1.5"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {can('manage_coupons') && (
+                          <div className="flex gap-1.5 justify-end">
+                            <button
+                              onClick={() => setEditCoupon(coupon)}
+                              className="btn-secondary p-2"
+                              title="Modifier"
+                              aria-label={`Modifier le coupon ${coupon.code}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(coupon)}
+                              className="btn-danger p-2"
+                              title="Supprimer"
+                              aria-label={`Supprimer le coupon ${coupon.code}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
