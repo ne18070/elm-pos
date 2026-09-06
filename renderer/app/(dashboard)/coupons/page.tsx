@@ -109,7 +109,71 @@ export default function CouponsPage() {
             <p className="font-medium">{search ? 'Aucun coupon trouvé' : 'Aucun coupon créé'}</p>
           </div>
         ) : (
-          <div className="rounded-xl border border-surface-border overflow-hidden m-6">
+          <>
+          {/* Mobile (< sm) : cartes — le tableau est trop large et sa dernière
+              colonne (Actions) était coupée hors écran. */}
+          <div className="sm:hidden p-4 space-y-3">
+            {filtered.map((coupon) => {
+              const { label: statusLabel, cls: statusCls } = couponStatusInfo(coupon);
+              return (
+                <div key={coupon.id} className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-mono font-bold text-content-brand text-sm truncate">{coupon.code}</p>
+                      <div className="flex items-center gap-1.5 mt-1 text-sm text-content-primary">
+                        <span className={`shrink-0 w-5 h-5 rounded-md flex items-center justify-center
+                          ${coupon.type === 'free_item'
+                            ? 'bg-badge-warning text-status-warning'
+                            : 'bg-badge-brand text-content-brand'}`}
+                        >
+                          <CouponTypeIcon type={coupon.type} />
+                        </span>
+                        <span className="font-medium truncate">{couponValueLabel(coupon, currency)}</span>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${statusCls}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-content-secondary">
+                    <span>
+                      {coupon.uses_count}{coupon.max_uses != null ? ` / ${coupon.max_uses}` : ''} util.
+                    </span>
+                    {coupon.min_order_amount != null && (
+                      <span>Min {formatCurrency(coupon.min_order_amount, currency)}</span>
+                    )}
+                    {coupon.min_quantity != null && (
+                      <span>Min {coupon.min_quantity} art.</span>
+                    )}
+                    {coupon.expires_at && (
+                      <span>Exp. {format(new Date(coupon.expires_at), 'd MMM yyyy', { locale: fr })}</span>
+                    )}
+                  </div>
+
+                  {can('manage_coupons') && (
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => setEditCoupon(coupon)}
+                        className="btn-secondary flex-1 h-9 text-sm flex items-center justify-center gap-1.5"
+                      >
+                        <Pencil className="w-4 h-4" /> Modifier
+                      </button>
+                      <button
+                        onClick={() => handleDelete(coupon)}
+                        className="btn-danger h-9 px-4 text-sm flex items-center justify-center gap-1.5"
+                      >
+                        <Trash2 className="w-4 h-4" /> Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Tablette / desktop (>= sm) : tableau */}
+          <div className="hidden sm:block rounded-xl border border-surface-border overflow-x-auto m-6">
             <table className="w-full">
               <thead className="sticky top-0 bg-surface-card border-b border-surface-border z-10">
                 <tr className="text-left text-xs text-content-secondary uppercase tracking-wide">
@@ -220,6 +284,7 @@ export default function CouponsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
