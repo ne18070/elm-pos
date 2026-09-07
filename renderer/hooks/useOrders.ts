@@ -14,6 +14,9 @@ interface UseOrdersOptions {
   search?:   string;
   cashierId?:    string;
   createdAfter?: string;
+  acompteOnly?:  boolean;
+  withCount?:    boolean;
+  projection?:   'full' | 'list';
 }
 
 export function useOrders(businessId: string, options?: UseOrdersOptions) {
@@ -23,7 +26,10 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
   const [error, setError]     = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
-    if (!businessId) return;
+    // businessId vide = requête volontairement désactivée (business/user pas
+    // encore chargé, ou source dédoublonnée) : on retombe sur un état neutre
+    // plutôt que de laisser `loading` à true indéfiniment.
+    if (!businessId) { setOrders([]); setCount(0); setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
@@ -36,7 +42,7 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search, options?.cashierId, options?.createdAfter]);
+  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search, options?.cashierId, options?.createdAfter, options?.acompteOnly, options?.withCount, options?.projection]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

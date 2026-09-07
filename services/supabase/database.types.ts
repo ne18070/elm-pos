@@ -2801,6 +2801,8 @@ export type Database = {
       }
       orders: {
         Row: {
+          amount_paid: number
+          balance_due: number
           business_id: string
           cashier_id: string | null
           coupon_code: string | null
@@ -2837,6 +2839,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount_paid?: number
           business_id: string
           cashier_id?: string | null
           coupon_code?: string | null
@@ -2873,6 +2876,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount_paid?: number
           business_id?: string
           cashier_id?: string | null
           coupon_code?: string | null

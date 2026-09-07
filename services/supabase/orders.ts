@@ -111,11 +111,28 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
 }
 
 /** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
+ *  le `#` de tête (l'ID est affiché "#A1B2C3D4" mais absent de la valeur uuid),
  *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
  *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
 function toIlikeTerm(raw: string): string {
-  return raw.trim().replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+  return raw.trim().replace(/^#+/, '').replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
 }
+
+// Jointures complètes, y compris le SKU produit de chaque ligne (facture
+// distributeur). Le sous-select `products` par ligne de commande est coûteux :
+// à réserver aux petits lots (une page de 50).
+const ORDERS_FULL_SELECT =
+  `*, items:order_items(*, product:products(sku)), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`;
+// Comme FULL mais sans la jointure `products` — supprime un sous-select par
+// ligne d'article. Suffit pour l'export historique (niveau commande) ; à
+// utiliser pour les gros lots qui sinon dépassent le statement_timeout (57014).
+const ORDERS_LIST_SELECT =
+  `*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`;
+
+const ORDERS_SELECT: Record<'full' | 'list', string> = {
+  full: ORDERS_FULL_SELECT,
+  list: ORDERS_LIST_SELECT,
+};
 
 export async function getOrders(
   businessId: string,
@@ -134,14 +151,24 @@ export async function getOrders(
     /** Plancher absolu sur created_at (ISO) — cumulé avec date/dateFrom/dateTo,
      *  jamais élargi par l'utilisateur. Sert à borner la vue d'un caissier. */
     createdAfter?: string;
+    /** Acomptes uniquement : solde restant dû > 0, hors annulées/remboursées et
+     *  hors demandes WhatsApp. Filtré et paginé côté SQL via la colonne générée
+     *  `orders.balance_due` + l'index partiel `idx_orders_acompte` (migration
+     *  112) — aucun filtrage ni pagination en mémoire côté client. */
+    acompteOnly?: boolean;
+    /** Demander le count exact (parcours complet des lignes correspondantes,
+     *  coûteux). Par défaut true ; passer false quand seule la page compte. */
+    withCount?: boolean;
+    /** 'full' (défaut) : toutes les jointures + SKU produit. 'list' : idem sans
+     *  la jointure produit (gros lots, export). */
+    projection?: 'full' | 'list';
   }
 ): Promise<{ orders: Order[]; count: number }> {
+  const withCount = options?.withCount ?? true;
+  const selectStr = ORDERS_SELECT[options?.projection ?? 'full'];
   let query = supabase
     .from('orders')
-    .select(
-      `*, items:order_items(*, product:products(sku)), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`,
-      { count: 'exact' }
-    )
+    .select(selectStr, withCount ? { count: 'exact' } : undefined)
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
 
@@ -153,6 +180,17 @@ export async function getOrders(
   }
   if (options?.createdAfter) {
     query = query.gte('created_at', options.createdAfter);
+  }
+  if (options?.acompteOnly) {
+    // Acompte = solde restant dû. `balance_due` (colonne générée = total -
+    // amount_paid, migration 112) rend le critère exprimable en SQL, donc
+    // paginable et comptable comme n'importe quel autre onglet. 0.005 = même
+    // tolérance que le calcul d'affichage (payé < total - 0.01). WhatsApp
+    // exclu : ce sont des demandes non encaissées, pas des acomptes.
+    query = query
+      .gt('balance_due', 0.005)
+      .not('status', 'in', '(cancelled,refunded)')
+      .neq('source', 'whatsapp');
   }
   // `date`/`dateFrom`/`dateTo` sont des dates calendaires locales (YYYY-MM-DD,
   // ex. "aujourd'hui" au fuseau du navigateur) — on les convertit en bornes

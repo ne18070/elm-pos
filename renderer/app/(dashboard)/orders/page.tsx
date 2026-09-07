@@ -45,12 +45,13 @@ function todayLocalISO(): string {
 }
 
 const PAGE_SIZE = 50;
-// "Acompte" (paiement partiel) n'est pas une colonne en base — c'est calculé
-// (payé < total) à partir des lignes payments de chaque commande. Impossible
-// à filtrer/paginer côté SQL sans vue dédiée : on se limite donc aux
-// ACOMPTE_FETCH_LIMIT commandes les plus récentes pour cet onglet et le badge
-// de comptage, plutôt que de charger tout l'historique en mémoire.
-const ACOMPTE_FETCH_LIMIT = 3000;
+// Plafond de sécurité de l'export "Imprimer l'historique". Au-delà, on prévient
+// que le lot est tronqué plutôt que de laisser croire à un export exhaustif.
+const HISTORY_PRINT_LIMIT = 5000;
+// "Acompte" (commande partiellement payée) est désormais filtré/paginé/compté
+// côté SQL via `orders.balance_due` + l'index partiel `idx_orders_acompte`
+// (migration 112) — plus aucun chargement de lot en mémoire, cet onglet se
+// comporte exactement comme les autres.
 
 // Un utilisateur sans la permission `view_all_orders` (par défaut : le caissier)
 // ne voit que SES propres ventes (cashier_id = son id) des
@@ -58,19 +59,26 @@ const ACOMPTE_FETCH_LIMIT = 3000;
 // le plancher created_at est calculé côté serveur, non modifiable depuis l'UI.
 const RESTRICTED_WINDOW_DAYS = 30;
 
+// Somme des paiements depuis les lignes `payments` (et non `order.amount_paid`) :
+// c'est ce que la mise à jour optimiste de la liste modifie (OrderDetail →
+// patchOrder) après l'encaissement d'un solde, sans attendre le refetch.
+// `order.amount_paid` (dénormalisé) ne sert qu'au filtre SQL de l'onglet.
 function getPaidAmount(order: Order): number {
   return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
 }
 
+// Affichage par ligne : badge "Acompte" + colonne versé/reste. Le filtrage de
+// l'onglet se fait côté serveur (acompteOnly) ; cette fonction ne fait que
+// refléter le même critère visuellement.
 function isAcompte(order: Order): boolean {
   if (order.status === 'cancelled' || order.status === 'refunded') return false;
-  if ((order as { source?: string }).source === 'whatsapp') return false;
+  if (order.source === 'whatsapp') return false;
   return getPaidAmount(order) < order.total - 0.01;
 }
 
 export default function OrdersPage() {
   const { business, user } = useAuthStore();
-  const { error: notifError } = useNotificationStore();
+  const { error: notifError, warning: notifWarn } = useNotificationStore();
   const canViewAllOrders = usePermission('view_all_orders');
   const restricted = !canViewAllOrders;
   const [tab, setTab]               = useState<FilterTab>('today');
@@ -125,38 +133,40 @@ export default function OrdersPage() {
     if (page !== 1) { effectivePage = 1; setPage(1); }
   }
 
-  // Liste principale affichée : pagination réelle côté serveur pour les
-  // onglets à statut direct. Pour "acompte" (calculé, non filtrable en SQL —
-  // voir ACOMPTE_FETCH_LIMIT), on récupère un lot borné des commandes les
-  // plus récentes et on filtre/pagine côté client à l'intérieur de ce lot.
-  const { orders, count, loading, refetch, patchOrder } = useOrders(
+  // Liste principale : pagination réelle côté serveur pour TOUS les onglets,
+  // "acompte" compris (filtré par `balance_due` en SQL — cf. migration 112).
+  const { orders, count, loading, error, refetch, patchOrder } = useOrders(
     effectiveBusinessId,
-    isAcompteTab
-      ? { limit: ACOMPTE_FETCH_LIMIT, search: debouncedSearch, ...dateRange, ...scopeOpts }
-      : { status: dbStatus, limit: PAGE_SIZE, offset: (effectivePage - 1) * PAGE_SIZE, search: debouncedSearch, ...dateRange, ...scopeOpts },
+    {
+      status:      dbStatus,
+      acompteOnly: isAcompteTab || undefined,
+      limit:       PAGE_SIZE,
+      offset:      (effectivePage - 1) * PAGE_SIZE,
+      search:      debouncedSearch,
+      ...dateRange,
+      ...scopeOpts,
+    },
   );
 
-  // Source dédiée au badge de comptage "acompte" — indépendante de l'onglet
-  // actif, mais désactivée (businessId vide) quand l'onglet acompte est déjà
-  // ouvert : `orders` ci-dessus sert alors directement de source, pas besoin
-  // de la récupérer deux fois.
-  // Le badge "acompte" reste indépendant de l'onglet "Aujourd'hui" : il suit le
-  // sélecteur de dates s'il est renseigné, sinon toute la fenêtre récente.
-  const { orders: acompteBadgeSource } = useOrders(
+  // Badge de comptage "acompte" — count exact côté serveur (index partiel), pas
+  // de lignes rapatriées hormis la première. Indépendant de l'onglet actif et
+  // de l'onglet "Aujourd'hui" ; suit le sélecteur de dates s'il est renseigné.
+  const { count: acompteCount } = useOrders(
     isAcompteTab ? '' : effectiveBusinessId,
-    { limit: ACOMPTE_FETCH_LIMIT, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, ...scopeOpts },
+    {
+      acompteOnly: true,
+      limit:       1,
+      projection:  'list',
+      dateFrom:    dateFrom || undefined,
+      dateTo:      dateTo || undefined,
+      ...scopeOpts,
+    },
   );
-  const acompteCount = (isAcompteTab ? orders : acompteBadgeSource).filter(isAcompte).length;
+  const effectiveAcompteCount = isAcompteTab ? count : acompteCount;
 
-  // Sur l'onglet acompte, `orders` contient jusqu'à ACOMPTE_FETCH_LIMIT
-  // commandes déjà filtrées par recherche côté serveur — reste à appliquer le
-  // filtre acompte et la pagination localement. Sur les autres onglets, le
-  // serveur a déjà renvoyé exactement la page demandée.
-  const filtered  = isAcompteTab ? orders.filter(isAcompte) : orders;
-  const pageCount = isAcompteTab ? Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)) : Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const pageCount   = Math.max(1, Math.ceil(count / PAGE_SIZE));
   const currentPage = Math.min(effectivePage, pageCount);
-  const paginated = isAcompteTab ? filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE) : filtered;
-  const totalCount = isAcompteTab ? filtered.length : count;
+  const totalCount  = count;
 
   // Débounce la recherche pour éviter une requête réseau à chaque frappe.
   useEffect(() => {
@@ -164,21 +174,37 @@ export default function OrdersPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  // Réaligne `page` sur la dernière page réelle quand le jeu de résultats a
+  // rétréci sans passer par un changement de filtre (refetch temps réel,
+  // annulation d'une commande sur la dernière page…) — sinon la requête repart
+  // avec un offset au-delà des données (page vide affichée « Page 2 / 2 ») et
+  // les boutons de pagination travaillent sur une valeur périmée.
+  useEffect(() => {
+    if (!loading && page > pageCount) setPage(pageCount);
+  }, [loading, page, pageCount]);
+
   // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp.
   // Fait un fetch direct par id plutôt que de chercher dans la page chargée :
   // la commande visée peut être sur n'importe quelle page/onglet.
+  const orderParamHandledRef = useRef(false);
   useEffect(() => {
+    if (orderParamHandledRef.current) return;
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order');
     if (!orderId) return;
+    // Attendre de connaître l'identité de l'utilisateur avant de décider si un
+    // caissier restreint a le droit d'ouvrir cette facture (évite aussi de
+    // relancer le fetch quand `user.id` passe de undefined à sa valeur).
+    if (restricted && !user?.id) return;
+    orderParamHandledRef.current = true;
     getOrderById(orderId).then((order) => {
       // Un caissier au périmètre restreint ne peut pas ouvrir la facture d'un
       // collègue via un lien direct (?order=…).
       if (restricted && order.cashier_id !== user?.id) return;
       setTab('all');
       setSelectedOrder(order);
-    }).catch(() => {});
-  }, [restricted, user?.id]);
+    }).catch((err) => notifError(toUserError(err)));
+  }, [restricted, user?.id, notifError]);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency);
 
@@ -190,14 +216,21 @@ export default function OrdersPage() {
     if (!business) return;
     setPrintingHistory(true);
     try {
-      const { orders: historyOrders } = await getOrders(effectiveBusinessId, {
-        status: dbStatus,
-        search: debouncedSearch,
-        limit:  5000,
+      const { orders: list } = await getOrders(effectiveBusinessId, {
+        status:      dbStatus,
+        acompteOnly: isAcompteTab || undefined,
+        search:      debouncedSearch,
+        limit:       HISTORY_PRINT_LIMIT,
+        withCount:   false,
+        // Rapport niveau commande uniquement : projection allégée pour tenir
+        // sous le statement_timeout sur un gros historique.
+        projection:  'list',
         ...dateRange,
         ...scopeOpts,
       });
-      const list = isAcompteTab ? historyOrders.filter(isAcompte) : historyOrders;
+      if (list.length >= HISTORY_PRINT_LIMIT) {
+        notifWarn(`Historique limité aux ${HISTORY_PRINT_LIMIT} commandes les plus récentes — affinez les dates pour un export complet.`);
+      }
       const periodLabel = isTodayTab
         ? `Aujourd'hui — ${format(new Date(), 'dd MMMM yyyy', { locale: fr })}`
         : (dateFrom || dateTo)
@@ -326,11 +359,11 @@ export default function OrdersPage() {
               >
                 {TAB_LABELS[t]}
                 {/* Badge compteur acomptes */}
-                {t === 'acompte' && acompteCount > 0 && (
+                {t === 'acompte' && effectiveAcompteCount > 0 && (
                   <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold ${
                     tab === 'acompte' ? 'bg-white/20 text-content-primary' : 'bg-amber-600 text-content-primary'
                   }`}>
-                    {acompteCount}
+                    {effectiveAcompteCount}
                   </span>
                 )}
               </button>
@@ -342,7 +375,15 @@ export default function OrdersPage() {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-32 text-content-secondary">Chargement…</div>
-          ) : filtered.length === 0 ? (
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-32 text-content-secondary gap-2">
+              <p className="text-status-error">Impossible de charger les commandes.</p>
+              <button onClick={refetch} className="btn-secondary flex items-center gap-1.5 text-sm">
+                <RefreshCw className="w-4 h-4" />
+                Réessayer
+              </button>
+            </div>
+          ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-content-secondary">
               <Filter className="w-8 h-8 mb-2 opacity-40" />
               <p>Aucune commande trouvée</p>
@@ -361,7 +402,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((order) => {
+                {orders.map((order) => {
                   const partial   = isAcompte(order);
                   const paidAmt   = getPaidAmount(order);
                   const remaining = order.total - paidAmt;
@@ -377,7 +418,7 @@ export default function OrdersPage() {
                     >
                       <td className="px-3 py-2 font-mono text-xs text-content-primary whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          {(order as { source?: string }).source === 'whatsapp' && (
+                          {order.source === 'whatsapp' && (
                             <span title="Commande WhatsApp">
                               <MessageCircle className="w-3.5 h-3.5 text-status-success shrink-0" />
                             </span>
@@ -403,7 +444,7 @@ export default function OrdersPage() {
                             {order.customer_phone && (
                               <p className="text-xs text-status-warning pl-5 truncate">{order.customer_phone}</p>
                             )}
-                            {(order as { source?: string }).source === 'whatsapp'
+                            {order.source === 'whatsapp'
                               ? <p className="text-xs text-status-success pl-5 flex items-center gap-1"><MessageCircle className="w-3 h-3" />WhatsApp</p>
                               : <p className="text-xs text-content-muted pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
                             }
@@ -469,14 +510,14 @@ export default function OrdersPage() {
         </div>
 
         {/* Pagination */}
-        {!loading && filtered.length > 0 && pageCount > 1 && (
+        {!loading && !error && orders.length > 0 && pageCount > 1 && (
           <div className="flex items-center justify-between px-4 py-2 border-t border-surface-border">
             <p className="text-xs text-content-secondary">
               Page {currentPage} / {pageCount} · {totalCount} commande{totalCount !== 1 ? 's' : ''}
             </p>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage <= 1}
                 className="btn-secondary flex items-center gap-1 text-sm px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -484,7 +525,7 @@ export default function OrdersPage() {
                 <span className="hidden sm:inline">Précédent</span>
               </button>
               <button
-                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
                 disabled={currentPage >= pageCount}
                 className="btn-secondary flex items-center gap-1 text-sm px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
               >

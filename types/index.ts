@@ -150,6 +150,12 @@ export interface Order {
   tax_amount: number;
   discount_amount: number;
   total: number;
+  /** Total encaissé, dénormalisé (maintenu par trigger sur `payments`). Sert au
+   *  filtre SQL de l'onglet "Acompte" ; l'affichage par ligne recalcule depuis
+   *  `payments` pour rester cohérent avec les mises à jour optimistes. */
+  amount_paid?: number;
+  /** Solde restant dû = total - amount_paid (colonne générée). > 0 ⇒ acompte. */
+  balance_due?: number;
   coupon_id?: string;
   coupon_code?: string;
   coupon_notes?: string;  // description affichée sur la facture (ex: "1 bouteille offerte")
