@@ -27,6 +27,17 @@ export interface CreateOrderInput {
   payments?: Array<{ method: string; amount: number }>;
   order_channel?: 'salle' | 'emporter' | 'livraison';
   delivery_address?: string;
+  /** UUID généré par le client AVANT l'appel — rend un rejeu (file offline,
+   *  double clic, réponse réseau perdue) idempotent côté `create_order`. */
+  client_order_id?: string;
+  /** Rachat de points fidélité — débité DANS `create_order`, même transaction
+   *  que la commande (l'ancien flux débitait après coup, hors transaction). */
+  loyalty_redeem?: {
+    client_name: string;
+    client_phone?: string | null;
+    points: number;      // points à débiter (= remise appliquée / valeur du point)
+    cash_value: number;  // montant de la remise fidélité portée par la commande
+  } | null;
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
@@ -58,6 +69,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
     order_data: {
       business_id: input.business_id,
       cashier_id:  input.cashier_id,
+      client_order_id: input.client_order_id ?? null,
       hotel_reservation_id: input.hotel_reservation_id ?? null,
       items: input.cart.items.map((item) => ({
         product_id:       item.product_id,
@@ -75,6 +87,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
         amount: input.payment_amount,
       },
       ...(input.payments ? { payments: input.payments } : {}),
+      loyalty_redeem: input.loyalty_redeem ?? null,
       subtotal,
       tax_amount:      tax,
       discount_amount: discount,

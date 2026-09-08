@@ -131,6 +131,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   partial:      'Acompte / Partiel',
   room_charge:  'Note de chambre',
   free:         'Gratuité / Offert',
+  loyalty:      'Points fidélité',
 };
 
 export const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
@@ -140,6 +141,7 @@ export const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   partial:      'SplitSquareHorizontal',
   room_charge:  'BedDouble',
   free:         'Gift',
+  loyalty:      'Star',
 };
 
 export const MOBILE_MONEY_PROVIDER_LABELS: Record<MobileMoneyProvider, string> = {

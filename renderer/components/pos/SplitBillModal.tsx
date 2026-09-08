@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Users, ChevronRight, Banknote, CreditCard, Smartphone, Loader2, CheckCircle, Minus, Plus } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { NumpadModal } from '@/components/ui/NumpadModal';
@@ -8,9 +8,10 @@ import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
+import { isNetworkError, orderErrorMessage } from '@/lib/net';
 import { createOrder } from '@services/supabase/orders';
-import { openCashDrawer } from '@/lib/ipc';
-import { computeOrderTotals } from '@domain/order.service';
+import { enqueueToSync, openCashDrawer } from '@/lib/ipc';
+import { computeOrderTotals, buildOrderDbPayload } from '@domain/order.service';
 import { PAYMENT_METHOD_LABELS } from '@domain/payment.service';
 import type { PaymentMethod } from '@pos-types';
 import type { WholesaleContext } from './WholesaleSelector';
@@ -43,6 +44,8 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, whole
   const [numpadOpen, setNumpadOpen]   = useState(false);
   const [submitting, setSubmitting]   = useState(false);
   const [erreur, setErreur]           = useState('');
+  const submittingRef                 = useRef(false);
+  const clientOrderIdRef              = useRef('');
 
   const cart = useCartStore();
   const { user, business } = useAuthStore();
@@ -83,21 +86,27 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, whole
 
   async function finalizeOrder(payments: PersonPayment[]) {
     if (!user || !business) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
+    if (!clientOrderIdRef.current) clientOrderIdRef.current = crypto.randomUUID();
+    const clientOrderId = clientOrderIdRef.current;
+    const payloadPayments = payments.map(p => ({ method: p.method, amount: p.amount }));
     try {
       await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
+        client_order_id: clientOrderId,
         cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         payment_method: payments.length === 1 ? payments[0].method : 'cash',
         payment_amount: total,
-        payments:       payments.map(p => ({ method: p.method, amount: p.amount })),
+        payments:       payloadPayments,
         tax_rate:       taxRate,
         tax_inclusive:  taxInclusive,
         coupons:        cart.coupons,
         notes:          cart.notes,
         table_id:       tableId,
-        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_id:        wholesaleCtx?.reseller?.id ?? undefined,
         reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
         order_channel:  cart.orderChannel !== 'salle' ? cart.orderChannel : undefined,
       });
@@ -107,11 +116,43 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, whole
       notifSuccess(`Addition partagée — ${n} parts encaissées`);
       cart.clear();
       setStage('done');
-    } catch {
-      notifWarning('Hors ligne — vente enregistrée localement');
+    } catch (err: unknown) {
+      console.error('Split bill order failed:', err);
+      // Erreur métier : on ne perd rien — retour à la dernière part, panier intact.
+      if (!isNetworkError(err)) {
+        setErreur(orderErrorMessage(err));
+        setCollected(payments.slice(0, -1));
+        setPersonIdx(n - 1);
+        setMethod('cash');
+        setReceived('');
+        setStage('collect');
+        return;
+      }
+      // Vraie panne réseau : file de synchro (client_order_id → pas de doublon).
+      const dbPayload = buildOrderDbPayload({
+        businessId:  business.id,
+        cashierId:   user.id,
+        clientOrderId,
+        cart:        { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
+        paymentMethod: payments.length === 1 ? payments[0].method : 'cash',
+        paymentAmount: total,
+        taxRate,
+        taxInclusive,
+        notes:       cart.notes,
+        tableId,
+        resellerId:       wholesaleCtx?.reseller?.id ?? null,
+        resellerClientId: wholesaleCtx?.client?.id ?? null,
+      });
+      (dbPayload as Record<string, unknown>).payments = payloadPayments;
+      if (cart.orderChannel !== 'salle') {
+        (dbPayload as Record<string, unknown>).order_channel = cart.orderChannel;
+      }
+      await enqueueToSync('create_order', dbPayload);
+      notifWarning('Hors ligne — addition enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
       setStage('done');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

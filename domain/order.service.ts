@@ -28,6 +28,18 @@ export interface CreateOrderPayload {
   tableId?: string;
   resellerId?: string | null;       // vente de gros : revendeur lié
   resellerClientId?: string | null; // client du revendeur (optionnel)
+  /** UUID généré avant l'appel — rend le rejeu (file de synchro) idempotent. */
+  clientOrderId?: string;
+  /** Lignes de paiement détaillées (fidélité + espèces) — conservées pour le
+   *  repli offline, où le règlement multi-modes doit survivre au rejeu. */
+  payments?: Array<{ method: string; amount: number }>;
+  /** Rachat de points fidélité, débité dans `create_order` au (re)jeu. */
+  loyaltyRedeem?: {
+    client_name: string;
+    client_phone?: string | null;
+    points: number;
+    cash_value: number;
+  } | null;
 }
 
 export type OrderValidationError =
@@ -137,20 +149,30 @@ export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string,
   return {
     business_id:     payload.businessId,
     cashier_id:      payload.cashierId,
+    client_order_id: payload.clientOrderId ?? null,
     items: payload.cart.items.map((item) => ({
-      product_id:      item.product_id,
-      variant_id:      item.variant_id,
-      name:            item.name,
-      price:           item.price,
-      quantity:        item.quantity,
-      discount_amount: 0,
-      total:           round2(item.price * item.quantity),
-      notes:           item.notes,
+      product_id:       item.product_id,
+      variant_id:       item.variant_id,
+      name:             item.name,
+      price:            item.price,
+      quantity:         item.quantity,
+      discount_amount:  0,
+      total:            round2(item.price * item.quantity),
+      notes:            item.notes,
+      stock_consumption: item.stock_consumption ?? 1,
     })),
     payment: {
       method:    payload.paymentMethod,
       amount:    payload.paymentAmount,
     },
+    // Règlement multi-modes (fidélité + espèces) : create_order insère alors
+    // une ligne par mode. On ne l'émet qu'à partir de 2 lignes, ou dès qu'un
+    // rachat de points est en jeu (la ligne 'loyalty' doit exister sur la vente).
+    ...(payload.payments &&
+        (payload.payments.length > 1 || (payload.loyaltyRedeem != null && payload.payments.length > 0))
+      ? { payments: payload.payments }
+      : {}),
+    loyalty_redeem: payload.loyaltyRedeem ?? null,
     subtotal,
     tax_amount:      taxAmount,
     discount_amount: discountAmount,

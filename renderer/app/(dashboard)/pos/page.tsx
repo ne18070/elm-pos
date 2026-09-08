@@ -132,7 +132,8 @@ export default function PosPage() {
       try {
         const product = await getProductByBarcode(business.id, barcode);
         if (product) {
-          addItem(product);
+          const res = addItem(product);
+          if (!res.ok) warning(res.reason ?? 'Stock insuffisant');
         } else {
           warning(`Aucun produit trouvé pour le code : ${barcode}`);
         }

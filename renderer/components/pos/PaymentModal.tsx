@@ -11,12 +11,13 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
+import { isNetworkError, orderErrorMessage } from '@/lib/net';
 import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
 import { createOrder, findOverdueAcompte } from '@services/supabase/orders';
-import { getLoyaltyConfig, getClientBalance, redeemPoints, type LoyaltyConfig } from '@services/supabase/loyalty';
+import { getLoyaltyConfig, getClientBalance, type LoyaltyConfig } from '@services/supabase/loyalty';
 import { enqueueToSync, printReceipt, openCashDrawer } from '@/lib/ipc';
 import { getIntouchConfig, processIntouchPayment, waitForPayment } from '@services/supabase/intouch';
 import type { IntouchConfig, IntouchPaymentRequest, IntouchPaymentResponse } from '@services/supabase/intouch';
@@ -126,6 +127,15 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
   // Ref vers la fonction DB à appeler quand le client valide
   const submitRef = useRef<(() => Promise<void>) | null>(null);
+  // Garde anti double-soumission (confirmation client + clic bypass simultanés).
+  const submittingRef = useRef(false);
+  // UUID d'idempotence : identique pour la tentative en ligne ET son repli
+  // offline → si l'appel a en fait abouti côté serveur, le rejeu ne duplique pas.
+  const clientOrderIdRef = useRef<string>('');
+  const nextClientOrderId = () => {
+    clientOrderIdRef.current = crypto.randomUUID();
+    return clientOrderIdRef.current;
+  };
 
   const fmt = (n: number) => formatCurrency(n, currency);
   const { subtotal, discountAmount, taxAmount, total } = computeOrderTotals(
@@ -220,26 +230,50 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // -- DB : paiement complet -------------------------------------------------
   async function submitSimple() {
     if (!user || !business) return;
+    if (submittingRef.current) return;      // anti double-soumission
+    submittingRef.current = true;
     setChargement(true);
     const reservation = reservationRef.current;
-    try {
-      // Construire les lignes de paiement (loyalty + méthode principale)
-      const loyaltyPayments = useLoyalty && loyaltyDiscount > 0
-        ? [{ method: 'loyalty', amount: loyaltyDiscount }]
-        : [];
-      const cashPaymentAmount = methode === 'cash' ? montantRecuNum : effectiveTotal;
-      const mainPayments = effectiveTotal > 0
-        ? [{ method: methode, amount: effectiveTotal }]
-        : [];
-      const allPayments = [...loyaltyPayments, ...mainPayments];
+    const clientOrderId = nextClientOrderId();
 
+    // Lignes de paiement : le tableau `payments` n'est utilisé QUE pour un
+    // règlement multi-lignes (fidélité + espèces). Un mode unique passe par le
+    // `payment` singulier — qui seul porte la référence de transaction (carte
+    // / mobile money).
+    const loyaltyPayments = useLoyalty && loyaltyDiscount > 0
+      ? [{ method: 'loyalty', amount: loyaltyDiscount }]
+      : [];
+    const mainPayments = effectiveTotal > 0
+      ? [{ method: methode, amount: effectiveTotal }]
+      : [];
+    const allPayments = [...loyaltyPayments, ...mainPayments];
+
+    // Rachat de points fidélité : débité DANS create_order (même transaction).
+    // Si les identifiants client ou le seuil ne sont pas réunis, on n'applique
+    // simplement pas de remise (loyaltyDiscount vaut alors 0 de toute façon).
+    const loyaltyRedeem =
+      useLoyalty && loyaltyConfig && maxRedeemablePoints >= loyaltyConfig.min_redeem && customerName.trim()
+        ? {
+            client_name:  customerName.trim(),
+            client_phone: customerPhone.trim() || null,
+            points:       maxRedeemablePoints,
+            cash_value:   loyaltyDiscount,
+          }
+        : null;
+
+    try {
       const order = await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
+        client_order_id: clientOrderId,
         cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
-        payment_method: effectiveTotal === 0 ? 'loyalty' as any : methode,
-        payment_amount: effectiveTotal === 0 ? loyaltyDiscount : cashPaymentAmount,
+        payment_method: effectiveTotal === 0 ? 'loyalty' : methode,
+        // Montant DÛ réglé, jamais le montant « donné » par le client : c'est
+        // ce qui alimente la session de caisse et la compta (le rendu monnaie
+        // est un affichage, pas un encaissement).
+        payment_amount: effectiveTotal === 0 ? loyaltyDiscount : effectiveTotal,
         payments:       allPayments.length > 1 ? allPayments : undefined,
+        loyalty_redeem: loyaltyRedeem ?? undefined,
         tax_rate:       taxRate,
         tax_inclusive:  taxInclusive,
         coupons:        cart.coupons,
@@ -248,20 +282,15 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         customer_phone:   (methode === 'room_charge' ? reservation?.guest?.phone : customerPhone.trim()) || undefined,
         hotel_reservation_id: reservation?.id,
         table_id:         tableId,
-        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_id:        wholesaleCtx?.reseller?.id ?? undefined,
         reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
         order_channel:    orderChannel !== 'salle' ? orderChannel : undefined,
         delivery_address: deliveryAddress.trim() || undefined,
       });
 
-      // Déduire les points fidélité après création de l'ordre
-      if (useLoyalty && loyaltyConfig && maxRedeemablePoints >= loyaltyConfig.min_redeem && customerName.trim()) {
-        try {
-          await redeemPoints(business.id, customerName.trim(), customerPhone.trim() || null, maxRedeemablePoints, loyaltyConfig, undefined, order.id);
-        } catch (e) {
-          console.warn('[pos] loyalty redeem failed', e);
-        }
-      }
+      // Les points fidélité sont désormais débités PAR create_order, dans la
+      // même transaction que la commande (plus de fenêtre où la remise passe
+      // sans que les points soient déduits).
       if (customerName.trim() && methode !== 'room_charge') saveCustomer(customerName, customerPhone);
       setOrdreId(order.id);
       setOrdre(order);
@@ -269,7 +298,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         order,
         business,
         cashier_name: user.full_name,
-        reseller_name:        wholesaleCtx?.reseller.name,
+        reseller_name:        wholesaleCtx?.reseller?.name,
         reseller_client_name: wholesaleCtx?.client?.name,
         reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
         loyalty: useLoyalty && loyaltyConfig && maxRedeemablePoints > 0 ? {
@@ -284,29 +313,42 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       onPaymentConfirm?.(methode === 'cash' ? montantRecuNum : total, rendu, total);
       cart.clear();
       setStep('succes');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Order creation failed:', err);
+      // Erreur MÉTIER (stock, droits, abonnement…) : ne rien mettre en file,
+      // ne pas vider le panier, montrer l'erreur au caissier.
+      if (!isNetworkError(err)) {
+        setErreur(orderErrorMessage(err));
+        setStep('methode');
+        return;
+      }
+      // Vraie panne réseau : repli sur la file de synchro (même client_order_id
+      // → aucun doublon si l'appel avait en fait abouti).
       const dbPayload = buildOrderDbPayload({
         businessId:    business.id,
         cashierId:     user.id,
+        clientOrderId,
         cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         paymentMethod: methode,
-        paymentAmount: methode === 'cash' ? montantRecuNum : total,
+        paymentAmount: effectiveTotal,
+        payments:      allPayments,
+        loyaltyRedeem,
         taxRate,
         taxInclusive,
         notes:         cart.notes,
         tableId:       tableId,
-        resellerId:       wholesaleCtx?.reseller.id ?? null,
+        resellerId:       wholesaleCtx?.reseller?.id ?? null,
         resellerClientId: wholesaleCtx?.client?.id ?? null,
       });
       if (reservation) {
-        (dbPayload as any).hotel_reservation_id = reservation.id;
+        (dbPayload as Record<string, unknown>).hotel_reservation_id = reservation.id;
       }
       await enqueueToSync('create_order', dbPayload);
       notifWarning('Hors ligne —vente enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
       setStep('succes');
     } finally {
+      submittingRef.current = false;
       setChargement(false);
     }
   }
@@ -354,13 +396,17 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // -- DB : acompte ----------------------------------------------------------
   async function submitAcompte() {
     if (!user || !business) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setAcompteConfirme(acompteNum);
     setTotalConfirme(total);
     setChargement(true);
+    const clientOrderId = nextClientOrderId();
     try {
       const order = await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
+        client_order_id: clientOrderId,
         cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         payment_method: 'partial',
         payment_amount: acompteNum,
@@ -371,7 +417,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         customer_name:  customerName.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
         table_id:       tableId,
-        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_id:        wholesaleCtx?.reseller?.id ?? undefined,
         reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
       });
       setOrdreId(order.id);
@@ -383,17 +429,25 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       if (partialMethod === 'cash') openCashDrawer().catch(() => {});
       cart.clear();
       setStep('succes');
-    } catch {
+    } catch (err: unknown) {
+      console.error('Acompte creation failed:', err);
+      if (!isNetworkError(err)) {
+        setErreur(orderErrorMessage(err));
+        setStep('methode');
+        return;
+      }
       const dbPayload = buildOrderDbPayload({
         businessId:    business.id,
         cashierId:     user.id,
+        clientOrderId,
         cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         paymentMethod: 'partial',
         paymentAmount: acompteNum,
         taxRate,
+        taxInclusive,
         notes:         cart.notes,
         tableId:       tableId,
-        resellerId:       wholesaleCtx?.reseller.id ?? null,
+        resellerId:       wholesaleCtx?.reseller?.id ?? null,
         resellerClientId: wholesaleCtx?.client?.id ?? null,
       });
       (dbPayload as Record<string, unknown>).customer_name  = customerName.trim() || null;
@@ -404,6 +458,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       cart.clear();
       setStep('succes');
     } finally {
+      submittingRef.current = false;
       setChargement(false);
     }
   }
@@ -414,14 +469,18 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // dans le détail de la commande.
   async function submitDeliveryNote() {
     if (!user || !business) return;
+    if (submittingRef.current) return;
     setErreur('');
     if (!customerName.trim()) { setErreur('Le nom du client est obligatoire pour un bon de livraison'); return; }
+    submittingRef.current = true;
     setTotalConfirme(total);
     setChargement(true);
+    const clientOrderId = nextClientOrderId();
     try {
       const order = await createOrder({
         business_id:    business.id,
         cashier_id:     user.id,
+        client_order_id: clientOrderId,
         cart:           { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         payment_method: 'partial',
         payment_amount: 0,
@@ -432,7 +491,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         customer_name:  customerName.trim(),
         customer_phone: customerPhone.trim() || undefined,
         table_id:       tableId,
-        reseller_id:        wholesaleCtx?.reseller.id ?? undefined,
+        reseller_id:        wholesaleCtx?.reseller?.id ?? undefined,
         reseller_client_id: wholesaleCtx?.client?.id ?? undefined,
         order_channel:    'livraison',
         delivery_address: deliveryNoteAddress.trim() || deliveryAddress.trim() || undefined,
@@ -444,17 +503,24 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         order,
         business,
         cashier_name:          user.full_name,
-        reseller_name:         wholesaleCtx?.reseller.name,
+        reseller_name:         wholesaleCtx?.reseller?.name,
         reseller_client_name:  wholesaleCtx?.client?.name,
         reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
       }).catch(() => notifWarning('Reçu non imprimé —imprimante indisponible'));
       notifSuccess('Bon de livraison créé');
       cart.clear();
       setStep('succes');
-    } catch {
+    } catch (err: unknown) {
+      console.error('Delivery note creation failed:', err);
+      if (!isNetworkError(err)) {
+        setErreur(orderErrorMessage(err));
+        setStep('methode');
+        return;
+      }
       const dbPayload = buildOrderDbPayload({
         businessId:    business.id,
         cashierId:     user.id,
+        clientOrderId,
         cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
         paymentMethod: 'partial',
         paymentAmount: 0,
@@ -462,7 +528,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         taxInclusive,
         notes:         cart.notes,
         tableId:       tableId,
-        resellerId:       wholesaleCtx?.reseller.id ?? null,
+        resellerId:       wholesaleCtx?.reseller?.id ?? null,
         resellerClientId: wholesaleCtx?.client?.id ?? null,
       });
       (dbPayload as Record<string, unknown>).customer_name    = customerName.trim();
@@ -475,6 +541,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       cart.clear();
       setStep('succes');
     } finally {
+      submittingRef.current = false;
       setChargement(false);
     }
   }
@@ -1432,7 +1499,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   order: ordre,
                   business: business!,
                   cashier_name: user!.full_name,
-                  reseller_name:        wholesaleCtx?.reseller.name,
+                  reseller_name:        wholesaleCtx?.reseller?.name,
                   reseller_client_name: wholesaleCtx?.client?.name,
                   reseller_client_phone: wholesaleCtx?.client?.phone ?? undefined,
                 })}

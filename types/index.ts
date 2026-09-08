@@ -113,7 +113,7 @@ export interface Product {
 
 export type OrderStatus   = 'pending' | 'paid' | 'cancelled' | 'refunded';
 export type DeliveryStatus = 'pending' | 'picking' | 'delivered';
-export type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'partial' | 'room_charge' | 'free';
+export type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'partial' | 'room_charge' | 'free' | 'loyalty';
 
 export interface OrderItem {
   id: string;
