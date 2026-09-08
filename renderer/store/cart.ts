@@ -338,7 +338,8 @@ export const useCartStore = create<CartState>()(
   discountAmount: () => {
     const { coupons, items } = get();
     const sub = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    return calculateDiscount(coupons, sub);
+    const count = items.reduce((n, i) => n + i.quantity, 0);
+    return calculateDiscount(coupons, sub, count);
   },
 
   taxAmount: (taxRate: number, taxInclusive = false) => {

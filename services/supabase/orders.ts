@@ -2,7 +2,7 @@ import { supabase } from './client';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { logAction } from './logger';
 import { q } from './q';
-import { calculateDiscount } from '../pricing';
+import { calculateDiscount, isCouponEligible } from '../pricing';
 import type { Order, Cart, PaymentMethod, Coupon, Refund } from '../../types';
 
 export interface CreateOrderInput {
@@ -41,13 +41,18 @@ export interface CreateOrderInput {
 }
 
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
-  const coupons = input.coupons ?? input.cart.coupons ?? [];
+  const rawCoupons = input.coupons ?? input.cart.coupons ?? [];
   const subtotal = input.cart.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+  const itemCount = input.cart.items.reduce((n, item) => n + item.quantity, 0);
+  // On n'envoie au serveur que les coupons encore éligibles (le panier a pu
+  // rétrécir sous le minimum requis depuis l'application du code). `create_order`
+  // revalide de son côté et rejetterait la commande sinon.
+  const coupons = rawCoupons.filter((c) => isCouponEligible(c, subtotal, itemCount));
   const discount = coupons.length > 0
-    ? calculateDiscount(coupons, subtotal)
+    ? calculateDiscount(coupons, subtotal, itemCount)
     : input.cart.discount_amount;
   const taxable = subtotal - discount;
   let tax: number;

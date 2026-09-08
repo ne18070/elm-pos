@@ -28,7 +28,8 @@ export function CouponInput({ businessId, orderTotal, cartItemCount = 0, onApply
         code,
         businessId,
         orderTotal,
-        user.id
+        user.id,
+        cartItemCount
       );
       if (error || !coupon) {
         setErreur(error ?? 'Coupon invalide');

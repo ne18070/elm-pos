@@ -9,6 +9,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
 import { formatCurrency } from '@/lib/utils';
 import { deleteCoupon } from '@services/supabase/coupons';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 import { CouponModal } from '@/components/coupons/CouponModal';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -17,9 +18,9 @@ import type { Coupon } from '@pos-types';
 function couponStatusInfo(coupon: Coupon): { label: string; cls: string } {
   const expired = coupon.expires_at ? new Date(coupon.expires_at) < new Date() : false;
   const maxed   = coupon.max_uses != null && coupon.uses_count >= coupon.max_uses;
-  if (!coupon.is_active) return { label: 'Inactif',  cls: 'bg-surface-card text-content-secondary border-slate-700' };
+  if (!coupon.is_active) return { label: 'Inactif',  cls: 'bg-surface-card text-content-muted border-surface-border' };
   if (expired)           return { label: 'Expiré',   cls: 'bg-badge-error text-status-error border-status-error' };
-  if (maxed)             return { label: 'Épuisé',   cls: 'bg-badge-orange text-status-orange border-orange-800' };
+  if (maxed)             return { label: 'Épuisé',   cls: 'bg-badge-warning text-status-warning border-status-warning' };
   return                        { label: 'Actif',    cls: 'bg-badge-success text-status-success border-status-success' };
 }
 
@@ -40,6 +41,7 @@ export default function CouponsPage() {
   const can = useCan();
   const { coupons, loading, refetch } = useCoupons(business?.id ?? '');
   const { success, error: notifError } = useNotificationStore();
+  const { askConfirm, ConfirmDialog } = useConfirm();
   const [editCoupon, setEditCoupon] = useState<Coupon | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState('');
@@ -52,15 +54,23 @@ export default function CouponsPage() {
     (c.free_item_label ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
-  async function handleDelete(coupon: Coupon) {
-    if (!confirm(`Supprimer le coupon "${coupon.code}" ?`)) return;
-    try {
-      await deleteCoupon(coupon.id);
-      success('Coupon supprimé');
-      refetch();
-    } catch (err) {
-      notifError(toUserError(err));
-    }
+  function handleDelete(coupon: Coupon) {
+    const used = coupon.uses_count > 0;
+    askConfirm(
+      used
+        ? `« ${coupon.code} » a déjà été utilisé ${coupon.uses_count} fois. Il sera désactivé (et conservé pour l'historique).`
+        : `Supprimer définitivement le coupon « ${coupon.code} » ?`,
+      async () => {
+        try {
+          await deleteCoupon(coupon.id);
+          success(used ? 'Coupon désactivé' : 'Coupon supprimé');
+          refetch();
+        } catch (err) {
+          notifError(toUserError(err));
+        }
+      },
+      { confirmLabel: used ? 'Désactiver' : 'Supprimer', danger: true },
+    );
   }
 
   return (
@@ -296,6 +306,8 @@ export default function CouponsPage() {
           onSaved={() => { setShowCreate(false); setEditCoupon(null); refetch(); }}
         />
       )}
+
+      <ConfirmDialog />
     </div>
   );
 }

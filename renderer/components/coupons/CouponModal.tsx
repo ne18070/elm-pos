@@ -17,6 +17,19 @@ interface CouponModalProps {
   onSaved: () => void;
 }
 
+/**
+ * Parse un nombre en tolérant la virgule décimale et les espaces (séparateurs
+ * de milliers). Renvoie NaN si la valeur n'est pas exploitable.
+ */
+function parseNumber(input: string): number {
+  let s = String(input ?? '').trim().replace(/[\s  ]/g, '');
+  if (s === '') return NaN;
+  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (s.includes(',')) s = s.replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModalProps) {
   const isEdit = !!coupon;
   const { success, error: notifError } = useNotificationStore();
@@ -75,29 +88,44 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
   }
 
   // Validation : pour free_item, valeur n'est pas requise (= 0)
+  const valueNum = parseNumber(form.value);
   const isValid = form.code.trim() !== '' && (
     isFreeItem
       ? form.free_item_label.trim() !== ''
-      : parseFloat(form.value) > 0 && (form.type !== 'percentage' || parseFloat(form.value) <= 100)
+      : valueNum > 0 && (form.type !== 'percentage' || valueNum <= 100)
   );
 
   async function handleSave() {
     if (!isValid) return;
+
+    const minOrder   = form.min_order_amount ? parseNumber(form.min_order_amount) : undefined;
+    const minQty     = form.min_quantity ? Math.floor(parseNumber(form.min_quantity)) : undefined;
+    const maxUses    = form.max_uses ? Math.floor(parseNumber(form.max_uses)) : undefined;
+    const perUser    = form.per_user_limit ? Math.floor(parseNumber(form.per_user_limit)) : undefined;
+    const freeQty    = isFreeItem ? Math.max(1, Math.floor(parseNumber(form.free_item_quantity) || 1)) : undefined;
+
+    if (minOrder != null && (Number.isNaN(minOrder) || minOrder < 0)) { notifError('Commande minimum invalide.'); return; }
+    if (minQty != null && (Number.isNaN(minQty) || minQty < 1)) { notifError('Quantité minimum invalide.'); return; }
+    if (maxUses != null && (Number.isNaN(maxUses) || maxUses < 1)) { notifError('Nombre d\'utilisations max invalide.'); return; }
+    if (perUser != null && (Number.isNaN(perUser) || perUser < 1)) { notifError('Limite par utilisateur invalide.'); return; }
+
     setLoading(true);
     try {
       const payload = {
         business_id:      businessId,
         code:             form.code.toUpperCase().trim(),
         type:             form.type,
-        value:            isFreeItem ? 0 : parseFloat(form.value),
-        min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : undefined,
-        min_quantity:     form.min_quantity ? parseInt(form.min_quantity) : undefined,
+        value:            isFreeItem ? 0 : valueNum,
+        min_order_amount: minOrder,
+        min_quantity:     minQty,
         free_item_label:       isFreeItem ? form.free_item_label.trim() : undefined,
         free_item_product_id:  isFreeItem && form.free_item_product_id ? form.free_item_product_id : undefined,
-        free_item_quantity:    isFreeItem ? (parseFloat(form.free_item_quantity) || 1) : undefined,
-        max_uses:         form.max_uses ? parseInt(form.max_uses) : undefined,
-        per_user_limit:   form.per_user_limit ? parseInt(form.per_user_limit) : undefined,
-        expires_at:       form.expires_at ? new Date(form.expires_at).toISOString() : undefined,
+        free_item_quantity:    freeQty,
+        max_uses:         maxUses,
+        per_user_limit:   perUser,
+        // Fin de journée locale plutôt que minuit UTC (sinon le coupon meurt la
+        // veille au soir pour un fuseau à l'est de Greenwich).
+        expires_at:       form.expires_at ? new Date(form.expires_at + 'T23:59:59').toISOString() : undefined,
         is_active:        form.is_active,
       };
 
@@ -208,16 +236,16 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                 {showProductDropdown && filteredProducts.length > 0 && createPortal(
                   <div
                     style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
-                    className="bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl"
+                    className="bg-surface-card border border-surface-border rounded-xl overflow-hidden shadow-xl"
                   >
                     {filteredProducts.map((p) => (
                       <button
                         key={p.id}
                         type="button"
                         onMouseDown={() => selectFreeProduct(p)}
-                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-700 text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2 hover:bg-surface-hover text-left"
                       >
-                        <Package className="w-4 h-4 text-content-primary shrink-0" />
+                        <Package className="w-4 h-4 text-content-secondary shrink-0" />
                         <div className="min-w-0">
                           <p className="text-sm text-content-primary truncate">{p.name}</p>
                           {p.track_stock && (
@@ -316,11 +344,27 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
             <input
               type="number"
               min="1"
+              step="1"
               value={form.max_uses}
               onChange={(e) => update('max_uses', e.target.value)}
               className="input"
               placeholder="Illimité"
             />
+          </div>
+          <div>
+            <label className="label">Limite par utilisateur</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.per_user_limit}
+              onChange={(e) => update('per_user_limit', e.target.value)}
+              className="input"
+              placeholder="Illimité"
+            />
+            <p className="text-xs text-content-muted mt-1">
+              Nombre de fois qu'un même caissier peut appliquer ce code.
+            </p>
           </div>
           <div>
             <label className="label">Date d&apos;expiration</label>

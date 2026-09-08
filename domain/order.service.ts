@@ -54,12 +54,36 @@ export function computeSubtotal(items: CartItem[]): number {
   return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 }
 
-export function computeDiscount(coupons: Coupon[] | Coupon | null | undefined, subtotal: number): number {
+/**
+ * Un coupon est-il encore applicable au panier courant ? Recontrôlé à chaque
+ * calcul : un panier qui repasse sous le minimum requis (montant / quantité)
+ * ne doit plus bénéficier de la remise. (Mirroir de services/pricing.ts —
+ * gardé local pour ne pas inverser la dépendance domain → services.)
+ */
+export function isCouponUsable(
+  coupon: Coupon,
+  subtotal: number,
+  cartItemCount: number,
+): boolean {
+  if (!coupon.is_active) return false;
+  if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return false;
+  if (coupon.max_uses != null && coupon.uses_count >= coupon.max_uses) return false;
+  if (coupon.min_order_amount != null && subtotal < coupon.min_order_amount) return false;
+  if (coupon.min_quantity != null && cartItemCount < coupon.min_quantity) return false;
+  return true;
+}
+
+export function computeDiscount(
+  coupons: Coupon[] | Coupon | null | undefined,
+  subtotal: number,
+  cartItemCount = Number.POSITIVE_INFINITY,
+): number {
   const list = Array.isArray(coupons) ? coupons : coupons ? [coupons] : [];
   if (list.length === 0) return 0;
   let total = 0;
   for (const coupon of list) {
     if (coupon.type === 'free_item') continue;
+    if (!isCouponUsable(coupon, subtotal, cartItemCount)) continue;
     total += coupon.type === 'percentage'
       ? round2(subtotal * coupon.value / 100)
       : Math.min(coupon.value, subtotal);
@@ -78,7 +102,8 @@ export function computeOrderTotals(
   taxInclusive = false
 ): OrderTotals {
   const subtotal       = computeSubtotal(items);
-  const discountAmount = computeDiscount(coupons, subtotal);
+  const itemCount      = items.reduce((n, i) => n + i.quantity, 0);
+  const discountAmount = computeDiscount(coupons, subtotal, itemCount);
   const taxable        = subtotal - discountAmount;
 
   let taxAmount: number;
@@ -144,7 +169,14 @@ export function buildOrderDbPayload(payload: CreateOrderPayload): Record<string,
     payload.taxInclusive
   );
 
-  const coupons = payload.cart.coupons ?? [];
+  // On ne persiste que les coupons encore applicables (le panier a pu passer
+  // sous le minimum requis) — cohérent avec le montant de remise calculé
+  // ci-dessus et avec la revalidation serveur dans create_order.
+  const _sub = computeSubtotal(payload.cart.items);
+  const _cnt = payload.cart.items.reduce((n, i) => n + i.quantity, 0);
+  const coupons = (payload.cart.coupons ?? []).filter(
+    (c) => isCouponUsable(c, _sub, _cnt)
+  );
 
   return {
     business_id:     payload.businessId,
