@@ -24,6 +24,25 @@ function generateEAN13(): string {
   return base + ean13CheckDigit(base);
 }
 
+/** Génère un EAN-13 non déjà utilisé (dans la liste `taken`). */
+function generateUniqueEAN13(taken: Set<string>): string {
+  for (let i = 0; i < 50; i++) {
+    const code = generateEAN13();
+    if (!taken.has(code)) { taken.add(code); return code; }
+  }
+  return generateEAN13();
+}
+
+/** Échappe le HTML avant injection dans la fenêtre d'impression. */
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // --- Rendu barcode dans un <svg> via JsBarcode --------------------------------
 
 function BarcodeImage({ value, height = 50 }: { value: string; height?: number }) {
@@ -85,15 +104,18 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
   const { success, error: notifError } = useNotificationStore();
   const [saving, setSaving] = useState(false);
 
-  const [items, setItems] = useState<SelectionItem[]>(() =>
-    products.map((p) => ({
+  const [items, setItems] = useState<SelectionItem[]>(() => {
+    const taken = new Set(
+      products.map((p) => p.barcode).filter((b): b is string => !!b)
+    );
+    return products.map((p) => ({
       product:  p,
       selected: false,
       qty:      1,
-      barcode:  p.barcode ?? generateEAN13(),
+      barcode:  p.barcode ?? generateUniqueEAN13(taken),
       isNew:    !p.barcode,
-    }))
-  );
+    }));
+  });
 
   const selected = items.filter((i) => i.selected);
   const hasNew   = selected.some((i) => i.isNew);
@@ -116,9 +138,12 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
   }
 
   function regenerate(id: string) {
-    setItems((prev) => prev.map((i) =>
-      i.product.id === id ? { ...i, barcode: generateEAN13(), isNew: true } : i
-    ));
+    setItems((prev) => {
+      const taken = new Set(prev.map((i) => i.barcode).filter(Boolean) as string[]);
+      return prev.map((i) =>
+        i.product.id === id ? { ...i, barcode: generateUniqueEAN13(taken), isNew: true } : i
+      );
+    });
   }
 
   // -- Sauvegarder les nouveaux codes en base --------------------------------
@@ -128,14 +153,27 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
     if (toSave.length === 0) return;
     setSaving(true);
     try {
-      await Promise.all(toSave.map((i) => updateProduct(i.product.id, { barcode: i.barcode })));
-      setItems((prev) => prev.map((i) =>
-        i.isNew && i.selected ? { ...i, isNew: false } : i
-      ));
-      success(`${toSave.length} code${toSave.length > 1 ? 's' : ''}-barres sauvegardé${toSave.length > 1 ? 's' : ''}`);
-      onRefetch?.();
-    } catch {
-      notifError('Impossible de sauvegarder les codes-barres');
+      // Séquentiel : permet d'attribuer un message d'erreur au bon produit
+      // (ex. code-barres déjà utilisé) et évite les collisions concurrentes.
+      const failures: string[] = [];
+      for (const i of toSave) {
+        try {
+          await updateProduct(i.product.id, { barcode: i.barcode });
+          setItems((prev) => prev.map((it) =>
+            it.product.id === i.product.id ? { ...it, isNew: false } : it
+          ));
+        } catch (err) {
+          failures.push(`${i.product.name} : ${err instanceof Error ? err.message : 'échec'}`);
+        }
+      }
+      const okCount = toSave.length - failures.length;
+      if (okCount > 0) {
+        success(`${okCount} code${okCount > 1 ? 's' : ''}-barres sauvegardé${okCount > 1 ? 's' : ''}`);
+        onRefetch?.();
+      }
+      if (failures.length > 0) {
+        notifError(failures.join(' · '));
+      }
     } finally {
       setSaving(false);
     }
@@ -167,14 +205,17 @@ export function BarcodePrintModal({ products, currency, onClose, onRefetch }: Pr
         Array.from({ length: item.qty }, () => `
           <div class="label">
             <div class="barcode-wrap">${makeSvg(item.barcode)}</div>
-            <div class="name">${item.product.name}</div>
-            <div class="price">${formatCurrency(item.product.price, currency)}</div>
+            <div class="name">${escapeHtml(item.product.name)}</div>
+            <div class="price">${escapeHtml(formatCurrency(item.product.price, currency))}</div>
           </div>
         `)
       ).join('');
 
       const win = window.open('', '_blank', 'width=820,height=600');
-      if (!win) return;
+      if (!win) {
+        notifError('Impossible d’ouvrir la fenêtre d’impression. Autorisez les pop-ups pour ce site.');
+        return;
+      }
 
       win.document.write(`<!DOCTYPE html>
 <html>

@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink, RotateCcw } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -10,20 +10,31 @@ import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlert
 import { formatCurrency } from '@/lib/utils';
 import { useCan } from '@/hooks/usePermission';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 import { ProductModal } from '@/components/products/ProductModal';
 import { ImportProductsModal } from '@/components/products/ImportProductsModal';
 import { BarcodePrintModal } from '@/components/products/BarcodePrintModal';
-import { deleteProduct } from '@services/supabase/products';
+import { deleteProduct, restoreProduct } from '@services/supabase/products';
 import type { Product } from '@pos-types';
 
 type ViewMode = 'grid' | 'list';
+type StatusFilter = 'active' | 'archived' | 'all';
+
+/** Neutralise l'injection de formule dans les tableurs (Excel/Sheets). */
+function csvCell(value: string): string {
+  const s = String(value ?? '');
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
 
 export default function ProductsPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const can = useCan();
+  const { askConfirm, ConfirmDialog } = useConfirm();
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ViewMode>('list');
+  const [status, setStatus] = useState<StatusFilter>('active');
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -31,7 +42,9 @@ export default function ProductsPage() {
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { products, loading, refetch } = useProducts(business?.id ?? '');
+  const { products, loading, refetch } = useProducts(business?.id ?? '', false, {
+    includeInactive: status !== 'active',
+  });
   const { lowStock } = useLowStockAlerts(business?.id ?? '');
 
   const shopUrl = typeof window !== 'undefined'
@@ -49,8 +62,10 @@ export default function ProductsPage() {
   }
 
   function exportCSV() {
+    // On exporte tout le jeu charg\u00E9 (selon le filtre Actifs / Archiv\u00E9s / Tous),
+    // pas seulement la recherche en cours.
     const headers = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
-    const rows = filtered.map((p) => [
+    const rows = products.map((p) => [
       p.name,
       p.description ?? '',
       String(p.price),
@@ -61,7 +76,7 @@ export default function ProductsPage() {
       p.track_stock ? 'oui' : 'non',
       p.is_active ? 'oui' : 'non',
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = [headers, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -71,29 +86,63 @@ export default function ProductsPage() {
     URL.revokeObjectURL(url);
   }
 
-  const filtered = products.filter(
-    (p) =>
-      !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode?.includes(search) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase())
-  );
+  const q = search.trim().toLowerCase();
+  const filtered = products.filter((p) => {
+    if (status === 'archived' && p.is_active) return false;
+    if (status === 'active' && !p.is_active) return false;
+    if (!q) return true;
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.barcode ?? '').toLowerCase().includes(q) ||
+      (p.sku ?? '').toLowerCase().includes(q)
+    );
+  });
 
-  async function handleDelete(product: Product, e: React.MouseEvent) {
+  function handleDelete(product: Product, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm(`Supprimer "${product.name}" ?`)) return;
+    askConfirm(
+      `Archiver « ${product.name} » ? Le produit sera retiré de la caisse mais conservé dans l'historique.`,
+      async () => {
+        try {
+          await deleteProduct(product.id);
+          success(`« ${product.name} » archivé`);
+          refetch();
+        } catch (err) {
+          notifError(toUserError(err));
+        }
+      },
+      { confirmLabel: 'Archiver', danger: true },
+    );
+  }
+
+  function handleEdit(product: Product, e: React.MouseEvent) {
+    e.stopPropagation();
+    setEditProduct(product);
+  }
+
+  async function handleRestore(product: Product, e: React.MouseEvent) {
+    e.stopPropagation();
     try {
-      await deleteProduct(product.id);
-      success(`"${product.name}" supprimé`);
+      await restoreProduct(product.id);
+      success(`"${product.name}" réactivé`);
       refetch();
     } catch (err) {
       notifError(toUserError(err));
     }
   }
 
-  function handleEdit(product: Product, e: React.MouseEvent) {
-    e.stopPropagation();
-    setEditProduct(product);
+  if (!can('view_products')) {
+    return (
+      <div className="flex h-full items-center justify-center bg-surface p-6">
+        <div className="max-w-sm text-center">
+          <Package className="mx-auto mb-3 h-10 w-10 text-content-secondary opacity-40" />
+          <h1 className="text-lg font-bold text-content-primary">Accès refusé</h1>
+          <p className="mt-1 text-sm text-content-secondary">
+            Vous n'avez pas la permission d'accéder au catalogue produits.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -173,6 +222,27 @@ export default function ProductsPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="input pl-10"
             />
+          </div>
+
+          {/* Filtre statut */}
+          <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 shrink-0">
+            {([
+              ['active', 'Actifs'],
+              ['archived', 'Archivés'],
+              ['all', 'Tous'],
+            ] as [StatusFilter, string][]).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setStatus(val)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  status === val
+                    ? 'bg-brand-600 text-content-primary'
+                    : 'text-content-secondary hover:text-content-primary'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* Toggle vue */}
@@ -284,8 +354,8 @@ export default function ProductsPage() {
                   )}
                 </div>
 
-                {/* Actions — visibles au hover */}
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Actions — toujours visibles sur mobile, au hover sur desktop */}
+                <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   {can('edit_product') && (
                     <button
                       onClick={(e) => handleEdit(product, e)}
@@ -295,7 +365,16 @@ export default function ProductsPage() {
                       Modifier
                     </button>
                   )}
-                  {can('delete_product') && (
+                  {!product.is_active && can('edit_product') && (
+                    <button
+                      onClick={(e) => handleRestore(product, e)}
+                      className="btn-secondary flex items-center justify-center gap-1 py-1.5 px-2 text-xs"
+                      title="Réactiver"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  )}
+                  {product.is_active && can('delete_product') && (
                     <button
                       onClick={(e) => handleDelete(product, e)}
                       className="btn-danger flex items-center justify-center py-1.5 px-2"
@@ -417,7 +496,7 @@ export default function ProductsPage() {
 
                     {/* Actions */}
                     <td className="px-3 py-2">
-                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         {can('edit_product') && (
                           <button
                             onClick={(e) => handleEdit(product, e)}
@@ -427,7 +506,16 @@ export default function ProductsPage() {
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        {can('delete_product') && (
+                        {!product.is_active && can('edit_product') && (
+                          <button
+                            onClick={(e) => handleRestore(product, e)}
+                            className="btn-secondary p-1.5"
+                            title="Réactiver"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {product.is_active && can('delete_product') && (
                           <button
                             onClick={(e) => handleDelete(product, e)}
                             className="btn-danger p-1.5"
@@ -482,9 +570,12 @@ export default function ProductsPage() {
                 <Share2 className="w-5 h-5 text-content-brand" />
                 <h3 className="font-semibold text-content-primary">Partager ma boutique</h3>
               </div>
-              <button onClick={() => setShowShare(false)} className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
-                <Trash2 className="w-4 h-4 sr-only" aria-hidden />
-                <span className="text-content-secondary text-lg leading-none">×</span>
+              <button
+                onClick={() => setShowShare(false)}
+                aria-label="Fermer"
+                className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover"
+              >
+                <span className="text-content-secondary text-lg leading-none" aria-hidden>×</span>
               </button>
             </div>
 
@@ -528,6 +619,8 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog />
     </div>
   );
 }

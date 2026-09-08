@@ -29,6 +29,19 @@ interface ParsedRow {
 
 const TEMPLATE_HEADERS = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
 
+/**
+ * Parse un nombre en tolérant les formats locaux : virgule décimale,
+ * espaces / espaces insécables comme séparateurs de milliers.
+ */
+function parseNum(input: string): number {
+  let s = String(input ?? '').trim().replace(/[\s  ]/g, '');
+  if (s === '') return NaN;
+  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (s.includes(',')) s = s.replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 const TEMPLATE_EXAMPLE = [
   ['Coca Cola 50cl', 'Bouteille 50cl', '500', 'Boissons', '', '', '100', 'oui', 'oui'],
   ['Eau Minérale', '', '200', 'Boissons', '0123456789', 'EAU-50', '200', 'oui', 'oui'],
@@ -151,9 +164,9 @@ function validateRow(cols: string[], colMap: Record<string, number> | null, line
   const fields = mapRowToFields(cols, colMap);
   const errors: string[] = [];
   if (!fields.nom) errors.push('Nom requis');
-  const prixNum = parseFloat(fields.prix.replace(',', '.'));
+  const prixNum = parseNum(fields.prix);
   if (!fields.prix || isNaN(prixNum) || prixNum < 0) errors.push('Prix invalide');
-  if (fields.stock && isNaN(parseFloat(fields.stock.replace(',', '.')))) errors.push('Stock invalide');
+  if (fields.stock && isNaN(parseNum(fields.stock))) errors.push('Stock invalide');
   return { line: lineNum, ...fields, errors };
 }
 
@@ -164,6 +177,7 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
   const [rows, setRows]       = useState<ParsedRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [imported, setImported]   = useState(0);
+  const [failures, setFailures]   = useState<{ line: number; nom: string; reason: string }[]>([]);
 
   const validRows   = rows.filter((r) => r.errors.length === 0);
   const invalidRows = rows.filter((r) => r.errors.length > 0);
@@ -211,15 +225,31 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
   async function handleImport() {
     if (validRows.length === 0) return;
     setImporting(true);
+    setFailures([]);
     let done = 0;
+    const failed: { line: number; nom: string; reason: string }[] = [];
+    const seen = new Set<string>(); // doublons intra-fichier (par nom)
 
     // Charger les catégories pour faire la correspondance par nom
     let categories: Category[] = [];
     try { categories = await getCategories(businessId); } catch { /* */ }
 
     for (const row of validRows) {
+      const key = row.nom.trim().toLowerCase();
+      if (seen.has(key)) {
+        failed.push({ line: row.line, nom: row.nom, reason: 'Doublon dans le fichier' });
+        continue;
+      }
+      seen.add(key);
+
       try {
-        const cat = categories.find((c) => c.name.toLowerCase() === row.categorie.toLowerCase());
+        const cat = row.categorie
+          ? categories.find((c) => c.name.toLowerCase() === row.categorie.toLowerCase())
+          : undefined;
+        if (row.categorie && !cat) {
+          // On importe quand même, mais on le signale.
+          failed.push({ line: row.line, nom: row.nom, reason: `Catégorie « ${row.categorie} » introuvable — produit importé sans catégorie` });
+        }
         const trackStock = row.suivre_stock.toLowerCase() === 'oui' || row.suivre_stock === '1' || row.suivre_stock.toLowerCase() === 'true';
         const isActive   = !row.actif || row.actif.toLowerCase() === 'oui' || row.actif === '1' || row.actif.toLowerCase() === 'true';
 
@@ -227,11 +257,11 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
           business_id:  businessId,
           name:         row.nom.trim(),
           description:  row.description.trim() || null,
-          price:        parseFloat(row.prix.replace(',', '.')),
+          price:        parseNum(row.prix),
           category_id:  cat?.id ?? null,
           barcode:      row.code_barres.trim() || null,
           sku:          row.sku.trim() || null,
-          stock:        trackStock && row.stock ? parseFloat(row.stock.replace(',', '.')) : null,
+          stock:        trackStock && row.stock ? parseNum(row.stock) : null,
           track_stock:  trackStock,
           is_active:    isActive,
           image_url:    null,
@@ -240,22 +270,41 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
 
         done++;
         setImported(done);
-      } catch { /* ignorer les erreurs individuelles */ }
+      } catch (err) {
+        failed.push({
+          line: row.line,
+          nom: row.nom,
+          reason: err instanceof Error ? err.message : 'Échec de l’enregistrement',
+        });
+      }
     }
 
-    success(`${done} produit${done !== 1 ? 's' : ''} importé${done !== 1 ? 's' : ''}`);
+    setFailures(failed);
+    if (done > 0) {
+      success(`${done} produit${done !== 1 ? 's' : ''} importé${done !== 1 ? 's' : ''}`);
+    }
+    if (failed.length > 0) {
+      notifError(`${failed.length} ligne${failed.length !== 1 ? 's' : ''} à vérifier — voir le détail`);
+    }
     setImporting(false);
-    onImported();
+    // Import parfait : on ferme et on rafraîchit. Sinon on garde le modal
+    // ouvert pour montrer le détail des lignes à corriger.
+    if (done > 0 && failed.length === 0) onImported();
+  }
+
+  function handleClose() {
+    if (imported > 0) onImported(); // rafraîchit la liste parente
+    else onClose();
   }
 
   return (
     <Modal
       title="Importer des produits"
-      onClose={onClose}
+      onClose={handleClose}
       size="lg"
       footer={() => (
         <div className="flex gap-3 justify-end">
-          <button onClick={onClose} className="btn-secondary">Fermer</button>
+          <button onClick={handleClose} className="btn-secondary">Fermer</button>
           {validRows.length > 0 && !importing && (
             <button onClick={handleImport} className="btn-primary flex items-center gap-2">
               <Upload className="w-4 h-4" />
@@ -387,6 +436,36 @@ export function ImportProductsModal({ businessId, onClose, onImported }: ImportP
                           </span>
                         )}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* -- Lignes à vérifier après import -- */}
+        {failures.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-status-error flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4" />
+              {failures.length} ligne{failures.length !== 1 ? 's' : ''} à vérifier
+            </p>
+            <div className="rounded-xl border border-status-error/40 overflow-hidden max-h-56 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-surface-card sticky top-0">
+                  <tr className="text-left text-content-secondary uppercase tracking-wide">
+                    <th className="px-3 py-2">Ligne</th>
+                    <th className="px-3 py-2">Nom</th>
+                    <th className="px-3 py-2">Problème</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {failures.map((f, i) => (
+                    <tr key={`${f.line}-${i}`} className="border-t border-surface-border">
+                      <td className="px-3 py-2 text-content-primary">{f.line}</td>
+                      <td className="px-3 py-2 text-content-primary font-medium max-w-[150px] truncate">{f.nom || '—'}</td>
+                      <td className="px-3 py-2 text-status-error">{f.reason}</td>
                     </tr>
                   ))}
                 </tbody>

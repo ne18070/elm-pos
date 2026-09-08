@@ -13,6 +13,23 @@ import type { Product, ProductVariant } from '@pos-types';
 
 const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
+/**
+ * Convertit une saisie utilisateur en nombre en tolérant les formats locaux :
+ * virgule décimale, espaces / espaces insécables comme séparateurs de milliers.
+ * Renvoie NaN si la valeur n'est pas un nombre exploitable.
+ */
+function parseNumber(input: string | number | null | undefined): number {
+  if (typeof input === 'number') return input;
+  if (input == null) return NaN;
+  let s = String(input).trim().replace(/[\s  ]/g, '');
+  if (s === '') return NaN;
+  // "1.500,00" → "1500.00" ; "12,5" → "12.5"
+  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (s.includes(',')) s = s.replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 function generateSKU(name: string): string {
   const prefix = name
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -60,6 +77,17 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
   const [variants, setVariants] = useState<ProductVariant[]>(
     product?.variants ?? []
   );
+
+  // Motif d'ajustement de stock (édition, stock suivi et quantité modifiée)
+  const [stockReason, setStockReason] = useState('');
+  const initialStock = product?.stock ?? null;
+  const stockChanged =
+    isEdit &&
+    form.track_stock &&
+    product?.track_stock === true &&
+    initialStock !== null &&
+    form.stock.trim() !== '' &&
+    parseNumber(form.stock) !== Number(initialStock);
 
   function addVariant() {
     setVariants((v) => [
@@ -111,28 +139,59 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     }
   }
 
+  function validate(): string | null {
+    if (!form.name.trim()) return 'Le nom est requis.';
+
+    const price = parseNumber(form.price);
+    if (Number.isNaN(price) || price < 0) return 'Le prix doit être un nombre positif.';
+
+    if (form.track_stock && form.stock.trim() !== '') {
+      const stock = parseNumber(form.stock);
+      if (Number.isNaN(stock) || stock < 0) return 'La quantité en stock est invalide.';
+    }
+
+    const names = new Set<string>();
+    for (const vr of variants) {
+      const n = vr.name.trim().toLowerCase();
+      if (!n) return 'Chaque variante doit avoir un nom.';
+      if (names.has(n)) return `Variante en double : « ${vr.name.trim()} ».`;
+      names.add(n);
+      if (price + vr.price_modifier < 0) return `Le prix de la variante « ${vr.name.trim()} » est négatif.`;
+      if (form.track_stock) {
+        const c = vr.stock_consumption ?? 1;
+        if (!(c > 0)) return `La consommation de stock de « ${vr.name.trim()} » doit être supérieure à 0.`;
+      }
+    }
+    return null;
+  }
+
   async function handleSave() {
-    if (!form.name || !form.price) return;
+    const err = validate();
+    if (err) { notifError(err); return; }
+
     setLoading(true);
     try {
+      const price = parseNumber(form.price);
       const payload = {
         business_id:  businessId,
-        name:         form.name,
-        description:  form.description || undefined,
-        price:        parseFloat(form.price),
+        name:         form.name.trim(),
+        description:  form.description.trim() || undefined,
+        price,
         category_id:  form.category_id || undefined,
-        barcode:      form.barcode || undefined,
-        sku:          form.sku || undefined,
+        barcode:      form.barcode.trim() || undefined,
+        sku:          form.sku.trim() || undefined,
         track_stock:  form.track_stock,
-        stock:        form.track_stock && form.stock ? parseFloat(form.stock) : undefined,
+        stock:        form.track_stock && form.stock.trim() !== '' ? parseNumber(form.stock) : undefined,
         unit:         form.unit || undefined,
         is_active:    form.is_active,
         image_url:    form.image_url || undefined,
-        variants,
+        variants:     variants.map((vr) => ({ ...vr, name: vr.name.trim() })),
       };
 
       if (isEdit) {
-        await updateProduct(product.id, payload);
+        await updateProduct(product.id, payload, {
+          stockAdjustmentReason: stockChanged ? stockReason.trim() || undefined : undefined,
+        });
         success('Produit mis à jour');
       } else {
         await createProduct(payload as Parameters<typeof createProduct>[0]);
@@ -157,7 +216,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
           <button onClick={requestClose} className="btn-secondary px-5">Annuler</button>
           <button
             onClick={handleSave}
-            disabled={loading || !form.name || !form.price}
+            disabled={loading || !form.name.trim() || !form.price.trim()}
             className="btn-primary px-5 flex items-center gap-2"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -348,6 +407,23 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
           )}
         </div>
 
+        {/* Motif d'ajustement de stock */}
+        {stockChanged && (
+          <div>
+            <label className="label">Motif de l'ajustement de stock</label>
+            <input
+              type="text"
+              value={stockReason}
+              onChange={(e) => setStockReason(e.target.value)}
+              className="input"
+              placeholder="Ex : inventaire, casse, vol, correction de saisie…"
+            />
+            <p className="text-xs text-content-muted mt-1">
+              Enregistré dans le journal comptable avec l'écriture d'ajustement.
+            </p>
+          </div>
+        )}
+
         {/* Unité de stock */}
         {form.track_stock && (
           <div>
@@ -400,10 +476,14 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                   <div className="flex flex-col items-start gap-0.5">
                     <input
                       type="number"
-                      value={parseFloat(form.price || '0') + vr.price_modifier || ''}
+                      value={(() => {
+                        const base = parseNumber(form.price) || 0;
+                        const final = base + vr.price_modifier;
+                        return Number.isFinite(final) ? final : 0;
+                      })()}
                       onChange={(e) => {
-                        const finalPrice = parseFloat(e.target.value) || 0;
-                        const base = parseFloat(form.price || '0');
+                        const finalPrice = parseNumber(e.target.value) || 0;
+                        const base = parseNumber(form.price) || 0;
                         updateVariant(vr.id, 'price_modifier', finalPrice - base);
                       }}
                       className="input w-28 py-1.5 text-sm"
@@ -419,11 +499,11 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
                       <input
                         type="number"
                         value={vr.stock_consumption ?? 1}
-                        onChange={(e) => updateVariant(vr.id, 'stock_consumption', parseFloat(e.target.value) || 1)}
+                        onChange={(e) => updateVariant(vr.id, 'stock_consumption', parseNumber(e.target.value) || 1)}
                         className="input w-20 py-1.5 text-sm"
                         placeholder="1"
                         step="any"
-                        min="0"
+                        min="0.001"
                       />
                       <span className="text-[10px] text-content-primary pl-1">
                         {form.unit ? form.unit : 'unité'}/vente
