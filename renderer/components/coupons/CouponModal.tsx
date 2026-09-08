@@ -1,11 +1,13 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, Gift, Package } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { useNotificationStore } from '@/store/notifications';
+import { useAuthStore } from '@/store/auth';
 import { useProducts } from '@/hooks/useProducts';
 import { createCoupon, updateCoupon } from '@services/supabase/coupons';
 import type { Coupon, CouponType, Product } from '@pos-types';
@@ -33,6 +35,8 @@ function parseNumber(input: string): number {
 export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModalProps) {
   const isEdit = !!coupon;
   const { success, error: notifError } = useNotificationStore();
+  const { business } = useAuthStore();
+  const currency = business?.currency ?? 'XOF';
   const { products } = useProducts(businessId);
   const [loading, setLoading] = useState(false);
   const [productSearch, setProductSearch] = useState('');
@@ -52,6 +56,11 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
       : null
   );
 
+  // Unité offerte : "unit" = unité de vente du produit ; "subunit" = fraction
+  // (ex. la tablette dans un carton). Déduit de free_item_stock_consumption.
+  const initConsumption = coupon?.free_item_stock_consumption ?? 1;
+  const initByUnit = !coupon || initConsumption >= 1 - 1e-9;
+
   const [form, setForm] = useState({
     code:                  coupon?.code ?? '',
     type:                  (coupon?.type ?? 'percentage') as CouponType,
@@ -61,6 +70,11 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
     free_item_label:       coupon?.free_item_label ?? '',
     free_item_product_id:  coupon?.free_item_product_id ?? '',
     free_item_quantity:    String(coupon?.free_item_quantity ?? '1'),
+    // "unit" ou "subunit"
+    free_item_by:          (initByUnit ? 'unit' : 'subunit') as 'unit' | 'subunit',
+    // nb de sous-unités par unité de vente (ex. 24 tablettes / carton)
+    free_item_pack_size:   initByUnit ? '' : String(Math.round(1 / initConsumption) || ''),
+    free_item_unit_label:  coupon?.free_item_unit_label ?? '',
     max_uses:              String(coupon?.max_uses ?? ''),
     per_user_limit:        String(coupon?.per_user_limit ?? ''),
     expires_at:            coupon?.expires_at?.slice(0, 10) ?? '',
@@ -79,12 +93,42 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
 
   const isFreeItem = form.type === 'free_item';
 
+  // Produit offert effectif : soit celui qu'on vient de choisir, soit celui
+  // référencé par le coupon en édition (résolu depuis la liste des produits).
+  const effectiveFreeProduct: Product | null =
+    freeProduct ?? products.find((p) => p.id === form.free_item_product_id) ?? null;
+
+  // En édition : pré-remplir le champ de recherche avec le nom du produit offert.
+  useEffect(() => {
+    if (isEdit && effectiveFreeProduct && !productSearch) {
+      setProductSearch(effectiveFreeProduct.name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveFreeProduct]);
+
+  // Unité de vente du produit (carton, sac…) et sous-unité choisie.
+  const sellUnit = effectiveFreeProduct?.unit || 'unité';
+  const packSize = parseNumber(form.free_item_pack_size);
+  const bySubunit = form.free_item_by === 'subunit';
+  // Consommation de stock par unité offerte.
+  const freeConsumption = bySubunit && packSize > 0 ? 1 / packSize : 1;
+  const offeredUnitLabel = bySubunit ? (form.free_item_unit_label.trim() || 'unité') : sellUnit;
+  // Prix unitaire de ce qui est offert.
+  const offeredUnitPrice = (effectiveFreeProduct?.price ?? 0) * freeConsumption;
+
   function selectFreeProduct(p: Product) {
     setFreeProduct(p);
     setProductSearch(p.name);
     setShowProductDropdown(false);
-    update('free_item_product_id', p.id);
-    if (!form.free_item_label) update('free_item_label', p.name);
+    setForm((f) => ({
+      ...f,
+      free_item_product_id: p.id,
+      free_item_label: f.free_item_label || p.name,
+      // Le conditionnement dépend du produit → on repart sur l'unité de vente.
+      free_item_by: 'unit',
+      free_item_pack_size: '',
+      free_item_unit_label: '',
+    }));
   }
 
   // Validation : pour free_item, valeur n'est pas requise (= 0)
@@ -109,6 +153,22 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
     if (maxUses != null && (Number.isNaN(maxUses) || maxUses < 1)) { notifError('Nombre d\'utilisations max invalide.'); return; }
     if (perUser != null && (Number.isNaN(perUser) || perUser < 1)) { notifError('Limite par utilisateur invalide.'); return; }
 
+    // Article offert : unité de vente ou sous-unité (fraction du carton…)
+    let freeConsumptionOut = 1;
+    let freeUnitLabelOut: string | undefined;
+    if (isFreeItem && bySubunit) {
+      if (Number.isNaN(packSize) || packSize <= 1) {
+        notifError('Indiquez combien de sous-unités contient une ' + sellUnit + ' (> 1).');
+        return;
+      }
+      if (!form.free_item_unit_label.trim()) {
+        notifError('Donnez un nom à la sous-unité offerte (ex : tablette, sachet).');
+        return;
+      }
+      freeConsumptionOut = Math.round((1 / packSize) * 1e6) / 1e6;
+      freeUnitLabelOut = form.free_item_unit_label.trim();
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -121,6 +181,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
         free_item_label:       isFreeItem ? form.free_item_label.trim() : undefined,
         free_item_product_id:  isFreeItem && form.free_item_product_id ? form.free_item_product_id : undefined,
         free_item_quantity:    freeQty,
+        free_item_unit_label:       isFreeItem ? freeUnitLabelOut : undefined,
+        free_item_stock_consumption: isFreeItem ? freeConsumptionOut : undefined,
         max_uses:         maxUses,
         per_user_limit:   perUser,
         // Fin de journée locale plutôt que minuit UTC (sinon le coupon meurt la
@@ -258,20 +320,91 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   document.body
                 )}
               </div>
-              {freeProduct && (
+              {effectiveFreeProduct && (
                 <p className="text-xs text-content-brand mt-1">
-                  Stock actuel : {freeProduct.stock ?? 0} {freeProduct.unit ?? 'pièce'}
+                  Stock actuel : {effectiveFreeProduct.stock ?? 0} {sellUnit}
+                  {' · '}Prix : {formatCurrency(effectiveFreeProduct.price, currency)} / {sellUnit}
                 </p>
               )}
             </div>
 
+            {/* Unité offerte : au carton ou à la sous-unité */}
+            {effectiveFreeProduct && (
+              <div>
+                <label className="label">On offre…</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => update('free_item_by', 'unit')}
+                    className={`py-2 px-2 rounded-lg border-2 text-xs font-semibold transition-all ${
+                      !bySubunit
+                        ? 'border-brand-500 bg-badge-brand text-content-brand'
+                        : 'border-surface-border bg-surface-input text-content-primary hover:border-brand-500/50'
+                    }`}
+                  >
+                    Par {sellUnit}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update('free_item_by', 'subunit')}
+                    className={`py-2 px-2 rounded-lg border-2 text-xs font-semibold transition-all ${
+                      bySubunit
+                        ? 'border-brand-500 bg-badge-brand text-content-brand'
+                        : 'border-surface-border bg-surface-input text-content-primary hover:border-brand-500/50'
+                    }`}
+                  >
+                    Par sous-unité
+                  </button>
+                </div>
+
+                {bySubunit && (
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div>
+                      <label className="label">Sous-unités par {sellUnit}</label>
+                      <input
+                        type="number"
+                        min="2"
+                        step="1"
+                        value={form.free_item_pack_size}
+                        onChange={(e) => update('free_item_pack_size', e.target.value)}
+                        className="input"
+                        placeholder="Ex : 24"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Nom de la sous-unité</label>
+                      <input
+                        type="text"
+                        value={form.free_item_unit_label}
+                        onChange={(e) => update('free_item_unit_label', e.target.value)}
+                        className="input"
+                        placeholder="Ex : tablette"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {effectiveFreeProduct.price > 0 && (
+                  <p className="text-xs text-content-secondary mt-1.5">
+                    Valeur de ce qui est offert :{' '}
+                    <span className="font-semibold text-content-primary">
+                      {formatCurrency(offeredUnitPrice, currency)} / {offeredUnitLabel}
+                    </span>
+                    {bySubunit && packSize > 1 && (
+                      <> ({(1 / packSize).toFixed(4)} {sellUnit} de stock par {offeredUnitLabel})</>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Quantité offerte</label>
+                <label className="label">Quantité offerte (en {offeredUnitLabel})</label>
                 <input
                   type="number"
-                  min="0"
-                  step="any"
+                  min="1"
+                  step="1"
                   value={form.free_item_quantity}
                   onChange={(e) => update('free_item_quantity', e.target.value)}
                   className="input"

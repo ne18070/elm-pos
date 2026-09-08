@@ -475,6 +475,9 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
                     <div className="flex-1 min-w-0">
                       <p className="text-content-primary truncate">{item.name}</p>
                       <p className="text-content-primary text-xs">{fmt(item.price)} —{item.quantity}</p>
+                      {item.notes && (
+                        <p className="text-content-secondary text-xs italic mt-0.5">{item.notes}</p>
+                      )}
                     </div>
                     <p className="text-content-primary font-medium shrink-0 ml-2">{fmt(item.total)}</p>
                   </div>

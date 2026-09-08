@@ -1034,6 +1034,8 @@ export type Database = {
           free_item_label: string | null
           free_item_product_id: string | null
           free_item_quantity: number
+          free_item_stock_consumption: number
+          free_item_unit_label: string | null
           id: string
           is_active: boolean
           max_uses: number | null
@@ -1052,6 +1054,8 @@ export type Database = {
           free_item_label?: string | null
           free_item_product_id?: string | null
           free_item_quantity?: number
+          free_item_stock_consumption?: number
+          free_item_unit_label?: string | null
           id?: string
           is_active?: boolean
           max_uses?: number | null
@@ -1070,6 +1074,8 @@ export type Database = {
           free_item_label?: string | null
           free_item_product_id?: string | null
           free_item_quantity?: number
+          free_item_stock_consumption?: number
+          free_item_unit_label?: string | null
           id?: string
           is_active?: boolean
           max_uses?: number | null

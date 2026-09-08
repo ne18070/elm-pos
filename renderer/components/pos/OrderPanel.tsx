@@ -80,7 +80,7 @@ export function OrderPanel({
   isRestaurant
 }: OrderPanelProps) {
   const {
-    items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem,
+    items, coupons, addCoupon, removeCoupon, addFreeItem, removeFreeItem, reconcileCoupons,
     updateQuantity, removeItem, resetPriceOverrides,
     subtotal, discountAmount, taxAmount, total, itemCount,
     holdCurrentOrder, heldOrders,
@@ -149,21 +149,39 @@ export function OrderPanel({
     : clientList;
 
   async function handleCouponAdd(c: Coupon) {
-    addCoupon(c);
+    // Coupon « article offert » : on ne l'applique QUE si l'article peut
+    // effectivement sortir du stock. Sinon le coupon n'est pas ajouté.
     if (c.type === 'free_item' && c.free_item_product_id) {
       try {
         const products = await getProducts(businessId);
         const freeProduct = products.find((p) => p.id === c.free_item_product_id);
-        if (freeProduct) {
-          const qty = c.free_item_quantity ?? 1;
-          const result = addFreeItem(freeProduct, qty);
-          if (!result.ok) warning(result.reason ?? 'Stock insuffisant pour l\'article offert');
+        if (!freeProduct) {
+          notifError('Le produit offert par ce coupon est introuvable.');
+          return;
+        }
+        const qty = c.free_item_quantity ?? 1;
+        // Unité offerte : soit l'unité de vente, soit une sous-unité (fraction
+        // du carton). `free_item_stock_consumption` = part de stock par unité offerte.
+        const consumption = c.free_item_stock_consumption && c.free_item_stock_consumption > 0
+          ? c.free_item_stock_consumption
+          : 1;
+        const unit = c.free_item_unit_label?.trim() || freeProduct.unit || 'pièce';
+        const puValue = freeProduct.price * consumption;
+        // Prix unitaire réel + unité (pièce / carton / …) : non compté dans le
+        // total mais affiché sur le panier et la facture.
+        const note = `Offert · P.U. ${formatCurrency(puValue, currency)} / ${unit}`;
+        const result = addFreeItem(freeProduct, qty, note, consumption);
+        if (!result.ok) {
+          warning(result.reason ?? "Stock insuffisant pour l'article offert — coupon non appliqué");
+          return;
         }
       } catch (e) {
         console.error('Failed to add free item for coupon:', e);
-        notifError('Erreur lors de l\'ajout de l\'article offert');
+        notifError("Erreur lors de l'ajout de l'article offert");
+        return;
       }
     }
+    addCoupon(c);
   }
 
   function handleCouponRemove(couponId: string) {
@@ -173,6 +191,19 @@ export function OrderPanel({
     }
     removeCoupon(couponId);
   }
+
+  // Le panier a changé → retirer les coupons devenus inéligibles (seuil de
+  // montant/quantité repassé sous le minimum) et leurs articles offerts.
+  useEffect(() => {
+    const dropped = reconcileCoupons();
+    if (dropped.length > 0) {
+      warning(
+        dropped.length === 1
+          ? `Coupon « ${dropped[0].code} » retiré : conditions du panier non remplies`
+          : `${dropped.length} coupons retirés : conditions du panier non remplies`,
+      );
+    }
+  }, [items, reconcileCoupons, warning]);
 
   const [showHoldModal, setShowHoldModal] = useState(false);
   const fmt = (n: number) => formatCurrency(n, currency);
@@ -324,8 +355,20 @@ export function OrderPanel({
               >
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-content-primary truncate">{item.name}</p>
-                    <p className="text-xs text-content-secondary mt-0.5">{fmt(item.price)} / unité</p>
+                    <p className="text-sm font-medium text-content-primary truncate flex items-center gap-1">
+                      {item.is_free_item && <Gift className="w-3.5 h-3.5 text-status-warning shrink-0" />}
+                      <span className="truncate">{item.name}</span>
+                    </p>
+                    {item.is_free_item ? (
+                      <p className="text-xs text-status-warning font-medium mt-0.5 truncate">
+                        {item.notes
+                          ?? `Offert · P.U. ${fmt((item.product?.price ?? 0) * (item.stock_consumption ?? 1))} / ${item.product?.unit ?? 'pièce'}`}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-content-secondary mt-0.5">
+                        {fmt(item.price)} / {item.product?.unit ?? 'unité'}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => removeItem(item.product_id, item.variant_id)}
@@ -363,7 +406,9 @@ export function OrderPanel({
                   </div>
 
                   <div className="text-right">
-                    <span className="text-content-primary font-bold block">{fmt(item.price * item.quantity)}</span>
+                    <span className={`font-bold block ${item.is_free_item ? 'text-status-warning' : 'text-content-primary'}`}>
+                      {item.is_free_item ? 'Offert' : fmt(item.price * item.quantity)}
+                    </span>
                     {/* Indicateur stock */}
                     {item.product?.track_stock && (
                       <span className={`text-xs ${

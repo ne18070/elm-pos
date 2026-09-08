@@ -256,7 +256,12 @@ export interface Coupon {
   min_quantity?: number;         // free_item: nb minimum d'articles dans le panier
   free_item_label?: string;      // free_item: description affichée (ex: "1 bouteille")
   free_item_product_id?: string; // free_item: produit à offrir (sortie de stock automatique)
-  free_item_quantity?: number;   // free_item: quantité offerte (défaut 1)
+  free_item_quantity?: number;   // free_item: quantité offerte (défaut 1), exprimée dans l'unité offerte
+  /** free_item: libellé de l'unité offerte (ex: "tablette"). Vide → unité du produit. */
+  free_item_unit_label?: string;
+  /** free_item: nb d'unités de STOCK consommées par unité offerte.
+   *  1 = offert à l'unité de vente ; 1/24 = offert à la pièce (carton de 24). */
+  free_item_stock_consumption?: number;
   max_uses?: number;
   uses_count: number;
   per_user_limit?: number;
