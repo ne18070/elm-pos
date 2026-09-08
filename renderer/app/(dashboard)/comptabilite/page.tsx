@@ -51,6 +51,10 @@ export default function ComptabilitePage() {
 
   const [entries, setEntries]   = useState<JournalEntry[]>([]);
   const [balance, setBalance]   = useState<TrialBalanceLine[]>([]);
+  // Balance CUMULÉE (origine → `to`) : le bilan se calcule sur des SOLDES, pas
+  // sur les mouvements d'une période. `balance` (période) reste pour le compte
+  // de résultat et l'onglet Balance.
+  const [bsBalance, setBsBalance] = useState<TrialBalanceLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
   const [reloadToken, setReloadToken]       = useState(0);
@@ -63,7 +67,7 @@ export default function ComptabilitePage() {
   const currency = business?.currency;
 
   const is = useMemo(() => computeIncomeStatement(balance), [balance]);
-  const bs = useMemo(() => computeBalanceSheet(balance), [balance]);
+  const bs = useMemo(() => computeBalanceSheet(bsBalance), [bsBalance]);
   const byClass = useMemo(() =>
     Array.from(new Set(balance.map((r) => r.class_num))).sort().map((cls) => ({
       cls,
@@ -77,13 +81,15 @@ export default function ComptabilitePage() {
     if (!business?.id) return;
     setLoading(true);
     try {
-      const [e, b, a] = await Promise.all([
-        getJournalEntries(business.id, { dateFrom: from, dateTo: to, limit: 500 }),
+      const [e, b, bCum, a] = await Promise.all([
+        getJournalEntries(business.id, { dateFrom: from, dateTo: to, limit: 5000 }),
         getTrialBalance(business.id, from, to),
+        getTrialBalance(business.id, undefined, to),
         getAccounts(business.id),
       ]);
       setEntries(e);
       setBalance(b);
+      setBsBalance(bCum);
       setAccounts(a);
     } catch (err) {
       notifErr(String(err));
@@ -128,6 +134,9 @@ export default function ComptabilitePage() {
   }
 
   function handleExport() {
+    if (entries.length >= 5000) {
+      notifErr("Export limité aux 5 000 dernières écritures de la période. Restreignez la période pour un journal complet.");
+    }
     const journalData = entries.flatMap((e) =>
       (e.lines ?? []).map((l) => ({
         Date: e.entry_date,
@@ -159,7 +168,7 @@ export default function ComptabilitePage() {
       { Libellé: 'Ventes & Prestations (70x)', Montant: is.ventesGross },
       { Libellé: 'RRR accordés (709)', Montant: -is.rrrAccordes },
       { Libellé: "CHIFFRE D'AFFAIRES NET", Montant: is.caNet },
-      { Libellé: 'Achats de marchandises (601)', Montant: -is.achatsMarchandises },
+      { Libellé: "Coût d'achat des marchandises (60x)", Montant: -is.achatsMarchandises },
       { Libellé: 'MARGE BRUTE', Montant: is.margeBrute },
       { Libellé: 'Transports (61)', Montant: -is.transports },
       { Libellé: 'Services extérieurs (62/63)', Montant: -is.servicesExterieurs },
@@ -185,12 +194,15 @@ export default function ComptabilitePage() {
       { Section: 'ACTIF', Poste: 'TOTAL ACTIF', Montant: bs.totalActif },
       { Section: '---', Poste: '---', Montant: null },
       { Section: 'PASSIF', Poste: 'Capitaux propres', Montant: bs.capitaux },
+      { Section: 'PASSIF', Poste: "Résultat de l'exercice", Montant: bs.resultatExercice },
       { Section: 'PASSIF', Poste: 'Emprunts', Montant: bs.dettesLT },
       { Section: 'PASSIF', Poste: 'Fournisseurs', Montant: bs.dettesFF },
       { Section: 'PASSIF', Poste: 'Dettes fiscales', Montant: bs.dettesFiscales },
       { Section: 'PASSIF', Poste: 'Dettes sociales', Montant: bs.dettesSociales },
+      { Section: 'PASSIF', Poste: 'Découverts bancaires', Montant: bs.decouvertsBancaires },
       { Section: 'PASSIF', Poste: 'Autres dettes CT', Montant: bs.autresDettesCT },
       { Section: 'PASSIF', Poste: 'TOTAL PASSIF', Montant: bs.totalPassif },
+      { Section: 'CONTRÔLE', Poste: 'Écart de bilan (doit être nul)', Montant: bs.ecartBilan },
     ];
 
     exportToExcel(
@@ -245,8 +257,15 @@ export default function ComptabilitePage() {
   }
 
   function handlePrint() {
-    const periodLabel = period === 'custom' ? `${customFrom} -${customTo}` : PERIOD_LABELS[period];
-    const bizName  = business?.name ?? 'Établissement';
+    // Échappement HTML — libellés de comptes, descriptions d'écritures et nom
+    // d'établissement sont des données utilisateur écrites telles quelles dans
+    // la fenêtre d'impression : sans échappement, un « <script> » ou un
+    // « </td> » dans un nom de produit casse la page (ou pire).
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
+    ));
+    const periodLabel = period === 'custom' ? `${customFrom} → ${customTo}` : PERIOD_LABELS[period];
+    const bizName  = esc(business?.name ?? 'Établissement');
     const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const fmt = (n: number) =>
       new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(n) + ' ' + displayCurrency(business?.currency ?? 'XOF');
@@ -265,18 +284,18 @@ export default function ComptabilitePage() {
       const linesHtml = (e.lines ?? []).map((l) => `
         <tr style="background:#f9fafb">
           <td></td>
-          <td style="padding:2px 8px;font-family:monospace;color:#6366f1;font-size:11px">${l.account_code}</td>
-          <td style="padding:2px 8px;font-size:11px;color:#555;font-style:italic">${l.account_name}</td>
+          <td style="padding:2px 8px;font-family:monospace;color:#6366f1;font-size:11px">${esc(l.account_code)}</td>
+          <td style="padding:2px 8px;font-size:11px;color:#555;font-style:italic">${esc(l.account_name)}</td>
           <td style="padding:2px 8px;text-align:right;font-family:monospace;font-size:11px">${l.debit > 0 ? fmt(l.debit) : ''}</td>
           <td style="padding:2px 8px;text-align:right;font-family:monospace;font-size:11px">${l.credit > 0 ? fmt(l.credit) : ''}</td>
         </tr>`).join('');
       const total = (e.lines ?? []).reduce((s, l) => s + l.debit, 0);
       return `
         <tr>
-          <td style="padding:5px 8px;font-size:12px;color:#888">${e.entry_date}</td>
-          <td style="padding:5px 8px;font-family:monospace;font-size:11px;color:#888">${e.reference ?? ''}</td>
-          <td style="padding:5px 8px;font-size:12px;font-weight:600">${e.description}</td>
-          <td style="padding:5px 8px"><span style="font-size:10px;background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:9px">${src}</span></td>
+          <td style="padding:5px 8px;font-size:12px;color:#888">${esc(e.entry_date)}</td>
+          <td style="padding:5px 8px;font-family:monospace;font-size:11px;color:#888">${esc(e.reference ?? '')}</td>
+          <td style="padding:5px 8px;font-size:12px;font-weight:600">${esc(e.description)}</td>
+          <td style="padding:5px 8px"><span style="font-size:10px;background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:9px">${esc(src)}</span></td>
           <td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:12px">${total > 0 ? fmt(total) : ''}</td>
         </tr>${linesHtml}`;
     }).join('');
@@ -296,8 +315,8 @@ export default function ComptabilitePage() {
       const detail = rows.map((r) => {
         const solde = r.total_debit - r.total_credit;
         return `<tr>
-          <td style="padding:4px 8px;font-family:monospace;font-size:11px;color:#4f46e5">${r.account_code}</td>
-          <td style="padding:4px 8px;font-size:11px">${r.account_name}</td>
+          <td style="padding:4px 8px;font-family:monospace;font-size:11px;color:#4f46e5">${esc(r.account_code)}</td>
+          <td style="padding:4px 8px;font-size:11px">${esc(r.account_name)}</td>
           <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${r.total_debit > 0 ? fmt(r.total_debit) : ''}</td>
           <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${r.total_credit > 0 ? fmt(r.total_credit) : ''}</td>
           <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px;color:${solde > 0 ? '#16a34a' : solde < 0 ? '#dc2626' : '#888'}">
@@ -315,20 +334,26 @@ export default function ComptabilitePage() {
     }).join('');
 
     const is = computeIncomeStatement(balance);
-    const bs = computeBalanceSheet(balance);
+    const bs = computeBalanceSheet(bsBalance); // bilan = SOLDES cumulés, pas mouvements de période
 
     const plRows: [string, number, boolean, boolean?, boolean?][] = [
       ['Ventes & Prestations (70x)',      is.ventesGross,        false],
       ["RRR accordés (7091)",            -is.rrrAccordes,       true],
       ["CHIFFRE D'AFFAIRES NET",          is.caNet,              false, true],
-      ['Achats de marchandises (601)',   -is.achatsMarchandises, true],
+      ["Coût d'achat marchandises (60x)", -is.achatsMarchandises, true],
       ['MARGE BRUTE',                     is.margeBrute,         false, true],
+      ['Transports (61)',                -is.transports,         true],
+      ['Services extérieurs (62/63)',    -is.servicesExterieurs, true],
+      ['Impôts et taxes (64)',           -is.impotsTaxes,        true],
+      ['Charges de personnel (66)',      -is.chargesPersonnel,   true],
       ['Autres charges (6xx)',           -is.autresCharges,      true],
+      ['EXCÉDENT BRUT (EBE)',             is.ebe,                false, true],
+      ['Dotations amort. (68)',          -is.dotations,          true],
       ["RÉSULTAT D'EXPLOITATION",         is.resultatExpl,       false, true],
-      ['Produits financiers',             is.produitsFinanciers,  true],
-      ['Charges financières (661)',      -is.chargesFinancieres, true],
+      ['Produits financiers (76/77)',     is.produitsFinanciers,  true],
+      ['Charges financières (67/661)',   -is.chargesFinancieres, true],
       ["RÉSULTAT AVANT IMPÔT",            is.resultatAvantImpot, false, true],
-      ['Impôts sur résultat (691)',      -is.impots,             true],
+      ['Impôts sur résultat (69)',       -is.impots,             true],
       ['RÉSULTAT NET',                    is.resultatNet,        false, true, true],
     ];
 
@@ -340,8 +365,8 @@ export default function ComptabilitePage() {
         </td>
       </tr>`).join('');
 
-    const bsActif  = [['Actif immobilisé (Cl. 2)', bs.actifImmobilise], ['Stocks (Cl. 3)', bs.stocks], ['Clients (411)', bs.creancesClients], ['TVA récupérable (4451)', bs.tvaRecuperable], ['Autres actifs CT', bs.autresActifCT], ['Trésorerie (521+571+576)', bs.tresorerie]] as [string, number][];
-    const bsPassif = [['Capitaux propres (Cl. 1)', bs.capitaux], ['Emprunts (161)', bs.dettesLT], ['Fournisseurs (401)', bs.dettesFF], ['Dettes fiscales', bs.dettesFiscales], ['Dettes sociales', bs.dettesSociales], ['Autres dettes CT', bs.autresDettesCT]] as [string, number][];
+    const bsActif  = [['Actif immobilisé (Cl. 2)', bs.actifImmobilise], ['Stocks (Cl. 3)', bs.stocks], ['Clients (411)', bs.creancesClients], ['TVA récupérable (4451)', bs.tvaRecuperable], ['Autres actifs CT', bs.autresActifCT], ['Trésorerie (521+531+571+576)', bs.tresorerie]] as [string, number][];
+    const bsPassif = [['Capitaux propres (Cl. 1)', bs.capitaux], ["Résultat de l'exercice", bs.resultatExercice], ['Emprunts (161)', bs.dettesLT], ['Fournisseurs (401)', bs.dettesFF], ['Dettes fiscales', bs.dettesFiscales], ['Dettes sociales', bs.dettesSociales], ['Découverts bancaires', bs.decouvertsBancaires], ['Autres dettes CT', bs.autresDettesCT]] as [string, number][];
 
     const bsHtml = `
       <table style="width:100%;border-collapse:collapse">
@@ -352,9 +377,9 @@ export default function ComptabilitePage() {
           <th style="padding:6px 8px;text-align:right;font-size:11px">Montant</th>
         </tr></thead>
         <tbody>
-          ${bsActif.map(([l, v], i) => `<tr>
-            <td style="padding:4px 8px;font-size:11px">${l}</td>
-            <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${fmt(v)}</td>
+          ${Array.from({ length: Math.max(bsActif.length, bsPassif.length) }).map((_, i) => `<tr>
+            <td style="padding:4px 8px;font-size:11px">${bsActif[i]?.[0] ?? ''}</td>
+            <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${bsActif[i] ? fmt(bsActif[i][1]) : ''}</td>
             <td style="padding:4px 8px;font-size:11px">${bsPassif[i]?.[0] ?? ''}</td>
             <td style="padding:4px 8px;text-align:right;font-family:monospace;font-size:11px">${bsPassif[i] ? fmt(bsPassif[i][1]) : ''}</td>
           </tr>`).join('')}
@@ -364,6 +389,10 @@ export default function ComptabilitePage() {
             <td style="padding:5px 8px;font-size:12px">TOTAL PASSIF</td>
             <td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:12px">${fmt(bs.totalPassif)}</td>
           </tr>
+          ${Math.abs(bs.ecartBilan) > 0.5 ? `<tr style="background:#fef2f2;color:#b91c1c;font-weight:700">
+            <td colspan="3" style="padding:5px 8px;font-size:11px">⚠ ÉCART DE BILAN (écriture(s) déséquilibrée(s))</td>
+            <td style="padding:5px 8px;text-align:right;font-family:monospace;font-size:12px">${fmt(bs.ecartBilan)}</td>
+          </tr>` : ''}
         </tbody>
       </table>`;
 

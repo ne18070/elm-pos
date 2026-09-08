@@ -15,7 +15,7 @@ import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { WholesaleContext } from './WholesaleSelector';
 import type { Order } from '@pos-types';
-import { createOrder } from '@services/supabase/orders';
+import { createOrder, findOverdueAcompte } from '@services/supabase/orders';
 import { getLoyaltyConfig, getClientBalance, redeemPoints, type LoyaltyConfig } from '@services/supabase/loyalty';
 import { enqueueToSync, printReceipt, openCashDrawer } from '@/lib/ipc';
 import { getIntouchConfig, processIntouchPayment, waitForPayment } from '@services/supabase/intouch';
@@ -512,7 +512,10 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     setStep('attente');
   }
 
-  function preConfirmerAcompte() {
+  /** Jours au-delà desquels un acompte impayé du client bloque tout nouvel acompte. */
+  const ACOMPTE_MAX_JOURS = 7;
+
+  async function preConfirmerAcompte() {
     if (!user || !business) return;
     setErreur('');
 
@@ -523,6 +526,45 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     if (partialMethod === 'cash' && acompteRecu && acompteRecuNum < acompteNum - 0.01) {
       setErreur('Montant reçu insuffisant'); return;
     }
+
+    // Blocage : ce client — OU ce revendeur — traîne déjà un acompte impayé de
+    // plus de 7 jours. Aucune dérogation possible depuis la caisse : il faut
+    // solder l'ancien acompte (Commandes › onglet Acompte) avant d'en ouvrir
+    // un nouveau.
+    setChargement(true);
+    try {
+      const stale = await findOverdueAcompte(
+        business.id,
+        {
+          name:  customerName.trim(),
+          phone: customerPhone.trim() || null,
+          resellerId:       wholesaleCtx?.reseller?.id ?? null,
+          resellerClientId: wholesaleCtx?.client?.id ?? null,
+        },
+        ACOMPTE_MAX_JOURS,
+      );
+      if (stale) {
+        const depuis = new Date(stale.created_at).toLocaleDateString('fr-FR', {
+          day: '2-digit', month: 'long', year: 'numeric',
+        });
+        const qui = stale.matched_on === 'reseller'
+          ? `le revendeur « ${wholesaleCtx?.reseller?.name ?? 'ce revendeur'} »`
+          : stale.matched_on === 'reseller_client'
+          ? `le client « ${wholesaleCtx?.client?.name ?? stale.customer_name ?? 'ce client'} »`
+          : `« ${stale.customer_name ?? customerName.trim()} »`;
+        setErreur(
+          `Nouvel acompte impossible : ${qui} a un acompte du ${depuis} `
+          + `(il y a ${stale.days_old} jours) encore dû pour ${fmt(stale.balance_due)}. `
+          + `Soldez-le d'abord dans Commandes › Acompte.`,
+        );
+        setChargement(false);
+        return;
+      }
+    } catch {
+      // Vérification impossible (hors ligne / réseau) : on n'immobilise pas la
+      // caisse pour autant — l'acompte suit son cours.
+    }
+    setChargement(false);
 
     submitRef.current = submitAcompte;
     if (skipClientConfirm) { void submitAcompte(); return; }

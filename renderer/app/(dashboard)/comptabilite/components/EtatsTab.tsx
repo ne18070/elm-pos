@@ -14,7 +14,7 @@ export function EtatsTab({ is, bs, currency }: Props) {
     { label: 'Ventes & Prestations (70x)',   val: is.ventesGross,         indent: 0, style: 'text-content-primary' },
     { label: 'RRR accordés (709)',           val: -is.rrrAccordes,        indent: 1, style: 'text-status-error' },
     { label: "CHIFFRE D'AFFAIRES NET",        val: is.caNet,               indent: 0, style: 'font-bold text-content-primary', separator: true },
-    { label: 'Achats de marchandises (601)',  val: -is.achatsMarchandises, indent: 1, style: 'text-status-error' },
+    { label: "Coût d'achat marchandises (60x)", val: -is.achatsMarchandises, indent: 1, style: 'text-status-error' },
     { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: 'font-semibold text-content-primary', separator: true },
     { label: 'Transports (61)',              val: -is.transports,         indent: 1, style: 'text-status-error' },
     { label: 'Services extérieurs (62/63)',  val: -is.servicesExterieurs, indent: 1, style: 'text-status-error' },
@@ -40,13 +40,17 @@ export function EtatsTab({ is, bs, currency }: Props) {
   ];
 
   const passifRows = [
-    { label: 'Capitaux propres', val: bs.capitaux },
-    { label: 'Emprunts LT',      val: bs.dettesLT },
-    { label: 'Fournisseurs',     val: bs.dettesFF },
-    { label: 'Dettes fiscales',  val: bs.dettesFiscales },
-    { label: 'Dettes sociales',  val: bs.dettesSociales },
-    { label: 'Autres dettes CT', val: bs.autresDettesCT },
+    { label: 'Capitaux propres',       val: bs.capitaux },
+    { label: "Résultat de l'exercice", val: bs.resultatExercice },
+    { label: 'Emprunts LT',            val: bs.dettesLT },
+    { label: 'Fournisseurs',           val: bs.dettesFF },
+    { label: 'Dettes fiscales',        val: bs.dettesFiscales },
+    { label: 'Dettes sociales',        val: bs.dettesSociales },
+    { label: 'Découverts bancaires',   val: bs.decouvertsBancaires },
+    { label: 'Autres dettes CT',       val: bs.autresDettesCT },
   ];
+
+  const bilanEquilibre = Math.abs(bs.ecartBilan) < 1;
 
   return (
     <div className="grid lg:grid-cols-2 gap-6">
@@ -75,8 +79,13 @@ export function EtatsTab({ is, bs, currency }: Props) {
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-surface-border bg-surface-card">
           <h2 className="font-bold text-content-primary">Bilan simplifié</h2>
-          <p className="text-xs text-content-primary mt-0.5">Situation patrimoniale</p>
+          <p className="text-xs text-content-primary mt-0.5">Situation patrimoniale (soldes cumulés)</p>
         </div>
+        {!bilanEquilibre && (
+          <div className="px-5 py-2 bg-badge-error border-b border-status-error text-xs text-status-error font-medium">
+            ⚠ Bilan déséquilibré — écart de {formatCurrency(bs.ecartBilan, currency)}. Une ou plusieurs écritures ne sont pas équilibrées (Débit ≠ Crédit) : vérifiez le journal.
+          </div>
+        )}
         <div className="p-5 grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <p className="text-xs font-bold text-content-secondary uppercase tracking-wide mb-3">ACTIF</p>

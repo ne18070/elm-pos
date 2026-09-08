@@ -26,6 +26,8 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
   const [saving, setSaving]     = useState(false);
   const [expertMode, setExpertMode] = useState(false);
 
+  const today = new Date().toISOString().slice(0, 10);
+
   // -- Mode guidé --
   const [category, setCategory] = useState<string | null>(null);
   const [op, setOp]             = useState<OpTemplate | null>(null);
@@ -209,7 +211,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                   )}
                   <div>
                     <label className="label">Date</label>
-                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" />
+                    <input type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} className="input" />
                   </div>
                   <div>
                     <label className="label">Note / précision</label>
@@ -253,7 +255,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">Date</label>
-                  <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className="input" />
+                  <input type="date" max={today} value={expDate} onChange={(e) => setExpDate(e.target.value)} className="input" />
                 </div>
                 <div>
                   <label className="label">Référence</label>

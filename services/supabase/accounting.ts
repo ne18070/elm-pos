@@ -4,6 +4,150 @@ import type { Json } from './database.types';
 const db  = supabase.from.bind(supabase);
 const rpc = supabase.rpc.bind(supabase);
 
+// --- Helpers ----------------------------------------------------------------
+
+/** Arrondi comptable à 2 décimales, sans artefact flottant. */
+const round2 = (n: number) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
+/**
+ * Libellé canonique par code de compte. `get_trial_balance` regroupe par
+ * (code, nom) : deux libellés différents pour le même code (« Caisse » vs
+ * « Caisse / Mobile », « Banques – comptes courants » vs « Banque / Carte »)
+ * scindent le compte en deux lignes et faussent le bilan (getBalance() ne lit
+ * que la 1re). Toute écriture générée doit passer par ACCT_NAME.
+ */
+const ACCT_NAME: Record<string, string> = {
+  '101':  'Capital social',
+  '161':  'Emprunts',
+  '31':   'Marchandises',
+  '401':  'Fournisseurs',
+  '411':  'Clients',
+  '419':  'Clients – avances et acomptes reçus',
+  '4441': 'TVA facturée (collectée)',
+  '4451': 'TVA récupérable sur achats',
+  '521':  'Banques – comptes courants',
+  '531':  'Chèques postaux',
+  '571':  'Caisse',
+  '576':  'Mobile Money',
+  '601':  'Achats de marchandises',
+  '603':  'Variations des stocks de marchandises',
+  '701':  'Ventes de marchandises',
+  '706':  'Prestations de services',
+  '7061': 'Honoraires',
+  '7065': 'Prestations de services',
+  '7091': 'RRR accordés sur ventes',
+};
+const acctName = (code: string, fallback = ''): string => ACCT_NAME[code] ?? fallback;
+
+/** id de l'utilisateur courant (pour journal_entries.created_by). */
+async function _currentUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+type _AnyLine = { account_code: string; account_name: string; debit: number; credit: number };
+
+/**
+ * Absorbe un écart d'ARRONDI (≤ 0,05) dans la plus grosse ligne pour garantir
+ * Σ débit = Σ crédit au centime. Au-delà, l'écart est une vraie anomalie : on
+ * ne touche à rien et l'appelant rejette l'écriture. Renvoie l'écart résiduel.
+ */
+function _absorbRoundingGap(lines: _AnyLine[]): number {
+  const d = round2(lines.reduce((s, l) => s + (Number(l.debit)  || 0), 0));
+  const c = round2(lines.reduce((s, l) => s + (Number(l.credit) || 0), 0));
+  const gap = round2(d - c);
+  if (gap === 0 || Math.abs(gap) > 0.05) return gap;
+  // gap > 0 : trop de débit → on augmente un crédit (ou on réduit un débit).
+  const side: 'debit' | 'credit' = gap > 0 ? 'credit' : 'debit';
+  let target = lines.filter((l) => l[side] > 0).sort((a, b) => b[side] - a[side])[0];
+  if (!target) { target = lines.filter((l) => (gap > 0 ? l.debit : l.credit) > 0).sort((a, b) => b[gap > 0 ? 'debit' : 'credit'] - a[gap > 0 ? 'debit' : 'credit'])[0]; }
+  if (!target) return gap;
+  if (side === 'credit') target.credit = round2(target.credit + Math.abs(gap));
+  else                   target.debit  = round2(target.debit  + Math.abs(gap));
+  return 0;
+}
+
+/** Code d'erreur PostgreSQL « unique_violation ». */
+const _PG_UNIQUE_VIOLATION = '23505';
+const _errCode = (e: unknown): string | undefined => (e as { code?: string } | null)?.code;
+
+/**
+ * Insère une écriture + ses lignes, en nettoyant l'écriture si l'insertion des
+ * lignes échoue (sinon : écriture orpheline sans ligne, définitivement bloquée
+ * par le dédoublonnage source_id). Rejette toute écriture déséquilibrée ou à
+ * moins de 2 lignes. Une violation d'unicité (je_biz_source_uidx) = écriture
+ * déjà comptabilisée par une synchro concurrente → on l'ignore sans erreur.
+ * Renvoie true si une écriture a bien été créée.
+ */
+async function _insertBalancedEntry(
+  entry: Record<string, unknown>,
+  lines: _AnyLine[],
+): Promise<boolean> {
+  _absorbRoundingGap(lines);
+  const d = round2(lines.reduce((s, l) => s + (Number(l.debit)  || 0), 0));
+  const c = round2(lines.reduce((s, l) => s + (Number(l.credit) || 0), 0));
+  if (lines.length < 2 || Math.abs(d - c) > 0.01) {
+    console.warn(`[compta] écriture « ${String(entry.description)} » ignorée — déséquilibre D ${d} ≠ C ${c}`);
+    return false;
+  }
+  const { data: created, error: eErr } = await db('journal_entries')
+    .insert(entry as never)
+    .select('id')
+    .maybeSingle();
+  if (eErr) {
+    if (_errCode(eErr) === _PG_UNIQUE_VIOLATION) return false; // déjà comptabilisée
+    throw new Error(eErr.message);
+  }
+  if (!created) return false;
+  const { error: lErr } = await db('journal_lines').insert(lines.map((l) => ({ ...l, entry_id: created.id })));
+  if (lErr) {
+    await db('journal_entries').delete().eq('id', created.id);
+    throw new Error(lErr.message);
+  }
+  return true;
+}
+
+/**
+ * Insère un lot d'écritures `journal_entries` en tolérant les doublons (course
+ * entre deux « Synchroniser » simultanés). Un INSERT multi-lignes étant
+ * atomique, sur violation d'unicité on réinsère le lot ligne à ligne en sautant
+ * les seuls doublons. Renvoie le mapping source_id → id des écritures RÉELLEMENT
+ * insérées PAR CET APPEL (jamais celles créées par une session concurrente :
+ * c'est cette session-là qui leur rattache leurs lignes).
+ */
+async function _insertEntriesTolerant(
+  _businessId: string,
+  rows: Record<string, unknown>[],
+): Promise<Map<string, string>> {
+  const mine = new Map<string, string>();
+  const keep = (r: { id: string; source_id: string | null } | null | undefined) => {
+    if (r?.source_id) mine.set(r.source_id, r.id);
+  };
+  for (let i = 0; i < rows.length; i += 300) {
+    const batch = rows.slice(i, i + 300);
+    const { data, error } = await db('journal_entries').insert(batch as never).select('id, source_id');
+    if (!error) {
+      for (const e of (data ?? []) as { id: string; source_id: string | null }[]) keep(e);
+      continue;
+    }
+    if (_errCode(error) !== _PG_UNIQUE_VIOLATION) throw new Error(error.message);
+    for (const one of batch) {
+      const { data: d1, error: e1 } = await db('journal_entries')
+        .insert(one as never).select('id, source_id').maybeSingle();
+      if (e1) {
+        if (_errCode(e1) !== _PG_UNIQUE_VIOLATION) throw new Error(e1.message);
+        continue; // déjà comptabilisée par une autre session
+      }
+      keep(d1 as { id: string; source_id: string | null } | null);
+    }
+  }
+  return mine;
+}
+
 // --- Types --------------------------------------------------------------------
 
 export interface Account {
@@ -59,10 +203,17 @@ export interface CreateEntryInput {
 
 // --- Comptes ------------------------------------------------------------------
 
+const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Garde-fou : ne jamais interpoler une valeur non-UUID dans un filtre .or(). */
+function _assertUuid(id: string): string {
+  if (!_UUID_RE.test(id)) throw new Error('Identifiant établissement invalide');
+  return id;
+}
+
 export async function getAccounts(businessId: string): Promise<Account[]> {
   const { data, error } = await db('accounts')
     .select('*')
-    .or(`business_id.eq.${businessId},business_id.is.null`)
+    .or(`business_id.eq.${_assertUuid(businessId)},business_id.is.null`)
     .eq('is_active', true)
     .order('code');
   if (error) throw new Error(error.message);
@@ -73,22 +224,50 @@ export async function createAccount(
   businessId: string,
   input: { code: string; name: string; nature: Account['nature']; balance_type: Account['balance_type'] }
 ): Promise<Account> {
-  const classNum = parseInt(input.code.charAt(0), 10);
+  _assertUuid(businessId);
+  const code = input.code.trim();
+  const classNum = parseInt(code.charAt(0), 10);
   if (isNaN(classNum) || classNum < 1 || classNum > 8) {
     throw new Error('Le numéro de compte doit commencer par un chiffre de 1 à 8');
   }
+  // On regarde AUSSI les comptes désactivés : l'index unique (business_id, code)
+  // porte sur toutes les lignes, actives ou non. Un code re-créé après
+  // suppression doit être RÉACTIVÉ, pas ré-inséré (sinon violation d'unicité).
   const { data: existing } = await db('accounts')
-    .select('id')
-    .eq('code', input.code)
+    .select('id, business_id, is_active, is_default')
+    .eq('code', code)
     .or(`business_id.eq.${businessId},business_id.is.null`)
-    .eq('is_active', true)
+    .order('business_id', { ascending: true, nullsFirst: false })
+    .limit(1)
     .maybeSingle();
-  if (existing) throw new Error(`Le compte ${input.code} existe déjà dans votre plan comptable`);
+
+  if (existing) {
+    if (existing.is_active) {
+      throw new Error(`Le compte ${code} existe déjà dans votre plan comptable`);
+    }
+    if (existing.business_id !== businessId) {
+      // Compte standard (business_id NULL) désactivé — le réactiver tel quel.
+      const { data, error } = await db('accounts')
+        .update({ is_active: true })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data as Account;
+    }
+    const { data, error } = await db('accounts')
+      .update({ is_active: true, name: input.name.trim(), nature: input.nature, balance_type: input.balance_type })
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Account;
+  }
 
   const { data, error } = await db('accounts')
     .insert({
       business_id: businessId,
-      code: input.code.trim(),
+      code,
       name: input.name.trim(),
       class: classNum,
       nature: input.nature,
@@ -103,6 +282,25 @@ export async function createAccount(
 }
 
 export async function deleteAccount(accountId: string): Promise<void> {
+  // Suppression franche si le compte n'a JAMAIS été mouvementé (permet de
+  // recréer le même code proprement) ; sinon désactivation (on ne casse pas
+  // l'historique du journal).
+  const { data: acc } = await db('accounts')
+    .select('id, code, business_id')
+    .eq('id', accountId)
+    .eq('is_default', false)
+    .maybeSingle();
+  if (!acc) return;
+
+  const { count } = await db('journal_lines')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_code', acc.code);
+
+  if ((count ?? 0) === 0) {
+    const { error } = await db('accounts').delete().eq('id', accountId).eq('is_default', false);
+    if (error) throw new Error(error.message);
+    return;
+  }
   const { error } = await db('accounts')
     .update({ is_active: false })
     .eq('id', accountId)
@@ -179,11 +377,15 @@ export async function getJournalDuplicateGroups(from?: string, to?: string): Pro
 }
 
 export async function createManualEntry(input: CreateEntryInput): Promise<JournalEntry> {
-  // Vérifier l'équilibre Débit = Crédit
-  const totalDebit  = input.lines.reduce((s, l) => s + l.debit, 0);
-  const totalCredit = input.lines.reduce((s, l) => s + l.credit, 0);
+  // Vérifier l'équilibre Débit = Crédit (garde-fou client ; le contrôle
+  // faisant autorité est le trigger je_balanced_check côté base — migration 113)
+  const totalDebit  = round2(input.lines.reduce((s, l) => s + (Number(l.debit)  || 0), 0));
+  const totalCredit = round2(input.lines.reduce((s, l) => s + (Number(l.credit) || 0), 0));
   if (Math.abs(totalDebit - totalCredit) > 0.01) {
     throw new Error(`Écriture déséquilibrée : Débit ${totalDebit} ≠ Crédit ${totalCredit}`);
+  }
+  if (input.lines.filter((l) => (Number(l.debit) || 0) > 0 || (Number(l.credit) || 0) > 0).length < 2) {
+    throw new Error('Une écriture comptable requiert au moins 2 lignes mouvementées');
   }
 
   const { data: entry, error: entryErr } = await db('journal_entries')
@@ -194,6 +396,7 @@ export async function createManualEntry(input: CreateEntryInput): Promise<Journa
       description: input.description,
       source:      'manual',
       source_id:   input.source_id ?? null,
+      created_by:  await _currentUserId(),
     })
     .select()
     .single();
@@ -291,25 +494,43 @@ async function _fetchInBatches<T>(
   return all;
 }
 
-/** Insère `rows` par lots de `batchSize` — un seul aller-retour réseau par
- *  lot plutôt qu'un insert par ligne, indispensable dès que le volume
- *  dépasse quelques dizaines d'enregistrements. */
-async function _insertInBatches<TReturn = unknown, TRow = unknown>(
-  rows: TRow[],
-  batchSize: number,
-  build: (batch: TRow[]) => PromiseLike<{ data: TReturn[] | null; error: { message: string } | null }>,
-): Promise<TReturn[]> {
-  const all: TReturn[] = [];
-  for (let i = 0; i < rows.length; i += batchSize) {
-    if (rows.length === 0) break;
-    const { data, error } = await build(rows.slice(i, i + batchSize));
+/**
+ * Insère des lignes de journal en lots ≤ `size` SANS jamais scinder les lignes
+ * d'une même écriture entre deux lots. Le trigger d'équilibre (DEFERRABLE,
+ * migration 113) vérifie Σ débit = Σ crédit par écriture au COMMIT de chaque
+ * requête HTTP : une écriture à cheval sur deux lots échouerait sur le premier.
+ * Pré-condition : les lignes d'une même écriture sont contiguës dans `lines`
+ * (vrai pour toutes les synchros — construites écriture par écriture).
+ */
+async function _insertJournalLinesByEntry(lines: _LineInput[], size = 1000): Promise<void> {
+  let batch: _LineInput[] = [];
+  const flush = async () => {
+    if (batch.length === 0) return;
+    const { error } = await db('journal_lines').insert(batch);
     if (error) throw new Error(error.message);
-    all.push(...(data ?? []));
+    batch = [];
+  };
+  let i = 0;
+  while (i < lines.length) {
+    const entryId = lines[i].entry_id;
+    let j = i;
+    while (j < lines.length && lines[j].entry_id === entryId) j++;
+    const group = lines.slice(i, j);
+    if (batch.length > 0 && batch.length + group.length > size) await flush();
+    batch.push(...group);
+    i = j;
   }
-  return all;
+  await flush();
 }
 
 export async function syncAccounting(businessId: string): Promise<number> {
+  // Purge des écritures orphelines (insérées puis échouées sur leurs lignes lors
+  // d'une synchro précédente) — sinon elles restent « déjà synchronisées » à
+  // jamais. RPC owner/admin ; ignore l'erreur si l'appelant n'a pas le rôle.
+  try {
+    await rpc('delete_orphan_journal_entries' as never, { p_business_id: businessId, p_source: null } as never);
+  } catch { /* rôle insuffisant ou RPC absente — non bloquant */ }
+
   // Collect already-synced IDs to avoid duplicates — paginé (voir _fetchAllRows).
   // .order('id') OBLIGATOIRE : sans tri explicite, une requête .range() paginée
   // renvoie les lignes dans un ordre non garanti d'une page à l'autre → des
@@ -356,74 +577,99 @@ export async function syncAccounting(businessId: string): Promise<number> {
     (payMap[p.order_id] ??= []).push(p);
   }
 
-  // ── Orders ──────────────────────────────────────────────────────────────────
-  // Insertion par lots (entries d'abord, puis leurs lignes une fois les id
-  // connus) plutôt qu'un aller-retour réseau par commande : sur un historique
-  // de plusieurs milliers de commandes, la version ligne-par-ligne prenait
-  // littéralement des dizaines de minutes (2 requêtes séquentielles × N
-  // commandes). Ici, tout l'historique tient en une poignée de lots.
-  const entryRows = unsynced.map((o) => {
-    const isRefund = o.status === 'refunded';
-    const ref      = '#' + o.id.slice(0, 8).toUpperCase();
-    const isRS     = o.order_channel === 'room_service';
-    return {
-      business_id: businessId,
-      entry_date:  (isRefund ? o.updated_at : o.created_at).slice(0, 10),
-      reference:   ref,
-      description: isRefund ? `Remboursement ${ref}` : `${isRS ? 'Room Service' : 'Vente'} ${ref}`,
-      source:      isRefund ? 'refund' : 'order',
-      source_id:   o.id,
-    };
-  });
-
-  const insertedEntries = await _insertInBatches(
-    entryRows, 500,
-    (batch) => db('journal_entries').insert(batch).select('id, source_id'),
+  // Remboursements réels par commande — l'extourne se fait AU PRORATA du
+  // montant effectivement remboursé (refunds.amount), jamais à 100 % d'office.
+  const allRefunds = await _fetchInBatches<{ order_id: string; amount: number }>(ids, 500, (batch) =>
+    supabase.from('refunds').select('order_id, amount').in('order_id', batch),
   );
-  const entryIdBySourceId = new Map(insertedEntries.map((e) => [e.source_id, e.id]));
+  const refundMap: Record<string, number> = {};
+  for (const r of allRefunds) refundMap[r.order_id] = round2((refundMap[r.order_id] ?? 0) + Number(r.amount || 0));
 
-  const allLines: _LineInput[] = [];
+  // ── Orders ──────────────────────────────────────────────────────────────────
+  // On construit chaque écriture + ses lignes AVANT toute insertion et on rejette
+  // les écritures déséquilibrées ; l'insertion (_insertEntriesTolerant) avale les
+  // violations d'unicité → deux « Synchroniser » concurrents ne produisent ni
+  // erreur dure ni lignes en double.
+  type _PendingLine = { account_code: string; account_name: string; debit: number; credit: number };
+  const built: { sourceId: string; entry: Record<string, unknown>; lines: _PendingLine[] }[] = [];
+
   for (const o of unsynced) {
-    const entryId = entryIdBySourceId.get(o.id);
-    if (!entryId) continue; // insertion de cette écriture a échoué/sautée — pas de lignes orphelines
-
     const isRefund = o.status === 'refunded';
     const isRS     = o.order_channel === 'room_service';
-    const total    = Number(o.total);
-    const subtotal = Number(o.subtotal);
-    const tax      = Number(o.tax_amount);
-    const discount = Number(o.discount_amount);
-    const pays     = (payMap[o.id] ?? []).filter((p) => p.method !== 'free' && Number(p.amount) > 0);
+    const ref      = '#' + o.id.slice(0, 8).toUpperCase();
+    const sub      = round2(Number(o.subtotal)  || 0);   // brut HT, AVANT remise
+    const tax      = round2(Number(o.tax_amount) || 0);
+    const disc     = round2(Number(o.discount_amount) || 0);
+    const tot      = round2(Number(o.total) || 0);
+    // TVA « en dedans » ? total ≈ sub - remise (sinon total ≈ sub - remise + TVA)
+    const taxInclusive = tax > 0 && Math.abs((sub - disc) - tot) < Math.abs((sub - disc + tax) - tot);
+    const rev      = round2(taxInclusive ? sub - tax : sub);  // produit HT à comptabiliser
+    const revCode  = isRS ? '706' : '701';
+    const revName  = acctName(revCode, isRS ? 'Prestations de services' : 'Ventes de marchandises');
+
+    const pays = (payMap[o.id] ?? []).filter((p) => p.method !== 'free' && Number(p.amount) > 0);
+    const paid = round2(pays.reduce((s, p) => s + (Number(p.amount) || 0), 0));
+
+    const lines: _PendingLine[] = [];
 
     if (!isRefund) {
-      // Debit: one line per payment method
-      if (pays.length > 0) {
-        for (const p of pays) {
-          const acc = _payMethodToAccount(p.method);
-          allLines.push({ entry_id: entryId, account_code: acc.code, account_name: acc.name, debit: Number(p.amount), credit: 0 });
-        }
-      } else if (total > 0) {
-        // Fallback if payments table has no record
-        allLines.push({ entry_id: entryId, account_code: '571', account_name: 'Caisse', debit: total, credit: 0 });
+      for (const p of pays) {
+        const acc = _payMethodToAccount(p.method);
+        lines.push({ account_code: acc.code, account_name: acctName(acc.code, acc.name), debit: round2(Number(p.amount)), credit: 0 });
       }
-      if (discount > 0) {
-        allLines.push({ entry_id: entryId, account_code: '7091', account_name: 'RRR accordés sur ventes', debit: discount, credit: 0 });
-      }
-      // Credit: revenue account (706 for room service, 701 for regular sales)
-      const revCode = isRS ? '706' : '701';
-      const revName = isRS ? 'Services rendus' : 'Ventes de marchandises';
-      if (subtotal > 0) allLines.push({ entry_id: entryId, account_code: revCode, account_name: revName, debit: 0, credit: subtotal });
-      if (tax > 0)      allLines.push({ entry_id: entryId, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: 0, credit: tax });
+      const due = round2(tot - paid);
+      // Solde non encaissé (acompte / vente à crédit) → créance client, JAMAIS de la caisse
+      if (due > 0.01)  lines.push({ account_code: '411', account_name: acctName('411'), debit: due, credit: 0 });
+      // Trop-perçu → dette envers le client
+      if (due < -0.01) lines.push({ account_code: '419', account_name: acctName('419'), debit: 0, credit: -due });
+      if (disc > 0)    lines.push({ account_code: '7091', account_name: acctName('7091'), debit: disc, credit: 0 });
+      if (rev > 0)     lines.push({ account_code: revCode, account_name: revName, debit: 0, credit: rev });
+      if (tax > 0)     lines.push({ account_code: '4441', account_name: acctName('4441'), debit: 0, credit: tax });
     } else {
-      // Refund: reverse of the original sale
-      if (subtotal > 0) allLines.push({ entry_id: entryId, account_code: '701', account_name: 'Ventes de marchandises', debit: subtotal, credit: 0 });
-      if (tax > 0)      allLines.push({ entry_id: entryId, account_code: '4441', account_name: 'TVA facturée (collectée)', debit: tax, credit: 0 });
-      if (total > 0)    allLines.push({ entry_id: entryId, account_code: '571', account_name: 'Caisse', debit: 0, credit: total });
+      const refunded = round2(refundMap[o.id] ?? tot);
+      const ratio    = tot > 0 ? Math.min(1, refunded / tot) : 1;
+      const rRev  = round2((taxInclusive ? sub - tax : sub) * ratio);
+      const rTax  = round2(tax  * ratio);
+      const rDisc = round2(disc * ratio);
+      if (rRev > 0)  lines.push({ account_code: '701', account_name: acctName('701'), debit: rRev, credit: 0 });
+      if (rTax > 0)  lines.push({ account_code: '4441', account_name: acctName('4441'), debit: rTax, credit: 0 });
+      if (rDisc > 0) lines.push({ account_code: '7091', account_name: acctName('7091'), debit: 0, credit: rDisc });
+      if (refunded > 0) lines.push({ account_code: '571', account_name: acctName('571'), debit: 0, credit: refunded });
     }
-  }
-  await _insertInBatches(allLines, 1000, (batch) => db('journal_lines').insert(batch));
 
-  let count = insertedEntries.length;
+    _absorbRoundingGap(lines);
+    const d = round2(lines.reduce((s, l) => s + l.debit, 0));
+    const c = round2(lines.reduce((s, l) => s + l.credit, 0));
+    if (lines.length < 2 || Math.abs(d - c) > 0.01) {
+      console.warn(`[compta] écriture ${ref} ignorée — déséquilibre D ${d} ≠ C ${c}`);
+      continue;
+    }
+
+    built.push({
+      sourceId: o.id,
+      entry: {
+        business_id: businessId,
+        entry_date:  (isRefund ? o.updated_at : o.created_at).slice(0, 10),
+        reference:   ref,
+        description: isRefund ? `Remboursement ${ref}` : `${isRS ? 'Room Service' : 'Vente'} ${ref}`,
+        source:      isRefund ? 'refund' : 'order',
+        source_id:   o.id,
+      },
+      lines,
+    });
+  }
+
+  const entryIdBySourceId = await _insertEntriesTolerant(businessId, built.map((b) => b.entry));
+
+  const allLines: _LineInput[] = [];
+  for (const b of built) {
+    const entryId = entryIdBySourceId.get(b.sourceId);
+    if (!entryId) continue; // écriture absente (course concurrente) → pas de lignes orphelines
+    for (const l of b.lines) allLines.push({ ...l, entry_id: entryId });
+  }
+  await _insertJournalLinesByEntry(allLines, 1000);
+
+  let count = built.filter((b) => entryIdBySourceId.has(b.sourceId)).length;
 
   // ── Stock purchases (achats) ─────────────────────────────────────────────
   const syncedStock = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
@@ -456,7 +702,7 @@ export async function syncAccounting(businessId: string): Promise<number> {
     if (seenStock.has(s.id)) return false;
     seenStock.add(s.id);
     if (syncedStockSet.has(s.id)) return false;
-    const totalCost = Math.round(Number(s.quantity) * Number(s.cost_per_unit) * 100) / 100;
+    const totalCost = round2(Number(s.quantity) * Number(s.cost_per_unit));
     if (totalCost <= 0) return false;
     stockCostBySourceId.set(s.id, totalCost);
     return true;
@@ -468,23 +714,20 @@ export async function syncAccounting(businessId: string): Promise<number> {
     source_id:   s.id,
   }));
 
-  const insertedStockEntries = await _insertInBatches(
-    stockEntryRows, 500,
-    (batch) => db('journal_entries').insert(batch).select('id, source_id'),
-  );
+  const stockIdBySourceId = await _insertEntriesTolerant(businessId, stockEntryRows);
 
   const stockLines: _LineInput[] = [];
-  for (const e of insertedStockEntries) {
-    const totalCost = e.source_id ? stockCostBySourceId.get(e.source_id) : undefined;
+  for (const [sourceId, entryId] of stockIdBySourceId) {
+    const totalCost = stockCostBySourceId.get(sourceId);
     if (!totalCost) continue;
     stockLines.push(
-      { entry_id: e.id, account_code: '601', account_name: 'Achats de marchandises', debit: totalCost, credit: 0 },
-      { entry_id: e.id, account_code: '401', account_name: 'Fournisseurs',           debit: 0,         credit: totalCost },
+      { entry_id: entryId, account_code: '601', account_name: acctName('601'), debit: totalCost, credit: 0 },
+      { entry_id: entryId, account_code: '401', account_name: acctName('401'), debit: 0,         credit: totalCost },
     );
   }
-  await _insertInBatches(stockLines, 1000, (batch) => db('journal_lines').insert(batch));
+  await _insertJournalLinesByEntry(stockLines, 1000);
 
-  count += insertedStockEntries.length;
+  count += stockIdBySourceId.size;
 
   return count;
 }
@@ -714,16 +957,21 @@ export interface BalanceSheet {
   creancesClients: number;  // 411
   tvaRecuperable:  number;  // 4451
   autresActifCT:   number;  // other class 4 debit
-  tresorerie:      number;  // 521, 571, 576
+  tresorerie:      number;  // 521, 571, 576, 531 (débiteurs uniquement)
   totalActif:      number;
   // PASSIF
-  capitaux:        number;  // class 1
-  dettesLT:        number;  // 161
-  dettesFF:        number;  // 401
-  dettesFiscales:  number;  // 441, 444, 4441
-  dettesSociales:  number;  // 421, 431, 646
-  autresDettesCT:  number;  // other class 4 credit
-  totalPassif:     number;
+  capitaux:          number;  // class 1 hors résultat de l'exercice
+  resultatExercice:  number;  // résultat net de la période (non encore journalisé)
+  dettesLT:          number;  // 161
+  dettesFF:          number;  // 401
+  dettesFiscales:    number;  // 441, 444, 4441
+  dettesSociales:    number;  // 421, 431
+  decouvertsBancaires: number; // 521/531/576 créditeurs + 551/565
+  autresDettesCT:    number;  // other class 4 credit + 419
+  totalPassif:       number;
+  /** totalActif − totalPassif : doit être nul. Non nul ⇒ écriture(s)
+   *  déséquilibrée(s) ou compte hors périmètre du bilan simplifié. */
+  ecartBilan:        number;
 }
 
 // --- Synchronisation hôtel ---------------------------------------------------
@@ -745,155 +993,173 @@ export async function syncHotelAccounting(businessId: string): Promise<number> {
   let count = 0;
 
   // --- 1. Sync hotel_payments (acomptes + paiements au check-out) ----------
-  // source = 'hotel', source_id = payment UUID - distinct des réservations car UUIDs différents
-  // Chaque paiement reçu génère : Débit 571/521 · Crédit 706
-  const syncedPayments = syncedSet; // même ensemble : source='hotel', source_id=uuid
+  // source = 'hotel', source_id = payment UUID. Chaque paiement reçu :
+  //   Débit 571/521/576 (selon moyen) · Crédit 706
+  // Paginé — sinon plafonné à 1000 lignes par PostgREST.
+  const payments = await _fetchAllRows<{
+    id: string; amount: number; method: string; paid_at: string; reservation_id: string;
+  }>((from, to) =>
+    supabase
+      .from('hotel_payments')
+      .select('id, amount, method, paid_at, reservation_id')
+      .eq('business_id', businessId)
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
 
-  const { data: payments, error: payErr } = await supabase
-    .from('hotel_payments')
-    .select('id, amount, method, paid_at, reservation_id')
-    .eq('business_id', businessId);
-  if (payErr) throw new Error(payErr.message);
-
-  // Récupérer les infos réservations en une seule requête pour les descriptions
-  const reservationIds = [...new Set((payments ?? []).map((p: { reservation_id: string }) => p.reservation_id))];
-  let resInfoMap: Record<string, { room: string; guest: string }> = {};
-  if (reservationIds.length > 0) {
+  // Infos réservations pour les libellés
+  const reservationIds = [...new Set(payments.map((p) => p.reservation_id))];
+  const resInfoMap: Record<string, { room: string; guest: string }> = {};
+  for (let i = 0; i < reservationIds.length; i += 200) {
     const { data: resInfo } = await supabase
       .from('hotel_reservations')
       .select('id, room:hotel_rooms!room_id(number), guest:hotel_guests!guest_id(full_name)')
-      .in('id', reservationIds);
+      .in('id', reservationIds.slice(i, i + 200));
     for (const r of (resInfo ?? []) as { id: string; room: { number: string } | null; guest: { full_name: string } | null }[]) {
       resInfoMap[r.id] = { room: r.room?.number ?? '', guest: r.guest?.full_name ?? 'Client' };
     }
   }
 
-  for (const p of (payments ?? []) as {
-    id: string; amount: number; method: string; paid_at: string; reservation_id: string;
-  }[]) {
-    if (syncedPayments.has(p.id)) continue;
+  for (const p of payments) {
+    if (syncedSet.has(p.id)) continue;
 
-    const entryDate = p.paid_at.slice(0, 10);
-    const debit = p.method === 'card'
-      ? { code: '521', name: 'Banque / Carte' }
-      : { code: '571', name: p.method === 'mobile_money' ? 'Caisse / Mobile' : 'Caisse' };
+    // Double comptabilisation : la section 2 a pu créer une écriture
+    // provisoire de séjour (source_id = reservation_id) tant qu'aucun
+    // paiement n'existait. Un paiement apparaît désormais → on retire la
+    // provision avant de comptabiliser l'encaissement réel.
+    if (syncedSet.has(p.reservation_id)) {
+      await db('journal_entries').delete()
+        .eq('business_id', businessId).eq('source', 'hotel').eq('source_id', p.reservation_id);
+      syncedSet.delete(p.reservation_id);
+    }
 
-    const info    = resInfoMap[p.reservation_id] ?? { room: '', guest: 'Client' };
-    const desc    = `Paiement hôtel${info.room ? ` - Ch.${info.room}` : ''} - ${info.guest}`;
+    const amount = round2(Number(p.amount) || 0);
+    if (amount <= 0) continue;
 
-    const { data: entry, error: entryErr } = await db('journal_entries')
-      .insert({ business_id: businessId, entry_date: entryDate, description: desc, source: 'hotel', source_id: p.id })
-      .select().single();
-    if (entryErr) throw new Error(`Erreur journal_entries: ${entryErr.message}`);
-    if (!entry) continue;
+    const debitCode = p.method === 'card' || p.method === 'bank' ? '521'
+      : p.method === 'mobile_money' || p.method === 'mobile' ? '576'
+      : '571';
 
-    const { error: linesErr } = await db('journal_lines').insert([
-      { entry_id: entry.id, account_code: debit.code, account_name: debit.name, debit: Number(p.amount), credit: 0 },
-      { entry_id: entry.id, account_code: '706', account_name: 'Prestations hébergement', debit: 0, credit: Number(p.amount) },
-    ]);
-    if (linesErr) throw new Error(`Erreur journal_lines: ${linesErr.message}`);
-    count++;
+    const info = resInfoMap[p.reservation_id] ?? { room: '', guest: 'Client' };
+    const desc = `Paiement hôtel${info.room ? ` - Ch.${info.room}` : ''} - ${info.guest}`;
+
+    const ok = await _insertBalancedEntry(
+      { business_id: businessId, entry_date: p.paid_at.slice(0, 10), description: desc, source: 'hotel', source_id: p.id },
+      [
+        { account_code: debitCode, account_name: acctName(debitCode, 'Caisse'), debit: amount, credit: 0 },
+        { account_code: '706',     account_name: acctName('706', 'Prestations hébergement'), debit: 0, credit: amount },
+      ],
+    );
+    if (ok) { count++; syncedSet.add(p.id); }
   }
 
-  // --- 2. Sync réservations clôturées SANS hotel_payments ------------------
-  // (rétrocompatibilité + séjours sans paiement enregistré)
-  const { data: reservations, error: resErr } = await supabase
-    .from('hotel_reservations')
-    .select('id, actual_check_out, check_out, total, paid_amount, room:hotel_rooms(number), guest:hotel_guests(full_name)')
-    .eq('business_id', businessId)
-    .eq('status', 'checked_out');
-  if (resErr) throw new Error(resErr.message);
-
-  for (const res of (reservations ?? []) as {
+  // --- 2. Séjours clôturés SANS hotel_payments ---------------------------
+  // (rétrocompatibilité + séjours sans paiement enregistré) — paginé.
+  const reservations = await _fetchAllRows<{
     id: string; actual_check_out: string | null; check_out: string;
     total: number; paid_amount: number;
     room: { number: string } | null; guest: { full_name: string } | null;
-  }[]) {
-    if (syncedSet.has(res.id)) continue; // déjà sync (ancienne logique)
+  }>((from, to) =>
+    supabase
+      .from('hotel_reservations')
+      .select('id, actual_check_out, check_out, total, paid_amount, room:hotel_rooms(number), guest:hotel_guests(full_name)')
+      .eq('business_id', businessId)
+      .eq('status', 'checked_out')
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
 
-    // Vérifier s'il existe des hotel_payments pour cette réservation
+  for (const res of reservations) {
+    if (syncedSet.has(res.id)) continue;
+
     const { data: hasPay } = await supabase
-      .from('hotel_payments')
-      .select('id')
-      .eq('reservation_id', res.id)
-      .limit(1);
+      .from('hotel_payments').select('id').eq('reservation_id', res.id).limit(1);
     if ((hasPay ?? []).length > 0) continue; // couvert par la section 1
 
     const entryDate   = (res.actual_check_out ?? res.check_out).slice(0, 10);
     const roomLabel   = res.room?.number ? `Ch.${res.room.number}` : '';
     const guestLabel  = res.guest?.full_name ?? 'Client';
     const description = `Séjour hôtel${roomLabel ? ` - ${roomLabel}` : ''} - ${guestLabel}`;
-    const total       = Number(res.total);
-    const paid        = Number(res.paid_amount);
-    const outstanding = Math.max(0, total - paid);
+    const total       = round2(Number(res.total) || 0);
+    const paid        = round2(Math.max(0, Number(res.paid_amount) || 0));
+    const outstanding = round2(Math.max(0, total - paid));
+    if (total <= 0) continue;
 
     const lines: { account_code: string; account_name: string; debit: number; credit: number }[] = [];
-    if (paid > 0)           lines.push({ account_code: '571', account_name: 'Caisse',                   debit: paid,        credit: 0 });
-    if (outstanding > 0.01) lines.push({ account_code: '411', account_name: 'Clients',                  debit: outstanding, credit: 0 });
-    lines.push(              { account_code: '706', account_name: 'Prestations hébergement', debit: 0,           credit: total });
+    if (paid > 0)           lines.push({ account_code: '571', account_name: acctName('571'), debit: Math.min(paid, total), credit: 0 });
+    if (outstanding > 0.01) lines.push({ account_code: '411', account_name: acctName('411'), debit: outstanding, credit: 0 });
+    lines.push({ account_code: '706', account_name: acctName('706', 'Prestations hébergement'), debit: 0, credit: total });
 
-    const { data: entry, error: entryErr2 } = await db('journal_entries')
-      .insert({ business_id: businessId, entry_date: entryDate, description, source: 'hotel', source_id: res.id })
-      .select().single();
-    if (entryErr2) throw new Error(`Erreur journal_entries (séjour): ${entryErr2.message}`);
-    if (!entry) continue;
-    const { error: linesErr2 } = await db('journal_lines').insert(lines.map((l) => ({ ...l, entry_id: entry.id })));
-    if (linesErr2) throw new Error(`Erreur journal_lines (séjour): ${linesErr2.message}`);
-    count++;
+    const ok = await _insertBalancedEntry(
+      { business_id: businessId, entry_date: entryDate, description, source: 'hotel', source_id: res.id },
+      lines,
+    );
+    if (ok) { count++; syncedSet.add(res.id); }
   }
 
   return count;
 }
 
 export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeStatement {
-  const sumRange = (prefix: string) =>
-    balance
-      .filter((r) => r.account_code.startsWith(prefix))
-      .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
+  const has = (r: TrialBalanceLine, ...prefixes: string[]) =>
+    prefixes.some((p) => r.account_code.startsWith(p));
+  /** Solde d'un ensemble de comptes, sens charge (débit − crédit). */
+  const sumCharge = (pred: (r: TrialBalanceLine) => boolean) =>
+    balance.filter(pred).reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
+  const sumRange = (prefix: string) => sumCharge((r) => r.account_code.startsWith(prefix));
 
-  // CA = somme de tous les comptes 70x (ventes + prestations), hors 709x (RRR)
+  // CA = comptes 70x (ventes + prestations), hors 709x (RRR accordés)
   const ventesGross = balance
     .filter((r) => r.account_code.startsWith('70') && !r.account_code.startsWith('709'))
     .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
-  
-  const rrrAccordes        = balance
+
+  const rrrAccordes = balance
     .filter((r) => r.account_code.startsWith('709'))
     .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
 
-  const caNet              = ventesGross - rrrAccordes;
-  const achatsMarchandises = sumRange('601');
+  const caNet = ventesGross - rrrAccordes;
+
+  // Coût d'achat des marchandises vendues : 601..608 + 603 (variation de stock),
+  // net des RRR obtenus (6091). `startsWith('60')` couvre 601/602/603/604/608.
+  const achatsMarchandises = sumRange('60');
   const margeBrute         = caNet - achatsMarchandises;
 
-  // Détails des charges
   const transports         = sumRange('61');
   const servicesExterieurs = sumRange('62') + sumRange('63');
-  const impotsTaxes        = sumRange('64'); 
-  const chargesPersonnel   = sumRange('66'); 
-  
-  // Si le personnel a été mis en 64 (comme dans OP_TEMPLATES 641/646)
-  const personnelIn64 = balance
-    .filter((r) => r.account_code.startsWith('641') || r.account_code.startsWith('646'))
-    .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
-  
+
+  // Intérêts d'emprunt : le plan OHADA du projet les code en 661 (classe 6).
+  // Ils relèvent du résultat FINANCIER, pas des charges de personnel (66x) ni
+  // d'exploitation. On les isole explicitement.
+  const interetsEmprunts = sumCharge((r) => has(r, '661', '671'));
+
+  // Personnel = 66x hors 661/671.
+  const chargesPersonnel = sumCharge((r) => has(r, '66') && !has(r, '661'));
+  // Impôts & taxes d'exploitation = 64x (hors 641/646 qui, dans ce plan, sont
+  // du personnel et doivent être neutralisés de ce poste).
+  const impotsTaxes = sumCharge((r) => has(r, '64') && !has(r, '641', '646'));
+  const personnelIn64 = sumCharge((r) => has(r, '641', '646'));
   const effectivePersonnel = chargesPersonnel + personnelIn64;
-  const effectiveTaxes     = Math.max(0, impotsTaxes - personnelIn64);
+  const effectiveTaxes     = impotsTaxes;
 
-  const totalKnownCharges = achatsMarchandises + transports + servicesExterieurs + effectiveTaxes + effectivePersonnel;
-  const autresCharges = balance
-    .filter((r) => r.class_num === 6 && !['601','61','62','63','64','66','68','69','67'].some(p => r.account_code.startsWith(p)))
-    .reduce((s, r) => s + (r.total_debit - r.total_credit), 0);
+  // Autres charges d'exploitation : reste de la classe 6 (hors 60/61/62/63/64,
+  // hors personnel 66, hors financier 67/661/671, hors dotations 68, hors
+  // impôt sur résultat 69).
+  const autresCharges = sumCharge((r) =>
+    r.class_num === 6 && !has(r, '60', '61', '62', '63', '64', '66', '67', '68', '69'),
+  );
 
-  const ebe                = margeBrute - (transports + servicesExterieurs + effectiveTaxes + effectivePersonnel + autresCharges);
-  const dotations          = sumRange('68');
-  const resultatExpl       = ebe - dotations;
+  const ebe          = margeBrute - (transports + servicesExterieurs + effectiveTaxes + effectivePersonnel + autresCharges);
+  const dotations    = sumRange('68');
+  const resultatExpl = ebe - dotations;
 
   const produitsFinanciers = balance
     .filter((r) => r.account_code.startsWith('77'))
     .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
-  
-  const chargesFinancieres = sumRange('67');
+
+  // Charges financières : 67x + intérêts d'emprunt codés en 661/671.
+  const chargesFinancieres = sumRange('67') + interetsEmprunts;
   const resultatFinancier  = produitsFinanciers - chargesFinancieres;
-  
+
   const resultatAvantImpot = resultatExpl + resultatFinancier;
   const impots             = sumRange('69');
   const resultatNet        = resultatAvantImpot - impots;
@@ -906,47 +1172,82 @@ export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeState
   };
 }
 
+/**
+ * Bilan simplifié. `balance` DOIT être la balance CUMULÉE (depuis l'origine
+ * jusqu'à la date de clôture) — un bilan sur les seuls mouvements d'une période
+ * n'a aucun sens. Le résultat de la période n'étant pas journalisé (pas
+ * d'écriture 13x), il est réinjecté ici via `resultatExercice` pour que
+ * ACTIF = PASSIF ; `ecartBilan` doit rester nul.
+ */
 export function computeBalanceSheet(balance: TrialBalanceLine[]): BalanceSheet {
-  const getBalance = (code: string) => {
-    const row = balance.find((r) => r.account_code === code);
-    if (!row) return 0;
-    return row.total_debit - row.total_credit;
-  };
-  const sumCodes = (...codes: string[]) => codes.reduce((s, c) => s + getBalance(c), 0);
-  const sumClass = (cls: number) =>
-    balance.filter((r) => r.class_num === cls).reduce((s, r) => s + r.total_debit - r.total_credit, 0);
+  // Routage en UN passage : chaque compte de classe 1 à 5 est ventilé selon le
+  // SENS de son solde (part débitrice → actif, part créditrice → passif). Ainsi
+  //   Σ actif − Σ passif(comptes) = Σ(classes 1..5) = − Σ(classes 6..8)
+  // et le résultat de la période (non journalisé) réinjecté au passif fait
+  // TOUJOURS coller ACTIF = PASSIF. `ecartBilan` ne bouge que si une écriture
+  // est elle-même déséquilibrée.
+  let actifImmobilise = 0, stocks = 0, tresorerie = 0, creancesClients = 0,
+      tvaRecuperable = 0, autresActifCT = 0;
+  let capitaux = 0, dettesLT = 0, dettesFF = 0, dettesFiscales = 0,
+      dettesSociales = 0, decouvertsBancaires = 0, autresDettesCT = 0;
 
-  const actifImmobilise = Math.max(0, sumClass(2));
-  const stocks          = Math.max(0, sumClass(3));
-  const tresorerie      = Math.max(0, sumCodes('521','571','576','531'));
-  const creancesClients = Math.max(0, getBalance('411'));
-  const tvaRecuperable  = Math.max(0, getBalance('4451'));
-  const autresActifCT   = Math.max(0,
-    balance
-      .filter((r) => r.class_num === 4 && !['401','411','4441','421','431','441','444','4451','419'].includes(r.account_code))
-      .reduce((s, r) => s + Math.max(0, r.total_debit - r.total_credit), 0)
-  );
-  const totalActif = actifImmobilise + stocks + creancesClients + tvaRecuperable + autresActifCT + tresorerie;
+  for (const r of balance) {
+    const bal = round2((r.total_debit || 0) - (r.total_credit || 0));
+    if (Math.abs(bal) < 0.005) continue;
+    const code = r.account_code;
+    const dr = Math.max(0, bal);    // part actif
+    const cr = Math.max(0, -bal);   // part passif
 
-  // Passif
-  const capitauxBrut = sumClass(1);
-  const capitaux     = Math.max(0, -capitauxBrut); // class 1 is credit-normal → negative balance = positive capital
-  const dettesLT     = Math.max(0, -getBalance('161'));
-  const dettesFF     = Math.max(0, -getBalance('401'));
-  const dettesFiscales = Math.max(0, -(getBalance('441') + getBalance('444') + getBalance('4441')));
-  const dettesSociales = Math.max(0, -(getBalance('421') + getBalance('431')));
-  const autresDettesCT = Math.max(0,
-    balance
-      .filter((r) => r.class_num === 4 && !['401','411','4441','421','431','441','444','4451','419'].includes(r.account_code))
-      .reduce((s, r) => s + Math.max(0, -(r.total_debit - r.total_credit)), 0)
+    switch (r.class_num) {
+      case 2: actifImmobilise += dr - cr; break;   // net des amortissements (28x créditeurs)
+      case 3: stocks += dr - cr; break;
+      case 5:
+        if (code.startsWith('16')) { dettesLT += cr; autresActifCT += dr; }
+        else { tresorerie += dr; decouvertsBancaires += cr; }
+        break;
+      case 1:
+        if (code.startsWith('16')) { dettesLT += cr; autresActifCT += dr; }
+        else { capitaux += cr - dr; }                                     // 10x/11x/12x/13x : report & résultat inclus
+        break;
+      case 4:
+        if (code.startsWith('419'))       { autresDettesCT += cr; autresActifCT += dr; }
+        else if (code.startsWith('41'))   { creancesClients += dr; autresDettesCT += cr; }
+        else if (code === '4451')         { tvaRecuperable += dr; dettesFiscales += cr; }
+        else if (code.startsWith('44'))   { dettesFiscales += cr; autresActifCT += dr; }
+        else if (code.startsWith('40'))   { dettesFF += cr; autresActifCT += dr; }
+        else if (code.startsWith('42') || code.startsWith('43')) { dettesSociales += cr; autresActifCT += dr; }
+        else                              { autresActifCT += dr; autresDettesCT += cr; }
+        break;
+      default: break; // classes 6/7/8/9 → via resultatExercice
+    }
+  }
+
+  const totalActif = round2(actifImmobilise + stocks + creancesClients + tvaRecuperable + autresActifCT + tresorerie);
+
+  // Résultat de la période = produits (cl. 7) − charges (cl. 6) ± HAO (cl. 8).
+  // Calculé directement sur la balance ⇒ capte TOUS les comptes de gestion,
+  // pas seulement ceux ventilés par le compte de résultat détaillé.
+  const resultatExercice = round2(balance.reduce((s, r) => {
+    if (r.class_num === 7) return s + (r.total_credit - r.total_debit);
+    if (r.class_num === 6) return s - (r.total_debit - r.total_credit);
+    if (r.class_num === 8) return s + (r.total_credit - r.total_debit);
+    return s;
+  }, 0));
+
+  const totalPassif = round2(
+    capitaux + resultatExercice + dettesLT + dettesFF + dettesFiscales +
+    dettesSociales + decouvertsBancaires + autresDettesCT,
   );
-  const totalPassif = capitaux + dettesLT + dettesFF + dettesFiscales + dettesSociales + autresDettesCT;
+  const ecartBilan = round2(totalActif - totalPassif);
 
   return {
-    actifImmobilise, stocks, creancesClients, tvaRecuperable,
-    autresActifCT, tresorerie, totalActif,
-    capitaux, dettesLT, dettesFF, dettesFiscales, dettesSociales,
-    autresDettesCT, totalPassif,
+    actifImmobilise: round2(actifImmobilise), stocks: round2(stocks),
+    creancesClients: round2(creancesClients), tvaRecuperable: round2(tvaRecuperable),
+    autresActifCT: round2(autresActifCT), tresorerie: round2(tresorerie), totalActif,
+    capitaux: round2(capitaux), resultatExercice,
+    dettesLT: round2(dettesLT), dettesFF: round2(dettesFF), dettesFiscales: round2(dettesFiscales),
+    dettesSociales: round2(dettesSociales), decouvertsBancaires: round2(decouvertsBancaires),
+    autresDettesCT: round2(autresDettesCT), totalPassif, ecartBilan,
   };
 }
 
@@ -978,25 +1279,24 @@ export async function syncHonorairesAccounting(businessId: string): Promise<numb
     date_facture: string; montant_paye: number; status: string;
   }[]) {
     if (synced.has(h.id)) continue;
+    const amount = round2(Number(h.montant_paye) || 0);
+    if (amount <= 0) continue;
 
-    const { data: entry, error: eErr } = await db('journal_entries')
-      .insert({
+    const ok = await _insertBalancedEntry(
+      {
         business_id: businessId,
         entry_date:  h.date_facture,
         reference:   `HON-${h.id.slice(0, 8).toUpperCase()}`,
         description: `Honoraires — ${h.client_name} (${h.type_prestation})`,
         source:      'honoraires',
         source_id:   h.id,
-      })
-      .select('id').single();
-    if (eErr) throw new Error(eErr.message);
-
-    const { error: lErr } = await db('journal_lines').insert([
-      { entry_id: entry.id, account_code: '571',  account_name: 'Caisse',       debit: Number(h.montant_paye), credit: 0 },
-      { entry_id: entry.id, account_code: '7061', account_name: 'Honoraires',   debit: 0, credit: Number(h.montant_paye) },
-    ]);
-    if (lErr) throw new Error(lErr.message);
-    count++;
+      },
+      [
+        { account_code: '571',  account_name: acctName('571'),  debit: amount, credit: 0 },
+        { account_code: '7061', account_name: acctName('7061'), debit: 0,      credit: amount },
+      ],
+    );
+    if (ok) count++;
   }
   return count;
 }
@@ -1041,34 +1341,31 @@ export async function syncServiceOrdersAccounting(businessId: string): Promise<n
     subject_ref: string | null; client_name: string | null;
   }[]) {
     if (synced.has(o.id)) continue;
+    const amount = round2(Number(o.paid_amount) || 0);
+    if (amount <= 0) continue;
 
     const entryDate = (o.paid_at ?? new Date().toISOString()).slice(0, 10);
-    const debitAccount = o.payment_method === 'mobile' || o.payment_method === 'mobile_money'
-      ? { code: '576', name: 'Mobile Money' }
-      : o.payment_method === 'card' || o.payment_method === 'bank'
-      ? { code: '521', name: 'Banques — comptes courants' }
-      : { code: '571', name: 'Caisse' };
+    const debitCode = o.payment_method === 'mobile' || o.payment_method === 'mobile_money' ? '576'
+      : o.payment_method === 'card' || o.payment_method === 'bank' ? '521'
+      : '571';
 
     const desc = `Prestation OT-${String(o.order_number).padStart(4, '0')}${o.subject_ref ? ` — ${o.subject_ref}` : ''}${o.client_name ? ` / ${o.client_name}` : ''}`;
 
-    const { data: entry, error: eErr } = await db('journal_entries')
-      .insert({
+    const ok = await _insertBalancedEntry(
+      {
         business_id: businessId,
         entry_date:  entryDate,
         reference:   `OT-${String(o.order_number).padStart(4, '0')}`,
         description: desc,
         source:      'service_order',
         source_id:   o.id,
-      })
-      .select('id').single();
-    if (eErr) throw new Error(eErr.message);
-
-    const { error: lErr } = await db('journal_lines').insert([
-      { entry_id: entry.id, account_code: debitAccount.code, account_name: debitAccount.name, debit: Number(o.paid_amount), credit: 0 },
-      { entry_id: entry.id, account_code: '7065', account_name: 'Prestations de services', debit: 0, credit: Number(o.paid_amount) },
-    ]);
-    if (lErr) throw new Error(lErr.message);
-    count++;
+      },
+      [
+        { account_code: debitCode, account_name: acctName(debitCode, 'Caisse'), debit: amount, credit: 0 },
+        { account_code: '7065',    account_name: acctName('7065'),              debit: 0,      credit: amount },
+      ],
+    );
+    if (ok) count++;
   }
   return count;
 }

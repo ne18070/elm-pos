@@ -308,6 +308,55 @@ export async function getRefundsForOrder(orderId: string): Promise<Refund[]> {
   );
 }
 
+export interface OverdueAcompte {
+  id:             string;
+  created_at:     string;
+  balance_due:    number;
+  total:          number;
+  customer_name:  string | null;
+  customer_phone: string | null;
+  reseller_id:    string | null;
+  days_old:       number;
+  /** Comment le rapprochement a été fait : 'reseller' | 'reseller_client' | 'phone' | 'name'. */
+  matched_on:     'reseller' | 'reseller_client' | 'phone' | 'name';
+}
+
+/**
+ * Le plus ancien acompte impayé rattaché à cette partie (client rapproché par
+ * téléphone puis par nom exact ; revendeur / client de revendeur rapproché par
+ * id), créé il y a plus de `days` jours. Passe par la RPC SECURITY DEFINER
+ * `overdue_acompte_for_customer` (migrations 114-115) pour voir aussi les
+ * acomptes pris par un autre caissier. Renvoie `null` si aucun.
+ */
+export async function findOverdueAcompte(
+  businessId: string,
+  party: {
+    name?: string | null;
+    phone?: string | null;
+    resellerId?: string | null;
+    resellerClientId?: string | null;
+  },
+  days = 7,
+): Promise<OverdueAcompte | null> {
+  const name             = (party.name  ?? '').trim();
+  const phone            = (party.phone ?? '').trim();
+  const resellerId       = party.resellerId       ?? undefined;
+  const resellerClientId = party.resellerClientId ?? undefined;
+  if (!name && !phone && !resellerId && !resellerClientId) return null;
+
+  const { data, error } = await supabase.rpc('overdue_acompte_for_customer' as never, {
+    p_business_id:        businessId,
+    p_name:              name  || undefined,
+    p_phone:             phone || undefined,
+    p_reseller_id:        resellerId,
+    p_reseller_client_id: resellerClientId,
+    p_days:              days,
+  } as never);
+  if (error) throw new Error((error as { message?: string }).message ?? 'Erreur lors de la vérification des acomptes');
+  const rows = (data ?? []) as unknown as OverdueAcompte[];
+  return rows[0] ?? null;
+}
+
 // ─── Livraison / Picking ─────────────────────────────────────────────────────
 
 /**

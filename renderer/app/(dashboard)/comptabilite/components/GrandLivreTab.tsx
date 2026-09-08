@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Edit3, Check, X } from 'lucide-react';
+import { Search, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { JournalEntry, Account } from '@services/supabase/accounting';
 
@@ -14,10 +14,11 @@ interface Props {
 export function GrandLivreTab({ entries, accounts, currency }: Props) {
   const [selectedAccount, setSelectedAccount] = useState<string>(accounts[0]?.code || '');
   const [searchTerm, setSearchTerm] = useState('');
-  const [revisionMode, setRevisionMode] = useState(false);
-  const [editingLine, setEditingLine] = useState<{ entryId: string, desc: string } | null>(null);
+  // `entries` est plafonné en amont (page.tsx). Au-delà, le solde cumulé
+  // affiché ici serait partiel → on prévient plutôt que d'afficher un faux.
+  const truncated = entries.length >= 5000;
 
-  const filteredAccounts = accounts.filter(a => 
+  const filteredAccounts = accounts.filter(a =>
     a.code.includes(searchTerm) || a.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -87,15 +88,6 @@ export function GrandLivreTab({ entries, accounts, currency }: Props) {
                   <p className="text-xs text-content-secondary uppercase tracking-wider">
                     Nature : {currentAccount.nature} · Solde normal : {currentAccount.balance_type}
                   </p>
-                  <button 
-                    onClick={() => setRevisionMode(!revisionMode)}
-                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-tighter transition-colors ${
-                      revisionMode ? 'bg-status-warning text-black' : 'bg-surface-hover text-content-secondary hover:text-content-primary'
-                    }`}
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    {revisionMode ? 'Mode Révision Actif' : 'Activer Révision'}
-                  </button>
                 </div>
               </div>
               <div className="text-right">
@@ -106,6 +98,13 @@ export function GrandLivreTab({ entries, accounts, currency }: Props) {
                 </p>
               </div>
             </div>
+
+            {truncated && (
+              <div className="flex items-start gap-2 px-4 py-2 rounded-xl bg-badge-warning border border-status-warning text-xs text-status-warning">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                Période trop volumineuse : seules les 5 000 dernières écritures sont chargées. Le solde cumulé ci-dessous peut être incomplet — restreignez la période.
+              </div>
+            )}
 
             <div className="flex-1 overflow-x-auto border border-surface-border rounded-xl">
               <table className="w-full text-left border-collapse">
@@ -122,34 +121,11 @@ export function GrandLivreTab({ entries, accounts, currency }: Props) {
                 <tbody className="divide-y divide-surface-border">
                   {linesWithBalance.length > 0 ? (
                     linesWithBalance.map((l, i) => (
-                      <tr key={i} className={`group hover:bg-surface-hover/50 transition-colors ${revisionMode ? 'cursor-help' : ''}`}>
+                      <tr key={i} className="group hover:bg-surface-hover/50 transition-colors">
                         <td className="px-4 py-3 text-sm text-content-secondary whitespace-nowrap">{l.date}</td>
                         <td className="px-4 py-3 text-sm font-mono text-content-secondary">{l.reference || '—'}</td>
-                        <td className="px-4 py-3 text-sm text-content-primary font-medium relative">
-                          {editingLine?.entryId === l.entryId ? (
-                            <div className="flex items-center gap-2">
-                              <input 
-                                autoFocus
-                                className="input py-0.5 px-2 text-sm flex-1"
-                                value={editingLine.desc}
-                                onChange={e => setEditingLine({ ...editingLine, desc: e.target.value })}
-                                onKeyDown={e => e.key === 'Enter' && setEditingLine(null)}
-                              />
-                              <button onClick={() => setEditingLine(null)} className="text-status-success p-1"><Check className="w-4 h-4" /></button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span>{l.description}</span>
-                              {revisionMode && (
-                                <button 
-                                  onClick={() => setEditingLine({ entryId: l.entryId, desc: l.description })}
-                                  className="opacity-0 group-hover:opacity-100 p-1 text-brand-500 hover:bg-brand-500/10 rounded transition-all"
-                                >
-                                  <Edit3 className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          )}
+                        <td className="px-4 py-3 text-sm text-content-primary font-medium">
+                          {l.description}
                         </td>
                         <td className="px-4 py-3 text-sm font-mono text-right text-content-primary">
                           {l.debit > 0 ? formatCurrency(l.debit, currency) : '—'}

@@ -106,25 +106,40 @@ export function BalanceTab({ byClass, expandedClasses, toggleClass, currency }: 
         </div>
       ))}
 
-      <div className="card p-4 bg-brand-600/10 border-brand-700/40">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-content-primary">TOTAL GÉNÉRAL</span>
-          <div className="flex gap-8">
-            <div className="text-right">
-              <p className="text-xs text-content-secondary">Total Débit</p>
-              <p className="font-bold text-content-primary font-mono">
-                {formatCurrency(byClass.reduce((s, c) => s + c.totalDebit, 0), currency)}
-              </p>
+      {(() => {
+        const totD = byClass.reduce((s, c) => s + c.totalDebit, 0);
+        const totC = byClass.reduce((s, c) => s + c.totalCredit, 0);
+        const ecart = Math.round((totD - totC) * 100) / 100;
+        const balanced = Math.abs(ecart) < 1;
+        return (
+          <div className={`card p-4 ${balanced ? 'bg-brand-600/10 border-brand-700/40' : 'bg-badge-error border-status-error'}`}>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-content-primary">TOTAL GÉNÉRAL</span>
+              <div className="flex gap-8">
+                <div className="text-right">
+                  <p className="text-xs text-content-secondary">Total Débit</p>
+                  <p className="font-bold text-content-primary font-mono">{formatCurrency(totD, currency)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-content-secondary">Total Crédit</p>
+                  <p className="font-bold text-content-primary font-mono">{formatCurrency(totC, currency)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-content-secondary">Écart</p>
+                  <p className={`font-bold font-mono ${balanced ? 'text-status-success' : 'text-status-error'}`}>
+                    {formatCurrency(ecart, currency)}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-content-secondary">Total Crédit</p>
-              <p className="font-bold text-content-primary font-mono">
-                {formatCurrency(byClass.reduce((s, c) => s + c.totalCredit, 0), currency)}
+            {!balanced && (
+              <p className="text-xs text-status-error mt-2 font-medium">
+                ⚠ La balance ne s&apos;équilibre pas : Débit ≠ Crédit. Une ou plusieurs écritures du journal sont déséquilibrées.
               </p>
-            </div>
+            )}
           </div>
-        </div>
-      </div>
+        );
+      })()}
     </div>
   );
 }
