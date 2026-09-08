@@ -2,7 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink, RotateCcw } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, LayoutGrid, List, Barcode, Upload, Download, AlertTriangle, Share2, Copy, Check, ExternalLink, RotateCcw, Printer } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -25,6 +25,16 @@ function csvCell(value: string): string {
   const s = String(value ?? '');
   const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
   return `"${safe.replace(/"/g, '""')}"`;
+}
+
+/** Échappe le HTML avant injection dans la fenêtre d'impression. */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export default function ProductsPage() {
@@ -84,6 +94,65 @@ export default function ProductsPage() {
     a.download = `produits_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function printCatalog() {
+    const cur = business?.currency;
+    const now = new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+    const title = `Catalogue produits \u2014 ${business?.name ?? ''}`.trim();
+
+    const rows = filtered.map((p) => {
+      const stockCell = p.track_stock
+        ? `${p.stock ?? 0}${p.unit ? ' ' + esc(p.unit) : ''}`
+        : '\u2014';
+      const codes = [p.barcode, p.sku].filter(Boolean).map(esc).join('<br>') || '\u2014';
+      return `<tr class="${!p.is_active ? 'inactive' : ''}">
+        <td>${esc(p.name)}</td>
+        <td>${esc(p.category?.name ?? '\u2014')}</td>
+        <td class="mono">${codes}</td>
+        <td class="num">${stockCell}</td>
+        <td class="num">${esc(formatCurrency(p.price, cur))}</td>
+        <td>${p.is_active ? 'Actif' : 'Inactif'}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<title>${esc(title)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a202c; margin: 24px; }
+  h1 { font-size: 16px; margin: 0 0 2px; }
+  .meta { font-size: 11px; color: #718096; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  th { background: #f7fafc; text-transform: uppercase; font-size: 9px; letter-spacing: .04em; color: #4a5568; border-bottom: 1.5px solid #cbd5e0; }
+  td.num { text-align: right; white-space: nowrap; }
+  td.mono { font-family: "SFMono-Regular", Consolas, monospace; font-size: 10px; color: #4a5568; }
+  tr.inactive td { color: #a0aec0; }
+  tfoot td { font-weight: 700; border-top: 1.5px solid #cbd5e0; border-bottom: none; padding-top: 8px; }
+  @media print { body { margin: 12mm; } th { background: #f7fafc !important; -webkit-print-color-adjust: exact; } }
+</style></head><body>
+  <h1>${esc(title)}</h1>
+  <div class="meta">${esc(now)} \u00B7 ${filtered.length} produit${filtered.length !== 1 ? 's' : ''}</div>
+  <table>
+    <thead><tr>
+      <th>Produit</th><th>Cat\u00E9gorie</th><th>Code-barres / SKU</th>
+      <th style="text-align:right">Stock</th><th style="text-align:right">Prix</th><th>Statut</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="6">${filtered.length} produit${filtered.length !== 1 ? 's' : ''}</td></tr></tfoot>
+  </table>
+  <script>window.onload = function () { window.print(); };<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      notifError('Impossible d\u2019ouvrir la fen\u00EAtre d\u2019impression. Autorisez les pop-ups pour ce site.');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   }
 
   const q = search.trim().toLowerCase();
@@ -178,6 +247,15 @@ export default function ProductsPage() {
                 <span className="hidden sm:inline">Codes-barres</span>
               </button>
             )}
+            <button
+              onClick={printCatalog}
+              disabled={loading || filtered.length === 0}
+              className="btn-secondary flex items-center gap-2"
+              title="Imprimer la liste des produits"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Imprimer</span>
+            </button>
             {can('export_products') && (
               <button
                 onClick={exportCSV}
@@ -297,7 +375,7 @@ export default function ProductsPage() {
                 >
                   <span>{p.name}</span>
                   <span className={`font-bold ${(p.stock ?? 0) === 0 ? 'text-status-error' : 'text-status-warning'}`}>
-                    {(p.stock ?? 0) === 0 ? 'RUPTURE' : `× ${p.stock}`}
+                    {(p.stock ?? 0) === 0 ? 'RUPTURE' : `× ${p.stock}${p.unit ? ` ${p.unit}` : ''}`}
                   </span>
                 </button>
               ))}
@@ -349,7 +427,7 @@ export default function ProductsPage() {
                   </p>
                   {product.track_stock && (
                     <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-content-secondary' : 'text-status-error font-medium'}`}>
-                      Stock : {product.stock ?? 0}
+                      Stock : {product.stock ?? 0}{product.unit ? ` ${product.unit}` : ''}
                     </p>
                   )}
                 </div>
@@ -470,6 +548,9 @@ export default function ProductsPage() {
                             : 'text-content-primary'
                         }`}>
                           {product.stock ?? 0}
+                          {product.unit && (
+                            <span className="text-xs font-normal text-content-muted"> {product.unit}</span>
+                          )}
                         </span>
                       ) : (
                         <span className="text-xs text-content-muted">—</span>

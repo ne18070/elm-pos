@@ -4881,6 +4881,60 @@ export type Database = {
           },
         ]
       }
+      stock_movements: {
+        Row: {
+          balance_after: number
+          business_id: string
+          created_at: string
+          created_by: string | null
+          delta: number
+          id: string
+          note: string | null
+          product_id: string
+          reason: string
+          source_id: string | null
+        }
+        Insert: {
+          balance_after: number
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          delta: number
+          id?: string
+          note?: string | null
+          product_id: string
+          reason?: string
+          source_id?: string | null
+        }
+        Update: {
+          balance_after?: number
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          delta?: number
+          id?: string
+          note?: string | null
+          product_id?: string
+          reason?: string
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_requests: {
         Row: {
           business_id: string

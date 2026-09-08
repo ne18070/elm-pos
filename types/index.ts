@@ -109,6 +109,31 @@ export interface Product {
   category?: Category;
 }
 
+// ─── Mouvements de stock (ledger) ────────────────────────────────────────────
+
+export type StockMovementReason =
+  | 'initial'
+  | 'vente'
+  | 'approvisionnement'
+  | 'ajustement'
+  | 'annulation'
+  | 'remboursement'
+  | 'modif_commande'
+  | (string & {});
+
+export interface StockMovement {
+  id: string;
+  business_id: string;
+  product_id: string;
+  delta: number;
+  balance_after: number;
+  reason: StockMovementReason;
+  source_id?: string | null;
+  note?: string | null;
+  created_by?: string | null;
+  created_at: string;
+}
+
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 export type OrderStatus   = 'pending' | 'paid' | 'cancelled' | 'refunded';

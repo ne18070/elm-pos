@@ -2,8 +2,9 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useRef } from 'react';
-import { Loader2, Upload, X, ScanLine, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, X, ScanLine, Plus, Trash2, RefreshCw, History } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { StockHistoryModal } from './StockHistoryModal';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -57,6 +58,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [scanMode, setScanMode] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -206,6 +208,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
   }
 
   return (
+    <>
     <Modal
       title={isEdit ? 'Modifier le produit' : 'Nouveau produit'}
       onClose={onClose}
@@ -407,6 +410,18 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
           )}
         </div>
 
+        {/* Historique des mouvements de stock */}
+        {isEdit && product && (
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="flex items-center gap-2 text-xs text-content-brand hover:underline"
+          >
+            <History className="w-3.5 h-3.5" />
+            Voir l'historique du stock (incréments / décréments)
+          </button>
+        )}
+
         {/* Motif d'ajustement de stock */}
         {stockChanged && (
           <div>
@@ -539,6 +554,11 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
         </div>
       </div>
     </Modal>
+
+    {showHistory && product && (
+      <StockHistoryModal product={product} onClose={() => setShowHistory(false)} />
+    )}
+    </>
   );
 }
 

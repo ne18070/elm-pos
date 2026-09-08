@@ -2,7 +2,7 @@ import { supabase } from './client';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { logAction } from './logger';
 import { q } from './q';
-import type { Product, Category } from '../../types';
+import type { Product, Category, StockMovement } from '../../types';
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
@@ -256,4 +256,21 @@ export async function restoreProduct(id: string): Promise<void> {
 
 export async function decrementStock(productId: string, quantity: number): Promise<void> {
   await q(supabase.rpc('decrement_stock', { p_product_id: productId, p_quantity: quantity }));
+}
+
+// ─── Historique des mouvements de stock ──────────────────────────────────────
+
+export async function getStockMovements(
+  productId: string,
+  limit = 200,
+): Promise<StockMovement[]> {
+  const { data, error } = await supabase
+    .from('stock_movements')
+    .select('*')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as StockMovement[];
 }
