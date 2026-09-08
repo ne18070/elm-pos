@@ -238,6 +238,9 @@ export function StockEntryModal({
   async function handleSave() {
     if (!business || !user) return;
     if (validLines.length === 0) { notifError('Aucune ligne valide'); return; }
+    if (validLines.some(l => (parseFloat(l.costPerUnit) || 0) < 0)) {
+      notifError('Le coût unitaire ne peut pas être négatif'); return;
+    }
 
     setSaving(true);
     try {

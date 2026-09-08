@@ -1,6 +1,9 @@
 import { supabase } from './client';
 import { logAction } from './logger';
 
+/** Nombre maximum d'entrées de stock renvoyées par getStockEntries (une seule page). */
+export const STOCK_ENTRIES_LIMIT = 200;
+
 export interface StockEntry {
   id: string;
   business_id: string;
@@ -45,7 +48,7 @@ export async function getStockEntries(
     `)
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
-    .limit(200);
+    .limit(STOCK_ENTRIES_LIMIT);
 
   if (productId) {
     query = query.eq('product_id', productId);

@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
 import { formatCurrency, cn } from '@/lib/utils';
-import { getStockEntries } from '@services/supabase/stock';
+import { getStockEntries, STOCK_ENTRIES_LIMIT } from '@services/supabase/stock';
 import { getSuppliers } from '@services/supabase/suppliers';
 import { getPurchaseOrders, updatePOStatus, receivePurchaseOrder } from '@services/supabase/purchase-orders';
 import { StockEntryModal } from '@/components/stock/StockEntryModal';
@@ -49,7 +49,14 @@ function cutoffForPeriod(period: Period): Date | null {
 
 // --- CSV export --------------------------------------------------------------
 
-function exportCSV(entries: StockEntry[], currency?: string) {
+/** Échappe une cellule CSV et neutralise l'injection de formule (Excel/Sheets). */
+function csvCell(value: unknown): string {
+  let s = value == null ? '' : String(value);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+function exportCSV(entries: StockEntry[]) {
   const headers = ['Date', 'Produit', 'Quantité', 'Unité', 'Fournisseur', 'Coût unitaire', 'Coût total', 'Notes'];
   const rows = entries.map(e => [
     format(new Date(e.created_at), 'dd/MM/yyyy HH:mm'),
@@ -61,12 +68,14 @@ function exportCSV(entries: StockEntry[], currency?: string) {
     e.cost_per_unit ? e.cost_per_unit * e.quantity : '',
     e.notes ?? '',
   ]);
-  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const csv = [headers, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = url;
   a.download = `approvisionnements_${format(new Date(), 'yyyy-MM-dd')}.csv`;
   a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // --- Page --------------------------------------------------------------------
@@ -75,7 +84,8 @@ export default function ApprovisionnementPage() {
   const { business, user }       = useAuthStore();
   const { error: notifError, success: notifOk } = useNotificationStore();
   const can = useCan();
-  const canManage = can('manage_inventory');
+  const canManage        = can('manage_inventory');
+  const canSeeFinancials = can('view_financials');
 
   const [entries, setEntries]       = useState<StockEntry[]>([]);
   const [suppliers, setSuppliers]   = useState<Supplier[]>([]);
@@ -86,6 +96,7 @@ export default function ApprovisionnementPage() {
   const [showModal, setShowModal]   = useState(false);
   const [showPOModal, setShowPOModal] = useState(false);
   const [showSupplierPanel, setShowSupplierPanel] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   const [search, setSearch]         = useState('');
   const [period, setPeriod]         = useState<Period>('month');
@@ -120,28 +131,42 @@ export default function ApprovisionnementPage() {
     return entries.filter(e => new Date(e.created_at) >= cutoff);
   }, [entries]);
 
+  const entryCost = (e: StockEntry) => (e.cost_per_unit ? e.cost_per_unit * e.quantity : 0);
+
   const spendThisMonth = useMemo(() =>
-    thisMonthEntries.reduce((s, e) => s + (e.cost_per_unit ? e.cost_per_unit * e.quantity : 0), 0),
+    thisMonthEntries.reduce((s, e) => s + entryCost(e), 0),
     [thisMonthEntries]
   );
 
+  /** Nombre d'entrées de ce mois sans coût renseigné — la dépense est alors sous-estimée. */
+  const monthEntriesMissingCost = useMemo(
+    () => thisMonthEntries.filter(e => !e.cost_per_unit).length,
+    [thisMonthEntries]
+  );
+
+  // Fournisseur principal : classé par dépense totale (et non par nb d'entrées).
   const topSupplier = useMemo(() => {
-    const counts: Record<string, number> = {};
-    entries.forEach(e => { if (e.supplier) counts[e.supplier] = (counts[e.supplier] ?? 0) + 1; });
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-    return top ? { name: top[0], count: top[1] } : null;
+    const agg: Record<string, { spend: number; count: number }> = {};
+    entries.forEach(e => {
+      if (!e.supplier) return;
+      const a = (agg[e.supplier] ??= { spend: 0, count: 0 });
+      a.spend += entryCost(e);
+      a.count += 1;
+    });
+    const top = Object.entries(agg).sort((a, b) => b[1].spend - a[1].spend || b[1].count - a[1].count)[0];
+    return top ? { name: top[0], spend: top[1].spend, count: top[1].count } : null;
   }, [entries]);
 
+  // Produit top : classé par quantité totale réapprovisionnée.
   const topProduct = useMemo(() => {
-    const counts: Record<string, { name: string; count: number }> = {};
+    const agg: Record<string, { name: string; qty: number; count: number }> = {};
     entries.forEach(e => {
-      if (e.product_id) {
-        const name = e.product?.name ?? '?';
-        if (!counts[e.product_id]) counts[e.product_id] = { name, count: 0 };
-        counts[e.product_id].count++;
-      }
+      if (!e.product_id) return;
+      const a = (agg[e.product_id] ??= { name: e.product?.name ?? '?', qty: 0, count: 0 });
+      a.qty   += e.quantity;
+      a.count += 1;
     });
-    return Object.values(counts).sort((a, b) => b.count - a.count)[0] ?? null;
+    return Object.values(agg).sort((a, b) => b.qty - a.qty || b.count - a.count)[0] ?? null;
   }, [entries]);
 
   const supplierOptions = useMemo(() =>
@@ -171,16 +196,21 @@ export default function ApprovisionnementPage() {
 
   async function handlePOStatus(order: PurchaseOrder, status: POStatus) {
     if (!business || !user) return;
+    if (!canManage) { notifError("Vous n'avez pas la permission de gérer les commandes."); return; }
+    if (pendingOrderId) return;               // une opération déjà en cours — anti double-clic
+    setPendingOrderId(order.id);
     try {
       if (status === 'received') {
         await receivePurchaseOrder(business.id, order, user.id);
         notifOk(`Commande réceptionnée — stock mis à jour`);
       } else {
-        await updatePOStatus(order.id, status);
+        await updatePOStatus(order.id, status, order.status);
       }
-      fetchAll(true);
+      await fetchAll(true);
     } catch (err) {
       notifError(toUserError(err));
+    } finally {
+      setPendingOrderId(null);
     }
   }
 
@@ -197,15 +227,20 @@ export default function ApprovisionnementPage() {
             </h1>
             <p className="text-xs text-content-muted mt-0.5">
               {entries.length} entrée{entries.length !== 1 ? 's' : ''} — {new Set(entries.map(e => e.product_id)).size} produit{new Set(entries.map(e => e.product_id)).size !== 1 ? 's' : ''}
+              {entries.length >= STOCK_ENTRIES_LIMIT && (
+                <span className="text-status-warning"> · {STOCK_ENTRIES_LIMIT} dernières seulement — stats partielles</span>
+              )}
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => exportCSV(filtered, business?.currency)}
-              className="btn-secondary p-2.5" title="Exporter CSV"
-            >
-              <Download className="w-4 h-4" />
-            </button>
+            {canSeeFinancials && (
+              <button
+                onClick={() => exportCSV(filtered)}
+                className="btn-secondary p-2.5" title="Exporter CSV"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => setShowSupplierPanel(true)}
               className="btn-secondary p-2.5" title="Gérer les fournisseurs"
@@ -218,35 +253,48 @@ export default function ApprovisionnementPage() {
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button
-              onClick={() => activeTab === 'commandes' ? setShowPOModal(true) : setShowModal(true)}
-              className="btn-primary flex items-center gap-2 h-10 px-4"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {activeTab === 'commandes' ? 'Nouvelle commande' : 'Nouvel approvisionnement'}
-              </span>
-              <span className="sm:hidden">Nouveau</span>
-            </button>
+            {canManage && (
+              <button
+                onClick={() => activeTab === 'commandes' ? setShowPOModal(true) : setShowModal(true)}
+                className="btn-primary flex items-center gap-2 h-10 px-4"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {activeTab === 'commandes' ? 'Nouvelle commande' : 'Nouvel approvisionnement'}
+                </span>
+                <span className="sm:hidden">Nouveau</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Stats cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <div className="bg-surface-input rounded-xl p-3 border border-surface-border">
-            <p className="text-[10px] text-content-muted uppercase tracking-wide font-semibold mb-1">Dépense ce mois</p>
-            <p className="text-base font-black text-content-primary leading-tight truncate">
-              {spendThisMonth > 0 ? formatCurrency(spendThisMonth, business?.currency) : '—'}
-            </p>
-            <p className="text-[10px] text-content-muted mt-0.5">{thisMonthEntries.length} entrée{thisMonthEntries.length !== 1 ? 's' : ''}</p>
-          </div>
+          {canSeeFinancials && (
+            <div className="bg-surface-input rounded-xl p-3 border border-surface-border">
+              <p className="text-[10px] text-content-muted uppercase tracking-wide font-semibold mb-1">Dépense ce mois</p>
+              <p className="text-base font-black text-content-primary leading-tight truncate">
+                {spendThisMonth > 0 ? formatCurrency(spendThisMonth, business?.currency) : '—'}
+              </p>
+              <p className="text-[10px] text-content-muted mt-0.5">
+                {thisMonthEntries.length} entrée{thisMonthEntries.length !== 1 ? 's' : ''}
+                {monthEntriesMissingCost > 0 && (
+                  <span className="text-status-warning"> · {monthEntriesMissingCost} sans coût</span>
+                )}
+              </p>
+            </div>
+          )}
           <div className="bg-surface-input rounded-xl p-3 border border-surface-border">
             <p className="text-[10px] text-content-muted uppercase tracking-wide font-semibold mb-1">Fournisseur principal</p>
             <p className="text-base font-black text-content-primary leading-tight truncate">
               {topSupplier?.name ?? '—'}
             </p>
             <p className="text-[10px] text-content-muted mt-0.5">
-              {topSupplier ? `${topSupplier.count} commande${topSupplier.count > 1 ? 's' : ''}` : 'Aucun renseigné'}
+              {topSupplier
+                ? (canSeeFinancials
+                    ? `${formatCurrency(topSupplier.spend, business?.currency)} · ${topSupplier.count} entrée${topSupplier.count > 1 ? 's' : ''}`
+                    : `${topSupplier.count} entrée${topSupplier.count > 1 ? 's' : ''}`)
+                : 'Aucun renseigné'}
             </p>
           </div>
           <div className="bg-surface-input rounded-xl p-3 border border-surface-border">
@@ -255,7 +303,9 @@ export default function ApprovisionnementPage() {
               {topProduct?.name ?? '—'}
             </p>
             <p className="text-[10px] text-content-muted mt-0.5">
-              {topProduct ? `${topProduct.count} fois réapprovisionné` : 'Aucune entrée'}
+              {topProduct
+                ? `${topProduct.qty} ${topProduct.qty > 1 ? 'unités' : 'unité'} · ${topProduct.count} entrée${topProduct.count > 1 ? 's' : ''}`
+                : 'Aucune entrée'}
             </p>
           </div>
           <div className={`rounded-xl p-3 border ${lowStock.length > 0 ? 'bg-badge-error border-status-error/30' : 'bg-surface-input border-surface-border'}`}>
@@ -371,11 +421,11 @@ export default function ApprovisionnementPage() {
                 {hasActiveFilter ? (
                   <button onClick={() => { setSearch(''); setSupplierFilter(''); setPeriod('all'); }}
                     className="btn-secondary text-sm">Effacer les filtres</button>
-                ) : (
+                ) : canManage ? (
                   <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2 mt-2">
                     <Plus className="w-4 h-4" /> Premier approvisionnement
                   </button>
-                )}
+                ) : null}
               </div>
             ) : (
               <>
@@ -408,7 +458,7 @@ export default function ApprovisionnementPage() {
                                 {entry.packaging_qty} {entry.packaging_unit ?? 'colis'} × {entry.packaging_size} {unit}
                               </span>
                             )}
-                            {totalCost != null && (
+                            {totalCost != null && canSeeFinancials && (
                               <span className="text-xs font-semibold text-content-primary">
                                 {formatCurrency(totalCost, business?.currency)}
                               </span>
@@ -432,7 +482,7 @@ export default function ApprovisionnementPage() {
                       <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Conditionnement</th>
                       <th className="px-4 py-3 whitespace-nowrap">Qté reçue</th>
                       <th className="px-4 py-3 whitespace-nowrap">Fournisseur</th>
-                      <th className="px-4 py-3 whitespace-nowrap">Coût total</th>
+                      {canSeeFinancials && <th className="px-4 py-3 whitespace-nowrap">Coût total</th>}
                       <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Par</th>
                     </tr>
                   </thead>
@@ -466,11 +516,13 @@ export default function ApprovisionnementPage() {
                           <td className="px-4 py-3 text-sm text-content-secondary max-w-[140px]">
                             <span className="truncate block">{entry.supplier ?? <span className="text-content-muted">—</span>}</span>
                           </td>
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {totalCost != null
-                              ? <span className="text-content-primary font-medium">{formatCurrency(totalCost, business?.currency)}</span>
-                              : <span className="text-content-muted">—</span>}
-                          </td>
+                          {canSeeFinancials && (
+                            <td className="px-4 py-3 text-sm whitespace-nowrap">
+                              {totalCost != null
+                                ? <span className="text-content-primary font-medium">{formatCurrency(totalCost, business?.currency)}</span>
+                                : <span className="text-content-muted">—</span>}
+                            </td>
+                          )}
                           <td className="px-4 py-3 text-xs text-content-primary hidden lg:table-cell max-w-[120px]">
                             <span className="truncate block">
                               {(entry.creator as { full_name?: string } | null)?.full_name ?? '—'}
@@ -506,9 +558,11 @@ export default function ApprovisionnementPage() {
             <div className="flex flex-col items-center justify-center h-48 text-content-muted gap-3">
               <ClipboardList className="w-10 h-10 opacity-30" />
               <p className="text-sm font-medium">Aucun bon de commande</p>
-              <button onClick={() => setShowPOModal(true)} className="btn-primary flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Première commande
-              </button>
+              {canManage && (
+                <button onClick={() => setShowPOModal(true)} className="btn-primary flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Première commande
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -531,7 +585,7 @@ export default function ApprovisionnementPage() {
                         </div>
                         <p className="text-xs text-content-muted mt-0.5">
                           {itemCount} article{itemCount > 1 ? 's' : ''}
-                          {totalEstim > 0 ? ` · ${formatCurrency(totalEstim, business?.currency)}` : ''}
+                          {totalEstim > 0 && canSeeFinancials ? ` · ${formatCurrency(totalEstim, business?.currency)}` : ''}
                           {' · '}{format(new Date(order.created_at), 'dd MMM yy', { locale: fr })}
                         </p>
                         {order.notes && <p className="text-xs text-content-muted italic mt-0.5 truncate">{order.notes}</p>}
@@ -555,32 +609,39 @@ export default function ApprovisionnementPage() {
                     </div>
 
                     {/* Action buttons */}
-                    {(order.status === 'draft' || order.status === 'ordered') && (
-                      <div className="flex gap-2 pt-2 border-t border-surface-border">
-                        {order.status === 'draft' && (
+                    {canManage && (order.status === 'draft' || order.status === 'ordered') && (() => {
+                      const busy = pendingOrderId === order.id;
+                      const anyBusy = pendingOrderId !== null;
+                      return (
+                        <div className="flex gap-2 pt-2 border-t border-surface-border">
+                          {order.status === 'draft' && (
+                            <button
+                              onClick={() => handlePOStatus(order, 'ordered')}
+                              disabled={anyBusy}
+                              className="flex-1 py-2 rounded-xl border border-brand-500/30 bg-badge-brand text-content-brand text-xs font-bold hover:bg-brand-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {busy ? 'Traitement…' : 'Marquer commandé'}
+                            </button>
+                          )}
+                          {order.status === 'ordered' && (
+                            <button
+                              onClick={() => handlePOStatus(order, 'received')}
+                              disabled={anyBusy}
+                              className="flex-1 py-2 rounded-xl border border-status-success/30 bg-badge-success text-status-success text-xs font-bold hover:bg-status-success/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {busy ? 'Réception…' : 'Réceptionner'}
+                            </button>
+                          )}
                           <button
-                            onClick={() => handlePOStatus(order, 'ordered')}
-                            className="flex-1 py-2 rounded-xl border border-brand-500/30 bg-badge-brand text-content-brand text-xs font-bold hover:bg-brand-500/20 transition-colors"
+                            onClick={() => handlePOStatus(order, 'cancelled')}
+                            disabled={anyBusy}
+                            className="px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-xs font-bold hover:text-status-error hover:border-status-error/30 hover:bg-badge-error transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Marquer commandé
+                            Annuler
                           </button>
-                        )}
-                        {order.status === 'ordered' && (
-                          <button
-                            onClick={() => handlePOStatus(order, 'received')}
-                            className="flex-1 py-2 rounded-xl border border-status-success/30 bg-badge-success text-status-success text-xs font-bold hover:bg-status-success/20 transition-colors"
-                          >
-                            Réceptionner
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handlePOStatus(order, 'cancelled')}
-                          className="px-3 py-2 rounded-xl border border-surface-border text-content-secondary text-xs font-bold hover:text-status-error hover:border-status-error/30 hover:bg-badge-error transition-colors"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

@@ -1,5 +1,4 @@
 import { supabase } from './client';
-import { addStockEntry } from './stock';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
@@ -91,7 +90,26 @@ export async function createPurchaseOrder(
   return po as PurchaseOrder;
 }
 
-export async function updatePOStatus(id: string, status: POStatus): Promise<void> {
+/** Transitions de statut autorisées pour un bon de commande. */
+const PO_TRANSITIONS: Record<POStatus, POStatus[]> = {
+  draft:     ['ordered', 'cancelled'],
+  ordered:   ['received', 'cancelled'],
+  received:  [],
+  cancelled: [],
+};
+
+export function canTransitionPO(from: POStatus, to: POStatus): boolean {
+  return PO_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export async function updatePOStatus(
+  id: string,
+  status: POStatus,
+  currentStatus?: POStatus,
+): Promise<void> {
+  if (currentStatus && !canTransitionPO(currentStatus, status)) {
+    throw new Error(`Transition invalide : ${currentStatus} → ${status}`);
+  }
   const updates: Record<string, unknown> = { status };
   if (status === 'ordered')  updates.ordered_at  = new Date().toISOString();
   if (status === 'received') updates.received_at = new Date().toISOString();
@@ -99,27 +117,22 @@ export async function updatePOStatus(id: string, status: POStatus): Promise<void
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Réceptionne un bon de commande de façon atomique côté serveur :
+ * verrou de ligne, contrôle du statut (`ordered` uniquement), création des
+ * entrées de stock + incrément du stock + passage en `received` dans une
+ * seule transaction. Empêche la double-réception (double-clic, rejeu).
+ */
 export async function receivePurchaseOrder(
-  businessId: string,
+  _businessId: string,
   order: PurchaseOrder,
-  createdBy: string
+  _createdBy: string,
 ): Promise<void> {
-  if (!order.items?.length) return;
-  for (const item of order.items) {
-    const qty = item.quantity_received ?? item.quantity_ordered;
-    if (qty <= 0) continue;
-    await addStockEntry({
-      businessId,
-      productId:     item.product_id,
-      quantity:      qty,
-      packagingQty:  item.packaging_qty  ?? undefined,
-      packagingSize: item.packaging_size ?? undefined,
-      packagingUnit: item.packaging_unit ?? undefined,
-      supplier:      order.supplier_name ?? order.supplier?.name ?? undefined,
-      costPerUnit:   item.cost_per_unit  ?? undefined,
-      notes:         order.reference ? `BC ${order.reference}` : undefined,
-      createdBy,
-    });
+  if (order.status !== 'ordered') {
+    throw new Error('Seule une commande au statut « Commandé » peut être réceptionnée.');
   }
-  await updatePOStatus(order.id, 'received');
+  const { error } = await supabase.rpc('receive_purchase_order' as never, {
+    p_order_id: order.id,
+  } as never);
+  if (error) throw new Error((error as { message?: string }).message ?? 'Échec de la réception');
 }
