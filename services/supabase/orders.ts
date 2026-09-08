@@ -130,10 +130,15 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
 
 /** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
  *  le `#` de tête (l'ID est affiché "#A1B2C3D4" mais absent de la valeur uuid),
- *  les caractères structurants de .or() (virgule, parenthèses) et échappe les
- *  métacaractères ILIKE (%, _, \) pour que le terme soit matché littéralement. */
+ *  les caractères réservés de la grammaire de filtre PostgREST — `,` `.` `:` `*`
+ *  `(` `)` (non entourés de guillemets ici, donc à neutraliser plutôt qu'à
+ *  échapper) — et échappe les métacaractères ILIKE (%, _, \) pour que le terme
+ *  soit matché littéralement. Sans ça, une recherche par numéro de téléphone
+ *  au format "05.12.34.56.78" (le `.` est réservé) faisait échouer .or() côté
+ *  PostgREST (PGRST100) et la page affichait "Impossible de charger les
+ *  commandes" pour toute recherche contenant un de ces caractères. */
 function toIlikeTerm(raw: string): string {
-  return raw.trim().replace(/^#+/, '').replace(/[,()]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+  return raw.trim().replace(/^#+/, '').replace(/[,().:*]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
 }
 
 // Jointures complètes, y compris le SKU produit de chaque ligne (facture
