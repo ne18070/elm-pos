@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getOrders } from '@services/supabase/orders';
 import type { Order } from '@pos-types';
 
@@ -25,21 +25,32 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
+  // Compteur de requêtes : plusieurs fetch() peuvent se chevaucher (frappe
+  // rapide malgré le debounce côté page, refetch temps réel déclenché pendant
+  // qu'une recherche est encore en vol...). Sans garde, la réponse la plus
+  // ANCIENNE peut arriver APRÈS la plus récente (réseau, requête plus lourde
+  // sur un gros historique) et écraser un résultat à jour avec des données
+  // périmées. On n'applique que la réponse de la dernière requête lancée.
+  const requestIdRef = useRef(0);
+
   const fetch = useCallback(async () => {
     // businessId vide = requête volontairement désactivée (business/user pas
     // encore chargé, ou source dédoublonnée) : on retombe sur un état neutre
     // plutôt que de laisser `loading` à true indéfiniment.
-    if (!businessId) { setOrders([]); setCount(0); setLoading(false); return; }
+    if (!businessId) { requestIdRef.current++; setOrders([]); setCount(0); setLoading(false); return; }
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const result = await getOrders(businessId, options);
+      if (requestId !== requestIdRef.current) return; // réponse périmée, ignorée
       setOrders(result.orders);
       setCount(result.count);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setError(String(err));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search, options?.cashierId, options?.createdAfter, options?.acompteOnly, options?.withCount, options?.projection]);

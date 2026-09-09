@@ -168,8 +168,14 @@ export default function OrdersPage() {
   const currentPage = Math.min(effectivePage, pageCount);
   const totalCount  = count;
 
-  // Débounce la recherche pour éviter une requête réseau à chaque frappe.
+  // Débounce la recherche pour éviter une requête réseau à chaque frappe, et
+  // n'interroge le serveur qu'à partir de 2 caractères : un terme d'1 seul
+  // caractère (`%x%`) est le pattern ILIKE le moins sélectif possible — la
+  // requête la plus coûteuse qu'on puisse lancer — pour un résultat de toute
+  // façon inexploitable pour l'utilisateur.
   useEffect(() => {
+    const trimmed = search.trim();
+    if (trimmed.length === 1) return;
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
