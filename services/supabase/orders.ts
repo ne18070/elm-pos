@@ -130,15 +130,18 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
 
 /** Nettoie un terme de recherche pour un usage sûr dans .or()/.ilike() : retire
  *  le `#` de tête (l'ID est affiché "#A1B2C3D4" mais absent de la valeur uuid),
- *  les caractères réservés de la grammaire de filtre PostgREST — `,` `.` `:` `*`
- *  `(` `)` (non entourés de guillemets ici, donc à neutraliser plutôt qu'à
- *  échapper) — et échappe les métacaractères ILIKE (%, _, \) pour que le terme
- *  soit matché littéralement. Sans ça, une recherche par numéro de téléphone
- *  au format "05.12.34.56.78" (le `.` est réservé) faisait échouer .or() côté
- *  PostgREST (PGRST100) et la page affichait "Impossible de charger les
- *  commandes" pour toute recherche contenant un de ces caractères. */
+ *  la liste COMPLÈTE des caractères réservés de la grammaire de filtre
+ *  PostgREST — `,` `.` `:` `*` `(` `)` `"` (non entourés de guillemets ici,
+ *  donc à neutraliser plutôt qu'à échapper — cf. doc PostgREST "Reserved
+ *  Characters") — et échappe les métacaractères ILIKE (%, _, \) pour que le
+ *  terme soit matché littéralement. Toute recherche non nettoyée par cette
+ *  fonction (id/customer_name/customer_phone dans getOrders) fait échouer
+ *  .or() côté PostgREST (PGRST100) dès qu'un caractère réservé est présent —
+ *  ex. un numéro de téléphone formaté "05.12.34.56.78" — et ce, sur TOUS les
+ *  onglets de la page Commandes puisque la barre de recherche est partagée
+ *  entre onglets (le filtre `search` s'applique quel que soit `tab`). */
 function toIlikeTerm(raw: string): string {
-  return raw.trim().replace(/^#+/, '').replace(/[,().:*]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
+  return raw.trim().replace(/^#+/, '').replace(/[,().:*"]/g, ' ').replace(/[\\%_]/g, (c) => '\\' + c);
 }
 
 // Jointures complètes, y compris le SKU produit de chaque ligne (facture
