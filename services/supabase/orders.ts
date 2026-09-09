@@ -182,8 +182,8 @@ export async function getOrders(
      *  `orders.balance_due` + l'index partiel `idx_orders_acompte` (migration
      *  112) — aucun filtrage ni pagination en mémoire côté client. */
     acompteOnly?: boolean;
-    /** Demander le count exact (parcours complet des lignes correspondantes,
-     *  coûteux). Par défaut true ; passer false quand seule la page compte. */
+    /** Demander un count (parcours des lignes correspondantes). Par défaut
+     *  true ; passer false quand seule la page compte. */
     withCount?: boolean;
     /** 'full' (défaut) : toutes les jointures + SKU produit. 'list' : idem sans
      *  la jointure produit (gros lots, export). */
@@ -194,7 +194,15 @@ export async function getOrders(
   const selectStr = ORDERS_SELECT[options?.projection ?? 'full'];
   let query = supabase
     .from('orders')
-    .select(selectStr, withCount ? { count: 'exact' } : undefined)
+    // 'estimated' : count exact tant que le nombre de lignes reste sous le
+    // seuil configuré côté PostgREST (db-max-rows), sinon estimation via le
+    // planificateur — évite qu'un COUNT(*) exact sur TOUT l'historique d'un
+    // business (onglet "Toutes", sans filtre de statut/date/recherche) ne
+    // dépasse le statement_timeout et fasse échouer le chargement de la page
+    // une fois l'historique volumineux. Négligeable sur les petits lots
+    // (badge acompte, onglets filtrés) : le seuil n'est alors jamais atteint
+    // et le count reste exact.
+    .select(selectStr, withCount ? { count: 'estimated' } : undefined)
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
 
