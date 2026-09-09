@@ -15,7 +15,6 @@ import { OrderDetail } from '@/components/orders/OrderDetail';
 import { InvoiceModal } from '@/components/shared/InvoiceModal';
 import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
 import { getOrderById, getOrders } from '@services/supabase/orders';
-import type { OrderCursor } from '@services/supabase/orders';
 import type { Order, OrderStatus } from '@pos-types';
 
 type FilterTab = OrderStatus | 'all' | 'acompte' | 'today';
@@ -90,12 +89,7 @@ export default function OrdersPage() {
   const [dateFrom, setDateFrom]     = useState('');
   const [dateTo, setDateTo]         = useState('');
   const [showImport, setShowImport] = useState(false);
-  // Pagination keyset COUPLÉE aux filtres : { key, cursors }. `cursors[i]` est
-  // le curseur (dernière ligne de la page i+1) qui ouvre la page i+2 ; la page
-  // courante = cursors.length + 1. La pile n'est retenue que tant que `key`
-  // correspond aux filtres courants — dès qu'un filtre change, la dérivation
-  // retombe page 1 de façon synchrone, sans setState pendant le rendu.
-  const [pageState, setPageState] = useState<{ key: string; cursors: OrderCursor[] }>({ key: '', cursors: [] });
+  const [page, setPage]             = useState(1);
   const [printingHistory, setPrintingHistory] = useState(false);
 
   const isAcompteTab = tab === 'acompte';
@@ -119,58 +113,40 @@ export default function OrdersPage() {
   // désactive la requête (businessId vide) plutôt que de tout exposer.
   const effectiveBusinessId = restricted && !user?.id ? '' : (business?.id ?? '');
 
-  const isSearching = debouncedSearch.trim().length > 0;
-  const filtersKey = `${effectiveBusinessId}|${tab}|${debouncedSearch}|${dateFrom}|${dateTo}`;
-  // Curseurs effectifs : ceux mémorisés s'ils appartiennent aux filtres
-  // courants, sinon aucun (page 1). Dérivation pure → jamais de curseur périmé
-  // après un changement de filtre, quel que soit le nombre de re-rendus.
-  const cursors = pageState.key === filtersKey ? pageState.cursors : [];
-  const effectivePage = cursors.length + 1;
-
-  // Oublie explicitement la pile mémorisée à chaque changement de filtre — en
-  // plus de la dérivation ci-dessus : revenir sur un onglet repart page 1.
-  useEffect(() => {
-    setPageState({ key: '', cursors: [] });
-  }, [filtersKey]);
+  // Remet la page à 1 dès qu'un filtre (onglet, recherche, dates) change —
+  // fait directement pendant le rendu (pattern React recommandé pour
+  // "ajuster un state suite au changement d'un autre"), pas dans un
+  // useEffect séparé : useOrders ci-dessous lit `page` dans CE MÊME rendu
+  // pour construire son offset, donc un reset après coup (effect) laisserait
+  // passer un premier fetch avec l'ancien offset avant de le corriger —
+  // flash "aucune commande" et requête réseau doublée. Ajusté pendant le
+  // rendu, useOrders ne voit jamais la valeur périmée.
+  const prevFiltersRef = useRef([tab, debouncedSearch, dateFrom, dateTo]);
+  let effectivePage = page;
+  if (
+    prevFiltersRef.current[0] !== tab ||
+    prevFiltersRef.current[1] !== debouncedSearch ||
+    prevFiltersRef.current[2] !== dateFrom ||
+    prevFiltersRef.current[3] !== dateTo
+  ) {
+    prevFiltersRef.current = [tab, debouncedSearch, dateFrom, dateTo];
+    if (page !== 1) { effectivePage = 1; setPage(1); }
+  }
 
   // Liste principale : pagination réelle côté serveur pour TOUS les onglets,
   // "acompte" compris (filtré par `balance_due` en SQL — cf. migration 112).
-  const { orders, count, hasMore, nextCursor, loading, error, refetch, patchOrder } = useOrders(
+  const { orders, count, loading, error, refetch, patchOrder } = useOrders(
     effectiveBusinessId,
     {
       status:      dbStatus,
       acompteOnly: isAcompteTab || undefined,
       limit:       PAGE_SIZE,
-      // Pagination keyset : coût constant quelle que soit la profondeur (un
-      // OFFSET faisait dépasser le statement_timeout dès la page 4 d'une
-      // recherche sur un gros historique — cf. getOrders).
-      before:      cursors[cursors.length - 1],
+      offset:      (effectivePage - 1) * PAGE_SIZE,
       search:      debouncedSearch,
-      // En recherche, le total n'est pas affiché (cf. countLabel) : inutile de
-      // le demander. Hors recherche, getOrders ne le calcule que pour la 1re
-      // page (une page suivante ne porte jamais de count → jamais de 416).
-      withCount:   !isSearching,
-      // Projection allégée : la liste n'affiche pas le SKU produit ligne à
-      // ligne — le sous-select `products(sku)` par article faisait dépasser le
-      // statement_timeout (57014) dès qu'on recherchait sur tout l'historique.
-      // Le détail / la facture rechargent la commande complète à l'ouverture.
-      projection:  'list',
       ...dateRange,
       ...scopeOpts,
     },
   );
-
-  // Navigation. « Suivant » n'est possible que si une page suivante est
-  // PROUVÉE (`nextCursor`, nul tant que les données ne correspondent pas aux
-  // filtres courants — cf. useOrders) ; « Précédent » dépile le dernier curseur.
-  const goNext = () => {
-    if (!nextCursor) return;
-    setPageState({ key: filtersKey, cursors: [...cursors, nextCursor] });
-  };
-  const goPrev = () => {
-    if (cursors.length === 0) return;
-    setPageState({ key: filtersKey, cursors: cursors.slice(0, -1) });
-  };
 
   // Badge de comptage "acompte" — count exact côté serveur (index partiel), pas
   // de lignes rapatriées hormis la première. Indépendant de l'onglet actif et
@@ -188,39 +164,30 @@ export default function OrdersPage() {
   );
   const effectiveAcompteCount = isAcompteTab ? count : acompteCount;
 
-  // Pagination pilotée par `hasMore` (getOrders demande 1 ligne de plus que la
-  // page et signale s'il en existe encore) — pas par un count, qui n'est qu'une
-  // estimation sur un gros historique et impossible en recherche
-  // (statement_timeout sur un terme courant). « Suivant » n'est donc actif que
-  // si une page suivante existe réellement.
-  // Total : count hors recherche ; en recherche on ne l'affiche que quand on
-  // est sûr d'être sur la dernière page, sinon « 50+ », « 100+ »…
-  const totalCount = !isSearching
-    ? count
-    : (effectivePage - 1) * PAGE_SIZE + orders.length;
-  const countLabel = isSearching && hasMore
-    ? `${effectivePage * PAGE_SIZE}+`
-    : String(totalCount);
-  const showPager = !loading && !error && (orders.length > 0 || effectivePage > 1) && (hasMore || effectivePage > 1);
+  const pageCount   = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const currentPage = Math.min(effectivePage, pageCount);
+  const totalCount  = count;
 
-  // Débounce la recherche pour éviter une requête réseau à chaque frappe.
-  // 500 ms : laisse le temps de finir de taper un nom même en frappe lente,
-  // sans multiplier les requêtes intermédiaires.
+  // Débounce la recherche pour éviter une requête réseau à chaque frappe, et
+  // n'interroge le serveur qu'à partir de 2 caractères : un terme d'1 seul
+  // caractère (`%x%`) est le pattern ILIKE le moins sélectif possible — la
+  // requête la plus coûteuse qu'on puisse lancer — pour un résultat de toute
+  // façon inexploitable pour l'utilisateur.
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 500);
+    const trimmed = search.trim();
+    if (trimmed.length === 1) return;
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Recule d'une page si la page courante (> 1) revient vide — refetch temps
-  // réel qui a réduit le jeu, page mémorisée devenue hors borne… Sans count
-  // sur les pages suivantes, PostgREST renvoie alors une page vide (pas de
-  // 416), qu'on rattrape ici.
+  // Réaligne `page` sur la dernière page réelle quand le jeu de résultats a
+  // rétréci sans passer par un changement de filtre (refetch temps réel,
+  // annulation d'une commande sur la dernière page…) — sinon la requête repart
+  // avec un offset au-delà des données (page vide affichée « Page 2 / 2 ») et
+  // les boutons de pagination travaillent sur une valeur périmée.
   useEffect(() => {
-    if (!loading && !error && orders.length === 0 && effectivePage > 1) {
-      goPrev();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, error, orders.length, effectivePage]);
+    if (!loading && page > pageCount) setPage(pageCount);
+  }, [loading, page, pageCount]);
 
   // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp.
   // Fait un fetch direct par id plutôt que de chercher dans la page chargée :
@@ -246,16 +213,6 @@ export default function OrdersPage() {
   }, [restricted, user?.id, notifError]);
 
   const fmt = (n: number) => formatCurrency(n, business?.currency);
-
-  // Ouvre le détail : affichage immédiat avec l'objet de la liste (projection
-  // allégée), puis rechargement de la commande complète en arrière-plan
-  // (jointure produit / SKU nécessaire à la facture distributeur).
-  function openOrder(o: Order) {
-    setSelectedOrder(o);
-    getOrderById(o.id)
-      .then((full) => setSelectedOrder((cur) => (cur?.id === o.id ? full : cur)))
-      .catch(() => { /* on garde la version liste */ });
-  }
 
   // Imprime l'historique des factures correspondant aux filtres actuellement
   // affichés (onglet, recherche, dates) — pas seulement la page en cours :
@@ -306,7 +263,7 @@ export default function OrdersPage() {
               <h1 className="text-lg sm:text-xl font-bold text-content-primary flex items-center gap-2">
                 Commandes
                 <span className="text-xs font-medium text-content-secondary bg-surface-input rounded-full px-2 py-0.5">
-                  {countLabel} commande{totalCount === 1 ? '' : 's'}
+                  {totalCount} commande{totalCount !== 1 ? 's' : ''}
                 </span>
               </h1>
               <p className="text-xs text-content-secondary mt-0.5">
@@ -460,7 +417,7 @@ export default function OrdersPage() {
                   return (
                     <tr
                       key={order.id}
-                      onClick={() => openOrder(order)}
+                      onClick={() => setSelectedOrder(order)}
                       className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer transition-colors
                         ${selectedOrder?.id === order.id ? 'bg-surface-hover' : ''}
                         ${partial ? 'border-l-2 border-l-amber-600' : ''}`}
@@ -559,23 +516,23 @@ export default function OrdersPage() {
         </div>
 
         {/* Pagination */}
-        {showPager && (
+        {!loading && !error && orders.length > 0 && pageCount > 1 && (
           <div className="flex items-center justify-between px-4 py-2 border-t border-surface-border">
             <p className="text-xs text-content-secondary">
-              Page {effectivePage} · {countLabel} commande{totalCount === 1 ? '' : 's'}
+              Page {currentPage} / {pageCount} · {totalCount} commande{totalCount !== 1 ? 's' : ''}
             </p>
             <div className="flex items-center gap-2">
               <button
-                onClick={goPrev}
-                disabled={effectivePage <= 1}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage <= 1}
                 className="btn-secondary flex items-center gap-1 text-sm px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Précédent</span>
               </button>
               <button
-                onClick={goNext}
-                disabled={!nextCursor}
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                disabled={currentPage >= pageCount}
                 className="btn-secondary flex items-center gap-1 text-sm px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="hidden sm:inline">Suivant</span>
