@@ -160,38 +160,55 @@ const ORDERS_SELECT: Record<'full' | 'list', string> = {
   list: ORDERS_LIST_SELECT,
 };
 
+type GetOrdersOptions = {
+  status?:   string;
+  limit?:    number;
+  offset?:   number;
+  /** Un seul jour (YYYY-MM-DD) — ignoré si dateFrom/dateTo est fourni. */
+  date?:     string;
+  /** Plage de dates (YYYY-MM-DD, bornes incluses). */
+  dateFrom?: string;
+  dateTo?:   string;
+  search?:   string;
+  /** Restreint aux commandes encaissées par ce caissier (son user id). */
+  cashierId?: string;
+  /** Plancher absolu sur created_at (ISO) — cumulé avec date/dateFrom/dateTo,
+   *  jamais élargi par l'utilisateur. Sert à borner la vue d'un caissier. */
+  createdAfter?: string;
+  /** Acomptes uniquement : solde restant dû > 0, hors annulées/remboursées et
+   *  hors demandes WhatsApp. Filtré et paginé côté SQL via la colonne générée
+   *  `orders.balance_due` + l'index partiel `idx_orders_acompte` (migration
+   *  112) — aucun filtrage ni pagination en mémoire côté client. */
+  acompteOnly?: boolean;
+  /** Demander un count (parcours des lignes correspondantes). Par défaut
+   *  true ; passer false quand seule la page compte. */
+  withCount?: boolean;
+  /** 'full' (défaut) : toutes les jointures + SKU produit. 'list' : idem sans
+   *  la jointure produit (gros lots, export). */
+  projection?: 'full' | 'list';
+};
+
 export async function getOrders(
   businessId: string,
-  options?: {
-    status?:   string;
-    limit?:    number;
-    offset?:   number;
-    /** Un seul jour (YYYY-MM-DD) — ignoré si dateFrom/dateTo est fourni. */
-    date?:     string;
-    /** Plage de dates (YYYY-MM-DD, bornes incluses). */
-    dateFrom?: string;
-    dateTo?:   string;
-    search?:   string;
-    /** Restreint aux commandes encaissées par ce caissier (son user id). */
-    cashierId?: string;
-    /** Plancher absolu sur created_at (ISO) — cumulé avec date/dateFrom/dateTo,
-     *  jamais élargi par l'utilisateur. Sert à borner la vue d'un caissier. */
-    createdAfter?: string;
-    /** Acomptes uniquement : solde restant dû > 0, hors annulées/remboursées et
-     *  hors demandes WhatsApp. Filtré et paginé côté SQL via la colonne générée
-     *  `orders.balance_due` + l'index partiel `idx_orders_acompte` (migration
-     *  112) — aucun filtrage ni pagination en mémoire côté client. */
-    acompteOnly?: boolean;
-    /** Demander un count (parcours des lignes correspondantes). Par défaut
-     *  true ; passer false quand seule la page compte. */
-    withCount?: boolean;
-    /** 'full' (défaut) : toutes les jointures + SKU produit. 'list' : idem sans
-     *  la jointure produit (gros lots, export). */
-    projection?: 'full' | 'list';
-  }
+  options?: GetOrdersOptions
 ): Promise<{ orders: Order[]; count: number }> {
   const withCount = options?.withCount ?? true;
   const selectStr = ORDERS_SELECT[options?.projection ?? 'full'];
+
+  const term = toIlikeTerm(options?.search ?? '');
+  if (term) {
+    // Chemin dédié (migration 124) : `WHERE ... ILIKE ... ORDER BY created_at
+    // LIMIT` laisse Postgres libre de choisir un plan qui ignore les index
+    // trigram (122/123) pour un terme peu sélectif à ses yeux — correct pour
+    // un mot fréquent, mais un balayage quasi complet (donc un timeout) pour
+    // un terme précis ("prénom nom") dont les rares correspondances peuvent
+    // être n'importe où dans un gros historique. La RPC `search_order_ids`
+    // matérialise l'ensemble des correspondances (fence d'optimisation) avant
+    // de trier/paginer, garantissant l'usage de l'index quelle que soit la
+    // sélectivité du terme.
+    return getOrdersBySearch(businessId, term, options, selectStr, withCount);
+  }
+
   let query = supabase
     .from('orders')
     // 'estimated' : count exact tant que le nombre de lignes reste sous le
@@ -241,16 +258,8 @@ export async function getOrders(
     if (options?.dateTo)   query = query.lte('created_at', new Date(`${options.dateTo}T23:59:59.999`).toISOString());
   }
 
-  const term = toIlikeTerm(options?.search ?? '');
-  if (term) {
-    // id_text (colonne générée, migration 097) : `id` est de type uuid — un
-    // cast inline (`id::text.ilike...`) est rejeté par PostgREST à l'intérieur
-    // de la grammaire or=(...) (PGRST100 "unexpected :"), d'où la colonne
-    // texte dédiée plutôt qu'un cast à la volée. Ne couvre pas le nom du
-    // caissier (table jointe) : le filtrer proprement demanderait une
-    // jointure !inner dédiée.
-    query = query.or(`id_text.ilike.%${term}%,customer_name.ilike.%${term}%,customer_phone.ilike.%${term}%`);
-  }
+  // Pas de recherche ici : `term` non vide part par getOrdersBySearch()
+  // ci-dessus, avant la construction de cette requête.
 
   // .range() seul pour la pagination — ne jamais combiner avec .limit() sur
   // la même requête (l'un des deux écrase silencieusement l'effet de l'autre
@@ -264,6 +273,67 @@ export async function getOrders(
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
   return { orders: (data ?? []) as unknown as Order[], count: count ?? 0 };
+}
+
+/** Chemin de recherche de getOrders (migration 124) : la RPC `search_order_ids`
+ *  matérialise et pagine les `id` correspondants (fence d'optimisation
+ *  garantissant l'usage des index trigram quelle que soit la sélectivité du
+ *  terme), puis on hydrate les commandes complètes (jointures) par un simple
+ *  `.in('id', ids)` — requête triviale sur un lot ≤ limit. `.in()` ne
+ *  garantit pas l'ordre : on retrie selon l'ordre déjà paginé par la RPC. */
+async function getOrdersBySearch(
+  businessId: string,
+  term: string,
+  options: GetOrdersOptions | undefined,
+  selectStr: string,
+  withCount: boolean,
+): Promise<{ orders: Order[]; count: number }> {
+  const limit  = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
+
+  // Même précédence et même conversion locale→UTC que le chemin non-recherche
+  // ci-dessus (`date` prime sur `dateFrom`/`dateTo` s'il est fourni).
+  const dateFromIso = options?.date
+    ? new Date(`${options.date}T00:00:00`).toISOString()
+    : options?.dateFrom ? new Date(`${options.dateFrom}T00:00:00`).toISOString() : undefined;
+  const dateToIso = options?.date
+    ? new Date(`${options.date}T23:59:59.999`).toISOString()
+    : options?.dateTo ? new Date(`${options.dateTo}T23:59:59.999`).toISOString() : undefined;
+
+  const { data: idRows, error: idError } = await supabase.rpc('search_order_ids' as never, {
+    p_business_id:    businessId,
+    p_search:         term,
+    p_status:         options?.status && options.status !== 'all' ? options.status : undefined,
+    p_acompte_only:   options?.acompteOnly ?? false,
+    p_date_from:      dateFromIso,
+    p_date_to:        dateToIso,
+    p_cashier_id:     options?.cashierId ?? undefined,
+    p_created_after:  options?.createdAfter ?? undefined,
+    p_limit:          limit,
+    p_offset:         offset,
+  } as never);
+  if (idError) throw new Error(idError.message);
+
+  const rows = (idRows ?? []) as unknown as Array<{ id: string; total_count: number }>;
+  if (rows.length === 0) return { orders: [], count: 0 };
+
+  const ids = rows.map((r) => r.id);
+  // Par lots de 200 : l'export d'historique (handlePrintHistory) peut demander
+  // jusqu'à HISTORY_PRINT_LIMIT correspondances — un `.in('id', ids)` unique
+  // avec des milliers d'UUID construirait une URL de requête excessive.
+  const CHUNK_SIZE = 200;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) chunks.push(ids.slice(i, i + CHUNK_SIZE));
+  const results = await Promise.all(
+    chunks.map((chunk) => supabase.from('orders').select(selectStr).in('id', chunk)),
+  );
+  for (const r of results) if (r.error) throw new Error(r.error.message);
+  const data = results.flatMap((r) => r.data ?? []);
+
+  const byId   = new Map((data as unknown as Order[]).map((o) => [o.id, o]));
+  const orders = ids.map((id) => byId.get(id)).filter((o): o is Order => o != null);
+
+  return { orders, count: withCount ? rows[0].total_count : orders.length };
 }
 
 export async function getOrderById(id: string): Promise<Order> {
