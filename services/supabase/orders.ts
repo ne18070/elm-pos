@@ -149,23 +149,38 @@ function toIlikeTerm(raw: string): string {
 // à réserver aux petits lots (une page de 50).
 const ORDERS_FULL_SELECT =
   `*, items:order_items(*, product:products(sku)), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`;
-// Comme FULL mais sans la jointure `products` — supprime un sous-select par
-// ligne d'article. Suffit pour l'export historique (niveau commande) ; à
-// utiliser pour les gros lots qui sinon dépassent le statement_timeout (57014).
+// Projection LISTE : uniquement ce qu'affichent la liste des commandes et le
+// rapport d'historique imprimé. Pas de `*` (on évite de transférer notes,
+// delivery_*, coupon_ids/codes jsonb…), et les sous-selects réduits au strict
+// nécessaire — `order_items(quantity)` (somme d'articles) et `payments(amount,
+// method)` (versé / acompte) au lieu de `(*)`. Le détail d'une commande et la
+// facture rechargent la version complète via getOrderById.
+const ORDERS_LIST_COLS =
+  'id, business_id, cashier_id, status, source, total, subtotal, tax_amount, ' +
+  'discount_amount, amount_paid, balance_due, customer_name, customer_phone, ' +
+  'reseller_id, reseller_client_id, order_channel, created_at, updated_at';
 const ORDERS_LIST_SELECT =
-  `*, items:order_items(*), payments(*), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`;
+  `${ORDERS_LIST_COLS}, items:order_items(quantity), payments(amount, method), cashier:cashier_id(id, full_name, email), reseller:resellers!reseller_id(id, name, type), reseller_client:reseller_clients!reseller_client_id(id, name, phone)`;
 
 const ORDERS_SELECT: Record<'full' | 'list', string> = {
   full: ORDERS_FULL_SELECT,
   list: ORDERS_LIST_SELECT,
 };
 
+/** Curseur keyset : position de la dernière ligne d'une page dans l'ordre
+ *  `created_at DESC, id DESC`. La page suivante = les lignes strictement
+ *  après ce point. */
+export interface OrderCursor { created_at: string; id: string }
+
 export async function getOrders(
   businessId: string,
   options?: {
     status?:   string;
     limit?:    number;
-    offset?:   number;
+    /** Pagination keyset : ne renvoie que les lignes situées APRÈS ce curseur
+     *  (voir OrderCursor). Omis = première page. Pas d'`offset` : voir le
+     *  commentaire dans le corps de la fonction. */
+    before?:   OrderCursor;
     /** Un seul jour (YYYY-MM-DD) — ignoré si dateFrom/dateTo est fourni. */
     date?:     string;
     /** Plage de dates (YYYY-MM-DD, bornes incluses). */
@@ -182,56 +197,73 @@ export async function getOrders(
      *  `orders.balance_due` + l'index partiel `idx_orders_acompte` (migration
      *  112) — aucun filtrage ni pagination en mémoire côté client. */
     acompteOnly?: boolean;
-    /** Demander un count (parcours des lignes correspondantes). Par défaut
-     *  true ; passer false quand seule la page compte. */
+    /** Demander un count. Par défaut true ; passer false quand seule la page
+     *  compte. N'est de toute façon honoré que pour la 1re page (sans
+     *  curseur) — voir le commentaire dans le corps de la fonction. `count`
+     *  vaut alors `null` dans le résultat. */
     withCount?: boolean;
     /** 'full' (défaut) : toutes les jointures + SKU produit. 'list' : idem sans
      *  la jointure produit (gros lots, export). */
     projection?: 'full' | 'list';
   }
-): Promise<{ orders: Order[]; count: number }> {
-  const withCount = options?.withCount ?? true;
+): Promise<{ orders: Order[]; count: number | null; hasMore: boolean; nextCursor: OrderCursor | null }> {
   const selectStr = ORDERS_SELECT[options?.projection ?? 'full'];
+  const term   = toIlikeTerm(options?.search ?? '');
+  const limit  = options?.limit ?? 0;
+  const before = options?.before;
+
+  // PAGINATION KEYSET, pas d'OFFSET. Avec `OFFSET n`, Postgres doit produire
+  // n + limit lignes pour en jeter n : en recherche, il remonte l'index
+  // (business_id, created_at DESC) en filtrant chaque ligne par ILIKE jusqu'à
+  // réunir n + limit correspondances — coût croissant avec la profondeur,
+  // statement_timeout (57014) dès la page 4 sur un terme courant (« amadou »)
+  // dans un gros historique. Avec un curseur, chaque page ne parcourt que ce
+  // qui suit la dernière ligne de la précédente : coût constant quelle que
+  // soit la page.
+  //   • `created_at <= c` seul est utilisable comme borne d'index (le parcours
+  //     démarre au curseur) ; le `or` gère l'égalité stricte sur
+  //     (created_at, id) — indispensable, des commandes importées partagent le
+  //     même created_at.
+  //   • Tri `created_at DESC, id DESC` : ordre total déterministe.
+  //
+  // COUNT — demandé UNIQUEMENT pour la première page. PostgREST ne renvoie
+  // 416 / PGRST103 « Requested range not satisfiable » QUE lorsqu'un total lui
+  // est demandé (Prefer: count=…) ET que la plage le dépasse — et avec
+  // 'planned' / 'estimated' ce total est une ESTIMATION du planificateur,
+  // parfois très inférieure au réel (recherche trigram « amadou » estimée à
+  // 2 lignes alors que la 1re page en rapportait 51). Une page suivante ne
+  // porte donc jamais de count ; le total ne change pas d'une page à l'autre,
+  // le hook conserve celui de la 1re page.
+  //  • 'estimated' hors recherche : exact tant que le planificateur estime peu
+  //    de lignes, sinon estimation — jamais de COUNT(*) exact sur tout
+  //    l'historique de l'onglet « Toutes ».
+  //  • 'planned' en recherche : un simple EXPLAIN. Un count exact sur un terme
+  //    courant (des milliers de factures) dépasse le statement_timeout.
+  const withCount = (options?.withCount ?? true) && !before;
+  const countMode: 'estimated' | 'planned' = term ? 'planned' : 'estimated';
+
   let query = supabase
     .from('orders')
-    // 'estimated' : count exact tant que le nombre de lignes reste sous le
-    // seuil configuré côté PostgREST (db-max-rows), sinon estimation via le
-    // planificateur — évite qu'un COUNT(*) exact sur TOUT l'historique d'un
-    // business (onglet "Toutes", sans filtre de statut/date/recherche) ne
-    // dépasse le statement_timeout et fasse échouer le chargement de la page
-    // une fois l'historique volumineux. Négligeable sur les petits lots
-    // (badge acompte, onglets filtrés) : le seuil n'est alors jamais atteint
-    // et le count reste exact.
-    .select(selectStr, withCount ? { count: 'estimated' } : undefined)
+    .select(selectStr, withCount ? { count: countMode } : undefined)
     .eq('business_id', businessId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false });
 
-  if (options?.status && options.status !== 'all') {
-    query = query.eq('status', options.status);
-  }
-  if (options?.cashierId) {
-    query = query.eq('cashier_id', options.cashierId);
-  }
-  if (options?.createdAfter) {
-    query = query.gte('created_at', options.createdAfter);
-  }
+  if (options?.status && options.status !== 'all') query = query.eq('status', options.status);
+  if (options?.cashierId)    query = query.eq('cashier_id', options.cashierId);
+  if (options?.createdAfter) query = query.gte('created_at', options.createdAfter);
   if (options?.acompteOnly) {
     // Acompte = solde restant dû. `balance_due` (colonne générée = total -
-    // amount_paid, migration 112) rend le critère exprimable en SQL, donc
-    // paginable et comptable comme n'importe quel autre onglet. 0.005 = même
-    // tolérance que le calcul d'affichage (payé < total - 0.01). WhatsApp
-    // exclu : ce sont des demandes non encaissées, pas des acomptes.
+    // amount_paid, migration 112). 0.005 = même tolérance que l'affichage.
+    // WhatsApp exclu : demandes non encaissées, pas des acomptes.
     query = query
       .gt('balance_due', 0.005)
       .not('status', 'in', '(cancelled,refunded)')
       .neq('source', 'whatsapp');
   }
-  // `date`/`dateFrom`/`dateTo` sont des dates calendaires locales (YYYY-MM-DD,
-  // ex. "aujourd'hui" au fuseau du navigateur) — on les convertit en bornes
-  // UTC via un Date local plutôt que de suffixer "Z" directement : un simple
-  // `${date}T00:00:00Z` traiterait la date locale comme si elle était déjà en
-  // UTC, décalant la fenêtre de l'offset du fuseau (ex. UTC+1 : les commandes
-  // passées entre 00h00 et 01h00 locales tombaient hors de la plage "aujourd'hui").
+  // `date`/`dateFrom`/`dateTo` : dates calendaires locales converties en bornes
+  // UTC via un Date local (un `${date}T00:00:00Z` décalerait la fenêtre de
+  // l'offset du fuseau).
   if (options?.date) {
     query = query
       .gte('created_at', new Date(`${options.date}T00:00:00`).toISOString())
@@ -240,30 +272,36 @@ export async function getOrders(
     if (options?.dateFrom) query = query.gte('created_at', new Date(`${options.dateFrom}T00:00:00`).toISOString());
     if (options?.dateTo)   query = query.lte('created_at', new Date(`${options.dateTo}T23:59:59.999`).toISOString());
   }
-
-  const term = toIlikeTerm(options?.search ?? '');
   if (term) {
-    // id_text (colonne générée, migration 097) : `id` est de type uuid — un
-    // cast inline (`id::text.ilike...`) est rejeté par PostgREST à l'intérieur
-    // de la grammaire or=(...) (PGRST100 "unexpected :"), d'où la colonne
-    // texte dédiée plutôt qu'un cast à la volée. Ne couvre pas le nom du
-    // caissier (table jointe) : le filtrer proprement demanderait une
-    // jointure !inner dédiée.
+    // id_text (colonne générée, migration 097) : cast uuid→text inline rejeté
+    // dans la grammaire or=(...), d'où la colonne dédiée. Index trigram GIN sur
+    // id_text / customer_name / customer_phone (migration 122).
     query = query.or(`id_text.ilike.%${term}%,customer_name.ilike.%${term}%,customer_phone.ilike.%${term}%`);
   }
-
-  // .range() seul pour la pagination — ne jamais combiner avec .limit() sur
-  // la même requête (l'un des deux écrase silencieusement l'effet de l'autre
-  // selon l'ordre d'appel, cause du bug historique où offset=0 ignorait
-  // totalement la pagination car `if (options?.offset)` traite 0 comme faux).
-  if (options?.limit) {
-    const offset = options.offset ?? 0;
-    query = query.range(offset, offset + options.limit - 1);
+  if (before) {
+    // Valeurs entre guillemets : `:` `+` `.` sont réservés dans la grammaire
+    // or=(...) de PostgREST. Le second `or=` s'ajoute (AND) au premier.
+    query = query
+      .lte('created_at', before.created_at)
+      .or(`created_at.lt."${before.created_at}",and(created_at.eq."${before.created_at}",id.lt."${before.id}")`);
   }
+  // limit + 1 lignes : la ligne de trop sert à détecter la page suivante
+  // (`hasMore`) sans count.
+  if (limit) query = query.limit(limit + 1);
 
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return { orders: (data ?? []) as unknown as Order[], count: count ?? 0 };
+
+  const rows    = (data ?? []) as unknown as Order[];
+  const hasMore = limit > 0 && rows.length > limit;
+  const page    = hasMore ? rows.slice(0, limit) : rows;
+  const last    = page[page.length - 1];
+  return {
+    orders:     page,
+    count:      withCount ? (count ?? 0) : null,
+    hasMore,
+    nextCursor: hasMore && last ? { created_at: last.created_at, id: last.id } : null,
+  };
 }
 
 export async function getOrderById(id: string): Promise<Order> {
