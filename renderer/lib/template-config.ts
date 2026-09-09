@@ -1,5 +1,5 @@
 import type { Order, Business, LoyaltyReceiptData } from '../../types';
-import { generateDistributeurInvoice, type DistributeurInvoiceType } from './invoice-templates';
+import { generateDistributeurInvoice, echeance, type DistributeurInvoiceType } from './invoice-templates';
 
 // --- Block types --------------------------------------------------------------
 
@@ -494,6 +494,11 @@ function renderItems(ctx: RenderCtx, isThermal: boolean): string {
 
 function renderTotals(ctx: RenderCtx, isThermal: boolean): string {
   const { order, config, cur } = ctx;
+  // Échéance de paiement — activée dans Réglages → Établissement
+  // (brand_config.echeance_enabled), libellé calculé selon le total TTC.
+  const echLabel = ctx.business?.brand_config?.echeance_enabled
+    ? echeance(order.total, ctx.business)
+    : '';
   if (isThermal) {
     return `
       <table data-section="totals">
@@ -505,6 +510,7 @@ function renderTotals(ctx: RenderCtx, isThermal: boolean): string {
           <td class="right">${fmt(order.total, cur)}</td>
         </tr>
       </table>
+      ${echLabel ? `<div class="small" style="margin-top:4px;font-weight:bold;text-transform:uppercase">${echLabel}</div>` : ''}
       ${config.showAmountInWords ? `
       <div class="small" style="margin:4px 0;font-style:italic;line-height:1.4">
         Arrêté à la somme de :<br>
@@ -519,6 +525,7 @@ function renderTotals(ctx: RenderCtx, isThermal: boolean): string {
         ${ctx.couponLine}
         ${config.showTax && order.tax_amount > 0 ? `<tr><td>TVA</td><td>${fmt(order.tax_amount, cur)}</td></tr>` : ''}
         <tr class="total-final"><td>TOTAL TTC</td><td>${fmt(order.total, cur)}</td></tr>
+        ${echLabel ? `<tr class="payment-line"><td style="font-weight:700;text-transform:uppercase">Échéance</td><td style="font-weight:700">${echLabel}</td></tr>` : ''}
         ${config.showAmountInWords ? `
         <tr><td colspan="2" style="font-size:8px;font-style:italic;color:#000;padding:3px 6px 2px;line-height:1.4;border-bottom:1px solid #000">
           Arrêté à la somme de : <strong>${amountInWords(order.total, cur)}</strong>

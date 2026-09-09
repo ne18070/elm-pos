@@ -1846,11 +1846,14 @@ const DEFAULT_ECHEANCE: EcheanceRule[] = [
   {                  label: 'Échéance : 30 jours' },
 ];
 
-function echeance(total: number, business: Business): string {
-  const rules: EcheanceRule[] =
-    (business.brand_config?.echeance_rules as EcheanceRule[] | undefined) ?? DEFAULT_ECHEANCE;
-  const match = rules.find(r => r.max == null || total <= r.max);
-  return match?.label ?? rules[rules.length - 1]?.label ?? 'Paiement comptant';
+export function echeance(total: number, business: Business): string {
+  const raw = (business.brand_config?.echeance_rules as EcheanceRule[] | undefined);
+  const rules: EcheanceRule[] = raw && raw.length > 0 ? raw : DEFAULT_ECHEANCE;
+  // Trie par seuil croissant (règle sans `max` = fallback, repoussée en fin) —
+  // l'ordre saisi en réglages n'est pas garanti croissant.
+  const sorted = [...rules].sort((a, b) => (a.max ?? Infinity) - (b.max ?? Infinity));
+  const match = sorted.find(r => r.max == null || total <= r.max);
+  return (match?.label || sorted[sorted.length - 1]?.label || 'Paiement comptant').trim();
 }
 
 // TTC → HT (hors TVA 18%)
@@ -1882,6 +1885,12 @@ export function generateDistributeurInvoice(
   const refName     = extra?.resellerName?.trim();
   const clientName  = extra?.resellerClientName?.trim() || order.customer_name || '—';
   const clientPhone = extra?.resellerClientPhone?.trim() || order.customer_phone || '';
+
+  // Message pied de reçu — champ « Message pied de reçu » de Réglages →
+  // Établissement (business.receipt_footer). Sauts de ligne conservés.
+  const footerMsg = business.receipt_footer?.trim()
+    ? business.receipt_footer.trim().replace(/\n/g, '<br>')
+    : '';
 
   function buildCopy(): string {
     const rows = (order.items ?? []).map((item) => {
@@ -1994,6 +2003,8 @@ export function generateDistributeurInvoice(
       <div class="sig-row">
         <div class="sig-box"><div class="sig-line"></div><p class="sig-lbl">Cachet et signature</p></div>
       </div>
+
+      ${footerMsg ? `<div class="footer-msg">${footerMsg}</div>` : ''}
     `;
   }
 
@@ -2079,6 +2090,9 @@ export function generateDistributeurInvoice(
   .sig-box { width: 130px; text-align: center; }
   .sig-line { border-top: 1.5px solid #000; height: 22px; }
   .sig-lbl { font-size: 9.5px; color: #000; margin-top: 2px; }
+
+  /* Message pied de reçu */
+  .footer-msg { margin-top: 6px; padding-top: 4px; border-top: 1px solid #000; font-size: 9px; font-style: italic; text-align: center; color: #000; }
 </style>
 </head><body>
 

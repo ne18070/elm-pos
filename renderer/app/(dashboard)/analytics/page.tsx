@@ -119,9 +119,12 @@ export default function AnalyticsPage() {
     { id: 'voitures',   label: 'Voitures',     icon: Car,       feature: 'voitures'      },
   ];
 
-  const filteredTabs = tabsConfig.filter(t => 
-    (t.show === undefined ? true : t.show) && 
-    (!t.feature || business?.features?.includes(t.feature))
+  const filteredTabs = tabsConfig.filter(t =>
+    (t.show === undefined ? true : t.show) &&
+    // hasFeature() gère l'héritage (types[], resto/hôtel → retail…) — un simple
+    // features.includes('retail') masquait les onglets Produits / Détail ventes /
+    // Revendeurs / Promos alors que le module est bien actif.
+    (!t.feature || hasFeature(business, t.feature))
   );
 
   return (
