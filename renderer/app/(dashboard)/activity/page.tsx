@@ -37,6 +37,7 @@ const ACTION_CONFIG: Record<string, { label: string; Icon: React.ElementType; co
   'order.created':           { label: 'Commande créée',       Icon: ShoppingCart, color: 'text-status-success' },
   'order.cancelled':         { label: 'Commande annulée',     Icon: XCircle,      color: 'text-status-error' },
   'order.refunded':          { label: 'Remboursement',        Icon: RotateCcw,    color: 'text-status-purple' },
+  'order.edited':            { label: 'Commande modifiée',    Icon: Pencil,       color: 'text-status-warning' },
   'order.payment_completed': { label: 'Solde encaissé',       Icon: CreditCard,   color: 'text-content-brand' },
   'product.created':         { label: 'Produit ajouté',       Icon: Package,      color: 'text-status-success' },
   'product.updated':         { label: 'Produit modifié',      Icon: Pencil,       color: 'text-status-warning' },
@@ -112,6 +113,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending:  'En attente',
   cancelled:'Annulé',
   refunded: 'Remboursé',
+  edited:   'Modifiée',
 };
 
 function getActionConfig(action: string) {
@@ -169,6 +171,7 @@ const ACTION_FILTERS = [
   { value: 'order.created',           label: 'Commandes créées' },
   { value: 'order.cancelled',         label: 'Annulations' },
   { value: 'order.refunded',          label: 'Remboursements' },
+  { value: 'order.edited',            label: 'Commandes modifiées' },
   { value: 'order.payment_completed', label: 'Soldes encaissés' },
   { value: 'product.created',         label: 'Produits ajoutés' },
   { value: 'product.updated',         label: 'Produits modifiés' },
