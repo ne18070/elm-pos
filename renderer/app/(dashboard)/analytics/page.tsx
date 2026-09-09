@@ -177,7 +177,7 @@ export default function AnalyticsPage() {
         )}
 
         {tab === 'produits' && (
-          <ProductsTab loading={loading} data={data} period={period} fmt={fmt} />
+          <ProductsTab loading={loading} data={data} period={period} fmt={fmt} businessId={business?.id ?? ''} />
         )}
 
         {tab === 'vendeurs' && (

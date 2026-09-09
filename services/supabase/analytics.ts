@@ -132,6 +132,47 @@ export async function getAnalyticsSummary(
   return { total_sales, order_count, avg_order_value, top_products, daily_stats };
 }
 
+// --- Ventes d'un produit sur une période ------------------------------------
+
+export interface ProductSalesResult {
+  quantity_sold: number;
+  revenue:       number;
+  order_count:   number;
+}
+
+/**
+ * Quantité vendue + CA + nombre de commandes pour UN produit entre deux dates
+ * (bornes calendaires locales incluses). Ne compte que les ventes finalisées
+ * (orders.status = 'paid'), cohérent avec le reste des stats.
+ */
+export async function getProductSales(
+  businessId: string,
+  productId:  string,
+  fromDate:   string,   // 'YYYY-MM-DD' (locale)
+  toDate:     string,   // 'YYYY-MM-DD' (locale, borne incluse)
+): Promise<ProductSalesResult> {
+  const startISO = new Date(`${fromDate}T00:00:00`).toISOString();
+  const endISO   = new Date(`${toDate}T23:59:59.999`).toISOString();
+
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('quantity, total, order_id, order:orders!inner(business_id, status, created_at)')
+    .eq('product_id', productId)
+    .eq('order.business_id', businessId)
+    .eq('order.status', 'paid')
+    .gte('order.created_at' as never, startISO)
+    .lte('order.created_at' as never, endISO);
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as Array<{ quantity: number; total: number; order_id: string }>;
+  return {
+    quantity_sold: rows.reduce((s, r) => s + Number(r.quantity), 0),
+    revenue:       rows.reduce((s, r) => s + Number(r.total), 0),
+    order_count:   new Set(rows.map((r) => r.order_id)).size,
+  };
+}
+
 // --- Reseller stats ----------------------------------------------------------
 
 export interface ResellerStat {
