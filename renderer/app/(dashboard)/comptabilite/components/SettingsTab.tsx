@@ -141,7 +141,7 @@ export function SettingsTab({ accounts, businessId, onRefresh }: Props) {
                   <select
                     className="input w-full"
                     value={newAcc.nature}
-                    onChange={e => setNewAcc({ ...newAcc, nature: e.target.value as any })}
+                    onChange={e => setNewAcc({ ...newAcc, nature: e.target.value as Account['nature'] })}
                   >
                     <option value="actif">Actif</option>
                     <option value="passif">Passif</option>
@@ -154,7 +154,7 @@ export function SettingsTab({ accounts, businessId, onRefresh }: Props) {
                   <select
                     className="input w-full"
                     value={newAcc.balance_type}
-                    onChange={e => setNewAcc({ ...newAcc, balance_type: e.target.value as any })}
+                    onChange={e => setNewAcc({ ...newAcc, balance_type: e.target.value as Account['balance_type'] })}
                   >
                     <option value="debit">Débiteur</option>
                     <option value="credit">Créditeur</option>

@@ -25,7 +25,7 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
           <p className="text-2xl font-bold text-content-primary">{formatCurrency(is.caNet, currency)}</p>
           {is.rrrAccordes > 0 && (
             <p className="text-xs text-content-primary mt-1">
-              Brut : {formatCurrency(is.ventesGross, currency)} —Remises : {formatCurrency(is.rrrAccordes, currency)}
+              Brut : {formatCurrency(is.ventesGross, currency)} — Remises : {formatCurrency(is.rrrAccordes, currency)}
             </p>
           )}
         </div>
@@ -36,7 +36,7 @@ export function DashboardTab({ entries, is, bs, currency }: Props) {
             <span className="text-xs text-content-secondary uppercase tracking-wide">Charges totales</span>
           </div>
           <p className="text-2xl font-bold text-content-primary">
-            {formatCurrency(is.caNet - is.ebe, currency)}
+            {formatCurrency(is.caNet + is.autresProduits - is.ebe, currency)}
           </p>
           <p className="text-xs text-content-primary mt-1">Opérationnelles (Achats + Frais)</p>
         </div>

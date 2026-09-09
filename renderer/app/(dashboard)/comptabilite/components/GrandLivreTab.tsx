@@ -13,6 +13,11 @@ interface Props {
 
 export function GrandLivreTab({ entries, accounts, currency }: Props) {
   const [selectedAccount, setSelectedAccount] = useState<string>(accounts[0]?.code || '');
+  // Compte sélectionné disparu du plan (supprimé / désactivé dans
+  // Configuration) → on retombe sur le premier compte au lieu d'un détail vide.
+  const activeCode = accounts.some((a) => a.code === selectedAccount)
+    ? selectedAccount
+    : (accounts[0]?.code ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   // `entries` est plafonné en amont (page.tsx). Au-delà, le solde cumulé
   // affiché ici serait partiel → on prévient plutôt que d'afficher un faux.
@@ -24,7 +29,7 @@ export function GrandLivreTab({ entries, accounts, currency }: Props) {
 
   const accountLines = entries.flatMap(e => 
     (e.lines ?? [])
-      .filter(l => l.account_code === selectedAccount)
+      .filter(l => l.account_code === activeCode)
       .map(l => ({
         ...l,
         entryId: e.id,
@@ -40,7 +45,7 @@ export function GrandLivreTab({ entries, accounts, currency }: Props) {
     return { ...l, balance: runningBalance };
   });
 
-  const currentAccount = accounts.find(a => a.code === selectedAccount);
+  const currentAccount = accounts.find(a => a.code === activeCode);
 
   return (
     <div className="grid lg:grid-cols-4 gap-6 h-full">
@@ -62,7 +67,7 @@ export function GrandLivreTab({ entries, accounts, currency }: Props) {
               key={a.code}
               onClick={() => setSelectedAccount(a.code)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                selectedAccount === a.code 
+                activeCode === a.code 
                   ? 'bg-brand-600/10 text-brand-500 font-semibold border border-brand-500/20' 
                   : 'text-content-secondary hover:bg-surface-hover hover:text-content-primary'
               }`}

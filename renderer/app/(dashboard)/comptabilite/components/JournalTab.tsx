@@ -37,6 +37,9 @@ export function JournalTab({ from, to, currency, canDelete, reloadToken, onNewEn
 
   // Nouvelle période ⇒ page 1 + sélection vidée
   useEffect(() => { setPage(1); setSelected(new Set()); }, [from, to]);
+  // Rechargement (sync / import / suppression) ⇒ sélection vidée — les ids
+  // sélectionnés viennent peut-être d'être supprimés ; la page est conservée.
+  useEffect(() => { setSelected(new Set()); }, [reloadToken]);
 
   // Page courante
   useEffect(() => {

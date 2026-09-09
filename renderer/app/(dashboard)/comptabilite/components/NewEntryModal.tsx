@@ -9,7 +9,7 @@ import { createManualEntry } from '@services/supabase/accounting';
 import { formatCurrency, displayCurrency } from '@/lib/utils';
 import type { Account } from '@services/supabase/accounting';
 import {
-  OP_CATEGORIES, OP_TEMPLATES, PAY_ACCOUNTS,
+  OP_CATEGORIES, OP_TEMPLATES, PAY_ACCOUNTS, todayLocalISO,
   type OpTemplate, type PaySide,
 } from './accounting-constants';
 
@@ -26,18 +26,20 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
   const [saving, setSaving]     = useState(false);
   const [expertMode, setExpertMode] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Date LOCALE : `toISOString()` donne la date UTC, décalée d'un jour selon
+  // l'heure et le fuseau — la date du jour devenait alors interdite (max).
+  const today = todayLocalISO();
 
   // -- Mode guidé --
   const [category, setCategory] = useState<string | null>(null);
   const [op, setOp]             = useState<OpTemplate | null>(null);
   const [amount, setAmount]     = useState('');
   const [paySide, setPaySide]   = useState<PaySide>('caisse');
-  const [date, setDate]         = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate]         = useState(today);
   const [desc, setDesc]         = useState('');
 
   // -- Mode expert --
-  const [expDate, setExpDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expDate, setExpDate] = useState(today);
   const [expRef, setExpRef]   = useState('');
   const [expDesc, setExpDesc] = useState('');
   const [lines, setLines]     = useState([
@@ -83,6 +85,10 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
         const acc = accounts.find((a) => a.code === value);
         return { ...l, account_code: String(value), account_name: acc?.name ?? l.account_name };
       }
+      // Une ligne ne joue que d'un côté : saisir un débit efface le crédit et
+      // inversement (sinon une même ligne pouvait porter les deux).
+      if (field === 'debit')  { const n = Number(value) || 0; return { ...l, debit: n,  credit: n > 0 ? 0 : l.credit }; }
+      if (field === 'credit') { const n = Number(value) || 0; return { ...l, credit: n, debit:  n > 0 ? 0 : l.debit }; }
       return { ...l, [field]: value };
     }));
   }
@@ -90,7 +96,15 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
   async function saveExpert() {
     if (!expDesc.trim()) return notifErr('Libellé requis');
     if (!expBalanced) return notifErr("L'écriture doit être équilibrée (Débit = Crédit)");
-    const validLines = lines.filter((l) => l.account_code && (l.debit > 0 || l.credit > 0));
+    // Une ligne mouvementée sans compte était silencieusement écartée : le
+    // total affiché était équilibré, mais l'écriture envoyée ne l'était plus
+    // et la base la rejetait avec un message déroutant.
+    if (lines.some((l) => (l.debit > 0 || l.credit > 0) && !l.account_code.trim())) {
+      return notifErr('Indiquez un numéro de compte sur chaque ligne mouvementée');
+    }
+    const validLines = lines
+      .filter((l) => l.account_code.trim() && (l.debit > 0 || l.credit > 0))
+      .map((l) => ({ ...l, account_code: l.account_code.trim() }));
     if (validLines.length < 2) return notifErr('Au moins 2 lignes');
     setSaving(true);
     try {
@@ -285,7 +299,7 @@ export function NewEntryModal({ accounts, businessId, currency, onClose, onSaved
                             onChange={(e) => updateLine(i, 'account_code', e.target.value)}
                             placeholder="571" className="input py-1 px-2 text-xs font-mono" />
                           <datalist id={`al-${i}`}>
-                            {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} —{a.name}</option>)}
+                            {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} — {a.name}</option>)}
                           </datalist>
                         </td>
                         <td className="px-1.5 py-1.5">

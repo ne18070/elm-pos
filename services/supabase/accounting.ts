@@ -404,7 +404,12 @@ export async function createManualEntry(input: CreateEntryInput): Promise<Journa
 
   const { error: linesErr } = await db('journal_lines')
     .insert(input.lines.map((l) => ({ ...l, entry_id: entry.id })));
-  if (linesErr) throw new Error(linesErr.message);
+  if (linesErr) {
+    // Lignes refusées (trigger d'équilibre, RLS…) : on retire l'en-tête, sinon
+    // une écriture orpheline sans ligne reste affichée dans le journal.
+    await db('journal_entries').delete().eq('id', entry.id);
+    throw new Error(linesErr.message);
+  }
 
   return { ...entry, lines: input.lines } as unknown as JournalEntry;
 }
@@ -447,6 +452,10 @@ function _payMethodToAccount(method: string): { code: string; name: string } {
     case 'card':         return { code: '521', name: 'Banques – comptes courants' };
     case 'mobile_money': return { code: '576', name: 'Mobile Money' };
     case 'room_charge':  return { code: '411', name: 'Clients' };
+    // Rachat de points fidélité : rien n'est encaissé — la part réglée en
+    // points est une remise consentie par le commerce (RRR sur ventes), pas
+    // de la trésorerie. La débiter en 571 gonflait la caisse d'autant.
+    case 'loyalty':      return { code: '7091', name: 'RRR accordés sur ventes' };
     default:             return { code: '571', name: 'Caisse' };
   }
 }
@@ -461,9 +470,9 @@ const _PAGE_SIZE = 1000;
  * tout synchronisé. Cette fonction feuillette la requête par pages de 1000
  * jusqu'à épuisement.
  */
-async function _fetchAllRows<T>(
-  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
-): Promise<T[]> {
+type _Rows<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
+
+async function _fetchAllRows<T>(build: (from: number, to: number) => _Rows<T>): Promise<T[]> {
   const all: T[] = [];
   let from = 0;
   for (;;) {
@@ -934,6 +943,7 @@ export interface IncomeStatement {
   caNet:             number;
   achatsMarchandises:number; // 601
   margeBrute:        number;
+  autresProduits:    number; // classe 7 hors 70x/77x (71, 72, 75, 78, 79…)
   transports:        number; // 61x
   servicesExterieurs:number; // 62x, 63x
   impotsTaxes:       number; // 64x
@@ -945,6 +955,7 @@ export interface IncomeStatement {
   produitsFinanciers:number; // 77x
   chargesFinancieres:number; // 67x
   resultatFinancier: number;
+  resultatHAO:       number; // classe 8 : produits − charges hors activités ordinaires
   resultatAvantImpot:number;
   impots:            number; // 691, 89
   resultatNet:       number;
@@ -984,11 +995,17 @@ export interface BalanceSheet {
 
 export async function syncHotelAccounting(businessId: string): Promise<number> {
   // Récupérer tous les source_id hôtel déjà synchronisés
-  const { data: existingAll } = await db('journal_entries')
-    .select('source_id')
-    .eq('business_id', businessId)
-    .eq('source', 'hotel');
-  const syncedSet = new Set((existingAll ?? []).map((e: { source_id: string | null }) => e.source_id));
+  // Paginé (voir _fetchAllRows) : au-delà de 1000 écritures hôtel, le plafond
+  // PostgREST laisserait croire que les suivantes ne sont pas synchronisées.
+  const existingAll = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
+    db('journal_entries')
+      .select('source_id')
+      .eq('business_id', businessId)
+      .eq('source', 'hotel')
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
+  const syncedSet = new Set(existingAll.map((e) => e.source_id));
 
   let count = 0;
 
@@ -1129,8 +1146,9 @@ export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeState
 
   // Intérêts d'emprunt : le plan OHADA du projet les code en 661 (classe 6).
   // Ils relèvent du résultat FINANCIER, pas des charges de personnel (66x) ni
-  // d'exploitation. On les isole explicitement.
-  const interetsEmprunts = sumCharge((r) => has(r, '661', '671'));
+  // d'exploitation. On les isole explicitement. (671 est déjà couvert par
+  // sumRange('67') plus bas — l'inclure ici le comptait deux fois.)
+  const interetsEmprunts = sumCharge((r) => has(r, '661'));
 
   // Personnel = 66x hors 661/671.
   const chargesPersonnel = sumCharge((r) => has(r, '66') && !has(r, '661'));
@@ -1148,7 +1166,17 @@ export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeState
     r.class_num === 6 && !has(r, '60', '61', '62', '63', '64', '66', '67', '68', '69'),
   );
 
-  const ebe          = margeBrute - (transports + servicesExterieurs + effectiveTaxes + effectivePersonnel + autresCharges);
+  // Autres produits d'exploitation : reste de la classe 7 (71 subventions,
+  // 72 production immobilisée, 75 autres produits, 78 transferts de charges,
+  // 79 reprises…), hors ventes 70x et produits financiers 77x. Sans ce poste,
+  // une écriture sur 758 par exemple n'apparaissait nulle part au compte de
+  // résultat, et le résultat net divergeait du résultat de l'exercice au bilan.
+  const autresProduits = balance
+    .filter((r) => r.class_num === 7 && !has(r, '70', '77'))
+    .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
+
+  const ebe          = margeBrute + autresProduits
+    - (transports + servicesExterieurs + effectiveTaxes + effectivePersonnel + autresCharges);
   const dotations    = sumRange('68');
   const resultatExpl = ebe - dotations;
 
@@ -1160,15 +1188,23 @@ export function computeIncomeStatement(balance: TrialBalanceLine[]): IncomeState
   const chargesFinancieres = sumRange('67') + interetsEmprunts;
   const resultatFinancier  = produitsFinanciers - chargesFinancieres;
 
-  const resultatAvantImpot = resultatExpl + resultatFinancier;
+  // Hors activités ordinaires (classe 8) : produits − charges HAO. Le bilan
+  // (computeBalanceSheet) les intègre au résultat de l'exercice ; le compte de
+  // résultat doit donc les porter aussi, sinon RÉSULTAT NET ≠ résultat au
+  // passif dès qu'un compte 8x est mouvementé.
+  const resultatHAO = balance
+    .filter((r) => r.class_num === 8)
+    .reduce((s, r) => s + (r.total_credit - r.total_debit), 0);
+
+  const resultatAvantImpot = resultatExpl + resultatFinancier + resultatHAO;
   const impots             = sumRange('69');
   const resultatNet        = resultatAvantImpot - impots;
 
   return {
-    ventesGross, rrrAccordes, caNet, achatsMarchandises, margeBrute,
+    ventesGross, rrrAccordes, caNet, achatsMarchandises, margeBrute, autresProduits,
     transports, servicesExterieurs, impotsTaxes: effectiveTaxes, chargesPersonnel: effectivePersonnel,
     autresCharges, ebe, dotations, resultatExpl, produitsFinanciers, chargesFinancieres,
-    resultatFinancier, resultatAvantImpot, impots, resultatNet,
+    resultatFinancier, resultatHAO, resultatAvantImpot, impots, resultatNet,
   };
 }
 
@@ -1259,25 +1295,35 @@ export function computeBalanceSheet(balance: TrialBalanceLine[]): BalanceSheet {
 //   Crédit 7061 (Honoraires) : montant_paye
 
 export async function syncHonorairesAccounting(businessId: string): Promise<number> {
-  const { data: existing } = await db('journal_entries')
-    .select('source_id')
-    .eq('business_id', businessId)
-    .eq('source', 'honoraires');
-  const synced = new Set((existing ?? []).map((e: { source_id: string | null }) => e.source_id));
+  const existing = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
+    db('journal_entries')
+      .select('source_id')
+      .eq('business_id', businessId)
+      .eq('source', 'honoraires')
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
+  const synced = new Set(existing.map((e) => e.source_id));
 
-  const { data: rows, error } = await supabase
-    .from('honoraires_cabinet')
-    .select('id, client_name, type_prestation, date_facture, montant_paye, status')
-    .eq('business_id', businessId)
-    .in('status', ['payé', 'partiel'])
-    .gt('montant_paye', 0);
-  if (error) throw new Error(error.message);
-
-  let count = 0;
-  for (const h of (rows ?? []) as {
+  type _HonRow = {
     id: string; client_name: string; type_prestation: string;
     date_facture: string; montant_paye: number; status: string;
-  }[]) {
+  };
+  // Paginé — sinon plafonné à 1000 lignes par PostgREST : au-delà, les
+  // honoraires suivants ne seraient jamais synchronisés.
+  const rows = await _fetchAllRows<_HonRow>((from, to) =>
+    supabase
+      .from('honoraires_cabinet')
+      .select('id, client_name, type_prestation, date_facture, montant_paye, status')
+      .eq('business_id', businessId)
+      .in('status', ['payé', 'partiel'])
+      .gt('montant_paye', 0)
+      .order('id', { ascending: true })
+      .range(from, to) as unknown as _Rows<_HonRow>,
+  );
+
+  let count = 0;
+  for (const h of rows) {
     if (synced.has(h.id)) continue;
     const amount = round2(Number(h.montant_paye) || 0);
     if (amount <= 0) continue;
@@ -1320,26 +1366,35 @@ export async function syncServiceOrdersAccounting(businessId: string): Promise<n
     throw new Error(rpcError.message);
   }
 
-  const { data: existing } = await db('journal_entries')
-    .select('source_id')
-    .eq('business_id', businessId)
-    .eq('source', 'service_order');
-  const synced = new Set((existing ?? []).map((e: { source_id: string | null }) => e.source_id));
+  const existing = await _fetchAllRows<{ source_id: string | null }>((from, to) =>
+    db('journal_entries')
+      .select('source_id')
+      .eq('business_id', businessId)
+      .eq('source', 'service_order')
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
+  const synced = new Set(existing.map((e) => e.source_id));
 
-  const { data: rows, error } = await supabase
-    .from('service_orders')
-    .select('id, order_number, paid_amount, payment_method, paid_at, subject_ref, client_name')
-    .eq('business_id', businessId)
-    .eq('status', 'paye')
-    .gt('paid_amount', 0);
-  if (error) throw new Error(error.message);
-
-  let count = 0;
-  for (const o of (rows ?? []) as {
+  type _SoRow = {
     id: string; order_number: number; paid_amount: number;
     payment_method: string | null; paid_at: string | null;
     subject_ref: string | null; client_name: string | null;
-  }[]) {
+  };
+  // Paginé — sinon plafonné à 1000 lignes par PostgREST.
+  const rows = await _fetchAllRows<_SoRow>((from, to) =>
+    supabase
+      .from('service_orders')
+      .select('id, order_number, paid_amount, payment_method, paid_at, subject_ref, client_name')
+      .eq('business_id', businessId)
+      .eq('status', 'paye')
+      .gt('paid_amount', 0)
+      .order('id', { ascending: true })
+      .range(from, to) as unknown as _Rows<_SoRow>,
+  );
+
+  let count = 0;
+  for (const o of rows) {
     if (synced.has(o.id)) continue;
     const amount = round2(Number(o.paid_amount) || 0);
     if (amount <= 0) continue;

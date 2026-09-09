@@ -40,14 +40,19 @@ export default function ComptabilitePage() {
   const { business, user } = useAuthStore();
   const can = useCan();
   const isOwnerOrAdmin = can('view_financials');
-  const { success, error: notifErr } = useNotificationStore();
+  const { success, error: notifErr, warning: notifWarn } = useNotificationStore();
 
   const [tab, setTab]               = useState<Tab>('dashboard');
   const [period, setPeriod]         = useState<Period>(new Date().getDate() <= 5 ? 'lastmonth' : 'month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');
   const [syncing, setSyncing]       = useState(false);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading]       = useState(true);
+  // Vrai dès qu'un premier chargement a abouti. Ensuite, les onglets restent
+  // montés pendant les rechargements (sync, suppression, nouvelle écriture…) :
+  // démontés à chaque fois, le Journal perdait sa page et sa sélection, le
+  // Grand Livre son compte, et chaque onglet relançait ses propres requêtes.
+  const [hasLoaded, setHasLoaded]   = useState(false);
 
   const [entries, setEntries]   = useState<JournalEntry[]>([]);
   const [balance, setBalance]   = useState<TrialBalanceLine[]>([]);
@@ -78,7 +83,7 @@ export default function ComptabilitePage() {
   [balance]);
 
   const load = useCallback(async () => {
-    if (!business?.id) return;
+    if (!business?.id) { setLoading(false); return; }
     setLoading(true);
     try {
       const [e, b, bCum, a] = await Promise.all([
@@ -91,6 +96,7 @@ export default function ComptabilitePage() {
       setBalance(b);
       setBsBalance(bCum);
       setAccounts(a);
+      setHasLoaded(true);
     } catch (err) {
       notifErr(String(err));
     } finally {
@@ -135,7 +141,7 @@ export default function ComptabilitePage() {
 
   function handleExport() {
     if (entries.length >= 5000) {
-      notifErr("Export limité aux 5 000 dernières écritures de la période. Restreignez la période pour un journal complet.");
+      notifWarn("Export limité aux 5 000 dernières écritures de la période. Restreignez la période pour un journal complet.");
     }
     const journalData = entries.flatMap((e) =>
       (e.lines ?? []).map((l) => ({
@@ -170,6 +176,7 @@ export default function ComptabilitePage() {
       { Libellé: "CHIFFRE D'AFFAIRES NET", Montant: is.caNet },
       { Libellé: "Coût d'achat des marchandises (60x)", Montant: -is.achatsMarchandises },
       { Libellé: 'MARGE BRUTE', Montant: is.margeBrute },
+      { Libellé: 'Autres produits (71-79)', Montant: is.autresProduits },
       { Libellé: 'Transports (61)', Montant: -is.transports },
       { Libellé: 'Services extérieurs (62/63)', Montant: -is.servicesExterieurs },
       { Libellé: 'Impôts et taxes (64)', Montant: -is.impotsTaxes },
@@ -179,6 +186,7 @@ export default function ComptabilitePage() {
       { Libellé: 'Dotations amort. (68)', Montant: -is.dotations },
       { Libellé: "RÉSULTAT D'EXPLOITATION", Montant: is.resultatExpl },
       { Libellé: 'Résultat financier', Montant: is.resultatFinancier },
+      { Libellé: 'Résultat HAO (8)', Montant: is.resultatHAO },
       { Libellé: "RÉSULTAT AVANT IMPÔT", Montant: is.resultatAvantImpot },
       { Libellé: 'Impôts sur résultat (69)', Montant: -is.impots },
       { Libellé: 'RÉSULTAT NET', Montant: is.resultatNet },
@@ -264,7 +272,7 @@ export default function ComptabilitePage() {
     const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
     ));
-    const periodLabel = period === 'custom' ? `${customFrom} → ${customTo}` : PERIOD_LABELS[period];
+    const periodLabel = period === 'custom' ? `${from} → ${to}` : PERIOD_LABELS[period];
     const bizName  = esc(business?.name ?? 'Établissement');
     const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const fmt = (n: number) =>
@@ -342,6 +350,7 @@ export default function ComptabilitePage() {
       ["CHIFFRE D'AFFAIRES NET",          is.caNet,              false, true],
       ["Coût d'achat marchandises (60x)", -is.achatsMarchandises, true],
       ['MARGE BRUTE',                     is.margeBrute,         false, true],
+      ['Autres produits (71-79)',         is.autresProduits,      true],
       ['Transports (61)',                -is.transports,         true],
       ['Services extérieurs (62/63)',    -is.servicesExterieurs, true],
       ['Impôts et taxes (64)',           -is.impotsTaxes,        true],
@@ -352,6 +361,7 @@ export default function ComptabilitePage() {
       ["RÉSULTAT D'EXPLOITATION",         is.resultatExpl,       false, true],
       ['Produits financiers (76/77)',     is.produitsFinanciers,  true],
       ['Charges financières (67/661)',   -is.chargesFinancieres, true],
+      ['Résultat HAO (8)',                is.resultatHAO,         true],
       ["RÉSULTAT AVANT IMPÔT",            is.resultatAvantImpot, false, true],
       ['Impôts sur résultat (69)',       -is.impots,             true],
       ['RÉSULTAT NET',                    is.resultatNet,        false, true, true],
@@ -396,8 +406,11 @@ export default function ComptabilitePage() {
         </tbody>
       </table>`;
 
+    // Onglets sans section d'impression dédiée (Grand Livre, Configuration) :
+    // on imprime le jeu complet plutôt qu'une page vide.
+    const printAll = tab === 'dashboard' || tab === 'grand-livre' || tab === 'settings';
     let body = '';
-    if (tab === 'journal' || tab === 'dashboard') {
+    if (tab === 'journal' || printAll) {
       body = `
         <h2 style="font-size:14px;font-weight:700;margin:16px 0 8px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:4px">Journal général</h2>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -410,7 +423,7 @@ export default function ComptabilitePage() {
           </thead><tbody>${journalRows}</tbody>
         </table>`;
     }
-    if (tab === 'balance' || tab === 'dashboard') {
+    if (tab === 'balance' || printAll) {
       body += `
         <h2 style="font-size:14px;font-weight:700;margin:24px 0 8px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:4px">Balance des comptes</h2>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -423,7 +436,7 @@ export default function ComptabilitePage() {
           </thead><tbody>${balanceRows}</tbody>
         </table>`;
     }
-    if (tab === 'etats' || tab === 'dashboard') {
+    if (tab === 'etats' || printAll) {
       body += `
         <h2 style="font-size:14px;font-weight:700;margin:24px 0 8px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:4px">Compte de résultat</h2>
         <table style="width:50%;border-collapse:collapse;font-size:12px"><tbody>${plHtml}</tbody></table>
@@ -434,7 +447,7 @@ export default function ComptabilitePage() {
     const html = `<!DOCTYPE html>
 <html lang="fr"><head>
   <meta charset="UTF-8">
-  <title>Comptabilité -${bizName}</title>
+  <title>Comptabilité – ${bizName}</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 0; padding: 24px 32px; font-size: 12px; }
@@ -446,7 +459,7 @@ export default function ComptabilitePage() {
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #4f46e5">
     <div>
       <h1 style="font-size:20px;font-weight:800;color:#1e293b;margin:0">${bizName}</h1>
-      <p style="font-size:12px;color:#64748b;margin:2px 0 0">Comptabilité OHADA -SYSCOHADA Révisé</p>
+      <p style="font-size:12px;color:#64748b;margin:2px 0 0">Comptabilité OHADA – SYSCOHADA Révisé</p>
     </div>
     <div style="text-align:right">
       <p style="font-size:13px;font-weight:700;color:#4f46e5;margin:0">${TAB_TITLES[tab]}</p>
@@ -537,8 +550,8 @@ export default function ComptabilitePage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {loading ? (
+      <div className={`flex-1 overflow-y-auto p-6 ${loading && hasLoaded ? 'opacity-60 pointer-events-none' : ''}`}>
+        {loading && !hasLoaded ? (
           <div className="text-content-secondary text-center py-16">Chargement…</div>
         ) : (
           <>

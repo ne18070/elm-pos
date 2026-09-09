@@ -16,6 +16,7 @@ export function EtatsTab({ is, bs, currency }: Props) {
     { label: "CHIFFRE D'AFFAIRES NET",        val: is.caNet,               indent: 0, style: 'font-bold text-content-primary', separator: true },
     { label: "Coût d'achat marchandises (60x)", val: -is.achatsMarchandises, indent: 1, style: 'text-status-error' },
     { label: 'MARGE BRUTE',                   val: is.margeBrute,          indent: 0, style: 'font-semibold text-content-primary', separator: true },
+    { label: 'Autres produits (71-79)',       val: is.autresProduits,      indent: 1, style: 'text-content-primary' },
     { label: 'Transports (61)',              val: -is.transports,         indent: 1, style: 'text-status-error' },
     { label: 'Services extérieurs (62/63)',  val: -is.servicesExterieurs, indent: 1, style: 'text-status-error' },
     { label: 'Impôts et taxes (64)',         val: -is.impotsTaxes,        indent: 1, style: 'text-status-error' },
@@ -25,6 +26,7 @@ export function EtatsTab({ is, bs, currency }: Props) {
     { label: 'Dotations amort. (68)',        val: -is.dotations,          indent: 1, style: 'text-status-error' },
     { label: "RÉSULTAT D'EXPLOITATION",       val: is.resultatExpl,        indent: 0, style: `font-semibold ${is.resultatExpl >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
     { label: 'Résultat financier (77-67)',    val: is.resultatFinancier,   indent: 1, style: is.resultatFinancier >= 0 ? 'text-content-primary' : 'text-status-error' },
+    { label: 'Résultat HAO (8)',              val: is.resultatHAO,         indent: 1, style: is.resultatHAO >= 0 ? 'text-content-primary' : 'text-status-error' },
     { label: "RÉSULTAT AVANT IMPÔT",          val: is.resultatAvantImpot,  indent: 0, style: `font-semibold ${is.resultatAvantImpot >= 0 ? 'text-status-success' : 'text-status-error'}`, separator: true },
     { label: 'Impôts sur résultat (69)',     val: -is.impots,             indent: 1, style: 'text-status-error' },
     { label: 'RÉSULTAT NET',                  val: is.resultatNet,         indent: 0, style: `font-bold text-lg ${is.resultatNet >= 0 ? 'text-content-brand' : 'text-status-error'}`, separator: true },
@@ -58,7 +60,7 @@ export function EtatsTab({ is, bs, currency }: Props) {
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-surface-border bg-surface-card">
           <h2 className="font-bold text-content-primary">Compte de résultat</h2>
-          <p className="text-xs text-content-primary mt-0.5">Activités ordinaires —SYSCOHADA</p>
+          <p className="text-xs text-content-primary mt-0.5">Activités ordinaires – SYSCOHADA</p>
         </div>
         <div className="p-5 space-y-1">
           {plRows.map((row, i) => (

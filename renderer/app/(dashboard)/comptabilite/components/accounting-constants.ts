@@ -18,12 +18,16 @@ export interface OpTemplate {
   credit: { code: string; name: string };
 }
 
-function localISO(date: Date): string {
+/** Date calendaire LOCALE au format YYYY-MM-DD (pas `toISOString()`, qui
+ *  donne la date UTC : décalée d'un jour en début de soirée / matinée selon
+ *  le fuseau). */
+export function localISO(date: Date): string {
   const y = date.getFullYear();
   const mo = String(date.getMonth() + 1).padStart(2, '0');
   const d  = String(date.getDate()).padStart(2, '0');
   return `${y}-${mo}-${d}`;
 }
+export const todayLocalISO = () => localISO(new Date());
 
 export function getPeriod(p: Period, customFrom?: string, customTo?: string) {
   const now = new Date();
@@ -46,7 +50,11 @@ export function getPeriod(p: Period, customFrom?: string, customTo?: string) {
   if (p === 'year') {
     return { from: `${y}-01-01`, to: `${y}-12-31` };
   }
-  return { from: customFrom ?? `${y}-01-01`, to: customTo ?? localISO(now) };
+  // `||` et non `??` : les champs date vides valent '' (pas undefined). Une
+  // borne vide envoyée aux RPC (paramètres `date`) faisait échouer le
+  // chargement — « invalid input syntax for type date » — dès qu'on passait
+  // en période personnalisée avant d'avoir saisi les deux dates.
+  return { from: customFrom || `${y}-01-01`, to: customTo || localISO(now) };
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {
