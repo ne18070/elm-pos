@@ -209,6 +209,16 @@ export async function getOrders(
     return getOrdersBySearch(businessId, term, options, selectStr, withCount);
   }
 
+  // DEUX ÉTAPES, comme le chemin de recherche : (1) les `id` de la page,
+  // seuls, paginés ; (2) hydratation des commandes complètes par `.in('id')`.
+  // Une requête unique `select *, items(...), payments(...), … OFFSET n LIMIT
+  // 50` oblige Postgres à construire les cinq sous-requêtes latérales
+  // (articles + produit, paiements, caissier, revendeur, client revendeur)
+  // pour les n + 50 lignes avant d'en jeter n : coût proportionnel à la
+  // profondeur de page, statement_timeout (57014) dès la page 9 de l'onglet
+  // « Toutes » sur un gros historique. Sur les seuls `id`, la pagination est
+  // un simple parcours de l'index (business_id, created_at DESC) ; les
+  // jointures ne sont ensuite calculées que pour les 50 commandes affichées.
   let query = supabase
     .from('orders')
     // 'estimated' : count exact tant que le nombre de lignes reste sous le
@@ -219,9 +229,13 @@ export async function getOrders(
     // une fois l'historique volumineux. Négligeable sur les petits lots
     // (badge acompte, onglets filtrés) : le seuil n'est alors jamais atteint
     // et le count reste exact.
-    .select(selectStr, withCount ? { count: 'estimated' } : undefined)
+    .select('id', withCount ? { count: 'estimated' } : undefined)
     .eq('business_id', businessId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    // Tie-break : des commandes importées partagent le même created_at ; sans
+    // ordre total, une pagination par offset peut répéter ou sauter une ligne
+    // d'une page à l'autre.
+    .order('id', { ascending: false });
 
   if (options?.status && options.status !== 'all') {
     query = query.eq('status', options.status);
@@ -272,15 +286,34 @@ export async function getOrders(
 
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return { orders: (data ?? []) as unknown as Order[], count: count ?? 0 };
+  const ids = ((data ?? []) as unknown as Array<{ id: string }>).map((r) => r.id);
+  return { orders: await hydrateOrders(ids, selectStr), count: count ?? 0 };
+}
+
+/** Hydrate des commandes complètes (jointures items/payments/cashier/reseller)
+ *  à partir d'ids déjà triés/paginés — requête triviale sur un lot ≤ limit.
+ *  Par lots de 200 : l'export d'historique (handlePrintHistory) peut demander
+ *  jusqu'à HISTORY_PRINT_LIMIT lignes, et un `.in('id', ids)` unique avec des
+ *  milliers d'UUID construirait une URL de requête excessive. `.in()` ne
+ *  garantit pas l'ordre : on retrie selon l'ordre des ids reçus. */
+async function hydrateOrders(ids: string[], selectStr: string): Promise<Order[]> {
+  if (ids.length === 0) return [];
+  const CHUNK_SIZE = 200;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) chunks.push(ids.slice(i, i + CHUNK_SIZE));
+  const results = await Promise.all(
+    chunks.map((chunk) => supabase.from('orders').select(selectStr).in('id', chunk)),
+  );
+  for (const r of results) if (r.error) throw new Error(r.error.message);
+  const data = results.flatMap((r) => r.data ?? []);
+  const byId = new Map((data as unknown as Order[]).map((o) => [o.id, o]));
+  return ids.map((id) => byId.get(id)).filter((o): o is Order => o != null);
 }
 
 /** Chemin de recherche de getOrders (migration 124) : la RPC `search_order_ids`
  *  matérialise et pagine les `id` correspondants (fence d'optimisation
  *  garantissant l'usage des index trigram quelle que soit la sélectivité du
- *  terme), puis on hydrate les commandes complètes (jointures) par un simple
- *  `.in('id', ids)` — requête triviale sur un lot ≤ limit. `.in()` ne
- *  garantit pas l'ordre : on retrie selon l'ordre déjà paginé par la RPC. */
+ *  terme), puis hydrateOrders() charge les commandes complètes. */
 async function getOrdersBySearch(
   businessId: string,
   term: string,
@@ -317,22 +350,7 @@ async function getOrdersBySearch(
   const rows = (idRows ?? []) as unknown as Array<{ id: string; total_count: number }>;
   if (rows.length === 0) return { orders: [], count: 0 };
 
-  const ids = rows.map((r) => r.id);
-  // Par lots de 200 : l'export d'historique (handlePrintHistory) peut demander
-  // jusqu'à HISTORY_PRINT_LIMIT correspondances — un `.in('id', ids)` unique
-  // avec des milliers d'UUID construirait une URL de requête excessive.
-  const CHUNK_SIZE = 200;
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += CHUNK_SIZE) chunks.push(ids.slice(i, i + CHUNK_SIZE));
-  const results = await Promise.all(
-    chunks.map((chunk) => supabase.from('orders').select(selectStr).in('id', chunk)),
-  );
-  for (const r of results) if (r.error) throw new Error(r.error.message);
-  const data = results.flatMap((r) => r.data ?? []);
-
-  const byId   = new Map((data as unknown as Order[]).map((o) => [o.id, o]));
-  const orders = ids.map((id) => byId.get(id)).filter((o): o is Order => o != null);
-
+  const orders = await hydrateOrders(rows.map((r) => r.id), selectStr);
   return { orders, count: withCount ? rows[0].total_count : orders.length };
 }
 
