@@ -49,7 +49,21 @@ export function fmtInTz(iso: string | null | undefined, tz = 'Africa/Dakar'): st
 }
 
 export function generateId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID v4 — contextes où `crypto.randomUUID` est absent
+  // (web servi en HTTP nu, anciens WebView). Reste au format UUID pour les
+  // colonnes `uuid` (ex. `orders.client_order_id`).
+  const rand = () =>
+    typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function'
+      ? crypto.getRandomValues(new Uint8Array(1))[0]
+      : Math.floor(Math.random() * 256);
+  const bytes = Array.from({ length: 16 }, rand);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.map((b) => b.toString(16).padStart(2, '0'));
+  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
 }
 
 export function debounce<T extends (...args: unknown[]) => unknown>(

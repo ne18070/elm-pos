@@ -2,7 +2,7 @@ import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
-  GraduationCap, DatabaseZap, Bot, Ticket
+  GraduationCap, DatabaseZap, Bot, Ticket, Zap
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PermissionKey } from './permissions';
@@ -16,7 +16,8 @@ export type NavSection = { label: string; items: NavItem[] };
 const S_VENTES: NavSection = {
   label: 'Ventes & Services',
   items: [
-    { href: '/pos',     icon: ShoppingCart,  label: 'Caisse (POS)',         permission: 'view_pos'          },
+    { href: '/pos',             icon: ShoppingCart, label: 'Caisse (POS)',         permission: 'view_pos'          },
+    { href: '/commande-rapide', icon: Zap,          label: 'Commande rapide',      permission: 'view_revendeurs'   },
     { href: '/caisse',  icon: Vault,         label: 'Gestion de caisse',    permission: 'view_cash_session' },
     { href: '/orders',  icon: ClipboardList, label: 'Commandes',            permission: 'view_orders'       },
     { href: '/services',icon: Wrench,        label: 'Prestations',          permission: 'view_services'     },
