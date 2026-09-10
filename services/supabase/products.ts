@@ -264,11 +264,15 @@ export async function getStockMovements(
   productId: string,
   limit = 200,
 ): Promise<StockMovement[]> {
+  // Tri par « seq » (ordre total monotone) et non « created_at » : toutes les
+  // lignes d'une même transaction partagent le même created_at, ce qui rendait
+  // l'ordre non déterministe et déclenchait de faux écarts / ruptures de chaîne
+  // dans StockHistoryModal. Voir migration 125.
   const { data, error } = await supabase
     .from('stock_movements')
     .select('*')
     .eq('product_id', productId)
-    .order('created_at', { ascending: false })
+    .order('seq', { ascending: false })
     .limit(limit);
 
   if (error) throw new Error(error.message);

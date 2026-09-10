@@ -54,6 +54,9 @@ export function StockHistoryModal({ product, onClose }: Props) {
 
   // Cohérence : le solde du mouvement le plus récent doit = stock courant,
   // et chaque ligne : solde_précédent + delta = solde_après.
+  // `rows` est trié par `seq` DESC (ordre total, cf. migration 125) : deux
+  // lignes consécutives ici sont bien chronologiquement adjacentes, donc
+  // l'invariant ci-dessous tient pour toute ligne légitime.
   const latest = rows[0];
   const currentStock = product.stock ?? 0;
   const headMismatch =

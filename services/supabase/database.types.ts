@@ -4892,6 +4892,7 @@ export type Database = {
           note: string | null
           product_id: string
           reason: string
+          seq: number
           source_id: string | null
         }
         Insert: {
@@ -4904,6 +4905,7 @@ export type Database = {
           note?: string | null
           product_id: string
           reason?: string
+          seq?: never
           source_id?: string | null
         }
         Update: {
@@ -4916,6 +4918,7 @@ export type Database = {
           note?: string | null
           product_id?: string
           reason?: string
+          seq?: never
           source_id?: string | null
         }
         Relationships: [

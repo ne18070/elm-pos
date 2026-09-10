@@ -434,7 +434,7 @@ export default function OrdersPage() {
                       </td>
 
                       <td className="px-3 py-2 text-xs text-content-secondary whitespace-nowrap hidden sm:table-cell">
-                        {format(new Date(order.created_at), 'dd MMM, HH:mm', { locale: fr })}
+                        {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
                       </td>
 
                       {/* Client + Revendeur + Caissier */}

@@ -123,6 +123,7 @@ export type StockMovementReason =
 
 export interface StockMovement {
   id: string;
+  seq: number;
   business_id: string;
   product_id: string;
   delta: number;
