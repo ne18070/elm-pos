@@ -3,10 +3,8 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
-  ShoppingCart, Package, ClipboardList,
-  BarChart2, Settings, LogOut, Tag, LayoutGrid, Truck, Warehouse,
-  Monitor, HelpCircle, BookOpen, ScrollText, Store, Sun, Moon, SunMoon, Vault, BedDouble, TrendingDown, Users, MessageCircle, CalendarDays, UserCheck,
-  Scale, Receipt, Menu, X, FileSignature, UsersRound, MapPin, Car, ChevronUp, Wrench, PanelLeftClose, PanelLeftOpen
+  LogOut, Monitor, HelpCircle, Sun, Moon, SunMoon,
+  Menu, X, ChevronUp, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -21,9 +19,7 @@ import { TeamTracker } from './TeamTracker';
 import { TerminalStatus } from './TerminalStatus';
 import { SupportPanel } from './SupportPanel';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
-import { 
-  hasRole, getContextualRoleLabel 
-} from '@/lib/permissions';
+import { getContextualRoleLabel } from '@/lib/permissions';
 import { useState, useEffect, useMemo } from 'react';
 import { useSidebarStore } from '@/store/sidebar';
 
@@ -59,6 +55,12 @@ function useCachedBusinessType(business: Business | null): BusinessType | null {
   return business?.type ?? cached;
 }
 
+// Actif si on est sur la route exacte ou une sous-route (« /orders/123 »),
+// mais pas sur une route qui partage seulement le préfixe (« /orders-archive »).
+function isNavActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
 function useVisibleNav(can: (p: PermissionKey) => boolean, business: Business | null, type: BusinessType | null) {
   return useMemo(() => {
     return getNavSections(type).map(section => ({
@@ -75,11 +77,9 @@ function useVisibleNav(can: (p: PermissionKey) => boolean, business: Business | 
 
 function SidebarContent({
   collapsed,
-  isHovering = false,
   onClose,
 }: {
   collapsed: boolean;
-  isHovering?: boolean;
   onClose?: () => void;   // mobile drawer close
 }) {
   const router = useRouter();
@@ -166,7 +166,7 @@ function SidebarContent({
         collapsed ? "max-h-0 opacity-0 pb-0 border-b-0 overflow-hidden" : "max-h-32 opacity-100 pb-4"
       )}>
         <div className="flex-1 min-w-0">
-          <BusinessSwitcher collapsed={collapsed} isHovering={isHovering} />
+          <BusinessSwitcher />
         </div>
         {onClose && (
           <button 
@@ -193,7 +193,7 @@ function SidebarContent({
             </div>
             <div className="space-y-0.5">
               {section.items.map(({ href, icon: Icon, label }) => {
-                const active = pathname.startsWith(href);
+                const active = isNavActive(pathname, href);
                 const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
                 const sessionDot = href === '/caisse';
                 const linkId = `nav-item-${href.replace('/', '')}`;
@@ -204,6 +204,7 @@ function SidebarContent({
                     href={href}
                     onClick={onClose}
                     title={collapsed ? label : undefined}
+                    aria-current={active ? 'page' : undefined}
                     className={cn(
                       'group flex items-center gap-0 rounded-xl transition-all duration-200 relative p-1',
                       active
@@ -298,9 +299,10 @@ function SidebarContent({
             href="/help"
             onClick={onClose}
             title={collapsed ? 'Aide' : undefined}
+            aria-current={isNavActive(pathname, '/help') ? 'page' : undefined}
             className={cn(
               'w-full flex items-center gap-0 rounded-xl transition-all duration-200 group p-1',
-              pathname.startsWith('/help') ? 'bg-brand-500/10 text-content-brand' : 'text-content-secondary hover:text-content-primary hover:bg-white/5'
+              isNavActive(pathname, '/help') ? 'bg-brand-500/10 text-content-brand' : 'text-content-secondary hover:text-content-primary hover:bg-white/5'
             )}
           >
             <div className="w-8 h-8 flex items-center justify-center shrink-0">
@@ -485,12 +487,13 @@ export function MobileBottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {visible.map(({ href, icon: Icon, label }) => {
-        const active = pathname.startsWith(href);
+        const active = isNavActive(pathname, href);
         const badge  = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
         return (
           <Link
             key={href}
             href={href}
+            aria-current={active ? 'page' : undefined}
             className={cn(
               'flex-1 flex flex-col items-center gap-1 py-2.5 px-1 transition-colors relative',
               active ? 'text-content-brand' : 'text-content-muted hover:text-content-primary'
@@ -559,10 +562,7 @@ export function Sidebar() {
             effectiveCollapsed ? 'w-16' : 'w-64',
           )}
         >
-          <SidebarContent
-            collapsed={effectiveCollapsed}
-            isHovering={isHovering}
-          />
+          <SidebarContent collapsed={effectiveCollapsed} />
         </aside>
       )}
 

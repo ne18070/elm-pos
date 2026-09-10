@@ -4,10 +4,11 @@ import {
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
   GraduationCap, DatabaseZap, Bot, Ticket
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { PermissionKey } from './permissions';
 import type { BusinessType } from '@pos-types';
 
-export type NavItem    = { href: string; icon: any; label: string; permission: PermissionKey | null };
+export type NavItem    = { href: string; icon: LucideIcon; label: string; permission: PermissionKey | null };
 export type NavSection = { label: string; items: NavItem[] };
 
 // ─── Sections partagées ────────────────────────────────────────────────────────

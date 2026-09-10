@@ -9,15 +9,16 @@ import { ChevronDown, Check, Plus, Building2, Loader2 } from 'lucide-react';
 // Affiche le logo d'un établissement — fallback initiale → icône si URL cassée.
 // object-cover remplit le carré quel que soit le ratio.
 // Fond blanc quand logo présent pour éviter le brand-600 derrière les PNG transparents.
-function BusinessLogo({ name, logoUrl, size = 8 }: { name: string; logoUrl: string | null; size?: number }) {
+function BusinessLogo({ name, logoUrl }: { name: string; logoUrl: string | null }) {
   const [imgError, setImgError] = useState(false);
   const showImg = !!logoUrl && !imgError;
   const letter  = name?.charAt(0)?.toUpperCase() || null;
 
   return (
-    <div className={`w-${size} h-${size} rounded-lg flex items-center justify-center shrink-0 overflow-hidden shadow-sm
-      ${showImg ? 'bg-white' : 'bg-brand-600'}`}
-    >
+    <div className={cn(
+      'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden shadow-sm',
+      showImg ? 'bg-white' : 'bg-brand-600',
+    )}>
       {showImg ? (
         <img
           src={logoUrl!}
@@ -48,13 +49,7 @@ import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import type { Business, UserRole } from '@pos-types';
 import type { BusinessMembership } from '@services/supabase/business';
 
-export function BusinessSwitcher({ 
-  collapsed = false,
-  isHovering = false 
-}: { 
-  collapsed?: boolean;
-  isHovering?: boolean;
-}) {
+export function BusinessSwitcher() {
   const { user, business, businesses, setBusiness, setBusinesses, setUser } = useAuthStore();
   const { setSubscription, subscription, plans } = useSubscriptionStore();
   const { setSession: setCashSession, setLoaded: setCashLoaded } = useCashSessionStore();
@@ -67,15 +62,21 @@ export function BusinessSwitcher({
   const [showCreate, setShowCreate] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const expanded = !collapsed || isHovering;
-
   useEffect(() => {
+    if (!open) return;
     function onOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
     document.addEventListener('mousedown', onOutside);
-    return () => document.removeEventListener('mousedown', onOutside);
-  }, []);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   // Fallback : si la migration 017 n'est pas encore appliquée,
   // on affiche au moins l'établissement actif depuis le store.
@@ -99,13 +100,15 @@ export function BusinessSwitcher({
     try {
       await switchBusiness(businessId);
 
-      const { data: profile } = await supabase
-        .from('users').select('*').eq('id', user.id).single();
+      // Deux lectures indépendantes → en parallèle (aucune ne rejette : PostgREST
+      // renvoie { data: null } en cas d'erreur, pas d'exception).
+      const [{ data: profile }, { data: biz }] = await Promise.all([
+        supabase.from('users').select('*').eq('id', user.id).single(),
+        supabase.from('businesses').select('*').eq('id', businessId).single(),
+      ]);
       if (profile) setUser(profile as never);
-
-      const { data: biz } = await supabase
-        .from('businesses').select('*').eq('id', businessId).single();
-      if (biz) setBusiness(biz as never);
+      if (!biz) throw new Error('Établissement introuvable après la bascule');
+      setBusiness(biz as never);
 
       // Recharger l'abonnement (owner_id en priorité, fallback par business_id pour les non-owners)
       try {
@@ -122,8 +125,8 @@ export function BusinessSwitcher({
 
       clear();
       setOpen(false);
-      success(`Basculé vers ${biz?.name ?? '…'}`);
-      router.replace(getDefaultRoute(profile?.role as any, biz as any));
+      success(`Basculé vers ${biz.name ?? '…'}`);
+      router.replace(getDefaultRoute((profile?.role ?? user.role) as any, biz as any));
     } catch (err) {
       notifError(toUserError(err));
     } finally {
@@ -174,22 +177,20 @@ export function BusinessSwitcher({
         {/* -- Bouton déclencheur -- */}
         <button
           onClick={() => setOpen((o) => !o)}
+          aria-haspopup="menu"
+          aria-expanded={open}
           className={cn(
             "w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-all duration-300 group",
             open ? "bg-surface-hover" : "hover:bg-surface-hover"
           )}
-          title={collapsed ? business?.name : undefined}
         >
           {/* Icône établissement - Fixed width to keep it centered when collapsed */}
           <div className="w-10 h-10 flex items-center justify-center shrink-0 transition-all duration-300">
-            <BusinessLogo name={business?.name ?? ''} logoUrl={business?.logo_url ?? null} size={8} />
+            <BusinessLogo name={business?.name ?? ''} logoUrl={business?.logo_url ?? null} />
           </div>
 
           {/* Nom + chevron */}
-          <div className={cn(
-            "flex flex-1 items-center justify-between min-w-0 transition-all duration-300 ease-in-out",
-            expanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 pointer-events-none w-0 overflow-hidden"
-          )}>
+          <div className="flex flex-1 items-center justify-between min-w-0">
             <div className="min-w-0 text-left">
               {business ? (
                 <p className="text-sm font-semibold text-content-primary truncate leading-tight">
@@ -216,10 +217,7 @@ export function BusinessSwitcher({
 
         {/* -- Dropdown -- */}
         {open && (
-          <div className={cn(
-            "absolute left-0 top-full mt-1.5 z-50 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden w-72",
-            expanded ? "lg:w-full" : "md:left-full md:top-0 md:mt-0 md:ml-2"
-          )}>
+          <div className="absolute left-0 top-full mt-1.5 z-50 bg-surface-card border border-surface-border rounded-xl shadow-2xl overflow-hidden w-72 lg:w-full">
 
             {/* En-tête */}
             <div className="px-3 py-2 border-b border-surface-border">
@@ -239,13 +237,14 @@ export function BusinessSwitcher({
                     key={biz.id}
                     onClick={() => handleSwitch(biz.id)}
                     disabled={!!switching}
+                    aria-current={isActive ? 'true' : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left
                       ${isActive ? 'bg-badge-brand' : 'hover:bg-surface-hover'}`}
                   >
                     <div className="w-8 h-8 shrink-0">
                       {isLoading
                         ? <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center"><Loader2 className="w-4 h-4 animate-spin text-content-primary" /></div>
-                        : <BusinessLogo name={biz.name} logoUrl={biz.logo_url ?? null} size={8} />}
+                        : <BusinessLogo name={biz.name} logoUrl={biz.logo_url ?? null} />}
                     </div>
 
                     <div className="flex-1 min-w-0">
