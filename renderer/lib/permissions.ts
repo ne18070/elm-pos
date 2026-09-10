@@ -26,6 +26,7 @@ const PERMISSIONS_MAP = {
   view_products:          { label: 'Accès catalogue produits',     group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['stock', 'retail'] },
   view_approvisionnement: { label: 'Accès stocks/entrées',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['approvisionnement', 'stock'] },
   view_revendeurs:        { label: 'Accès réseau revendeurs',      group: 'navigation', defaultRoles: ['admin', 'owner'], feature: ['revendeurs'] },
+  view_commande_rapide:   { label: 'Accès commande rapide (revendeurs)', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['revendeurs'] },
   view_hotel:             { label: 'Accès module hôtel',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'hotel' },
   view_categories:        { label: 'Accès catégories produits',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['stock', 'retail'] },
   view_coupons:           { label: 'Accès coupons/remises',        group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['coupons', 'retail'] },

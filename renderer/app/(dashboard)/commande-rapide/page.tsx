@@ -389,7 +389,7 @@ export default function CommandeRapidePage() {
   );
 
   if (!business) return null;
-  if (!hasFeature(business, 'revendeurs') || !can('view_revendeurs')) {
+  if (!hasFeature(business, 'revendeurs') || !can('view_commande_rapide')) {
     return (
       <div className="h-full flex items-center justify-center p-6 text-center text-sm text-content-muted">
         La commande rapide nécessite la fonctionnalité Revendeurs.
