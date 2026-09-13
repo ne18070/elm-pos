@@ -74,11 +74,17 @@ export default function ProductsPage() {
   function exportCSV() {
     // On exporte tout le jeu charg\u00E9 (selon le filtre Actifs / Archiv\u00E9s / Tous),
     // pas seulement la recherche en cours.
-    const headers = ['nom', 'description', 'prix', 'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif'];
+    const showCost = can('view_financials');
+    const headers = [
+      'nom', 'description', 'prix',
+      ...(showCost ? ['prix_achat'] : []),
+      'categorie', 'code_barres', 'sku', 'stock', 'suivre_stock', 'actif',
+    ];
     const rows = products.map((p) => [
       p.name,
       p.description ?? '',
       String(p.price),
+      ...(showCost ? [p.cost_price != null ? String(p.cost_price) : ''] : []),
       p.category?.name ?? '',
       p.barcode ?? '',
       p.sku ?? '',
@@ -425,6 +431,11 @@ export default function ProductsPage() {
                   <p className="text-content-brand font-semibold mt-1 text-sm">
                     {formatCurrency(product.price, business?.currency)}
                   </p>
+                  {can('view_financials') && product.cost_price != null && (
+                    <p className="text-xs text-content-muted mt-0.5">
+                      Achat : {formatCurrency(product.cost_price, business?.currency)}
+                    </p>
+                  )}
                   {product.track_stock && (
                     <p className={`text-xs mt-0.5 ${(product.stock ?? 0) > 0 ? 'text-content-secondary' : 'text-status-error font-medium'}`}>
                       Stock : {product.stock ?? 0}{product.unit ? ` ${product.unit}` : ''}
@@ -476,6 +487,9 @@ export default function ProductsPage() {
                   <th className="px-3 py-2 hidden lg:table-cell">Code-barres / SKU</th>
                   <th className="px-3 py-2 hidden sm:table-cell">Stock</th>
                   <th className="px-3 py-2">Prix</th>
+                  {can('view_financials') && (
+                    <th className="px-3 py-2 hidden md:table-cell">Prix d'achat</th>
+                  )}
                   <th className="px-3 py-2 w-24">Statut</th>
                   <th className="px-3 py-2 w-20"></th>
                 </tr>
@@ -563,6 +577,19 @@ export default function ProductsPage() {
                         {formatCurrency(product.price, business?.currency)}
                       </span>
                     </td>
+
+                    {/* Prix d'achat */}
+                    {can('view_financials') && (
+                      <td className="px-3 py-2 hidden md:table-cell">
+                        {product.cost_price != null ? (
+                          <span className="text-content-secondary text-sm">
+                            {formatCurrency(product.cost_price, business?.currency)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-content-muted">—</span>
+                        )}
+                      </td>
+                    )}
 
                     {/* Statut actif */}
                     <td className="px-3 py-2">

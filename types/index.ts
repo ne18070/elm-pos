@@ -94,6 +94,8 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
+  /** Dernier coût d'achat unitaire connu (mis à jour à chaque approvisionnement). */
+  cost_price?: number;
   image_url?: string;
   barcode?: string;
   sku?: string;

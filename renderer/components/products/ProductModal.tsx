@@ -8,6 +8,7 @@ import { StockHistoryModal } from './StockHistoryModal';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
 import { createProduct, updateProduct } from '@services/supabase/products';
 import { uploadProductImage } from '@services/supabase/storage';
 import type { Product, ProductVariant } from '@pos-types';
@@ -54,6 +55,8 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
   const { categories } = useCategories(businessId);
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
+  const canSeeFinancials = can('view_financials');
   const stockUnits = business?.stock_units ?? DEFAULT_UNITS;
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -66,6 +69,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     name:        product?.name ?? '',
     description: product?.description ?? '',
     price:       String(product?.price ?? ''),
+    cost_price:  String(product?.cost_price ?? ''),
     category_id: product?.category_id ?? '',
     barcode:     product?.barcode ?? '',
     sku:         product?.sku ?? '',
@@ -147,6 +151,11 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
     const price = parseNumber(form.price);
     if (Number.isNaN(price) || price < 0) return 'Le prix doit être un nombre positif.';
 
+    if (canSeeFinancials && form.cost_price.trim() !== '') {
+      const cost = parseNumber(form.cost_price);
+      if (Number.isNaN(cost) || cost < 0) return "Le prix d'achat doit être un nombre positif.";
+    }
+
     if (form.track_stock && form.stock.trim() !== '') {
       const stock = parseNumber(form.stock);
       if (Number.isNaN(stock) || stock < 0) return 'La quantité en stock est invalide.';
@@ -179,6 +188,7 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
         name:         form.name.trim(),
         description:  form.description.trim() || undefined,
         price,
+        cost_price:   canSeeFinancials && form.cost_price.trim() !== '' ? parseNumber(form.cost_price) : undefined,
         category_id:  form.category_id || undefined,
         barcode:      form.barcode.trim() || undefined,
         sku:          form.sku.trim() || undefined,
@@ -329,6 +339,26 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             </select>
           </div>
         </div>
+
+        {/* Prix d'achat */}
+        {canSeeFinancials && (
+          <div>
+            <label className="label">Prix d'achat</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min="0"
+              value={form.cost_price}
+              onChange={(e) => update('cost_price', e.target.value)}
+              className="input"
+              placeholder="0.00"
+            />
+            <p className="text-xs text-content-muted mt-1">
+              Dernier coût d'achat connu — mis à jour automatiquement à chaque approvisionnement.
+            </p>
+          </div>
+        )}
 
         {/* Code-barres + SKU */}
         <div className="grid grid-cols-2 gap-4">

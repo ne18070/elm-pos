@@ -138,6 +138,12 @@ export default function ApprovisionnementPage() {
     [thisMonthEntries]
   );
 
+  /** Total dépensé sur l'ensemble des entrées chargées (voir STOCK_ENTRIES_LIMIT). */
+  const totalSpend = useMemo(() =>
+    entries.reduce((s, e) => s + entryCost(e), 0),
+    [entries]
+  );
+
   /** Nombre d'entrées de ce mois sans coût renseigné — la dépense est alors sous-estimée. */
   const monthEntriesMissingCost = useMemo(
     () => thisMonthEntries.filter(e => !e.cost_per_unit).length,
@@ -270,6 +276,17 @@ export default function ApprovisionnementPage() {
 
         {/* Stats cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {canSeeFinancials && (
+            <div className="bg-surface-input rounded-xl p-3 border border-surface-border">
+              <p className="text-[10px] text-content-muted uppercase tracking-wide font-semibold mb-1">Total approvisionnements</p>
+              <p className="text-base font-black text-content-primary leading-tight truncate">
+                {totalSpend > 0 ? formatCurrency(totalSpend, business?.currency) : '—'}
+              </p>
+              <p className="text-[10px] text-content-muted mt-0.5">
+                {entries.length} entrée{entries.length !== 1 ? 's' : ''} au total
+              </p>
+            </div>
+          )}
           {canSeeFinancials && (
             <div className="bg-surface-input rounded-xl p-3 border border-surface-border">
               <p className="text-[10px] text-content-muted uppercase tracking-wide font-semibold mb-1">Dépense ce mois</p>
