@@ -198,6 +198,12 @@ export default function ApprovisionnementPage() {
 
   const hasActiveFilter = search !== '' || supplierFilter !== '' || period !== 'all';
 
+  /** Total du « Coût total » pour les entrées actuellement affichées (après filtres). */
+  const filteredTotalCost = useMemo(() =>
+    filtered.reduce((s, e) => s + entryCost(e), 0),
+    [filtered]
+  );
+
   const pendingOrders = orders.filter(o => o.status === 'draft' || o.status === 'ordered').length;
 
   async function handlePOStatus(order: PurchaseOrder, status: POStatus) {
@@ -549,10 +555,40 @@ export default function ApprovisionnementPage() {
                       );
                     })}
                   </tbody>
+                  {canSeeFinancials && (
+                    <tfoot className="sticky bottom-0 bg-surface-card border-t border-surface-border">
+                      <tr>
+                        <td className="px-4 py-3" />
+                        <td className="px-4 py-3" />
+                        <td className="px-4 py-3 hidden lg:table-cell" />
+                        <td className="px-4 py-3" />
+                        <td className="px-4 py-3 text-xs font-bold text-content-secondary uppercase tracking-wide text-right">
+                          Total ({filtered.length})
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-sm font-black text-content-primary">
+                            {formatCurrency(filteredTotalCost, business?.currency)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell" />
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </>
             )}
           </div>
+          {/* Mobile total footer */}
+          {!loading && filtered.length > 0 && canSeeFinancials && (
+            <div className="md:hidden px-4 py-3 border-t border-surface-border flex items-center justify-between shrink-0">
+              <span className="text-xs font-bold text-content-secondary uppercase tracking-wide">
+                Total ({filtered.length})
+              </span>
+              <span className="text-sm font-black text-content-primary">
+                {formatCurrency(filteredTotalCost, business?.currency)}
+              </span>
+            </div>
+          )}
         </>
       )}
 

@@ -6,7 +6,7 @@ import { X, Package, Calculator, Loader2, AlertTriangle, Plus, Trash2 } from 'lu
 import { useProducts } from '@/hooks/useProducts';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, displayCurrency } from '@/lib/utils';
 import { addStockEntry } from '@services/supabase/stock';
 import type { Product } from '@pos-types';
 import type { Supplier } from '@services/supabase/suppliers';
@@ -31,7 +31,8 @@ function emptyLine(product?: Product): LineItem {
   return {
     _id: makeId(), product: product ?? null,
     search: product?.name ?? '', mode: 'packaging',
-    directQty: '', packQty: '', packSize: '', packUnit: '', costPerUnit: '',
+    directQty: '', packQty: '', packSize: '', packUnit: '',
+    costPerUnit: product?.cost_price != null ? String(product.cost_price) : '',
   };
 }
 
@@ -87,7 +88,13 @@ function LineCard({
                 <button
                   key={p.id}
                   type="button"
-                  onMouseDown={() => { onUpdate({ product: p, search: p.name }); setShowDrop(false); }}
+                  onMouseDown={() => {
+                    onUpdate({
+                      product: p, search: p.name,
+                      costPerUnit: p.cost_price != null ? String(p.cost_price) : '',
+                    });
+                    setShowDrop(false);
+                  }}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-surface-hover text-left"
                 >
                   <div className="w-7 h-7 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
@@ -97,7 +104,10 @@ function LineCard({
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm text-content-primary font-medium truncate">{p.name}</p>
-                    <p className="text-xs text-content-muted">Stock : {p.stock ?? 0} {p.unit ?? 'pièce'}</p>
+                    <p className="text-xs text-content-muted">
+                      Stock : {p.stock ?? 0} {p.unit ?? 'pièce'}
+                      {p.cost_price != null && ` · dernier achat : ${formatCurrency(p.cost_price, currency)}`}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -177,11 +187,19 @@ function LineCard({
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <label className="text-[10px] text-content-muted block mb-1">
-                Coût/{unit}{currency ? ` (${currency})` : ''}
+                Prix d'achat / {unit}{currency ? ` (${displayCurrency(currency)})` : ''}
               </label>
               <input type="number" inputMode="decimal" value={line.costPerUnit}
                 onChange={e => onUpdate({ costPerUnit: e.target.value })}
                 placeholder="0" className="input text-sm w-full" />
+              {line.product?.cost_price != null && (
+                <p className={`text-[10px] mt-1 ${
+                  parseFloat(line.costPerUnit) !== line.product.cost_price
+                    ? 'text-status-warning' : 'text-content-muted'
+                }`}>
+                  Dernier prix connu : {formatCurrency(line.product.cost_price, currency)}
+                </p>
+              )}
             </div>
             {totalQty > 0 && (
               <div className="shrink-0 text-right pb-0.5">
