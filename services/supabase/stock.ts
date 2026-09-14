@@ -35,6 +35,16 @@ export interface AddStockEntryInput {
   createdBy?: string;
 }
 
+export interface UpdateStockEntryInput {
+  quantity: number;
+  packagingQty?: number;
+  packagingSize?: number;
+  packagingUnit?: string;
+  supplier?: string;
+  costPerUnit?: number;
+  notes?: string;
+}
+
 export async function getStockEntries(
   businessId: string,
   productId?: string
@@ -83,6 +93,37 @@ export async function addStockEntry(input: AddStockEntryInput): Promise<void> {
       quantity:   input.quantity,
       supplier:   input.supplier,
       cost:       input.costPerUnit,
+    },
+  });
+}
+
+export async function updateStockEntry(
+  entryId: string,
+  businessId: string,
+  input: UpdateStockEntryInput,
+  userId?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('update_stock_entry', {
+    p_entry_id:       entryId,
+    p_quantity:       input.quantity,
+    p_packaging_qty:  input.packagingQty  ?? undefined,
+    p_packaging_size: input.packagingSize ?? undefined,
+    p_packaging_unit: input.packagingUnit ?? undefined,
+    p_supplier:       input.supplier      ?? undefined,
+    p_cost_per_unit:  input.costPerUnit   ?? undefined,
+    p_notes:          input.notes         ?? undefined,
+  });
+  if (error) throw new Error(error.message);
+  logAction({
+    business_id: businessId,
+    action:      'stock.entry_update',
+    entity_type: 'stock',
+    entity_id:   entryId,
+    user_id:     userId,
+    metadata: {
+      quantity: input.quantity,
+      supplier: input.supplier,
+      cost:     input.costPerUnit,
     },
   });
 }

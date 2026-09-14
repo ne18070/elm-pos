@@ -6590,6 +6590,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_stock_entry: {
+        Args: {
+          p_cost_per_unit?: number
+          p_entry_id: string
+          p_notes?: string
+          p_packaging_qty?: number
+          p_packaging_size?: number
+          p_packaging_unit?: string
+          p_quantity: number
+          p_supplier?: string
+        }
+        Returns: undefined
+      }
       update_technician_service_order_status:
         | {
             Args: { p_order_id: string; p_status: string; p_token: string }

@@ -4,7 +4,7 @@ import { toUserError } from '@/lib/user-error';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus, RefreshCw, Package, TrendingUp, Search, Filter,
-  AlertTriangle, Download, Building2, ClipboardList,
+  AlertTriangle, Download, Building2, ClipboardList, Pencil,
 } from 'lucide-react';
 import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -16,6 +16,7 @@ import { getStockEntries, STOCK_ENTRIES_LIMIT } from '@services/supabase/stock';
 import { getSuppliers } from '@services/supabase/suppliers';
 import { getPurchaseOrders, updatePOStatus, receivePurchaseOrder } from '@services/supabase/purchase-orders';
 import { StockEntryModal } from '@/components/stock/StockEntryModal';
+import { EditStockEntryModal } from '@/components/stock/EditStockEntryModal';
 import { POModal } from '@/components/stock/POModal';
 import { SuppliersPanel } from '@/components/stock/SuppliersPanel';
 import { useLowStockAlerts, LOW_STOCK_THRESHOLD } from '@/hooks/useLowStockAlerts';
@@ -97,6 +98,7 @@ export default function ApprovisionnementPage() {
   const [showPOModal, setShowPOModal] = useState(false);
   const [showSupplierPanel, setShowSupplierPanel] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<StockEntry | null>(null);
 
   const [search, setSearch]         = useState('');
   const [period, setPeriod]         = useState<Period>('month');
@@ -470,9 +472,20 @@ export default function ApprovisionnementPage() {
                               {entry.supplier && <p className="text-xs text-content-muted truncate">{entry.supplier}</p>}
                             </div>
                           </div>
-                          <span className="shrink-0 text-sm font-black text-status-success whitespace-nowrap">
-                            +{entry.quantity} {unit}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-sm font-black text-status-success whitespace-nowrap">
+                              +{entry.quantity} {unit}
+                            </span>
+                            {canManage && (
+                              <button
+                                onClick={() => setEditingEntry(entry)}
+                                className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                                title="Modifier"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between pl-10">
                           <div className="flex items-center gap-3">
@@ -507,6 +520,7 @@ export default function ApprovisionnementPage() {
                       <th className="px-4 py-3 whitespace-nowrap">Fournisseur</th>
                       {canSeeFinancials && <th className="px-4 py-3 whitespace-nowrap">Coût total</th>}
                       <th className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">Par</th>
+                      {canManage && <th className="px-4 py-3 whitespace-nowrap" />}
                     </tr>
                   </thead>
                   <tbody>
@@ -551,6 +565,17 @@ export default function ApprovisionnementPage() {
                               {(entry.creator as { full_name?: string } | null)?.full_name ?? '—'}
                             </span>
                           </td>
+                          {canManage && (
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <button
+                                onClick={() => setEditingEntry(entry)}
+                                className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                                title="Modifier"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -571,6 +596,7 @@ export default function ApprovisionnementPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell" />
+                        {canManage && <td className="px-4 py-3" />}
                       </tr>
                     </tfoot>
                   )}
@@ -709,6 +735,14 @@ export default function ApprovisionnementPage() {
           suppliers={suppliers}
           onClose={() => setShowModal(false)}
           onSuccess={() => { setShowModal(false); fetchAll(true); }}
+        />
+      )}
+      {editingEntry && (
+        <EditStockEntryModal
+          entry={editingEntry}
+          currency={business?.currency}
+          onClose={() => setEditingEntry(null)}
+          onSuccess={() => { setEditingEntry(null); fetchAll(true); }}
         />
       )}
       {showPOModal && (
