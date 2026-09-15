@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import {
-  Users, Plus, Loader2, LayoutList, Calendar, Wallet, Palmtree, 
-  UserMinus, Clock, Unlink, Banknote, AlertCircle
+  Users, Plus, Loader2, LayoutList, Calendar, Wallet, Palmtree,
+  UserMinus, Clock, Unlink, Banknote, AlertCircle, ScanLine
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -174,15 +175,26 @@ export default function StaffPage() {
             </div>
           </div>
           
-          {can('manage_staff') && (
-            <button 
-              onClick={() => setStaffPanel({ item: null })}
-              className="btn-primary flex items-center gap-2 h-11 px-6 shadow-lg shadow-brand-500/20 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
-            >
-              <Plus size={18} />
-              <span className="hidden sm:inline">Ajouter un employé</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {can('manage_staff_attendance') && (
+              <Link
+                href="/staff/pointage"
+                className="btn-secondary flex items-center gap-2 h-11 px-4 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
+              >
+                <ScanLine size={18} />
+                <span className="hidden sm:inline">Mode borne</span>
+              </Link>
+            )}
+            {can('manage_staff') && (
+              <button
+                onClick={() => setStaffPanel({ item: null })}
+                className="btn-primary flex items-center gap-2 h-11 px-6 shadow-lg shadow-brand-500/20 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
+              >
+                <Plus size={18} />
+                <span className="hidden sm:inline">Ajouter un employé</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Top KPIs Row - Operational visibility */}

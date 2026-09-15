@@ -32,6 +32,7 @@ export function StaffPanel({
     hire_date:            string;
     status:               'active' | 'inactive';
     notes:                string;
+    badge_code:           string;
     manager_id:           string;
     contract_type:        string;
     contract_start_date:  string;
@@ -50,6 +51,7 @@ export function StaffPanel({
     hire_date:           staff?.hire_date ?? '',
     status:              staff?.status ?? 'active',
     notes:               staff?.notes ?? '',
+    badge_code:          staff?.badge_code ?? '',
     manager_id:          staff?.manager_id ?? '',
     contract_type:       staff?.contract_type ?? '',
     contract_start_date: staff?.contract_start_date ?? '',
@@ -81,6 +83,7 @@ export function StaffPanel({
         hire_date: form.hire_date || null,
         status: form.status,
         notes: form.notes.trim() || null,
+        badge_code: form.badge_code.trim() || null,
         // FIX: Preserve user_id on edit to avoid unlinking account accidentally
         user_id: staff?.user_id ?? null,
         manager_id:          form.manager_id || null,
@@ -128,6 +131,18 @@ export function StaffPanel({
               <Field label="Département" value={form.department} onChange={(v) => set('department', v)} placeholder="Admin" />
             </div>
             <Field label="Date d'embauche" value={form.hire_date} onChange={(v) => set('hire_date', v)} type="date" />
+            <div>
+              <label className="text-xs text-content-secondary block mb-1">Code badge (pointage)</label>
+              <input
+                value={form.badge_code}
+                onChange={(e) => set('badge_code', e.target.value)}
+                placeholder="Scannez le badge ici, ou saisissez le code"
+                className="input w-full text-sm font-mono"
+              />
+              <p className="mt-1 text-xs text-content-muted">
+                Utilisé sur l'écran de pointage par badge. Laissez vide si non applicable.
+              </p>
+            </div>
             <div>
               <label className="text-xs text-content-secondary block mb-1">Rattaché à (manager)</label>
               <select value={form.manager_id} onChange={(e) => set('manager_id', e.target.value)} className="input w-full text-sm">

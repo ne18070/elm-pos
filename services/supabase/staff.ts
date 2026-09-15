@@ -8,6 +8,7 @@ import { supabase } from './client';
 export type SalaryType  = 'hourly' | 'daily' | 'monthly';
 export type StaffStatus = 'active' | 'inactive';
 export type AttendanceStatus = 'present' | 'absent' | 'half_day' | 'leave' | 'holiday';
+export type ClockMethod = 'manual' | 'login' | 'badge';
 export type PaymentMethod = 'cash' | 'transfer' | 'mobile_money' | 'check';
 export type PaymentStatus = 'pending' | 'paid';
 
@@ -25,6 +26,7 @@ export interface Staff {
   status:                StaffStatus;
   notes:                string | null;
   user_id:              string | null;  // lié à un compte système
+  badge_code:           string | null;  // code-barres du badge de pointage
   manager_id:           string | null;  // organigramme : rattaché à un autre employé
   contract_type:        string | null;  // ex: CDI, CDD, Stage, Freelance — libre, non contraint
   contract_start_date:  string | null;
@@ -46,6 +48,7 @@ export interface StaffAttendance {
   clock_out:    string | null; // HH:MM
   hours_worked: number | null;
   notes:        string | null;
+  clock_method: ClockMethod;
   created_at:   string;
 }
 
@@ -186,6 +189,7 @@ export async function upsertAttendance(record: {
   clock_out?:   string | null;
   hours_worked?: number | null;
   notes?:       string | null;
+  clock_method?: ClockMethod;
 }): Promise<StaffAttendance> {
   const { data, error } = await supabase
     .from('staff_attendance')
@@ -488,6 +492,7 @@ export async function autoRecordPresence(businessId: string, userId: string): Pr
       clock_in:     clockIn,
       hours_worked: 8, // Par défaut une journée complète
       notes:        'Pointage automatique au login',
+      clock_method: 'login',
     });
 
     return true;
@@ -543,6 +548,7 @@ export async function autoRecordDeparture(businessId: string, userId: string): P
       clock_out: clockOut,
       hours_worked: (hours ?? 0) > 0 ? hours : 8,
       notes: (existing.notes ? existing.notes + ' | ' : '') + 'Départ auto à la déconnexion',
+      clock_method: existing.clock_method as ClockMethod,
     });
 
     return true;
@@ -596,13 +602,89 @@ export async function updateStaffHeartbeat(businessId: string, userId: string): 
 
     await supabase
       .from('staff_attendance')
-      .update({ 
-        clock_out: clockOut, 
-        hours_worked: hours > 0 ? hours : 8 
+      .update({
+        clock_out: clockOut,
+        hours_worked: hours > 0 ? hours : 8
       })
       .eq('id', existing.id);
 
   } catch (e) {
     // Silencieux pour ne pas gêner l'utilisateur
   }
+}
+
+// ─── Pointage par badge (code-barres) ──────────────────────────────────────────
+
+export interface BadgeClockResult {
+  staffId:   string;
+  staffName: string;
+  action:    'clock_in' | 'clock_out';
+  time:      string; // HH:MM
+}
+
+/**
+ * Pointe l'employé associé à ce code de badge : premier scan du jour =
+ * arrivée, second scan = départ (avec calcul des heures). Un troisième
+ * scan le même jour est refusé — corriger via la grille de présence.
+ */
+export async function recordBadgeClock(businessId: string, badgeCode: string): Promise<BadgeClockResult> {
+  const { data: staff, error: staffErr } = await supabase
+    .from('staff')
+    .select('id, name')
+    .eq('business_id', businessId)
+    .eq('badge_code', badgeCode)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (staffErr) throw new Error(staffErr.message);
+  if (!staff) throw new Error('Badge inconnu — aucun employé actif associé à ce code');
+
+  const today = new Date().toISOString().split('T')[0];
+  const { data: existing } = await supabase
+    .from('staff_attendance')
+    .select('*')
+    .eq('staff_id', staff.id)
+    .eq('date', today)
+    .maybeSingle();
+
+  const now  = new Date();
+  const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  if (!existing || !existing.clock_in) {
+    await upsertAttendance({
+      business_id:  businessId,
+      staff_id:     staff.id,
+      date:         today,
+      status:       'present',
+      clock_in:     time,
+      clock_out:    existing?.clock_out ?? null,
+      hours_worked: existing?.hours_worked ?? null,
+      notes:        existing?.notes ?? null,
+      clock_method: 'badge',
+    });
+    return { staffId: staff.id, staffName: staff.name, action: 'clock_in', time };
+  }
+
+  if (!existing.clock_out) {
+    const [hIn, mIn] = existing.clock_in.split(':').map(Number);
+    const startTime = new Date();
+    startTime.setHours(hIn, mIn, 0);
+    const diffMs = now.getTime() - startTime.getTime();
+    const hours  = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+
+    await upsertAttendance({
+      business_id:  businessId,
+      staff_id:     staff.id,
+      date:         today,
+      status:       existing.status as AttendanceStatus,
+      clock_in:     existing.clock_in,
+      clock_out:    time,
+      hours_worked: hours > 0 ? hours : existing.hours_worked,
+      notes:        existing.notes,
+      clock_method: 'badge',
+    });
+    return { staffId: staff.id, staffName: staff.name, action: 'clock_out', time };
+  }
+
+  throw new Error(`${staff.name} a déjà pointé son départ aujourd'hui (${existing.clock_out})`);
 }

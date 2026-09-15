@@ -4583,6 +4583,7 @@ export type Database = {
       }
       staff: {
         Row: {
+          badge_code: string | null
           business_id: string
           contract_end_date: string | null
           contract_start_date: string | null
@@ -4607,6 +4608,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          badge_code?: string | null
           business_id: string
           contract_end_date?: string | null
           contract_start_date?: string | null
@@ -4631,6 +4633,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          badge_code?: string | null
           business_id?: string
           contract_end_date?: string | null
           contract_start_date?: string | null
@@ -4830,6 +4833,7 @@ export type Database = {
         Row: {
           business_id: string
           clock_in: string | null
+          clock_method: string
           clock_out: string | null
           created_at: string | null
           date: string
@@ -4842,6 +4846,7 @@ export type Database = {
         Insert: {
           business_id: string
           clock_in?: string | null
+          clock_method?: string
           clock_out?: string | null
           created_at?: string | null
           date: string
@@ -4854,6 +4859,7 @@ export type Database = {
         Update: {
           business_id?: string
           clock_in?: string | null
+          clock_method?: string
           clock_out?: string | null
           created_at?: string | null
           date?: string

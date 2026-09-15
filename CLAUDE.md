@@ -18,6 +18,16 @@ yarn lint             # eslint on .ts/.tsx
 yarn web:build && yarn web:start  # Web (Vercel-style)
 yarn dist:win / dist:mac / dist:linux  # Electron installers
 
+# Mobile (Capacitor — companion app under (mobile) route group, /m/*)
+yarn mobile:build     # next build (static export) + cap sync
+yarn mobile:ios / yarn mobile:android  # open native IDE (Xcode / Android Studio)
+
+# Tests (Playwright, tests/*.spec.ts)
+yarn playwright test                     # full suite, all browsers
+yarn playwright test tests/dossiers.spec.ts  # single file
+yarn playwright test -g "test name"      # single test by title
+yarn playwright show-report               # view last HTML report
+
 # Supabase
 # No CLI — run migrations manually in Supabase dashboard SQL editor (in order)
 ```
@@ -28,10 +38,13 @@ yarn dist:win / dist:mac / dist:linux  # Electron installers
 elm-pos/
 ├── main/         Electron main process (window, IPC handlers, SQLite offline store)
 ├── hardware/     Hardware drivers — printer (ESC/POS USB+TCP), scanner (HID), NFC
-├── renderer/     Next.js 14 App Router — the entire UI, shared between Electron & web
+├── renderer/     Next.js 14 App Router — the entire UI, shared across Electron, web & Capacitor mobile
 ├── services/     Supabase data layer — imported by both main and renderer
+├── domain/       Pure business-logic services (order/payment/coupon totals & validation) — no I/O, no Supabase import
 ├── types/        Shared TypeScript types (import via @pos-types alias)
-└── supabase/migrations/  PostgreSQL schema, RLS policies, functions — apply in order
+├── supabase/migrations/  PostgreSQL schema, RLS policies, functions — apply in order
+├── android/, ios/  Capacitor native shells (generated; app code stays in renderer/)
+└── tests/        Playwright end-to-end specs
 ```
 
 **Critical rule**: `hardware/` is NEVER imported by `renderer/`. Hardware access goes through Electron IPC only.
@@ -54,12 +67,25 @@ elm-pos/
 | `(public)` | Public-facing pages (boutique, tracking, developers, etc.) |
 | `(backoffice)` | Superadmin only |
 | `(kiosk)` | Customer-facing display mode |
+| `(marketing)` | Landing page, subscribe, privacy — always light mode |
+| `(mobile)` | Capacitor companion app screens, under `/m/*` (owner, orders, clients, inventory, delivery, vehicles, services, contrats, dossiers) |
+
+### Three platform targets
+
+The same `renderer/` codebase ships as three builds, distinguished at runtime via `renderer/lib/platform.ts` (`isElectron`, `isCapacitor`, `isWeb` / `getPlatform()`):
+
+| Target | Built via | Notes |
+|---|---|---|
+| Electron desktop | `yarn dev` / `yarn dist:*` | Full hardware access (printer, scanner, NFC) via IPC; SQLite offline store |
+| Web | `yarn web:dev` / `yarn web:build` | Deployed on Vercel; no Electron/hardware IPC — `renderer/lib/ipc.ts` falls back to browser stubs |
+| Capacitor mobile (iOS/Android) | `yarn mobile:build` + `mobile:ios`/`mobile:android` | Static export (`ELECTRON_BUILD=1`) wrapped by Capacitor; UI lives under the `(mobile)` route group (`/m/*`); native shells in `android/`, `ios/` |
 
 ### Data flow
 
 - **Renderer → Supabase**: via `@services/supabase/*.ts` (uses anon key + RLS)
-- **Renderer → Hardware**: via `renderer/lib/ipc.ts` → `window.electronAPI` (Electron only) — falls back to browser stubs in web mode
+- **Renderer → Hardware**: via `renderer/lib/ipc.ts` → `window.electronAPI` (Electron only) — falls back to browser stubs in web/Capacitor mode
 - **API routes (`/api/v1/*`)**: use `SUPABASE_SERVICE_ROLE_KEY` (admin client, bypasses RLS) — authenticated via `X-API-Key` header, see `renderer/lib/api-v1-auth.ts`
+- **Domain layer**: `domain/*.service.ts` (order totals/validation, payment, coupons) holds pricing/validation logic shared by the renderer (UI) and the main-process sync engine, so a queued offline order is recomputed identically to one placed online. These files must stay free of Supabase/Electron imports — only pure functions over `@pos-types`.
 
 ### Auth architecture
 
@@ -97,6 +123,12 @@ Never define `getAdmin()` or `createClient(...serviceKey...)` inline in route fi
 3. Redirects unauthenticated users away from protected routes
 
 `PUBLIC_PATHS` in that file controls which routes skip auth. Add new public routes there.
+
+### Offline sync (Electron only)
+
+`main/store/local-db.ts` opens a `better-sqlite3` database in the Electron userData dir with a versioned migration runner (`schema_version` table). Writes made while offline go into a `sync_queue` table (`pending` / `synced` / `failed`, with attempt count and `next_retry`) instead of hitting Supabase directly.
+
+`main/ipc/sync.ts` drains that queue: triggered event-driven on network-online, plus a 60s fallback poll (10s when items are pending). Each queued item replays through the Supabase JS client using the same RPCs/tables the online path uses (`create_order` RPC, `orders` update, `payments` insert) — so `domain/order.service.ts` computing identical totals for both paths matters. Renderer-side status/retry comes through the `sync:*` IPC channels (`sync:status`, `sync:queue:add`, `sync:queue:flush`, `sync:retry-failed`).
 
 ### Service layer pattern
 
@@ -233,3 +265,12 @@ See `supabase/migrations/085_explicit_grants.sql` for the baseline.
 | `SUPABASE_SERVICE_ROLE_KEY` | API routes only (never expose to client) |
 | `ELECTRON_BUILD=1` | Switches Next.js to static export mode |
 | `ELECTRON_DEV=true` | Forces dev mode in Electron |
+
+## CI/CD (`.github/workflows/`)
+
+- `playwright.yml` — runs `yarn playwright test` on every push/PR to `main`.
+- `release.yml` — triggered by pushing a `v*` tag: builds Windows/macOS/Linux Electron installers and a signed Android AAB (auto-published to the Play Store production track) in parallel, then publishes a single GitHub Release with all artifacts. An iOS/TestFlight job exists but stays off unless the `IOS_DEPLOY_ENABLED` repo variable is `true`. See the comment header in that file for the full secrets list.
+
+## Claude Code skills for this repo
+
+Prefer these over ad hoc implementations — they encode this project's specific conventions: `api-route` (new `/api/v1/*` endpoint), `new-page` (scaffold a dashboard/backoffice page), `supabase-migration` (new migration file, incl. the mandatory GRANTs above), `debug-rls` (empty results / 401/403 troubleshooting), `theme-guide` (light/dark-safe UI).
