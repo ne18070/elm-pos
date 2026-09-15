@@ -4585,6 +4585,7 @@ export type Database = {
         Row: {
           badge_code: string | null
           business_id: string
+          clock_mode: string
           contract_end_date: string | null
           contract_start_date: string | null
           contract_type: string | null
@@ -4610,6 +4611,7 @@ export type Database = {
         Insert: {
           badge_code?: string | null
           business_id: string
+          clock_mode?: string
           contract_end_date?: string | null
           contract_start_date?: string | null
           contract_type?: string | null
@@ -4635,6 +4637,7 @@ export type Database = {
         Update: {
           badge_code?: string | null
           business_id?: string
+          clock_mode?: string
           contract_end_date?: string | null
           contract_start_date?: string | null
           contract_type?: string | null

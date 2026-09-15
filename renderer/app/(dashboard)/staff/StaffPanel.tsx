@@ -3,8 +3,8 @@ import { X, Loader2, Save } from 'lucide-react';
 import { Field } from './SharedComponents';
 import {
   createStaff, updateStaff,
-  SALARY_TYPE_LABELS,
-  type Staff, type StaffForm, type SalaryType,
+  SALARY_TYPE_LABELS, CLOCK_MODE_LABELS,
+  type Staff, type StaffForm, type SalaryType, type ClockMode,
 } from '@services/supabase/staff';
 
 const CONTRACT_TYPE_SUGGESTIONS = ['CDI', 'CDD', 'Stage', 'Freelance', 'Temporaire', 'Saisonnier'];
@@ -33,6 +33,7 @@ export function StaffPanel({
     status:               'active' | 'inactive';
     notes:                string;
     badge_code:           string;
+    clock_mode:           ClockMode;
     manager_id:           string;
     contract_type:        string;
     contract_start_date:  string;
@@ -52,6 +53,7 @@ export function StaffPanel({
     status:              staff?.status ?? 'active',
     notes:               staff?.notes ?? '',
     badge_code:          staff?.badge_code ?? '',
+    clock_mode:          staff?.clock_mode ?? 'auto',
     manager_id:          staff?.manager_id ?? '',
     contract_type:       staff?.contract_type ?? '',
     contract_start_date: staff?.contract_start_date ?? '',
@@ -69,6 +71,10 @@ export function StaffPanel({
     if (!form.name.trim()) { notifError('Nom requis'); return; }
     const rate = parseFloat(form.salary_rate);
     if (isNaN(rate) || rate < 0) { notifError('Taux de salaire invalide'); return; }
+    if (form.clock_mode === 'badge' && !form.badge_code.trim()) {
+      notifError('Renseignez un code badge, ou choisissez une autre méthode de pointage');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -84,6 +90,7 @@ export function StaffPanel({
         status: form.status,
         notes: form.notes.trim() || null,
         badge_code: form.badge_code.trim() || null,
+        clock_mode: form.clock_mode,
         // FIX: Preserve user_id on edit to avoid unlinking account accidentally
         user_id: staff?.user_id ?? null,
         manager_id:          form.manager_id || null,
@@ -132,17 +139,31 @@ export function StaffPanel({
             </div>
             <Field label="Date d'embauche" value={form.hire_date} onChange={(v) => set('hire_date', v)} type="date" />
             <div>
-              <label className="text-xs text-content-secondary block mb-1">Code badge (pointage)</label>
-              <input
-                value={form.badge_code}
-                onChange={(e) => set('badge_code', e.target.value)}
-                placeholder="Scannez le badge ici, ou saisissez le code"
-                className="input w-full text-sm font-mono"
-              />
+              <label className="text-xs text-content-secondary block mb-1">Méthode de pointage</label>
+              <select
+                value={form.clock_mode}
+                onChange={(e) => set('clock_mode', e.target.value as ClockMode)}
+                className="input w-full text-sm"
+              >
+                {(Object.keys(CLOCK_MODE_LABELS) as ClockMode[]).map((k) => (
+                  <option key={k} value={k}>{CLOCK_MODE_LABELS[k]}</option>
+                ))}
+              </select>
               <p className="mt-1 text-xs text-content-muted">
-                Utilisé sur l'écran de pointage par badge. Laissez vide si non applicable.
+                Un seul canal automatique actif à la fois — évite le double pointage. La grille de présence reste toujours modifiable manuellement.
               </p>
             </div>
+            {form.clock_mode === 'badge' && (
+              <div>
+                <label className="text-xs text-content-secondary block mb-1">Code badge (pointage)</label>
+                <input
+                  value={form.badge_code}
+                  onChange={(e) => set('badge_code', e.target.value)}
+                  placeholder="Scannez le badge ici, ou saisissez le code"
+                  className="input w-full text-sm font-mono"
+                />
+              </div>
+            )}
             <div>
               <label className="text-xs text-content-secondary block mb-1">Rattaché à (manager)</label>
               <select value={form.manager_id} onChange={(e) => set('manager_id', e.target.value)} className="input w-full text-sm">

@@ -9,8 +9,15 @@ export type SalaryType  = 'hourly' | 'daily' | 'monthly';
 export type StaffStatus = 'active' | 'inactive';
 export type AttendanceStatus = 'present' | 'absent' | 'half_day' | 'leave' | 'holiday';
 export type ClockMethod = 'manual' | 'login' | 'badge';
+export type ClockMode   = 'auto' | 'badge' | 'manual'; // canal automatique autorisé pour cet employé
 export type PaymentMethod = 'cash' | 'transfer' | 'mobile_money' | 'check';
 export type PaymentStatus = 'pending' | 'paid';
+
+export const CLOCK_MODE_LABELS: Record<ClockMode, string> = {
+  auto:   'Automatique (connexion)',
+  badge:  'Badge',
+  manual: 'Manuel (grille de présence)',
+};
 
 export interface Staff {
   id:                   string;
@@ -27,6 +34,7 @@ export interface Staff {
   notes:                string | null;
   user_id:              string | null;  // lié à un compte système
   badge_code:           string | null;  // code-barres du badge de pointage
+  clock_mode:           ClockMode;      // canal de pointage automatique autorisé
   manager_id:           string | null;  // organigramme : rattaché à un autre employé
   contract_type:        string | null;  // ex: CDI, CDD, Stage, Freelance — libre, non contraint
   contract_start_date:  string | null;
@@ -460,13 +468,14 @@ export async function autoRecordPresence(businessId: string, userId: string): Pr
     // 1. Trouver l'employé actif lié à cet utilisateur
     const { data: staff, error: staffErr } = await supabase
       .from('staff')
-      .select('id')
+      .select('id, clock_mode')
       .eq('business_id', businessId)
       .eq('user_id', userId)
       .eq('status', 'active')
       .maybeSingle();
 
     if (staffErr || !staff) return false;
+    if (staff.clock_mode !== 'auto') return false; // canal auto désactivé pour cet employé
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -509,13 +518,14 @@ export async function autoRecordDeparture(businessId: string, userId: string): P
   try {
     const { data: staff } = await supabase
       .from('staff')
-      .select('id')
+      .select('id, clock_mode')
       .eq('business_id', businessId)
       .eq('user_id', userId)
       .eq('status', 'active')
       .maybeSingle();
 
     if (!staff) return false;
+    if (staff.clock_mode !== 'auto') return false; // canal auto désactivé pour cet employé
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -566,13 +576,14 @@ export async function updateStaffHeartbeat(businessId: string, userId: string): 
     const today = new Date().toISOString().split('T')[0];
     const { data: staff } = await supabase
       .from('staff')
-      .select('id')
+      .select('id, clock_mode')
       .eq('business_id', businessId)
       .eq('user_id', userId)
       .eq('status', 'active')
       .maybeSingle();
 
     if (!staff) return;
+    if (staff.clock_mode !== 'auto') return; // canal auto désactivé pour cet employé
 
     const { data: existing } = await supabase
       .from('staff_attendance')
@@ -630,7 +641,7 @@ export interface BadgeClockResult {
 export async function recordBadgeClock(businessId: string, badgeCode: string): Promise<BadgeClockResult> {
   const { data: staff, error: staffErr } = await supabase
     .from('staff')
-    .select('id, name')
+    .select('id, name, clock_mode')
     .eq('business_id', businessId)
     .eq('badge_code', badgeCode)
     .eq('status', 'active')
@@ -638,6 +649,9 @@ export async function recordBadgeClock(businessId: string, badgeCode: string): P
 
   if (staffErr) throw new Error(staffErr.message);
   if (!staff) throw new Error('Badge inconnu — aucun employé actif associé à ce code');
+  if (staff.clock_mode !== 'badge') {
+    throw new Error(`Le pointage par badge n'est pas activé pour ${staff.name} (méthode actuelle : ${CLOCK_MODE_LABELS[staff.clock_mode as ClockMode] ?? staff.clock_mode})`);
+  }
 
   const today = new Date().toISOString().split('T')[0];
   const { data: existing } = await supabase
