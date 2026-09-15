@@ -69,7 +69,7 @@ export function MarketingNav() {
                 Connexion
               </Link>
               <Link
-                href="/subscribe"
+                href="/signup"
                 className="text-sm font-semibold text-content-primary bg-brand-600 hover:bg-brand-500 px-4 py-1.5 rounded-lg transition-colors"
               >
                 Essai gratuit
