@@ -56,12 +56,17 @@ export async function POST(req: NextRequest) {
       await Promise.all([
         admin.from('subscriptions').delete().in('business_id', bizIds),
         admin.from('business_members').delete().in('business_id', bizIds),
-        admin.from('analytics_events').delete().in('business_id', bizIds),
         admin.from('monitoring_vitals').delete().in('business_id', bizIds),
       ]);
       // Supprimer les businesses elles-mêmes
       await admin.from('businesses').delete().in('id', bizIds);
     }
+
+    // analytics_events.user_id référence auth.users(id) sans ON DELETE, et les
+    // événements d'onboarding (signup_started...) sont capturés avant la
+    // création du business (business_id NULL) : un filtre par business_id les
+    // rate et laisse une ligne qui bloque auth.admin.deleteUser() plus bas.
+    await admin.from('analytics_events').delete().eq('user_id', ownerId);
 
     // 3. Supprimer l'organisation
     if (orgId) {
