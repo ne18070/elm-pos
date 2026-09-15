@@ -626,6 +626,60 @@ export async function getJuridiqueAnalytics(
   };
 }
 
+// --- RH analytics (organisations "RH / SIRH uniquement") ---------------------
+
+export interface RHAnalyticsSummary {
+  total_payroll:      number; // masse salariale versée (paiements "payés") sur la période
+  active_staff_count: number; // effectif actif (indépendant de la période)
+  present_today:      number; // présents/demi-journée aujourd'hui, sur l'effectif actif
+  pending_leaves:     number; // demandes de congé en attente
+}
+
+export async function getRHAnalytics(
+  businessId: string,
+  days = 30
+): Promise<RHAnalyticsSummary> {
+  const { format: fmt2, subDays: sub2 } = await import('date-fns');
+  const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+  const todayStr  = fmt2(new Date(), 'yyyy-MM-dd');
+
+  const [paymentsRes, staffRes, attendanceRes, leavesRes] = await Promise.all([
+    supabase
+      .from('staff_payments')
+      .select('net_amount')
+      .eq('business_id', businessId)
+      .eq('status', 'paid')
+      .gte('payment_date', startDate),
+    supabase
+      .from('staff')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('status', 'active'),
+    supabase
+      .from('staff_attendance')
+      .select('status')
+      .eq('business_id', businessId)
+      .eq('date', todayStr),
+    supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('status', 'pending'),
+  ]);
+
+  if (paymentsRes.error) throw new Error(paymentsRes.error.message);
+  if (staffRes.error) throw new Error(staffRes.error.message);
+  if (attendanceRes.error) throw new Error(attendanceRes.error.message);
+  if (leavesRes.error) throw new Error(leavesRes.error.message);
+
+  const total_payroll = (paymentsRes.data ?? []).reduce((s: number, p: any) => s + Number(p.net_amount ?? 0), 0);
+  const active_staff_count = (staffRes.data ?? []).length;
+  const present_today = (attendanceRes.data ?? []).filter((a: any) => a.status === 'present' || a.status === 'half_day').length;
+  const pending_leaves = (leavesRes.data ?? []).length;
+
+  return { total_payroll, active_staff_count, present_today, pending_leaves };
+}
+
 // --- Voitures analytics -------------------------------------------------------
 
 export interface VoituresAnalyticsSummary {

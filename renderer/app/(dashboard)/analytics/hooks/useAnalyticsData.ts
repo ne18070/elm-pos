@@ -2,15 +2,15 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { 
+import {
   getAnalyticsSummary, getDailySales, getCouponStats,
   getHotelAnalytics, getJuridiqueAnalytics, getVoituresAnalytics,
   getRevendeursAnalytics, getApprovisionnementAnalytics, getPrevPeriodCA,
-  getServicesAnalytics, getVendeursAnalytics,
+  getServicesAnalytics, getVendeursAnalytics, getRHAnalytics,
   type CouponStat, type HotelAnalyticsSummary, type JuridiqueAnalyticsSummary,
   type VoituresAnalyticsSummary, type RevendeursAnalyticsSummary,
   type ApprovAnalyticsSummary, type PrevPeriodCA, type ServicesAnalyticsSummary,
-  type VendeursAnalyticsSummary
+  type VendeursAnalyticsSummary, type RHAnalyticsSummary
 } from '@services/supabase/analytics';
 import { supabase } from '@services/supabase/client';
 import type { AnalyticsSummary } from '@pos-types';
@@ -35,6 +35,7 @@ export function useAnalyticsData(business: any, period: number) {
   const [approvData, setApprovData]         = useState<ApprovAnalyticsSummary | null>(null);
   const [servicesData, setServicesData]     = useState<ServicesAnalyticsSummary | null>(null);
   const [vendeursData, setVendeursData]     = useState<VendeursAnalyticsSummary | null>(null);
+  const [rhData, setRHData]                 = useState<RHAnalyticsSummary | null>(null);
   const [audiences, setAudiences]           = useState<any[]>([]);
 
   // Which tabs have been loaded for the current period/business
@@ -52,27 +53,30 @@ export function useAnalyticsData(business: any, period: number) {
       const isJuridique = business?.type === 'juridique' ||
                           business?.features?.includes('dossiers') ||
                           business?.features?.includes('honoraires');
+      const isRH        = business?.type === 'rh';
 
-      const [summary, todayData, prevStats] = await Promise.all([
+      const [summary, todayData, prevStats, rh] = await Promise.all([
         getAnalyticsSummary(business.id, days),
         getDailySales(business.id, todayStr),
         period > 0 ? getPrevPeriodCA(business.id, days, !!isHotel, !!isJuridique) : Promise.resolve(null),
+        isRH ? getRHAnalytics(business.id, days) : Promise.resolve(null),
       ]);
 
       if (period === 0) {
         const todayStat = summary.daily_stats.find((d) => d.date === todayStr);
-        setData({ 
-            ...summary, 
-            total_sales: todayStat?.total_sales ?? 0, 
-            order_count: todayStat?.order_count ?? 0, 
-            avg_order_value: todayStat?.avg_order_value ?? 0, 
-            daily_stats: todayStat ? [todayStat] : [] 
+        setData({
+            ...summary,
+            total_sales: todayStat?.total_sales ?? 0,
+            order_count: todayStat?.order_count ?? 0,
+            avg_order_value: todayStat?.avg_order_value ?? 0,
+            daily_stats: todayStat ? [todayStat] : []
         });
       } else {
         setData(summary);
       }
       setToday(todayData);
       setPrevCA(prevStats);
+      setRHData(rh);
       setLoadedTabs(new Set(['general']));
     } catch (e) {
       notifError('Erreur lors du chargement des statistiques générales');
@@ -179,6 +183,7 @@ export function useAnalyticsData(business: any, period: number) {
     approvData,
     servicesData,
     vendeursData,
+    rhData,
     audiences,
     stackedDays,
     hasMultiSource,

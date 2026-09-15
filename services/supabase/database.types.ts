@@ -4584,52 +4584,73 @@ export type Database = {
       staff: {
         Row: {
           business_id: string
+          contract_end_date: string | null
+          contract_start_date: string | null
+          contract_type: string | null
           created_at: string | null
           department: string | null
           email: string | null
           hire_date: string | null
           id: string
+          manager_id: string | null
           name: string
           notes: string | null
           phone: string | null
           position: string | null
+          probation_end_date: string | null
           salary_rate: number
           salary_type: string
           status: string
+          termination_date: string | null
+          termination_reason: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           business_id: string
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          contract_type?: string | null
           created_at?: string | null
           department?: string | null
           email?: string | null
           hire_date?: string | null
           id?: string
+          manager_id?: string | null
           name: string
           notes?: string | null
           phone?: string | null
           position?: string | null
+          probation_end_date?: string | null
           salary_rate?: number
           salary_type?: string
           status?: string
+          termination_date?: string | null
+          termination_reason?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           business_id?: string
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          contract_type?: string | null
           created_at?: string | null
           department?: string | null
           email?: string | null
           hire_date?: string | null
           id?: string
+          manager_id?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
           position?: string | null
+          probation_end_date?: string | null
           salary_rate?: number
           salary_type?: string
           status?: string
+          termination_date?: string | null
+          termination_reason?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -4639,6 +4660,168 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_documents: {
+        Row: {
+          business_id: string
+          category: string
+          created_at: string | null
+          id: string
+          is_confidential: boolean
+          mime_type: string | null
+          nom: string
+          staff_id: string
+          storage_path: string
+          taille_bytes: number
+          uploaded_by: string | null
+        }
+        Insert: {
+          business_id: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_confidential?: boolean
+          mime_type?: string | null
+          nom: string
+          staff_id: string
+          storage_path: string
+          taille_bytes?: number
+          uploaded_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_confidential?: boolean
+          mime_type?: string | null
+          nom?: string
+          staff_id?: string
+          storage_path?: string
+          taille_bytes?: number
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_documents_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_checklist_templates: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          label: string
+          order_index: number
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          order_index?: number
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          order_index?: number
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_checklist_templates_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_checklist_items: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          done_at: string | null
+          done_by: string | null
+          due_date: string | null
+          id: string
+          is_done: boolean
+          label: string
+          order_index: number
+          staff_id: string
+          type: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          done_at?: string | null
+          done_by?: string | null
+          due_date?: string | null
+          id?: string
+          is_done?: boolean
+          label: string
+          order_index?: number
+          staff_id: string
+          type: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          done_at?: string | null
+          done_by?: string | null
+          due_date?: string | null
+          id?: string
+          is_done?: boolean
+          label?: string
+          order_index?: number
+          staff_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_checklist_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_checklist_items_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -4745,6 +4928,86 @@ export type Database = {
           },
         ]
       }
+      staff_schedules: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          end_time: string
+          id: string
+          is_active: boolean
+          staff_id: string
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean
+          staff_id: string
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          staff_id?: string
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_schedules_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_schedules_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_time_settings: {
+        Row: {
+          business_id: string
+          daily_hours_threshold: number
+          overtime_multiplier: number
+          updated_at: string | null
+          weekly_hours_threshold: number
+        }
+        Insert: {
+          business_id: string
+          daily_hours_threshold?: number
+          overtime_multiplier?: number
+          updated_at?: string | null
+          weekly_hours_threshold?: number
+        }
+        Update: {
+          business_id?: string
+          daily_hours_threshold?: number
+          overtime_multiplier?: number
+          updated_at?: string | null
+          weekly_hours_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_time_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_payments: {
         Row: {
           base_amount: number
@@ -4753,6 +5016,7 @@ export type Database = {
           created_at: string | null
           days_worked: number | null
           deductions: number
+          gross_amount: number | null
           hours_worked: number | null
           id: string
           net_amount: number
@@ -4763,6 +5027,8 @@ export type Database = {
           period_start: string
           staff_id: string
           status: string
+          total_employee_contributions: number | null
+          total_employer_contributions: number | null
         }
         Insert: {
           base_amount?: number
@@ -4771,6 +5037,7 @@ export type Database = {
           created_at?: string | null
           days_worked?: number | null
           deductions?: number
+          gross_amount?: number | null
           hours_worked?: number | null
           id?: string
           net_amount?: number
@@ -4781,6 +5048,8 @@ export type Database = {
           period_start: string
           staff_id: string
           status?: string
+          total_employee_contributions?: number | null
+          total_employer_contributions?: number | null
         }
         Update: {
           base_amount?: number
@@ -4789,6 +5058,7 @@ export type Database = {
           created_at?: string | null
           days_worked?: number | null
           deductions?: number
+          gross_amount?: number | null
           hours_worked?: number | null
           id?: string
           net_amount?: number
@@ -4799,6 +5069,8 @@ export type Database = {
           period_start?: string
           staff_id?: string
           status?: string
+          total_employee_contributions?: number | null
+          total_employer_contributions?: number | null
         }
         Relationships: [
           {
@@ -4813,6 +5085,110 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_contribution_types: {
+        Row: {
+          business_id: string
+          calc_method: string
+          ceiling_amount: number | null
+          code: string | null
+          created_at: string | null
+          fixed_amount: number | null
+          id: string
+          is_active: boolean
+          name: string
+          order_index: number
+          payer: string
+          rate_percent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          calc_method?: string
+          ceiling_amount?: number | null
+          code?: string | null
+          created_at?: string | null
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          order_index?: number
+          payer?: string
+          rate_percent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          calc_method?: string
+          ceiling_amount?: number | null
+          code?: string | null
+          created_at?: string | null
+          fixed_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          order_index?: number
+          payer?: string
+          rate_percent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_contribution_types_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_payment_lines: {
+        Row: {
+          base_amount: number
+          computed_amount: number
+          contribution_type_id: string | null
+          created_at: string | null
+          id: string
+          name: string
+          payer: string
+          payment_id: string
+        }
+        Insert: {
+          base_amount?: number
+          computed_amount?: number
+          contribution_type_id?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          payer: string
+          payment_id: string
+        }
+        Update: {
+          base_amount?: number
+          computed_amount?: number
+          contribution_type_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          payer?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_payment_lines_contribution_type_id_fkey"
+            columns: ["contribution_type_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_contribution_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_payment_lines_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "staff_payments"
             referencedColumns: ["id"]
           },
         ]

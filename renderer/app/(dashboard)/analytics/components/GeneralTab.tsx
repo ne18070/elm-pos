@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { 
-  DollarSign, TrendingUp, Banknote, Briefcase, 
-  ShoppingBag, BedDouble, Receipt 
+import {
+  DollarSign, TrendingUp, Banknote, Briefcase,
+  ShoppingBag, BedDouble, Receipt, Wallet, Users, UserCheck, Palmtree
 } from 'lucide-react';
 import { KpiCard, KpiGrid } from './KpiCard';
 import { StackedChart, SimpleBarChart, Delta, DayStack } from './Charts';
@@ -11,10 +11,11 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { AnalyticsSummary } from '@pos-types';
-import type { 
-  HotelAnalyticsSummary, 
+import type {
+  HotelAnalyticsSummary,
   JuridiqueAnalyticsSummary,
-  PrevPeriodCA
+  PrevPeriodCA,
+  RHAnalyticsSummary
 } from '@services/supabase/analytics';
 
 interface GeneralTabProps {
@@ -23,6 +24,7 @@ interface GeneralTabProps {
   data: AnalyticsSummary | null;
   juridiqueData: JuridiqueAnalyticsSummary | null;
   hotelData: HotelAnalyticsSummary | null;
+  rhData: RHAnalyticsSummary | null;
   prevCA: PrevPeriodCA | null;
   stackedDays: DayStack[];
   hasMultiSource: boolean;
@@ -35,16 +37,18 @@ export function GeneralTab({
   data,
   juridiqueData,
   hotelData,
+  rhData,
   prevCA,
   stackedDays,
   hasMultiSource,
   fmt
 }: GeneralTabProps) {
-  
+
   const isHotel     = business?.type === 'hotel' || business?.features?.includes('hotel');
   const isJuridique = business?.type === 'juridique' ||
                       business?.features?.includes('dossiers') ||
                       business?.features?.includes('honoraires');
+  const isRH        = business?.type === 'rh';
   const isStandard  = business?.type === 'retail' || business?.type === 'restaurant' || business?.type === 'service' ||
                       business?.features?.includes('retail') || business?.features?.includes('restaurant');
 
@@ -59,6 +63,14 @@ export function GeneralTab({
   const globalPaid     = totalSales + totalPaidFees + totalHotelPaid;
 
   const getKPIs = () => {
+    if (isRH) {
+      return [
+        { label: 'Masse Salariale',    value: fmt(rhData?.total_payroll ?? 0),      sub: null, icon: Wallet,    color: 'text-content-brand',  bg: 'bg-badge-brand border-status-brand' },
+        { label: 'Effectif Actif',     value: String(rhData?.active_staff_count ?? 0), sub: null, icon: Users,   color: 'text-status-info',    bg: 'bg-badge-info border-status-info' },
+        { label: 'Présents Aujourd\'hui', value: `${rhData?.present_today ?? 0} / ${rhData?.active_staff_count ?? 0}`, sub: null, icon: UserCheck, color: 'text-status-success', bg: 'bg-badge-success border-status-success' },
+        { label: 'Congés en Attente',  value: String(rhData?.pending_leaves ?? 0),  sub: null, icon: Palmtree,  color: 'text-status-warning', bg: 'bg-badge-warning border-status-warning' },
+      ];
+    }
     if (isJuridique && !isHotel && !isStandard) {
       return [
         { label: 'Total Honoraires', value: fmt(totalFees),  sub: <Delta current={totalFees} prev={prevCA?.total_fees ?? 0} />,  icon: DollarSign, color: 'text-content-brand',   bg: 'bg-badge-brand border-status-brand' },
@@ -154,28 +166,30 @@ export function GeneralTab({
         </div>
       )}
 
-      <div className="card p-4">
-        <h2 className="text-sm font-semibold text-content-secondary mb-4">
-          {hasMultiSource ? 'CA journalier — toutes sources' : 'Ventes journalières'}
-        </h2>
-        {loading ? (
-            <div className="h-[220px] w-full bg-surface-hover animate-pulse rounded-xl" />
-        ) : stackedDays.length > 0 ? (
-            hasMultiSource
-                ? <StackedChart days={stackedDays} fmt={fmt} />
-                : (
-                    <SimpleBarChart
-                    data={stackedDays.map(d => ({ label: format(new Date(d.date), 'd MMM', { locale: fr }), total: d.retail + d.services }))}
-                    dataKey="total"
-                    fmt={fmt}
-                    />
-                )
-        ) : (
-            <div className="h-[220px] flex items-center justify-center border border-dashed border-surface-border rounded-xl text-content-muted text-xs">
-                Aucune vente sur la période
-            </div>
-        )}
-      </div>
+      {!isRH && (
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold text-content-secondary mb-4">
+            {hasMultiSource ? 'CA journalier — toutes sources' : 'Ventes journalières'}
+          </h2>
+          {loading ? (
+              <div className="h-[220px] w-full bg-surface-hover animate-pulse rounded-xl" />
+          ) : stackedDays.length > 0 ? (
+              hasMultiSource
+                  ? <StackedChart days={stackedDays} fmt={fmt} />
+                  : (
+                      <SimpleBarChart
+                      data={stackedDays.map(d => ({ label: format(new Date(d.date), 'd MMM', { locale: fr }), total: d.retail + d.services }))}
+                      dataKey="total"
+                      fmt={fmt}
+                      />
+                  )
+          ) : (
+              <div className="h-[220px] flex items-center justify-center border border-dashed border-surface-border rounded-xl text-content-muted text-xs">
+                  Aucune vente sur la période
+              </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

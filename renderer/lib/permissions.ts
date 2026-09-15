@@ -41,6 +41,7 @@ const PERMISSIONS_MAP = {
   view_contrats:          { label: 'Accès contrats location',      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'contrats' },
   view_voitures:          { label: 'Accès vente voitures',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'voitures' },
   view_staff:             { label: 'Accès personnel & RH',         group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  view_my_hr:             { label: 'Accès Mon Espace RH (self-service)', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'staff' },
   view_team_tracking:     { label: 'Accès tracking équipe',        group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
   view_menu_du_jour:           { label: 'Accès menu du jour',             group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
   view_commandes_emporter:     { label: 'Accès commandes emporter/livraison', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
@@ -144,6 +145,7 @@ const PERMISSIONS_MAP = {
   // RH
   manage_staff:           { label: 'Gérer les employés',           group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
   manage_staff_attendance: { label: 'Gérer les présences',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_documents:  { label: 'Gérer dossier RH (documents, checklist)', group: 'gestion', defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_staff_payroll:    { label: 'Gérer la paie',                group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
   manage_team_tracking:    { label: 'Suivre équipe sur carte',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
 

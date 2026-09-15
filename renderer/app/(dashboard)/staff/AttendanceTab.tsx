@@ -1,23 +1,27 @@
-import { useState, useMemo } from 'react';
-import { 
-  ChevronLeft, ChevronRight, UserCheck, UserMinus, Coffee, Plane, 
-  Printer, Loader2, Zap, Info, List
+import { useMemo, useState } from 'react';
+import {
+  ChevronLeft, ChevronRight, UserCheck, UserMinus, Coffee, Plane,
+  Printer, Loader2, Zap, Info, List, Clock, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  MONTH_NAMES, ATTENDANCE_CFG, CYCLE 
+import {
+  MONTH_NAMES, ATTENDANCE_CFG, CYCLE
 } from './staff-utils';
-import { 
-  computePayroll, upsertAttendance, deleteAttendance,
-  type Staff, type StaffAttendance 
+import {
+  computePayroll, computeOvertime, upsertAttendance, deleteAttendance,
+  type Staff, type StaffAttendance, type OvertimeCalc
 } from '@services/supabase/staff';
+import { DEFAULT_TIME_SETTINGS, type StaffTimeSettings } from '@services/supabase/staff-schedules';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
+import { ScheduleSettingsModal } from './ScheduleSettingsModal';
 
-export function AttendanceTab({ 
-  staffList, attendance, year, month, onPrevMonth, onNextMonth, onPrintSheet, onRefresh, businessId
-}: { 
-  staffList: Staff[]; 
+export function AttendanceTab({
+  staffList, attendance, overtimeAttendance, year, month, onPrevMonth, onNextMonth, onPrintSheet, onRefresh, businessId, timeSettings
+}: {
+  staffList: Staff[];
   attendance: StaffAttendance[];
+  overtimeAttendance: StaffAttendance[];
   year: number;
   month: number;
   onPrevMonth: () => void;
@@ -25,12 +29,28 @@ export function AttendanceTab({
   onPrintSheet: (s: Staff) => void;
   onRefresh: () => void;
   businessId: string;
+  timeSettings: StaffTimeSettings | null;
 }) {
   const { error: notifError, success: notifSuccess } = useNotificationStore();
+  const can = useCan();
   const [savingKey, setSavingKey] = useState<string | null>(null);
-  
+  const [showSchedules, setShowSchedules] = useState(false);
+  const weeklyThreshold = timeSettings?.weekly_hours_threshold ?? DEFAULT_TIME_SETTINGS.weekly_hours_threshold;
+
   const activeStaff = useMemo(() => staffList.filter(s => s.status === 'active'), [staffList]);
   const daysInMonth = new Date(year, month, 0).getDate();
+
+  // PERFORMANCE: un seul recalcul par changement de données/seuil, pas par render/clic.
+  const payrollByStaff = useMemo(() => {
+    const map = new Map<string, { calc: ReturnType<typeof computePayroll>; overtime: OvertimeCalc }>();
+    for (const s of activeStaff) {
+      map.set(s.id, {
+        calc:     computePayroll(s, attendance, year, month),
+        overtime: computeOvertime(overtimeAttendance, s.id, weeklyThreshold, { year, month }),
+      });
+    }
+    return map;
+  }, [activeStaff, attendance, overtimeAttendance, year, month, weeklyThreshold]);
 
   // PERFORMANCE: Memoized map for attendance lookups
   const attendanceMap = useMemo(() => {
@@ -167,6 +187,12 @@ export function AttendanceTab({
               <span className="text-[9px] text-content-brand font-black uppercase flex items-center gap-1">
                 <Info size={12} /> Clic case pour modifier
               </span>
+              {can('manage_staff_attendance') && (
+                <button onClick={() => setShowSchedules(true)}
+                  className="flex items-center gap-1.5 text-[9px] font-black uppercase text-content-muted hover:text-content-brand transition-colors">
+                  <Settings size={12} /> Horaires
+                </button>
+              )}
             </div>
           </div>
           
@@ -199,7 +225,7 @@ export function AttendanceTab({
               </thead>
               <tbody className="divide-y divide-surface-border/50">
                 {activeStaff.map((s) => {
-                  const calc = computePayroll(s, attendance, year, month);
+                  const { calc, overtime } = payrollByStaff.get(s.id)!;
                   return (
                     <tr key={s.id} className="hover:bg-surface-hover/10 transition-colors text-content-primary group">
                       <td className="sticky left-0 z-10 bg-surface-card border-r border-surface-border px-5 py-3 group-hover:bg-surface-card transition-colors">
@@ -240,6 +266,11 @@ export function AttendanceTab({
                       })}
                       <td className="px-5 py-3 text-right font-black bg-brand-500/5 group-hover:bg-brand-500/10 transition-colors">
                         <p className="text-content-brand">{calc.daysWorked}j</p>
+                        {overtime.overtimeHours > 0 && (
+                          <p className="flex items-center justify-end gap-1 text-status-warning text-[9px] font-black mt-0.5">
+                            <Clock size={10} /> +{overtime.overtimeHours.toFixed(1)}h sup
+                          </p>
+                        )}
                       </td>
                     </tr>
                   );
@@ -248,6 +279,18 @@ export function AttendanceTab({
             </table>
           </div>
         </div>
+      )}
+
+      {showSchedules && (
+        <ScheduleSettingsModal
+          businessId={businessId}
+          staffList={activeStaff}
+          timeSettings={timeSettings}
+          onClose={() => setShowSchedules(false)}
+          onSaved={onRefresh}
+          notifError={notifError}
+          notifSuccess={notifSuccess}
+        />
       )}
     </div>
   );

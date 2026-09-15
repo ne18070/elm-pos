@@ -84,7 +84,11 @@ export default function BillingPage() {
   }
 
   useEffect(() => {
-    if (!business) return;
+    // `business` peut être temporairement null pendant le chargement initial du store
+    // auth (ex: juste après l'onboarding) — ne pas rester bloqué sur le spinner tant
+    // qu'il ne se résout pas : cet effet se relance dès que business?.id devient dispo.
+    if (!business) { setLoading(false); return; }
+    setLoading(true);
     Promise.all([
       getPlans(),
       getMySubscriptionRequests(business.id),

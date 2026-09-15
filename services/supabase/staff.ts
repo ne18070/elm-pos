@@ -12,21 +12,28 @@ export type PaymentMethod = 'cash' | 'transfer' | 'mobile_money' | 'check';
 export type PaymentStatus = 'pending' | 'paid';
 
 export interface Staff {
-  id:           string;
-  business_id:  string;
-  name:         string;
-  phone:        string | null;
-  email:        string | null;
-  position:     string | null;
-  department:   string | null;
-  salary_type:  SalaryType;
-  salary_rate:  number;
-  hire_date:    string | null;
-  status:       StaffStatus;
-  notes:        string | null;
-  user_id:      string | null;  // lié à un compte système
-  created_at:   string;
-  updated_at:   string;
+  id:                   string;
+  business_id:          string;
+  name:                 string;
+  phone:                string | null;
+  email:                string | null;
+  position:             string | null;
+  department:           string | null;
+  salary_type:          SalaryType;
+  salary_rate:          number;
+  hire_date:            string | null;
+  status:                StaffStatus;
+  notes:                string | null;
+  user_id:              string | null;  // lié à un compte système
+  manager_id:           string | null;  // organigramme : rattaché à un autre employé
+  contract_type:        string | null;  // ex: CDI, CDD, Stage, Freelance — libre, non contraint
+  contract_start_date:  string | null;
+  contract_end_date:    string | null;
+  probation_end_date:   string | null;
+  termination_date:     string | null;
+  termination_reason:   string | null;
+  created_at:           string;
+  updated_at:           string;
 }
 
 export interface StaffAttendance {
@@ -59,6 +66,9 @@ export interface StaffPayment {
   status:         PaymentStatus;
   notes:          string | null;
   created_at:     string;
+  gross_amount:                  number | null;
+  total_employee_contributions:  number | null;
+  total_employer_contributions:  number | null;
   staff?:         Pick<Staff, 'name' | 'position' | 'salary_type' | 'salary_rate'> | null;
 }
 
@@ -136,6 +146,37 @@ export async function getAttendanceForMonth(
   return (data ?? []) as unknown as StaffAttendance[];
 }
 
+/**
+ * Comme `getAttendanceForMonth`, mais élargi aux semaines ISO (lundi-dimanche)
+ * complètes chevauchant le mois, pour que `computeOvertime` voie le total
+ * hebdomadaire réel même sur les semaines à cheval sur deux mois. À combiner
+ * avec l'attribution par mois de `computeOvertime` (le mois du lundi de la
+ * semaine) pour ne compter chaque semaine que dans un seul mois.
+ */
+export async function getAttendanceForOvertimeWindow(
+  businessId: string,
+  year: number,
+  month: number,
+): Promise<StaffAttendance[]> {
+  const first = new Date(year, month - 1, 1);
+  const last  = new Date(year, month, 0);
+  const firstWeekday = (first.getDay() + 6) % 7; // lundi = 0
+  const lastWeekday  = (last.getDay() + 6) % 7;
+  const start = new Date(first); start.setDate(start.getDate() - firstWeekday);
+  const end   = new Date(last);  end.setDate(end.getDate() + (6 - lastWeekday));
+
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const { data, error } = await supabase
+    .from('staff_attendance')
+    .select('*')
+    .eq('business_id', businessId)
+    .gte('date', fmt(start))
+    .lte('date', fmt(end));
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as StaffAttendance[];
+}
+
 export async function upsertAttendance(record: {
   business_id:  string;
   staff_id:     string;
@@ -164,13 +205,15 @@ export async function deleteAttendance(id: string): Promise<void> {
 
 export async function getPayments(
   businessId: string,
-  options?: { year?: number; month?: number },
+  options?: { year?: number; month?: number; staff_id?: string },
 ): Promise<StaffPayment[]> {
   let query = supabase
     .from('staff_payments')
     .select('*, staff(name, position, salary_type, salary_rate)')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false });
+
+  if (options?.staff_id) query = query.eq('staff_id', options.staff_id);
 
   if (options?.year && options?.month) {
     const start = `${options.year}-${String(options.month).padStart(2, '0')}-01`;
@@ -199,6 +242,9 @@ export async function createPayment(input: {
   payment_date:   string | null;
   status:         PaymentStatus;
   notes:          string;
+  gross_amount?:                  number;
+  total_employee_contributions?:  number;
+  total_employer_contributions?:  number;
 }): Promise<StaffPayment> {
   const { data, error } = await supabase
     .from('staff_payments')
@@ -226,26 +272,92 @@ export async function deletePayment(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ─── Heures supplémentaires (client-side) ─────────────────────────────────────
+
+export interface OvertimeCalc {
+  regularHours:  number;
+  overtimeHours: number;
+}
+
+/**
+ * Heures sup calculées par semaine calendaire (lundi-dimanche) : pour chaque semaine
+ * couverte par le mois, tout ce qui dépasse `weekly_hours_threshold` est compté en
+ * heures sup. Seuil générique et configurable par business (pas de règle légale figée).
+ *
+ * `attribution` (année/mois) n'est nécessaire que si `attendance` provient de
+ * `getAttendanceForOvertimeWindow` (fenêtre élargie aux semaines complètes) : une
+ * semaine à cheval sur deux mois n'est alors comptée que dans le mois de son lundi,
+ * pour éviter un double comptage entre la vue de janvier et celle de février.
+ * Avec `getAttendanceForMonth` (fenêtre stricte, sans padding), omettre `attribution`
+ * conserve l'ancien comportement (semaines partielles en bord de mois).
+ */
+export function computeOvertime(
+  attendance: StaffAttendance[],
+  staffId: string,
+  weeklyHoursThreshold: number,
+  attribution?: { year: number; month: number }, // 1-12
+): OvertimeCalc {
+  const records = attendance.filter((a) => a.staff_id === staffId && a.hours_worked);
+
+  function isoWeekMonday(dateStr: string): Date {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = (d.getDay() + 6) % 7; // lundi = 0
+    d.setDate(d.getDate() - day);
+    return d;
+  }
+
+  const byWeek = new Map<string, { total: number; monday: Date }>();
+  for (const r of records) {
+    const monday = isoWeekMonday(r.date);
+    const key = monday.toISOString().split('T')[0];
+    const entry = byWeek.get(key) ?? { total: 0, monday };
+    entry.total += r.hours_worked ?? 0;
+    byWeek.set(key, entry);
+  }
+
+  let regularHours = 0;
+  let overtimeHours = 0;
+  for (const { total, monday } of byWeek.values()) {
+    if (attribution && (monday.getFullYear() !== attribution.year || monday.getMonth() + 1 !== attribution.month)) {
+      continue;
+    }
+    const overtime = Math.max(0, total - weeklyHoursThreshold);
+    overtimeHours += overtime;
+    regularHours += total - overtime;
+  }
+
+  return { regularHours, overtimeHours };
+}
+
 // ─── Payroll calculation (client-side) ───────────────────────────────────────
 
 export interface PayrollCalc {
-  daysWorked:  number;  // includes 0.5 for half_day
-  hoursWorked: number;
-  absentDays:  number;
-  baseAmount:  number;
+  daysWorked:    number;  // includes 0.5 for half_day
+  hoursWorked:   number;
+  absentDays:    number;
+  baseAmount:    number;
+  overtimeHours: number;
+  overtimePay:   number;
 }
 
 import { getLeaveRequests, type LeaveRequest } from './leave';
 
 // ... (types and other functions)
 
-/** Compute payroll for one staff member based on attendance records and leave requests */
+/**
+ * Compute payroll for one staff member based on attendance records and leave requests.
+ * `overtime`/`overtimeMultiplier` (from computeOvertime + staff_time_settings) only affect
+ * `baseAmount` for hourly staff — daily/monthly salary types have no per-hour rate to apply
+ * a premium to.
+ */
 export function computePayroll(
   staff: Staff,
   attendance: StaffAttendance[],
   year: number,
   month: number,
   leaveRequests: LeaveRequest[] = [], // Optional for backward compatibility
+  overtime?: OvertimeCalc,
+  overtimeMultiplier = 1,
 ): PayrollCalc {
   const records = attendance.filter((a) => a.staff_id === staff.id);
   const leaves  = leaveRequests.filter((l) => l.staff_id === staff.id && l.status === 'approved');
@@ -277,8 +389,16 @@ export function computePayroll(
   }
 
   let baseAmount = 0;
+  let overtimeHours = 0;
+  let overtimePay = 0;
   if (staff.salary_type === 'hourly') {
-    baseAmount = hoursWorked * staff.salary_rate;
+    if (overtime) {
+      overtimeHours = overtime.overtimeHours;
+      overtimePay   = overtime.overtimeHours * staff.salary_rate * overtimeMultiplier;
+      baseAmount    = overtime.regularHours * staff.salary_rate + overtimePay;
+    } else {
+      baseAmount = hoursWorked * staff.salary_rate;
+    }
   } else if (staff.salary_type === 'daily') {
     baseAmount = daysWorked * staff.salary_rate;
   } else {
@@ -292,7 +412,19 @@ export function computePayroll(
     }
   }
 
-  return { daysWorked, hoursWorked, absentDays, baseAmount };
+  return { daysWorked, hoursWorked, absentDays, baseAmount, overtimeHours, overtimePay };
+}
+
+/** Fiche employé liée au compte de l'utilisateur connecté (self-service) */
+export async function getMyStaffRecord(businessId: string, userId: string): Promise<Staff | null> {
+  const { data, error } = await supabase
+    .from('staff')
+    .select('*')
+    .eq('business_id', businessId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data ?? null) as unknown as Staff | null;
 }
 
 // ─── Liaison compte système ───────────────────────────────────────────────────

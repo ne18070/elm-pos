@@ -31,7 +31,7 @@ export interface Organization {
 
 // ─── Business ─────────────────────────────────────────────────────────────────
 
-export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique' | 'education';
+export type BusinessType = 'restaurant' | 'retail' | 'service' | 'hotel' | 'juridique' | 'education' | 'rh';
 
 export interface Business {
   id: string;

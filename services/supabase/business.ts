@@ -115,6 +115,7 @@ export async function createOrganization(data: {
   else if (data.type === 'restaurant') features = ['restaurant', 'retail', 'stock', 'expenses'];
   else if (data.type === 'hotel')  features = ['hotel', 'retail', 'expenses'];
   else if (data.type === 'service') features = ['legal', 'expenses'];
+  else if (data.type === 'rh')     features = ['staff'];
 
   const { data: result, error } = await supabase
     .from('businesses')

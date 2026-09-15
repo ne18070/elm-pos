@@ -782,7 +782,10 @@ export function generateStaffPayslip(
   staff: Staff,
   payment: StaffPayment,
   business: Business,
+  lines: { name: string; payer: 'employee' | 'employer'; computed_amount: number }[] = [],
 ): string {
+  const employeeLines = lines.filter((l) => l.payer === 'employee');
+  const employerLines = lines.filter((l) => l.payer === 'employer');
   const cur = business.currency ?? 'XOF';
   const payslipNum = payment.id.replace(/-/g, '').toUpperCase().slice(0, 8);
   const printDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -878,6 +881,13 @@ export function generateStaffPayslip(
       <td class="r">—</td>
       <td class="r bold">+ ${fmt(payment.bonuses, cur)}</td>
     </tr>` : ''}
+    ${employeeLines.map((l) => `
+    <tr>
+      <td>${l.name} (cotisation salariale)</td>
+      <td class="r">—</td>
+      <td class="r">—</td>
+      <td class="r bold" style="color:#dc2626">- ${fmt(l.computed_amount, cur)}</td>
+    </tr>`).join('')}
     ${payment.deductions > 0 ? `
     <tr>
       <td>Retenues et avances</td>
@@ -894,8 +904,13 @@ export function generateStaffPayslip(
       <td>Total Brut</td>
       <td class="r">${fmt(payment.base_amount + payment.bonuses, cur)}</td>
     </tr>
+    ${employeeLines.length > 0 ? `
     <tr>
-      <td>Total Retenues</td>
+      <td>Cotisations salariales</td>
+      <td class="r" style="color:#dc2626">-${fmt(payment.total_employee_contributions ?? employeeLines.reduce((s, l) => s + l.computed_amount, 0), cur)}</td>
+    </tr>` : ''}
+    <tr>
+      <td>Retenues</td>
       <td class="r" style="color:#dc2626">-${fmt(payment.deductions, cur)}</td>
     </tr>
     <tr class="total-row">
@@ -904,6 +919,12 @@ export function generateStaffPayslip(
     </tr>
   </table>
 </div>
+
+${employerLines.length > 0 ? `
+<div style="margin-top:12px; font-size:10px; color:#6b7280;">
+  Cotisations patronales (à la charge de l'employeur, hors net) : ${employerLines.map((l) => `${l.name} ${fmt(l.computed_amount, cur)}`).join(' · ')}
+  — Coût total employeur : <strong>${fmt(payment.base_amount + payment.bonuses + (payment.total_employer_contributions ?? employerLines.reduce((s, l) => s + l.computed_amount, 0)), cur)}</strong>
+</div>` : ''}
 
 <div style="margin-top:20px; font-style:italic; font-size:10px;">
   Arrêté le présent bulletin de paie à la somme de :<br>
