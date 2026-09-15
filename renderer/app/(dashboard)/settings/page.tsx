@@ -14,6 +14,7 @@ import { hasRole } from '@/lib/permissions';
 import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ALL_PUBLIC_MODULES } from './settings-utils';
 
 // Modular Sections
 import { BusinessSettingsSection } from './BusinessSettingsSection';
@@ -101,6 +102,15 @@ export default function SettingsPage() {
   const businessTypes: string[] = business.types?.length ? business.types : (business.type ? [business.type] : []);
   const selectedTypes = allTypes.filter((t) => businessTypes.includes(t.id));
 
+  // N'afficher que les sections pertinentes pour les activités réellement actives
+  // (business.features) — évite par ex. "Tiroir-caisse" ou "Programme de fidélité"
+  // sur une organisation RH-only qui n'a aucune activité de vente.
+  const hasSalesFeature = hasFeature(business, 'pos') || hasFeature(business, 'retail');
+  const hasStockFeature = hasFeature(business, 'stock') || hasFeature(business, 'retail');
+  const hasAnyPublicModule = ALL_PUBLIC_MODULES.some(({ features, bizTypes }) =>
+    features.some((f) => hasFeature(business, f)) || bizTypes?.some((t) => hasFeature(business, t))
+  );
+
   return (
     <div className="h-full flex flex-col bg-surface overflow-y-auto">
       {/* Header */}
@@ -171,11 +181,13 @@ export default function SettingsPage() {
             </SettingsSection>
           )}
 
-          <SettingsSection id="public" title="Liens publics & QR Codes" icon={Globe} isOpen={openSections.public} onToggle={toggle}>
-            <PublicLinksQrSection />
-          </SettingsSection>
-          
-          {isManager && (
+          {hasAnyPublicModule && (
+            <SettingsSection id="public" title="Liens publics & QR Codes" icon={Globe} isOpen={openSections.public} onToggle={toggle}>
+              <PublicLinksQrSection />
+            </SettingsSection>
+          )}
+
+          {isManager && hasStockFeature && (
             <SettingsSection id="stock" title="Unités de stock" icon={Package} isOpen={openSections.stock} onToggle={toggle} badge="Manager+">
               <StockUnitsSection />
             </SettingsSection>
@@ -187,32 +199,36 @@ export default function SettingsPage() {
             </SettingsSection>
           )}
 
-          <SettingsSection id="loyalty" title="Programme de fidélité" icon={Gift} isOpen={openSections.loyalty} onToggle={toggle}>
-            <LoyaltySettingsSection />
-          </SettingsSection>
+          {hasSalesFeature && (
+            <SettingsSection id="loyalty" title="Programme de fidélité" icon={Gift} isOpen={openSections.loyalty} onToggle={toggle}>
+              <LoyaltySettingsSection />
+            </SettingsSection>
+          )}
         </div>
 
         {/* --- Category: Hardware --- */}
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center gap-3 px-1 mb-2">
-            <Printer className="w-4 h-4 text-content-muted" />
-            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-content-muted">Matériel & Impression</h3>
-          </div>
+        {hasSalesFeature && (
+          <div className="space-y-4 pt-4">
+            <div className="flex items-center gap-3 px-1 mb-2">
+              <Printer className="w-4 h-4 text-content-muted" />
+              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-content-muted">Matériel & Impression</h3>
+            </div>
 
-          {isManager && (
-            <SettingsSection id="print-temp" title="Modèles de facture & reçus" icon={LucideIcons.Palette} isOpen={openSections['print-temp']} onToggle={toggle} badge="Manager+">
-              <PrintTemplatesSection />
+            {isManager && (
+              <SettingsSection id="print-temp" title="Modèles de facture & reçus" icon={LucideIcons.Palette} isOpen={openSections['print-temp']} onToggle={toggle} badge="Manager+">
+                <PrintTemplatesSection />
+              </SettingsSection>
+            )}
+
+            <SettingsSection id="printer" title="Imprimante thermique" icon={Printer} isOpen={openSections.printer} onToggle={toggle}>
+              <PrinterSection />
             </SettingsSection>
-          )}
 
-          <SettingsSection id="printer" title="Imprimante thermique" icon={Printer} isOpen={openSections.printer} onToggle={toggle}>
-            <PrinterSection />
-          </SettingsSection>
-
-          <SettingsSection id="drawer" title="Tiroir-caisse" icon={Archive} isOpen={openSections.drawer} onToggle={toggle}>
-            <CashDrawerSection />
-          </SettingsSection>
-        </div>
+            <SettingsSection id="drawer" title="Tiroir-caisse" icon={Archive} isOpen={openSections.drawer} onToggle={toggle}>
+              <CashDrawerSection />
+            </SettingsSection>
+          </div>
+        )}
 
         {/* --- Category: Système --- */}
         <div className="space-y-4 pt-4">

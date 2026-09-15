@@ -35,7 +35,7 @@ const PERMISSIONS_MAP = {
   view_comptabilite:      { label: 'Accès états comptables',       group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'comptabilite' },
   view_activity:          { label: 'Accès journal audit',          group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] }, 
   view_recovery:          { label: 'Accès récupération données',   group: 'admin',      defaultRoles: ['admin', 'owner'] },
-  view_import:            { label: 'Accès import base de données',  group: 'admin',      defaultRoles: ['admin', 'owner'] },
+  // view_import:            { label: 'Accès import base de données',  group: 'admin',      defaultRoles: ['admin', 'owner'] },
   view_dossiers:          { label: 'Accès dossiers juridiques',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'dossiers' },
   view_honoraires:        { label: 'Accès facturation honoraires', group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'honoraires' },
   view_contrats:          { label: 'Accès contrats location',      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'contrats' },
@@ -58,7 +58,7 @@ const PERMISSIONS_MAP = {
   view_evenements:        { label: 'Accès gestion événements',     group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'evenements' },
   manage_evenements:      { label: 'Gérer événements & invités',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'evenements' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
-  view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
+  // view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
 
   // -- Actions Générales
   manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },

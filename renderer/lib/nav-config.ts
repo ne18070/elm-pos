@@ -113,7 +113,7 @@ const S_ADMIN: NavSection = {
     { href: '/staff',     icon: UsersRound,   label: 'Équipe & Paie',          permission: 'view_staff'     },
     { href: '/mon-espace-rh', icon: UserCircle, label: 'Mon Espace RH',        permission: 'view_my_hr'     },
     { href: '/recovery',  icon: History,      label: 'Récupération Données',   permission: 'view_recovery'  },
-    { href: '/import',    icon: DatabaseZap,  label: 'Import base de données', permission: 'view_import'    },
+    // { href: '/import',    icon: DatabaseZap,  label: 'Import base de données', permission: 'view_import'    },
     { href: '/activity',  icon: ScrollText,   label: 'Journal Audit',          permission: 'view_activity'  },
     { href: '/settings',  icon: Settings,     label: 'Paramètres',             permission: 'view_settings'  },
   ],
