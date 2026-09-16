@@ -6,6 +6,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { updateBusiness, uploadBusinessLogo, deleteBusinessLogo } from '@services/supabase/business';
 import { normalizeSlug, isValidUrl } from './settings-utils';
 import { toUserError } from '@/lib/user-error';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 
 const DEFAULT_ECHEANCE_RULES: EcheanceRule[] = [
   { max:    500_000, label: 'Paiement comptant'    },
@@ -20,6 +21,7 @@ const DEFAULT_ECHEANCE_RULES: EcheanceRule[] = [
 export function BusinessSettingsSection() {
   const { business, setBusiness } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const { askConfirm, ConfirmDialog } = useConfirm();
 
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -165,15 +167,17 @@ export function BusinessSettingsSection() {
     }
   }
 
-  async function handleDeleteLogo() {
-    if (!business || !window.confirm('Supprimer le logo ?')) return;
-    try {
-      await deleteBusinessLogo(business.id);
-      setBusiness({ ...business, logo_url: undefined });
-      success('Logo supprimé');
-    } catch (err) {
-      notifError(toUserError(err));
-    }
+  function handleDeleteLogo() {
+    if (!business) return;
+    askConfirm('Supprimer le logo ?', async () => {
+      try {
+        await deleteBusinessLogo(business.id);
+        setBusiness({ ...business, logo_url: undefined });
+        success('Logo supprimé');
+      } catch (err) {
+        notifError(toUserError(err));
+      }
+    });
   }
 
   return (
@@ -230,7 +234,11 @@ export function BusinessSettingsSection() {
             onChange={(e) => {
               const newCur = e.target.value;
               if (business?.currency && newCur !== business.currency) {
-                if (!window.confirm('Changer la devise peut affecter la cohérence de vos anciens rapports de vente. Confirmer ?')) return;
+                askConfirm(
+                  'Changer la devise peut affecter la cohérence de vos anciens rapports de vente. Confirmer ?',
+                  () => handleChange({ currency: newCur })
+                );
+                return;
               }
               handleChange({ currency: newCur });
             }}
@@ -243,6 +251,7 @@ export function BusinessSettingsSection() {
             <option value="MAD">MAD - Dirham marocain</option>
             <option value="DZD">DZD - Dinar algérien</option>
             <option value="TND">TND - Dinar tunisien</option>
+            <option value="MRU">MRU - Ouguiya mauritanien</option>
           </select>
         </div>
       </div>
@@ -477,6 +486,7 @@ export function BusinessSettingsSection() {
           </span>
         )}
       </div>
+      <ConfirmDialog />
     </div>
   );
 }

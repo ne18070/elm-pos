@@ -178,7 +178,7 @@ export default function StaffPage() {
             </div>
             <div>
               <h1 className="font-black text-content-primary text-2xl tracking-tight uppercase italic">Gestion du Personnel</h1>
-              <p className="text-xs text-content-secondary font-medium mt-0.5">Pointage automatique, Paie et Congés</p>
+              <p className="text-xs text-content-secondary font-medium mt-0.5">Pointage, Paie et Congés</p>
             </div>
           </div>
           

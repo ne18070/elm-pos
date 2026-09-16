@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, LogIn, LogOut, Loader2, ScanLine, XCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ type Feedback =
 const FEEDBACK_DISPLAY_MS = 4000;
 
 export default function StaffPointagePage() {
+  const router = useRouter();
   const { business } = useAuthStore();
   const [feedback, setFeedback] = useState<Feedback>({ kind: 'idle' });
   const [processing, setProcessing] = useState(false);
@@ -52,12 +53,12 @@ export default function StaffPointagePage() {
       <BarcodeListener onScan={handleScan} />
 
       <div className="px-6 py-4 border-b border-surface-border bg-surface-card flex items-center gap-3 shrink-0">
-        <Link
-          href="/staff"
+        <button
+          onClick={() => router.back()}
           className="p-2 rounded-xl hover:bg-surface-hover text-content-secondary transition-colors"
         >
           <ArrowLeft size={20} />
-        </Link>
+        </button>
         <div>
           <h1 className="text-lg font-black text-content-primary uppercase tracking-tight">Pointage par badge</h1>
           <p className="text-xs text-content-secondary">Scannez votre badge pour enregistrer votre arrivée ou votre départ</p>

@@ -177,11 +177,18 @@ export async function updateBusiness(
   businessId: string,
   patch: Partial<Business>
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('businesses')
     .update(patch as unknown as TablesInsert<'businesses'>)
-    .eq('id', businessId);
+    .eq('id', businessId)
+    .select('id');
   if (error) throw new Error(error.message);
+  // RLS peut laisser passer un UPDATE qui ne matche 0 ligne sans lever
+  // d'erreur (PostgREST renvoie alors un tableau vide) — sans ce contrôle,
+  // l'appelant croit la sauvegarde réussie alors que rien n'a été persisté.
+  if (!data || data.length === 0) {
+    throw new Error('Aucune ligne mise à jour — vérifiez vos droits sur cet établissement');
+  }
 }
 
 /** Basculer vers un autre établissement (met à jour le contexte RLS) */

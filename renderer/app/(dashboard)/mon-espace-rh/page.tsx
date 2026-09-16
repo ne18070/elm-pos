@@ -5,6 +5,7 @@ import {
   UserCircle, Loader2, Wallet, Palmtree, FileText, Download, Plus,
   Clock, CheckCircle2, XCircle, Ban, Lock, Contact, ListChecks, Briefcase, CalendarDays,
   Target, ChevronLeft, ChevronRight, GraduationCap, Plane, Lightbulb, MapPin, Banknote, PiggyBank,
+  ScanLine, LogIn,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollableTabBar } from '@/components/shared/ScrollableTabBar';
@@ -13,8 +14,10 @@ import { useNotificationStore } from '@/store/notifications';
 import { generateStaffPayslip, printHtml } from '@/lib/invoice-templates';
 import {
   getMyStaffRecord, getStaffById, getStaff, getPayments, getMyAttendance,
+  CLOCK_MODE_LABELS,
   type Staff, type StaffPayment, type StaffAttendance,
 } from '@services/supabase/staff';
+import Link from 'next/link';
 import { getPaymentLines } from '@services/supabase/payroll-settings';
 import {
   getLeaveTypes, getLeaveRequests, createLeaveRequest,
@@ -503,6 +506,25 @@ function DossierPanel({
         </div>
       </div>
 
+      <div className="bg-surface-card border border-surface-border rounded-2xl p-4 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-content-brand shrink-0">
+          {myStaff.clock_mode === 'badge' ? <ScanLine size={18} /> : <LogIn size={18} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-content-primary">{CLOCK_MODE_LABELS[myStaff.clock_mode]}</p>
+          <p className="text-[11px] text-content-secondary mt-0.5">
+            {myStaff.clock_mode === 'auto' && "Votre présence est enregistrée automatiquement à la connexion et à la déconnexion de l'application — aucune action requise."}
+            {myStaff.clock_mode === 'badge' && "Scannez votre badge sur la borne de pointage pour enregistrer votre arrivée et votre départ."}
+            {myStaff.clock_mode === 'manual' && "Votre présence est enregistrée manuellement par un responsable — aucune action requise de votre part."}
+          </p>
+        </div>
+        {myStaff.clock_mode === 'badge' && (
+          <Link href="/staff/pointage" className="btn-primary px-4 h-9 flex items-center text-xs font-bold shrink-0 whitespace-nowrap">
+            Pointer
+          </Link>
+        )}
+      </div>
+
       {schedules.length > 0 && (
         <div className="bg-surface-card border border-surface-border rounded-2xl p-4">
           <p className="text-[10px] font-black text-content-muted uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -599,12 +621,12 @@ function TachesPanel({
         <cfg.icon className={cn('w-4 h-4 shrink-0', cfg.color)} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-content-primary truncate">{task.title}</p>
-          <p className="text-[11px] text-content-muted">
+          <p className="text-[11px] text-content-muted truncate">
             {task.assignee?.name ?? '—'} · {TASK_PRIORITY_LABELS[task.priority]}
             {task.due_date && ` · ${new Date(task.due_date).toLocaleDateString('fr-FR')}`}
           </p>
         </div>
-        <select value={task.status} onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)} className="input h-8 text-[11px]">
+        <select value={task.status} onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)} className="input h-8 text-[11px] shrink-0 w-auto min-w-[104px]">
           {(Object.keys(TASK_STATUS_LABELS) as TaskStatus[]).map((k) => <option key={k} value={k}>{TASK_STATUS_LABELS[k]}</option>)}
         </select>
       </div>

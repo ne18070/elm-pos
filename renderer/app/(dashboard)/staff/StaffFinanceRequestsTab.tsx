@@ -75,17 +75,17 @@ export function StaffFinanceRequestsTab({
               <p className="font-bold text-content-primary truncate">
                 {r.staff?.name ?? '—'} · {r.amount.toLocaleString('fr-FR')} {currency}
               </p>
-              <p className="text-[11px] text-content-muted mt-0.5">
+              <p className="text-[11px] text-content-muted mt-0.5 truncate">
                 {FINANCIAL_REQUEST_KIND_LABELS[r.kind]}
                 {r.repayment_months && ` · Remboursement sur ${r.repayment_months} mois`}
               </p>
-              {r.reason && <p className="text-[11px] text-content-secondary mt-1 italic">{r.reason}</p>}
+              {r.reason && <p className="text-[11px] text-content-secondary mt-1 italic truncate">{r.reason}</p>}
             </div>
             <select value={r.status} onChange={(e) => handleStatusChange(r, e.target.value as FinancialRequestStatus)}
-              className={cn('input h-9 text-xs font-bold', STATUS_COLOR[r.status])}>
+              className={cn('input h-9 text-xs font-bold shrink-0 w-auto min-w-[110px]', STATUS_COLOR[r.status])}>
               {(Object.keys(FINANCIAL_REQUEST_STATUS_LABELS) as FinancialRequestStatus[]).map((k) => <option key={k} value={k}>{FINANCIAL_REQUEST_STATUS_LABELS[k]}</option>)}
             </select>
-            <button onClick={() => handleDelete(r)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors">
+            <button onClick={() => handleDelete(r)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors shrink-0">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>

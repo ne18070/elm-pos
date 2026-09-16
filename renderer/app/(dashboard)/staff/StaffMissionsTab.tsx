@@ -80,16 +80,19 @@ export function StaffMissionsTab({
               <Plane className="w-5 h-5 text-content-brand shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-content-primary truncate">{m.objet}</p>
-                <p className="text-[11px] text-content-muted mt-0.5 flex items-center gap-1">
-                  <MapPin size={11} /> {m.destination} · {m.requester?.name ?? '—'} ·
-                  {' '}{new Date(m.start_date).toLocaleDateString('fr-FR')} – {new Date(m.end_date).toLocaleDateString('fr-FR')}
+                <p className="text-[11px] text-content-muted mt-0.5 flex items-center gap-1 min-w-0">
+                  <MapPin size={11} className="shrink-0" />
+                  <span className="truncate">
+                    {m.destination} · {m.requester?.name ?? '—'} ·{' '}
+                    {new Date(m.start_date).toLocaleDateString('fr-FR')} – {new Date(m.end_date).toLocaleDateString('fr-FR')}
+                  </span>
                 </p>
               </div>
               <select value={m.status} onChange={(e) => handleStatusChange(m, e.target.value as MissionStatus)}
-                className={cn('input h-9 text-xs font-bold', STATUS_COLOR[m.status])}>
+                className={cn('input h-9 text-xs font-bold shrink-0 w-auto min-w-[110px]', STATUS_COLOR[m.status])}>
                 {(Object.keys(MISSION_STATUS_LABELS) as MissionStatus[]).map((k) => <option key={k} value={k}>{MISSION_STATUS_LABELS[k]}</option>)}
               </select>
-              <button onClick={() => handleDelete(m)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors">
+              <button onClick={() => handleDelete(m)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors shrink-0">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>

@@ -58,17 +58,17 @@ export function StaffTrainingTab({
             : <GraduationCap className="w-5 h-5 text-content-brand shrink-0" />}
           <div className="flex-1 min-w-0">
             <p className="font-bold text-content-primary truncate">{r.title}</p>
-            <p className="text-[11px] text-content-muted mt-0.5">
+            <p className="text-[11px] text-content-muted mt-0.5 truncate">
               {r.staff?.name ?? '—'} · {r.is_need_only ? 'Besoin exprimé' : 'Demande'}
               {r.desired_period_start && ` · Souhaité du ${new Date(r.desired_period_start).toLocaleDateString('fr-FR')}${r.desired_period_end ? ` au ${new Date(r.desired_period_end).toLocaleDateString('fr-FR')}` : ''}`}
             </p>
-            {r.justification && <p className="text-[11px] text-content-secondary mt-1 italic">{r.justification}</p>}
+            {r.justification && <p className="text-[11px] text-content-secondary mt-1 italic truncate">{r.justification}</p>}
           </div>
           <select value={r.status} onChange={(e) => handleStatusChange(r, e.target.value as TrainingStatus)}
-            className={cn('input h-9 text-xs font-bold', STATUS_COLOR[r.status])}>
+            className={cn('input h-9 text-xs font-bold shrink-0 w-auto min-w-[110px]', STATUS_COLOR[r.status])}>
             {(Object.keys(TRAINING_STATUS_LABELS) as TrainingStatus[]).map((k) => <option key={k} value={k}>{TRAINING_STATUS_LABELS[k]}</option>)}
           </select>
-          <button onClick={() => handleDelete(r)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors">
+          <button onClick={() => handleDelete(r)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors shrink-0">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>

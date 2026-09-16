@@ -40,6 +40,13 @@ export function AttendanceTab({
   const activeStaff = useMemo(() => staffList.filter(s => s.status === 'active'), [staffList]);
   const daysInMonth = new Date(year, month, 0).getDate();
 
+  const clockModeCounts = useMemo(() => {
+    const auto   = activeStaff.filter((s) => s.clock_mode === 'auto').length;
+    const badge  = activeStaff.filter((s) => s.clock_mode === 'badge').length;
+    const manual = activeStaff.filter((s) => s.clock_mode === 'manual').length;
+    return { auto, badge, manual, total: activeStaff.length };
+  }, [activeStaff]);
+
   // PERFORMANCE: un seul recalcul par changement de données/seuil, pas par render/clic.
   const payrollByStaff = useMemo(() => {
     const map = new Map<string, { calc: ReturnType<typeof computePayroll>; overtime: OvertimeCalc }>();
@@ -121,17 +128,33 @@ export function AttendanceTab({
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-6">
-      {/* Pointage Automatique Banner */}
+      {/* Pointage Banner — reflète la méthode réellement configurée par employé (clock_mode) */}
       <div className="bg-brand-500/5 border border-brand-500/20 rounded-2xl p-4 flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
           <Zap className="w-5 h-5 text-content-brand" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-sm font-bold text-content-brand">Pointage Automatique Activé</h3>
-          <p className="text-xs text-content-secondary leading-relaxed">
-            Les présences sont gérées par le système : l'arrivée est enregistrée à la <strong>connexion</strong>, 
-            l'activité est suivie en temps réel, et le départ est validé à la <strong>déconnexion</strong>.
-          </p>
+          {clockModeCounts.total === 0 ? null : clockModeCounts.auto === clockModeCounts.total ? (
+            <>
+              <h3 className="text-sm font-bold text-content-brand">Pointage Automatique Activé</h3>
+              <p className="text-xs text-content-secondary leading-relaxed">
+                Les présences sont gérées par le système : l'arrivée est enregistrée à la <strong>connexion</strong>,
+                l'activité est suivie en temps réel, et le départ est validé à la <strong>déconnexion</strong>.
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-bold text-content-brand">Méthodes de pointage mixtes</h3>
+              <p className="text-xs text-content-secondary leading-relaxed">
+                {clockModeCounts.auto > 0 && <>{clockModeCounts.auto} en <strong>automatique</strong> (connexion/déconnexion)</>}
+                {clockModeCounts.auto > 0 && (clockModeCounts.badge > 0 || clockModeCounts.manual > 0) && ' · '}
+                {clockModeCounts.badge > 0 && <>{clockModeCounts.badge} par <strong>badge</strong></>}
+                {clockModeCounts.badge > 0 && clockModeCounts.manual > 0 && ' · '}
+                {clockModeCounts.manual > 0 && <>{clockModeCounts.manual} en <strong>manuel</strong></>}
+                {' '}— configurez la méthode de chaque employé dans sa fiche.
+              </p>
+            </>
+          )}
         </div>
       </div>
 

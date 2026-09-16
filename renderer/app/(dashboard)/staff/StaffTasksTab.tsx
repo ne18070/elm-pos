@@ -120,16 +120,16 @@ export function StaffTasksTab({
               <cfg.icon className={cn('w-5 h-5 shrink-0', cfg.color)} />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-content-primary truncate">{t.title}</p>
-                <p className="text-[11px] text-content-muted mt-0.5">
+                <p className="text-[11px] text-content-muted mt-0.5 truncate">
                   {t.assignee?.name ?? '—'} · {TASK_PRIORITY_LABELS[t.priority]}
                   {t.due_date && ` · ${new Date(t.due_date).toLocaleDateString('fr-FR')}`}
                 </p>
               </div>
               <select value={t.status} onChange={(e) => handleStatusChange(t, e.target.value as TaskStatus)}
-                className="input h-9 text-xs">
+                className="input h-9 text-xs shrink-0 w-auto min-w-[110px]">
                 {(Object.keys(TASK_STATUS_LABELS) as TaskStatus[]).map((k) => <option key={k} value={k}>{TASK_STATUS_LABELS[k]}</option>)}
               </select>
-              <button onClick={() => handleDelete(t)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors">
+              <button onClick={() => handleDelete(t)} className="p-2 text-content-muted hover:text-status-error rounded-lg transition-colors shrink-0">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
