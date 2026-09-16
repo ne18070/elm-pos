@@ -25,5 +25,5 @@ export function initials(name: string) {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export type StaffTab = 'employes' | 'presences' | 'paie' | 'conges' | 'taches' | 'objectifs' | 'formations' | 'missions';
+export type StaffTab = 'employes' | 'presences' | 'paie' | 'conges' | 'taches' | 'objectifs' | 'formations' | 'missions' | 'finances';
 export type StaffView = 'list' | 'offices';

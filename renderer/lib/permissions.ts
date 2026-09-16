@@ -151,6 +151,7 @@ const PERMISSIONS_MAP = {
   manage_staff_objectives: { label: 'Gérer les objectifs',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_staff_trainings: { label: 'Gérer les demandes de formation', group: 'gestion',  defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_staff_missions:  { label: 'Gérer les ordres de mission',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_finances:  { label: 'Gérer les prêts et avances',    group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
   manage_team_tracking:    { label: 'Suivre équipe sur carte',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
 
   // Menu

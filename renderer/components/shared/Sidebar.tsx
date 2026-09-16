@@ -337,7 +337,7 @@ function SidebarContent({
 
           <SupportPanel isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
 
-          <button
+          {/* <button
             onClick={handleOpenDisplay}
             title="Ouvrir l'écran client"
             className={cn(
@@ -354,7 +354,7 @@ function SidebarContent({
             )}>
               <span className="text-xs font-medium">Écran client</span>
             </div>
-          </button>
+          </button> */}
         </div>
 
         {/* User Profile Card */}

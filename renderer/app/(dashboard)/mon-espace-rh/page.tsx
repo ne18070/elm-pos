@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   UserCircle, Loader2, Wallet, Palmtree, FileText, Download, Plus,
   Clock, CheckCircle2, XCircle, Ban, Lock, Contact, ListChecks, Briefcase, CalendarDays,
-  Target, ChevronLeft, ChevronRight, GraduationCap, Plane, Lightbulb, MapPin,
+  Target, ChevronLeft, ChevronRight, GraduationCap, Plane, Lightbulb, MapPin, Banknote, PiggyBank,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollableTabBar } from '@/components/shared/ScrollableTabBar';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { generateStaffPayslip, printHtml } from '@/lib/invoice-templates';
@@ -45,8 +46,13 @@ import {
   MISSION_STATUS_LABELS,
   type StaffMission, type MissionStatus,
 } from '@services/supabase/staff-missions';
+import {
+  getFinancialRequests, createFinancialRequest,
+  FINANCIAL_REQUEST_STATUS_LABELS,
+  type StaffFinancialRequest, type FinancialRequestStatus,
+} from '@services/supabase/staff-finance';
 
-type Tab = 'dossier' | 'bulletins' | 'conges' | 'taches' | 'objectifs' | 'formation' | 'mission' | 'documents';
+type Tab = 'dossier' | 'bulletins' | 'conges' | 'taches' | 'objectifs' | 'formation' | 'mission' | 'prets' | 'avance' | 'documents';
 
 const STATUS_CFG: Record<LeaveStatus, { label: string; color: string; icon: typeof Clock }> = {
   pending:   { label: 'En attente', color: 'text-status-warning', icon: Clock },
@@ -77,6 +83,7 @@ export default function MonEspaceRhPage() {
   const [myAttendance, setMyAttendance] = useState<StaffAttendance[]>([]);
   const [trainingRequests, setTrainingRequests] = useState<StaffTrainingRequest[]>([]);
   const [myMissions, setMyMissions] = useState<StaffMission[]>([]);
+  const [financialRequests, setFinancialRequests] = useState<StaffFinancialRequest[]>([]);
 
   const now = new Date();
   const [attMonth, setAttMonth] = useState(now.getMonth() + 1);
@@ -89,7 +96,7 @@ export default function MonEspaceRhPage() {
       const staff = await getMyStaffRecord(business.id, user.id);
       setMyStaff(staff);
       if (staff) {
-        const [p, lt, lr, docs, mgr, checklist, sched, assigned, created, roster, objs, training, missions] = await Promise.all([
+        const [p, lt, lr, docs, mgr, checklist, sched, assigned, created, roster, objs, training, missions, finance] = await Promise.all([
           getPayments(business.id, { staff_id: staff.id }),
           getLeaveTypes(business.id),
           getLeaveRequests(business.id, { staff_id: staff.id }),
@@ -103,6 +110,7 @@ export default function MonEspaceRhPage() {
           getObjectives(business.id, staff.id),
           getTrainingRequests(business.id, staff.id),
           getMyMissions(business.id, staff.id),
+          getFinancialRequests(business.id, { staffId: staff.id }),
         ]);
         setPayments(p);
         setLeaveTypes(lt);
@@ -111,6 +119,7 @@ export default function MonEspaceRhPage() {
         setManager(mgr);
         setTrainingRequests(training);
         setMyMissions(missions);
+        setFinancialRequests(finance);
         setChecklistItems(checklist);
         setSchedules(sched);
         setAssignedTasks(assigned);
@@ -175,7 +184,7 @@ export default function MonEspaceRhPage() {
         </div>
       </div>
 
-      <div className="flex px-4 bg-surface-card border-b border-surface-border shrink-0 overflow-x-auto no-scrollbar">
+      <ScrollableTabBar className="bg-surface-card border-b border-surface-border shrink-0">
         {[
           { id: 'dossier',   label: 'Votre dossier',  icon: Contact },
           { id: 'bulletins', label: 'Mes bulletins', icon: Wallet },
@@ -184,6 +193,8 @@ export default function MonEspaceRhPage() {
           { id: 'objectifs', label: 'Mes objectifs',  icon: Target },
           { id: 'formation', label: 'Formation',      icon: GraduationCap },
           { id: 'mission',   label: 'Mission',         icon: Plane },
+          { id: 'prets',     label: 'Prêts',           icon: Banknote },
+          { id: 'avance',    label: 'Avance sur salaire', icon: PiggyBank },
           { id: 'documents', label: 'Mes documents',  icon: FileText },
         ].map((t) => (
           <button key={t.id} onClick={() => setTab(t.id as Tab)}
@@ -196,7 +207,7 @@ export default function MonEspaceRhPage() {
             {tab === t.id && <div className="absolute bottom-0 left-4 right-4 h-1 bg-brand-500 rounded-t-full shadow-glow" />}
           </button>
         ))}
-      </div>
+      </ScrollableTabBar>
 
       <div className="flex-1 overflow-y-auto bg-surface/20 scrollbar-thin p-4 max-w-4xl w-full mx-auto space-y-4">
         {tab === 'dossier' && (
@@ -236,6 +247,20 @@ export default function MonEspaceRhPage() {
         {tab === 'mission' && (
           <MissionPanel
             myStaff={myStaff} businessId={business!.id} missions={myMissions}
+            onRefresh={load} notifError={notifError} notifSuccess={notifSuccess}
+          />
+        )}
+        {tab === 'prets' && (
+          <FinancialRequestPanel
+            kind="pret" myStaff={myStaff} businessId={business!.id}
+            requests={financialRequests.filter((r) => r.kind === 'pret')} currency={business?.currency ?? 'XOF'}
+            onRefresh={load} notifError={notifError} notifSuccess={notifSuccess}
+          />
+        )}
+        {tab === 'avance' && (
+          <FinancialRequestPanel
+            kind="avance_salaire" myStaff={myStaff} businessId={business!.id}
+            requests={financialRequests.filter((r) => r.kind === 'avance_salaire')} currency={business?.currency ?? 'XOF'}
             onRefresh={load} notifError={notifError} notifSuccess={notifSuccess}
           />
         )}
@@ -968,6 +993,89 @@ function MissionPanel({
         <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Missions dont je suis membre</p>
         {memberOnly.length === 0 && <p className="text-center text-content-muted text-sm py-4">Aucune mission en tant que membre.</p>}
         {memberOnly.map((m) => <MissionRow key={m.id} m={m} />)}
+      </div>
+    </div>
+  );
+}
+
+// ─── Prêts / Avance sur salaire ─────────────────────────────────────────────────
+
+const FINANCIAL_REQUEST_STATUS_COLOR: Record<FinancialRequestStatus, string> = {
+  en_attente: 'text-status-warning',
+  approuvee:  'text-status-success',
+  rejetee:    'text-status-error',
+  decaissee:  'text-blue-400',
+  remboursee: 'text-content-muted',
+};
+
+function FinancialRequestPanel({
+  kind, myStaff, businessId, requests, currency, onRefresh, notifError, notifSuccess,
+}: {
+  kind: 'pret' | 'avance_salaire'; myStaff: Staff; businessId: string; requests: StaffFinancialRequest[]; currency: string;
+  onRefresh: () => void; notifError: (m: string) => void; notifSuccess: (m: string) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ amount: '', reason: '', repayment_months: '' });
+
+  async function handleSubmit() {
+    const amount = parseFloat(form.amount);
+    if (isNaN(amount) || amount <= 0) { notifError('Montant invalide'); return; }
+    setSaving(true);
+    try {
+      await createFinancialRequest({
+        business_id: businessId,
+        staff_id:    myStaff.id,
+        kind,
+        amount,
+        reason:      form.reason.trim() || null,
+        repayment_months: kind === 'pret' && form.repayment_months ? parseInt(form.repayment_months, 10) : null,
+      });
+      notifSuccess(kind === 'pret' ? 'Demande de prêt envoyée' : 'Demande d\'avance envoyée');
+      setForm({ amount: '', reason: '', repayment_months: '' });
+      setShowForm(false);
+      onRefresh();
+    } catch (e) { notifError(String(e)); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => setShowForm((v) => !v)}
+        className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-surface-border text-content-muted hover:text-content-brand hover:border-brand-500 transition-all text-xs font-black uppercase tracking-widest">
+        <Plus className="w-4 h-4" /> {kind === 'pret' ? 'Nouvelle demande de prêt' : 'Nouvelle demande d\'avance'}
+      </button>
+
+      {showForm && (
+        <div className="bg-surface-card border border-surface-border rounded-2xl p-4 space-y-3">
+          <input type="number" min="0" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+            placeholder={`Montant (${currency})`} className="input w-full text-sm" />
+          {kind === 'pret' && (
+            <input type="number" min="1" value={form.repayment_months} onChange={(e) => setForm((f) => ({ ...f, repayment_months: e.target.value }))}
+              placeholder="Remboursement sur combien de mois ?" className="input w-full text-sm" />
+          )}
+          <textarea value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+            placeholder="Motif (optionnel)" rows={2} className="input w-full text-sm resize-none" />
+          <button onClick={handleSubmit} disabled={saving} className="w-full btn-primary py-2.5 text-sm font-bold disabled:opacity-60">
+            {saving ? 'Envoi…' : 'Envoyer la demande'}
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {requests.length === 0 && <p className="text-center text-content-muted text-sm py-6">Aucune demande.</p>}
+        {requests.map((r) => (
+          <div key={r.id} className="flex items-center gap-3 bg-surface-card border border-surface-border rounded-xl p-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-content-primary">{r.amount.toLocaleString('fr-FR')} {currency}</p>
+              {r.repayment_months && <p className="text-[11px] text-content-muted">Sur {r.repayment_months} mois</p>}
+              {r.reason && <p className="text-[11px] text-content-secondary italic">{r.reason}</p>}
+            </div>
+            <span className={cn('text-[10px] font-black uppercase shrink-0', FINANCIAL_REQUEST_STATUS_COLOR[r.status])}>
+              {FINANCIAL_REQUEST_STATUS_LABELS[r.status]}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

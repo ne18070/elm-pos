@@ -5287,6 +5287,69 @@ export type Database = {
           },
         ]
       }
+      staff_financial_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          business_id: string
+          created_at: string | null
+          id: string
+          kind: string
+          reason: string | null
+          repayment_months: number | null
+          staff_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          business_id: string
+          created_at?: string | null
+          id?: string
+          kind: string
+          reason?: string | null
+          repayment_months?: number | null
+          staff_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          kind?: string
+          reason?: string | null
+          repayment_months?: number | null
+          staff_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_financial_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_financial_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_payments: {
         Row: {
           base_amount: number

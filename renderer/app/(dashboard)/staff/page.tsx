@@ -27,6 +27,7 @@ import { getTimeSettings, type StaffTimeSettings } from '@services/supabase/staf
 import { getPaymentLines } from '@services/supabase/payroll-settings';
 import type { User as SystemUser } from '@pos-types';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { ScrollableTabBar } from '@/components/shared/ScrollableTabBar';
 
 // Modular Components
 import { StaffTab, fmtMoney } from './staff-utils';
@@ -42,6 +43,7 @@ import { StaffTasksTab } from './StaffTasksTab';
 import { StaffObjectivesTab } from './StaffObjectivesTab';
 import { StaffTrainingTab } from './StaffTrainingTab';
 import { StaffMissionsTab } from './StaffMissionsTab';
+import { StaffFinanceRequestsTab } from './StaffFinanceRequestsTab';
 
 export default function StaffPage() {
   const { business } = useAuthStore();
@@ -219,7 +221,7 @@ export default function StaffPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex px-4 bg-surface-card border-b border-surface-border shrink-0 overflow-x-auto no-scrollbar">
+      <ScrollableTabBar className="bg-surface-card border-b border-surface-border shrink-0">
         {[
           { id: 'employes', label: 'Équipe', icon: LayoutList, show: true },
           { id: 'presences', label: 'Présences', icon: Calendar, show: can('manage_staff_attendance') },
@@ -229,6 +231,7 @@ export default function StaffPage() {
           { id: 'objectifs', label: 'Objectifs', icon: Target, show: can('manage_staff_objectives') },
           { id: 'formations', label: 'Formation', icon: GraduationCap, show: can('manage_staff_trainings') },
           { id: 'missions', label: 'Missions', icon: Plane, show: can('manage_staff_missions') },
+          { id: 'finances', label: 'Prêts & Avances', icon: Banknote, show: can('manage_staff_finances') },
         ].filter(t => t.show).map((t) => (
           <button 
             key={t.id} 
@@ -245,7 +248,7 @@ export default function StaffPage() {
             )}
           </button>
         ))}
-      </div>
+      </ScrollableTabBar>
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
@@ -317,6 +320,13 @@ export default function StaffPage() {
           {tab === 'missions' && (
             <StaffMissionsTab
               staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
+
+          {tab === 'finances' && (
+            <StaffFinanceRequestsTab
+              businessId={business.id} currency={cur}
               notifError={notifError} notifSuccess={notifSuccess}
             />
           )}
