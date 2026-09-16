@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Users, Plus, Loader2, LayoutList, Calendar, Wallet, Palmtree,
-  UserMinus, Clock, Unlink, Banknote, AlertCircle, ScanLine
+  UserMinus, Clock, Unlink, Banknote, AlertCircle, ScanLine, ListChecks, Target,
+  GraduationCap, Plane
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -37,6 +38,10 @@ import { AttendanceTab } from './AttendanceTab';
 import { PayrollTab } from './PayrollTab';
 import { LeaveManagementContent } from './LeaveManagementContent';
 import { StaffFolderPanel } from './StaffFolderPanel';
+import { StaffTasksTab } from './StaffTasksTab';
+import { StaffObjectivesTab } from './StaffObjectivesTab';
+import { StaffTrainingTab } from './StaffTrainingTab';
+import { StaffMissionsTab } from './StaffMissionsTab';
 
 export default function StaffPage() {
   const { business } = useAuthStore();
@@ -220,6 +225,10 @@ export default function StaffPage() {
           { id: 'presences', label: 'Présences', icon: Calendar, show: can('manage_staff_attendance') },
           { id: 'paie', label: 'Paie & Salaires', icon: Wallet, show: can('manage_staff_payroll') },
           { id: 'conges', label: 'Congés & Absences', icon: Palmtree, show: true },
+          { id: 'taches', label: 'Tâches', icon: ListChecks, show: can('manage_staff_tasks') },
+          { id: 'objectifs', label: 'Objectifs', icon: Target, show: can('manage_staff_objectives') },
+          { id: 'formations', label: 'Formation', icon: GraduationCap, show: can('manage_staff_trainings') },
+          { id: 'missions', label: 'Missions', icon: Plane, show: can('manage_staff_missions') },
         ].filter(t => t.show).map((t) => (
           <button 
             key={t.id} 
@@ -286,6 +295,31 @@ export default function StaffPage() {
           {tab === 'conges' && (
             <LeaveManagementContent staffList={staffList} askConfirm={askConfirm} />
           )}
+
+          {tab === 'taches' && (
+            <StaffTasksTab
+              staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
+
+          {tab === 'objectifs' && (
+            <StaffObjectivesTab
+              staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
+
+          {tab === 'formations' && (
+            <StaffTrainingTab businessId={business.id} notifError={notifError} notifSuccess={notifSuccess} />
+          )}
+
+          {tab === 'missions' && (
+            <StaffMissionsTab
+              staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
         </div>
       )}
 
@@ -331,6 +365,7 @@ export default function StaffPage() {
         <LinkAccountModal
           staff={linkModal.staff}
           businessId={business.id}
+          businessType={business.type}
           teamMembers={teamMembers}
           linkedUserIds={staffList.filter((s) => s.user_id).map((s) => s.user_id as string)}
           onClose={() => setLinkModal(null)}

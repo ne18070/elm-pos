@@ -59,6 +59,24 @@ const ROLE_LEGENDS: Record<string, Record<UserRole, string>> = {
     manager: "Clerc de notaire / Juriste : suivi des procédures, processus et pièces jointes.",
     staff:   "Secrétaire : consultation des dossiers, saisie simple et accueil.",
   },
+  education: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Gestion complète : classes, bulletins, scolarité, personnel et statistiques.",
+    manager: "Direction : suivi des classes, validation des bulletins et discipline.",
+    staff:   "Enseignant : saisie des notes, appel et suivi des élèves.",
+  },
+  rh: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Gestion complète : employés, paie, congés et permissions.",
+    manager: "Responsable RH : présences, congés et suivi de l'équipe.",
+    staff:   "Employé : consultation de son espace RH (bulletins, congés, documents).",
+  },
+  service: {
+    owner:   "Accès total : gestion de l'abonnement, suppression et réglages critiques.",
+    admin:   "Gestion complète : clients, factures, devis et statistiques financières.",
+    manager: "Responsable : suivi des prestations, devis et facturation.",
+    staff:   "Collaborateur : saisie des prestations et suivi client.",
+  },
 };
 
 type Tab = 'profil' | 'equipe' | 'permissions' | 'etablissements' | 'facturation';
@@ -370,7 +388,7 @@ export default function AdminPage() {
                   <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border
                     ${ROLE_LABELS[user?.role ?? 'staff'].color}`}>
                     <Shield className="w-3 h-3" />
-                    {ROLE_LABELS[user?.role ?? 'staff'].label}
+                    {getContextualRoleLabel(user?.role, business?.type)}
                   </div>
                 </div>
               </div>
@@ -735,7 +753,7 @@ export default function AdminPage() {
 
                     <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-medium border
                       ${ROLE_LABELS[role].color}`}>
-                      {ROLE_LABELS[role].label}
+                      {getContextualRoleLabel(role, biz.type)}
                     </span>
                   </div>
                 );

@@ -970,6 +970,7 @@ export function generateStaffAttendanceSheet(
 
   const ATTENDANCE_LABELS: Record<string, string> = {
     present:  'Présent',
+    retard:   'Retard',
     absent:   'Absent',
     half_day: 'Demi-journée',
     leave:    'Congé',
@@ -997,9 +998,10 @@ export function generateStaffAttendanceSheet(
 
   // Stats
   const present  = attendance.filter(a => a.status === 'present').length;
+  const retard   = attendance.filter(a => a.status === 'retard').length;
   const halfDays = attendance.filter(a => a.status === 'half_day').length;
   const absent   = attendance.filter(a => a.status === 'absent').length;
-  const totalDays = present + (halfDays * 0.5);
+  const totalDays = present + retard + (halfDays * 0.5);
 
   return `<!DOCTYPE html>
 <html lang="fr"><head>
@@ -1087,6 +1089,10 @@ export function generateStaffAttendanceSheet(
   <div class="stat-item">
     <div class="label">Jours Présents</div>
     <div class="stat-val">${present}</div>
+  </div>
+  <div class="stat-item">
+    <div class="label">Retards</div>
+    <div class="stat-val" style="color: #ea580c;">${retard}</div>
   </div>
   <div class="stat-item">
     <div class="label">Demi-journées</div>

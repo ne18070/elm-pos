@@ -7,7 +7,7 @@ import { supabase } from './client';
 
 export type SalaryType  = 'hourly' | 'daily' | 'monthly';
 export type StaffStatus = 'active' | 'inactive';
-export type AttendanceStatus = 'present' | 'absent' | 'half_day' | 'leave' | 'holiday';
+export type AttendanceStatus = 'present' | 'absent' | 'half_day' | 'leave' | 'holiday' | 'retard';
 export type ClockMethod = 'manual' | 'login' | 'badge';
 export type ClockMode   = 'auto' | 'badge' | 'manual'; // canal automatique autorisé pour cet employé
 export type PaymentMethod = 'cash' | 'transfer' | 'mobile_money' | 'check';
@@ -151,6 +151,30 @@ export async function getAttendanceForMonth(
     .from('staff_attendance')
     .select('*')
     .eq('business_id', businessId)
+    .gte('date', start)
+    .lte('date', end);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as StaffAttendance[];
+}
+
+/**
+ * Présences d'un seul employé (self-service) — filtre explicitement par
+ * staff_id plutôt que de compter sur la RLS pour ne pas renvoyer tout le
+ * business à un admin/manager consultant sa propre vue.
+ */
+export async function getMyAttendance(
+  staffId: string,
+  year: number,
+  month: number, // 1-12
+): Promise<StaffAttendance[]> {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  const { data, error } = await supabase
+    .from('staff_attendance')
+    .select('*')
+    .eq('staff_id', staffId)
     .gte('date', start)
     .lte('date', end);
   if (error) throw new Error(error.message);
@@ -381,7 +405,7 @@ export function computePayroll(
 
   // 1. Process attendance records
   for (const r of records) {
-    if (r.status === 'present' || r.status === 'holiday' || r.status === 'leave') {
+    if (r.status === 'present' || r.status === 'holiday' || r.status === 'leave' || r.status === 'retard') {
       daysWorked  += 1;
       hoursWorked += r.hours_worked ?? 8;
     } else if (r.status === 'half_day') {
@@ -434,6 +458,16 @@ export async function getMyStaffRecord(businessId: string, userId: string): Prom
     .select('*')
     .eq('business_id', businessId)
     .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data ?? null) as unknown as Staff | null;
+}
+
+export async function getStaffById(id: string): Promise<Staff | null> {
+  const { data, error } = await supabase
+    .from('staff')
+    .select('*')
+    .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data ?? null) as unknown as Staff | null;

@@ -5017,6 +5017,276 @@ export type Database = {
           },
         ]
       }
+      staff_tasks: {
+        Row: {
+          assigned_to: string
+          business_id: string
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to: string
+          business_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string
+          business_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_tasks_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_objectives: {
+        Row: {
+          achieved_at: string | null
+          achieved_note: string | null
+          assigned_by: string | null
+          business_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          staff_id: string
+          status: string
+          target_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          achieved_at?: string | null
+          achieved_note?: string | null
+          assigned_by?: string | null
+          business_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          staff_id: string
+          status?: string
+          target_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          achieved_at?: string | null
+          achieved_note?: string | null
+          assigned_by?: string | null
+          business_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          staff_id?: string
+          status?: string
+          target_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_objectives_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_objectives_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_training_requests: {
+        Row: {
+          admin_notes: string | null
+          business_id: string
+          created_at: string | null
+          desired_period_end: string | null
+          desired_period_start: string | null
+          id: string
+          is_need_only: boolean
+          justification: string | null
+          staff_id: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_id: string
+          created_at?: string | null
+          desired_period_end?: string | null
+          desired_period_start?: string | null
+          id?: string
+          is_need_only?: boolean
+          justification?: string | null
+          staff_id: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          business_id?: string
+          created_at?: string | null
+          desired_period_end?: string | null
+          desired_period_start?: string | null
+          id?: string
+          is_need_only?: boolean
+          justification?: string | null
+          staff_id?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_training_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_training_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_missions: {
+        Row: {
+          admin_notes: string | null
+          business_id: string
+          created_at: string | null
+          destination: string
+          end_date: string
+          id: string
+          objet: string
+          requested_by: string
+          start_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_id: string
+          created_at?: string | null
+          destination: string
+          end_date: string
+          id?: string
+          objet: string
+          requested_by: string
+          start_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          business_id?: string
+          created_at?: string | null
+          destination?: string
+          end_date?: string
+          id?: string
+          objet?: string
+          requested_by?: string
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_missions_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_missions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_mission_members: {
+        Row: {
+          added_at: string | null
+          mission_id: string
+          staff_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          mission_id: string
+          staff_id: string
+        }
+        Update: {
+          added_at?: string | null
+          mission_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_mission_members_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "staff_missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_mission_members_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_payments: {
         Row: {
           base_amount: number

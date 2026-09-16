@@ -44,7 +44,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { supabase } from '@/lib/supabase';
 import { CreateBusinessModal } from './CreateBusinessModal';
-import { hasRole, getRoleLabel } from '@/lib/permissions';
+import { hasRole, getContextualRoleLabel } from '@/lib/permissions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import type { Business, UserRole } from '@pos-types';
 import type { BusinessMembership } from '@services/supabase/business';
@@ -205,7 +205,7 @@ export function BusinessSwitcher() {
                 </p>
               )}
               <p className="text-xs text-content-muted truncate leading-tight">
-                {getRoleLabel(user?.role)}
+                {getContextualRoleLabel(user?.role, business?.type)}
               </p>
             </div>
             <ChevronDown className={cn(
@@ -258,7 +258,7 @@ export function BusinessSwitcher() {
                         </p>
                       )}
                       <span className="text-[10px] font-bold text-content-muted uppercase tracking-tight">
-                        {getRoleLabel(role as UserRole)}
+                        {getContextualRoleLabel(role as UserRole, biz.type)}
                       </span>
                     </div>
 

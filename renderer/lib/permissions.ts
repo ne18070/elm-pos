@@ -147,6 +147,10 @@ const PERMISSIONS_MAP = {
   manage_staff_attendance: { label: 'Gérer les présences',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_staff_documents:  { label: 'Gérer dossier RH (documents, checklist)', group: 'gestion', defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_staff_payroll:    { label: 'Gérer la paie',                group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
+  manage_staff_tasks:      { label: 'Tâches RH (vue équipe)',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_objectives: { label: 'Gérer les objectifs',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_trainings: { label: 'Gérer les demandes de formation', group: 'gestion',  defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_missions:  { label: 'Gérer les ordres de mission',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_team_tracking:    { label: 'Suivre équipe sur carte',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
 
   // Menu
@@ -268,6 +272,18 @@ export function getContextualRoleLabel(role: UserRole | undefined | null, busine
   if (businessType === 'hotel') {
     if (r === 'manager') return 'Gouvernant';
     if (r === 'staff') return 'Réceptionniste';
+  }
+  if (businessType === 'education') {
+    if (r === 'manager') return 'Direction';
+    if (r === 'staff') return 'Enseignant';
+  }
+  if (businessType === 'rh') {
+    if (r === 'manager') return 'Responsable RH';
+    if (r === 'staff') return 'Employé';
+  }
+  if (businessType === 'service') {
+    if (r === 'manager') return 'Responsable';
+    if (r === 'staff') return 'Collaborateur';
   }
   return ROLE_LABEL[r] ?? 'Employé';
 }

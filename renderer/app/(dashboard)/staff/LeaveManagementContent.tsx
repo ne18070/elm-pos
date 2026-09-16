@@ -14,7 +14,7 @@ import {
   type LeaveRequest, type LeaveType, 
   type PressureDay, type LeaveStatus 
 } from '@services/supabase/leave';
-import { type Staff } from '@services/supabase/staff';
+import { getAttendanceForMonth, type Staff, type StaffAttendance } from '@services/supabase/staff';
 import { LeaveCalendar } from '@/components/admin/LeaveCalendar';
 import { Field, ModalWrapper } from './SharedComponents';
 
@@ -27,10 +27,16 @@ export function LeaveManagementContent({ staffList, askConfirm }: { staffList: S
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [types, setTypes] = useState<LeaveType[]>([]);
   const [pressureDays, setPressureDays] = useState<PressureDay[]>([]);
-  
+  const [attendance, setAttendance] = useState<StaffAttendance[]>([]);
+
   const now = new Date();
   const [calMonth, setCalMonth] = useState(now.getMonth() + 1);
   const [calYear, setCalYear] = useState(now.getFullYear());
+
+  useEffect(() => {
+    if (!business) return;
+    getAttendanceForMonth(business.id, calYear, calMonth).then(setAttendance).catch(() => {});
+  }, [business?.id, calYear, calMonth]);
 
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -192,10 +198,11 @@ export function LeaveManagementContent({ staffList, askConfirm }: { staffList: S
 
       {tab === 'overview' && (
         <div className="space-y-6">
-          <LeaveCalendar 
+          <LeaveCalendar
             year={calYear}
             month={calMonth}
             requests={requests}
+            attendance={attendance}
             onPrev={() => {
               if (calMonth === 1) { setCalMonth(12); setCalYear(y => y - 1); }
               else setCalMonth(m => m - 1);
@@ -213,6 +220,14 @@ export function LeaveManagementContent({ staffList, askConfirm }: { staffList: S
                 <span className="text-[10px] font-bold text-content-muted uppercase tracking-wider">{t.name}</span>
               </div>
             ))}
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-status-error" />
+              <span className="text-[10px] font-bold text-content-muted uppercase tracking-wider">Absences</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-status-orange" />
+              <span className="text-[10px] font-bold text-content-muted uppercase tracking-wider">Retards</span>
+            </div>
           </div>
         </div>
       )}

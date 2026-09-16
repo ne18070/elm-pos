@@ -63,10 +63,11 @@ export function AttendanceTab({
 
   const stats = useMemo(() => {
     const presentDays = attendance.filter((a) => a.status === 'present').length;
+    const retardDays  = attendance.filter((a) => a.status === 'retard').length;
     const absentDays  = attendance.filter((a) => a.status === 'absent').length;
     const halfDays    = attendance.filter((a) => a.status === 'half_day').length;
     const leaveDays   = attendance.filter((a) => a.status === 'leave').length;
-    return { presentDays, absentDays, halfDays, leaveDays };
+    return { presentDays, retardDays, absentDays, halfDays, leaveDays };
   }, [attendance]);
 
   async function cycleAttendance(staffId: string, day: number) {
@@ -82,7 +83,7 @@ export function AttendanceTab({
       if (nextStatus === null) {
         if (record) await deleteAttendance(record.id);
       } else {
-        const hours = nextStatus === 'present' ? 8 : nextStatus === 'half_day' ? 4 : null;
+        const hours = nextStatus === 'present' || nextStatus === 'retard' ? 8 : nextStatus === 'half_day' ? 4 : null;
         await upsertAttendance({
           business_id:  businessId,
           staff_id:     staffId,
@@ -149,9 +150,10 @@ export function AttendanceTab({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: 'Présents',      value: stats.presentDays, icon: UserCheck,  color: 'text-status-success',  border: 'border-green-900/20', bg: 'bg-green-500/5' },
+          { label: 'Retards',       value: stats.retardDays,  icon: Clock,      color: 'text-status-orange',   border: 'border-orange-900/20', bg: 'bg-orange-500/5' },
           { label: 'Absents',       value: stats.absentDays,  icon: UserMinus,  color: 'text-status-error',    border: 'border-red-900/20', bg: 'bg-red-500/5'   },
           { label: 'Demi-j.',       value: stats.halfDays,    icon: Coffee,     color: 'text-status-warning',  border: 'border-amber-900/20', bg: 'bg-amber-500/5' },
           { label: 'Congés',         value: stats.leaveDays,   icon: Plane,      color: 'text-blue-400',   border: 'border-blue-900/20', bg: 'bg-blue-500/5'  },
