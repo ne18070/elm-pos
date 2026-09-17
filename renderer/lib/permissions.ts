@@ -35,12 +35,13 @@ const PERMISSIONS_MAP = {
   view_comptabilite:      { label: 'Accès états comptables',       group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'comptabilite' },
   view_activity:          { label: 'Accès journal audit',          group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] }, 
   view_recovery:          { label: 'Accès récupération données',   group: 'admin',      defaultRoles: ['admin', 'owner'] },
-  view_import:            { label: 'Accès import base de données',  group: 'admin',      defaultRoles: ['admin', 'owner'] },
+  // view_import:            { label: 'Accès import base de données',  group: 'admin',      defaultRoles: ['admin', 'owner'] },
   view_dossiers:          { label: 'Accès dossiers juridiques',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'dossiers' },
   view_honoraires:        { label: 'Accès facturation honoraires', group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'honoraires' },
   view_contrats:          { label: 'Accès contrats location',      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'contrats' },
   view_voitures:          { label: 'Accès vente voitures',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'voitures' },
   view_staff:             { label: 'Accès personnel & RH',         group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  view_my_hr:             { label: 'Accès Mon Espace RH (self-service)', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'staff' },
   view_team_tracking:     { label: 'Accès tracking équipe',        group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
   view_menu_du_jour:           { label: 'Accès menu du jour',             group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
   view_commandes_emporter:     { label: 'Accès commandes emporter/livraison', group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'restaurant' },
@@ -57,7 +58,7 @@ const PERMISSIONS_MAP = {
   view_evenements:        { label: 'Accès gestion événements',     group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'evenements' },
   manage_evenements:      { label: 'Gérer événements & invités',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'evenements' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 
-  view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
+  // view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
 
   // -- Actions Générales
   manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
@@ -144,7 +145,13 @@ const PERMISSIONS_MAP = {
   // RH
   manage_staff:           { label: 'Gérer les employés',           group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
   manage_staff_attendance: { label: 'Gérer les présences',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_documents:  { label: 'Gérer dossier RH (documents, checklist)', group: 'gestion', defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
   manage_staff_payroll:    { label: 'Gérer la paie',                group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
+  manage_staff_tasks:      { label: 'Tâches RH (vue équipe)',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_objectives: { label: 'Gérer les objectifs',          group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_trainings: { label: 'Gérer les demandes de formation', group: 'gestion',  defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_missions:  { label: 'Gérer les ordres de mission',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'staff' },
+  manage_staff_finances:  { label: 'Gérer les prêts et avances',    group: 'admin',      defaultRoles: ['admin', 'owner'],             feature: 'staff' },
   manage_team_tracking:    { label: 'Suivre équipe sur carte',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'tracking' },
 
   // Menu
@@ -266,6 +273,18 @@ export function getContextualRoleLabel(role: UserRole | undefined | null, busine
   if (businessType === 'hotel') {
     if (r === 'manager') return 'Gouvernant';
     if (r === 'staff') return 'Réceptionniste';
+  }
+  if (businessType === 'education') {
+    if (r === 'manager') return 'Direction';
+    if (r === 'staff') return 'Enseignant';
+  }
+  if (businessType === 'rh') {
+    if (r === 'manager') return 'Responsable RH';
+    if (r === 'staff') return 'Employé';
+  }
+  if (businessType === 'service') {
+    if (r === 'manager') return 'Responsable';
+    if (r === 'staff') return 'Collaborateur';
   }
   return ROLE_LABEL[r] ?? 'Employé';
 }

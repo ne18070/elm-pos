@@ -1,23 +1,27 @@
-import { useState, useMemo } from 'react';
-import { 
-  ChevronLeft, ChevronRight, UserCheck, UserMinus, Coffee, Plane, 
-  Printer, Loader2, Zap, Info, List
+import { useMemo, useState } from 'react';
+import {
+  ChevronLeft, ChevronRight, UserCheck, UserMinus, Coffee, Plane,
+  Printer, Loader2, Zap, Info, List, Clock, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  MONTH_NAMES, ATTENDANCE_CFG, CYCLE 
+import {
+  MONTH_NAMES, ATTENDANCE_CFG, CYCLE
 } from './staff-utils';
-import { 
-  computePayroll, upsertAttendance, deleteAttendance,
-  type Staff, type StaffAttendance 
+import {
+  computePayroll, computeOvertime, upsertAttendance, deleteAttendance,
+  type Staff, type StaffAttendance, type OvertimeCalc
 } from '@services/supabase/staff';
+import { DEFAULT_TIME_SETTINGS, type StaffTimeSettings } from '@services/supabase/staff-schedules';
 import { useNotificationStore } from '@/store/notifications';
+import { useCan } from '@/hooks/usePermission';
+import { ScheduleSettingsModal } from './ScheduleSettingsModal';
 
-export function AttendanceTab({ 
-  staffList, attendance, year, month, onPrevMonth, onNextMonth, onPrintSheet, onRefresh, businessId
-}: { 
-  staffList: Staff[]; 
+export function AttendanceTab({
+  staffList, attendance, overtimeAttendance, year, month, onPrevMonth, onNextMonth, onPrintSheet, onRefresh, businessId, timeSettings
+}: {
+  staffList: Staff[];
   attendance: StaffAttendance[];
+  overtimeAttendance: StaffAttendance[];
   year: number;
   month: number;
   onPrevMonth: () => void;
@@ -25,12 +29,35 @@ export function AttendanceTab({
   onPrintSheet: (s: Staff) => void;
   onRefresh: () => void;
   businessId: string;
+  timeSettings: StaffTimeSettings | null;
 }) {
   const { error: notifError, success: notifSuccess } = useNotificationStore();
+  const can = useCan();
   const [savingKey, setSavingKey] = useState<string | null>(null);
-  
+  const [showSchedules, setShowSchedules] = useState(false);
+  const weeklyThreshold = timeSettings?.weekly_hours_threshold ?? DEFAULT_TIME_SETTINGS.weekly_hours_threshold;
+
   const activeStaff = useMemo(() => staffList.filter(s => s.status === 'active'), [staffList]);
   const daysInMonth = new Date(year, month, 0).getDate();
+
+  const clockModeCounts = useMemo(() => {
+    const auto   = activeStaff.filter((s) => s.clock_mode === 'auto').length;
+    const badge  = activeStaff.filter((s) => s.clock_mode === 'badge').length;
+    const manual = activeStaff.filter((s) => s.clock_mode === 'manual').length;
+    return { auto, badge, manual, total: activeStaff.length };
+  }, [activeStaff]);
+
+  // PERFORMANCE: un seul recalcul par changement de données/seuil, pas par render/clic.
+  const payrollByStaff = useMemo(() => {
+    const map = new Map<string, { calc: ReturnType<typeof computePayroll>; overtime: OvertimeCalc }>();
+    for (const s of activeStaff) {
+      map.set(s.id, {
+        calc:     computePayroll(s, attendance, year, month),
+        overtime: computeOvertime(overtimeAttendance, s.id, weeklyThreshold, { year, month }),
+      });
+    }
+    return map;
+  }, [activeStaff, attendance, overtimeAttendance, year, month, weeklyThreshold]);
 
   // PERFORMANCE: Memoized map for attendance lookups
   const attendanceMap = useMemo(() => {
@@ -43,10 +70,11 @@ export function AttendanceTab({
 
   const stats = useMemo(() => {
     const presentDays = attendance.filter((a) => a.status === 'present').length;
+    const retardDays  = attendance.filter((a) => a.status === 'retard').length;
     const absentDays  = attendance.filter((a) => a.status === 'absent').length;
     const halfDays    = attendance.filter((a) => a.status === 'half_day').length;
     const leaveDays   = attendance.filter((a) => a.status === 'leave').length;
-    return { presentDays, absentDays, halfDays, leaveDays };
+    return { presentDays, retardDays, absentDays, halfDays, leaveDays };
   }, [attendance]);
 
   async function cycleAttendance(staffId: string, day: number) {
@@ -62,7 +90,7 @@ export function AttendanceTab({
       if (nextStatus === null) {
         if (record) await deleteAttendance(record.id);
       } else {
-        const hours = nextStatus === 'present' ? 8 : nextStatus === 'half_day' ? 4 : null;
+        const hours = nextStatus === 'present' || nextStatus === 'retard' ? 8 : nextStatus === 'half_day' ? 4 : null;
         await upsertAttendance({
           business_id:  businessId,
           staff_id:     staffId,
@@ -100,17 +128,33 @@ export function AttendanceTab({
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-6">
-      {/* Pointage Automatique Banner */}
+      {/* Pointage Banner — reflète la méthode réellement configurée par employé (clock_mode) */}
       <div className="bg-brand-500/5 border border-brand-500/20 rounded-2xl p-4 flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center shrink-0">
           <Zap className="w-5 h-5 text-content-brand" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-sm font-bold text-content-brand">Pointage Automatique Activé</h3>
-          <p className="text-xs text-content-secondary leading-relaxed">
-            Les présences sont gérées par le système : l'arrivée est enregistrée à la <strong>connexion</strong>, 
-            l'activité est suivie en temps réel, et le départ est validé à la <strong>déconnexion</strong>.
-          </p>
+          {clockModeCounts.total === 0 ? null : clockModeCounts.auto === clockModeCounts.total ? (
+            <>
+              <h3 className="text-sm font-bold text-content-brand">Pointage Automatique Activé</h3>
+              <p className="text-xs text-content-secondary leading-relaxed">
+                Les présences sont gérées par le système : l'arrivée est enregistrée à la <strong>connexion</strong>,
+                l'activité est suivie en temps réel, et le départ est validé à la <strong>déconnexion</strong>.
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-bold text-content-brand">Méthodes de pointage mixtes</h3>
+              <p className="text-xs text-content-secondary leading-relaxed">
+                {clockModeCounts.auto > 0 && <>{clockModeCounts.auto} en <strong>automatique</strong> (connexion/déconnexion)</>}
+                {clockModeCounts.auto > 0 && (clockModeCounts.badge > 0 || clockModeCounts.manual > 0) && ' · '}
+                {clockModeCounts.badge > 0 && <>{clockModeCounts.badge} par <strong>badge</strong></>}
+                {clockModeCounts.badge > 0 && clockModeCounts.manual > 0 && ' · '}
+                {clockModeCounts.manual > 0 && <>{clockModeCounts.manual} en <strong>manuel</strong></>}
+                {' '}— configurez la méthode de chaque employé dans sa fiche.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -129,9 +173,10 @@ export function AttendanceTab({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: 'Présents',      value: stats.presentDays, icon: UserCheck,  color: 'text-status-success',  border: 'border-green-900/20', bg: 'bg-green-500/5' },
+          { label: 'Retards',       value: stats.retardDays,  icon: Clock,      color: 'text-status-orange',   border: 'border-orange-900/20', bg: 'bg-orange-500/5' },
           { label: 'Absents',       value: stats.absentDays,  icon: UserMinus,  color: 'text-status-error',    border: 'border-red-900/20', bg: 'bg-red-500/5'   },
           { label: 'Demi-j.',       value: stats.halfDays,    icon: Coffee,     color: 'text-status-warning',  border: 'border-amber-900/20', bg: 'bg-amber-500/5' },
           { label: 'Congés',         value: stats.leaveDays,   icon: Plane,      color: 'text-blue-400',   border: 'border-blue-900/20', bg: 'bg-blue-500/5'  },
@@ -167,6 +212,12 @@ export function AttendanceTab({
               <span className="text-[9px] text-content-brand font-black uppercase flex items-center gap-1">
                 <Info size={12} /> Clic case pour modifier
               </span>
+              {can('manage_staff_attendance') && (
+                <button onClick={() => setShowSchedules(true)}
+                  className="flex items-center gap-1.5 text-[9px] font-black uppercase text-content-muted hover:text-content-brand transition-colors">
+                  <Settings size={12} /> Horaires
+                </button>
+              )}
             </div>
           </div>
           
@@ -199,7 +250,7 @@ export function AttendanceTab({
               </thead>
               <tbody className="divide-y divide-surface-border/50">
                 {activeStaff.map((s) => {
-                  const calc = computePayroll(s, attendance, year, month);
+                  const { calc, overtime } = payrollByStaff.get(s.id)!;
                   return (
                     <tr key={s.id} className="hover:bg-surface-hover/10 transition-colors text-content-primary group">
                       <td className="sticky left-0 z-10 bg-surface-card border-r border-surface-border px-5 py-3 group-hover:bg-surface-card transition-colors">
@@ -240,6 +291,11 @@ export function AttendanceTab({
                       })}
                       <td className="px-5 py-3 text-right font-black bg-brand-500/5 group-hover:bg-brand-500/10 transition-colors">
                         <p className="text-content-brand">{calc.daysWorked}j</p>
+                        {overtime.overtimeHours > 0 && (
+                          <p className="flex items-center justify-end gap-1 text-status-warning text-[9px] font-black mt-0.5">
+                            <Clock size={10} /> +{overtime.overtimeHours.toFixed(1)}h sup
+                          </p>
+                        )}
                       </td>
                     </tr>
                   );
@@ -248,6 +304,18 @@ export function AttendanceTab({
             </table>
           </div>
         </div>
+      )}
+
+      {showSchedules && (
+        <ScheduleSettingsModal
+          businessId={businessId}
+          staffList={activeStaff}
+          timeSettings={timeSettings}
+          onClose={() => setShowSchedules(false)}
+          onSaved={onRefresh}
+          notifError={notifError}
+          notifSuccess={notifSuccess}
+        />
       )}
     </div>
   );

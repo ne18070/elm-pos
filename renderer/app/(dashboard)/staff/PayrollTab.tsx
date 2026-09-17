@@ -1,41 +1,58 @@
-import { useMemo } from 'react';
-import { 
-  ChevronLeft, ChevronRight, Wallet, Printer, Banknote, 
-  TrendingUp, Users, DollarSign, Clock
+import { useMemo, useState } from 'react';
+import {
+  ChevronLeft, ChevronRight, Wallet, Printer, Banknote,
+  TrendingUp, Users, DollarSign, Clock, Settings
 } from 'lucide-react';
-import { 
-  MONTH_NAMES, fmtMoney, initials 
+import {
+  MONTH_NAMES, fmtMoney, initials
 } from './staff-utils';
-import { 
-  computePayroll, SALARY_TYPE_LABELS,
-  type Staff, type StaffAttendance, type StaffPayment 
+import {
+  computePayroll, computeOvertime, SALARY_TYPE_LABELS,
+  type Staff, type StaffAttendance, type StaffPayment
 } from '@services/supabase/staff';
 import { type LeaveRequest } from '@services/supabase/leave';
+import { DEFAULT_TIME_SETTINGS, type StaffTimeSettings } from '@services/supabase/staff-schedules';
+import { useCan } from '@/hooks/usePermission';
+import { useNotificationStore } from '@/store/notifications';
+import { PayrollSettingsModal } from './PayrollSettingsModal';
 
-export function PayrollTab({ 
-  staffList, attendance, leaveRequests = [], payments, year, month, currency, onPrevMonth, onNextMonth, onPay, onPrintPayslip
-}: { 
-  staffList: Staff[]; 
+export function PayrollTab({
+  staffList, attendance, overtimeAttendance, leaveRequests = [], payments, year, month, currency, businessId, timeSettings, onPrevMonth, onNextMonth, onPay, onPrintPayslip
+}: {
+  staffList: Staff[];
   attendance: StaffAttendance[];
+  overtimeAttendance: StaffAttendance[];
   leaveRequests?: LeaveRequest[];
   payments: StaffPayment[];
   year: number;
   month: number;
   currency: string;
+  businessId: string;
+  timeSettings: StaffTimeSettings | null;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onPay: (s: Staff) => void;
   onPrintPayslip: (s: Staff, p: StaffPayment) => void;
 }) {
+  const can = useCan();
+  const { error: notifError, success: notifSuccess } = useNotificationStore();
+  const [showSettings, setShowSettings] = useState(false);
   const activeStaff = useMemo(() => staffList.filter(s => s.status === 'active'), [staffList]);
+  const weeklyThreshold    = timeSettings?.weekly_hours_threshold ?? DEFAULT_TIME_SETTINGS.weekly_hours_threshold;
+  const overtimeMultiplier = timeSettings?.overtime_multiplier    ?? DEFAULT_TIME_SETTINGS.overtime_multiplier;
 
   const payrollData = useMemo(() => {
-    return activeStaff.map((s) => ({
-      staff: s,
-      calc:  computePayroll(s, attendance, year, month, leaveRequests),
-      paid:  payments.find((p) => p.staff_id === s.id && p.status === 'paid' && p.period_start === `${year}-${String(month).padStart(2, '0')}-01`),
-    }));
-  }, [activeStaff, attendance, leaveRequests, payments, year, month]);
+    return activeStaff.map((s) => {
+      const overtime = s.salary_type === 'hourly'
+        ? computeOvertime(overtimeAttendance, s.id, weeklyThreshold, { year, month })
+        : undefined;
+      return {
+        staff: s,
+        calc:  computePayroll(s, attendance, year, month, leaveRequests, overtime, overtimeMultiplier),
+        paid:  payments.find((p) => p.staff_id === s.id && p.status === 'paid' && p.period_start === `${year}-${String(month).padStart(2, '0')}-01`),
+      };
+    });
+  }, [activeStaff, attendance, overtimeAttendance, leaveRequests, payments, year, month, weeklyThreshold, overtimeMultiplier]);
 
   const kpis = useMemo(() => {
     const totalNet = payrollData.reduce((acc, curr) => acc + (curr.paid?.net_amount || curr.calc.baseAmount), 0);
@@ -71,9 +88,17 @@ export function PayrollTab({
         <div className="text-center font-black text-content-primary uppercase tracking-widest">
           {MONTH_NAMES[month - 1]} {year}
         </div>
-        <button onClick={onNextMonth} className="p-3 rounded-xl hover:bg-surface-hover text-content-secondary transition-colors">
-          <ChevronRight className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {can('manage_staff_payroll') && (
+            <button onClick={() => setShowSettings(true)} title="Paramètres Paie"
+              className="p-3 rounded-xl hover:bg-surface-hover text-content-secondary transition-colors">
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
+          <button onClick={onNextMonth} className="p-3 rounded-xl hover:bg-surface-hover text-content-secondary transition-colors">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-3">
@@ -97,6 +122,9 @@ export function PayrollTab({
               <div>
                 <p className="text-[9px] font-black text-content-muted uppercase tracking-widest mb-1.5 flex items-center justify-center sm:justify-end gap-1.5"><DollarSign size={10} /> Salaire Base</p>
                 <p className="text-sm font-black text-content-brand tracking-tight">{fmtMoney(calc.baseAmount, currency)}</p>
+                {calc.overtimeHours > 0 && (
+                  <p className="text-[10px] font-bold text-status-warning tracking-tight mt-0.5">dont +{fmtMoney(calc.overtimePay, currency)} sup</p>
+                )}
               </div>
             </div>
 
@@ -125,6 +153,15 @@ export function PayrollTab({
           <div className="py-20 text-center bg-surface-input/20 rounded-3xl border border-dashed border-surface-border text-content-muted text-sm italic">Aucun employé actif ce mois-ci.</div>
         )}
       </div>
+
+      {showSettings && (
+        <PayrollSettingsModal
+          businessId={businessId}
+          onClose={() => setShowSettings(false)}
+          notifError={notifError}
+          notifSuccess={notifSuccess}
+        />
+      )}
     </div>
   );
 }

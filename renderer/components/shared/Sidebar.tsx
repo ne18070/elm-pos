@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LogOut, Monitor, HelpCircle, Sun, Moon, SunMoon,
-  Menu, X, ChevronUp, PanelLeftClose, PanelLeftOpen,
+  Menu, X, ChevronUp, PanelLeftClose, PanelLeftOpen, UserCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -337,7 +337,7 @@ function SidebarContent({
 
           <SupportPanel isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
 
-          <button
+          {/* <button
             onClick={handleOpenDisplay}
             title="Ouvrir l'écran client"
             className={cn(
@@ -354,7 +354,7 @@ function SidebarContent({
             )}>
               <span className="text-xs font-medium">Écran client</span>
             </div>
-          </button>
+          </button> */}
         </div>
 
         {/* User Profile Card */}
@@ -405,7 +405,19 @@ function SidebarContent({
                theme === 'dark'   ? <Moon    className="w-4 h-4 group-hover:-rotate-12 transition-transform" /> :
                                     <SunMoon className="w-4 h-4" />}
             </button>
-            
+
+            {can('view_my_hr') && (
+              <Link
+                href="/mon-espace-rh"
+                onClick={onClose}
+                title="Mon Espace RH"
+                className="flex-1 flex items-center justify-center p-2 rounded-lg text-content-secondary hover:text-content-brand hover:bg-brand-500/10 transition-all group"
+                aria-label="Mon Espace RH"
+              >
+                <UserCircle className="w-4 h-4" />
+              </Link>
+            )}
+
             <button
               onClick={handleLogout}
               title="Déconnexion"

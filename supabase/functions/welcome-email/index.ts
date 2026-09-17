@@ -39,7 +39,7 @@ serve(async (req) => {
     const sector = record.industry_sector || record.type;
     let templateKey = 'welcome';
     
-    if (['restaurant', 'juridique', 'location', 'hotel'].includes(sector)) {
+    if (['restaurant', 'juridique', 'location', 'hotel', 'rh'].includes(sector)) {
       templateKey = `welcome_${sector}`;
     } else if (sector === 'boutique' || sector === 'retail') {
       templateKey = 'welcome_retail';

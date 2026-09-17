@@ -3,14 +3,17 @@ import { X, Loader2, Save } from 'lucide-react';
 import { Field } from './SharedComponents';
 import {
   createStaff, updateStaff,
-  SALARY_TYPE_LABELS,
-  type Staff, type StaffForm, type SalaryType,
+  SALARY_TYPE_LABELS, CLOCK_MODE_LABELS,
+  type Staff, type StaffForm, type SalaryType, type ClockMode,
 } from '@services/supabase/staff';
 
+const CONTRACT_TYPE_SUGGESTIONS = ['CDI', 'CDD', 'Stage', 'Freelance', 'Temporaire', 'Saisonnier'];
+
 export function StaffPanel({
-  staff, onClose, onSaved, businessId, notifError,
+  staff, staffList, onClose, onSaved, businessId, notifError,
 }: {
   staff:       Staff | null;
+  staffList:   Staff[];
   onClose:     () => void;
   onSaved:     (s: Staff) => void;
   businessId:  string;
@@ -19,28 +22,48 @@ export function StaffPanel({
   const isEdit = !!staff;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<{
-    name:        string;
-    phone:       string;
-    email:       string;
-    position:    string;
-    department:  string;
-    salary_type: SalaryType;
-    salary_rate: string;
-    hire_date:   string;
-    status:      'active' | 'inactive';
-    notes:       string;
+    name:                 string;
+    phone:                string;
+    email:                string;
+    position:             string;
+    department:           string;
+    salary_type:          SalaryType;
+    salary_rate:          string;
+    hire_date:            string;
+    status:               'active' | 'inactive';
+    notes:                string;
+    badge_code:           string;
+    clock_mode:           ClockMode;
+    manager_id:           string;
+    contract_type:        string;
+    contract_start_date:  string;
+    contract_end_date:    string;
+    probation_end_date:   string;
+    termination_date:     string;
+    termination_reason:   string;
   }>({
-    name:        staff?.name ?? '',
-    phone:       staff?.phone ?? '',
-    email:       staff?.email ?? '',
-    position:    staff?.position ?? '',
-    department:  staff?.department ?? '',
-    salary_type: staff?.salary_type ?? 'monthly',
-    salary_rate: staff?.salary_rate.toString() ?? '0',
-    hire_date:   staff?.hire_date ?? '',
-    status:      staff?.status ?? 'active',
-    notes:       staff?.notes ?? '',
+    name:                staff?.name ?? '',
+    phone:               staff?.phone ?? '',
+    email:               staff?.email ?? '',
+    position:            staff?.position ?? '',
+    department:          staff?.department ?? '',
+    salary_type:         staff?.salary_type ?? 'monthly',
+    salary_rate:         staff?.salary_rate.toString() ?? '0',
+    hire_date:           staff?.hire_date ?? '',
+    status:              staff?.status ?? 'active',
+    notes:               staff?.notes ?? '',
+    badge_code:          staff?.badge_code ?? '',
+    clock_mode:          staff?.clock_mode ?? 'auto',
+    manager_id:          staff?.manager_id ?? '',
+    contract_type:       staff?.contract_type ?? '',
+    contract_start_date: staff?.contract_start_date ?? '',
+    contract_end_date:   staff?.contract_end_date ?? '',
+    probation_end_date:  staff?.probation_end_date ?? '',
+    termination_date:    staff?.termination_date ?? '',
+    termination_reason:  staff?.termination_reason ?? '',
   });
+
+  const managerOptions = staffList.filter((s) => s.id !== staff?.id && s.status === 'active');
 
   function set(k: string, v: string) { setForm((f) => ({ ...f, [k]: v })); }
 
@@ -48,6 +71,10 @@ export function StaffPanel({
     if (!form.name.trim()) { notifError('Nom requis'); return; }
     const rate = parseFloat(form.salary_rate);
     if (isNaN(rate) || rate < 0) { notifError('Taux de salaire invalide'); return; }
+    if (form.clock_mode === 'badge' && !form.badge_code.trim()) {
+      notifError('Renseignez un code badge, ou choisissez une autre méthode de pointage');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -62,8 +89,17 @@ export function StaffPanel({
         hire_date: form.hire_date || null,
         status: form.status,
         notes: form.notes.trim() || null,
+        badge_code: form.badge_code.trim() || null,
+        clock_mode: form.clock_mode,
         // FIX: Preserve user_id on edit to avoid unlinking account accidentally
-        user_id: staff?.user_id ?? null
+        user_id: staff?.user_id ?? null,
+        manager_id:          form.manager_id || null,
+        contract_type:       form.contract_type.trim() || null,
+        contract_start_date: form.contract_start_date || null,
+        contract_end_date:   form.contract_end_date || null,
+        probation_end_date:  form.probation_end_date || null,
+        termination_date:    form.status === 'inactive' ? (form.termination_date || null) : null,
+        termination_reason:  form.status === 'inactive' ? (form.termination_reason.trim() || null) : null,
       };
       const saved = isEdit
         ? await updateStaff(staff.id, input)
@@ -102,6 +138,70 @@ export function StaffPanel({
               <Field label="Département" value={form.department} onChange={(v) => set('department', v)} placeholder="Admin" />
             </div>
             <Field label="Date d'embauche" value={form.hire_date} onChange={(v) => set('hire_date', v)} type="date" />
+            <div>
+              <label className="text-xs text-content-secondary block mb-1">Méthode de pointage</label>
+              <select
+                value={form.clock_mode}
+                onChange={(e) => set('clock_mode', e.target.value as ClockMode)}
+                className="input w-full text-sm"
+              >
+                {(Object.keys(CLOCK_MODE_LABELS) as ClockMode[]).map((k) => (
+                  <option key={k} value={k}>{CLOCK_MODE_LABELS[k]}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-content-muted">
+                Un seul canal automatique actif à la fois — évite le double pointage. La grille de présence reste toujours modifiable manuellement.
+              </p>
+            </div>
+            {form.clock_mode === 'badge' && (
+              <div>
+                <label className="text-xs text-content-secondary block mb-1">Code badge (pointage)</label>
+                <input
+                  value={form.badge_code}
+                  onChange={(e) => set('badge_code', e.target.value)}
+                  placeholder="Scannez le badge ici, ou saisissez le code"
+                  className="input w-full text-sm font-mono"
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-xs text-content-secondary block mb-1">Rattaché à (manager)</label>
+              <select value={form.manager_id} onChange={(e) => set('manager_id', e.target.value)} className="input w-full text-sm">
+                <option value="">Aucun</option>
+                {managerOptions.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}{m.position ? ` — ${m.position}` : ''}</option>
+                ))}
+              </select>
+            </div>
+          </section>
+
+          {/* Contrat */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold text-content-secondary uppercase tracking-wider">Contrat</h3>
+            <div>
+              <label className="text-xs text-content-secondary block mb-1">Type de contrat</label>
+              <input
+                list="contract-type-suggestions"
+                value={form.contract_type}
+                onChange={(e) => set('contract_type', e.target.value)}
+                placeholder="CDI, CDD, Stage…"
+                className="input w-full text-sm"
+              />
+              <datalist id="contract-type-suggestions">
+                {CONTRACT_TYPE_SUGGESTIONS.map((t) => <option key={t} value={t} />)}
+              </datalist>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Début contrat" value={form.contract_start_date} onChange={(v) => set('contract_start_date', v)} type="date" />
+              <Field label="Fin contrat" value={form.contract_end_date} onChange={(v) => set('contract_end_date', v)} type="date" />
+            </div>
+            <Field label="Fin de période d'essai" value={form.probation_end_date} onChange={(v) => set('probation_end_date', v)} type="date" />
+            {form.status === 'inactive' && (
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-surface-border/50">
+                <Field label="Date de départ" value={form.termination_date} onChange={(v) => set('termination_date', v)} type="date" />
+                <Field label="Motif de départ" value={form.termination_reason} onChange={(v) => set('termination_reason', v)} placeholder="Démission, fin de contrat…" />
+              </div>
+            )}
           </section>
 
           {/* Salaire */}

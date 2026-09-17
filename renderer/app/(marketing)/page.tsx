@@ -59,7 +59,7 @@ function Hero() {
           </h1>
 
           <p className="text-lg text-content-secondary leading-relaxed max-w-xl mb-10">
-            ELM (Entreprise Lifecycle Management) : Caisse, stocks, comptabilité OHADA, location, hôtellerie et juridique. La solution tout-en-un conçue pour les PME sénégalaises.
+            ELM (Entreprise Lifecycle Management) : Caisse, stocks, comptabilité OHADA, RH & paie, location, hôtellerie et juridique. La solution tout-en-un conçue pour les PME sénégalaises.
           </p>
 
           <div className="flex flex-wrap gap-2 mb-12 max-w-2xl">
@@ -67,6 +67,7 @@ function Hero() {
               { label: 'Caisse tactile', icon: ShoppingCart },
               { label: 'Gestion des stocks', icon: Package },
               { label: 'Comptabilité OHADA', icon: Receipt },
+              { label: 'RH & Paie', icon: Users },
               { label: 'Location véhicules', icon: Car },
               { label: 'Réservations', icon: CalendarCheck },
               { label: 'Livraisons', icon: Truck },
@@ -162,6 +163,11 @@ const FEATURES = [
     icon: Globe,
     title: 'Multi-établissements',
     desc: 'Gérez plusieurs boutiques ou points de vente depuis un seul compte centralisé.',
+  },
+  {
+    icon: Users,
+    title: 'Gestion RH & Paie (SIRH)',
+    desc: 'Employés, présences, paie configurable, congés et espace self-service pour votre équipe.',
   },
   {
     icon: Car,

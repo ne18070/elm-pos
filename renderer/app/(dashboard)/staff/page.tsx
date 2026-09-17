@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import {
-  Users, Plus, Loader2, LayoutList, Calendar, Wallet, Palmtree, 
-  UserMinus, Clock, Unlink, Banknote, AlertCircle
+  Users, Plus, Loader2, LayoutList, Calendar, Wallet, Palmtree,
+  UserMinus, Clock, Unlink, Banknote, AlertCircle, ScanLine, ListChecks, Target,
+  GraduationCap, Plane
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -15,14 +17,17 @@ import {
 } from '@/lib/invoice-templates';
 import {
   getStaff, updateStaff, deleteStaff,
-  getAttendanceForMonth, getPayments,
+  getAttendanceForMonth, getAttendanceForOvertimeWindow, getPayments,
   unlinkStaffUser,
   type Staff, type StaffAttendance, type StaffPayment,
 } from '@services/supabase/staff';
 import { getTeamMembers } from '@services/supabase/users';
 import { getLeaveRequests } from '@services/supabase/leave';
+import { getTimeSettings, type StaffTimeSettings } from '@services/supabase/staff-schedules';
+import { getPaymentLines } from '@services/supabase/payroll-settings';
 import type { User as SystemUser } from '@pos-types';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { ScrollableTabBar } from '@/components/shared/ScrollableTabBar';
 
 // Modular Components
 import { StaffTab, fmtMoney } from './staff-utils';
@@ -33,6 +38,12 @@ import { EmployeesTab } from './EmployeesTab';
 import { AttendanceTab } from './AttendanceTab';
 import { PayrollTab } from './PayrollTab';
 import { LeaveManagementContent } from './LeaveManagementContent';
+import { StaffFolderPanel } from './StaffFolderPanel';
+import { StaffTasksTab } from './StaffTasksTab';
+import { StaffObjectivesTab } from './StaffObjectivesTab';
+import { StaffTrainingTab } from './StaffTrainingTab';
+import { StaffMissionsTab } from './StaffMissionsTab';
+import { StaffFinanceRequestsTab } from './StaffFinanceRequestsTab';
 
 export default function StaffPage() {
   const { business } = useAuthStore();
@@ -44,9 +55,11 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [attendance, setAttendance] = useState<StaffAttendance[]>([]);
+  const [overtimeAttendance, setOvertimeAttendance] = useState<StaffAttendance[]>([]);
   const [payments, setPayments] = useState<StaffPayment[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<SystemUser[]>([]);
+  const [timeSettings, setTimeSettings] = useState<StaffTimeSettings | null>(null);
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -56,24 +69,29 @@ export default function StaffPage() {
   const [staffPanel, setStaffPanel] = useState<{ item: Staff | null } | null>(null);
   const [payModal, setPayModal] = useState<{ staff: Staff } | null>(null);
   const [linkModal, setLinkModal] = useState<{ staff: Staff } | null>(null);
+  const [folderPanel, setFolderPanel] = useState<{ staff: Staff } | null>(null);
 
   const { askConfirm, ConfirmDialog } = useConfirm();
 
   const loadData = useCallback(async () => {
     if (!business) return;
     try {
-      const [s, m, a, p, l] = await Promise.all([
+      const [s, m, a, oa, p, l, ts] = await Promise.all([
         getStaff(business.id),
         getTeamMembers(business.id).catch(() => [] as SystemUser[]),
         getAttendanceForMonth(business.id, year, month),
+        getAttendanceForOvertimeWindow(business.id, year, month),
         getPayments(business.id, { year, month }),
         getLeaveRequests(business.id).catch(() => []),
+        getTimeSettings(business.id),
       ]);
       setStaffList(s);
       setTeamMembers(m);
       setAttendance(a);
+      setOvertimeAttendance(oa);
       setPayments(p);
       setLeaveRequests(l);
+      setTimeSettings(ts);
     } catch (e) { notifError(toUserError(e)); }
   }, [business, year, month, notifError]);
 
@@ -116,9 +134,10 @@ export default function StaffPage() {
     });
   }
 
-  function handlePrintPayslip(staff: Staff, payment: StaffPayment) {
+  async function handlePrintPayslip(staff: Staff, payment: StaffPayment) {
     if (!business) return;
-    const html = generateStaffPayslip(staff, payment, business);
+    const lines = await getPaymentLines(payment.id).catch(() => []);
+    const html = generateStaffPayslip(staff, payment, business, lines);
     printHtml(html);
   }
 
@@ -159,19 +178,30 @@ export default function StaffPage() {
             </div>
             <div>
               <h1 className="font-black text-content-primary text-2xl tracking-tight uppercase italic">Gestion du Personnel</h1>
-              <p className="text-xs text-content-secondary font-medium mt-0.5">Pointage automatique, Paie et Congés</p>
+              <p className="text-xs text-content-secondary font-medium mt-0.5">Pointage, Paie et Congés</p>
             </div>
           </div>
           
-          {can('manage_staff') && (
-            <button 
-              onClick={() => setStaffPanel({ item: null })}
-              className="btn-primary flex items-center gap-2 h-11 px-6 shadow-lg shadow-brand-500/20 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
-            >
-              <Plus size={18} />
-              <span className="hidden sm:inline">Ajouter un employé</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {can('manage_staff_attendance') && (
+              <Link
+                href="/staff/pointage"
+                className="btn-secondary flex items-center gap-2 h-11 px-4 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
+              >
+                <ScanLine size={18} />
+                <span className="hidden sm:inline">Mode borne</span>
+              </Link>
+            )}
+            {can('manage_staff') && (
+              <button
+                onClick={() => setStaffPanel({ item: null })}
+                className="btn-primary flex items-center gap-2 h-11 px-6 shadow-lg shadow-brand-500/20 active:scale-95 transition-all font-black text-xs uppercase tracking-widest"
+              >
+                <Plus size={18} />
+                <span className="hidden sm:inline">Ajouter un employé</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Top KPIs Row - Operational visibility */}
@@ -191,12 +221,17 @@ export default function StaffPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex px-4 bg-surface-card border-b border-surface-border shrink-0 overflow-x-auto no-scrollbar">
+      <ScrollableTabBar className="bg-surface-card border-b border-surface-border shrink-0">
         {[
           { id: 'employes', label: 'Équipe', icon: LayoutList, show: true },
           { id: 'presences', label: 'Présences', icon: Calendar, show: can('manage_staff_attendance') },
           { id: 'paie', label: 'Paie & Salaires', icon: Wallet, show: can('manage_staff_payroll') },
           { id: 'conges', label: 'Congés & Absences', icon: Palmtree, show: true },
+          { id: 'taches', label: 'Tâches', icon: ListChecks, show: can('manage_staff_tasks') },
+          { id: 'objectifs', label: 'Objectifs', icon: Target, show: can('manage_staff_objectives') },
+          { id: 'formations', label: 'Formation', icon: GraduationCap, show: can('manage_staff_trainings') },
+          { id: 'missions', label: 'Missions', icon: Plane, show: can('manage_staff_missions') },
+          { id: 'finances', label: 'Prêts & Avances', icon: Banknote, show: can('manage_staff_finances') },
         ].filter(t => t.show).map((t) => (
           <button 
             key={t.id} 
@@ -213,7 +248,7 @@ export default function StaffPage() {
             )}
           </button>
         ))}
-      </div>
+      </ScrollableTabBar>
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
@@ -233,24 +268,27 @@ export default function StaffPage() {
               }}
               onLinkAccount={(s) => setLinkModal({ staff: s })}
               onUnlinkAccount={handleUnlinkAccount}
+              onOpenFolder={(s) => setFolderPanel({ staff: s })}
             />
           )}
 
           {tab === 'presences' && (
-            <AttendanceTab 
-              staffList={staffList} attendance={attendance} year={year} month={month}
+            <AttendanceTab
+              staffList={staffList} attendance={attendance} overtimeAttendance={overtimeAttendance} year={year} month={month}
               onPrevMonth={prevMonth} onNextMonth={nextMonth}
               onPrintSheet={handlePrintAttendanceSheet}
               onRefresh={loadData}
               businessId={business.id}
+              timeSettings={timeSettings}
             />
           )}
 
           {tab === 'paie' && (
-            <PayrollTab 
-              staffList={staffList} attendance={attendance} payments={payments}
+            <PayrollTab
+              staffList={staffList} attendance={attendance} overtimeAttendance={overtimeAttendance} payments={payments}
               leaveRequests={leaveRequests}
-              year={year} month={month} currency={cur}
+              year={year} month={month} currency={cur} businessId={business.id}
+              timeSettings={timeSettings}
               onPrevMonth={prevMonth} onNextMonth={nextMonth}
               onPay={(s) => setPayModal({ staff: s })}
               onPrintPayslip={handlePrintPayslip}
@@ -260,6 +298,38 @@ export default function StaffPage() {
           {tab === 'conges' && (
             <LeaveManagementContent staffList={staffList} askConfirm={askConfirm} />
           )}
+
+          {tab === 'taches' && (
+            <StaffTasksTab
+              staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
+
+          {tab === 'objectifs' && (
+            <StaffObjectivesTab
+              staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
+
+          {tab === 'formations' && (
+            <StaffTrainingTab businessId={business.id} notifError={notifError} notifSuccess={notifSuccess} />
+          )}
+
+          {tab === 'missions' && (
+            <StaffMissionsTab
+              staffList={staffList} businessId={business.id}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
+
+          {tab === 'finances' && (
+            <StaffFinanceRequestsTab
+              businessId={business.id} currency={cur}
+              notifError={notifError} notifSuccess={notifSuccess}
+            />
+          )}
         </div>
       )}
 
@@ -267,6 +337,7 @@ export default function StaffPage() {
       {staffPanel && (
         <StaffPanel
           staff={staffPanel.item}
+          staffList={staffList}
           onClose={() => setStaffPanel(null)}
           onSaved={() => {
             setStaffPanel(null);
@@ -282,12 +353,14 @@ export default function StaffPage() {
         <PaymentModal
           staff={payModal.staff}
           attendance={attendance}
+          overtimeAttendance={overtimeAttendance}
           leaveRequests={leaveRequests}
           year={year}
           month={month}
           currency={cur}
           businessId={business.id}
           existingPayments={payments}
+          timeSettings={timeSettings}
           onClose={() => setPayModal(null)}
           onSaved={() => {
             setPayModal(null);
@@ -302,6 +375,7 @@ export default function StaffPage() {
         <LinkAccountModal
           staff={linkModal.staff}
           businessId={business.id}
+          businessType={business.type}
           teamMembers={teamMembers}
           linkedUserIds={staffList.filter((s) => s.user_id).map((s) => s.user_id as string)}
           onClose={() => setLinkModal(null)}
@@ -314,6 +388,16 @@ export default function StaffPage() {
             const freshMembers = await getTeamMembers(business.id);
             setTeamMembers(freshMembers);
           }}
+          notifError={notifError}
+          notifSuccess={notifSuccess}
+        />
+      )}
+
+      {folderPanel && (
+        <StaffFolderPanel
+          staff={folderPanel.staff}
+          businessId={business.id}
+          onClose={() => setFolderPanel(null)}
           notifError={notifError}
           notifSuccess={notifSuccess}
         />

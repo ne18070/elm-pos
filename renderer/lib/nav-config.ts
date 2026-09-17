@@ -2,7 +2,7 @@ import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
-  GraduationCap, DatabaseZap, Bot, Ticket, Zap
+  GraduationCap, DatabaseZap, Bot, Ticket, Zap, UserCircle
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PermissionKey } from './permissions';
@@ -106,13 +106,14 @@ const S_EVENEMENTS: NavSection = {
 const S_ADMIN: NavSection = {
   label: 'Administration',
   items: [
-    { href: '/assistant', icon: Bot,          label: 'Assistant IA',          permission: 'view_ai_assistant' },
+    // { href: '/assistant', icon: Bot,          label: 'Assistant IA',          permission: 'view_ai_assistant' },
     { href: '/clients',   icon: Users,        label: 'Base Clients',           permission: 'view_clients'   },
     { href: '/coupons',   icon: Tag,          label: 'Coupons & Remises',      permission: 'view_coupons'   },
-    { href: '/whatsapp',  icon: MessageCircle,label: 'WhatsApp Business',      permission: 'view_whatsapp'  },
+    // { href: '/whatsapp',  icon: MessageCircle,label: 'WhatsApp Business',      permission: 'view_whatsapp'  },
     { href: '/staff',     icon: UsersRound,   label: 'Équipe & Paie',          permission: 'view_staff'     },
+    { href: '/mon-espace-rh', icon: UserCircle, label: 'Mon Espace RH',        permission: 'view_my_hr'     },
     { href: '/recovery',  icon: History,      label: 'Récupération Données',   permission: 'view_recovery'  },
-    { href: '/import',    icon: DatabaseZap,  label: 'Import base de données', permission: 'view_import'    },
+    // { href: '/import',    icon: DatabaseZap,  label: 'Import base de données', permission: 'view_import'    },
     { href: '/activity',  icon: ScrollText,   label: 'Journal Audit',          permission: 'view_activity'  },
     { href: '/settings',  icon: Settings,     label: 'Paramètres',             permission: 'view_settings'  },
   ],
@@ -127,6 +128,12 @@ export const NAV_BY_TYPE: Record<BusinessType, NavSection[]> = {
   service:    [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
   juridique:  [S_JURIDIQUE,     S_FINANCE,  S_EVENEMENTS, S_ADMIN],
   education:  [S_SCOLARITE,     S_FINANCE,  S_EVENEMENTS, S_ADMIN],
+  // Organisation "RH / SIRH uniquement" (create_business_v2, secteur 'rh') : ni vente,
+  // ni stock, ni livraison — juste le suivi financier de base et l'administration
+  // (dont Équipe & Paie). Un type dédié évite de réutiliser 'service', dont le nom
+  // collisionne avec la feature 'service' (module Prestations/Ateliers) via le
+  // fallback type→feature de hasFeature().
+  rh:         [S_FINANCE,       S_ADMIN],
 };
 
 export function getNavSections(type: BusinessType | null | undefined): NavSection[] {

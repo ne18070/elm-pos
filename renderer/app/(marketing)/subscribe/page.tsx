@@ -166,7 +166,7 @@ export default function SubscribePage() {
   }
 
   return (
-    <div style={{ height: '100dvh', overflowY: 'auto' }} className="bg-surface p-4 sm:p-8">
+    <div style={{ height: '100dvh', overflowY: 'auto' }} className="bg-surface px-4 sm:px-8 pb-4 sm:pb-8 pt-28 sm:pt-32">
       {/* Grille de fond */}
       <div className="subscribe-grid-bg fixed inset-0 opacity-[0.03] pointer-events-none" style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',

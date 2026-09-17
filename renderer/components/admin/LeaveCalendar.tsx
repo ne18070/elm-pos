@@ -4,16 +4,23 @@ import React, { useMemo } from 'react';
 import { ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LeaveRequest } from '@services/supabase/leave';
+import type { StaffAttendance } from '@services/supabase/staff';
+
+const ATTENDANCE_CHIP_CFG: Record<string, { label: string; color: string }> = {
+  absent: { label: 'Absent', color: '#ef4444' },
+  retard: { label: 'Retard', color: '#f97316' },
+};
 
 interface LeaveCalendarProps {
   year: number;
   month: number;
   requests: LeaveRequest[];
+  attendance?: StaffAttendance[];
   onPrev: () => void;
   onNext: () => void;
 }
 
-export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCalendarProps) {
+export function LeaveCalendar({ year, month, requests, attendance = [], onPrev, onNext }: LeaveCalendarProps) {
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDay = new Date(year, month - 1, 1).getDay(); // 0 (Sun) to 6 (Sat)
   
@@ -33,11 +40,24 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
 
   const getLeavesForDay = (day: number) => {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return requests.filter(r => 
-      r.status === 'approved' && 
-      dateStr >= r.start_date && 
+    return requests.filter(r =>
+      r.status === 'approved' &&
+      dateStr >= r.start_date &&
       dateStr <= r.end_date
     );
+  };
+
+  // Regroupe absences/retards du jour par statut (pas de nom d'employé : StaffAttendance
+  // ne porte pas de relation staff embarquée côté admin, un compte par statut suffit ici).
+  const getAttendanceCountsForDay = (day: number) => {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const counts: Record<string, number> = {};
+    for (const a of attendance) {
+      if (a.date !== dateStr) continue;
+      if (!ATTENDANCE_CHIP_CFG[a.status]) continue;
+      counts[a.status] = (counts[a.status] ?? 0) + 1;
+    }
+    return counts;
   };
 
   return (
@@ -65,6 +85,7 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
         
         {days.map((day, i) => {
           const leaves = day ? getLeavesForDay(day) : [];
+          const attendanceCounts = day ? getAttendanceCountsForDay(day) : {};
           return (
             <div key={i} className={cn(
               "min-h-[100px] bg-surface-card p-2 transition-colors",
@@ -75,8 +96,8 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
                   <span className="text-xs font-bold text-content-primary">{day}</span>
                   <div className="mt-1 space-y-1">
                     {leaves.map(l => (
-                      <div 
-                        key={l.id} 
+                      <div
+                        key={l.id}
                         style={{ backgroundColor: `${l.leave_type?.color}20`, borderColor: `${l.leave_type?.color}40`, color: l.leave_type?.color }}
                         className="text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 truncate font-bold"
                         title={`${l.staff?.name} - ${l.leave_type?.name}`}
@@ -85,6 +106,19 @@ export function LeaveCalendar({ year, month, requests, onPrev, onNext }: LeaveCa
                         {l.staff?.name}
                       </div>
                     ))}
+                    {Object.entries(attendanceCounts).map(([status, count]) => {
+                      const cfg = ATTENDANCE_CHIP_CFG[status];
+                      return (
+                        <div
+                          key={status}
+                          style={{ backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}40`, color: cfg.color }}
+                          className="text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 truncate font-bold"
+                        >
+                          <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
+                          {count} {cfg.label}{count > 1 ? 's' : ''}
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}

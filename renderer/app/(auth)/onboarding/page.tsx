@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Store, Utensils, Car, Gavel, Hotel, LayoutGrid,
-  ChevronRight, CheckCircle2, Loader2, GraduationCap
+  ChevronRight, CheckCircle2, Loader2, GraduationCap, UsersRound
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { trackEvent } from '@/lib/analytics';
@@ -60,6 +59,14 @@ const SECTORS = [
     bg:    'bg-badge-info',
   },
   {
+    id:    'rh',
+    label: 'RH / SIRH uniquement',
+    desc:  'Employés, présences, paie, congés — sans caisse',
+    icon:  UsersRound,
+    color: 'text-status-success',
+    bg:    'bg-badge-success',
+  },
+  {
     id:    'autre',
     label: 'Autre activité',
     desc:  'Configuration personnalisée',
@@ -73,7 +80,6 @@ export default function OnboardingPage() {
   const [step,         setStep]        = useState<'sector' | 'loading' | 'success'>('sector');
   const [progress,     setProgress]    = useState(0);
   const [loadingText,  setLoadingText] = useState('Configuration...');
-  const router = useRouter();
 
   useEffect(() => { trackEvent('onboarding_started'); }, []);
 
@@ -120,9 +126,13 @@ export default function OnboardingPage() {
 
       const route = getDefaultRoute('owner', business);
 
-      // On laisse l'animation de succès respirer un peu
+      // Navigation "dure" (pas router.push) : AuthProvider ne réagit qu'au montage/
+      // focus/onAuthStateChange, pas à une navigation client-side. Sans reload complet,
+      // le business/l'abonnement fraîchement créés restent absents du store (celui-ci a
+      // été peuplé au signup, avant create_business_v2/activate_trial_v2), et le dashboard
+      // layout nous renvoie vers /billing en boucle en le croyant "sans abonnement".
       setTimeout(() => {
-        router.push(`${route}?first_visit=true`);
+        window.location.href = `${route}?first_visit=true`;
       }, 1500);
 
     } catch (err: any) {

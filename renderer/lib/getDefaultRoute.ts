@@ -30,6 +30,18 @@ export function getDefaultRoute(
     return staffRoutes[kind];
   }
 
+  // Organisation "RH / SIRH uniquement" (secteur 'rh' de l'onboarding) :
+  // aucune feature de vente, donc le parcours NAV_ITEMS ci-dessous atterrirait
+  // sur /analytics (premier item sans contrainte de feature) — un tableau de
+  // bord vide plutôt que le module RH pour lequel l'organisation s'est inscrite.
+  if (
+    business?.features?.length === 1 &&
+    business.features[0] === 'staff' &&
+    checkPermission(role, 'view_staff', overrides, business)
+  ) {
+    return '/staff';
+  }
+
   // On parcourt NAV_ITEMS dans l'ordre (défini par NAV_SECTIONS)
   // et on retourne la première route autorisée.
   for (const item of NAV_ITEMS) {

@@ -4,8 +4,6 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Bot, Send, X, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
-import { usePermissionsStore } from '@/store/permissions';
-import { checkPermission } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { getProducts } from '@services/supabase/products';
 import { getOrders } from '@services/supabase/orders';
@@ -126,7 +124,6 @@ function buildContext(
 export function AssistantWidget() {
   const pathname = usePathname();
   const { user, business } = useAuthStore();
-  const { overrides } = usePermissionsStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [contextLoaded, setContextLoaded] = useState(false);
@@ -143,7 +140,8 @@ export function AssistantWidget() {
   const hasDragged = useRef(false);
   const dragOrigin = useRef({ px: 0, py: 0, bx: 0, by: 0 });
 
-  const canUse = !!user && checkPermission(user.role, 'view_ai_assistant', overrides, business);
+  // Assistant IA désactivé (cf. view_ai_assistant commenté dans permissions.ts / nav-config.ts)
+  const canUse = false;
   const isAssistantPage = pathname === '/assistant';
 
   // Cleanup cooldown interval on unmount

@@ -3,6 +3,7 @@ import { X, Loader2, Link2, RefreshCw, Copy, Check } from 'lucide-react';
 import { inviteUser } from '@services/supabase/users';
 import { getTeamMembers } from '@services/supabase/users';
 import { linkStaffToUser } from '@services/supabase/staff';
+import { getContextualRoleLabel } from '@/lib/permissions';
 import type { User as SystemUser } from '@pos-types';
 import { type Staff } from '@services/supabase/staff';
 
@@ -12,11 +13,12 @@ function generatePassword(): string {
 }
 
 export function LinkAccountModal({
-  staff, businessId, teamMembers, linkedUserIds,
+  staff, businessId, businessType, teamMembers, linkedUserIds,
   onClose, onLinked, onTeamRefresh, notifError, notifSuccess,
 }: {
   staff:          Staff;
   businessId:     string;
+  businessType?:  string;
   teamMembers:    SystemUser[];
   linkedUserIds:  string[];   // user_ids already linked to another staff record
   onClose:        () => void;
@@ -25,6 +27,7 @@ export function LinkAccountModal({
   notifError:     (m: string) => void;
   notifSuccess:   (m: string) => void;
 }) {
+  const roleLabel = getContextualRoleLabel('staff', businessType);
   const [mode, setMode]       = useState<'new' | 'existing'>('new');
   const [saving, setSaving]   = useState(false);
   const [copied, setCopied]   = useState(false);
@@ -119,7 +122,7 @@ export function LinkAccountModal({
           {mode === 'new' ? (
             <div className="space-y-4">
               <p className="text-xs text-content-secondary leading-relaxed">
-                Un compte Caissier sera créé. L'employé pourra se connecter et accéder à la caisse, aux commandes et aux livraisons.
+                Un compte {roleLabel} sera créé. L'employé pourra se connecter à l'application avec les accès de ce rôle.
               </p>
               <div>
                 <label className="text-[10px] font-black text-content-muted uppercase tracking-widest block mb-1.5">Adresse e-mail *</label>

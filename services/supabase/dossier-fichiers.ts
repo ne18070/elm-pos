@@ -42,15 +42,16 @@ export async function getSignedUrl(storagePath: string): Promise<string> {
   return data.signedUrl;
 }
 
+/** Quota de stockage partagé du business (compteur maintenu par trigger sur dossier_fichiers + staff_documents) */
 export async function getStorageInfo(businessId: string): Promise<StorageInfo> {
-  const [quotaRes, usedRes] = await Promise.all([
-    supabase.from('businesses').select('storage_quota_bytes').eq('id', businessId).single(),
-    supabase.from('dossier_fichiers').select('taille_bytes').eq('business_id', businessId),
-  ]);
-  if (quotaRes.error) throw new Error(quotaRes.error.message);
-  if (usedRes.error) throw new Error(usedRes.error.message);
-  const quota = quotaRes.data?.storage_quota_bytes ?? 1073741824;
-  const used  = (usedRes.data ?? []).reduce((sum: number, r: { taille_bytes: number }) => sum + (r.taille_bytes ?? 0), 0);
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('storage_quota_bytes, storage_used_bytes')
+    .eq('id', businessId)
+    .single();
+  if (error) throw new Error(error.message);
+  const quota = data?.storage_quota_bytes ?? 1073741824;
+  const used  = data?.storage_used_bytes ?? 0;
   return {
     used_bytes:  used,
     quota_bytes: quota,

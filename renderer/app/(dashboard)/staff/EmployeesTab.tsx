@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { 
-  Users, Plus, Pencil, Trash2, List, Map as MapIcon, 
-  Search as SearchIcon, X, Phone, Mail, Building2, LogIn, Link2, Unlink, Filter
+import {
+  Users, Plus, Pencil, Trash2, List, Map as MapIcon,
+  Search as SearchIcon, X, Phone, Mail, Building2, LogIn, Link2, Unlink, Filter, FolderOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { initials } from './staff-utils';
@@ -9,10 +9,10 @@ import { type Staff, type SalaryType } from '@services/supabase/staff';
 import type { User as SystemUser } from '@pos-types';
 import { StaffOffices } from '@/components/admin/StaffOffices';
 
-export function EmployeesTab({ 
-  staffList, teamMembers, currency, onAdd, onEdit, onDelete, onUpdateStaff, onLinkAccount, onUnlinkAccount 
-}: { 
-  staffList: Staff[]; 
+export function EmployeesTab({
+  staffList, teamMembers, currency, onAdd, onEdit, onDelete, onUpdateStaff, onLinkAccount, onUnlinkAccount, onOpenFolder
+}: {
+  staffList: Staff[];
   teamMembers: SystemUser[];
   currency: string;
   onAdd: () => void;
@@ -21,6 +21,7 @@ export function EmployeesTab({
   onUpdateStaff: (id: string, form: any) => Promise<void>;
   onLinkAccount: (s: Staff) => void;
   onUnlinkAccount: (s: Staff) => void;
+  onOpenFolder: (s: Staff) => void;
 }) {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'list' | 'offices'>('list');
@@ -162,6 +163,7 @@ export function EmployeesTab({
               onDelete={() => onDelete(s)}
               onLinkAccount={() => onLinkAccount(s)}
               onUnlinkAccount={() => onUnlinkAccount(s)}
+              onOpenFolder={() => onOpenFolder(s)}
             />
           ))}
         </div>
@@ -171,7 +173,7 @@ export function EmployeesTab({
 }
 
 function StaffCard({
-  staff: s, currency, teamMember, onEdit, onDelete, onLinkAccount, onUnlinkAccount,
+  staff: s, currency, teamMember, onEdit, onDelete, onLinkAccount, onUnlinkAccount, onOpenFolder,
 }: {
   staff: Staff;
   currency: string;
@@ -180,6 +182,7 @@ function StaffCard({
   onDelete: () => void;
   onLinkAccount: () => void;
   onUnlinkAccount: () => void;
+  onOpenFolder: () => void;
 }) {
   const rate = s.salary_type === 'hourly'
     ? `${s.salary_rate.toLocaleString('fr-FR')} /h`
@@ -234,6 +237,8 @@ function StaffCard({
         )}
       </div>
 
+      <ContractAlert staff={s} />
+
       <div className="space-y-3 pt-1">
         {teamMember ? (
           <div className="flex items-center justify-between bg-surface-input border border-surface-border rounded-xl px-3 py-2.5 shadow-inner">
@@ -262,12 +267,61 @@ function StaffCard({
             className="flex-1 h-10 flex items-center justify-center gap-2 bg-surface-input hover:bg-surface-hover text-content-primary rounded-xl transition-all text-xs font-bold border border-surface-border">
             <Pencil size={14} /> Modifier
           </button>
+          <button onClick={onOpenFolder} title="Dossier RH (documents, checklist)"
+            className="w-10 h-10 flex items-center justify-center border border-surface-border hover:border-brand-500 hover:bg-brand-500/5 text-content-muted hover:text-content-brand rounded-xl transition-all">
+            <FolderOpen size={14} />
+          </button>
           <button onClick={onDelete}
             className="w-10 h-10 flex items-center justify-center border border-surface-border hover:border-status-error hover:bg-badge-error text-content-muted hover:text-status-error rounded-xl transition-all">
             <Trash2 size={14} />
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+const ALERT_WINDOW_DAYS = 30;
+
+function daysUntil(dateStr: string): number {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr + 'T00:00:00');
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function buildDateAlert(
+  days: number | null,
+  expiredLabel: string,
+  upcomingLabel: (d: number) => string,
+): { label: string; urgent: boolean; days: number } | null {
+  // Bornée des deux côtés : un `days` très négatif (ex: essai jamais nettoyé
+  // il y a 2 ans) ne doit pas rester "à traiter" indéfiniment.
+  if (days === null || days < -ALERT_WINDOW_DAYS || days > ALERT_WINDOW_DAYS) return null;
+  return { label: days < 0 ? expiredLabel : upcomingLabel(days), urgent: days <= 7, days };
+}
+
+function ContractAlert({ staff: s }: { staff: Staff }) {
+  if (s.status !== 'active') return null;
+
+  const probationDays = s.probation_end_date ? daysUntil(s.probation_end_date) : null;
+  const contractDays  = s.contract_end_date  ? daysUntil(s.contract_end_date)  : null;
+
+  const probationAlert = buildDateAlert(probationDays, "Période d'essai dépassée", (d) => `Fin d'essai dans ${d} j`);
+  const contractAlert  = buildDateAlert(contractDays, 'Contrat expiré', (d) => `Fin de contrat dans ${d} j`);
+
+  // La plus urgente des deux (days le plus petit = la plus proche/dépassée) l'emporte.
+  const alert = [probationAlert, contractAlert]
+    .filter((a): a is NonNullable<typeof a> => a !== null)
+    .sort((a, b) => a.days - b.days)[0] ?? null;
+
+  if (!alert) return null;
+
+  return (
+    <div className={cn(
+      'flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border -mt-1',
+      alert.urgent ? 'bg-badge-error border-status-error text-status-error' : 'bg-badge-warning border-status-warning text-status-warning'
+    )}>
+      {alert.label}
     </div>
   );
 }

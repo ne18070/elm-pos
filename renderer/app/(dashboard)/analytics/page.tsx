@@ -62,6 +62,7 @@ export default function AnalyticsPage() {
     approvData,
     servicesData,
     vendeursData,
+    rhData,
     audiences,
     stackedDays,
     hasMultiSource,
@@ -109,11 +110,11 @@ export default function AnalyticsPage() {
     { id: 'general',    label: 'Général',      icon: TrendingUp                          },
     { id: 'services',   label: 'Prestations',  icon: Wrench,    show: isService          },
     { id: 'produits',   label: 'Produits',     icon: BarChart,  feature: 'retail'        },
-    { id: 'vendeurs',   label: 'Vendeurs',     icon: UserCheck                           },
+    { id: 'vendeurs',   label: 'Vendeurs',     icon: UserCheck, feature: 'retail'        },
     { id: 'grossiste',  label: 'Détail ventes',icon: Store,     feature: 'retail'        },
     { id: 'revendeurs', label: 'Revendeurs',   icon: Users,     feature: 'retail'        },
     { id: 'promos',     label: 'Promos',       icon: Tag,       feature: 'retail'        },
-    { id: 'appro',      label: 'Achats',       icon: Package                             },
+    { id: 'appro',      label: 'Achats',       icon: Package,   feature: 'stock'         },
     { id: 'juridique',  label: 'Dossiers',     icon: Briefcase, feature: 'dossiers'      },
     { id: 'hotel',      label: 'Hôtel',        icon: BedDouble, feature: 'hotel'         },
     { id: 'voitures',   label: 'Voitures',     icon: Car,       feature: 'voitures'      },
@@ -172,6 +173,7 @@ export default function AnalyticsPage() {
             data={data}
             juridiqueData={juridiqueData}
             hotelData={hotelData}
+            rhData={rhData}
             prevCA={prevCA}
             stackedDays={stackedDays}
             hasMultiSource={hasMultiSource}
