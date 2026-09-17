@@ -42,10 +42,27 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  // Largeur (w-72) + hauteur max approximative (header + liste plafonnée à max-h-80)
+  // du dropdown, utilisées pour le garder dans les limites de l'écran (évite qu'il
+  // soit coupé/caché sous la barre des tâches quand le bouton est en bas de la sidebar).
+  const DROPDOWN_WIDTH = 288;
+  const DROPDOWN_MAX_HEIGHT = 400;
+  const VIEWPORT_MARGIN = 12;
+
   const handleToggle = () => {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.top, left: rect.right + 8 });
+
+      let left = rect.right + 8;
+      if (left + DROPDOWN_WIDTH + VIEWPORT_MARGIN > window.innerWidth) {
+        left = Math.max(VIEWPORT_MARGIN, rect.left - 8 - DROPDOWN_WIDTH);
+      }
+
+      let top = rect.top;
+      const maxTop = window.innerHeight - DROPDOWN_MAX_HEIGHT - VIEWPORT_MARGIN;
+      top = Math.min(top, Math.max(VIEWPORT_MARGIN, maxTop));
+
+      setDropdownPos({ top, left });
     }
     setOpen((v) => !v);
   };
