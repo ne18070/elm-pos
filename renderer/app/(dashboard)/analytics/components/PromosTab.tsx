@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Tag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Tag, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CouponStat } from '@services/supabase/analytics';
 
 interface PromosTabProps {
@@ -18,6 +18,7 @@ export function PromosTab({
   fmt
 }: PromosTabProps) {
   const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   if (loading) {
       return (
@@ -49,22 +50,72 @@ export function PromosTab({
             <p className="text-sm">Aucun coupon utilisé sur {periodLabel}</p>
         </div>
       ) : (
-        <div className="space-y-0 divide-y divide-surface-border">
-          {coupons.map((c) => (
-            <div key={c.coupon_code} className="py-3 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-sm font-mono font-semibold text-status-success">{c.coupon_code}</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-badge-success border border-status-success/50 text-status-success">×{c.usage_count}</span>
-                </div>
-                <div className="flex gap-4 text-xs text-content-muted">
-                  <span>CA : {fmt(c.revenue)}</span>
-                  <span>Remise : <span className="text-status-error">−{fmt(c.total_discount)}</span></span>
-                </div>
-              </div>
-              <p className="text-sm font-semibold text-content-primary shrink-0">{fmt(c.revenue)}</p>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-content-muted border-b border-surface-border">
+                <th className="py-2 pr-4 font-medium"></th>
+                <th className="py-2 pr-4 font-medium">Code</th>
+                <th className="py-2 pr-4 font-medium text-right">Utilisations</th>
+                <th className="py-2 pr-4 font-medium text-right">Montant (voir détail)</th>
+                <th className="py-2 pr-4 font-medium text-right">Qté offerte</th>
+                <th className="py-2 pr-4 font-medium text-right">Valeur offerte</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-surface-border">
+              {coupons.map((c) => {
+                const isOpen = expanded === c.coupon_code;
+                return (
+                  <React.Fragment key={c.coupon_code}>
+                    <tr
+                      className="cursor-pointer hover:bg-surface-hover"
+                      onClick={() => setExpanded(isOpen ? null : c.coupon_code)}
+                    >
+                      <td className="py-3 pl-1 text-content-muted w-6">
+                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="text-sm font-mono font-semibold text-status-success">{c.coupon_code}</span>
+                      </td>
+                      <td className="py-3 pr-4 text-right">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-badge-success border border-status-success/50 text-status-success">×{c.usage_count}</span>
+                      </td>
+                      <td className="py-3 pr-4 text-right">
+                        <div className="text-sm font-semibold text-content-primary">{fmt(c.revenue)}</div>
+                        <div className="text-[10px] text-content-muted">{c.revenue_label}</div>
+                      </td>
+                      <td className="py-3 pr-4 text-right text-xs text-content-secondary">
+                        {c.offered_quantity > 0
+                          ? `${c.offered_quantity} ${c.offered_unit ?? 'unité'}${c.offered_quantity > 1 ? 's' : ''}`
+                          : '—'}
+                      </td>
+                      <td className="py-3 pr-4 text-right text-xs text-status-error">−{fmt(c.total_discount)}</td>
+                    </tr>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={6} className="bg-surface-input/50 px-4 py-3 space-y-3">
+                          <p className="text-xs text-content-secondary leading-relaxed">
+                            <span className="font-semibold text-content-primary">{fmt(c.revenue)}</span> — {c.revenue_description}
+                          </p>
+                          {c.usages.length === 0 ? (
+                            <p className="text-xs text-content-muted">Aucun détail disponible pour ce coupon.</p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {c.usages.map((u) => (
+                                <li key={u.order_id} className="text-xs text-content-secondary leading-relaxed">
+                                  {u.description}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

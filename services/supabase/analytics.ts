@@ -1,6 +1,7 @@
 import { supabase } from './client';
 import type { AnalyticsSummary, DailyStat, TopProduct } from '../../types';
 import { format, subDays } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export async function getAnalyticsSummary(
   businessId: string,
@@ -275,11 +276,47 @@ export async function getResellerClientStats(
 
 // --- Coupon / promo stats -----------------------------------------------------
 
+export interface CouponUsageDetail {
+  order_id: string;
+  created_at: string;
+  /** Phrase complète en français décrivant cette utilisation (qui, pour qui, quoi, combien) */
+  description: string;
+}
+
 export interface CouponStat {
   coupon_code: string;
   usage_count: number;
+  /** Quantité d'articles offerts (coupons de type free_item uniquement) */
+  offered_quantity: number;
+  /** Unité de vente du produit offert (carton, pièce, etc.) */
+  offered_unit: string | null;
+  /** Valeur monétaire de la remise : quantité offerte × prix de vente du produit
+   *  (ou somme de discount_amount pour les coupons %/montant fixe) */
   total_discount: number;
   revenue: number;
+  /** Étiquette courte affichée sous le montant (ex: "Ventes de MAGGI TABLETTE") —
+   *  affichée en permanence pour qu'on n'ait pas à deviner ce que "revenue" mesure ici. */
+  revenue_label: string;
+  /** Phrase complète expliquant ce que représente `revenue` pour ce coupon précis
+   *  (le calcul diffère selon le type de coupon — éviter toute ambiguïté sur "CA") */
+  revenue_description: string;
+  /** Détail de chaque commande ayant utilisé ce coupon, la plus récente en premier */
+  usages: CouponUsageDetail[];
+}
+
+interface CouponOrderRow {
+  id: string;
+  created_at: string;
+  coupon_code: string;
+  coupon_codes: string[] | null;
+  discount_amount: number;
+  total: number;
+  customer_name: string | null;
+  cashier: { full_name: string } | null;
+}
+
+function formatFcfa(n: number): string {
+  return `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 }
 
 export async function getCouponStats(
@@ -290,30 +327,176 @@ export async function getCouponStats(
 
   const { data, error } = await supabase
     .from('orders')
-    .select('coupon_code, discount_amount, total')
+    .select('id, created_at, coupon_code, coupon_codes, discount_amount, total, customer_name, cashier:users!cashier_id(full_name)')
     .eq('business_id', businessId)
     .eq('status', 'paid')
     .gte('created_at', `${startDate}T00:00:00Z`)
     .not('coupon_code', 'is', null) as unknown as {
-      data: Array<{ coupon_code: string; discount_amount: number; total: number }> | null;
+      data: CouponOrderRow[] | null;
       error: unknown;
     };
 
   if (error) throw error;
+  const orders = data ?? [];
+  if (orders.length === 0) return [];
 
   const map = new Map<string, CouponStat>();
-  for (const row of data ?? []) {
-    if (!row.coupon_code) continue;
-    const existing = map.get(row.coupon_code) ?? {
-      coupon_code: row.coupon_code,
-      usage_count: 0,
-      total_discount: 0,
-      revenue: 0,
+  const orderIdsByCode = new Map<string, string[]>();
+  const orderById = new Map(orders.map((o) => [o.id, o]));
+
+  for (const row of orders) {
+    const codes = new Set<string>(row.coupon_codes ?? []);
+    if (row.coupon_code) codes.add(row.coupon_code);
+
+    for (const code of codes) {
+      const existing = map.get(code) ?? {
+        coupon_code: code,
+        usage_count: 0,
+        offered_quantity: 0,
+        offered_unit: null,
+        total_discount: 0, // filled in below — offered_quantity × prix de vente for free_item coupons
+        revenue: 0, // filled in below — either from the linked product's sales, or the order totals as fallback
+        revenue_label: '',
+        revenue_description: '',
+        usages: [],
+      };
+      existing.usage_count += 1;
+      existing.total_discount += row.discount_amount ?? 0;
+      map.set(code, existing);
+
+      const ids = orderIdsByCode.get(code) ?? [];
+      ids.push(row.id);
+      orderIdsByCode.set(code, ids);
+    }
+  }
+
+  // Coupons of type "free_item" tie a revenue figure to their linked product's actual
+  // sales, not the total of orders that happened to use them (those orders often bundle
+  // unrelated products, e.g. a wholesale order redeeming a "free item" promo alongside
+  // other unrelated purchases).
+  const { data: couponRows } = await supabase
+    .from('coupons')
+    .select('code, type, free_item_product_id')
+    .eq('business_id', businessId)
+    .in('code', Array.from(map.keys())) as unknown as {
+      data: Array<{ code: string; type: string; free_item_product_id: string | null }> | null;
     };
-    existing.usage_count += 1;
-    existing.total_discount += row.discount_amount ?? 0;
-    existing.revenue += row.total;
-    map.set(row.coupon_code, existing);
+  const couponByCode = new Map((couponRows ?? []).map((c) => [c.code, c]));
+
+  const productScoped: Array<{ code: string; productId: string; orderIds: string[] }> = [];
+  for (const [code, orderIds] of orderIdsByCode) {
+    const coupon = couponByCode.get(code);
+    if (coupon?.type === 'free_item' && coupon.free_item_product_id) {
+      productScoped.push({ code, productId: coupon.free_item_product_id, orderIds });
+    } else {
+      const stat = map.get(code)!;
+      stat.revenue = orderIds.reduce((sum, id) => sum + (orderById.get(id)?.total ?? 0), 0);
+      stat.revenue_label = 'Total des commandes concernées';
+      stat.revenue_description = `Montant total (TTC) des ${orderIds.length} commande${orderIds.length > 1 ? 's' : ''} ayant utilisé le coupon ${code} — ce n'est pas la valeur de la remise, mais le total payé par les clients sur ces commandes, articles hors coupon compris.`;
+      stat.usages = orderIds.map((id): CouponUsageDetail => {
+        const o = orderById.get(id)!;
+        const who = o.cashier?.full_name ?? 'un caissier inconnu';
+        const forWhom = o.customer_name ? `pour ${o.customer_name}` : 'pour un client non renseigné';
+        const dateStr = format(new Date(o.created_at), "d MMM yyyy 'à' HH:mm", { locale: fr });
+        const ref = id.slice(0, 8).toUpperCase();
+        const remisePart = o.discount_amount > 0
+          ? `, avec une remise de ${formatFcfa(o.discount_amount)} appliquée grâce au coupon ${code}`
+          : ` (le coupon ${code} était appliqué mais n'a réduit aucun montant sur cette commande)`;
+        return {
+          order_id: id,
+          created_at: o.created_at,
+          description: `Le ${dateStr}, commande #${ref} vendue par ${who} ${forWhom} : ${formatFcfa(o.total)} d'achats${remisePart}.`,
+        };
+      }).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+  }
+
+  if (productScoped.length > 0) {
+    const allOrderIds = Array.from(new Set(productScoped.flatMap((p) => p.orderIds)));
+    const productIds = Array.from(new Set(productScoped.map((p) => p.productId)));
+
+    const [{ data: items }, { data: products }] = await Promise.all([
+      supabase
+        .from('order_items')
+        .select('order_id, product_id, quantity, price, total')
+        .in('order_id', allOrderIds) as unknown as Promise<{
+          data: Array<{ order_id: string; product_id: string; quantity: number; price: number; total: number }> | null;
+        }>,
+      supabase
+        .from('products')
+        .select('id, name, price, unit')
+        .in('id', productIds) as unknown as Promise<{
+          data: Array<{ id: string; name: string; price: number; unit: string | null }> | null;
+        }>,
+    ]);
+
+    const itemsByOrder = new Map<string, Array<{ product_id: string; quantity: number; price: number; total: number }>>();
+    for (const item of items ?? []) {
+      const arr = itemsByOrder.get(item.order_id) ?? [];
+      arr.push(item);
+      itemsByOrder.set(item.order_id, arr);
+    }
+    const productById = new Map((products ?? []).map((p) => [p.id, p]));
+
+    for (const { code, productId, orderIds } of productScoped) {
+      const product = productById.get(productId);
+      const productName = product?.name ?? 'ce produit';
+      const salePrice = product?.price ?? 0;
+      const unit = product?.unit ?? 'unité';
+
+      let revenue = 0;
+      let offeredQuantity = 0;
+      const usages: CouponUsageDetail[] = [];
+
+      for (const orderId of orderIds) {
+        let paidQuantity = 0;
+        let paidRevenue = 0;
+        let paidUnitPrice = 0; // prix unitaire réellement facturé lors de cette commande (peut différer du prix catalogue actuel)
+        let orderOfferedQuantity = 0;
+        for (const line of itemsByOrder.get(orderId) ?? []) {
+          if (line.product_id !== productId) continue;
+          revenue += line.total;
+          // Les articles offerts sont ajoutés au panier à prix 0 (voir cart.ts addFreeItem)
+          if (line.price === 0) {
+            orderOfferedQuantity += line.quantity;
+          } else {
+            paidQuantity += line.quantity;
+            paidRevenue += line.total;
+            paidUnitPrice = line.price;
+          }
+        }
+        offeredQuantity += orderOfferedQuantity;
+
+        const o = orderById.get(orderId)!;
+        const who = o.cashier?.full_name ?? 'un caissier inconnu';
+        const forWhom = o.customer_name ? `pour ${o.customer_name}` : 'pour un client non renseigné';
+        const dateStr = format(new Date(o.created_at), "d MMM yyyy 'à' HH:mm", { locale: fr });
+        const ref = orderId.slice(0, 8).toUpperCase();
+        const plural = (n: number) => (n > 1 ? 's' : '');
+
+        const achatPart = paidQuantity > 0
+          ? `${paidQuantity} ${unit}${plural(paidQuantity)} de ${productName} acheté${plural(paidQuantity)} à ${formatFcfa(paidUnitPrice)}/${unit} pour ${formatFcfa(paidRevenue)} au total`
+          : `aucun achat payant de ${productName}`;
+        const offertPart = orderOfferedQuantity > 0
+          ? `, dont ${orderOfferedQuantity} ${unit}${plural(orderOfferedQuantity)} offert${plural(orderOfferedQuantity)} gratuitement grâce au coupon ${code} (valorisé${plural(orderOfferedQuantity)} à ${formatFcfa(salePrice)}/${unit}, soit ${formatFcfa(orderOfferedQuantity * salePrice)})`
+          : ` (aucun ${unit} offert sur cette commande malgré le coupon ${code})`;
+
+        usages.push({
+          order_id: orderId,
+          created_at: o.created_at,
+          description: `Le ${dateStr}, commande #${ref} vendue par ${who} ${forWhom} : ${achatPart}${offertPart}.`,
+        });
+      }
+
+      const stat = map.get(code)!;
+      stat.revenue = revenue;
+      stat.offered_quantity = offeredQuantity;
+      stat.offered_unit = unit;
+      stat.total_discount = offeredQuantity * salePrice;
+      stat.revenue_label = `Ventes payées de ${productName}`;
+      stat.revenue_description = `Ventes réellement payées de ${productName} (${unit}s achetés à prix normal) sur les commandes ayant utilisé le coupon ${code} — n'inclut ni les ${unit}s offerts (0 FCFA), ni la valeur des autres produits présents dans ces commandes.`;
+      stat.usages = usages.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
   }
 
   return Array.from(map.values()).sort((a, b) => b.usage_count - a.usage_count);
