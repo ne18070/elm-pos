@@ -71,10 +71,43 @@ export async function createCoupon(
   return created;
 }
 
+/**
+ * Champs qui définissent CE QU'EST le coupon (code, type, valeur, article offert).
+ * Une fois le coupon utilisé (uses_count > 0), des commandes passées en dépendent
+ * pour leur interprétation (ex: les statistiques recalculent le CA à partir du
+ * `type`/`free_item_product_id` *actuels* du coupon — voir getCouponStats) : les
+ * modifier après coup fausserait silencieusement l'historique.
+ */
+const LOCKED_AFTER_USE_FIELDS = [
+  'code', 'type', 'value',
+  'free_item_label', 'free_item_product_id', 'free_item_quantity',
+  'free_item_unit_label', 'free_item_stock_consumption',
+] as const satisfies ReadonlyArray<keyof Coupon>;
+
 export async function updateCoupon(
   id: string,
   updates: Partial<Omit<Coupon, 'id' | 'created_at'>>
 ): Promise<Coupon> {
+  const { data: currentData } = await supabase
+    .from('coupons')
+    .select('uses_count, code, type, value, free_item_label, free_item_product_id, free_item_quantity, free_item_unit_label, free_item_stock_consumption')
+    .eq('id', id)
+    .maybeSingle();
+  const current = currentData as Pick<Coupon, typeof LOCKED_AFTER_USE_FIELDS[number] | 'uses_count'> | null;
+
+  if (current && current.uses_count > 0) {
+    const blockedField = LOCKED_AFTER_USE_FIELDS.find((field) => {
+      if (!(field in updates)) return false;
+      const nextValue = updates[field];
+      return (nextValue ?? null) !== (current[field] ?? null);
+    });
+    if (blockedField) {
+      throw new Error(
+        `Ce coupon a déjà été utilisé ${current.uses_count} fois : le code, le type, la valeur et l'article offert ne peuvent plus être modifiés (cela fausserait l'historique des ventes). Vous pouvez encore l'activer/désactiver, changer sa date d'expiration ou ses conditions d'utilisation.`,
+      );
+    }
+  }
+
   // Le code doit rester normalisé même à l'édition (sinon validate_coupon ne
   // le retrouve plus).
   const patch = updates.code != null ? { ...updates, code: normalizeCode(updates.code) } : updates;

@@ -34,6 +34,9 @@ function parseNumber(input: string): number {
 
 export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModalProps) {
   const isEdit = !!coupon;
+  // Le coupon a déjà servi : le code, le type, la valeur et l'article offert sont
+  // verrouillés pour ne pas fausser l'historique des ventes (voir updateCoupon).
+  const locked = isEdit && (coupon?.uses_count ?? 0) > 0;
   const { success, error: notifError } = useNotificationStore();
   const { business } = useAuthStore();
   const currency = business?.currency ?? 'XOF';
@@ -227,6 +230,14 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
       )}
     >
       <div className="space-y-4">
+        {locked && (
+          <div className="p-3 bg-badge-warning border border-status-warning/40 rounded-xl text-xs text-status-warning">
+            Ce coupon a déjà été utilisé {coupon?.uses_count} fois : le code, le type, la valeur et l&apos;article
+            offert sont verrouillés pour ne pas fausser l&apos;historique des ventes. Vous pouvez encore
+            l&apos;activer/désactiver, changer sa date d&apos;expiration ou ses conditions d&apos;utilisation.
+          </div>
+        )}
+
         {/* Code */}
         <div>
           <label className="label">Code promo *</label>
@@ -234,9 +245,10 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
             type="text"
             value={form.code}
             onChange={(e) => update('code', e.target.value.toUpperCase())}
-            className="input font-mono tracking-widest"
+            className="input font-mono tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder="PROMO20"
             autoFocus
+            disabled={locked}
           />
         </div>
 
@@ -256,8 +268,10 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   key={t}
                   type="button"
                   onClick={() => update('type', t)}
+                  disabled={locked}
                   className={[
                     'py-3 px-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center gap-1.5',
+                    locked ? 'opacity-60 cursor-not-allowed' : '',
                     isActive
                       ? 'border-brand-500 bg-badge-brand text-content-brand scale-[1.02] shadow-md'
                       : 'border-surface-border/80 bg-surface-input text-content-primary hover:border-brand-500/50 hover:bg-surface-hover',
@@ -292,10 +306,11 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   onFocus={() => { setShowProductDropdown(true); updateDropdownPos(); }}
                   onBlur={() => setTimeout(() => setShowProductDropdown(false), 150)}
                   placeholder="Rechercher le produit à offrir…"
-                  className="input w-full"
+                  className="input w-full disabled:opacity-60 disabled:cursor-not-allowed"
                   autoComplete="off"
+                  disabled={locked}
                 />
-                {showProductDropdown && filteredProducts.length > 0 && createPortal(
+                {!locked && showProductDropdown && filteredProducts.length > 0 && createPortal(
                   <div
                     style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
                     className="bg-surface-card border border-surface-border rounded-xl overflow-hidden shadow-xl"
@@ -336,7 +351,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   <button
                     type="button"
                     onClick={() => update('free_item_by', 'unit')}
-                    className={`py-2 px-2 rounded-lg border-2 text-xs font-semibold transition-all ${
+                    disabled={locked}
+                    className={`py-2 px-2 rounded-lg border-2 text-xs font-semibold transition-all ${locked ? 'opacity-60 cursor-not-allowed' : ''} ${
                       !bySubunit
                         ? 'border-brand-500 bg-badge-brand text-content-brand'
                         : 'border-surface-border bg-surface-input text-content-primary hover:border-brand-500/50'
@@ -347,7 +363,8 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   <button
                     type="button"
                     onClick={() => update('free_item_by', 'subunit')}
-                    className={`py-2 px-2 rounded-lg border-2 text-xs font-semibold transition-all ${
+                    disabled={locked}
+                    className={`py-2 px-2 rounded-lg border-2 text-xs font-semibold transition-all ${locked ? 'opacity-60 cursor-not-allowed' : ''} ${
                       bySubunit
                         ? 'border-brand-500 bg-badge-brand text-content-brand'
                         : 'border-surface-border bg-surface-input text-content-primary hover:border-brand-500/50'
@@ -367,8 +384,9 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                         step="1"
                         value={form.free_item_pack_size}
                         onChange={(e) => update('free_item_pack_size', e.target.value)}
-                        className="input"
+                        className="input disabled:opacity-60 disabled:cursor-not-allowed"
                         placeholder="Ex : 24"
+                        disabled={locked}
                       />
                     </div>
                     <div>
@@ -377,8 +395,9 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                         type="text"
                         value={form.free_item_unit_label}
                         onChange={(e) => update('free_item_unit_label', e.target.value)}
-                        className="input"
+                        className="input disabled:opacity-60 disabled:cursor-not-allowed"
                         placeholder="Ex : tablette"
+                        disabled={locked}
                       />
                     </div>
                   </div>
@@ -407,8 +426,9 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   step="1"
                   value={form.free_item_quantity}
                   onChange={(e) => update('free_item_quantity', e.target.value)}
-                  className="input"
+                  className="input disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="1"
+                  disabled={locked}
                 />
               </div>
               <div>
@@ -417,8 +437,9 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                   type="text"
                   value={form.free_item_label}
                   onChange={(e) => update('free_item_label', e.target.value)}
-                  className="input"
+                  className="input disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="Ex : 1 bouteille offerte"
+                  disabled={locked}
                 />
               </div>
             </div>
@@ -451,8 +472,9 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
                 step="any"
                 value={form.value}
                 onChange={(e) => update('value', e.target.value)}
-                className="input"
+                className="input disabled:opacity-60 disabled:cursor-not-allowed"
                 placeholder={form.type === 'percentage' ? '10' : '500'}
+                disabled={locked}
               />
             </div>
             <div>
