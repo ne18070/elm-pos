@@ -9,7 +9,7 @@ android/keystore.properties
 .next/
 renderer/.next/
 renderer/out/
-# .claude
+.claude/settings.local.json
 *.db
 *.db-shm
 *.db-wal

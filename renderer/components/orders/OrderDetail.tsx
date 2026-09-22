@@ -238,6 +238,24 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
     setInvoiceLink('');
   }, [order.id]);
 
+  // Le panneau détail n'est jamais remonté quand on change de commande
+  // sélectionnée (pas de `key` côté OrdersPage) — sans ce reset, un formulaire
+  // resté ouvert (édition, solde, remboursement) continue de référencer l'état
+  // de l'ANCIENNE commande alors que `order` (et donc `order.id` envoyé aux
+  // actions) pointe déjà sur la nouvelle. C'est ce qui a permis à une édition
+  // destinée à une commande d'être enregistrée sur une autre (cf. incident
+  // Aminata Sow / Amadou Dabo, 18/09/2026 ~14:42).
+  useEffect(() => {
+    setEditMode(false);
+    setEditLines([]);
+    setEditDiscount('0');
+    setEditRemoveCoupon(false);
+    setAddPid('');
+    setShowCompleteForm(false);
+    setCompleteAmount('');
+    setShowRefundModal(false);
+  }, [order.id]);
+
   // Pré-remplir le montant quand on ouvre le formulaire
   useEffect(() => {
     if (showCompleteForm) {
