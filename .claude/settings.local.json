@@ -15,7 +15,8 @@
       "Bash(grep -oE \"\\(Vos comptes publicitaires|Faites connaître votre activité|Publicités|marketing[^\\\\\"]{0,30}\\)\")",
       "Bash(grep -rhoE \"https://[a-z]{15,25}\\\\.supabase\\\\.co\" --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.json\" --include=\"*.md\" .)",
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64url'\\)\\)\")",
-      "Bash(grep -nA3 \"^\\\\[functions\" supabase/config.toml)"
+      "Bash(grep -nA3 \"^\\\\[functions\" supabase/config.toml)",
+      "Bash(supabase functions *)"
     ]
   }
 }

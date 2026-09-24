@@ -14,12 +14,15 @@ const APP_SECRET = Deno.env.get('META_APP_SECRET') ?? '';
 
 const GRAPH = `https://graph.facebook.com/${VERSION}`;
 
+// Réduit au strict nécessaire : chaque permission demandée doit être justifiée
+// en App Review, et une permission superflue rallonge l'examen sans rien
+// apporter. `ads_read` est couvert par `ads_management`, et
+// `pages_read_engagement` ne sert à rien ici — on ne lit pas le contenu de la
+// Page, seulement la liste des Pages pour savoir sous laquelle publier.
 export const META_SCOPES = [
   'ads_management',
-  'ads_read',
   'business_management',
   'pages_show_list',
-  'pages_read_engagement',
 ].join(',');
 
 export class MetaError extends Error {
