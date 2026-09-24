@@ -2,7 +2,7 @@ import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
   Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
-  GraduationCap, DatabaseZap, Bot, Ticket, Zap, UserCircle
+  GraduationCap, DatabaseZap, Bot, Ticket, Zap, UserCircle, Megaphone
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PermissionKey } from './permissions';
@@ -103,6 +103,18 @@ const S_EVENEMENTS: NavSection = {
   ],
 };
 
+// Disponible pour tous les types d'établissement (view_marketing n'a pas de
+// clé `feature`). L'entrée reste masquée tant que l'App Review Meta et l'accès
+// TikTok Marketing API ne sont pas obtenus : la page répond déjà sur /marketing
+// pour les tests, mais aucun client ne doit tomber sur un module qui ne peut
+// pas encore connecter de compte. Même précédent que WhatsApp ci-dessous.
+const S_MARKETING: NavSection = {
+  label: 'Marketing & Publicité',
+  items: [
+    // { href: '/marketing', icon: Megaphone, label: 'Publicités', permission: 'view_marketing' },
+  ],
+};
+
 const S_ADMIN: NavSection = {
   label: 'Administration',
   items: [
@@ -122,18 +134,18 @@ const S_ADMIN: NavSection = {
 // ─── Nav par type d'établissement ─────────────────────────────────────────────
 
 export const NAV_BY_TYPE: Record<BusinessType, NavSection[]> = {
-  retail:     [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
-  restaurant: [S_VENTES_SIMPLE, S_RESTAURATION, S_STOCK, S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
-  hotel:      [S_VENTES_SIMPLE, S_HEBERGEMENT, S_RESTAURATION, S_STOCK, S_FINANCE, S_EVENEMENTS, S_ADMIN],
-  service:    [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_ADMIN],
-  juridique:  [S_JURIDIQUE,     S_FINANCE,  S_EVENEMENTS, S_ADMIN],
-  education:  [S_SCOLARITE,     S_FINANCE,  S_EVENEMENTS, S_ADMIN],
+  retail:     [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_MARKETING, S_ADMIN],
+  restaurant: [S_VENTES_SIMPLE, S_RESTAURATION, S_STOCK, S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_MARKETING, S_ADMIN],
+  hotel:      [S_VENTES_SIMPLE, S_HEBERGEMENT, S_RESTAURATION, S_STOCK, S_FINANCE, S_EVENEMENTS, S_MARKETING, S_ADMIN],
+  service:    [S_VENTES,        S_STOCK,    S_LIVRAISON, S_FINANCE, S_EVENEMENTS, S_MARKETING, S_ADMIN],
+  juridique:  [S_JURIDIQUE,     S_FINANCE,  S_EVENEMENTS, S_MARKETING, S_ADMIN],
+  education:  [S_SCOLARITE,     S_FINANCE,  S_EVENEMENTS, S_MARKETING, S_ADMIN],
   // Organisation "RH / SIRH uniquement" (create_business_v2, secteur 'rh') : ni vente,
   // ni stock, ni livraison — juste le suivi financier de base et l'administration
   // (dont Équipe & Paie). Un type dédié évite de réutiliser 'service', dont le nom
   // collisionne avec la feature 'service' (module Prestations/Ateliers) via le
   // fallback type→feature de hasFeature().
-  rh:         [S_FINANCE,       S_ADMIN],
+  rh:         [S_FINANCE,       S_MARKETING, S_ADMIN],
 };
 
 export function getNavSections(type: BusinessType | null | undefined): NavSection[] {

@@ -112,6 +112,307 @@ export type Database = {
           },
         ]
       }
+      ad_campaigns: {
+        Row: {
+          business_id: string
+          campaign_group_id: string
+          connection_id: string | null
+          created_at: string | null
+          created_by: string | null
+          creative: Json
+          currency: string
+          daily_budget_minor: number
+          end_date: string | null
+          error_message: string | null
+          external_ad_id: string | null
+          external_adset_id: string | null
+          external_campaign_id: string | null
+          id: string
+          landing_url: string | null
+          last_synced_at: string | null
+          name: string
+          objective: string
+          platform: string
+          product_id: string | null
+          start_date: string
+          status: string
+          targeting: Json
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          campaign_group_id: string
+          connection_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative?: Json
+          currency?: string
+          daily_budget_minor: number
+          end_date?: string | null
+          error_message?: string | null
+          external_ad_id?: string | null
+          external_adset_id?: string | null
+          external_campaign_id?: string | null
+          id?: string
+          landing_url?: string | null
+          last_synced_at?: string | null
+          name: string
+          objective: string
+          platform: string
+          product_id?: string | null
+          start_date: string
+          status?: string
+          targeting?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          campaign_group_id?: string
+          connection_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative?: Json
+          currency?: string
+          daily_budget_minor?: number
+          end_date?: string | null
+          error_message?: string | null
+          external_ad_id?: string | null
+          external_adset_id?: string | null
+          external_campaign_id?: string | null
+          id?: string
+          landing_url?: string | null
+          last_synced_at?: string | null
+          name?: string
+          objective?: string
+          platform?: string
+          product_id?: string | null
+          start_date?: string
+          status?: string
+          targeting?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaigns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_platform_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_metrics_daily: {
+        Row: {
+          business_id: string
+          campaign_id: string
+          clicks: number
+          conversions: number
+          created_at: string | null
+          currency: string
+          date: string
+          id: string
+          impressions: number
+          reach: number
+          spend_minor: number
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          campaign_id: string
+          clicks?: number
+          conversions?: number
+          created_at?: string | null
+          currency?: string
+          date: string
+          id?: string
+          impressions?: number
+          reach?: number
+          spend_minor?: number
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          campaign_id?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string | null
+          currency?: string
+          date?: string
+          id?: string
+          impressions?: number
+          reach?: number
+          spend_minor?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_metrics_daily_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_metrics_daily_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_oauth_states: {
+        Row: {
+          business_id: string
+          consumed_at: string | null
+          created_at: string | null
+          expires_at: string
+          platform: string
+          return_origin: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          consumed_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          platform: string
+          return_origin: string
+          state?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          consumed_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          platform?: string
+          return_origin?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_oauth_states_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_oauth_states_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_platform_connections: {
+        Row: {
+          access_token: string | null
+          available_accounts: Json | null
+          business_id: string
+          connected_by: string | null
+          created_at: string | null
+          currency: string
+          external_account_id: string | null
+          external_account_name: string | null
+          id: string
+          identity_id: string | null
+          instagram_actor_id: string | null
+          last_checked_at: string | null
+          last_error: string | null
+          min_daily_budget_minor: number | null
+          page_id: string | null
+          page_name: string | null
+          pixel_id: string | null
+          platform: string
+          refresh_token: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          available_accounts?: Json | null
+          business_id: string
+          connected_by?: string | null
+          created_at?: string | null
+          currency?: string
+          external_account_id?: string | null
+          external_account_name?: string | null
+          id?: string
+          identity_id?: string | null
+          instagram_actor_id?: string | null
+          last_checked_at?: string | null
+          last_error?: string | null
+          min_daily_budget_minor?: number | null
+          page_id?: string | null
+          page_name?: string | null
+          pixel_id?: string | null
+          platform: string
+          refresh_token?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          available_accounts?: Json | null
+          business_id?: string
+          connected_by?: string | null
+          created_at?: string | null
+          currency?: string
+          external_account_id?: string | null
+          external_account_name?: string | null
+          id?: string
+          identity_id?: string | null
+          instagram_actor_id?: string | null
+          last_checked_at?: string | null
+          last_error?: string | null
+          min_daily_budget_minor?: number | null
+          page_id?: string | null
+          page_name?: string | null
+          pixel_id?: string | null
+          platform?: string
+          refresh_token?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_platform_connections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_platform_connections_connected_by_fkey"
+            columns: ["connected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversations: {
         Row: {
           answer: string

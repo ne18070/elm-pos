@@ -55,6 +55,13 @@ const PERMISSIONS_MAP = {
   add_grade:              { label: 'Saisir les notes',             group: 'gestion',    defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'notes' },
 
   view_whatsapp:          { label: 'Accès support WhatsApp',       group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'whatsapp' },
+
+  // Publicités Meta/TikTok — sans clé `feature` : ouvert à tous les types
+  // d'établissement. Lancer une campagne engage une dépense facturée
+  // directement par la plateforme, d'où la séparation voir / gérer.
+  view_marketing:         { label: 'Accès publicités (Meta/TikTok)', group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'] },
+  manage_marketing:       { label: 'Créer et piloter des publicités', group: 'gestion',   defaultRoles: ['admin', 'owner'] },
+
   view_evenements:        { label: 'Accès gestion événements',     group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'evenements' },
   manage_evenements:      { label: 'Gérer événements & invités',   group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'evenements' },
   view_settings:          { label: 'Accès paramètres',              group: 'admin',      defaultRoles: ['staff', 'manager', 'admin', 'owner'] }, 

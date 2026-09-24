@@ -48,3 +48,14 @@ verify_jwt = false
 
 [functions.daily-services-report]
 verify_jwt = false
+
+# Cible du redirect_uri de Meta et TikTok : la plateforme redirige un navigateur
+# ici, sans session Supabase. La sécurité repose sur le `state` à usage unique.
+[functions.marketing-oauth-callback]
+verify_jwt = false
+
+# Appelée par le cron avec CRON_SECRET, qui n'est pas un JWT. L'appel depuis
+# l'app reste protégé : la function valide elle-même le JWT quand l'en-tête
+# n'est pas le secret du cron.
+[functions.marketing-sync-metrics]
+verify_jwt = false

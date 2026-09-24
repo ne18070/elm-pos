@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(node *)",
-      "Bash(\"/c/Program Files/nodejs/node.exe\"*)"
+      "Bash(\"/c/Program Files/nodejs/node.exe\"*)",
+      "Bash(npx tsc *)",
+      "Bash(yarn typecheck *)",
+      "Bash(yarn lint *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} time=%{time_total}s\\\\n\" \"http://localhost:3001/marketing\")",
+      "Bash(curl -s \"http://localhost:3001/marketing\")",
+      "Bash(grep -oiE \"\\(error|Unhandled|Cannot find module|Module not found\\)[^<]{0,120}\")",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" \"http://localhost:3001/marketing/nouvelle\")",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" \"http://localhost:3001/marketing/detail?id=test\")",
+      "Bash(grep -oE \"\\(Vos comptes publicitaires|Faites connaître votre activité|Publicités|marketing[^\\\\\"]{0,30}\\)\")",
+      "Bash(grep -rhoE \"https://[a-z]{15,25}\\\\.supabase\\\\.co\" --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.json\" --include=\"*.md\" .)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64url'\\)\\)\")",
+      "Bash(grep -nA3 \"^\\\\[functions\" supabase/config.toml)"
     ]
   }
 }
