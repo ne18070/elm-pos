@@ -104,14 +104,19 @@ const S_EVENEMENTS: NavSection = {
 };
 
 // Disponible pour tous les types d'établissement (view_marketing n'a pas de
-// clé `feature`). L'entrée reste masquée tant que l'App Review Meta et l'accès
-// TikTok Marketing API ne sont pas obtenus : la page répond déjà sur /marketing
-// pour les tests, mais aucun client ne doit tomber sur un module qui ne peut
-// pas encore connecter de compte. Même précédent que WhatsApp ci-dessous.
+// clé `feature`).
+//
+// L'entrée reste masquée tant que l'app Meta est en mode développement : dans
+// cet état, seuls ses administrateurs et testeurs peuvent autoriser la
+// connexion, un commerçant échouerait. À décommenter dès que l'App Review
+// accorde l'accès avancé — sans attendre TikTok, les deux plateformes étant
+// indépendantes : le module fonctionne avec une seule des deux connectée.
+// La page répond déjà sur /marketing pour les tests. Même précédent que
+// WhatsApp ci-dessous.
 const S_MARKETING: NavSection = {
   label: 'Marketing & Publicité',
   items: [
-    // { href: '/marketing', icon: Megaphone, label: 'Publicités', permission: 'view_marketing' },
+    { href: '/marketing', icon: Megaphone, label: 'Publicités', permission: 'view_marketing' },
   ],
 };
 
