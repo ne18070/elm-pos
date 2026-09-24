@@ -11,7 +11,15 @@ export type AdCampaignStatus =
 
 /** Comptes et Pages proposés par la plateforme, à trancher quand il y en a plusieurs. */
 export interface AvailableAccounts {
-  accounts?: Array<{ account_id: string; name?: string; currency?: string }>;
+  accounts?: Array<{
+    account_id: string;
+    name?: string;
+    currency?: string;
+    /** 1 = actif. Tout autre code signale un compte suspendu, impayé ou clos. */
+    account_status?: number;
+    /** Droits de l'utilisateur sur ce compte : sans ADVERTISE ni MANAGE, il ne peut pas diffuser. */
+    user_tasks?: string[];
+  }>;
   pages?:    Array<{ id: string; name?: string }>;
   advertisers?: Array<{ advertiser_id: string; advertiser_name?: string; currency?: string }>;
 }
@@ -132,7 +140,7 @@ const CONNECTION_COLUMNS = `
   id, business_id, platform,
   external_account_id, external_account_name, currency, min_daily_budget_minor,
   page_id, page_name, instagram_actor_id, pixel_id, identity_id,
-  status, last_error, last_checked_at, created_at, updated_at
+  available_accounts, status, last_error, last_checked_at, created_at, updated_at
 `;
 
 // --- Connexions ---------------------------------------------------------------

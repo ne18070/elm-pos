@@ -101,12 +101,20 @@ export interface MetaAdAccount {
   currency:       string;
   account_status: number;
   min_daily_budget?: number;
+  /** Droits de l'utilisateur sur le compte : ANALYZE, ADVERTISE, MANAGE. */
+  user_tasks?:    string[];
 }
 
 export async function listAdAccounts(token: string): Promise<MetaAdAccount[]> {
+  // `user_tasks` évite une erreur incompréhensible au moment de publier : un
+  // compte visible en lecture seule apparaîtrait sinon comme sélectionnable
+  // alors que la création d'annonce y est refusée.
   const r = await call('/me/adaccounts', {
     token,
-    params: { fields: 'id,account_id,name,currency,account_status,min_daily_budget', limit: 100 },
+    params: {
+      fields: 'id,account_id,name,currency,account_status,min_daily_budget,user_tasks',
+      limit:  100,
+    },
   });
   return ((r.data ?? []) as MetaAdAccount[]);
 }

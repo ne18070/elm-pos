@@ -94,7 +94,10 @@ export default function MarketingPage() {
     if (connected) {
       const needsChoice = params.get('status') === 'needs_account_selection';
       if (needsChoice) {
-        notifError(`Compte ${PLATFORM_LABEL[connected as AdPlatform] ?? connected} relié, mais plusieurs comptes publicitaires existent : choisissez-en un.`);
+        // Ce statut couvre deux situations distinctes — plusieurs comptes, ou
+        // aucun. Le panneau plus bas connaît la liste réelle et le dit
+        // précisément ; le toast se garde d'affirmer l'un ou l'autre.
+        notifError(`Compte ${PLATFORM_LABEL[connected as AdPlatform] ?? connected} relié — il reste à choisir le compte publicitaire à utiliser.`);
       } else {
         success(`${PLATFORM_LABEL[connected as AdPlatform] ?? connected} connecté`);
       }
@@ -323,11 +326,31 @@ function AccountPicker({
   const isMeta = connection.platform === 'meta';
 
   const accounts = isMeta
-    ? (available.accounts ?? []).map((a) => ({ id: a.account_id, label: a.name ?? a.account_id }))
-    : (available.advertisers ?? []).map((a) => ({ id: a.advertiser_id, label: a.advertiser_name ?? a.advertiser_id }));
+    ? (available.accounts ?? []).map((a) => {
+        // Un compte suspendu ou partagé en lecture seule se voit dans la liste
+        // mais refuserait la création d'annonce : autant le dire ici plutôt
+        // que de laisser l'erreur surgir à la publication.
+        const canAdvertise = !a.user_tasks
+          || a.user_tasks.some((t) => t === 'ADVERTISE' || t === 'MANAGE');
+        const reason = a.account_status !== undefined && a.account_status !== 1
+          ? 'compte inactif'
+          : !canAdvertise ? 'lecture seule' : null;
+        return {
+          id:       a.account_id,
+          label:    `${a.name ?? a.account_id}${a.currency ? ` · ${a.currency}` : ''}`,
+          disabled: Boolean(reason),
+          reason,
+        };
+      })
+    : (available.advertisers ?? []).map((a) => ({
+        id:       a.advertiser_id,
+        label:    `${a.advertiser_name ?? a.advertiser_id}${a.currency ? ` · ${a.currency}` : ''}`,
+        disabled: false,
+        reason:   null as string | null,
+      }));
   const pages = available.pages ?? [];
 
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
+  const [accountId, setAccountId] = useState(accounts.find((a) => !a.disabled)?.id ?? '');
   const [pageId, setPageId]       = useState(pages[0]?.id ?? '');
   const [saving, setSaving]       = useState(false);
 
@@ -346,9 +369,13 @@ function AccountPicker({
 
   if (accounts.length === 0) {
     return (
-      <div className="rounded-lg border border-status-warning bg-badge-warning p-3 text-xs text-status-warning">
-        Aucun compte publicitaire n&apos;est rattaché à votre compte {PLATFORM_LABEL[connection.platform]}.
-        Créez-en un sur la plateforme, puis reconnectez-vous ici.
+      <div className="rounded-lg border border-status-warning bg-badge-warning p-3 text-xs text-status-warning space-y-1">
+        <p className="font-medium">
+          {PLATFORM_LABEL[connection.platform]} n&apos;a renvoyé aucun compte publicitaire.
+        </p>
+        <p>Deux explications possibles : votre compte n&apos;en possède pas encore
+        — créez-le sur la plateforme puis reconnectez-vous — ou l&apos;autorisation
+        de gestion des publicités n&apos;a pas été accordée pendant la connexion.</p>
       </div>
     );
   }
@@ -370,9 +397,17 @@ function AccountPicker({
           className="input w-full min-h-[44px]"
         >
           {accounts.map((a) => (
-            <option key={a.id} value={a.id}>{a.label}</option>
+            <option key={a.id} value={a.id} disabled={a.disabled}>
+              {a.label}{a.reason ? ` — ${a.reason}` : ''}
+            </option>
           ))}
         </select>
+        {accounts.every((a) => a.disabled) && (
+          <p className="text-xs text-status-warning mt-1">
+            Aucun de ces comptes ne permet de diffuser : il faut un compte actif sur lequel
+            vous avez les droits de publicité.
+          </p>
+        )}
       </div>
 
       {isMeta && (

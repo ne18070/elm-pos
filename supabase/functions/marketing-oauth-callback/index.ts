@@ -75,9 +75,13 @@ Deno.serve(async (req) => {
         meta.listPages(token),
       ]);
 
-      // Un compte publicitaire utilisable est actif (status 1) ; on ne
-      // présélectionne que s'il n'y a aucune ambiguïté.
-      const usable = accounts.filter((a) => a.account_status === 1);
+      // Utilisable = actif (status 1) ET diffusable par cet utilisateur : un
+      // compte partagé en lecture seule se voit mais refuse toute création.
+      // On ne présélectionne que s'il n'y a aucune ambiguïté.
+      const usable = accounts.filter((a) =>
+        a.account_status === 1
+        && (!a.user_tasks || a.user_tasks.some((t) => t === 'ADVERTISE' || t === 'MANAGE')),
+      );
       const account = usable.length === 1 ? usable[0] : undefined;
       const page = pages.length === 1 ? pages[0] : undefined;
 
