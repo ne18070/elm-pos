@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import { getPublicSiteUrl } from '@/lib/public-links';
 import { getProducts } from '@services/supabase/products';
+import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 import {
   getAdConnections, publishCampaign, minorToMajor, majorToMinor,
   type AdConnection, type AdPlatform, type AdObjective,
@@ -127,8 +128,12 @@ export default function NouvellePubliciteePage() {
       const digits = (business?.phone ?? '').replace(/\D/g, '');
       return digits ? `https://wa.me/${digits}` : '';
     }
-    return `${getPublicSiteUrl()}/boutique/${businessId}`;
-  }, [objective, business?.phone, businessId]);
+    // Le slug plutôt que l'UUID : la route boutique résout les deux, mais
+    // l'adresse est visible dans l'annonce et un identifiant technique
+    // n'inspire pas confiance au moment de cliquer.
+    const ref = buildPublicBusinessRef(business?.name ?? '', business?.public_slug);
+    return `${getPublicSiteUrl()}/boutique/${ref}`;
+  }, [objective, business?.phone, business?.name, business?.public_slug]);
 
   const totalMajor = budgetMajor * days;
 

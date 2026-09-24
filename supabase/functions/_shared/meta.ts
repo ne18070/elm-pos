@@ -67,9 +67,35 @@ async function call(
     const err = (body as { error?: { message?: string; code?: number } }).error;
     // 190 = token expiré ou révoqué : le seul cas qui impose de redemander une
     // connexion au commerçant plutôt que de réessayer.
-    throw new MetaError(err?.message ?? `Meta ${res.status}`, err?.code, err?.code === 190);
+    throw new MetaError(
+      friendlyMessage(err?.code, err?.message) ?? `Meta ${res.status}`,
+      err?.code,
+      err?.code === 190,
+    );
   }
   return body as Record<string, unknown>;
+}
+
+/**
+ * Les messages de Meta sont en anglais et souvent opaques — « Permissions
+ * error » ne dit pas au commerçant quoi faire. On traduit les cas qui ont une
+ * action claire, et on laisse passer le message d'origine pour le reste plutôt
+ * que de masquer une information utile au débogage.
+ */
+function friendlyMessage(code: number | undefined, original: string | undefined): string | undefined {
+  switch (code) {
+    case 200:
+    case 10:
+      return "Ce compte publicitaire ne vous autorise pas à créer des annonces : votre accès y est en lecture seule. Choisissez un compte sur lequel vous avez les droits de publicité, ou demandez-les dans le Business Manager.";
+    case 190:
+      return 'La connexion à Facebook a expiré. Reconnectez votre compte.';
+    case 1487742:
+      return "Ce compte publicitaire est suspendu ou présente un impayé. Régularisez-le sur Facebook avant de diffuser.";
+    case 100:
+      return original ? `Paramètre refusé par Facebook : ${original}` : undefined;
+    default:
+      return original;
+  }
 }
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────

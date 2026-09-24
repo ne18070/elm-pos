@@ -15,6 +15,18 @@ import * as tiktok from '../_shared/tiktok.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/marketing-oauth-callback`;
 
+// Texte brut volontairement : la passerelle Supabase impose
+// `Content-Type: text/plain` sur cette réponse, du HTML s'afficherait tel quel.
+const LANDING_TEXT = [
+  'elm-pos — point de retour d\'autorisation publicitaire',
+  '',
+  "Cette adresse reçoit la confirmation d'autorisation de Meta et de TikTok",
+  "lorsqu'un commerçant connecte son compte publicitaire à elm-pos.",
+  '',
+  "Elle n'est pas destinée à être ouverte directement.",
+  'https://www.elm-app.click',
+].join('\n');
+
 function back(origin: string, params: Record<string, string>): Response {
   const url = new URL('/marketing', origin);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
@@ -27,6 +39,14 @@ Deno.serve(async (req) => {
   // Meta renvoie `code`, TikTok `auth_code`.
   const code = url.searchParams.get('code') ?? url.searchParams.get('auth_code');
   const denied = url.searchParams.get('error') ?? url.searchParams.get('error_description');
+
+  // Visite directe, sans paramètres : c'est le cas d'un examinateur Meta ou
+  // TikTok qui ouvre l'URL de redirection déclarée pour vérifier qu'elle est
+  // bien joignable. Une erreur en texte brut donnerait l'impression d'un lien
+  // cassé, d'où une page d'explication.
+  if (!stateParam && !code && !denied) {
+    return new Response(LANDING_TEXT, { status: 200 });
+  }
 
   if (!stateParam) {
     return new Response('État OAuth manquant', { status: 400 });
