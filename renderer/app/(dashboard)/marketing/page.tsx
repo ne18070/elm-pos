@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Megaphone, Plus, RefreshCw, Link2, AlertTriangle, CheckCircle2, XCircle, MinusCircle,
-  Play, Pause, Square, ChevronRight, CreditCard, Clock,
+  Play, Pause, Square, ChevronRight, CreditCard, Clock, Send,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -197,6 +197,17 @@ export default function MarketingPage() {
               >
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Actualiser</span>
+              </button>
+            )}
+            {/* Publier est gratuit et ne demande aucun compte publicitaire :
+                accessible dès que la Page est reliée, même sans campagne. */}
+            {connections.some((c) => c.platform === 'meta' && c.page_id) && can('manage_marketing') && (
+              <button
+                onClick={() => router.push('/marketing/publication')}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Publier</span>
               </button>
             )}
             {canPublish && (
@@ -473,6 +484,9 @@ function AccountPicker({
           onChange={(e) => setAccountId(e.target.value)}
           className="input w-full min-h-[44px]"
         >
+          {/* Publier ne demande aucun compte publicitaire : un commerçant qui
+              n'en a pas doit pouvoir valider sa Page seule. */}
+          {isMeta && <option value="">Aucun pour l&apos;instant — publication seulement</option>}
           {accounts.map((a) => (
             <option key={a.id} value={a.id} disabled={a.disabled}>
               {a.label}{a.reason ? ` — ${a.reason}` : ''}
@@ -512,7 +526,7 @@ function AccountPicker({
 
       <button
         onClick={handleSave}
-        disabled={saving || !accountId || (isMeta && !pageId)}
+        disabled={saving || (isMeta ? !pageId && !accountId : !accountId)}
         className="btn-primary min-h-[44px] w-full sm:w-auto disabled:opacity-50"
       >
         {saving ? 'Enregistrement…' : 'Valider'}

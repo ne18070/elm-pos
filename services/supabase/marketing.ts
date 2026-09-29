@@ -144,6 +144,25 @@ const CONNECTION_COLUMNS = `
   available_accounts, status, last_error, last_checked_at, created_at, updated_at
 `;
 
+/**
+ * `functions.invoke` renvoie « Edge Function returned a non-2xx status code »
+ * et laisse le corps de la réponse de côté — or c'est lui qui porte le message
+ * explicatif, souvent déjà traduit côté serveur. Sans cette extraction, tout le
+ * soin mis à rédiger des erreurs compréhensibles est perdu à l'affichage.
+ */
+async function invokeFn<T>(name: string, body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (!error) return data as T;
+
+  const ctx = (error as { context?: Response }).context;
+  if (ctx && typeof ctx.json === 'function') {
+    const res = typeof ctx.clone === 'function' ? ctx.clone() : ctx;
+    const payload = await res.json().catch(() => null) as { error?: string } | null;
+    if (payload?.error) throw new Error(payload.error);
+  }
+  throw error;
+}
+
 // --- Connexions ---------------------------------------------------------------
 
 export async function getAdConnections(businessId: string): Promise<AdConnection[]> {
@@ -165,22 +184,24 @@ export async function startPlatformConnect(
   platform: AdPlatform,
   returnOrigin: string,
 ): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('marketing-oauth-start', {
-    body: { platform, return_origin: returnOrigin },
+  const data = await invokeFn<{ url: string }>('marketing-oauth-start', {
+    platform, return_origin: returnOrigin,
   });
-  if (error) throw error;
-  return (data as { url: string }).url;
+  return data.url;
 }
 
+/**
+ * `accountId` est facultatif côté Meta : choisir une Page suffit pour publier,
+ * le compte publicitaire n'étant nécessaire que pour diffuser des annonces.
+ */
 export async function selectAdAccount(
   platform: AdPlatform,
-  accountId: string,
+  accountId?: string,
   pageId?: string,
 ): Promise<void> {
-  const { error } = await supabase.functions.invoke('marketing-select-account', {
-    body: { platform, account_id: accountId, page_id: pageId },
+  await invokeFn('marketing-select-account', {
+    platform, account_id: accountId || undefined, page_id: pageId,
   });
-  if (error) throw error;
 }
 
 // --- Campagnes ----------------------------------------------------------------
@@ -323,24 +344,55 @@ export async function getCampaignGroup(
 }
 
 export async function publishCampaign(input: PublishCampaignInput): Promise<PublishResult> {
-  const { data, error } = await supabase.functions.invoke('marketing-campaign-publish', {
-    body: input,
-  });
-  if (error) throw error;
-  return data as PublishResult;
+  return invokeFn<PublishResult>('marketing-campaign-publish', { ...input });
 }
 
 export async function setCampaignAction(
   groupId: string,
   action: 'pause' | 'resume' | 'stop',
 ): Promise<void> {
-  const { error } = await supabase.functions.invoke('marketing-campaign-action', {
-    body: { campaign_group_id: groupId, action },
-  });
+  await invokeFn('marketing-campaign-action', { campaign_group_id: groupId, action });
+}
+
+// --- Publications organiques ---------------------------------------------------
+
+export type SocialTarget = 'facebook' | 'instagram';
+
+export interface SocialPost {
+  id:               string;
+  platform:         SocialTarget;
+  status:           'published' | 'failed';
+  message:          string;
+  image_url:        string | null;
+  product_id:       string | null;
+  external_post_id: string | null;
+  error_message:    string | null;
+  created_at:       string;
+}
+
+export async function getSocialPosts(businessId: string, limit = 20): Promise<SocialPost[]> {
+  const { data, error } = await supabase
+    .from('social_posts')
+    .select('id, platform, status, message, image_url, product_id, external_post_id, error_message, created_at')
+    .eq('business_id', businessId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
   if (error) throw error;
+  return (data ?? []) as unknown as SocialPost[];
+}
+
+export async function publishSocialPost(input: {
+  targets:     SocialTarget[];
+  message:     string;
+  image_url?:  string | null;
+  product_id?: string | null;
+}): Promise<{ results: Array<{ target: SocialTarget; ok: boolean; error?: string }> }> {
+  return invokeFn<{ results: Array<{ target: SocialTarget; ok: boolean; error?: string }> }>(
+    'marketing-publish-post', input,
+  );
 }
 
 export async function refreshCampaignMetrics(): Promise<void> {
-  const { error } = await supabase.functions.invoke('marketing-sync-metrics', { body: {} });
-  if (error) throw error;
+  await invokeFn('marketing-sync-metrics', {});
 }

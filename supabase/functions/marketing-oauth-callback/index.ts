@@ -107,7 +107,13 @@ Deno.serve(async (req) => {
 
       row.access_token     = token;
       row.token_expires_at = new Date(Date.now() + expiresIn * 1000).toISOString();
-      row.available_accounts = { accounts, pages };
+      // `available_accounts` est lisible par le client (GRANT colonne de la
+      // migration 152) : le jeton de Page doit en être retiré, il est aussi
+      // sensible que le jeton utilisateur.
+      row.available_accounts = {
+        accounts,
+        pages: pages.map(({ access_token: _t, ...rest }) => rest),
+      };
 
       if (account && page) {
         row.external_account_id     = account.account_id;
@@ -116,6 +122,7 @@ Deno.serve(async (req) => {
         row.min_daily_budget_minor  = account.min_daily_budget ?? null;
         row.page_id                 = page.id;
         row.page_name               = page.name;
+        row.page_access_token       = page.access_token ?? null;
         row.instagram_actor_id      = page.instagram_business_account?.id ?? null;
         row.status                  = 'connected';
       } else {

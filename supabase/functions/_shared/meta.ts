@@ -23,6 +23,12 @@ export const META_SCOPES = [
   'ads_management',
   'business_management',
   'pages_show_list',
+  // Publication sur la Page et sur Instagram. Ces trois-là n'ont rien à voir
+  // avec la publicité : un commerçant peut publier sans compte publicitaire ni
+  // moyen de paiement, d'où leur intérêt pour l'adoption.
+  'pages_manage_posts',
+  'instagram_basic',
+  'instagram_content_publish',
 ].join(',');
 
 export class MetaError extends Error {
@@ -148,15 +154,72 @@ export async function listAdAccounts(token: string): Promise<MetaAdAccount[]> {
 export interface MetaPage {
   id:   string;
   name: string;
+  /** Jeton propre à la Page : publier avec le jeton utilisateur est refusé. */
+  access_token?: string;
   instagram_business_account?: { id: string };
 }
 
 export async function listPages(token: string): Promise<MetaPage[]> {
   const r = await call('/me/accounts', {
     token,
-    params: { fields: 'id,name,instagram_business_account{id}', limit: 100 },
+    params: { fields: 'id,name,access_token,instagram_business_account{id}', limit: 100 },
   });
   return ((r.data ?? []) as MetaPage[]);
+}
+
+// ─── Publication organique ───────────────────────────────────────────────────
+
+/** Publie une photo légendée sur la Page. Retourne l'identifiant du post. */
+export async function publishPagePhoto(
+  pageToken: string,
+  pageId: string,
+  message: string,
+  imageUrl: string,
+): Promise<string> {
+  const r = await call(`/${pageId}/photos`, {
+    token:  pageToken,
+    method: 'POST',
+    params: { url: imageUrl, caption: message },
+  });
+  return String(r.post_id ?? r.id);
+}
+
+export async function publishPageText(
+  pageToken: string,
+  pageId: string,
+  message: string,
+): Promise<string> {
+  const r = await call(`/${pageId}/feed`, {
+    token:  pageToken,
+    method: 'POST',
+    params: { message },
+  });
+  return String(r.id);
+}
+
+/**
+ * Instagram impose deux temps : on dépose d'abord le média dans un conteneur,
+ * puis on le publie. Une image est obligatoire — contrairement à Facebook,
+ * Instagram n'accepte pas de publication en texte seul.
+ */
+export async function publishInstagramPhoto(
+  pageToken: string,
+  igUserId: string,
+  message: string,
+  imageUrl: string,
+): Promise<string> {
+  const container = await call(`/${igUserId}/media`, {
+    token:  pageToken,
+    method: 'POST',
+    params: { image_url: imageUrl, caption: message },
+  });
+
+  const published = await call(`/${igUserId}/media_publish`, {
+    token:  pageToken,
+    method: 'POST',
+    params: { creation_id: String(container.id) },
+  });
+  return String(published.id);
 }
 
 // ─── Création d'annonce ──────────────────────────────────────────────────────

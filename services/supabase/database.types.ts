@@ -339,6 +339,7 @@ export type Database = {
           last_checked_at: string | null
           last_error: string | null
           min_daily_budget_minor: number | null
+          page_access_token: string | null
           page_id: string | null
           page_name: string | null
           pixel_id: string | null
@@ -363,6 +364,7 @@ export type Database = {
           last_checked_at?: string | null
           last_error?: string | null
           min_daily_budget_minor?: number | null
+          page_access_token?: string | null
           page_id?: string | null
           page_name?: string | null
           pixel_id?: string | null
@@ -387,6 +389,7 @@ export type Database = {
           last_checked_at?: string | null
           last_error?: string | null
           min_daily_budget_minor?: number | null
+          page_access_token?: string | null
           page_id?: string | null
           page_name?: string | null
           pixel_id?: string | null
@@ -4878,6 +4881,66 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          external_post_id: string | null
+          id: string
+          image_url: string | null
+          message: string
+          platform: string
+          product_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          image_url?: string | null
+          message: string
+          platform: string
+          product_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          image_url?: string | null
+          message?: string
+          platform?: string
+          product_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
