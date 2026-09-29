@@ -87,6 +87,7 @@ export interface AdCampaignGroup {
   currency:  string;
   startDate: string;
   endDate:   string | null;
+  createdAt: string;
   creative:  AdCampaign['creative'];
   platforms: AdPlatform[];
   campaigns: AdCampaign[];
@@ -255,6 +256,7 @@ export async function getCampaignGroups(businessId: string): Promise<AdCampaignG
       currency:  head.currency,
       startDate: head.start_date,
       endDate:   head.end_date,
+      createdAt: head.created_at,
       creative:  head.creative ?? {},
       platforms: list.map((c) => c.platform),
       campaigns: list,
@@ -310,6 +312,7 @@ export async function getCampaignGroup(
       currency:  head.currency,
       startDate: head.start_date,
       endDate:   head.end_date,
+      createdAt: head.created_at,
       creative:  head.creative ?? {},
       platforms: campaigns.map((c) => c.platform),
       campaigns,

@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Play, Pause, Square, RefreshCw, AlertTriangle, Eye, MousePointerClick, ShoppingCart, Wallet,
+  ArrowLeft, Play, Pause, Square, RefreshCw, AlertTriangle, Eye, MousePointerClick, ShoppingCart, Wallet, Clock,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -20,6 +20,7 @@ import {
   getCampaignGroup, setCampaignAction, refreshCampaignMetrics, minorToMajor,
   type AdCampaignGroup, type AdMetricDay, type AdPlatform, type AdCampaignStatus,
 } from '@services/supabase/marketing';
+import { launchHint, isScheduled } from '../hints';
 
 const PLATFORM_LABEL: Record<AdPlatform, string> = {
   meta:   'Facebook & Instagram',
@@ -126,7 +127,9 @@ export default function MarketingDetailPage() {
     );
   }
 
-  const info = STATUS_INFO[group.status];
+  const baseInfo = STATUS_INFO[group.status];
+  const info = isScheduled(group) ? { ...baseInfo, label: 'Programmée' } : baseInfo;
+  const hint = launchHint(group);
   const currency = group.currency;
   const spend = minorToMajor(group.totals.spendMinor, currency);
   const costPerClick = group.totals.clicks > 0 ? spend / group.totals.clicks : 0;
@@ -168,6 +171,13 @@ export default function MarketingDetailPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {hint && (
+          <div className="rounded-xl border border-surface-border bg-surface-card p-4 flex items-start gap-2.5">
+            <Clock className="w-4 h-4 text-content-secondary shrink-0 mt-0.5" />
+            <p className="text-sm text-content-secondary">{hint}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Stat icon={Wallet}              label="Dépensé"     value={formatCurrency(spend, currency)} />
           <Stat icon={Eye}                 label="Vues"        value={group.totals.impressions.toLocaleString('fr-FR')} />

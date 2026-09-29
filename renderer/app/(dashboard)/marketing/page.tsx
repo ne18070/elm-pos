@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Megaphone, Plus, RefreshCw, Link2, AlertTriangle, CheckCircle2,
-  Play, Pause, Square, ChevronRight, CreditCard,
+  Megaphone, Plus, RefreshCw, Link2, AlertTriangle, CheckCircle2, XCircle, MinusCircle,
+  Play, Pause, Square, ChevronRight, CreditCard, Clock,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -19,6 +19,7 @@ import {
   setCampaignAction, refreshCampaignMetrics, minorToMajor,
   type AdConnection, type AdCampaignGroup, type AdPlatform, type AdCampaignStatus,
 } from '@services/supabase/marketing';
+import { launchHint, isScheduled } from './hints';
 
 const PLATFORM_LABEL: Record<AdPlatform, string> = {
   meta:   'Facebook & Instagram',
@@ -310,6 +311,82 @@ function ConnectionPanel({
   );
 }
 
+// ─── Diagnostic ───────────────────────────────────────────────────────────────
+
+type CheckState = 'ok' | 'ko' | 'unknown';
+interface Check { state: CheckState; label: string; detail: string }
+
+/**
+ * Traduit l'état réel de la connexion en points vérifiables. Chaque cause de
+ * blocage rencontrée en production a sa ligne ici : c'est ce qui évite au
+ * commerçant de découvrir le problème sous la forme d'une erreur d'API au
+ * moment de payer.
+ */
+function diagnose(connection: AdConnection): Check[] {
+  const checks: Check[] = [];
+  const isMeta = connection.platform === 'meta';
+  const accounts = connection.available_accounts?.accounts ?? [];
+  const chosen = accounts.find((a) => a.account_id === connection.external_account_id);
+
+  if (connection.external_account_id) {
+    const canAdvertise = !chosen?.user_tasks
+      || chosen.user_tasks.some((t) => t === 'ADVERTISE' || t === 'MANAGE');
+    const inactive = chosen?.account_status !== undefined && chosen.account_status !== 1;
+
+    checks.push(
+      inactive
+        ? { state: 'ko', label: 'Compte publicitaire', detail: `${connection.external_account_name ?? '—'} — compte suspendu ou impayé, à régulariser sur la plateforme` }
+      : !canAdvertise
+        ? { state: 'ko', label: 'Compte publicitaire', detail: `${connection.external_account_name ?? '—'} — accès en lecture seule, demandez les droits de publicité` }
+        : { state: 'ok', label: 'Compte publicitaire', detail: connection.external_account_name ?? '—' },
+    );
+  } else {
+    checks.push({ state: 'ko', label: 'Compte publicitaire', detail: 'Aucun compte sélectionné' });
+  }
+
+  // La devise est définitive côté plateforme et conditionne tous les budgets
+  // affichés : l'exposer évite qu'un commerçant croie budgéter en FCFA.
+  checks.push({
+    state:  'ok',
+    label:  'Devise de facturation',
+    detail: connection.currency,
+  });
+
+  if (isMeta) {
+    checks.push(connection.page_id
+      ? { state: 'ok', label: 'Page Facebook', detail: connection.page_name ?? connection.page_id }
+      : { state: 'ko', label: 'Page Facebook', detail: 'Aucune Page — une annonce doit être publiée sous une Page' });
+  }
+
+  checks.push({
+    state:  'unknown',
+    label:  'Moyen de paiement',
+    detail: `Vérifié par ${isMeta ? 'Facebook' : 'TikTok'} au lancement`,
+  });
+
+  return checks;
+}
+
+function CheckList({ checks }: { checks: Check[] }) {
+  return (
+    <ul className="mt-3 space-y-1.5 border-t border-surface-border pt-3">
+      {checks.map((c) => (
+        <li key={c.label} className="flex items-start gap-2 text-xs">
+          {c.state === 'ok'   && <CheckCircle2 className="w-3.5 h-3.5 text-status-success shrink-0 mt-px" />}
+          {c.state === 'ko'   && <XCircle className="w-3.5 h-3.5 text-status-error shrink-0 mt-px" />}
+          {c.state === 'unknown' && <MinusCircle className="w-3.5 h-3.5 text-content-muted shrink-0 mt-px" />}
+          <span className="min-w-0">
+            <span className="text-content-primary">{c.label}</span>
+            <span className={`block ${c.state === 'ko' ? 'text-status-error' : 'text-content-secondary'}`}>
+              {c.detail}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Plusieurs comptes publicitaires (ou Pages) sont rattachés à l'identité
  * connectée : le choix revient au commerçant, se tromper ici reviendrait à
@@ -458,33 +535,45 @@ function PlatformRow({
   const needsAttention = status === 'token_expired' || status === 'needs_account_selection';
 
   return (
-    <div className="rounded-lg border border-surface-border bg-surface p-3 flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <p className="font-medium text-content-primary text-sm">{PLATFORM_LABEL[platform]}</p>
-        {connected ? (
-          <p className="text-xs text-status-success flex items-center gap-1 mt-0.5">
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{connection?.external_account_name ?? 'Compte relié'}</span>
-          </p>
-        ) : needsAttention ? (
-          <p className="text-xs text-status-warning flex items-center gap-1 mt-0.5">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            {status === 'token_expired' ? 'Connexion expirée' : 'Compte à sélectionner'}
-          </p>
-        ) : (
-          <p className="text-xs text-content-muted mt-0.5">Non connecté</p>
+    <div className="rounded-lg border border-surface-border bg-surface p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium text-content-primary text-sm">{PLATFORM_LABEL[platform]}</p>
+          {connected ? (
+            <p className="text-xs text-status-success mt-0.5">Compte relié</p>
+          ) : needsAttention ? (
+            <p className="text-xs text-status-warning flex items-center gap-1 mt-0.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              {status === 'token_expired' ? 'Connexion expirée' : 'Compte à sélectionner'}
+            </p>
+          ) : (
+            <p className="text-xs text-content-muted mt-0.5">Non connecté</p>
+          )}
+        </div>
+
+        {canManage && (
+          <button
+            onClick={onConnect}
+            disabled={busy}
+            className={`${connected ? 'btn-secondary' : 'btn-primary'} text-sm shrink-0 min-h-[44px] px-3 flex items-center gap-1.5 disabled:opacity-50`}
+          >
+            <Link2 className="w-4 h-4" />
+            {busy ? '…' : connected ? 'Changer' : needsAttention ? 'Reconnecter' : 'Connecter'}
+          </button>
         )}
       </div>
 
-      {canManage && (
-        <button
-          onClick={onConnect}
-          disabled={busy}
-          className={`${connected ? 'btn-secondary' : 'btn-primary'} text-sm shrink-0 min-h-[44px] px-3 flex items-center gap-1.5 disabled:opacity-50`}
-        >
-          <Link2 className="w-4 h-4" />
-          {busy ? '…' : connected ? 'Changer' : needsAttention ? 'Reconnecter' : 'Connecter'}
-        </button>
+      {connected && connection && <CheckList checks={diagnose(connection)} />}
+
+      {status === 'token_expired' && (
+        <p className="mt-2 text-xs text-status-warning">
+          Facebook et TikTok expirent l&apos;autorisation après quelques semaines.
+          Reconnectez le compte, vos publicités en cours ne sont pas perdues.
+        </p>
+      )}
+
+      {connection?.last_error && status !== 'connected' && (
+        <p className="mt-2 text-xs text-status-error">{connection.last_error}</p>
       )}
     </div>
   );
@@ -521,9 +610,11 @@ function CampaignCard({
   onOpen:    () => void;
   onAction:  (a: 'pause' | 'resume' | 'stop') => void;
 }) {
-  const info = STATUS_INFO[group.status];
+  const base = STATUS_INFO[group.status];
+  const info = isScheduled(group) ? { ...base, label: 'Programmée' } : base;
   const image = group.creative?.image_url;
   const failed = group.campaigns.filter((c) => c.status === 'failed');
+  const hint = launchHint(group);
 
   return (
     <div className="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
@@ -562,6 +653,13 @@ function CampaignCard({
       {failed.length > 0 && (
         <p className="px-4 pb-3 text-xs text-status-error">
           {failed.map((c) => `${PLATFORM_LABEL[c.platform]} : ${c.error_message ?? 'échec de publication'}`).join(' · ')}
+        </p>
+      )}
+
+      {hint && (
+        <p className="px-4 pb-3 text-xs text-content-secondary flex items-start gap-1.5">
+          <Clock className="w-3.5 h-3.5 shrink-0 mt-px" />
+          <span>{hint}</span>
         </p>
       )}
 

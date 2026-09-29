@@ -57,10 +57,30 @@ async function call(
 
   const code = Number(payload.code ?? -1);
   if (!res.ok || code !== 0) {
-    const message = String(payload.message ?? `TikTok ${res.status}`);
-    throw new TikTokError(message, code, TOKEN_ERROR_CODES.has(code));
+    const original = String(payload.message ?? `TikTok ${res.status}`);
+    throw new TikTokError(friendlyMessage(code, original), code, TOKEN_ERROR_CODES.has(code));
   }
   return (payload.data ?? {}) as Record<string, unknown>;
+}
+
+/**
+ * Seuls les cas dont la cause est certaine sont traduits. Pour le reste, on
+ * conserve le message de TikTok en l'annonçant clairement comme venant de la
+ * plateforme : une traduction approximative ferait chercher le commerçant au
+ * mauvais endroit, ce qui est pire qu'un message technique assumé.
+ */
+function friendlyMessage(code: number, original: string): string {
+  if (TOKEN_ERROR_CODES.has(code)) {
+    return 'La connexion à TikTok a expiré. Reconnectez votre compte.';
+  }
+  const lowered = original.toLowerCase();
+  if (lowered.includes('balance') || lowered.includes('insufficient')) {
+    return "Le solde de votre compte TikTok Ads est insuffisant. Approvisionnez-le avant de diffuser.";
+  }
+  if (lowered.includes('not authorized') || lowered.includes('permission')) {
+    return "Votre compte n'est pas autorisé à créer des publicités sur ce compte annonceur.";
+  }
+  return `TikTok a refusé la demande : ${original}`;
 }
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
@@ -89,18 +109,30 @@ export async function listAdvertisers(token: string): Promise<TikTokAdvertiser[]
 
   // Le premier appel ne renvoie pas la devise, qui conditionne pourtant tout le
   // calcul de budget : on la complète immédiatement.
+  //
+  // Le champ s'appelle `name` ici, et non `advertiser_name` comme dans
+  // /oauth2/advertiser/get/ — se tromper fait rejeter la requête entière.
+  // Volontairement sans capture d'erreur : une devise inconnue retomberait sur
+  // une valeur par défaut et enverrait un budget faux d'un facteur cent. Mieux
+  // vaut refuser la connexion et la refaire.
   const info = await call('/advertiser/info/', {
     token,
     params: {
       advertiser_ids: list.map((a) => a.advertiser_id),
-      fields:         ['advertiser_id', 'advertiser_name', 'currency'],
+      fields:         ['advertiser_id', 'name', 'currency'],
     },
-  }).catch(() => ({ list: [] as TikTokAdvertiser[] }));
+  });
 
-  const byId = new Map(
-    ((info.list ?? []) as TikTokAdvertiser[]).map((a) => [a.advertiser_id, a.currency]),
-  );
-  return list.map((a) => ({ ...a, currency: byId.get(a.advertiser_id) ?? a.currency }));
+  const rows = (info.list ?? []) as Array<{ advertiser_id: string; name?: string; currency?: string }>;
+  const byId = new Map(rows.map((a) => [a.advertiser_id, a]));
+  return list.map((a) => {
+    const detail = byId.get(a.advertiser_id);
+    return {
+      ...a,
+      advertiser_name: detail?.name ?? a.advertiser_name,
+      currency:        detail?.currency ?? a.currency,
+    };
+  });
 }
 
 /** Une annonce TikTok doit être publiée sous une identité : une par annonceur. */

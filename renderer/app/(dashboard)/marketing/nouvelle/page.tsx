@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ArrowRight, Store, ShoppingBag, Megaphone, MessageCircle,
-  Check, Loader2, Package,
+  Check, Loader2, Package, AlertTriangle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import { getPublicSiteUrl } from '@/lib/public-links';
 import { getProducts } from '@services/supabase/products';
@@ -35,6 +35,19 @@ const OBJECTIVES: Array<{
 
 const DURATIONS = [7, 14, 30];
 
+/** Date du jour dans le fuseau de l'utilisateur — `toISOString()` renverrait la
+ *  veille pour tout fuseau à l'ouest de Greenwich. */
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Ajoute des jours à une date ISO sans repasser par un fuseau horaire. */
+function addDaysISO(startISO: string, days: number): string {
+  const [y, m, d] = startISO.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
 export default function NouvellePubliciteePage() {
   const router = useRouter();
   const { business } = useAuthStore();
@@ -52,6 +65,7 @@ export default function NouvellePubliciteePage() {
   const [platforms, setPlatforms] = useState<AdPlatform[]>([]);
   const [budgetMajor, setBudget]  = useState(0);
   const [days, setDays]           = useState(7);
+  const [startDate, setStartDate] = useState(todayISO());
   const [headline, setHeadline]   = useState('');
   const [body, setBody]           = useState('');
   const [copyEdited, setCopyEdited] = useState(false);
@@ -83,12 +97,13 @@ export default function NouvellePubliciteePage() {
   // Paliers de budget exprimés dans la devise du compte connecté. Le plancher
   // vient de la plateforme (il dépend du pays et de la devise) plutôt que d'une
   // valeur inventée ici qui provoquerait un refus à la publication.
-  const presets = useMemo(() => {
+  const { presets, minMajor } = useMemo(() => {
     const zeroDecimal = minorToMajor(100, currency) === 100;
     const base = zeroDecimal ? [2000, 5000, 10000, 25000] : [5, 10, 25, 50];
     const minMinor = Math.max(...connected.map((c) => c.min_daily_budget_minor ?? 0), 0);
-    const minMajor = minMinor ? minorToMajor(minMinor, currency) : 0;
-    return base.filter((v) => v >= minMajor).length ? base.filter((v) => v >= minMajor) : [minMajor];
+    const floor = minMinor ? minorToMajor(minMinor, currency) : 0;
+    const usable = base.filter((v) => v >= floor);
+    return { presets: usable.length ? usable : [floor], minMajor: floor };
   }, [currency, connected]);
 
   useEffect(() => {
@@ -151,10 +166,6 @@ export default function NouvellePubliciteePage() {
 
     setPublishing(true);
     try {
-      const start = new Date();
-      const end = new Date(start.getTime() + days * 86400000);
-      const iso = (d: Date) => d.toISOString().slice(0, 10);
-
       const result = await publishCampaign({
         platforms,
         objective,
@@ -165,8 +176,8 @@ export default function NouvellePubliciteePage() {
         image_url:          product?.image_url ?? business?.logo_url ?? null,
         product_id:         productId,
         daily_budget_minor: majorToMinor(budgetMajor, currency),
-        start_date:         iso(start),
-        end_date:           iso(end),
+        start_date:         startDate,
+        end_date:           addDaysISO(startDate, days),
       });
 
       const failures = result.results.filter((r) => !r.ok);
@@ -212,7 +223,8 @@ export default function NouvellePubliciteePage() {
   const canNext =
     step === 1 ? true
   : step === 2 ? Boolean(objective)
-  : step === 3 ? platforms.length > 0 && budgetMajor > 0
+  : step === 3 ? platforms.length > 0 && budgetMajor > 0 && days >= 1
+                 && (minMajor === 0 || budgetMajor >= minMajor)
   : true;
 
   return (
@@ -258,8 +270,11 @@ export default function NouvellePubliciteePage() {
         {step === 3 && (
           <StepBudget
             presets={presets}
+            minMajor={minMajor}
             budgetMajor={budgetMajor}
             days={days}
+            startDate={startDate}
+            onStartDate={setStartDate}
             currency={currency}
             totalMajor={totalMajor}
             platforms={platforms}
@@ -279,6 +294,7 @@ export default function NouvellePubliciteePage() {
             budgetMajor={budgetMajor}
             totalMajor={totalMajor}
             days={days}
+            startDate={startDate}
             currency={currency}
             platforms={platforms}
             onHeadline={(v) => { setHeadline(v); setCopyEdited(true); }}
@@ -420,12 +436,15 @@ function StepObjective({
 // ─── Étape 3 : budget & durée ─────────────────────────────────────────────────
 
 function StepBudget({
-  presets, budgetMajor, days, currency, totalMajor, platforms, connected,
-  onBudget, onDays, onTogglePlatform,
+  presets, minMajor, budgetMajor, days, startDate, currency, totalMajor, platforms, connected,
+  onBudget, onDays, onStartDate, onTogglePlatform,
 }: {
   presets:     number[];
+  minMajor:    number;
   budgetMajor: number;
   days:        number;
+  startDate:   string;
+  onStartDate: (v: string) => void;
   currency:    string;
   totalMajor:  number;
   platforms:   AdPlatform[];
@@ -434,6 +453,14 @@ function StepBudget({
   onDays:      (v: number) => void;
   onTogglePlatform: (p: AdPlatform) => void;
 }) {
+  // Le mode libre se déduit de la valeur courante : en revenant sur cette
+  // étape, un montant personnalisé reste affiché comme tel sans état à porter.
+  const [customBudget, setCustomBudget] = useState(!presets.includes(budgetMajor));
+  const [customDays, setCustomDays]     = useState(!DURATIONS.includes(days));
+  const scheduled = startDate !== todayISO();
+
+  const belowMin = minMajor > 0 && budgetMajor > 0 && budgetMajor < minMajor;
+
   return (
     <div className="space-y-6">
       <div>
@@ -445,13 +472,13 @@ function StepBudget({
 
       <div>
         <p className="text-sm font-medium text-content-primary mb-2">Budget par jour</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {presets.map((v) => (
             <button
               key={v}
-              onClick={() => onBudget(v)}
+              onClick={() => { setCustomBudget(false); onBudget(v); }}
               className={`rounded-lg border min-h-[44px] px-3 text-sm font-medium ${
-                budgetMajor === v
+                !customBudget && budgetMajor === v
                   ? 'border-brand-600 bg-badge-brand text-content-brand'
                   : 'border-surface-border bg-surface-card text-content-primary'
               }`}
@@ -459,18 +486,50 @@ function StepBudget({
               {formatCurrency(v, currency)}
             </button>
           ))}
+          <button
+            onClick={() => setCustomBudget(true)}
+            className={`rounded-lg border min-h-[44px] px-3 text-sm font-medium ${
+              customBudget
+                ? 'border-brand-600 bg-badge-brand text-content-brand'
+                : 'border-surface-border bg-surface-card text-content-primary'
+            }`}
+          >
+            Autre
+          </button>
         </div>
+
+        {customBudget && (
+          <div className="mt-2">
+            <label htmlFor="budget-libre" className="block text-xs text-content-secondary mb-1">
+              Montant par jour, en {currency}
+            </label>
+            <input
+              id="budget-libre"
+              type="number"
+              inputMode="numeric"
+              min={minMajor || undefined}
+              value={budgetMajor || ''}
+              onChange={(e) => onBudget(Number(e.target.value))}
+              className="input w-full sm:w-48 min-h-[44px]"
+            />
+            {belowMin && (
+              <p className="text-xs text-status-error mt-1">
+                Minimum imposé par la plateforme : {formatCurrency(minMajor, currency)} par jour.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
         <p className="text-sm font-medium text-content-primary mb-2">Pendant</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {DURATIONS.map((d) => (
             <button
               key={d}
-              onClick={() => onDays(d)}
+              onClick={() => { setCustomDays(false); onDays(d); }}
               className={`rounded-lg border min-h-[44px] px-3 text-sm font-medium ${
-                days === d
+                !customDays && days === d
                   ? 'border-brand-600 bg-badge-brand text-content-brand'
                   : 'border-surface-border bg-surface-card text-content-primary'
               }`}
@@ -478,7 +537,80 @@ function StepBudget({
               {d} jours
             </button>
           ))}
+          <button
+            onClick={() => setCustomDays(true)}
+            className={`rounded-lg border min-h-[44px] px-3 text-sm font-medium ${
+              customDays
+                ? 'border-brand-600 bg-badge-brand text-content-brand'
+                : 'border-surface-border bg-surface-card text-content-primary'
+            }`}
+          >
+            Autre
+          </button>
         </div>
+
+        {customDays && (
+          <div className="mt-2">
+            <label htmlFor="duree-libre" className="block text-xs text-content-secondary mb-1">
+              Nombre de jours (1 à 90)
+            </label>
+            <input
+              id="duree-libre"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={90}
+              value={days || ''}
+              onChange={(e) => onDays(Math.min(90, Math.max(1, Number(e.target.value))))}
+              className="input w-full sm:w-48 min-h-[44px]"
+            />
+          </div>
+        )}
+      </div>
+
+      <div>
+        <p className="text-sm font-medium text-content-primary mb-2">Démarrage</p>
+        <div className="grid grid-cols-2 gap-2 sm:max-w-sm">
+          <button
+            onClick={() => onStartDate(todayISO())}
+            className={`rounded-lg border min-h-[44px] px-3 text-sm font-medium ${
+              !scheduled
+                ? 'border-brand-600 bg-badge-brand text-content-brand'
+                : 'border-surface-border bg-surface-card text-content-primary'
+            }`}
+          >
+            Dès maintenant
+          </button>
+          <button
+            onClick={() => onStartDate(addDaysISO(todayISO(), 1))}
+            className={`rounded-lg border min-h-[44px] px-3 text-sm font-medium ${
+              scheduled
+                ? 'border-brand-600 bg-badge-brand text-content-brand'
+                : 'border-surface-border bg-surface-card text-content-primary'
+            }`}
+          >
+            Programmer
+          </button>
+        </div>
+
+        {scheduled && (
+          <div className="mt-2">
+            <label htmlFor="date-debut" className="block text-xs text-content-secondary mb-1">
+              Date de début
+            </label>
+            <input
+              id="date-debut"
+              type="date"
+              min={todayISO()}
+              value={startDate}
+              onChange={(e) => onStartDate(e.target.value || todayISO())}
+              className="input w-full sm:w-48 min-h-[44px]"
+            />
+            <p className="text-xs text-content-secondary mt-1">
+              La publicité est créée tout de suite et reste en attente jusqu&apos;à cette date.
+            </p>
+          </div>
+        )}
       </div>
 
       <div>
@@ -508,6 +640,7 @@ function StepBudget({
         </p>
         <p className="text-xs text-content-secondary mt-1">
           soit {formatCurrency(budgetMajor, currency)} par jour pendant {days} jours
+          {scheduled && `, à partir du ${formatDate(startDate)}`}
           {platforms.length > 1 && ', sur chaque plateforme sélectionnée'}
         </p>
       </div>
@@ -518,7 +651,7 @@ function StepBudget({
 // ─── Étape 4 : aperçu ─────────────────────────────────────────────────────────
 
 function StepPreview({
-  headline, body, imageUrl, landingUrl, budgetMajor, totalMajor, days, currency, platforms,
+  headline, body, imageUrl, landingUrl, budgetMajor, totalMajor, days, startDate, currency, platforms,
   onHeadline, onBody,
 }: {
   headline:    string;
@@ -528,11 +661,30 @@ function StepPreview({
   budgetMajor: number;
   totalMajor:  number;
   days:        number;
+  startDate:   string;
   currency:    string;
   platforms:   AdPlatform[];
   onHeadline:  (v: string) => void;
   onBody:      (v: string) => void;
 }) {
+  // Les plateformes acceptent les petites images mais les affichent floues, et
+  // une créa floue est la première cause d'annonce ignorée. On mesure le
+  // fichier réel plutôt que de faire confiance au rendu miniature.
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!imageUrl) { setDims(null); return; }
+    const img = new window.Image();
+    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = imageUrl;
+  }, [imageUrl]);
+
+  const imageWarning =
+    !imageUrl                      ? "Aucune photo : une annonce sans visuel est très peu vue. Ajoutez une photo au produit."
+  : dims && (dims.w < 600 || dims.h < 600)
+                                   ? `Photo de ${dims.w}×${dims.h} pixels, un peu petite. En dessous de 600 pixels de côté, l'annonce paraît floue.`
+  : null;
+
   return (
     <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
       <div className="space-y-4">
@@ -575,24 +727,63 @@ function StepPreview({
         <div className="rounded-lg border border-surface-border bg-surface p-3 space-y-1 text-xs text-content-secondary">
           <p><span className="text-content-primary font-medium">Destination :</span> {landingUrl || '— à configurer —'}</p>
           <p><span className="text-content-primary font-medium">Budget :</span> {formatCurrency(budgetMajor, currency)} par jour pendant {days} jours ({formatCurrency(totalMajor, currency)} au total)</p>
+          <p>
+            <span className="text-content-primary font-medium">Période :</span>{' '}
+            {startDate === todayISO() ? 'dès la validation' : `à partir du ${formatDate(startDate)}`}
+            {' '}jusqu&apos;au {formatDate(addDaysISO(startDate, days))}
+          </p>
           <p><span className="text-content-primary font-medium">Diffusion :</span> {platforms.map((p) => PLATFORM_LABEL[p]).join(' + ')}</p>
         </div>
       </div>
 
-      <div>
-        <p className="text-sm font-medium text-content-primary mb-2">Aperçu</p>
-        <div className="rounded-xl border border-surface-border bg-surface-card overflow-hidden max-w-sm">
-          {imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="" className="w-full aspect-square object-cover" />
-          )}
-          <div className="p-3">
-            <p className="font-semibold text-content-primary text-sm">{headline || 'Titre de l\'annonce'}</p>
-            <p className="text-sm text-content-secondary mt-1 whitespace-pre-line">{body}</p>
-            <div className="mt-3 rounded-lg bg-surface-input px-3 py-2 text-xs text-content-secondary">
-              Sponsorisé
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-content-primary">Aperçu</p>
+
+        {imageWarning && (
+          <p className="text-xs text-status-warning flex items-start gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+            <span>{imageWarning}</span>
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-4">
+          {platforms.includes('meta') && (
+            <div className="w-full max-w-[18rem]">
+              <p className="text-xs text-content-secondary mb-1.5">Facebook & Instagram</p>
+              <div className="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
+                {imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="" className="w-full aspect-square object-cover" />
+                )}
+                <div className="p-3">
+                  <p className="font-semibold text-content-primary text-sm">{headline || "Titre de l'annonce"}</p>
+                  <p className="text-sm text-content-secondary mt-1 whitespace-pre-line">{body}</p>
+                  <div className="mt-3 rounded-lg bg-surface-input px-3 py-2 text-xs text-content-secondary">
+                    Sponsorisé
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {platforms.includes('tiktok') && (
+            // TikTok diffuse en plein écran vertical : montrer le même cadre
+            // carré que Facebook donnerait une fausse idée du rendu.
+            <div className="w-full max-w-[13rem]">
+              <p className="text-xs text-content-secondary mb-1.5">TikTok</p>
+              <div className="relative rounded-xl border border-surface-border bg-black overflow-hidden aspect-[9/16]">
+                {imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />
+                )}
+                <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                  <p className="text-white text-xs font-semibold">{headline || "Titre de l'annonce"}</p>
+                  <p className="text-white/80 text-xs mt-1 line-clamp-3">{body}</p>
+                  <span className="inline-block mt-2 text-[10px] text-white/70">Sponsorisé</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
