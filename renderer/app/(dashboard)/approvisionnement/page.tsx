@@ -350,8 +350,8 @@ export default function ApprovisionnementPage() {
             <AlertTriangle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-status-error">
-                {lowStock.filter(p => (p.stock ?? 0) === 0).length > 0
-                  ? `${lowStock.filter(p => (p.stock ?? 0) === 0).length} produit(s) en rupture totale`
+                {lowStock.filter(p => (p.stock ?? 0) <= 0).length > 0
+                  ? `${lowStock.filter(p => (p.stock ?? 0) <= 0).length} produit(s) en rupture totale`
                   : `${lowStock.length} produit(s) avec stock bas (≤ ${LOW_STOCK_THRESHOLD})`}
               </p>
               <p className="text-xs text-content-secondary mt-0.5">

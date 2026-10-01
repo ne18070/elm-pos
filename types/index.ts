@@ -118,6 +118,7 @@ export type StockMovementReason =
   | 'vente'
   | 'approvisionnement'
   | 'ajustement'
+  | 'inventaire'
   | 'annulation'
   | 'remboursement'
   | 'modif_commande'

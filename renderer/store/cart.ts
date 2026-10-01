@@ -99,7 +99,7 @@ function stockAvailable(product: Product, consumedInCart: number, consumption: n
   if (consumedInCart + consumption > stock) {
     return {
       ok: false,
-      reason: stock === 0
+      reason: stock <= 0
         ? `"${product.name}" est épuisé`
         : `Stock insuffisant — seulement ${stock} ${product.unit ?? 'unité(s)'} disponible${stock > 1 ? 's' : ''}`,
     };

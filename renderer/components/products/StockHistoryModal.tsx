@@ -12,6 +12,7 @@ const REASON_LABEL: Record<string, string> = {
   approvisionnement: 'Approvisionnement',
   correction_appro:  "Correction d'appro",
   ajustement:        'Ajustement manuel',
+  inventaire:        'Inventaire',
   annulation:        'Annulation de vente',
   remboursement:     'Remboursement',
   modif_commande:    'Modification commande',
@@ -25,6 +26,7 @@ const REASON_CLASS: Record<string, string> = {
   remboursement:     'bg-badge-warning text-status-warning',
   modif_commande:    'bg-badge-warning text-status-warning',
   ajustement:        'bg-surface-input text-content-secondary',
+  inventaire:        'bg-badge-info text-status-info',
   initial:           'bg-badge-brand text-content-brand',
 };
 

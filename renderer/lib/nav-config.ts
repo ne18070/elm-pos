@@ -1,7 +1,7 @@
 import {
   ShoppingCart, ClipboardList, Package, LayoutGrid, Warehouse, Store, BedDouble,
   Truck, UserCheck, MapPin, Scale, Receipt, BarChart2, TrendingDown, BookOpen,
-  Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck,
+  Users, Tag, MessageCircle, UsersRound, ScrollText, Settings, Wrench, FileSignature, Car, CalendarDays, Vault, History, PackageCheck, ClipboardCheck,
   GraduationCap, DatabaseZap, Bot, Ticket, Zap, UserCircle, Megaphone
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -65,6 +65,7 @@ const S_STOCK: NavSection = {
     { href: '/products',          icon: Package,    label: 'Produits',          permission: 'view_products'          },
     { href: '/categories',        icon: LayoutGrid, label: 'Catégories',        permission: 'view_categories'        },
     { href: '/approvisionnement', icon: Warehouse,  label: 'Approvisionnement', permission: 'view_approvisionnement' },
+    { href: '/inventaire',        icon: ClipboardCheck, label: 'Inventaire',    permission: 'view_inventaire'        },
     { href: '/revendeurs',        icon: Store,      label: 'Revendeurs',        permission: 'view_revendeurs'        },
   ],
 };

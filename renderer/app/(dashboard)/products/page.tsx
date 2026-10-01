@@ -146,7 +146,12 @@ export default function ProductsPage() {
       <th style="text-align:right">Stock</th><th style="text-align:right">Prix</th><th>Statut</th>
     </tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="6">${filtered.length} produit${filtered.length !== 1 ? 's' : ''}</td></tr></tfoot>
+    <tfoot><tr>
+      <td colspan="3">${filtered.length} produit${filtered.length !== 1 ? 's' : ''}</td>
+      <td class="num">${esc(formatQty(stockTotals.units))}</td>
+      <td class="num">${esc(formatCurrency(stockTotals.saleValue, cur))}</td>
+      <td></td>
+    </tr></tfoot>
   </table>
   <script>window.onload = function () { window.print(); };<\/script>
 </body></html>`;
@@ -172,6 +177,21 @@ export default function ProductsPage() {
       (p.sku ?? '').toLowerCase().includes(q)
     );
   });
+
+  // Totaux de stock sur la sélection affichée (produits avec suivi de stock uniquement)
+  const stockTotals = filtered.reduce(
+    (acc, p) => {
+      if (!p.track_stock) return acc;
+      const qty = Math.max(0, p.stock ?? 0);
+      acc.units += qty;
+      acc.saleValue += qty * (p.price ?? 0);
+      acc.costValue += qty * (p.cost_price ?? 0);
+      acc.tracked += 1;
+      return acc;
+    },
+    { units: 0, saleValue: 0, costValue: 0, tracked: 0 },
+  );
+  const formatQty = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
   function handleDelete(product: Product, e: React.MouseEvent) {
     e.stopPropagation();
@@ -359,6 +379,29 @@ export default function ProductsPage() {
 
       {/* Contenu */}
       <div className="flex-1 overflow-y-auto p-4">
+        {/* Total du stock */}
+        {!loading && stockTotals.tracked > 0 && (
+          <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-surface-border bg-surface-card p-3">
+              <p className="text-xs text-content-muted">Stock total</p>
+              <p className="text-lg font-bold text-content-primary">{formatQty(stockTotals.units)}</p>
+              <p className="text-xs text-content-muted">
+                sur {stockTotals.tracked} produit{stockTotals.tracked > 1 ? 's' : ''} suivi{stockTotals.tracked > 1 ? 's' : ''}
+              </p>
+            </div>
+            <div className="rounded-xl border border-surface-border bg-surface-card p-3">
+              <p className="text-xs text-content-muted">Valeur (prix de vente)</p>
+              <p className="text-lg font-bold text-content-primary">{formatCurrency(stockTotals.saleValue, business?.currency)}</p>
+            </div>
+            {can('view_financials') && (
+              <div className="rounded-xl border border-surface-border bg-surface-card p-3">
+                <p className="text-xs text-content-muted">Valeur (prix d&apos;achat)</p>
+                <p className="text-lg font-bold text-content-primary">{formatCurrency(stockTotals.costValue, business?.currency)}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Alertes stock bas */}
         {!loading && lowStock.length > 0 && (
           <div className="mb-3 rounded-xl border border-status-warning bg-badge-warning p-3">
@@ -374,14 +417,14 @@ export default function ProductsPage() {
                   key={p.id}
                   onClick={() => setEditProduct(p)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-badge-warning ${
-                    (p.stock ?? 0) === 0
+                    (p.stock ?? 0) <= 0
                       ? 'border-status-error bg-badge-error text-status-error'
                       : 'border-status-warning bg-badge-warning text-status-warning'
                   }`}
                 >
                   <span>{p.name}</span>
-                  <span className={`font-bold ${(p.stock ?? 0) === 0 ? 'text-status-error' : 'text-status-warning'}`}>
-                    {(p.stock ?? 0) === 0 ? 'RUPTURE' : `× ${p.stock}${p.unit ? ` ${p.unit}` : ''}`}
+                  <span className={`font-bold ${(p.stock ?? 0) <= 0 ? 'text-status-error' : 'text-status-warning'}`}>
+                    {(p.stock ?? 0) <= 0 ? 'RUPTURE' : `× ${p.stock}${p.unit ? ` ${p.unit}` : ''}`}
                   </span>
                 </button>
               ))}
@@ -555,7 +598,7 @@ export default function ProductsPage() {
                     <td className="px-3 py-2 hidden sm:table-cell">
                       {product.track_stock ? (
                         <span className={`text-sm font-medium ${
-                          (product.stock ?? 0) === 0
+                          (product.stock ?? 0) <= 0
                             ? 'text-status-error'
                             : (product.stock ?? 0) <= 5
                             ? 'text-status-warning'

@@ -9,7 +9,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
-import { createProduct, updateProduct } from '@services/supabase/products';
+import { createProduct, updateProduct, adjustStock, StockChangedError } from '@services/supabase/products';
 import { uploadProductImage } from '@services/supabase/storage';
 import type { Product, ProductVariant } from '@pos-types';
 
@@ -86,14 +86,17 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
 
   // Motif d'ajustement de stock (édition, stock suivi et quantité modifiée)
   const [stockReason, setStockReason] = useState('');
-  const initialStock = product?.stock ?? null;
+  // Quantité de référence (vue par l'utilisateur). L'ajustement est envoyé
+  // relativement à elle : si une vente passe pendant l'édition, le serveur
+  // refuse au lieu d'écraser la vente (voir adjust_stock).
+  const [baseStock, setBaseStock] = useState<number | null>(product?.stock ?? null);
+  const [stockConflict, setStockConflict] = useState(false);
+  const stockAdjustable = isEdit && product?.track_stock === true && baseStock !== null;
   const stockChanged =
-    isEdit &&
+    stockAdjustable &&
     form.track_stock &&
-    product?.track_stock === true &&
-    initialStock !== null &&
     form.stock.trim() !== '' &&
-    parseNumber(form.stock) !== Number(initialStock);
+    parseNumber(form.stock) !== Number(baseStock);
 
   function addVariant() {
     setVariants((v) => [
@@ -193,7 +196,8 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
         barcode:      form.barcode.trim() || undefined,
         sku:          form.sku.trim() || undefined,
         track_stock:  form.track_stock,
-        stock:        form.track_stock && form.stock.trim() !== '' ? parseNumber(form.stock) : undefined,
+        // Stock déjà suivi : jamais écrasé ici, il passe par adjustStock ci-dessous
+        stock:        !stockAdjustable && form.track_stock && form.stock.trim() !== '' ? parseNumber(form.stock) : undefined,
         unit:         form.unit || undefined,
         is_active:    form.is_active,
         image_url:    form.image_url || undefined,
@@ -201,9 +205,22 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
       };
 
       if (isEdit) {
-        await updateProduct(product.id, payload, {
-          stockAdjustmentReason: stockChanged ? stockReason.trim() || undefined : undefined,
-        });
+        if (stockChanged && baseStock !== null) {
+          try {
+            const newStock = await adjustStock(product.id, Number(baseStock), parseNumber(form.stock), stockReason.trim());
+            setBaseStock(newStock);
+            setStockConflict(false);
+          } catch (e) {
+            if (e instanceof StockChangedError) {
+              setBaseStock(e.currentStock);
+              setStockConflict(true);
+              notifError(e.message);
+              return;
+            }
+            throw e;
+          }
+        }
+        await updateProduct(product.id, payload);
         success('Produit mis à jour');
       } else {
         await createProduct(payload as Parameters<typeof createProduct>[0]);
@@ -439,6 +456,11 @@ export function ProductModal({ product, businessId, onClose, onSaved }: ProductM
             />
           )}
         </div>
+        {stockAdjustable && form.track_stock && stockConflict && (
+          <p className="text-xs text-status-warning -mt-2">
+            Stock actuel en base : {baseStock}{form.unit ? ` ${form.unit}` : ''} — il a changé pendant la modification (vente ?).
+          </p>
+        )}
 
         {/* Historique des mouvements de stock */}
         {isEdit && product && (

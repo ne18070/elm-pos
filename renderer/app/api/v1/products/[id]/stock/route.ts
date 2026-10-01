@@ -26,33 +26,54 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return apiError('Provide either "stock" (absolute) or "delta" (relative).', 400);
     }
 
-    // Verify product belongs to this business
-    const { data: product, error: fetchErr } = await admin
-      .from('products')
-      .select('id, stock')
-      .eq('id', id)
-      .eq('business_id', businessId)
-      .maybeSingle();
+    // Optimistic concurrency: adjust_stock refuses the write if the stock moved
+    // between our read and our write (e.g. a POS sale). We then re-read and
+    // retry, so a "delta" is never applied to a stale value and a concurrent
+    // sale is never overwritten.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: product, error: fetchErr } = await admin
+        .from('products')
+        .select('id, name, stock, track_stock')
+        .eq('id', id)
+        .eq('business_id', businessId)
+        .maybeSingle();
 
-    if (fetchErr) return apiError(fetchErr.message, 502);
-    if (!product) return apiError('Product not found.', 404);
+      if (fetchErr) return apiError(fetchErr.message, 502);
+      if (!product) return apiError('Product not found.', 404);
 
-    const newStock = body.stock !== undefined
-      ? body.stock
-      : (product.stock ?? 0) + (body.delta ?? 0);
+      const current  = Number(product.stock ?? 0);
+      const newStock = body.stock !== undefined ? body.stock : current + (body.delta ?? 0);
 
-    if (newStock < 0) return apiError('Stock cannot be negative.', 422);
+      if (newStock < 0) return apiError('Stock cannot be negative.', 422);
 
-    const { data, error } = await admin
-      .from('products')
-      .update({ stock: newStock })
-      .eq('id', id)
-      .select('id, name, stock')
-      .single();
+      if (!product.track_stock) {
+        // Stock not tracked: no ledger / accounting, plain update as before.
+        const { data, error } = await admin
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', id)
+          .select('id, name, stock')
+          .single();
+        if (error) return apiError(error.message, 502);
+        return Response.json({ data }, { headers: corsHeaders() });
+      }
 
-    if (error) return apiError(error.message, 502);
+      const { error } = await admin.rpc('adjust_stock', {
+        p_product_id: id,
+        p_expected:   current,
+        p_new_qty:    newStock,
+        p_reason:     'API v1',
+      });
+      if (error) {
+        if (error.message.includes('STOCK_A_CHANGE')) continue;
+        return apiError(error.message, 502);
+      }
 
-    return Response.json({ data }, { headers: corsHeaders() });
+      const data = { id: product.id, name: product.name, stock: newStock };
+      return Response.json({ data }, { headers: corsHeaders() });
+    }
+
+    return apiError('Stock changed concurrently, please retry.', 409);
   } catch (err) {
     return handleAuthError(err);
   }

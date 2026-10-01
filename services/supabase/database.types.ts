@@ -2564,6 +2564,116 @@ export type Database = {
           },
         ]
       }
+      inventory_count_lines: {
+        Row: {
+          applied_delta: number | null
+          business_id: string
+          counted_at: string
+          counted_by: string | null
+          counted_qty: number
+          expected_qty: number
+          id: string
+          product_id: string
+          reason: string | null
+          session_id: string
+          unit_cost: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          applied_delta?: number | null
+          business_id: string
+          counted_at?: string
+          counted_by?: string | null
+          counted_qty: number
+          expected_qty: number
+          id?: string
+          product_id: string
+          reason?: string | null
+          session_id: string
+          unit_cost?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          applied_delta?: number | null
+          business_id?: string
+          counted_at?: string
+          counted_by?: string | null
+          counted_qty?: number
+          expected_qty?: number
+          id?: string
+          product_id?: string
+          reason?: string | null
+          session_id?: string
+          unit_cost?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_lines_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_sessions: {
+        Row: {
+          business_id: string
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_sessions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       journal_entries: {
         Row: {
           business_id: string
@@ -7645,6 +7755,20 @@ export type Database = {
         Returns: undefined
       }
       unaccent: { Args: { "": string }; Returns: string }
+      adjust_stock: {
+        Args: { p_expected: number; p_new_qty: number; p_product_id: string; p_reason?: string }
+        Returns: number
+      }
+      cancel_inventory_session: { Args: { p_session_id: string }; Returns: undefined }
+      create_inventory_session: {
+        Args: { p_business_id: string; p_category_id?: string; p_name: string; p_notes?: string }
+        Returns: string
+      }
+      set_inventory_count: {
+        Args: { p_counted_qty: number | null; p_product_id: string; p_reason?: string; p_session_id: string }
+        Returns: Database["public"]["Tables"]["inventory_count_lines"]["Row"]
+      }
+      validate_inventory_session: { Args: { p_session_id: string }; Returns: Json }
       record_stock_adjustment: {
         Args: { p_product_id: string; p_qty_before: number; p_qty_after: number; p_reason?: string }
         Returns: Json

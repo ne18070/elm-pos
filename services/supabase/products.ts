@@ -278,3 +278,39 @@ export async function getStockMovements(
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as StockMovement[];
 }
+
+/** Le stock a bougé (vente, appro…) entre l'affichage et l'ajustement. */
+export class StockChangedError extends Error {
+  constructor(public readonly currentStock: number) {
+    super(`Le stock a changé entre-temps (actuellement ${currentStock}). Vérifiez la quantité puis réessayez.`);
+    this.name = 'StockChangedError';
+  }
+}
+
+/**
+ * Ajustement manuel du stock d'un produit.
+ *
+ * `expected` = quantité que l'utilisateur avait sous les yeux. Si le stock a
+ * changé depuis (vente passée pendant l'édition), la RPC refuse au lieu
+ * d'écraser la vente → StockChangedError avec le stock actuel. Le motif est
+ * journalisé et l'écriture comptable passée dans la même transaction.
+ */
+export async function adjustStock(
+  productId: string,
+  expected: number,
+  newQty: number,
+  reason?: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc('adjust_stock', {
+    p_product_id: productId,
+    p_expected:   expected,
+    p_new_qty:    newQty,
+    p_reason:     reason || undefined,
+  });
+  if (error) {
+    const m = /STOCK_A_CHANGE:(-?[\d.]+)/.exec(error.message);
+    if (m) throw new StockChangedError(Number(m[1]));
+    throw new Error(error.message);
+  }
+  return Number(data);
+}
