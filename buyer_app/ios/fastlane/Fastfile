@@ -58,13 +58,24 @@ platform :ios do
       export_options:   { provisioningProfiles: { BUNDLE_ID => profile["Name"] } },
     )
 
+    ipa = lane_context[SharedValues::IPA_OUTPUT_PATH]
+
+    unless ENV["SUBMIT_FOR_REVIEW"] == "true"
+      # TestFlight seulement : binaire uniquement, aucune métadonnée — App Store Connect
+      # refuse les « Nouveautés » sur la toute première version d'une app.
+      upload_to_testflight(api_key: api_key, ipa: ipa, skip_waiting_for_build_processing: true)
+      next
+    end
+
+    notes = ENV["RELEASE_NOTES"].to_s.strip
     upload_to_app_store(
       api_key:                    api_key,
-      ipa:                        lane_context[SharedValues::IPA_OUTPUT_PATH],
+      ipa:                        ipa,
       app_version:                version,
       skip_screenshots:           true,
-      release_notes:              { "default" => ENV.fetch("RELEASE_NOTES", "Améliorations et corrections.") },
-      submit_for_review:          ENV["SUBMIT_FOR_REVIEW"] == "true",
+      skip_metadata:              notes.empty?,
+      release_notes:              notes.empty? ? nil : { "default" => notes },
+      submit_for_review:          true,
       automatic_release:          true,
       force:                      true, # pas d'aperçu HTML à valider en CI
       run_precheck_before_submit: false,

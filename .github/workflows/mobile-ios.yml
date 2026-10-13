@@ -149,7 +149,8 @@ jobs:
         env:
           APP_VERSION: ${{ steps.version.outputs.name }}
           SUBMIT_FOR_REVIEW: ${{ github.event_name == 'push' || inputs.submit_for_review }}
-          RELEASE_NOTES: ${{ inputs.release_notes || 'Améliorations et corrections.' }}
+          # Tag → notes par défaut ; manuel → uniquement si saisies (vide = métadonnées inchangées)
+          RELEASE_NOTES: ${{ github.event_name == 'push' && 'Améliorations et corrections.' || inputs.release_notes }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_CERTIFICATE_PATH: ${{ runner.temp }}/distribution.p12
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
