@@ -1,0 +1,174 @@
+name: Mobile Boutique — App Store
+
+# Publie « ELM Boutique » (app Flutter buyer_app/, com.elmapp.mobile) sur l'App Store :
+# archive signée, envoi App Store Connect puis soumission à la review avec publication
+# automatique après validation. Logique de signature/envoi : buyer_app/ios/fastlane/Fastfile.
+#
+# Déclenchement :
+#   git tag mobile-v1.2.0 && git push origin mobile-v1.2.0   → iOS + Android (mobile-android.yml)
+#   ou manuellement : Actions → « Mobile Boutique — App Store » → Run workflow
+#
+# Projets natifs générés par `flutter create`, configurés par buyer_app/tool/configure_platforms.py.
+#
+# Versionnement :
+#   CFBundleShortVersionString = tag sans « mobile-v » (ou l'input `version`)
+#   CFBundleVersion            = github.run_number + vars.IOS_BUILD_NUMBER_OFFSET (défaut 0)
+#
+# Secrets requis :
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY  (passés en --dart-define)
+#   APPLE_TEAM_ID                     — Apple Developer → Membership → Team ID
+#   APPLE_CERTIFICATE_BASE64          — certificat « Apple Distribution » exporté en .p12, en base64
+#   APPLE_CERTIFICATE_PASSWORD        — mot de passe défini à l'export du .p12
+#   APPLE_PROVISIONING_PROFILE_BASE64 — profil « App Store Connect » pour com.elmapp.mobile, en base64
+#   APP_STORE_CONNECT_ISSUER_ID       — App Store Connect → Utilisateurs et accès → Intégrations → Issuer ID
+#   APP_STORE_CONNECT_KEY_ID          — id de la clé API (rôle « App Manager » minimum)
+#   APP_STORE_CONNECT_PRIVATE_KEY     — contenu brut du fichier AuthKey_XXXX.p8
+#   Encodage base64 depuis Windows :
+#     [Convert]::ToBase64String([IO.File]::ReadAllBytes('distribution.p12')) | Set-Clipboard
+#
+# Prérequis côté Apple (une seule fois) :
+#   - App créée dans App Store Connect avec le bundle ID com.elmapp.mobile
+#   - 1ère version : fiche (captures, description, confidentialité) remplie à la main, et un
+#     lien de boutique avec des produits dans les notes de review — la CI n'envoie que le
+#     binaire et les notes de version.
+
+on:
+  push:
+    tags:
+      - 'mobile-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (ex: 1.2.0)'
+        required: true
+      submit_for_review:
+        description: 'Soumettre à la review App Store (sinon : TestFlight uniquement)'
+        type: boolean
+        default: true
+      release_notes:
+        description: 'Notes de version (« Nouveautés »)'
+        required: false
+
+concurrency:
+  group: mobile-ios
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: buyer_app
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            NAME="${{ inputs.version }}"
+          else
+            NAME="${GITHUB_REF_NAME#mobile-v}"
+          fi
+          if ! echo "$NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: version '$NAME' invalide — attendu X.Y.Z (tag mobile-vX.Y.Z)"
+            exit 1
+          fi
+          BUILD=$(( ${{ github.run_number }} + ${{ vars.IOS_BUILD_NUMBER_OFFSET || 0 }} ))
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "iOS version=$NAME build=$BUILD"
+
+      - name: Check required secrets
+        run: |
+          for s in SUPABASE_URL SUPABASE_ANON_KEY APPLE_TEAM_ID APPLE_CERTIFICATE_BASE64 \
+                   APPLE_PROVISIONING_PROFILE_BASE64 APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_PRIVATE_KEY; do
+            if [ -z "${!s}" ]; then echo "ERROR: secret manquant pour $s"; exit 1; fi
+          done
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: buyer_app/ios
+
+      - name: Generate & configure native projects
+        run: |
+          flutter create --org com.elmapp --project-name elm_boutique --platforms android,ios .
+          python3 tool/configure_platforms.py
+
+      - name: Launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze & test
+        run: |
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Build iOS (sans signature — la signature est faite par fastlane)
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name=${{ steps.version.outputs.name }} \
+            --build-number=${{ steps.version.outputs.build }} \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+
+      - name: Decode signing certificate & provisioning profile
+        env:
+          CERT_B64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          PROFILE_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          echo -n "$CERT_B64"    | base64 --decode -o "$RUNNER_TEMP/distribution.p12"
+          echo -n "$PROFILE_B64" | base64 --decode -o "$RUNNER_TEMP/appstore.mobileprovision"
+
+      - name: Archive, upload & submit (fastlane)
+        working-directory: buyer_app/ios
+        run: bundle exec fastlane ios release
+        env:
+          APP_VERSION: ${{ steps.version.outputs.name }}
+          SUBMIT_FOR_REVIEW: ${{ github.event_name == 'push' || inputs.submit_for_review }}
+          RELEASE_NOTES: ${{ inputs.release_notes || 'Améliorations et corrections.' }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_CERTIFICATE_PATH: ${{ runner.temp }}/distribution.p12
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_PATH: ${{ runner.temp }}/appstore.mobileprovision
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          FASTLANE_SKIP_UPDATE_CHECK: '1'
+          FASTLANE_HIDE_CHANGELOG: '1'
+
+      - name: Upload IPA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-boutique-${{ steps.version.outputs.name }}-${{ steps.version.outputs.build }}
+          path: buyer_app/ios/build/Runner.ipa
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Clean up signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/appstore.mobileprovision"

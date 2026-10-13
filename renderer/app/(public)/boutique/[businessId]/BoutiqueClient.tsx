@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   ShoppingCart, Plus, Minus, X, Package,
   Search, MapPin, Phone, Loader2, AlertCircle,
@@ -14,6 +14,7 @@ import {
   type BoutiqueInfo, type BoutiqueProduct, type BoutiqueVariant, type BoutiqueCartItem,
 } from '@services/supabase/boutique';
 import { formatCurrency } from '@/lib/utils';
+import { boutiqueConfirmationPath, rememberBoutique, useBoutiqueParams } from '@/lib/boutique-routes';
 
 // ------ Types -----------------------------------------------------------------------
 
@@ -265,7 +266,7 @@ function VariantModal({
 // ------ Page principale -------------------------------------------------------------
 
 export default function BoutiquePage() {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { businessId } = useBoutiqueParams();
   const router = useRouter();
 
   // ---- Données
@@ -299,12 +300,17 @@ export default function BoutiquePage() {
   const [submitError,     setSubmitError]     = useState<string | null>(null);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId) {
+      setLoadErr("Lien de boutique invalide.");
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const bInfo = await getBoutiqueInfo(businessId);
         if (!bInfo) { setLoadErr("Cette boutique n'existe pas."); return; }
         setInfo(bInfo);
+        rememberBoutique({ id: bInfo.id, name: bInfo.name, logo_url: bInfo.logo_url });
         setProducts(await getBoutiqueProducts(bInfo.id));
       } catch {
         setLoadErr("Impossible de charger la boutique. Réessayez.");
@@ -389,7 +395,7 @@ export default function BoutiquePage() {
         notes:            notes.trim() || undefined,
       });
       clearCart();
-      router.push(`/boutique/${businessId}/confirmation/${result.payment_token}`);
+      router.push(boutiqueConfirmationPath(businessId ?? info.id, result.payment_token));
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Une erreur est survenue. Réessayez.");
     } finally {
@@ -430,7 +436,7 @@ export default function BoutiquePage() {
     <div className="min-h-screen bg-surface pb-32">
 
       {/* ---- Header ------------------------------------------------------------ */}
-      <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm">
+      <header className="sticky top-0 z-30 bg-surface-card border-b border-surface-border shadow-sm pt-[env(safe-area-inset-top)]">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
 
           {/* Logo + nom */}

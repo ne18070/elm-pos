@@ -6,6 +6,14 @@ release/
 *.jks
 *.keystore
 android/keystore.properties
+# Signature Apple (certificats, clés privées, profils, clés API App Store Connect)
+*.key
+*.p12
+*.cer
+*.csr
+*.certSigningRequest
+*.p8
+*.mobileprovision
 .next/
 renderer/.next/
 renderer/out/

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { boutiquePath, useBoutiqueParams } from '@/lib/boutique-routes';
 import {
   CheckCircle2, Package, Truck, Store, Banknote,
   CreditCard, MessageCircle, Loader2, AlertCircle,
@@ -32,7 +32,7 @@ const PAYMENT_LABELS: Record<string, { label: string; desc: string; icon: React.
 };
 
 export default function ConfirmationPage() {
-  const { businessId, orderId: token } = useParams<{ businessId: string; orderId: string }>();
+  const { businessId, orderToken: token } = useBoutiqueParams();
 
   const [order,   setOrder]   = useState<BoutiqueOrderDetail | null>(null);
   const [info,    setInfo]    = useState<BoutiqueInfo | null>(null);
@@ -73,7 +73,7 @@ export default function ConfirmationPage() {
           <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
           <p className="font-semibold text-slate-800">{error ?? "Une erreur est survenue"}</p>
           <a
-            href={`/boutique/${businessId}`}
+            href={boutiquePath(businessId ?? '')}
             className="block w-full py-3 rounded-xl bg-brand-600 text-content-primary font-semibold text-sm hover:bg-brand-700 transition-colors text-center"
           >
             Retour à la boutique
@@ -95,10 +95,10 @@ export default function ConfirmationPage() {
     <div className="min-h-screen bg-slate-50 pb-16">
 
       {/* Header */}
-      <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10">
+      <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
           <a
-            href={`/boutique/${businessId}`}
+            href={boutiquePath(businessId ?? '')}
             className="p-2 rounded-full hover:bg-slate-100 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-content-muted" />
@@ -253,7 +253,7 @@ export default function ConfirmationPage() {
 
         {/* Retour boutique */}
         <a
-          href={`/boutique/${businessId}`}
+          href={boutiquePath(businessId ?? '')}
           className="block w-full text-center py-3.5 rounded-xl border-2 border-slate-200 text-content-muted font-semibold text-sm hover:border-brand-400 hover:text-brand-600 transition-colors"
         >
           ← Retour à la boutique

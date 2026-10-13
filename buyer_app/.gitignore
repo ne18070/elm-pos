@@ -1,0 +1,26 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+.idea/
+
+# Signature (écrite par la CI, jamais commitée)
+android/key.properties
+android/upload.jks
+
+# fastlane
+ios/fastlane/report.xml
+ios/fastlane/README.md
+
+# Projets natifs générés en CI (flutter create + tool/configure_platforms.py)
+/android/
+/ios/*
+!/ios/Gemfile
+!/ios/Gemfile.lock
+!/ios/fastlane/
+.metadata

@@ -1,0 +1,37 @@
+name: elm_boutique
+description: "ELM Boutique — vitrine acheteur des boutiques ELM (com.elmapp.mobile)."
+publish_to: 'none'
+
+# Remplacé en CI par --build-name / --build-number (tag mobile-vX.Y.Z)
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.8.0
+  shared_preferences: ^2.3.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.png
+
+# dart run flutter_launcher_icons (lancé par la CI après flutter create)
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "assets/icon/background.png"
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+  min_sdk_android: 21

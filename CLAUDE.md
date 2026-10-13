@@ -22,6 +22,11 @@ yarn dist:win / dist:mac / dist:linux  # Electron installers
 yarn mobile:build     # next build (static export) + cap sync
 yarn mobile:ios / yarn mobile:android  # open native IDE (Xcode / Android Studio)
 
+# Flutter buyer app « ELM Boutique » (buyer_app/) — android/ & ios/ are generated, not committed
+cd buyer_app && flutter create --org com.elmapp --project-name elm_boutique --platforms android,ios . && python tool/configure_platforms.py
+flutter run --dart-define=SUPABASE_URL=<url> --dart-define=SUPABASE_ANON_KEY=<anon key>
+flutter test          # unit tests (format, liens, panier)
+
 # Tests (Playwright, tests/*.spec.ts)
 yarn playwright test                     # full suite, all browsers
 yarn playwright test tests/dossiers.spec.ts  # single file
@@ -44,6 +49,7 @@ elm-pos/
 ├── types/        Shared TypeScript types (import via @pos-types alias)
 ├── supabase/migrations/  PostgreSQL schema, RLS policies, functions — apply in order
 ├── android/, ios/  Capacitor native shells (generated; app code stays in renderer/)
+├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — storefront: open a boutique, order
 └── tests/        Playwright end-to-end specs
 ```
 
@@ -68,7 +74,7 @@ elm-pos/
 | `(backoffice)` | Superadmin only |
 | `(kiosk)` | Customer-facing display mode |
 | `(marketing)` | Landing page, subscribe, privacy — always light mode |
-| `(mobile)` | Capacitor companion app screens, under `/m/*` (owner, orders, clients, inventory, delivery, vehicles, services, contrats, dossiers) |
+| `(mobile)` | Capacitor owner companion screens, under `/m/*` (owner, orders, clients, inventory, delivery, vehicles, services, contrats, dossiers) — no longer published to the stores (`com.elmapp.mobile` is now the Flutter buyer app, see `buyer_app/`) |
 
 ### Three platform targets
 
@@ -78,7 +84,7 @@ The same `renderer/` codebase ships as three builds, distinguished at runtime vi
 |---|---|---|
 | Electron desktop | `yarn dev` / `yarn dist:*` | Full hardware access (printer, scanner, NFC) via IPC; SQLite offline store |
 | Web | `yarn web:dev` / `yarn web:build` | Deployed on Vercel; no Electron/hardware IPC — `renderer/lib/ipc.ts` falls back to browser stubs |
-| Capacitor mobile (iOS/Android) | `yarn mobile:build` + `mobile:ios`/`mobile:android` | Static export (`ELECTRON_BUILD=1`) wrapped by Capacitor; UI lives under the `(mobile)` route group (`/m/*`); native shells in `android/`, `ios/` |
+| Capacitor mobile (iOS/Android) | `yarn mobile:build` + `mobile:ios`/`mobile:android` | Static export (`ELECTRON_BUILD=1`) wrapped by Capacitor; UI lives under the `(mobile)` route group (`/m/*`); native shells in `android/`, `ios/`. Not published to the stores anymore |
 
 ### Data flow
 
@@ -269,7 +275,8 @@ See `supabase/migrations/085_explicit_grants.sql` for the baseline.
 ## CI/CD (`.github/workflows/`)
 
 - `playwright.yml` — runs `yarn playwright test` on every push/PR to `main`.
-- `release.yml` — triggered by pushing a `v*` tag: builds Windows/macOS/Linux Electron installers and a signed Android AAB (auto-published to the Play Store production track) in parallel, then publishes a single GitHub Release with all artifacts. An iOS/TestFlight job exists but stays off unless the `IOS_DEPLOY_ENABLED` repo variable is `true`. See the comment header in that file for the full secrets list.
+- `release.yml` — triggered by pushing a `v*` tag: builds Windows/macOS/Linux Electron installers in parallel, then publishes a single GitHub Release. Desktop only.
+- `mobile-android.yml` / `mobile-ios.yml` — build and publish the **Flutter** buyer app « ELM Boutique » (`buyer_app/`, store id `com.elmapp.mobile`), triggered by a `mobile-vX.Y.Z` tag (or manually). Native folders are not committed: CI runs `flutter create` then `buyer_app/tool/configure_platforms.py` (app id, release signing, display name). Android → Play Store production track; iOS → fastlane (`buyer_app/ios/fastlane/Fastfile`) uploads to App Store Connect and submits for review. Version name comes from the tag, build number from `github.run_number`. Secrets are listed in each file's header.
 
 ## Claude Code skills for this repo
 
