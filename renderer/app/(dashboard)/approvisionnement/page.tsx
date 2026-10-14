@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
 import { formatCurrency, cn } from '@/lib/utils';
-import { getStockEntries, STOCK_ENTRIES_LIMIT } from '@services/supabase/stock';
+import { getStockEntries, STOCK_ENTRIES_LIMIT, STOCK_ENTRIES_RANGE_LIMIT } from '@services/supabase/stock';
 import { getSuppliers } from '@services/supabase/suppliers';
 import { getPurchaseOrders, updatePOStatus, receivePurchaseOrder } from '@services/supabase/purchase-orders';
 import { StockEntryModal } from '@/components/stock/StockEntryModal';
@@ -27,10 +27,10 @@ import type { PurchaseOrder, POStatus } from '@services/supabase/purchase-orders
 // --- Types -------------------------------------------------------------------
 
 type PageTab   = 'historique' | 'commandes';
-type Period    = 'all' | 'today' | 'week' | 'month';
+type Period    = 'all' | 'today' | 'week' | 'month' | 'custom';
 
 const PERIOD_LABELS: Record<Period, string> = {
-  all: 'Tout', today: "Auj.", week: 'Semaine', month: 'Mois',
+  all: 'Tout', today: "Auj.", week: 'Semaine', month: 'Mois', custom: 'Dates',
 };
 
 const PO_STATUS_CFG: Record<POStatus, { label: string; color: string }> = {
@@ -41,7 +41,7 @@ const PO_STATUS_CFG: Record<POStatus, { label: string; color: string }> = {
 };
 
 function cutoffForPeriod(period: Period): Date | null {
-  if (period === 'all') return null;
+  if (period === 'all' || period === 'custom') return null;
   const now = new Date();
   if (period === 'today') return startOfDay(now);
   if (period === 'week')  return startOfWeek(now, { weekStartsOn: 1 });
@@ -103,6 +103,12 @@ export default function ApprovisionnementPage() {
   const [search, setSearch]         = useState('');
   const [period, setPeriod]         = useState<Period>('month');
   const [supplierFilter, setSupplierFilter] = useState('');
+  // Période « Dates » : plage libre, interrogée côté serveur (la liste
+  // principale ne contient que les STOCK_ENTRIES_LIMIT dernières entrées).
+  const [dateFrom, setDateFrom]     = useState('');
+  const [dateTo, setDateTo]         = useState('');
+  const [rangeEntries, setRangeEntries] = useState<StockEntry[] | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
 
   const { lowStock } = useLowStockAlerts(business?.id ?? '');
 
@@ -126,6 +132,21 @@ export default function ApprovisionnementPage() {
   }, [business?.id]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Recharge aussi après un ajout/une correction (`entries` change via fetchAll).
+  const hasRange = period === 'custom' && !!(dateFrom || dateTo);
+  useEffect(() => {
+    if (!business?.id || !hasRange) { setRangeEntries(null); return; }
+    let stale = false;
+    setRangeLoading(true);
+    getStockEntries(business.id, undefined, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined })
+      .then((list) => { if (!stale) setRangeEntries(list); })
+      .catch((err) => { if (!stale) notifError(toUserError(err)); })
+      .finally(() => { if (!stale) setRangeLoading(false); });
+    return () => { stale = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id, hasRange, dateFrom, dateTo, entries]);
+  const rangeTruncated = hasRange && (rangeEntries?.length ?? 0) >= STOCK_ENTRIES_RANGE_LIMIT;
 
   // Stats
   const thisMonthEntries = useMemo(() => {
@@ -185,7 +206,9 @@ export default function ApprovisionnementPage() {
   // Filtered history list
   const filtered = useMemo(() => {
     const cutoff = cutoffForPeriod(period);
-    let list = cutoff ? entries.filter(e => new Date(e.created_at) >= cutoff) : [...entries];
+    let list = hasRange
+      ? [...(rangeEntries ?? [])]
+      : cutoff ? entries.filter(e => new Date(e.created_at) >= cutoff) : [...entries];
     if (supplierFilter) list = list.filter(e => e.supplier === supplierFilter);
     if (search) {
       const q = search.toLowerCase();
@@ -196,9 +219,10 @@ export default function ApprovisionnementPage() {
       );
     }
     return list;
-  }, [entries, period, supplierFilter, search]);
+  }, [entries, rangeEntries, hasRange, period, supplierFilter, search]);
 
   const hasActiveFilter = search !== '' || supplierFilter !== '' || period !== 'all';
+  const clearFilters = () => { setSearch(''); setSupplierFilter(''); setPeriod('all'); setDateFrom(''); setDateTo(''); };
 
   /** Total du « Coût total » pour les entrées actuellement affichées (après filtres). */
   const filteredTotalCost = useMemo(() =>
@@ -433,9 +457,41 @@ export default function ApprovisionnementPage() {
               </select>
             )}
           </div>
+          {period === 'custom' && (
+            <div className="px-4 sm:px-6 pb-3 flex items-center gap-2 flex-wrap shrink-0">
+              <label className="flex items-center gap-1.5 text-xs text-content-secondary">
+                Du
+                <input
+                  type="date"
+                  value={dateFrom}
+                  max={dateTo || undefined}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="input h-8 text-sm py-0"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-content-secondary">
+                Au
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="input h-8 text-sm py-0"
+                />
+              </label>
+              {!hasRange && (
+                <span className="text-xs text-content-muted">Choisissez une date de début et/ou de fin.</span>
+              )}
+              {rangeTruncated && (
+                <span className="text-xs text-status-warning">
+                  {STOCK_ENTRIES_RANGE_LIMIT} entrées les plus récentes seulement — réduisez la plage.
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto">
-            {loading ? (
+            {loading || (hasRange && rangeLoading && rangeEntries === null) ? (
               <div className="flex items-center justify-center h-32 text-content-secondary text-sm">Chargement…</div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-content-primary gap-3">
@@ -444,7 +500,7 @@ export default function ApprovisionnementPage() {
                   {hasActiveFilter ? 'Aucun résultat pour ces filtres' : 'Aucun approvisionnement enregistré'}
                 </p>
                 {hasActiveFilter ? (
-                  <button onClick={() => { setSearch(''); setSupplierFilter(''); setPeriod('all'); }}
+                  <button onClick={clearFilters}
                     className="btn-secondary text-sm">Effacer les filtres</button>
                 ) : canManage ? (
                   <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2 mt-2">

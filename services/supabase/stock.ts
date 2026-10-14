@@ -45,10 +45,18 @@ export interface UpdateStockEntryInput {
   notes?: string;
 }
 
+/** Plafond d'une recherche par plage de dates (au-delà : affinez la plage). */
+export const STOCK_ENTRIES_RANGE_LIMIT = 2000;
+
 export async function getStockEntries(
   businessId: string,
-  productId?: string
+  productId?: string,
+  /** Plage calendaire locale (YYYY-MM-DD, bornes incluses), filtrée côté SQL :
+   *  sans elle, seules les STOCK_ENTRIES_LIMIT dernières entrées sont lues et
+   *  une période ancienne paraîtrait vide. */
+  range?: { dateFrom?: string; dateTo?: string },
 ): Promise<StockEntry[]> {
+  const hasRange = !!(range?.dateFrom || range?.dateTo);
   let query = supabase
     .from('stock_entries')
     .select(`
@@ -58,11 +66,14 @@ export async function getStockEntries(
     `)
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
-    .limit(STOCK_ENTRIES_LIMIT);
+    .limit(hasRange ? STOCK_ENTRIES_RANGE_LIMIT : STOCK_ENTRIES_LIMIT);
 
   if (productId) {
     query = query.eq('product_id', productId);
   }
+  // Date locale → borne UTC via un Date local (même conversion que getOrders).
+  if (range?.dateFrom) query = query.gte('created_at', new Date(`${range.dateFrom}T00:00:00`).toISOString());
+  if (range?.dateTo)   query = query.lte('created_at', new Date(`${range.dateTo}T23:59:59.999`).toISOString());
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
