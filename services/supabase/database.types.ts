@@ -3178,6 +3178,7 @@ export type Database = {
           price: number
           product_id: string
           quantity: number
+          stock_qty: number | null
           total: number
           variant_id: string | null
         }
@@ -3190,6 +3191,7 @@ export type Database = {
           price: number
           product_id: string
           quantity: number
+          stock_qty?: number | null
           total: number
           variant_id?: string | null
         }
@@ -3202,6 +3204,7 @@ export type Database = {
           price?: number
           product_id?: string
           quantity?: number
+          stock_qty?: number | null
           total?: number
           variant_id?: string | null
         }

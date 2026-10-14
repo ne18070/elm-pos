@@ -116,10 +116,12 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
 
   // --- Contrôle du stock disponible en édition -------------------------------
   // La commande "réserve" déjà sa quantité d'origine → budget dispo par produit
-  // = stock actuel + quantité déjà sur la commande.
+  // = stock actuel + stock déjà décrémenté par la commande. Tout est compté en
+  // unités de STOCK (quantité × consommation : un carton = 12 unités…), comme
+  // update_pending_order (migration 157).
   const originalQtyByProduct: Record<string, number> = {};
   for (const it of order.items ?? []) {
-    originalQtyByProduct[it.product_id] = (originalQtyByProduct[it.product_id] ?? 0) + it.quantity;
+    originalQtyByProduct[it.product_id] = (originalQtyByProduct[it.product_id] ?? 0) + (it.stock_qty ?? it.quantity);
   }
   const productById = new Map(products.map((p) => [p.id, p]));
   function stockBudget(pid: string): number {
@@ -127,9 +129,18 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
     if (!p || !p.track_stock) return Infinity;
     return (p.stock ?? 0) + (originalQtyByProduct[pid] ?? 0);
   }
+  function unitConsumption(l: EditLine): number {
+    const same = (order.items ?? []).filter(
+      (it) => it.product_id === l.product_id && (it.variant_id ?? null) === (l.variant_id ?? null) && it.quantity > 0,
+    );
+    const orig = same.find((it) => String(it.price) === l.price) ?? same[0];
+    if (orig) return (orig.stock_qty ?? orig.quantity) / orig.quantity;
+    const v = productById.get(l.product_id)?.variants?.find((x) => x.id === l.variant_id);
+    return v?.stock_consumption && v.stock_consumption > 0 ? v.stock_consumption : 1;
+  }
   const usedByProduct: Record<string, number> = {};
   for (const l of editLines) {
-    usedByProduct[l.product_id] = (usedByProduct[l.product_id] ?? 0) + (parseFloat(l.quantity) || 0);
+    usedByProduct[l.product_id] = (usedByProduct[l.product_id] ?? 0) + (parseFloat(l.quantity) || 0) * unitConsumption(l);
   }
   const overspentPids = new Set(
     Object.keys(usedByProduct).filter((pid) => usedByProduct[pid] > stockBudget(pid)),

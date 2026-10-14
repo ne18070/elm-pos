@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, RefreshCw, User, Printer, Loader2, MessageCircle, Upload, ChevronLeft, ChevronRight, Store } from 'lucide-react';
+import { Search, Filter, RefreshCw, User, Printer, Loader2, MessageCircle, Upload, ChevronLeft, ChevronRight, Store, ShoppingBag } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/store/auth';
@@ -17,11 +17,12 @@ import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
 import { getOrderById, getOrders } from '@services/supabase/orders';
 import type { Order, OrderStatus } from '@pos-types';
 
-type FilterTab = OrderStatus | 'all' | 'acompte' | 'today';
+type FilterTab = OrderStatus | 'all' | 'acompte' | 'today' | 'online';
 
 const TAB_LABELS: Record<FilterTab, string> = {
   today:     "Aujourd'hui",
   all:       'Toutes',
+  online:    'En ligne',
   paid:      'Payées',
   pending:   'En attente',
   acompte:   'Acomptes',
@@ -36,7 +37,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   refunded:  'bg-purple-500/20 text-status-purple border-purple-700',
 };
 
-const TABS: FilterTab[] = ['today', 'all', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
+const TABS: FilterTab[] = ['today', 'all', 'online', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
 
 /** Date du jour au format YYYY-MM-DD dans le fuseau local. */
 function todayLocalISO(): string {
@@ -72,7 +73,7 @@ function getPaidAmount(order: Order): number {
 // refléter le même critère visuellement.
 function isAcompte(order: Order): boolean {
   if (order.status === 'cancelled' || order.status === 'refunded') return false;
-  if (order.source === 'whatsapp') return false;
+  if (order.source === 'whatsapp' || order.source === 'boutique') return false;
   return getPaidAmount(order) < order.total - 0.01;
 }
 
@@ -94,7 +95,10 @@ export default function OrdersPage() {
 
   const isAcompteTab = tab === 'acompte';
   const isTodayTab   = tab === 'today';
-  const dbStatus = tab === 'all' || tab === 'today' || isAcompteTab ? undefined : tab as OrderStatus;
+  const isOnlineTab  = tab === 'online';
+  const dbStatus = tab === 'all' || tab === 'today' || isAcompteTab || isOnlineTab ? undefined : tab as OrderStatus;
+  // Commandes passées sur la boutique en ligne (web + appli ELM Boutique).
+  const dbSource = isOnlineTab ? 'boutique' : undefined;
   // L'onglet "Aujourd'hui" force la plage sur la date du jour et ignore le
   // sélecteur de dates (masqué dans ce cas).
   const dateRange = isTodayTab
@@ -140,6 +144,7 @@ export default function OrdersPage() {
     {
       status:      dbStatus,
       acompteOnly: isAcompteTab || undefined,
+      source:      dbSource,
       limit:       PAGE_SIZE,
       offset:      (effectivePage - 1) * PAGE_SIZE,
       search:      debouncedSearch,
@@ -163,6 +168,20 @@ export default function OrdersPage() {
     },
   );
   const effectiveAcompteCount = isAcompteTab ? count : acompteCount;
+
+  // Badge "En ligne" : commandes boutique encore en attente, toutes dates
+  // confondues — elles réservent du stock tant qu'elles ne sont ni encaissées
+  // ni annulées.
+  const { count: onlinePendingCount } = useOrders(
+    effectiveBusinessId,
+    {
+      source:     'boutique',
+      status:     'pending',
+      limit:      1,
+      projection: 'list',
+      ...scopeOpts,
+    },
+  );
 
   const pageCount   = Math.max(1, Math.ceil(count / PAGE_SIZE));
   const currentPage = Math.min(effectivePage, pageCount);
@@ -225,6 +244,7 @@ export default function OrdersPage() {
       const { orders: list } = await getOrders(effectiveBusinessId, {
         status:      dbStatus,
         acompteOnly: isAcompteTab || undefined,
+        source:      dbSource,
         search:      debouncedSearch,
         limit:       HISTORY_PRINT_LIMIT,
         withCount:   false,
@@ -364,6 +384,17 @@ export default function OrdersPage() {
                 }`}
               >
                 {TAB_LABELS[t]}
+                {/* Badge compteur commandes en ligne à traiter */}
+                {t === 'online' && onlinePendingCount > 0 && (
+                  <span
+                    title="Commandes en ligne en attente"
+                    className={`ml-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-xs font-bold ${
+                      tab === 'online' ? 'bg-white/20 text-content-primary' : 'bg-brand-600 text-content-primary'
+                    }`}
+                  >
+                    {onlinePendingCount}
+                  </span>
+                )}
                 {/* Badge compteur acomptes */}
                 {t === 'acompte' && effectiveAcompteCount > 0 && (
                   <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold ${
@@ -391,8 +422,13 @@ export default function OrdersPage() {
             </div>
           ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-content-secondary">
-              <Filter className="w-8 h-8 mb-2 opacity-40" />
-              <p>Aucune commande trouvée</p>
+              {isOnlineTab ? <ShoppingBag className="w-8 h-8 mb-2 opacity-40" /> : <Filter className="w-8 h-8 mb-2 opacity-40" />}
+              <p>{isOnlineTab ? 'Aucune commande en ligne' : 'Aucune commande trouvée'}</p>
+              {isOnlineTab && (
+                <p className="text-xs text-content-muted mt-1 text-center px-4">
+                  Les commandes passées sur votre boutique en ligne et l&apos;appli ELM Boutique apparaîtront ici.
+                </p>
+              )}
             </div>
           ) : (
             <table className="w-full">
@@ -429,6 +465,11 @@ export default function OrdersPage() {
                               <MessageCircle className="w-3.5 h-3.5 text-status-success shrink-0" />
                             </span>
                           )}
+                          {order.source === 'boutique' && (
+                            <span title="Commande en ligne (boutique)">
+                              <ShoppingBag className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                            </span>
+                          )}
                           #{order.id.slice(0, 8).toUpperCase()}
                         </div>
                       </td>
@@ -452,6 +493,8 @@ export default function OrdersPage() {
                             )}
                             {order.source === 'whatsapp'
                               ? <p className="text-xs text-status-success pl-5 flex items-center gap-1"><MessageCircle className="w-3 h-3" />WhatsApp</p>
+                              : order.source === 'boutique'
+                              ? <p className="text-xs text-brand-400 pl-5 flex items-center gap-1"><ShoppingBag className="w-3 h-3" />En ligne</p>
                               : <p className="text-xs text-content-muted pl-5 truncate">via {order.cashier?.full_name ?? '—'}</p>
                             }
                           </div>

@@ -176,10 +176,14 @@ type GetOrdersOptions = {
    *  jamais élargi par l'utilisateur. Sert à borner la vue d'un caissier. */
   createdAfter?: string;
   /** Acomptes uniquement : solde restant dû > 0, hors annulées/remboursées et
-   *  hors demandes WhatsApp. Filtré et paginé côté SQL via la colonne générée
+   *  hors demandes WhatsApp et commandes boutique (non encaissées, pas des
+   *  acomptes). Filtré et paginé côté SQL via la colonne générée
    *  `orders.balance_due` + l'index partiel `idx_orders_acompte` (migration
    *  112) — aucun filtrage ni pagination en mémoire côté client. */
   acompteOnly?: boolean;
+  /** Origine de la commande (`orders.source`) : 'boutique' = commandes en
+   *  ligne (boutique web + appli ELM Boutique), 'whatsapp', 'pos'… */
+  source?: string;
   /** Demander un count (parcours des lignes correspondantes). Par défaut
    *  true ; passer false quand seule la page compte. */
   withCount?: boolean;
@@ -240,6 +244,9 @@ export async function getOrders(
   if (options?.status && options.status !== 'all') {
     query = query.eq('status', options.status);
   }
+  if (options?.source) {
+    query = query.eq('source', options.source);
+  }
   if (options?.cashierId) {
     query = query.eq('cashier_id', options.cashierId);
   }
@@ -250,12 +257,13 @@ export async function getOrders(
     // Acompte = solde restant dû. `balance_due` (colonne générée = total -
     // amount_paid, migration 112) rend le critère exprimable en SQL, donc
     // paginable et comptable comme n'importe quel autre onglet. 0.005 = même
-    // tolérance que le calcul d'affichage (payé < total - 0.01). WhatsApp
-    // exclu : ce sont des demandes non encaissées, pas des acomptes.
+    // tolérance que le calcul d'affichage (payé < total - 0.01). WhatsApp et
+    // boutique en ligne exclus : ce sont des commandes non encaissées, pas des
+    // acomptes (même critère que search_order_ids, migration 158).
     query = query
       .gt('balance_due', 0.005)
       .not('status', 'in', '(cancelled,refunded)')
-      .neq('source', 'whatsapp');
+      .not('source', 'in', '(whatsapp,boutique)');
   }
   // `date`/`dateFrom`/`dateTo` sont des dates calendaires locales (YYYY-MM-DD,
   // ex. "aujourd'hui" au fuseau du navigateur) — on les convertit en bornes
@@ -344,6 +352,9 @@ async function getOrdersBySearch(
     p_created_after:  options?.createdAfter ?? undefined,
     p_limit:          limit,
     p_offset:         offset,
+    // Omis hors onglet « En ligne » : la signature sans p_source (migration
+    // 124) reste ainsi appelable tant que la 158 n'est pas appliquée.
+    ...(options?.source ? { p_source: options.source } : {}),
   } as never);
   if (idError) throw new Error(idError.message);
 

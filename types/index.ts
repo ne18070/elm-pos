@@ -154,6 +154,8 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  /** Unités de stock décrémentées (quantity × stock_consumption) ; null = historique → quantity */
+  stock_qty?: number | null;
   discount_amount: number;
   total: number;
   notes?: string;
