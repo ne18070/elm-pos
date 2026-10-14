@@ -11,6 +11,10 @@ import { ChevronDown, Check, Plus, Building2, Loader2 } from 'lucide-react';
 // Fond blanc quand logo présent pour éviter le brand-600 derrière les PNG transparents.
 function BusinessLogo({ name, logoUrl }: { name: string; logoUrl: string | null }) {
   const [imgError, setImgError] = useState(false);
+  // Le composant du bouton principal est réutilisé d'un établissement à
+  // l'autre : sans ce reset, un seul échec de chargement (réseau coupé, logo
+  // précédent cassé) masquait le logo de tous les établissements suivants.
+  useEffect(() => { setImgError(false); }, [logoUrl]);
   const showImg = !!logoUrl && !imgError;
   const letter  = name?.charAt(0)?.toUpperCase() || null;
 

@@ -293,7 +293,9 @@ export async function uploadBusinessLogo(businessId: string, file: File): Promis
 }
 
 export async function deleteBusinessLogo(businessId: string): Promise<void> {
-  await updateBusiness(businessId, { logo_url: undefined });
+  // null et non undefined : supabase-js retire les clés undefined du JSON,
+  // la suppression n'était donc jamais enregistrée en base.
+  await updateBusiness(businessId, { logo_url: null as unknown as string });
 }
 
 /** @deprecated - utiliser getAllOrganizationsAdmin() pour le backoffice */

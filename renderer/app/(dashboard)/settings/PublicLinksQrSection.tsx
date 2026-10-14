@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
 import { Copy, ArrowRight, Download, Loader2, Smartphone } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -9,6 +8,62 @@ import { toUserError } from '@/lib/user-error';
 import { hasFeature } from '@/lib/permissions';
 import { getDirectoryListed, setDirectoryListed } from '@services/supabase/business';
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload  = () => resolve(img);
+    img.onerror = () => reject(new Error(`Image introuvable : ${src}`));
+    img.src = src;
+  });
+}
+
+/**
+ * Dessine le QR + le logo au centre directement sur un canvas, sans
+ * html2canvas : ce dernier recopie et ré-analyse toute la page, et le moindre
+ * style ou image qu'il ne gère pas faisait échouer l'export. Un logo
+ * illisible n'empêche pas l'export (repli sur le logo ELM, puis sans logo).
+ */
+async function renderQrPng(qrUrl: string, logoUrl: string | null): Promise<Blob> {
+  const SIZE = 540;
+  const PAD  = 24;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas indisponible');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.drawImage(await loadImage(qrUrl), PAD, PAD, SIZE - 2 * PAD, SIZE - 2 * PAD);
+
+  const logo = await loadImage(logoUrl || '/logo.png')
+    .catch(() => (logoUrl ? loadImage('/logo.png') : null))
+    .catch(() => null);
+  if (logo) {
+    // Même proportions que l'aperçu : pastille 48 px dans un QR de 180 px
+    // (ecc=H tolère largement cette surface masquée).
+    const box   = Math.round(SIZE * 48 / 180);
+    const x     = (SIZE - box) / 2;
+    const inner = box * 0.75;
+    ctx.fillStyle   = '#ffffff';
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth   = 3;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, x, box, box, box * 0.2);
+    else ctx.rect(x, x, box, box);
+    ctx.fill();
+    ctx.stroke();
+    const scale = Math.min(inner / logo.naturalWidth, inner / logo.naturalHeight);
+    const w = logo.naturalWidth * scale;
+    const h = logo.naturalHeight * scale;
+    ctx.drawImage(logo, (SIZE - w) / 2, (SIZE - h) / 2, w, h);
+  }
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Export PNG impossible'))), 'image/png');
+  });
+}
+
 export function PublicLinksQrSection() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
@@ -16,23 +71,21 @@ export function PublicLinksQrSection() {
 
   if (!business) return null;
 
-  async function downloadQrPng(moduleKey: string, moduleLabel: string) {
-    const node = document.getElementById(`public-qr-${moduleKey}`);
-    if (!node || !business) return;
+  async function downloadQrPng(moduleKey: string, moduleLabel: string, url: string) {
+    if (!business) return;
 
     setDownloadingQr(moduleKey);
     try {
-      const canvas = await html2canvas(node, {
-        backgroundColor: '#ffffff',
-        scale: 3,
-        useCORS: true,
-      });
+      const blob = await renderQrPng(qrImageUrl(url), business.logo_url ?? null);
+      const href = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
+      link.href = href;
       link.download = `${business.public_slug || 'business'}-${moduleKey}-qr.png`;
       link.click();
+      setTimeout(() => URL.revokeObjectURL(href), 10_000);
       success(`QR Code ${moduleLabel} exporté`);
     } catch (err) {
+      console.error('[QR export]', err);
       notifError(toUserError(err));
     } finally {
       setDownloadingQr(null);
@@ -100,7 +153,7 @@ export function PublicLinksQrSection() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => downloadQrPng(key, label)}
+                    onClick={() => downloadQrPng(key, label, url)}
                     disabled={downloadingQr === key || !business.public_slug}
                     className="p-2.5 bg-surface-input hover:bg-surface-hover text-content-secondary hover:text-content-primary rounded-xl border border-surface-border transition-all shrink-0"
                     title="Exporter en PNG"
