@@ -783,6 +783,7 @@ export type Database = {
           created_at: string
           currency: string
           denomination: string | null
+          directory_listed: boolean
           email: string | null
           features: string[]
           hotel_cancellation_policy: string | null
@@ -814,6 +815,7 @@ export type Database = {
           created_at?: string
           currency?: string
           denomination?: string | null
+          directory_listed?: boolean
           email?: string | null
           features?: string[]
           hotel_cancellation_policy?: string | null
@@ -845,6 +847,7 @@ export type Database = {
           created_at?: string
           currency?: string
           denomination?: string | null
+          directory_listed?: boolean
           email?: string | null
           features?: string[]
           hotel_cancellation_policy?: string | null
@@ -7208,6 +7211,23 @@ export type Database = {
       }
     }
     Functions: {
+      list_directory_businesses: {
+        Args: {
+          p_kind?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: {
+          address: string
+          has_products: boolean
+          has_services: boolean
+          id: string
+          logo_url: string
+          name: string
+          public_slug: string
+        }[]
+      }
       activate_subscription: {
         Args: {
           p_business_id: string

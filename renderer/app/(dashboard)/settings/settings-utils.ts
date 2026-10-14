@@ -1,6 +1,7 @@
 import { 
   ShoppingBag, Wrench, Briefcase, BedDouble, Car, Scale, FileText, Search 
 } from 'lucide-react';
+import { getPublicSiteUrl } from '@/lib/public-links';
 
 export const DEFAULT_UNITS = ['pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'sachet', 'boîte', 'paquet', 'lot'];
 
@@ -15,9 +16,11 @@ export const ALL_PUBLIC_MODULES = [
   { key: 'track',      label: 'Suivi de Commande',  icon: Search,      features: ['orders'],    bizTypes: null as string[] | null },
 ];
 
+/** URL publique des liens partagés et QR codes (https://www.elm-app.click) — jamais l'origine
+ *  locale : depuis Electron elle vaut file:// ou localhost, et les liens doivent pouvoir
+ *  ouvrir l'app mobile (Universal Links / App Links) ou le site. */
 export function getAppUrl() {
-  if (typeof window !== 'undefined') return window.location.origin;
-  return '';
+  return getPublicSiteUrl();
 }
 
 export function qrImageUrl(url: string) {

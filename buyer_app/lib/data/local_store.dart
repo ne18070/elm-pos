@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/boutique.dart';
+import '../models/directory.dart';
 
 class RecentBoutique {
   const RecentBoutique({
@@ -10,6 +11,7 @@ class RecentBoutique {
     required this.name,
     required this.visitedAt,
     this.logoUrl,
+    this.kind = VisitKind.boutique,
   });
 
   factory RecentBoutique.fromJson(Map<String, dynamic> json) => RecentBoutique(
@@ -17,14 +19,18 @@ class RecentBoutique {
         name: json['name'] as String,
         logoUrl: json['logo_url'] as String?,
         visitedAt: DateTime.tryParse('${json['visited_at']}') ?? DateTime.now(),
+        // Entrées enregistrées avant la 1.1.0 : toujours des boutiques
+        kind: json['kind'] == 'service' ? VisitKind.service : VisitKind.boutique,
       );
 
   final String id;
   final String name;
   final String? logoUrl;
   final DateTime visitedAt;
+  final VisitKind kind;
 
   Map<String, Object?> toJson() => {
+        'kind': kind.name,
         'id': id,
         'name': name,
         'logo_url': logoUrl,
@@ -69,17 +75,25 @@ class LocalStore {
     }
   }
 
-  Future<void> rememberBoutique(BoutiqueInfo info) async {
+  Future<void> rememberBoutique(BoutiqueInfo info, {VisitKind kind = VisitKind.boutique}) async {
     final current = await recentBoutiques();
     final next = [
-      RecentBoutique(id: info.id, name: info.name, logoUrl: info.logoUrl, visitedAt: DateTime.now()),
-      ...current.where((b) => b.id != info.id),
+      RecentBoutique(
+        id: info.id,
+        name: info.name,
+        logoUrl: info.logoUrl,
+        visitedAt: DateTime.now(),
+        kind: kind,
+      ),
+      ...current.where((b) => !(b.id == info.id && b.kind == kind)),
     ].take(_recentMax).toList();
     await _saveRecents(next);
   }
 
-  Future<List<RecentBoutique>> forgetBoutique(String id) async {
-    final next = (await recentBoutiques()).where((b) => b.id != id).toList();
+  Future<List<RecentBoutique>> forgetBoutique(RecentBoutique visit) async {
+    final next = (await recentBoutiques())
+        .where((b) => !(b.id == visit.id && b.kind == visit.kind))
+        .toList();
     await _saveRecents(next);
     return next;
   }

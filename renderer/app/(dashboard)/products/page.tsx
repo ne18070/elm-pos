@@ -16,6 +16,7 @@ import { ImportProductsModal } from '@/components/products/ImportProductsModal';
 import { BarcodePrintModal } from '@/components/products/BarcodePrintModal';
 import { deleteProduct, restoreProduct } from '@services/supabase/products';
 import type { Product } from '@pos-types';
+import { getPublicSiteUrl } from '@/lib/public-links';
 
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'active' | 'archived' | 'all';
@@ -57,9 +58,7 @@ export default function ProductsPage() {
   });
   const { lowStock } = useLowStockAlerts(business?.id ?? '');
 
-  const shopUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/boutique/${business?.id ?? ''}`
-    : '';
+  const shopUrl = `${getPublicSiteUrl()}/boutique/${business?.id ?? ''}`;
 
   async function copyShopLink() {
     try {

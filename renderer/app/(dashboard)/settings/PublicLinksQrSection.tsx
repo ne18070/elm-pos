@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Copy, ArrowRight, Download, Loader2 } from 'lucide-react';
+import { Copy, ArrowRight, Download, Loader2, Smartphone } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { ALL_PUBLIC_MODULES, getAppUrl, qrImageUrl } from './settings-utils';
 import { buildPublicBusinessRef } from '@services/supabase/public-business-ref';
 import { toUserError } from '@/lib/user-error';
 import { hasFeature } from '@/lib/permissions';
+import { getDirectoryListed, setDirectoryListed } from '@services/supabase/business';
 
 export function PublicLinksQrSection() {
   const { business } = useAuthStore();
@@ -64,6 +65,8 @@ export function PublicLinksQrSection() {
           <Copy className="w-3.5 h-3.5" /> Copier tous les liens
         </button>
       </div>
+
+      <DirectoryListingToggle businessId={business.id} />
 
       {!business.public_slug && (
         <div className="p-4 bg-badge-error/20 border border-status-error/20 rounded-2xl flex items-start gap-3">
@@ -177,5 +180,67 @@ export function PublicLinksQrSection() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Présence dans l'annuaire de l'app mobile « ELM Boutique » (list_directory_businesses). */
+function DirectoryListingToggle({ businessId }: { businessId: string }) {
+  const { success, error: notifError } = useNotificationStore();
+  const [listed, setListed] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDirectoryListed(businessId)
+      .then((value) => { if (!cancelled) setListed(value); })
+      .catch(() => { if (!cancelled) setListed(true); });
+    return () => { cancelled = true; };
+  }, [businessId]);
+
+  async function toggle() {
+    if (listed === null || saving) return;
+    const next = !listed;
+    setListed(next);
+    setSaving(true);
+    try {
+      await setDirectoryListed(businessId, next);
+      success(next ? "Votre établissement apparaît dans l'app ELM Boutique" : "Votre établissement est retiré de l'app ELM Boutique");
+    } catch (err) {
+      setListed(!next);
+      notifError(toUserError(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={listed ?? false}
+      onClick={toggle}
+      disabled={listed === null || saving}
+      className="w-full flex items-center justify-between gap-4 p-4 bg-surface-card border border-surface-border rounded-2xl hover:bg-surface-hover transition-colors text-left disabled:opacity-60"
+    >
+      <span className="flex items-center gap-3 min-w-0">
+        <span className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center shrink-0">
+          <Smartphone className="w-5 h-5 text-content-brand" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-bold text-content-primary">Visible dans l&apos;app ELM Boutique</span>
+          <span className="block text-xs text-content-muted mt-0.5">
+            {listed === false
+              ? 'Masqué — seuls vos liens partagés donnent accès à votre catalogue'
+              : "Les clients peuvent trouver votre boutique ou vos services dans la recherche de l'app"}
+          </span>
+        </span>
+      </span>
+      <span
+        aria-hidden
+        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${listed ? 'bg-brand-600' : 'bg-surface-input border border-surface-border'}`}
+      >
+        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${listed ? 'left-[22px]' : 'left-0.5'}`} />
+      </span>
+    </button>
   );
 }

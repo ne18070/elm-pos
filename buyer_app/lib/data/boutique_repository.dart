@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/boutique.dart';
+import '../models/directory.dart';
+import '../models/service.dart';
 import '../utils/format.dart';
 
 /// Accès Supabase de la vitrine — mêmes requêtes et RPC que le renderer web
@@ -33,6 +35,29 @@ class BoutiqueRepository {
       if (slugify('${row['name']}') == ref) return BoutiqueInfo.fromJson(row);
     }
     return null;
+  }
+
+  static const directoryPageSize = 30;
+
+  /// Annuaire public (RPC list_directory_businesses, migration 156).
+  Future<List<DirectoryEntry>> directory({
+    String search = '',
+    DirectoryKind kind = DirectoryKind.all,
+    int offset = 0,
+  }) async {
+    final rows = await _db.rpc(
+      'list_directory_businesses',
+      params: {
+        'p_search': search.trim().isEmpty ? null : search.trim(),
+        'p_kind': kind.apiValue,
+        'p_limit': directoryPageSize,
+        'p_offset': offset,
+      },
+    );
+    return (rows as List)
+        .whereType<Map>()
+        .map((r) => DirectoryEntry.fromJson(Map<String, dynamic>.from(r)))
+        .toList();
   }
 
   Future<List<BoutiqueProduct>> products(String businessId) async {
@@ -75,6 +100,46 @@ class BoutiqueRepository {
       },
     );
     return '${(data as Map)['payment_token']}';
+  }
+
+  Future<List<ServiceItem>> serviceCatalog(String businessId) async {
+    final rows = await _db
+        .from('service_catalog')
+        .select(
+          'id, name, description, price, duration_min, category_id, '
+          'category:service_categories(id, name)',
+        )
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('sort_order', ascending: true)
+        .order('name', ascending: true);
+    return rows.map(ServiceItem.fromJson).toList();
+  }
+
+  /// Même RPC que la page web /services/[id].
+  Future<ServiceRequestResult> createServiceRequest({
+    required String businessId,
+    required String clientName,
+    required String clientPhone,
+    required List<Map<String, Object?>> items,
+    String? subjectRef,
+    String? subjectInfo,
+    String? notes,
+  }) async {
+    final data = await _db.rpc(
+      'create_public_service_order',
+      params: {
+        'p_business_id': businessId,
+        'p_client_name': clientName,
+        'p_client_phone': clientPhone,
+        'p_subject_ref': subjectRef,
+        'p_subject_type': 'autre',
+        'p_subject_info': subjectInfo,
+        'p_notes': notes,
+        'p_items': items,
+      },
+    );
+    return ServiceRequestResult.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   Future<BoutiqueOrderDetail?> order(String token) async {

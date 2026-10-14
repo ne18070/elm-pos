@@ -49,7 +49,7 @@ elm-pos/
 ├── types/        Shared TypeScript types (import via @pos-types alias)
 ├── supabase/migrations/  PostgreSQL schema, RLS policies, functions — apply in order
 ├── android/, ios/  Capacitor native shells (generated; app code stays in renderer/)
-├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — storefront: open a boutique, order
+├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — directory of ELM boutiques & services (RPC list_directory_businesses, opt-out via businesses.directory_listed), product orders, service requests
 └── tests/        Playwright end-to-end specs
 ```
 
@@ -270,6 +270,8 @@ See `supabase/migrations/085_explicit_grants.sql` for the baseline.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Renderer + services (client) |
 | `SUPABASE_SERVICE_ROLE_KEY` | API routes only (never expose to client) |
 | `ELECTRON_BUILD=1` | Switches Next.js to static export mode |
+| `ANDROID_SHA256_CERT_FINGERPRINTS` | `/.well-known/assetlinks.json` (Android App Links of the buyer app) — Play Console app-signing + upload key SHA-256, comma-separated |
+| `NEXT_PUBLIC_ANDROID_PLAY_STORE_URL`, `NEXT_PUBLIC_IOS_APP_STORE_URL` | `AppDownloadPrompt` on `/boutique/[id]` and `/services/[id]` (+ Safari Smart App Banner) — prompt hidden for a store left empty |
 | `ELECTRON_DEV=true` | Forces dev mode in Electron |
 
 ## CI/CD (`.github/workflows/`)

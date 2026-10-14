@@ -45,6 +45,13 @@ const nextConfig = {
   ...(isElectron ? { output: 'export', trailingSlash: true } : {}),
   images: { unoptimized: isElectron },
   ...(isElectron ? {} : {
+    // Liens profonds de l'app mobile « ELM Boutique » (Universal Links / App Links)
+    async rewrites() {
+      return [
+        { source: '/.well-known/apple-app-site-association', destination: '/api/well-known/apple-app-site-association' },
+        { source: '/.well-known/assetlinks.json',            destination: '/api/well-known/assetlinks' },
+      ];
+    },
     async headers() {
       return [
         { source: '/(.*)', headers: securityHeaders },

@@ -1,3 +1,5 @@
+import '../models/directory.dart';
+
 // Formatage et parsing — alignés sur renderer/lib/utils.ts et renderer/lib/boutique-routes.ts.
 
 const _currencyLabels = {'XOF': 'FCFA', 'XAF': 'FCFA'};
@@ -12,28 +14,39 @@ String formatCurrency(num amount, [String currency = 'XOF']) {
   final digits = parts[0];
   final grouped = StringBuffer();
   for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) grouped.write(' ');
+    if (i > 0 && (digits.length - i) % 3 == 0) grouped.write('\u202F');
     grouped.write(digits[i]);
   }
   final sign = amount < 0 ? '-' : '';
   final decimalPart = parts.length > 1 ? ',${parts[1]}' : '';
-  return '$sign$grouped$decimalPart $label';
+  return '$sign$grouped$decimalPart\u00A0$label';
 }
 
-/// Extrait la référence d'une boutique d'un lien partagé (…/boutique/<ref>) ou d'un code saisi.
-String? parseBoutiqueRef(String input) {
+class LinkTarget {
+  const LinkTarget(this.ref, this.kind);
+
+  final String ref;
+  final VisitKind kind;
+}
+
+/// Lien partagé (…/boutique/<ref> ou …/services/<ref>) ou code saisi (→ boutique).
+LinkTarget? parseBusinessLink(String input) {
   final trimmed = input.trim();
   if (trimmed.isEmpty) return null;
-  final fromLink = RegExp(r'/boutique/([^/?#\s]+)').firstMatch(trimmed);
+  final fromLink = RegExp(r'/(boutique|services)/([^/?#\s]+)').firstMatch(trimmed);
   if (fromLink != null) {
+    final kind = fromLink.group(1) == 'services' ? VisitKind.service : VisitKind.boutique;
     try {
-      return Uri.decodeComponent(fromLink.group(1)!);
+      return LinkTarget(Uri.decodeComponent(fromLink.group(2)!), kind);
     } on ArgumentError {
-      return fromLink.group(1);
+      return LinkTarget(fromLink.group(2)!, kind);
     }
   }
-  return RegExp(r'^[\w-]+$').hasMatch(trimmed) ? trimmed : null;
+  return RegExp(r'^[\w-]+$').hasMatch(trimmed) ? LinkTarget(trimmed, VisitKind.boutique) : null;
 }
+
+/// Référence seule (rétro-compatibilité).
+String? parseBoutiqueRef(String input) => parseBusinessLink(input)?.ref;
 
 final _uuid = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',

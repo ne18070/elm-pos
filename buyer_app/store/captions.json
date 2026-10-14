@@ -1,0 +1,17 @@
+{
+  "_comment": "Légendes des captures, dans l'ordre alphabétique des fichiers de store/raw/ (01-…, 02-…). Ajuster si l'ordre des écrans change.",
+  "screens": [
+    { "title": "Vos boutiques, en un geste", "subtitle": "Ouvrez le lien reçu, retrouvez-les ensuite dans l'app" },
+    { "title": "Tout le catalogue dans votre poche", "subtitle": "Photos, prix, options et recherche instantanée" },
+    { "title": "Commandez en quelques secondes", "subtitle": "Retrait en boutique ou livraison à domicile" },
+    { "title": "Payez comme vous voulez", "subtitle": "Espèces, Mobile Money ou lien de paiement" },
+    { "title": "Commande confirmée", "subtitle": "Récapitulatif et contact WhatsApp avec la boutique" }
+  ],
+  "banner": {
+    "_screen": "numéro de la capture affichée dans le téléphone des bannières (1 = première)",
+    "screen": 3,
+    "title": "ELM Boutique",
+    "subtitle": "Vos boutiques de quartier, dans votre poche",
+    "pills": ["Retrait ou livraison", "Espèces ou Mobile Money", "Sans compte"]
+  }
+}

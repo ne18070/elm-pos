@@ -32,6 +32,7 @@ import { OrderDetailPanel } from './components/OrderDetailPanel';
 
 // Hooks
 import { useServiceCatalog } from './hooks/useServiceCatalog';
+import { getPublicSiteUrl } from '@/lib/public-links';
 
 type PageTab = 'orders' | 'catalog' | 'subjects' | 'campagnes';
 
@@ -105,7 +106,7 @@ export default function ServicesPage() {
   async function copyPublicLink() {
     if (!business) return;
     const ref = buildPublicBusinessRef(business.name, business.public_slug);
-    const url = `${window.location.origin}/services/${ref}`;
+    const url = `${getPublicSiteUrl()}/services/${ref}`;
     try {
       await navigator.clipboard.writeText(url);
       success('Lien public copié !');

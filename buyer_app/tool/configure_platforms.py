@@ -16,6 +16,10 @@ from pathlib import Path
 APP_ID = 'com.elmapp.mobile'          # identifiant existant sur Play Store / App Store
 APP_NAME = 'ELM Boutique'
 
+# Liens profonds (Universal Links / App Links) — garder aligné avec renderer/lib/mobile-app.ts
+LINK_HOSTS = ['www.elm-app.click', 'elm-app.click']
+LINK_PATH_PREFIXES = ['/boutique/', '/services/']
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -90,8 +94,30 @@ def configure_android() -> None:
             xml,
             count=1,
         )
+    # App Links vérifiés : /boutique et /services s'ouvrent dans l'app. Le deep linking
+    # Flutter par défaut est coupé, c'est le plugin app_links qui reçoit les liens.
+    if 'elm: app links' not in xml:
+        lines = [
+            # 1re ligne insérée à la place de </activity>, qui garde son indentation (8 espaces)
+            '    <!-- elm: app links -->',
+            '            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>',
+            '            <intent-filter android:autoVerify="true">',
+            '                <action android:name="android.intent.action.VIEW"/>',
+            '                <category android:name="android.intent.category.DEFAULT"/>',
+            '                <category android:name="android.intent.category.BROWSABLE"/>',
+        ]
+        for host in LINK_HOSTS:
+            for prefix in LINK_PATH_PREFIXES:
+                lines.append(
+                    f'                <data android:scheme="https" android:host="{host}" '
+                    f'android:pathPrefix="{prefix}"/>'
+                )
+        lines.append('            </intent-filter>')
+        if '</activity>' not in xml:
+            fail('</activity> introuvable dans AndroidManifest.xml')
+        xml = xml.replace('</activity>', '\n'.join(lines) + '\n        </activity>', 1)
     manifest.write_text(xml, encoding='utf-8')
-    print(f'android: applicationId={APP_ID}, label={APP_NAME}, signature release, INTERNET')
+    print(f'android: applicationId={APP_ID}, label={APP_NAME}, signature release, INTERNET, app links')
 
 
 def configure_ios() -> None:
@@ -115,9 +141,32 @@ def configure_ios() -> None:
     info['CFBundleDisplayName'] = APP_NAME
     # HTTPS standard uniquement → exemption, évite la question de conformité à chaque build
     info['ITSAppUsesNonExemptEncryption'] = False
+    # Liens reçus par le plugin app_links, pas par le routeur Flutter
+    info['FlutterDeepLinkingEnabled'] = False
     with info_path.open('wb') as f:
         plistlib.dump(info, f)
-    print(f'ios: bundle={APP_ID}, CFBundleDisplayName={APP_NAME}, ITSAppUsesNonExemptEncryption=false')
+
+    # Universal Links : nécessite la capability « Associated Domains » sur l'App ID
+    # et un profil de provisioning régénéré après l'avoir activée.
+    entitlements = ROOT / 'ios' / 'Runner' / 'Runner.entitlements'
+    with entitlements.open('wb') as f:
+        plistlib.dump(
+            {'com.apple.developer.associated-domains': [f'applinks:{host}' for host in LINK_HOSTS]},
+            f,
+        )
+    project = pbxproj.read_text(encoding='utf-8')
+    if 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' not in project:
+        # Configurations Debug / Release / Profile de la cible Runner (pas RunnerTests)
+        project, n = re.subn(
+            r'([ \t]*)(PRODUCT_BUNDLE_IDENTIFIER = ' + re.escape(APP_ID) + r';)',
+            lambda m: f'{m.group(1)}CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;\n{m.group(1)}{m.group(2)}',
+            project,
+        )
+        if n == 0:
+            fail("impossible d'ajouter CODE_SIGN_ENTITLEMENTS à la cible Runner")
+        pbxproj.write_text(project, encoding='utf-8')
+    print(f'ios: bundle={APP_ID}, CFBundleDisplayName={APP_NAME}, ITSAppUsesNonExemptEncryption=false, '
+          f'associated domains={LINK_HOSTS}')
 
 
 if __name__ == '__main__':

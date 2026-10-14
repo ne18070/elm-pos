@@ -24,3 +24,7 @@ ios/fastlane/README.md
 !/ios/Gemfile.lock
 !/ios/fastlane/
 .metadata
+
+# Visuels App Store générés (node buyer_app/store/generate.mjs)
+store/out/
+store/raw/*.png

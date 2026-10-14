@@ -37,6 +37,8 @@ export interface Business {
   id: string;
   name: string;              // Nom de l'établissement
   public_slug?: string;
+  /** Visible dans l'annuaire de l'app ELM Boutique (migration 156) */
+  directory_listed?: boolean;
   type: BusinessType;
   industry_sector?: string;
   denomination?: string;

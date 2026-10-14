@@ -191,6 +191,21 @@ export async function updateBusiness(
   }
 }
 
+/** Visibilité dans l'annuaire de l'app ELM Boutique (true par défaut, migration 156) */
+export async function getDirectoryListed(businessId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('directory_listed')
+    .eq('id', businessId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.directory_listed ?? true;
+}
+
+export async function setDirectoryListed(businessId: string, listed: boolean): Promise<void> {
+  await updateBusiness(businessId, { directory_listed: listed });
+}
+
 /** Basculer vers un autre établissement (met à jour le contexte RLS) */
 export async function switchBusiness(businessId: string): Promise<void> {
   const { error } = await supabase.rpc('switch_business', {

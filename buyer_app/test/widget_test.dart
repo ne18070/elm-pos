@@ -1,6 +1,9 @@
 // Nom imposé : `flutter create` (lancé en CI) génère test/widget_test.dart s'il n'existe pas.
 import 'package:elm_boutique/models/boutique.dart';
+import 'package:elm_boutique/models/directory.dart';
+import 'package:elm_boutique/models/service.dart';
 import 'package:elm_boutique/state/cart.dart';
+import 'package:elm_boutique/state/service_cart.dart';
 import 'package:elm_boutique/utils/format.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,13 +26,13 @@ BoutiqueProduct _product({
 void main() {
   group('formatCurrency', () {
     test('XOF sans décimales, espaces fr-FR, libellé FCFA', () {
-      expect(formatCurrency(12500, 'XOF'), '12 500 FCFA');
-      expect(formatCurrency(0, 'XOF'), '0 FCFA');
-      expect(formatCurrency(1234567, 'XOF'), '1 234 567 FCFA');
+      expect(formatCurrency(12500, 'XOF'), '12\u202F500\u00A0FCFA');
+      expect(formatCurrency(0, 'XOF'), '0\u00A0FCFA');
+      expect(formatCurrency(1234567, 'XOF'), '1\u202F234\u202F567\u00A0FCFA');
     });
 
     test('devise à décimales', () {
-      expect(formatCurrency(1234.5, 'EUR'), '1 234,50 EUR');
+      expect(formatCurrency(1234.5, 'EUR'), '1\u202F234,50\u00A0EUR');
     });
   });
 
@@ -46,6 +49,57 @@ void main() {
       expect(parseBoutiqueRef('  ma-boutique  '), 'ma-boutique');
       expect(parseBoutiqueRef(''), isNull);
       expect(parseBoutiqueRef('pas un lien !'), isNull);
+    });
+  });
+
+  group('parseBusinessLink', () {
+    test('lien boutique ou services', () {
+      final boutique = parseBusinessLink('https://www.elm-app.click/boutique/ma-boutique');
+      expect(boutique?.ref, 'ma-boutique');
+      expect(boutique?.kind, VisitKind.boutique);
+      final service = parseBusinessLink('elm-app.click/services/garage-ndiaye');
+      expect(service?.ref, 'garage-ndiaye');
+      expect(service?.kind, VisitKind.service);
+    });
+
+    test('code seul = boutique', () {
+      expect(parseBusinessLink('garage-ndiaye')?.kind, VisitKind.boutique);
+    });
+  });
+
+  group('Services', () {
+    test('durée lisible', () {
+      ServiceItem item(int? minutes) =>
+          ServiceItem.fromJson({'id': 's', 'name': 'Vidange', 'price': 5000, 'duration_min': minutes});
+      expect(item(null).durationLabel, isNull);
+      expect(item(45).durationLabel, '45 min');
+      expect(item(60).durationLabel, '1 h');
+      expect(item(90).durationLabel, '1 h 30');
+    });
+
+    test('panier de prestations au format de la RPC', () {
+      final cart = ServiceCart();
+      final item = ServiceItem.fromJson({'id': 's1', 'name': 'Lavage', 'price': 2500});
+      cart.add(item);
+      cart.add(item);
+      expect(cart.total, 5000);
+      expect(cart.toRequestItems().single, {
+        'service_id': 's1',
+        'name': 'Lavage',
+        'price': 2500.0,
+        'quantity': 2,
+      });
+    });
+
+    test('annuaire : drapeaux produits / services', () {
+      final entry = DirectoryEntry.fromJson({
+        'id': 'b1',
+        'name': 'Garage',
+        'has_products': false,
+        'has_services': true,
+      });
+      expect(entry.hasProducts, isFalse);
+      expect(entry.hasServices, isTrue);
     });
   });
 
