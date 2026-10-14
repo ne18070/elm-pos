@@ -161,6 +161,15 @@ jobs:
           FASTLANE_SKIP_UPDATE_CHECK: '1'
           FASTLANE_HIDE_CHANGELOG: '1'
 
+      - name: Upload Xcode build logs (en cas d'échec)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs-${{ github.run_number }}
+          path: ~/Library/Logs/gym/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload IPA artifact
         if: always()
         uses: actions/upload-artifact@v4
