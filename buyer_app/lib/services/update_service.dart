@@ -13,7 +13,7 @@ import '../config.dart';
 /// Au démarrage, l'app lit android/latest.json (publié par la CI dans le bucket
 /// app-releases) et propose la nouvelle version, une fois par version.
 class UpdateService {
-  static const _dismissedKey = 'update_dismissed_build';
+  static const _dismissedKey = 'update_dismissed_version';
 
   static Future<void> checkForUpdate(BuildContext context) async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
@@ -22,12 +22,14 @@ class UpdateService {
           .from('app-releases')
           .download('android/latest.json');
       final latest = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
-      final latestBuild = (latest['build'] as num?)?.toInt() ?? 0;
-      final current = int.tryParse((await PackageInfo.fromPlatform()).buildNumber) ?? 0;
-      if (latestBuild <= current) return;
+      final latestVersion = '${latest['version'] ?? ''}';
+      // Version X.Y.Z et non numéro de build : les APK par architecture (--split-per-abi)
+      // ont un versionCode préfixé (arm64 : 2000 + build), différent de latest.json.
+      final currentVersion = (await PackageInfo.fromPlatform()).version;
+      if (compareVersions(latestVersion, currentVersion) <= 0) return;
 
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getInt(_dismissedKey) == latestBuild) return;
+      if (prefs.getString(_dismissedKey) == latestVersion) return;
       if (!context.mounted) return;
 
       final update = await showDialog<bool>(
@@ -47,11 +49,25 @@ class UpdateService {
       if (update == true) {
         await launchUrl(Uri.parse(AppConfig.downloadPageUrl), mode: LaunchMode.externalApplication);
       } else {
-        await prefs.setInt(_dismissedKey, latestBuild);
+        await prefs.setString(_dismissedKey, latestVersion);
       }
     } catch (error) {
       // Hors ligne ou aucune version publiée : on réessaiera au prochain lancement
       debugPrint('Vérification de mise à jour impossible : $error');
     }
   }
+}
+
+/// Compare deux versions « X.Y.Z » : négatif si a < b, 0 si égales, positif si a > b.
+/// Un segment absent ou non numérique compte pour 0.
+int compareVersions(String a, String b) {
+  List<int> parts(String v) => v.split('.').map((p) => int.tryParse(p.trim()) ?? 0).toList();
+  final pa = parts(a);
+  final pb = parts(b);
+  for (var i = 0; i < 3; i++) {
+    final x = i < pa.length ? pa[i] : 0;
+    final y = i < pb.length ? pb[i] : 0;
+    if (x != y) return x.compareTo(y);
+  }
+  return 0;
 }

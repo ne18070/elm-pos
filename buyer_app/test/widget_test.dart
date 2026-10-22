@@ -2,6 +2,7 @@
 import 'package:elm_boutique/models/boutique.dart';
 import 'package:elm_boutique/models/directory.dart';
 import 'package:elm_boutique/models/service.dart';
+import 'package:elm_boutique/services/update_service.dart';
 import 'package:elm_boutique/state/cart.dart';
 import 'package:elm_boutique/state/service_cart.dart';
 import 'package:elm_boutique/utils/format.dart';
@@ -101,6 +102,14 @@ void main() {
       expect(entry.hasProducts, isFalse);
       expect(entry.hasServices, isTrue);
     });
+  });
+
+  test('compareVersions : mise à jour proposée seulement pour une version plus récente', () {
+    expect(compareVersions('1.2.1', '1.2.0'), greaterThan(0));
+    expect(compareVersions('1.10.0', '1.9.3'), greaterThan(0));
+    expect(compareVersions('1.2.0', '1.2.0'), 0);
+    expect(compareVersions('1.2', '1.2.0'), 0);
+    expect(compareVersions('1.1.9', '1.2.0'), lessThan(0));
   });
 
   test('slugify suit slugifyBusinessName du web', () {

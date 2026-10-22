@@ -155,12 +155,17 @@ jobs:
             echo "FIREBASE_ANDROID_APP_ID=${{ vars.FIREBASE_ANDROID_APP_ID }}"
           } > "$RUNNER_TEMP/dart-defines.env"
 
-      - name: Build signed APK
+      # Un APK par architecture (~20 Mo chacun) : un APK universel dépasse la limite de
+      # 50 Mo par fichier de Supabase Storage (plan gratuit). Flutter préfixe alors le
+      # versionCode par l'architecture (arm64 : 2000 + build) — l'app compare donc la
+      # version (X.Y.Z) à latest.json, pas le numéro de build.
+      - name: Build signed APKs (une par architecture)
         run: |
-          flutter build apk --release \
+          flutter build apk --release --split-per-abi \
             --build-name=${{ steps.version.outputs.name }} \
             --build-number=${{ steps.version.outputs.code }} \
             --dart-define-from-file="$RUNNER_TEMP/dart-defines.env"
+          ls -lh build/app/outputs/flutter-apk/*.apk
 
       - name: Publish APK (bucket Supabase app-releases)
         env:
@@ -169,10 +174,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.name }}
           BUILD: ${{ steps.version.outputs.code }}
         run: |
-          APK=build/app/outputs/flutter-apk/app-release.apk
-          NAME="elm-boutique-$VERSION-$BUILD.apk"
+          OUT=build/app/outputs/flutter-apk
           BASE="${SUPABASE_URL%/}/storage/v1/object/app-releases/android"
-          echo "APK : $(du -h "$APK" | cut -f1)"
           # Clé service : ancien format (JWT « eyJ… », aussi en Authorization) ou nouveau
           # format Supabase (« sb_secret_… », en-tête apikey uniquement : ce n'est pas un JWT)
           AUTH=(-H "apikey: $SERVICE_KEY")
@@ -182,8 +185,9 @@ jobs:
             status=$(curl --silent --show-error -o "$RUNNER_TEMP/upload-response.json" -w '%{http_code}' \
               -X POST "$BASE/$2" "${AUTH[@]}" \
               -H "Content-Type: $3" -H "x-upsert: true" -H "cache-control: $4" \
-              --data-binary "@$1")
-            if [ "$status" -ge 300 ]; then
+              --data-binary "@$1") || status="erreur curl"
+            # Tout ce qui n'est pas un 2xx est un échec (y compris erreur réseau : statut vide / 000)
+            if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
               echo "ERROR: dépôt de $2 refusé par Supabase (HTTP $status) :"
               cat "$RUNNER_TEMP/upload-response.json"; echo
               echo "→ Bucket not found : appliquer la migration 159 (bucket app-releases)."
@@ -193,29 +197,40 @@ jobs:
               exit 1
             fi
           }
-          upload "$APK" "$NAME" application/vnd.android.package-archive "max-age=31536000"
-          python3 - "$APK" "$NAME" <<'PYEOF'
+          for ABI in arm64-v8a armeabi-v7a x86_64; do
+            echo "$ABI : $(du -h "$OUT/app-$ABI-release.apk" | cut -f1)"
+            upload "$OUT/app-$ABI-release.apk" "elm-boutique-$VERSION-$BUILD-$ABI.apk" \
+              application/vnd.android.package-archive "max-age=31536000"
+          done
+          python3 - "$OUT" <<'PYEOF'
           import json, os, sys
           from datetime import datetime, timezone
-          apk, name = sys.argv[1], sys.argv[2]
+          out, version, build = sys.argv[1], os.environ['VERSION'], os.environ['BUILD']
+          apks = {}
+          for abi in ('arm64-v8a', 'armeabi-v7a', 'x86_64'):
+              apks[abi] = {
+                  'file': f'elm-boutique-{version}-{build}-{abi}.apk',
+                  'size_bytes': os.path.getsize(f'{out}/app-{abi}-release.apk'),
+              }
           json.dump({
-              'version': os.environ['VERSION'],
-              'build': int(os.environ['BUILD']),
-              'apk': name,
-              'size_bytes': os.path.getsize(apk),
+              'version': version,
+              'build': int(build),
+              # Par défaut : 64 bits (quasi tous les téléphones depuis 2017)
+              'apk': apks['arm64-v8a']['file'],
+              'size_bytes': apks['arm64-v8a']['size_bytes'],
+              'apks': apks,
               'published_at': datetime.now(timezone.utc).isoformat(),
           }, open('latest.json', 'w'))
           PYEOF
-          # Publié en dernier : la page /telecharger et l'app ne voient la version que l'APK une fois en ligne
+          # Publié en dernier : la page /telecharger et l'app ne voient la version qu'une fois les APK en ligne
           upload latest.json latest.json application/json "max-age=60"
-          echo "APK publié : ${SUPABASE_URL%/}/storage/v1/object/public/app-releases/android/$NAME"
-          echo "### APK $VERSION ($BUILD) publié — lien à partager : https://www.elm-app.click/telecharger" >> "$GITHUB_STEP_SUMMARY"
+          echo "### APK $VERSION ($BUILD) publiés — lien à partager : https://www.elm-app.click/telecharger" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-boutique-${{ steps.version.outputs.name }}-${{ steps.version.outputs.code }}
-          path: buyer_app/build/app/outputs/flutter-apk/app-release.apk
+          path: buyer_app/build/app/outputs/flutter-apk/app-*-release.apk
           retention-days: 30
 
       # ── Optionnel : Google Play ────────────────────────────────────────────

@@ -31,11 +31,16 @@ export const APP_STORE_URL = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || '';
 /** APK Android et son manifeste latest.json, déposés par .github/workflows/mobile-android.yml */
 export const ANDROID_RELEASES_URL = `${(process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '')}/storage/v1/object/public/app-releases/android`;
 
+export type AndroidAbi = 'arm64-v8a' | 'armeabi-v7a' | 'x86_64';
+
+/** android/latest.json — un APK par architecture (--split-per-abi, limite de 50 Mo par fichier) */
 export interface AndroidRelease {
   version: string;
   build: number;
+  /** APK par défaut (64 bits) */
   apk: string;
   size_bytes: number;
+  apks?: Partial<Record<AndroidAbi, { file: string; size_bytes: number }>>;
   published_at: string;
 }
 

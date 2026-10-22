@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Download, Loader2, ShieldCheck, Smartphone, RefreshCw } from 'lucide-react';
-import { APP_STORE_URL, ANDROID_RELEASES_URL, type AndroidRelease } from '@/lib/mobile-app';
+import { APP_STORE_URL, ANDROID_RELEASES_URL, type AndroidAbi, type AndroidRelease } from '@/lib/mobile-app';
 import { getPublicSiteUrl } from '@/lib/public-links';
 
 type Device = 'android' | 'ios' | 'desktop';
@@ -14,6 +14,22 @@ function detectDevice(): Device {
   return 'desktop';
 }
 
+/**
+ * Architecture du téléphone : le navigateur ne la donne pas dans le user-agent Android,
+ * seule l'indication « bitness » (Chrome) permet de repérer un ancien téléphone 32 bits.
+ * Par défaut : 64 bits, le cas de quasi tous les téléphones depuis 2017.
+ */
+async function detectAndroidAbi(): Promise<AndroidAbi> {
+  try {
+    const uaData = (navigator as Navigator & {
+      userAgentData?: { getHighEntropyValues(hints: string[]): Promise<{ bitness?: string }> };
+    }).userAgentData;
+    const { bitness } = (await uaData?.getHighEntropyValues(['bitness'])) ?? {};
+    if (bitness === '32') return 'armeabi-v7a';
+  } catch { /* indication indisponible */ }
+  return 'arm64-v8a';
+}
+
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} Mo`;
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -22,9 +38,11 @@ export default function DownloadClient() {
   const [device, setDevice] = useState<Device>('desktop');
   const [release, setRelease] = useState<AndroidRelease | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [abi, setAbi] = useState<AndroidAbi>('arm64-v8a');
 
   useEffect(() => {
     setDevice(detectDevice());
+    detectAndroidAbi().then(setAbi);
     fetch(`${ANDROID_RELEASES_URL}/latest.json`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data: AndroidRelease) => {
@@ -34,9 +52,13 @@ export default function DownloadClient() {
       .catch(() => setStatus('unavailable'));
   }, []);
 
-  const apkUrl = release
-    ? `${ANDROID_RELEASES_URL}/${release.apk}?download=elm-boutique-${release.version}.apk`
-    : '';
+  // APK de l'architecture du téléphone, sinon l'APK par défaut (64 bits)
+  const apkFor = (target: AndroidAbi) =>
+    release?.apks?.[target] ?? (release ? { file: release.apk, size_bytes: release.size_bytes } : null);
+  const apk = apkFor(abi);
+  const apkUrl = (file: string) =>
+    `${ANDROID_RELEASES_URL}/${file}?download=elm-boutique-${release?.version ?? ''}.apk`;
+  const legacyApk = abi === 'arm64-v8a' ? release?.apks?.['armeabi-v7a'] : undefined;
   const pageUrl = `${getPublicSiteUrl()}/telecharger`;
 
   return (
@@ -74,14 +96,14 @@ export default function DownloadClient() {
               </p>
             )}
 
-            {status === 'ready' && release && (
+            {status === 'ready' && release && apk && (
               <>
                 <a
-                  href={apkUrl}
+                  href={apkUrl(apk.file)}
                   className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold transition-colors"
                 >
                   <Download className="w-5 h-5" />
-                  Télécharger l&apos;app ({formatSize(release.size_bytes)})
+                  Télécharger l&apos;app ({formatSize(apk.size_bytes)})
                 </a>
                 <p className="text-xs text-content-muted text-center">
                   Version {release.version} · publiée le {formatDate(release.published_at)}
@@ -95,6 +117,15 @@ export default function DownloadClient() {
                   </li>
                   <li>Touchez <strong>Installer</strong>, puis <strong>Ouvrir</strong>.</li>
                 </ol>
+
+                {legacyApk && (
+                  <p className="text-xs text-content-muted text-center">
+                    L&apos;installation échoue (« application non compatible ») ?{' '}
+                    <a href={apkUrl(legacyApk.file)} className="text-content-brand underline">
+                      Version pour ancien téléphone (32 bits)
+                    </a>
+                  </p>
+                )}
 
                 <div className="flex gap-3 p-3 rounded-xl bg-badge-info text-sm">
                   <RefreshCw className="w-4 h-4 text-status-info shrink-0 mt-0.5" />
