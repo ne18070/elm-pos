@@ -271,7 +271,7 @@ See `supabase/migrations/085_explicit_grants.sql` for the baseline.
 | `SUPABASE_SERVICE_ROLE_KEY` | API routes only (never expose to client) |
 | `ELECTRON_BUILD=1` | Switches Next.js to static export mode |
 | `ANDROID_SHA256_CERT_FINGERPRINTS` | `/.well-known/assetlinks.json` (Android App Links of the buyer app) — Play Console app-signing + upload key SHA-256, comma-separated |
-| `NEXT_PUBLIC_ANDROID_DOWNLOAD_URL`, `NEXT_PUBLIC_IOS_APP_STORE_URL` | `AppDownloadPrompt` on `/boutique/[id]`, `/services/[id]`, `/track/[token]` (+ Safari Smart App Banner) — Android points to `/telecharger` (APK); prompt hidden for a platform left empty |
+| `NEXT_PUBLIC_ANDROID_DOWNLOAD_URL`, `NEXT_PUBLIC_IOS_APP_STORE_URL` | `AppDownloadBanner` at the top of `/boutique`, `/boutique/[id]`, `/services/[id]`, `/track/[token]` on phones (+ Safari Smart App Banner). Android defaults to `/telecharger` (APK) — the variable only overrides it; iOS banner hidden while its URL is empty |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | `renderer/lib/fcm.ts` — push notifications to the buyer app, sent by `/api/client-push/notify` alongside Web Push |
 | `ELECTRON_DEV=true` | Forces dev mode in Electron |
 

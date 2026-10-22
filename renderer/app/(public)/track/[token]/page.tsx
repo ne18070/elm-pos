@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import { AppDownloadPrompt } from '@/components/shared/AppDownloadPrompt';
+import { AppDownloadBanner } from '@/components/shared/AppDownloadBanner';
 
 // On utilise un import dynamique avec ssr: false pour s'assurer que 
 // la vue de suivi s'exécute uniquement côté client (navigateur).
@@ -14,8 +14,8 @@ export function generateStaticParams(): Array<{ token: string }> {
 export default function Page() {
   return (
     <>
+      <AppDownloadBanner />
       <PublicTrackingView />
-      <AppDownloadPrompt />
     </>
   );
 }

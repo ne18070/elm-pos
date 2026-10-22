@@ -172,11 +172,26 @@ jobs:
           APK=build/app/outputs/flutter-apk/app-release.apk
           NAME="elm-boutique-$VERSION-$BUILD.apk"
           BASE="${SUPABASE_URL%/}/storage/v1/object/app-releases/android"
+          echo "APK : $(du -h "$APK" | cut -f1)"
+          # Clé service : ancien format (JWT « eyJ… », aussi en Authorization) ou nouveau
+          # format Supabase (« sb_secret_… », en-tête apikey uniquement : ce n'est pas un JWT)
+          AUTH=(-H "apikey: $SERVICE_KEY")
+          case "$SERVICE_KEY" in eyJ*) AUTH+=(-H "Authorization: Bearer $SERVICE_KEY");; esac
           upload() { # $1 = fichier local, $2 = nom distant, $3 = type, $4 = cache-control
-            curl --fail --silent --show-error -X POST "$BASE/$2" \
-              -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+            local status
+            status=$(curl --silent --show-error -o "$RUNNER_TEMP/upload-response.json" -w '%{http_code}' \
+              -X POST "$BASE/$2" "${AUTH[@]}" \
               -H "Content-Type: $3" -H "x-upsert: true" -H "cache-control: $4" \
-              --data-binary "@$1" > /dev/null
+              --data-binary "@$1")
+            if [ "$status" -ge 300 ]; then
+              echo "ERROR: dépôt de $2 refusé par Supabase (HTTP $status) :"
+              cat "$RUNNER_TEMP/upload-response.json"; echo
+              echo "→ Bucket not found : appliquer la migration 159 (bucket app-releases)."
+              echo "→ Invalid JWT / Compact JWS / Unauthorized : vérifier le secret SUPABASE_SERVICE_ROLE_KEY."
+              echo "→ exceeded the maximum allowed size : relever la limite de taille des fichiers du projet"
+              echo "  (Supabase → Storage → Settings), ou publier des APK par architecture (--split-per-abi)."
+              exit 1
+            fi
           }
           upload "$APK" "$NAME" application/vnd.android.package-archive "max-age=31536000"
           python3 - "$APK" "$NAME" <<'PYEOF'

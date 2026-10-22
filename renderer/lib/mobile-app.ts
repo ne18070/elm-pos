@@ -4,7 +4,7 @@
  * Les liens partagés https://www.elm-app.click/boutique/<ref>, /services/<ref> et /track/<jeton>
  * (QR codes, WhatsApp…) ouvrent l'app si elle est installée (Universal Links iOS / App Links
  * Android, fichiers servis sous /.well-known/), sinon la page web, qui propose l'app
- * (AppDownloadPrompt).
+ * (AppDownloadBanner).
  *
  * Android est distribué hors Play Store : APK publié par la CI dans le bucket Supabase
  * public « app-releases » (migration 159), téléchargeable depuis la page /telecharger.
@@ -18,12 +18,14 @@ export const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID || 'H3USZB5KY7';
 export const MOBILE_APP_PATHS = ['/boutique/*', '/services/*', '/track/*'];
 
 /**
- * Où obtenir l'app : la proposition d'installation n'apparaît que pour une plateforme
- * renseignée, donc pas avant que l'app y soit disponible.
- *   NEXT_PUBLIC_ANDROID_DOWNLOAD_URL : https://www.elm-app.click/telecharger (APK) ou la page Play Store
- *   NEXT_PUBLIC_IOS_APP_STORE_URL    : page App Store (https://apps.apple.com/app/id…)
+ * Où obtenir l'app :
+ *   Android : page /telecharger du site (APK), ou NEXT_PUBLIC_ANDROID_DOWNLOAD_URL pour la remplacer
+ *             (ex. page Play Store un jour)
+ *   iOS     : NEXT_PUBLIC_IOS_APP_STORE_URL (https://apps.apple.com/app/id…) ; bandeau masqué
+ *             tant qu'elle est vide
  */
-export const ANDROID_DOWNLOAD_URL = process.env.NEXT_PUBLIC_ANDROID_DOWNLOAD_URL || '';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '');
+export const ANDROID_DOWNLOAD_URL = process.env.NEXT_PUBLIC_ANDROID_DOWNLOAD_URL || `${SITE_URL}/telecharger`;
 export const APP_STORE_URL = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || '';
 
 /** APK Android et son manifeste latest.json, déposés par .github/workflows/mobile-android.yml */

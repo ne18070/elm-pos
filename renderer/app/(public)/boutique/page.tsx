@@ -1,8 +1,14 @@
 import dynamic from 'next/dynamic';
+import { AppDownloadBanner } from '@/components/shared/AppDownloadBanner';
 
-// Accueil de la vitrine acheteur — écran de démarrage de l'app mobile (com.elmapp.mobile)
+// Accueil web « Mes boutiques » (/boutique)
 const BoutiqueHome = dynamic(() => import('./BoutiqueHome'), { ssr: false });
 
 export default function Page() {
-  return <BoutiqueHome />;
+  return (
+    <>
+      <AppDownloadBanner />
+      <BoutiqueHome />
+    </>
+  );
 }

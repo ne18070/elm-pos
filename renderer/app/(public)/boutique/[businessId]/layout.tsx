@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AppDownloadPrompt } from '@/components/shared/AppDownloadPrompt';
+import { AppDownloadBanner } from '@/components/shared/AppDownloadBanner';
 import { APP_STORE_ID } from '@/lib/mobile-app';
 
 export const metadata: Metadata = {
@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 export default function BoutiqueLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      <AppDownloadBanner />
       {children}
-      <AppDownloadPrompt />
     </div>
   );
 }
