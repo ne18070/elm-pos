@@ -55,11 +55,42 @@ class CustomerDetails {
   Map<String, Object?> toJson() => {'name': name, 'phone': phone, 'address': address};
 }
 
+/// Demande suivie depuis l'app (jeton de `/track/<jeton>`), affichée dans « Mes suivis ».
+class TrackedRequest {
+  const TrackedRequest({
+    required this.token,
+    required this.businessName,
+    required this.label,
+    required this.createdAt,
+  });
+
+  factory TrackedRequest.fromJson(Map<String, dynamic> json) => TrackedRequest(
+        token: json['token'] as String,
+        businessName: '${json['business_name'] ?? ''}',
+        label: '${json['label'] ?? ''}',
+        createdAt: DateTime.tryParse('${json['created_at']}') ?? DateTime.now(),
+      );
+
+  final String token;
+  final String businessName;
+  final String label;
+  final DateTime createdAt;
+
+  Map<String, Object?> toJson() => {
+        'token': token,
+        'business_name': businessName,
+        'label': label,
+        'created_at': createdAt.toIso8601String(),
+      };
+}
+
 /// Données gardées uniquement sur le téléphone (aucun compte acheteur en v1).
 class LocalStore {
   static const _recentKey = 'recent_boutiques';
   static const _customerKey = 'customer_details';
   static const _recentMax = 20;
+  static const _trackedKey = 'tracked_requests';
+  static const _trackedMax = 50;
 
   Future<List<RecentBoutique>> recentBoutiques() async {
     final prefs = await SharedPreferences.getInstance();
@@ -117,5 +148,34 @@ class LocalStore {
   Future<void> saveCustomerDetails(CustomerDetails details) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_customerKey, jsonEncode(details.toJson()));
+  }
+
+  Future<List<TrackedRequest>> trackedRequests() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_trackedKey);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .whereType<Map>()
+          .map((e) => TrackedRequest.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } on FormatException {
+      return [];
+    }
+  }
+
+  /// Ajoute (ou remonte en tête) une demande suivie ; garde les infos déjà connues.
+  Future<void> rememberTracking(TrackedRequest request) async {
+    final current = await trackedRequests();
+    final next = [request, ...current.where((r) => r.token != request.token)].take(_trackedMax).toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
+  }
+
+  Future<List<TrackedRequest>> forgetTracking(String token) async {
+    final next = (await trackedRequests()).where((r) => r.token != token).toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
+    return next;
   }
 }

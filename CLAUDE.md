@@ -271,14 +271,15 @@ See `supabase/migrations/085_explicit_grants.sql` for the baseline.
 | `SUPABASE_SERVICE_ROLE_KEY` | API routes only (never expose to client) |
 | `ELECTRON_BUILD=1` | Switches Next.js to static export mode |
 | `ANDROID_SHA256_CERT_FINGERPRINTS` | `/.well-known/assetlinks.json` (Android App Links of the buyer app) — Play Console app-signing + upload key SHA-256, comma-separated |
-| `NEXT_PUBLIC_ANDROID_PLAY_STORE_URL`, `NEXT_PUBLIC_IOS_APP_STORE_URL` | `AppDownloadPrompt` on `/boutique/[id]` and `/services/[id]` (+ Safari Smart App Banner) — prompt hidden for a store left empty |
+| `NEXT_PUBLIC_ANDROID_DOWNLOAD_URL`, `NEXT_PUBLIC_IOS_APP_STORE_URL` | `AppDownloadPrompt` on `/boutique/[id]`, `/services/[id]`, `/track/[token]` (+ Safari Smart App Banner) — Android points to `/telecharger` (APK); prompt hidden for a platform left empty |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | `renderer/lib/fcm.ts` — push notifications to the buyer app, sent by `/api/client-push/notify` alongside Web Push |
 | `ELECTRON_DEV=true` | Forces dev mode in Electron |
 
 ## CI/CD (`.github/workflows/`)
 
 - `playwright.yml` — runs `yarn playwright test` on every push/PR to `main`.
 - `release.yml` — triggered by pushing a `v*` tag: builds Windows/macOS/Linux Electron installers in parallel, then publishes a single GitHub Release. Desktop only.
-- `mobile-android.yml` / `mobile-ios.yml` — build and publish the **Flutter** buyer app « ELM Boutique » (`buyer_app/`, store id `com.elmapp.mobile`), triggered by a `mobile-vX.Y.Z` tag (or manually). Native folders are not committed: CI runs `flutter create` then `buyer_app/tool/configure_platforms.py` (app id, release signing, display name). Android → Play Store production track; iOS → fastlane (`buyer_app/ios/fastlane/Fastfile`) uploads to App Store Connect and submits for review. Version name comes from the tag, build number from `github.run_number`. Secrets are listed in each file's header.
+- `mobile-android.yml` / `mobile-ios.yml` — build and publish the **Flutter** buyer app « ELM Boutique » (`buyer_app/`, store id `com.elmapp.mobile`), triggered by a `mobile-vX.Y.Z` tag (or manually). Native folders are not committed: CI runs `flutter create` then `buyer_app/tool/configure_platforms.py` (app id, release signing, display name, deep links, iOS push when `IOS_PUSH_ENABLED`). Android → signed **APK outside the Play Store**, uploaded to the public Supabase bucket `app-releases` (+ `android/latest.json`, read by `/telecharger` and by the app's update prompt; Play upload optional via `play_track`); iOS → fastlane (`buyer_app/ios/fastlane/Fastfile`) uploads to App Store Connect and submits for review. Version name comes from the tag, build number from `github.run_number`. Secrets are listed in each file's header.
 
 ## Claude Code skills for this repo
 

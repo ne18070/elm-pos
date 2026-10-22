@@ -26,6 +26,13 @@ name: Mobile Boutique — App Store
 #   Encodage base64 depuis Windows :
 #     [Convert]::ToBase64String([IO.File]::ReadAllBytes('distribution.p12')) | Set-Clipboard
 #
+# Variables (Settings → Secrets and variables → Actions → Variables), notifications push :
+#   FIREBASE_IOS_API_KEY, FIREBASE_PROJECT_ID, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_IOS_APP_ID
+#   (GoogleService-Info.plist de l app iOS : API_KEY, PROJECT_ID, GCM_SENDER_ID, GOOGLE_APP_ID)
+#   IOS_PUSH_ENABLED=true — seulement après : capability « Push Notifications » cochée sur
+#     l'App ID, profil de provisioning régénéré, clé APNs (.p8) déposée dans Firebase
+#     (Paramètres du projet → Cloud Messaging → app iOS).
+#
 # Prérequis côté Apple (une seule fois) :
 #   - App créée dans App Store Connect avec le bundle ID com.elmapp.mobile
 #   - 1ère version : fiche (captures, description, confidentialité) remplie à la main, et un
@@ -59,6 +66,9 @@ defaults:
 
 jobs:
   build-and-deploy:
+    # Les tags mobile-v* ne publient iOS qu'une fois IOS_RELEASE_ENABLED=true (variable de dépôt) ;
+    # le lancement manuel (Run workflow) fonctionne toujours.
+    if: github.event_name == 'workflow_dispatch' || vars.IOS_RELEASE_ENABLED == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -112,6 +122,10 @@ jobs:
           working-directory: buyer_app/ios
 
       - name: Generate & configure native projects
+        env:
+          # « true » une fois la capability Push Notifications activée sur l'App ID ET le
+          # profil de provisioning régénéré — sinon l'archive échoue (entitlement absent du profil)
+          IOS_PUSH_ENABLED: ${{ vars.IOS_PUSH_ENABLED }}
         run: |
           flutter create --org com.elmapp --project-name elm_boutique --platforms android,ios .
           python3 tool/configure_platforms.py
@@ -129,11 +143,19 @@ jobs:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+            echo "FIREBASE_IOS_API_KEY=${{ vars.FIREBASE_IOS_API_KEY }}"
+            echo "FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }}"
+            echo "FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID }}"
+            echo "FIREBASE_IOS_APP_ID=${{ vars.FIREBASE_IOS_APP_ID }}"
+          } > "$RUNNER_TEMP/dart-defines.env"
           flutter build ios --release --no-codesign \
             --build-name=${{ steps.version.outputs.name }} \
             --build-number=${{ steps.version.outputs.build }} \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define-from-file="$RUNNER_TEMP/dart-defines.env"
+          rm -f "$RUNNER_TEMP/dart-defines.env"
 
       - name: Decode signing certificate & provisioning profile
         env:

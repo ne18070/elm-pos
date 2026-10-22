@@ -1,34 +1,33 @@
-name: Mobile Boutique — Play Store
+name: Mobile Boutique — Android (APK)
 
-# Publie « ELM Boutique » (app Flutter buyer_app/, com.elmapp.mobile) sur Google Play.
-# C'est la vitrine acheteur : ouvrir une boutique ELM, commander, voir la confirmation.
+# Compile « ELM Boutique » (app Flutter buyer_app/, com.elmapp.mobile) en APK signé et le
+# publie HORS Play Store : bucket Supabase public « app-releases » (migration 159).
+# Lien à partager : https://www.elm-app.click/telecharger (lit android/latest.json).
+# L'app compare sa version à latest.json au démarrage et propose la mise à jour.
 #
 # Déclenchement :
 #   git tag mobile-v1.2.0 && git push origin mobile-v1.2.0   → Android + iOS (mobile-ios.yml)
-#   ou manuellement : Actions → « Mobile Boutique — Play Store » → Run workflow
+#   ou manuellement : Actions → « Mobile Boutique — Android (APK) » → Run workflow
 #
-# Projets natifs : android/ et ios/ ne sont pas commités — ils sont générés par
-# `flutter create` puis configurés par buyer_app/tool/configure_platforms.py
-# (applicationId com.elmapp.mobile, signature release, nom « ELM Boutique »).
+# Projets natifs : android/ et ios/ ne sont pas commités — générés par `flutter create`
+# puis configurés par buyer_app/tool/configure_platforms.py.
 #
 # Versionnement :
 #   versionName = tag sans le préfixe « mobile-v » (ou l'input `version` en manuel)
 #   versionCode = github.run_number + vars.ANDROID_VERSION_CODE_OFFSET (défaut 100)
-#     → doit dépasser le versionCode des builds Capacitor déjà publiés. Si Play refuse
-#       « version code already used », augmente ANDROID_VERSION_CODE_OFFSET
-#       (Settings → Secrets and variables → Actions → Variables).
+#     → doit toujours augmenter : Android refuse d'installer une mise à jour de versionCode inférieur.
 #
 # Secrets requis :
 #   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY  (passés en --dart-define)
+#   SUPABASE_SERVICE_ROLE_KEY — dépôt de l'APK dans le bucket app-releases
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
-#     → la MÊME clé que l'app Capacitor (elm-release.jks), sinon Play refuse la mise à jour.
-#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON — JSON du compte de service Google Cloud.
-#     1. Play Console → Configuration → Accès API → relier/créer un projet Google Cloud
-#     2. Google Cloud Console → IAM et administration → Comptes de service → Créer
-#     3. Sur ce compte de service → Clés → Ajouter une clé → JSON → télécharger
-#     4. Play Console → Utilisateurs et autorisations → inviter l'e-mail du compte de
-#        service → droits « Release Manager » sur com.elmapp.mobile
-#     5. Coller le contenu brut du JSON dans le secret GitHub
+#     → toujours la MÊME clé (elm-release.jks) : Android refuse une mise à jour signée autrement.
+#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON — uniquement si un jour publication Play Store (input play_track)
+#
+# Variables (Settings → Secrets and variables → Actions → Variables), notifications push :
+#   FIREBASE_API_KEY, FIREBASE_PROJECT_ID, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_ANDROID_APP_ID
+#   (Console Firebase → Paramètres du projet → Vos applications → app Android com.elmapp.mobile).
+#   Absentes : l'app fonctionne, sans notifications.
 
 on:
   push:
@@ -39,11 +38,11 @@ on:
       version:
         description: 'versionName (ex: 1.2.0)'
         required: true
-      track:
-        description: 'Piste Google Play'
+      play_track:
+        description: 'Publier aussi sur Google Play ?'
         type: choice
-        options: [production, beta, alpha, internal]
-        default: production
+        options: [aucune, internal, alpha, beta, production]
+        default: aucune
 
 concurrency:
   group: mobile-android
@@ -54,8 +53,10 @@ defaults:
     working-directory: buyer_app
 
 jobs:
-  build-and-deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
+    env:
+      PLAY_TRACK: ${{ inputs.play_track || 'aucune' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -78,12 +79,16 @@ jobs:
 
       - name: Check required secrets
         run: |
-          for s in SUPABASE_URL SUPABASE_ANON_KEY ANDROID_KEYSTORE_BASE64 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON; do
+          for s in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY ANDROID_KEYSTORE_BASE64; do
             if [ -z "${!s}" ]; then echo "ERROR: secret manquant pour $s"; exit 1; fi
           done
+          if [ "$PLAY_TRACK" != "aucune" ] && [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "ERROR: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON requis pour publier sur Google Play"; exit 1
+          fi
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
 
@@ -135,34 +140,89 @@ jobs:
             "${{ secrets.ANDROID_KEY_PASSWORD }}" \
             > android/key.properties
 
-      - name: Build signed AAB
+      - name: Dart defines
+        id: defines
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          flutter build appbundle --release \
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+            echo "FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }}"
+            echo "FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }}"
+            echo "FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID }}"
+            echo "FIREBASE_ANDROID_APP_ID=${{ vars.FIREBASE_ANDROID_APP_ID }}"
+          } > "$RUNNER_TEMP/dart-defines.env"
+
+      - name: Build signed APK
+        run: |
+          flutter build apk --release \
             --build-name=${{ steps.version.outputs.name }} \
             --build-number=${{ steps.version.outputs.code }} \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define-from-file="$RUNNER_TEMP/dart-defines.env"
 
-      - name: Upload AAB artifact
+      - name: Publish APK (bucket Supabase app-releases)
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERSION: ${{ steps.version.outputs.name }}
+          BUILD: ${{ steps.version.outputs.code }}
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          NAME="elm-boutique-$VERSION-$BUILD.apk"
+          BASE="${SUPABASE_URL%/}/storage/v1/object/app-releases/android"
+          upload() { # $1 = fichier local, $2 = nom distant, $3 = type, $4 = cache-control
+            curl --fail --silent --show-error -X POST "$BASE/$2" \
+              -H "Authorization: Bearer $SERVICE_KEY" -H "apikey: $SERVICE_KEY" \
+              -H "Content-Type: $3" -H "x-upsert: true" -H "cache-control: $4" \
+              --data-binary "@$1" > /dev/null
+          }
+          upload "$APK" "$NAME" application/vnd.android.package-archive "max-age=31536000"
+          python3 - "$APK" "$NAME" <<'PYEOF'
+          import json, os, sys
+          from datetime import datetime, timezone
+          apk, name = sys.argv[1], sys.argv[2]
+          json.dump({
+              'version': os.environ['VERSION'],
+              'build': int(os.environ['BUILD']),
+              'apk': name,
+              'size_bytes': os.path.getsize(apk),
+              'published_at': datetime.now(timezone.utc).isoformat(),
+          }, open('latest.json', 'w'))
+          PYEOF
+          # Publié en dernier : la page /telecharger et l'app ne voient la version que l'APK une fois en ligne
+          upload latest.json latest.json application/json "max-age=60"
+          echo "APK publié : ${SUPABASE_URL%/}/storage/v1/object/public/app-releases/android/$NAME"
+          echo "### APK $VERSION ($BUILD) publié — lien à partager : https://www.elm-app.click/telecharger" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-boutique-${{ steps.version.outputs.name }}-${{ steps.version.outputs.code }}
-          path: buyer_app/build/app/outputs/bundle/release/app-release.aab
+          path: buyer_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
+      # ── Optionnel : Google Play ────────────────────────────────────────────
+      - name: Build signed AAB (Google Play)
+        if: env.PLAY_TRACK != 'aucune'
+        run: |
+          flutter build appbundle --release \
+            --build-name=${{ steps.version.outputs.name }} \
+            --build-number=${{ steps.version.outputs.code }} \
+            --dart-define-from-file="$RUNNER_TEMP/dart-defines.env"
+
       - name: Upload to Google Play
+        if: env.PLAY_TRACK != 'aucune'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.elmapp.mobile
           releaseFiles: buyer_app/build/app/outputs/bundle/release/app-release.aab
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
-          track: ${{ inputs.track || 'production' }}
+          track: ${{ env.PLAY_TRACK }}
           status: completed
 
       - name: Clean up signing material
         if: always()
-        run: rm -f android/upload.jks android/key.properties
+        run: rm -f android/upload.jks android/key.properties "$RUNNER_TEMP/dart-defines.env"

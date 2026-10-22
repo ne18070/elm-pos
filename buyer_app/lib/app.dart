@@ -7,6 +7,9 @@ import 'screens/home_screen.dart';
 /// Couleur de marque ELM (brand-600 du renderer : rgb(2, 132, 199)).
 const brandColor = Color(0xFF0284C7);
 
+/// Affiche les notifications reçues quand l'app est ouverte (PushService)
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 class ElmBoutiqueApp extends StatelessWidget {
   const ElmBoutiqueApp({super.key, required this.repository, required this.store});
 
@@ -18,6 +21,7 @@ class ElmBoutiqueApp extends StatelessWidget {
     return MaterialApp(
       title: 'ELM Boutique',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       home: HomeScreen(repository: repository, store: store),

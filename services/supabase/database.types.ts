@@ -1006,6 +1006,33 @@ export type Database = {
           },
         ]
       }
+      client_push_devices: {
+        Row: {
+          created_at: string
+          fcm_token: string
+          id: string
+          last_seen_at: string
+          platform: string
+          tracking_token: string
+        }
+        Insert: {
+          created_at?: string
+          fcm_token: string
+          id?: string
+          last_seen_at?: string
+          platform: string
+          tracking_token: string
+        }
+        Update: {
+          created_at?: string
+          fcm_token?: string
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          tracking_token?: string
+        }
+        Relationships: []
+      }
       client_push_subscriptions: {
         Row: {
           auth: string
@@ -7214,6 +7241,10 @@ export type Database = {
       }
     }
     Functions: {
+      register_push_device: {
+        Args: { p_fcm_token: string; p_platform: string; p_tracking_token: string }
+        Returns: undefined
+      }
       list_directory_businesses: {
         Args: {
           p_kind?: string

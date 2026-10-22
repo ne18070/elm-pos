@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/boutique.dart';
 import '../models/directory.dart';
 import '../models/service.dart';
+import '../models/tracking.dart';
 import '../utils/format.dart';
 
 /// Accès Supabase de la vitrine — mêmes requêtes et RPC que le renderer web
@@ -142,9 +143,42 @@ class BoutiqueRepository {
     return ServiceRequestResult.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  /// Suivi public (`/track/<jeton>`). Lève [TrackingException] si le lien est invalide.
+  Future<TrackingData> tracking(String token) async {
+    final data = await _db.rpc('get_public_tracking', params: {'p_token': token});
+    if (data is! Map) throw TrackingException(trackingErrorMessage(null));
+    final json = Map<String, dynamic>.from(data);
+    if (json['error'] != null) throw TrackingException(trackingErrorMessage('${json['error']}'));
+    return TrackingData.fromJson(json);
+  }
+
+  Future<void> submitFeedback(String token, int rating, String? feedback) => _db.rpc(
+        'submit_service_order_feedback',
+        params: {'p_token': token, 'p_rating': rating, 'p_feedback': feedback},
+      );
+
+  /// Abonne ce téléphone aux notifications du suivi (table client_push_devices).
+  Future<void> registerPushDevice(String trackingToken, String fcmToken, String platform) => _db.rpc(
+        'register_push_device',
+        params: {
+          'p_tracking_token': trackingToken,
+          'p_fcm_token': fcmToken,
+          'p_platform': platform,
+        },
+      );
+
   Future<BoutiqueOrderDetail?> order(String token) async {
     final data = await _db.rpc('get_boutique_order', params: {'p_token': token});
     if (data is! Map) return null;
     return BoutiqueOrderDetail.fromJson(Map<String, dynamic>.from(data));
   }
+}
+
+class TrackingException implements Exception {
+  const TrackingException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

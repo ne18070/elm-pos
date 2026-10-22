@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { sendFcm, isFcmConfigured } from '@/lib/fcm';
 
 export const runtime = 'nodejs';
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-}
 
 async function getWebPush() {
   const mod = await import('web-push');
@@ -36,6 +30,10 @@ const STATUS_NOTIF: Record<string, { title: string; body: (ref: string, biz: str
   },
 };
 
+/**
+ * Notifie le client d'un changement de statut d'ordre de service :
+ * navigateurs abonnés (Web Push, page /track) et app « ELM Boutique » (FCM).
+ */
 export async function POST(req: NextRequest) {
   const { serviceOrderId, status, orderRef, businessName, trackingUrl } = await req.json();
   if (!serviceOrderId || !status) {
@@ -47,48 +45,70 @@ export async function POST(req: NextRequest) {
 
   const supabaseAdmin = getSupabaseAdmin();
 
-  // Find tracking token for this service order
-  const { data: tokenRow } = await supabaseAdmin
+  // Jetons de suivi valides de l'OT (créé à la demande publique et/ou par le dashboard)
+  const { data: tokenRows } = await supabaseAdmin
     .from('client_tracking_tokens')
     .select('token')
     .eq('service_order_id', serviceOrderId)
-    .maybeSingle();
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false });
 
-  if (!tokenRow?.token) return NextResponse.json({ ok: true, skipped: 'no token' });
+  const tokens = (tokenRows ?? []).map((r) => r.token);
+  if (!tokens.length) return NextResponse.json({ ok: true, skipped: 'no token' });
 
-  // Find all client push subscriptions for this token
-  const { data: subs } = await supabaseAdmin
-    .from('client_push_subscriptions')
-    .select('endpoint, p256dh, auth')
-    .eq('token', tokenRow.token);
+  const title = notif.title;
+  const body  = notif.body(orderRef ?? serviceOrderId.slice(0, 8), businessName ?? 'votre prestataire');
+  const url   = trackingUrl ?? `/track/${tokens[0]}`;
+  const tag   = `ot-${serviceOrderId}`;
 
-  if (!subs?.length) return NextResponse.json({ ok: true, skipped: 'no subs' });
+  const [{ data: subs }, { data: devices }] = await Promise.all([
+    supabaseAdmin
+      .from('client_push_subscriptions')
+      .select('endpoint, p256dh, auth')
+      .in('token', tokens),
+    supabaseAdmin
+      .from('client_push_devices')
+      .select('id, fcm_token')
+      .in('tracking_token', tokens),
+  ]);
 
-  const payload = JSON.stringify({
-    title:   notif.title,
-    body:    notif.body(orderRef ?? serviceOrderId.slice(0, 8), businessName ?? 'votre prestataire'),
-    url:     trackingUrl ?? `/track/${tokenRow.token}`,
-    vibrate: [200, 100, 200],
-    tag:     `ot-${serviceOrderId}`,
-  });
+  let webSent = 0;
+  if (subs?.length) {
+    const webpush = await getWebPush();
+    const payload = JSON.stringify({ title, body, url, vibrate: [200, 100, 200], tag });
+    const results = await Promise.allSettled(
+      subs.map((sub) =>
+        webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload,
+        ).catch(async (err) => {
+          if (err.statusCode === 410) {
+            await supabaseAdmin.from('client_push_subscriptions').delete().eq('endpoint', sub.endpoint);
+          }
+          throw err;
+        }),
+      ),
+    );
+    webSent = results.filter((r) => r.status === 'fulfilled').length;
+  }
 
-  const webpush = await getWebPush();
-
-  await Promise.allSettled(
-    subs.map(sub =>
-      webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload,
-      ).catch(async (err) => {
-        if (err.statusCode === 410) {
-          await supabaseAdmin
-            .from('client_push_subscriptions')
-            .delete()
-            .eq('endpoint', sub.endpoint);
+  let appSent = 0;
+  if (devices?.length && isFcmConfigured()) {
+    // L'app ouvre /track/<jeton> : on lui donne l'URL publique complète
+    const appUrl = url.startsWith('http')
+      ? url
+      : `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '')}${url}`;
+    const results = await Promise.all(
+      devices.map(async (device) => {
+        const result = await sendFcm(device.fcm_token, { title, body, url: appUrl, tag });
+        if (result === 'unregistered') {
+          await supabaseAdmin.from('client_push_devices').delete().eq('id', device.id);
         }
+        return result;
       }),
-    ),
-  );
+    );
+    appSent = results.filter((r) => r === 'sent').length;
+  }
 
-  return NextResponse.json({ ok: true, sent: subs.length });
+  return NextResponse.json({ ok: true, sent: { web: webSent, app: appSent } });
 }

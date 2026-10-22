@@ -15,6 +15,11 @@ dependencies:
   shared_preferences: ^2.3.0
   url_launcher: ^6.3.0
   app_links: ^6.3.0
+  # Notifications push (Firebase Cloud Messaging) — inactives sans variables FIREBASE_*
+  firebase_core: ^5.0.0
+  firebase_messaging: ^17.0.0
+  # Android hors Play Store : comparaison avec android/latest.json (mises à jour)
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:

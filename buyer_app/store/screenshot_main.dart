@@ -11,6 +11,7 @@ import 'package:elm_boutique/models/boutique.dart';
 import 'package:elm_boutique/screens/boutique_screen.dart';
 import 'package:elm_boutique/screens/checkout_screen.dart';
 import 'package:elm_boutique/screens/confirmation_screen.dart';
+import 'package:elm_boutique/services/push_service.dart';
 import 'package:elm_boutique/state/cart.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -67,6 +68,8 @@ Future<void> main() async {
   final screen = params['screen'] ?? 'home';
   final repository = BoutiqueRepository(Supabase.instance.client);
   final store = LocalStore();
+  // Captures : pas de notifications (Firebase non configuré en web)
+  PushService.instance = PushService(repository, store, scaffoldMessengerKey);
 
   final info = await repository.findBoutique(params['id'] ?? _demoBoutique);
   if (info != null) await store.rememberBoutique(info);

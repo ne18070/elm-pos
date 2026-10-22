@@ -29,7 +29,7 @@ class LinkTarget {
   final VisitKind kind;
 }
 
-/// Lien partagé (…/boutique/<ref> ou …/services/<ref>) ou code saisi (→ boutique).
+/// Lien partagé (`…/boutique/<ref>` ou `…/services/<ref>`) ou code saisi (→ boutique).
 LinkTarget? parseBusinessLink(String input) {
   final trimmed = input.trim();
   if (trimmed.isEmpty) return null;
@@ -83,3 +83,15 @@ String slugify(String name) {
 String digitsOnly(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
 
 String shortOrderId(String id) => (id.length >= 8 ? id.substring(0, 8) : id).toUpperCase();
+
+/// Jeton d'un lien de suivi (`…/track/<jeton>`), sinon null.
+String? parseTrackingToken(String input) {
+  final match = RegExp(r'/track/([A-Za-z0-9_-]{16,})').firstMatch(input.trim());
+  return match?.group(1);
+}
+
+/// « 14/10/2026 à 09:05 »
+String formatDateTime(DateTime date) {
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${two(date.day)}/${two(date.month)}/${date.year} à ${two(date.hour)}:${two(date.minute)}';
+}

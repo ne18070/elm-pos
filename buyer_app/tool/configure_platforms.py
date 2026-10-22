@@ -8,6 +8,7 @@ Usage (depuis buyer_app/, après flutter create) :
 Idempotent : peut être relancé sur des dossiers déjà configurés (ou commités).
 Échoue bruyamment si le template Flutter a changé, plutôt que de publier une app mal configurée.
 """
+import os
 import plistlib
 import re
 import sys
@@ -18,7 +19,11 @@ APP_NAME = 'ELM Boutique'
 
 # Liens profonds (Universal Links / App Links) — garder aligné avec renderer/lib/mobile-app.ts
 LINK_HOSTS = ['www.elm-app.click', 'elm-app.click']
-LINK_PATH_PREFIXES = ['/boutique/', '/services/']
+LINK_PATH_PREFIXES = ['/boutique/', '/services/', '/track/']
+
+# Notifications push iOS : seulement quand l'App ID et le profil de provisioning ont la
+# capability « Push Notifications » (variable de dépôt IOS_PUSH_ENABLED=true en CI)
+IOS_PUSH_ENABLED = os.environ.get('IOS_PUSH_ENABLED', '').lower() == 'true'
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -143,17 +148,24 @@ def configure_ios() -> None:
     info['ITSAppUsesNonExemptEncryption'] = False
     # Liens reçus par le plugin app_links, pas par le routeur Flutter
     info['FlutterDeepLinkingEnabled'] = False
+    if IOS_PUSH_ENABLED:
+        modes = info.setdefault('UIBackgroundModes', [])
+        if 'remote-notification' not in modes:
+            modes.append('remote-notification')
     with info_path.open('wb') as f:
         plistlib.dump(info, f)
 
     # Universal Links : nécessite la capability « Associated Domains » sur l'App ID
     # et un profil de provisioning régénéré après l'avoir activée.
+    # Push (IOS_PUSH_ENABLED=true) : idem avec la capability « Push Notifications ».
+    entitlement_values = {
+        'com.apple.developer.associated-domains': [f'applinks:{host}' for host in LINK_HOSTS],
+    }
+    if IOS_PUSH_ENABLED:
+        entitlement_values['aps-environment'] = 'production'
     entitlements = ROOT / 'ios' / 'Runner' / 'Runner.entitlements'
     with entitlements.open('wb') as f:
-        plistlib.dump(
-            {'com.apple.developer.associated-domains': [f'applinks:{host}' for host in LINK_HOSTS]},
-            f,
-        )
+        plistlib.dump(entitlement_values, f)
     project = pbxproj.read_text(encoding='utf-8')
     if 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' not in project:
         # Configurations Debug / Release / Profile de la cible Runner (pas RunnerTests)
@@ -166,7 +178,7 @@ def configure_ios() -> None:
             fail("impossible d'ajouter CODE_SIGN_ENTITLEMENTS à la cible Runner")
         pbxproj.write_text(project, encoding='utf-8')
     print(f'ios: bundle={APP_ID}, CFBundleDisplayName={APP_NAME}, ITSAppUsesNonExemptEncryption=false, '
-          f'associated domains={LINK_HOSTS}')
+          f'associated domains={LINK_HOSTS}, push={IOS_PUSH_ENABLED}')
 
 
 if __name__ == '__main__':

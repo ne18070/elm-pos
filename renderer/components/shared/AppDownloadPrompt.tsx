@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Smartphone, X } from 'lucide-react';
-import { APP_STORE_URL, PLAY_STORE_URL, androidIntentUrl } from '@/lib/mobile-app';
+import { APP_STORE_URL, ANDROID_DOWNLOAD_URL, androidIntentUrl } from '@/lib/mobile-app';
 import { isCapacitor, isElectron } from '@/lib/platform';
 
 const DISMISS_KEY = 'elm-app-prompt-dismissed';
@@ -31,7 +31,7 @@ export function AppDownloadPrompt() {
       if (sessionStorage.getItem(DISMISS_KEY)) return;
     } catch { /* stockage indisponible : on affiche quand même */ }
     const detected = detectMobileOs();
-    if (detected === 'android' && PLAY_STORE_URL) setOs('android');
+    if (detected === 'android' && ANDROID_DOWNLOAD_URL) setOs('android');
     if (detected === 'ios' && APP_STORE_URL) setOs('ios');
   }, []);
 
@@ -42,7 +42,7 @@ export function AppDownloadPrompt() {
     setOs(null);
   }
 
-  // Android : ouvre l'app si elle est installée, sinon le Play Store.
+  // Android : ouvre l'app si elle est installée, sinon la page de téléchargement de l'APK.
   // iOS : l'app n'est pas installée (sinon le lien universel l'aurait ouverte) → App Store.
   const href = os === 'android' ? androidIntentUrl(window.location.href) : APP_STORE_URL;
 

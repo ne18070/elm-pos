@@ -10,7 +10,11 @@ import '../data/local_store.dart';
 import '../models/directory.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../services/push_service.dart';
+import '../services/update_service.dart';
 import 'boutique_screen.dart';
+import 'my_tracking_screen.dart';
+import 'tracking_screen.dart';
 import 'service_screen.dart';
 
 /// Accueil : annuaire des boutiques et services ELM avec recherche,
@@ -53,6 +57,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecents();
     _reload();
     _linkSubscription = AppLinks().uriLinkStream.listen(_handleIncomingLink);
+    // Toucher d'une notification de suivi → écran de suivi
+    PushService.instance.onOpenLink = _handleIncomingLink;
+    // Android (APK hors Play Store) : nouvelle version publiée ?
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) UpdateService.checkForUpdate(context);
+    });
   }
 
   @override
@@ -143,7 +153,31 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadRecents();
   }
 
+  Future<void> _openTracking(String token) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TrackingScreen(token: token, repository: widget.repository, store: widget.store),
+      ),
+    );
+  }
+
+  Future<void> _openMyTracking() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MyTrackingScreen(repository: widget.repository, store: widget.store),
+      ),
+    );
+  }
+
   Future<void> _handleIncomingLink(Uri uri) async {
+    // Lien de suivi (/track/<jeton>) : WhatsApp, QR code ou notification
+    final trackingToken = parseTrackingToken(uri.toString());
+    if (trackingToken != null) {
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      await _openTracking(trackingToken);
+      return;
+    }
     final target = parseBusinessLink(uri.toString());
     if (target == null || !mounted) return;
     try {
@@ -237,6 +271,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Mes suivis',
+            icon: const Icon(Icons.assignment_outlined),
+            onPressed: _openMyTracking,
+          ),
           IconButton(
             tooltip: 'Ouvrir un lien de boutique',
             icon: const Icon(Icons.link),

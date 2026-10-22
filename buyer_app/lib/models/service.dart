@@ -59,13 +59,16 @@ class ServiceItem {
 
 /// Résultat de la RPC create_public_service_order.
 class ServiceRequestResult {
-  const ServiceRequestResult({required this.id, this.orderNumber});
+  const ServiceRequestResult({required this.id, this.orderNumber, this.trackingToken});
 
   factory ServiceRequestResult.fromJson(Map<String, dynamic> json) => ServiceRequestResult(
         id: '${json['id']}',
         orderNumber: json['order_number'] is num ? (json['order_number'] as num).toInt() : null,
+        // Renvoyé depuis la migration 159 : suivi immédiat de la demande (/track/<jeton>)
+        trackingToken: json['tracking_token'] as String?,
       );
 
   final String id;
   final int? orderNumber;
+  final String? trackingToken;
 }

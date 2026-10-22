@@ -6,9 +6,11 @@ import '../data/boutique_repository.dart';
 import '../data/local_store.dart';
 import '../models/boutique.dart';
 import '../models/service.dart';
+import '../services/push_service.dart';
 import '../state/service_cart.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import 'tracking_screen.dart';
 
 /// Coordonnées + objet du service → create_public_service_order, puis confirmation.
 class ServiceRequestScreen extends StatefulWidget {
@@ -90,6 +92,19 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
       await widget.store.saveCustomerDetails(
         CustomerDetails(name: _name.text.trim(), phone: _phone.text.trim(), address: saved?.address),
       );
+      final trackingToken = result.trackingToken;
+      if (trackingToken != null) {
+        // « Mes suivis » + notifications à chaque étape (permission demandée maintenant)
+        await widget.store.rememberTracking(
+          TrackedRequest(
+            token: trackingToken,
+            businessName: widget.info.name,
+            label: 'Demande n° ${result.orderNumber ?? shortOrderId(result.id)}',
+            createdAt: DateTime.now(),
+          ),
+        );
+        await PushService.instance.subscribe(trackingToken);
+      }
       if (!mounted) return;
       setState(() {
         _result = result;
@@ -329,7 +344,24 @@ class _ServiceRequestScreenState extends State<ServiceRequestScreen> {
             ),
             const SizedBox(height: 8),
           ],
-          FilledButton(
+          if (result.trackingToken != null) ...[
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute<void>(
+                  builder: (_) => TrackingScreen(
+                    token: result.trackingToken!,
+                    repository: widget.repository,
+                    store: widget.store,
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.assignment_outlined),
+              label: const Text('Suivre ma demande'),
+            ),
+            const SizedBox(height: 8),
+          ],
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Retour aux services'),
           ),
