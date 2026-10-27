@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { useNotificationStore } from '@/store/notifications';
+import { toUserError } from '@/lib/user-error';
 import { Plus, Pencil, Trash2, Check, ToggleLeft, ToggleRight, Grid3X3, Package, Layers } from 'lucide-react';
 import {
   getAllBusinessTypes, getAllAppModules, getTypeModules,
@@ -21,6 +24,16 @@ const ACCENT_OPTIONS = [
 ];
 
 export function ModulesTab() {
+  const { askConfirm, ConfirmDialog } = useConfirm();
+  const { error: notifError } = useNotificationStore();
+
+  function confirmDelete(label: string, remove: () => Promise<void>) {
+    askConfirm(`Supprimer « ${label} » ?`, async () => {
+      try { await remove(); await load(); }
+      catch (e) { notifError(toUserError(e)); }
+    }, { confirmLabel: 'Supprimer' });
+  }
+
   const [subTab, setSubTab] = useState<SubTab>('types');
   const [types,   setTypes]   = useState<BusinessTypeRow[]>([]);
   const [modules, setModules] = useState<AppModule[]>([]);
@@ -138,6 +151,7 @@ export function ModulesTab() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog />
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-surface-input rounded-xl p-1 w-fit">
         {([['types', "Types d'établissement", Layers], ['modules', 'Modules', Package], ['matrix', 'Matrice', Grid3X3]] as const).map(([id, label, Icon]) => (
@@ -185,7 +199,7 @@ export function ModulesTab() {
                 <div>
                   <label className="label">Couleur accent</label>
                   <select className="input" value={editingType.accent_color ?? 'brand'} onChange={(e) => setEditingType((p) => ({ ...p, accent_color: e.target.value }))}>
-                    {ACCENT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-gray-900 text-content-primary">{o.label}</option>)}
+                    {ACCENT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-surface-card text-content-primary">{o.label}</option>)}
                   </select>
                 </div>
                 <div>
@@ -249,7 +263,7 @@ export function ModulesTab() {
                         <button onClick={() => setEditingType(t)} className="p-1.5 text-content-secondary hover:text-content-primary rounded-lg hover:bg-surface-input transition-colors">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={async () => { if (confirm(`Supprimer "${t.label}" ?`)) { await deleteBusinessType(t.id); load(); } }}
+                        <button onClick={() => confirmDelete(t.label, () => deleteBusinessType(t.id))}
                           className="p-1.5 text-content-secondary hover:text-status-error rounded-lg hover:bg-badge-error transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -359,7 +373,7 @@ export function ModulesTab() {
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         {!m.is_core && (
-                          <button onClick={async () => { if (confirm(`Supprimer "${m.label}" ?`)) { await deleteAppModule(m.id); load(); } }}
+                          <button onClick={() => confirmDelete(m.label, () => deleteAppModule(m.id))}
                             className="p-1.5 text-content-secondary hover:text-status-error rounded-lg hover:bg-badge-error transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

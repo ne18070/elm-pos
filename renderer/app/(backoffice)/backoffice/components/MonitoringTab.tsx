@@ -242,7 +242,7 @@ function SlugBadge({ slug, isDuplicate }: { slug: string | null; isDuplicate?: b
         title={isDuplicate ? "SLUG EN DOUBLE ! Cliquez pour copier" : "Copier le slug"}
         className={cn(
           "p-0.5 transition-colors shrink-0",
-          isDuplicate ? "text-status-error hover:text-red-400" : "text-content-muted hover:text-content-brand"
+          isDuplicate ? "text-status-error hover:text-status-error" : "text-content-muted hover:text-content-brand"
         )}
       >
         {copied ? <Check className="w-3 h-3 text-status-success" /> : <Copy className="w-3 h-3" />}

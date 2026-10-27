@@ -8,28 +8,50 @@ import {
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { getPlans, upsertPlan, type Plan } from '@services/supabase/subscriptions';
+import { useNotificationStore } from '@/store/notifications';
+
+const NEW_PLAN: Partial<Plan> = { name: '', label: '', price: 0, currency: 'XOF', duration_days: 30, features: [], is_active: true, sort_order: 0 };
 
 export default function PlansPage() {
   const [plans, setPlans]     = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<Plan> | null>(null);
+  // Texte brut : découper à chaque frappe supprimait la ligne vide créée par Entrée
+  const [featuresText, setFeaturesText] = useState('');
+  const [formError, setFormError] = useState('');
   const [saving, setSaving]   = useState(false);
+  const { success, error: notifError } = useNotificationStore();
 
   async function load() {
     setLoading(true);
-    try { setPlans(await getPlans()); } finally { setLoading(false); }
+    try { setPlans(await getPlans()); }
+    catch (e) { notifError(toUserError(e)); }
+    finally { setLoading(false); }
   }
 
   useEffect(() => { load(); }, []);
 
+  function openEditor(plan: Partial<Plan>) {
+    setEditing({ ...plan });
+    setFeaturesText((plan.features ?? []).join('\n'));
+    setFormError('');
+  }
+
   async function handleSave() {
     if (!editing) return;
+    if (!editing.label?.trim() || !editing.name?.trim()) { setFormError('Le libellé et le slug sont requis.'); return; }
+    if (editing.price == null || editing.price < 0)       { setFormError('Indiquez un prix (0 ou plus).'); return; }
+    if (!editing.duration_days || editing.duration_days < 1) { setFormError('La durée doit être d\'au moins 1 jour.'); return; }
     setSaving(true);
-    try { 
-      await upsertPlan(editing); 
-      setEditing(null); 
-      await load(); 
-    } catch (e) { alert(toUserError(e)); }
+    try {
+      await upsertPlan({
+        ...editing,
+        features: featuresText.split('\n').map((f) => f.trim()).filter(Boolean),
+      });
+      setEditing(null);
+      success('Plan enregistré');
+      await load();
+    } catch (e) { setFormError(toUserError(e)); }
     finally { setSaving(false); }
   }
 
@@ -41,7 +63,7 @@ export default function PlansPage() {
           <p className="text-content-muted text-sm mt-1">Gérez les offres commerciales et les fonctionnalités incluses.</p>
         </div>
         <button 
-          onClick={() => setEditing({ name: '', label: '', price: 0, currency: 'XOF', duration_days: 30, features: [], is_active: true, sort_order: 0 })} 
+          onClick={() => openEditor(NEW_PLAN)}
           className="btn-primary h-11 px-6 flex items-center gap-2 shadow-lg shadow-brand-500/20"
         >
           <Plus className="w-5 h-5" />
@@ -53,7 +75,7 @@ export default function PlansPage() {
         <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.sort((a,b) => a.sort_order - b.sort_order).map((plan) => (
+          {[...plans].sort((a,b) => a.sort_order - b.sort_order).map((plan) => (
             <div key={plan.id} className={cn(
               "card p-0 flex flex-col transition-all group relative overflow-hidden",
               !plan.is_active && "opacity-60"
@@ -68,7 +90,7 @@ export default function PlansPage() {
                     <p className="text-[10px] font-black text-content-muted uppercase tracking-[0.2em]">{plan.name}</p>
                   </div>
                   <button 
-                    onClick={() => setEditing({ ...plan })} 
+                    onClick={() => openEditor(plan)}
                     className="p-2 rounded-xl bg-surface-input text-content-secondary hover:text-content-primary transition-all border border-surface-border shadow-sm"
                   >
                     <Pencil size={16} />
@@ -98,7 +120,7 @@ export default function PlansPage() {
                       <Clock size={12} /> {plan.duration_days} Jours
                    </div>
                    {!plan.is_active && (
-                     <span className="text-[10px] font-black uppercase bg-badge-error text-status-error px-2 py-0.5 rounded border border-red-900/50">Désactivé</span>
+                     <span className="text-[10px] font-black uppercase bg-badge-error text-status-error px-2 py-0.5 rounded border border-status-error/50">Désactivé</span>
                    )}
                 </div>
               </div>
@@ -131,7 +153,7 @@ export default function PlansPage() {
                  </div>
                  <div className="col-span-2 md:col-span-1">
                     <label className="label text-[10px] uppercase font-black tracking-widest">Prix</label>
-                    <input type="number" className="input h-12" value={editing.price ?? 0} onChange={e => setEditing({...editing, price: parseFloat(e.target.value) || 0})} />
+                    <input type="number" min={0} className="input h-12" value={editing.price ?? ''} onChange={e => setEditing({...editing, price: e.target.value === '' ? undefined : parseFloat(e.target.value)})} />
                  </div>
                  <div className="col-span-2 md:col-span-1">
                     <label className="label text-[10px] uppercase font-black tracking-widest">Devise</label>
@@ -140,7 +162,7 @@ export default function PlansPage() {
                  <div className="col-span-2">
                     <label className="label text-[10px] uppercase font-black tracking-widest">Durée (Jours)</label>
                     <div className="flex gap-2 p-1 bg-surface-input rounded-xl border border-surface-border h-14 items-center px-4">
-                       <input type="number" className="bg-transparent border-none focus:ring-0 text-content-primary font-black text-xl w-24" value={editing.duration_days ?? 30} onChange={e => setEditing({...editing, duration_days: parseInt(e.target.value) || 30})} />
+                       <input type="number" className="bg-transparent border-none focus:ring-0 text-content-primary font-black text-xl w-24" min={1} value={editing.duration_days ?? ''} onChange={e => setEditing({...editing, duration_days: e.target.value === '' ? undefined : parseInt(e.target.value)})} />
                        <div className="h-6 w-px bg-surface-input mx-2" />
                        <button onClick={() => setEditing({...editing, duration_days: 30})} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", editing.duration_days === 30 ? "bg-brand-600 text-content-primary" : "text-content-muted")}>Mensuel</button>
                        <button onClick={() => setEditing({...editing, duration_days: 365})} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", editing.duration_days === 365 ? "bg-brand-600 text-content-primary" : "text-content-muted")}>Annuel</button>
@@ -150,8 +172,8 @@ export default function PlansPage() {
                     <label className="label text-[10px] uppercase font-black tracking-widest">Fonctionnalités (une par ligne)</label>
                     <textarea 
                       className="input min-h-[120px] py-4 text-xs font-medium leading-relaxed" 
-                      value={(editing.features ?? []).join('\n')} 
-                      onChange={e => setEditing({...editing, features: e.target.value.split('\n').filter(Boolean)})} 
+                      value={featuresText}
+                      onChange={e => setFeaturesText(e.target.value)}
                       placeholder="pos&#10;stock&#10;hotel"
                     />
                  </div>
@@ -166,6 +188,9 @@ export default function PlansPage() {
               </label>
             </div>
 
+            {formError && (
+              <p className="mx-8 mb-4 text-sm text-status-error bg-badge-error border border-status-error/30 rounded-xl px-3 py-2">{formError}</p>
+            )}
             <div className="p-6 bg-surface-hover border-t border-surface-border flex gap-4 shrink-0">
                <button onClick={() => setEditing(null)} className="btn-secondary flex-1 h-12 text-[10px] font-black uppercase tracking-widest">Annuler</button>
                <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 h-12 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-brand-500/20">

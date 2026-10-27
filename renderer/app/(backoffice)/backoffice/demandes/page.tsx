@@ -6,6 +6,7 @@ import {
   Search, Eye, X, Copy, Check as CheckIcon,
   ChevronLeft, ChevronRight, Check, Send, Trash2
 } from 'lucide-react';
+import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
@@ -62,6 +63,7 @@ function Pagination({ total, page, onChange }: { total: number; page: number; on
 }
 
 export default function RequestsPage() {
+  const { success, warning, error: notifError } = useNotificationStore();
   const [rows, setRows]           = useState<SubscriptionRequest[]>([]);
   const [publicRows, setPublicRows] = useState<PublicSubscriptionRequest[]>([]);
   const [plans, setPlans]         = useState<Plan[]>([]);
@@ -87,13 +89,16 @@ export default function RequestsPage() {
     setLoading(true);
     try {
       const [r, p, pl] = await Promise.all([
-        getSubscriptionRequests().catch(() => [] as SubscriptionRequest[]),
-        getPublicSubscriptionRequests().catch(() => [] as PublicSubscriptionRequest[]),
-        getPlans().catch(() => [] as Plan[]),
+        getSubscriptionRequests(),
+        getPublicSubscriptionRequests(),
+        getPlans(),
       ]);
       setRows(r);
       setPublicRows(p);
       setPlans(pl);
+    } catch (e) {
+      // Ne pas afficher une liste vide comme s'il n'y avait aucune demande
+      notifError(`Chargement des demandes impossible : ${toUserError(e)}`);
     } finally { setLoading(false); }
   };
   
@@ -112,7 +117,7 @@ export default function RequestsPage() {
       );
       setApproveForm(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setProcessing(null); }
   };
 
@@ -146,11 +151,11 @@ export default function RequestsPage() {
       const result = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
       if (!res.ok) throw new Error(result.error ?? 'Erreur serveur');
       if (result.emailError) {
-        alert(`Compte créé, mais l'email d'activation n'a pas pu être envoyé (${result.emailError}). Utilisez « Renvoyer l'email d'accès ».`);
+        warning(`Compte créé, mais l'email d'activation n'a pas pu être envoyé (${result.emailError}). Utilisez « Renvoyer l'email d'accès ».`);
       }
       setApprovePublicForm(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setProcessing(null); }
   };
 
@@ -167,8 +172,8 @@ export default function RequestsPage() {
         body: JSON.stringify({ email: req.email, business_name: req.business_name, plan_label: req.plan_label }),
       });
       if (!res.ok) throw new Error('Erreur lors du renvoi');
-      alert(`✅ Email renvoyé à ${req.email}`);
-    } catch (e) { alert(toUserError(e)); }
+      success(`Email renvoyé à ${req.email}`);
+    } catch (e) { notifError(toUserError(e)); }
     finally { setResending(null); }
   };
 
@@ -185,7 +190,7 @@ export default function RequestsPage() {
       setRejectId(null);
       setRejectNote('');
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setProcessing(null); }
   };
 
@@ -200,7 +205,7 @@ export default function RequestsPage() {
       }
       setDeleteId(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setProcessing(null); }
   };
 
@@ -539,7 +544,7 @@ export default function RequestsPage() {
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4 animate-in fade-in duration-300" onClick={() => setPreview(null)}>
           <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
              <img src={preview} alt="reçu" className="w-full h-auto rounded-3xl shadow-2xl border border-white/10" />
-             <button onClick={() => setPreview(null)} className="absolute -top-4 -right-4 w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white shadow-xl hover:bg-red-700 transition-colors"><X size={20} /></button>
+             <button onClick={() => setPreview(null)} className="absolute -top-4 -right-4 w-10 h-10 bg-status-error rounded-full flex items-center justify-center text-white shadow-xl hover:opacity-90 transition-colors"><X size={20} /></button>
           </div>
         </div>
       )}

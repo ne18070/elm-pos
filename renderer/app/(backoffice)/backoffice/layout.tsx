@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Layers, Users, CreditCard, 
   Settings, Megaphone, Mail, LogOut, ChevronLeft,
   ChevronRight, Search, Bell, BarChart2, Smartphone,
-  Command, Package, Grid3X3, HelpCircle
+  Command, Package, Grid3X3, HelpCircle, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
@@ -26,7 +26,8 @@ interface NavItem {
 export default function BackofficeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, business, clear } = useAuthStore();
+  const { user, clear, isLoading } = useAuthStore();
+  const isSuperadmin = !!user?.is_superadmin;
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [supportCount, setSupportCount] = useState(0);
@@ -50,13 +51,14 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
   }, []);
 
   useEffect(() => {
-    // Check if user is superadmin (simplified check, should be more robust)
-    if (user && !user.is_superadmin) {
-      router.push('/dashboard');
+    // Sans session, AuthProvider redirige vers /login ; ici on écarte les non-superadmins
+    if (!isLoading && user && !user.is_superadmin) {
+      router.replace('/dashboard');
     }
-  }, [user, router]);
+  }, [isLoading, user, router]);
 
   useEffect(() => {
+    if (!isSuperadmin) return;
     Promise.all([
       getSubscriptionRequests().catch(() => []),
       getPublicSubscriptionRequests().catch(() => []),
@@ -68,7 +70,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
       );
       setSupportCount(tickets.filter(t => t.status === 'open').length);
     });
-  }, []);
+  }, [isSuperadmin]);
 
   const navItems: NavItem[] = [
     { label: 'Tableau de bord', href: '/backoffice', icon: LayoutDashboard },
@@ -80,6 +82,15 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
     { label: 'Marketing', href: '/backoffice/marketing', icon: Megaphone },
     { label: 'Paramètres', href: '/backoffice/settings', icon: Settings },
   ];
+
+  // Rien du backoffice n'est rendu tant que le rôle superadmin n'est pas confirmé
+  if (!isSuperadmin) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-surface">
+        <Loader2 className="w-8 h-8 animate-spin text-content-brand" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
@@ -125,7 +136,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
                 )}
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className={cn(
-                    "absolute flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[10px] font-black bg-red-500 text-content-primary shadow-lg",
+                    "absolute flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[10px] font-black bg-status-error text-white shadow-lg",
                     isSidebarOpen ? "right-3" : "top-1 right-1"
                   )}>
                     {item.badge > 9 ? '9+' : item.badge}
@@ -139,7 +150,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
         <div className="p-4 border-t border-surface-border">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-content-secondary hover:text-status-error hover:bg-red-500/10 transition-all group"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-content-secondary hover:text-status-error hover:bg-badge-error transition-all group"
           >
             <LogOut className="w-5 h-5 text-content-muted group-hover:text-status-error" />
             {isSidebarOpen && <span className="text-sm font-bold">Déconnexion</span>}

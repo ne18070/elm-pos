@@ -6,6 +6,7 @@ import {
   Mail, Grid3X3, CreditCard, ShieldCheck, FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { 
   getPaymentSettings, upsertPaymentSettings, uploadQrCode,
@@ -17,6 +18,7 @@ import { EmailTemplatesTab } from '../components/EmailTemplatesTab';
 type SettingsTab = 'paiement' | 'modules' | 'emails';
 
 export default function SettingsPage() {
+  const { success, error: notifError } = useNotificationStore();
   const [activeTab, setActiveTab] = useState<SettingsTab>('paiement');
   
   // Payment State
@@ -41,7 +43,9 @@ export default function SettingsPage() {
           invoice_rccm:         s?.invoice_rccm ?? '',
           invoice_email:        s?.invoice_email ?? '',
         });
-      }).finally(() => setPaymentLoading(false));
+      })
+        .catch((e) => notifError(toUserError(e)))
+        .finally(() => setPaymentLoading(false));
     }
   }, [activeTab]);
 
@@ -50,7 +54,7 @@ export default function SettingsPage() {
     try { 
       const url = await uploadQrCode(type, file); 
       setPaymentForm((f) => ({ ...f, [`${type}_qr_url`]: url })); 
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setUploading(null); }
   }
 
@@ -58,8 +62,8 @@ export default function SettingsPage() {
     setPaymentSaving(true);
     try { 
       await upsertPaymentSettings(paymentForm); 
-      alert('Paramètres enregistrés');
-    } catch (e) { alert(toUserError(e)); }
+      success('Paramètres enregistrés');
+    } catch (e) { notifError(toUserError(e)); }
     finally { setPaymentSaving(false); }
   }
 
@@ -95,7 +99,10 @@ export default function SettingsPage() {
       </div>
 
       <div className="animate-in fade-in duration-500">
-        {activeTab === 'paiement' && (
+        {activeTab === 'paiement' && paymentLoading && (
+          <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-content-brand" /></div>
+        )}
+        {activeTab === 'paiement' && !paymentLoading && (
           <div className="max-w-2xl space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="card p-6 space-y-4 col-span-2">
@@ -156,9 +163,9 @@ export default function SettingsPage() {
                     {(paymentForm as any)[field] ? (
                       <div className="relative group">
                         <img src={(paymentForm as any)[field]} alt={label} className="w-32 h-32 object-contain" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                        <div className={cn("absolute inset-0 bg-black/60 transition-opacity flex items-center justify-center rounded-xl", uploading === type ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                            <label className="cursor-pointer p-2 bg-brand-600 rounded-full text-content-primary shadow-xl">
-                              <Upload size={16} />
+                              {uploading === type ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(type, e.target.files[0])} />
                            </label>
                         </div>

@@ -5,8 +5,10 @@ import { Loader2, Send, Users, Mail, AlertTriangle, CheckCircle } from 'lucide-r
 import { getAllSubscriptions, type SubscriptionRow } from '@services/supabase/subscriptions';
 import { sendEmail } from '@services/resend';
 import { toUserError } from '@/lib/user-error';
+import { useConfirm } from '@/components/shared/ConfirmDialog';
 
 export function MarketingTab() {
+  const { askConfirm, ConfirmDialog } = useConfirm();
   const [subs, setSubs] = useState<SubscriptionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -59,8 +61,14 @@ export function MarketingTab() {
       return;
     }
 
-    if (!confirm(`Voulez-vous envoyer cet email à ${emails.length} contact(s) ?`)) return;
+    askConfirm(
+      `Envoyer cet email à ${emails.length} contact${emails.length > 1 ? 's' : ''} ?`,
+      sendCampaign,
+      { confirmLabel: 'Envoyer', danger: false },
+    );
+  }
 
+  async function sendCampaign() {
     setSending(true);
     setSuccess(null);
     setError(null);
@@ -107,6 +115,7 @@ export function MarketingTab() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <ConfirmDialog />
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Mail className="w-5 h-5 text-content-brand" />
@@ -213,16 +222,16 @@ export function MarketingTab() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 flex items-start gap-3">
+          <div className="bg-badge-error border border-status-error/50 rounded-xl p-3 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-status-error shrink-0" />
-            <p className="text-sm text-red-200">{error}</p>
+            <p className="text-sm text-status-error">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="bg-green-500/10 border border-green-500/50 rounded-xl p-3 flex items-start gap-3">
+          <div className="bg-badge-success border border-status-success/50 rounded-xl p-3 flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-status-success shrink-0" />
-            <p className="text-sm text-green-200">{success}</p>
+            <p className="text-sm text-status-success">{success}</p>
           </div>
         )}
 
@@ -272,7 +281,7 @@ export function MarketingTab() {
               </div>
             )}
             
-            <div className="pt-6 border-t border-slate-100 mt-6">
+            <div className="pt-6 border-t border-surface-border mt-6">
               <p className="text-[#94a3b8] text-[10px] text-center">
                 ELM APP · Gestion simplifiée pour l'Afrique<br/>
                 contact@elm-app.click

@@ -17,10 +17,10 @@ import { useNotificationStore } from '@/store/notifications';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: any }> = {
-  open:        { label: 'Ouvert',      color: 'text-status-info bg-blue-500/10 border-blue-500/20', icon: Clock },
-  in_progress: { label: 'En cours',   color: 'text-status-warning bg-amber-500/10 border-amber-500/20', icon: ActivityIcon },
-  resolved:    { label: 'Résolu',      color: 'text-status-success bg-emerald-500/10 border-emerald-500/20', icon: CheckCircle2 },
-  closed:      { label: 'Fermé',      color: 'text-content-muted bg-slate-500/10 border-slate-500/20', icon: XCircle },
+  open:        { label: 'Ouvert',      color: 'text-status-info bg-badge-info border-status-info/20', icon: Clock },
+  in_progress: { label: 'En cours',   color: 'text-status-warning bg-badge-warning border-status-warning/20', icon: ActivityIcon },
+  resolved:    { label: 'Résolu',      color: 'text-status-success bg-badge-success border-status-success/20', icon: CheckCircle2 },
+  closed:      { label: 'Fermé',      color: 'text-content-muted bg-surface-input border-surface-border', icon: XCircle },
 };
 
 const TYPE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
@@ -114,7 +114,7 @@ export default function SupportAdminPage() {
           onClick={() => setStatusFilter('all')}
           className={cn(
             "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all",
-            statusFilter === 'all' ? "bg-white text-black border-white shadow-lg" : "bg-surface-card border border-surface-border text-content-muted hover:text-content-primary"
+            statusFilter === 'all' ? "bg-brand-600 text-white border-brand-600 shadow-lg" : "bg-surface-card border border-surface-border text-content-muted hover:text-content-primary"
           )}
         >
           Tous ({tickets.length})
@@ -153,7 +153,7 @@ export default function SupportAdminPage() {
                   onClick={() => setSelectedTicket(ticket)}
                   className="card p-6 border-surface-border hover:border-brand-500/50 transition-all group cursor-pointer relative overflow-hidden flex flex-col md:flex-row md:items-center gap-6"
                 >
-                  <div className={cn("w-1.5 h-12 rounded-full absolute left-0 top-1/2 -translate-y-1/2", ticket.priority === 'urgent' ? 'bg-red-500' : ticket.priority === 'high' ? 'bg-orange-500' : 'bg-blue-500')} />
+                  <div className={cn("w-1.5 h-12 rounded-full absolute left-0 top-1/2 -translate-y-1/2", ticket.priority === 'urgent' ? 'bg-status-error' : ticket.priority === 'high' ? 'bg-status-orange' : 'bg-status-info')} />
                   
                   <div className="flex-1 space-y-2 min-w-0">
                     <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ export default function SupportAdminPage() {
                         <typeCfg.icon size={12} />
                         {typeCfg.label}
                       </span>
-                      <span className="text-slate-700">•</span>
+                      <span className="text-content-muted">•</span>
                       <span className="text-[10px] font-bold text-content-muted uppercase">{new Date(ticket.created_at).toLocaleString('fr-FR')}</span>
                     </div>
                     <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{ticket.subject}</h3>
@@ -188,7 +188,7 @@ export default function SupportAdminPage() {
                          </div>
                        )}
                     </div>
-                    <ChevronRight className="text-slate-700 group-hover:text-content-brand transition-colors" />
+                    <ChevronRight className="text-content-muted group-hover:text-content-brand transition-colors" />
                   </div>
                 </div>
               );
@@ -293,7 +293,7 @@ export default function SupportAdminPage() {
             </div>
 
             {selectedTicket.status === 'open' && (
-              <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/10 flex items-start gap-4">
+              <div className="p-5 rounded-3xl bg-badge-info/50 border border-status-info/20 flex items-start gap-4">
                  <ShieldAlert className="text-status-info shrink-0" size={20} />
                  <div className="space-y-1">
                     <p className="text-xs font-bold text-content-primary">Prise en charge nécessaire</p>

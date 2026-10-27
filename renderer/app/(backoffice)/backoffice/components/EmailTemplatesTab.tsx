@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Save, Pencil, Mail, Eye, Code2 } from 'lucide-react';
 import type { Database } from '@services/supabase/database.types';
+import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { supabase } from '@services/supabase/client';
 
@@ -22,6 +23,7 @@ async function adminFetch(path: string, options?: RequestInit) {
 }
 
 export function EmailTemplatesTab() {
+  const { error: notifError } = useNotificationStore();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading]     = useState(true);
   const [editing, setEditing]     = useState<EmailTemplate | null>(null);
@@ -35,7 +37,7 @@ export function EmailTemplatesTab() {
       if (!res.ok) throw new Error((await res.json()).error);
       setTemplates(await res.json());
     } catch (e) {
-      alert(toUserError(e));
+      notifError(toUserError(e));
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,7 @@ export function EmailTemplatesTab() {
       setEditing(null);
       await load();
     } catch (e) {
-      alert(toUserError(e));
+      notifError(toUserError(e));
     } finally {
       setSaving(false);
     }

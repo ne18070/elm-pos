@@ -7,6 +7,7 @@ import {
   Phone as PhoneIcon, Mail as MailIcon, ChevronLeft, ChevronRight,
   Building2, Trash2, RefreshCw, AlertTriangle,
 } from 'lucide-react';
+import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
@@ -36,15 +37,16 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
 
 const getTypeBadge = (type: string) => {
   switch (type) {
-    case 'hotel':      return 'bg-blue-500/10 text-status-info border-blue-500/20';
-    case 'restaurant': return 'bg-orange-500/10 text-status-orange border-orange-500/20';
-    case 'retail':     return 'bg-green-500/10 text-status-success border-green-500/20';
-    case 'service':    return 'bg-purple-500/10 text-status-purple border-purple-500/20';
-    default:           return 'bg-slate-500/10 text-content-secondary border-slate-500/20';
+    case 'hotel':      return 'bg-badge-info text-status-info border-status-info/20';
+    case 'restaurant': return 'bg-badge-orange text-status-orange border-status-orange/20';
+    case 'retail':     return 'bg-badge-success text-status-success border-status-success/20';
+    case 'service':    return 'bg-badge-purple text-status-purple border-status-purple/20';
+    default:           return 'bg-surface-input text-content-secondary border-surface-border';
   }
 };
 
 export default function StructuresPage() {
+  const { error: notifError } = useNotificationStore();
   const [orgs, setOrgs]             = useState<OrganizationWithBusinesses[]>([]);
   const [unassigned, setUnassigned] = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -67,7 +69,7 @@ export default function StructuresPage() {
       setOrgs(orgsData);
       setUnassigned(unassignedData);
     } catch (e) {
-      alert(toUserError(e));
+      notifError(toUserError(e));
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,7 @@ export default function StructuresPage() {
       });
       setOrgModal(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   };
 
@@ -121,7 +123,7 @@ export default function StructuresPage() {
       });
       setOrgModal(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   };
 
@@ -139,7 +141,7 @@ export default function StructuresPage() {
       });
       setAdminModal(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setSaving(false); }
   };
 
@@ -268,8 +270,8 @@ export default function StructuresPage() {
             </p>
           </div>
         </div>
-        <div className="p-5 rounded-3xl bg-blue-500/5 border border-blue-500/10 flex gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
+        <div className="p-5 rounded-3xl bg-badge-info/50 border border-status-info/20 flex gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-badge-info flex items-center justify-center shrink-0">
             <Building2 size={24} className="text-status-info" />
           </div>
           <div className="space-y-1">
@@ -410,12 +412,12 @@ export default function StructuresPage() {
             <div className="mt-16 space-y-6">
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-black text-status-warning uppercase tracking-widest">Établissements orphelins</h2>
-                <div className="h-px flex-1 bg-amber-500/20" />
+                <div className="h-px flex-1 bg-status-warning/20" />
                 <span className="text-xs font-bold text-status-warning/50">{filteredUnassigned.length} orphelins</span>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredUnassigned.map((biz: any) => (
-                  <div key={biz.id} className="card p-0 border-amber-500/20 hover:border-amber-500/40 transition-all group relative overflow-hidden flex flex-col">
+                  <div key={biz.id} className="card p-0 border-status-warning/20 hover:border-status-warning/40 transition-all group relative overflow-hidden flex flex-col">
                     <div className="p-6 flex-1 space-y-4">
                       <div className="space-y-1 min-w-0">
                         <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
@@ -426,7 +428,7 @@ export default function StructuresPage() {
                         {biz.denomination && <p className="text-xs text-content-secondary italic truncate">{biz.denomination}</p>}
                       </div>
                     </div>
-                    <div className="px-6 py-4 bg-amber-500/5 border-t border-amber-500/20 flex items-center justify-between">
+                    <div className="px-6 py-4 bg-badge-warning/50 border-t border-status-warning/20 flex items-center justify-between">
                       <span className="text-xs text-status-warning font-bold">⚠️ Sans organisation</span>
                       <button onClick={() => setAdminModal(biz)} className="text-[10px] font-black uppercase tracking-widest text-content-brand hover:text-content-brand transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10">
                         <Plus className="w-3 h-3" /> Créer Admin

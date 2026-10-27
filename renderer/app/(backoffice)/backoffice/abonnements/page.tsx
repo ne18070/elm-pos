@@ -6,6 +6,7 @@ import {
   Search, ChevronLeft, ChevronRight,
   Zap, Trash2
 } from 'lucide-react';
+import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
@@ -50,6 +51,7 @@ function Pagination({ total, page, onChange }: { total: number; page: number; on
 }
 
 export default function SubscriptionsPage() {
+  const { error: notifError } = useNotificationStore();
   const [rows, setRows]             = useState<SubscriptionRow[]>([]);
   const [plans, setPlans]           = useState<Plan[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -71,7 +73,9 @@ export default function SubscriptionsPage() {
       ]);
       setRows(subs);
       setPlans(plansData);
-    } catch { /* pas superadmin */ }
+    } catch (e) {
+      notifError(`Chargement des abonnements impossible : ${toUserError(e)}`);
+    }
     finally { setLoading(false); }
   }
 
@@ -96,7 +100,7 @@ export default function SubscriptionsPage() {
     // Vide = prix du plan × nombre de périodes (calculé en base), 0 = pas de facture
     const amount = form.amount.trim() === '' ? undefined : Number(form.amount);
     if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) {
-      alert('Montant facturé invalide');
+      notifError('Montant facturé invalide');
       setActivating(null);
       return;
     }
@@ -104,7 +108,7 @@ export default function SubscriptionsPage() {
       await activateSubscription(form.businessId, form.planId, totalDays, form.note || undefined, amount);
       setForm(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setActivating(null); }
   }
 
@@ -115,7 +119,7 @@ export default function SubscriptionsPage() {
       await deleteAccount(deleteConfirm.ownerId);
       setDeleteConfirm(null);
       await load();
-    } catch (e) { alert(toUserError(e)); }
+    } catch (e) { notifError(toUserError(e)); }
     finally { setDeleting(false); }
   }
 

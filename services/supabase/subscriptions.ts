@@ -154,6 +154,16 @@ export async function activateSubscription(
   if (error) throw new Error(error.message);
 }
 
+/** Superadmin : factures émises depuis une date (montant + devise seulement, pour les KPI). */
+export async function getInvoiceTotalsSince(sinceIso: string): Promise<Pick<SubscriptionInvoice, 'amount' | 'currency'>[]> {
+  const { data, error } = await db
+    .from('subscription_invoices')
+    .select('amount, currency')
+    .gte('issued_at', sinceIso);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 /** Factures visibles par l'utilisateur courant (RLS : titulaire, owner/admin, superadmin). */
 export async function getMySubscriptionInvoices(): Promise<SubscriptionInvoice[]> {
   const { data, error } = await db
