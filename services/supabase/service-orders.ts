@@ -635,6 +635,25 @@ export async function getTechnicianServiceOrders(token: string): Promise<Technic
   return result;
 }
 
+/**
+ * Notifie le client (Web Push + app ELM Boutique) du statut actuel de l'OT.
+ * Fire-and-forget : n'échoue jamais. Le serveur exige d'être membre de
+ * l'établissement (session) ou technicien assigné (technicianToken).
+ */
+export async function notifyServiceOrderClient(serviceOrderId: string, technicianToken?: string): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch('/api/client-push/notify', {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ serviceOrderId, technicianToken }),
+    });
+  } catch { /* notification best-effort */ }
+}
+
 export async function updateTechnicianServiceOrderStatus(
   token: string,
   orderId: string,

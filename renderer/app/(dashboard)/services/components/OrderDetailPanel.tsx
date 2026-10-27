@@ -11,7 +11,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { cn, formatCurrency, fmtInTz } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
-  updateServiceOrderStatus, cancelServiceOrder, updateServiceOrder,
+  updateServiceOrderStatus, cancelServiceOrder, updateServiceOrder, notifyServiceOrderClient,
   getOrCreateServiceTechnicianToken, toggleServiceOrderCredit,
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
@@ -118,16 +118,7 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
     setBusy(true);
     try {
       await updateServiceOrderStatus(order.id, newStatus, { userId: user?.id, userName: user?.full_name });
-      fetch('/api/client-push/notify', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceOrderId: order.id,
-          status:         newStatus,
-          orderRef:       `OT-${String(order.order_number).padStart(4, '0')}`,
-          businessName:   business?.name ?? '',
-        }),
-      }).catch(() => {});
+      void notifyServiceOrderClient(order.id);
       onRefresh(); onClose();
     }
     catch (e: any) { notifError(toUserError(e)); }

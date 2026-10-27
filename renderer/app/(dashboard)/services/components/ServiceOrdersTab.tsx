@@ -13,7 +13,7 @@ import { useCan } from '@/hooks/usePermission';
 import { useCashSessionStore } from '@/store/cashSession';
 import { toUserError } from '@/lib/user-error';
 import { 
-  updateServiceOrderStatus, 
+  updateServiceOrderStatus, notifyServiceOrderClient,
   type ServiceOrder, 
   type ServiceOrderStatus 
 } from '@services/supabase/service-orders';
@@ -158,18 +158,7 @@ export function ServiceOrdersTab({
       onStatusChange?.();
       success('Statut mis à jour');
       // Push notification client (fire-and-forget)
-      if (order) {
-        fetch('/api/client-push/notify', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            serviceOrderId: id,
-            status,
-            orderRef:     `OT-${String(order.order_number).padStart(4, '0')}`,
-            businessName: business?.name ?? '',
-          }),
-        }).catch(() => {});
-      }
+      if (order) void notifyServiceOrderClient(id);
     } catch (err: any) { notifError(toUserError(err)); }
   }
 

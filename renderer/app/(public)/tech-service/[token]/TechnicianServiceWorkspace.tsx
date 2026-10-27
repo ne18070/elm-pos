@@ -13,6 +13,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import {
   getTechnicianServiceOrders,
   updateTechnicianServiceOrderStatus,
+  notifyServiceOrderClient,
   type TechnicianServiceOrder,
   type TechnicianWorkspaceData,
   type ServiceOrderStatus,
@@ -219,16 +220,7 @@ export default function TechnicianServiceWorkspace() {
                                 'OT marqué comme terminé',
       );
       await load();
-      fetch('/api/client-push/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceOrderId: order.id,
-          status,
-          orderRef: orderRef(order.order_number),
-          businessName: data?.business.name ?? '',
-        }),
-      }).catch(() => {});
+      void notifyServiceOrderClient(order.id, tokenValue);
     } catch (e: any) {
       setError(e?.message ?? 'Action refusée');
     } finally {
