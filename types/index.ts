@@ -454,7 +454,6 @@ export interface PublicSubscriptionRequest {
   plan_price:    number | null;
   plan_currency: string | null;
   receipt_url:   string | null;
-  password:      string | null;
   status:        'pending' | 'approved' | 'rejected';
   note:          string | null;
   created_at:    string;

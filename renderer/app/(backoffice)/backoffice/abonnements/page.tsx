@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { 
-  Loader2, CheckCircle, Clock, XCircle, RefreshCw, 
-  Smartphone, Search, ChevronLeft, ChevronRight, 
-  Settings2, Zap, X, Trash2
+import {
+  Loader2, CheckCircle, Clock, XCircle, RefreshCw,
+  Search, ChevronLeft, ChevronRight,
+  Zap, Trash2
 } from 'lucide-react';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
@@ -12,7 +12,6 @@ import {
   getAllSubscriptions, activateSubscription, getPlans, deleteAccount,
   type SubscriptionRow, type Plan 
 } from '@services/supabase/subscriptions';
-import { getIntouchConfig, upsertIntouchConfig } from '@services/supabase/intouch';
 import { SideDrawer } from '@/components/ui/SideDrawer';
 
 const PAGE_SIZE = 25;
@@ -57,36 +56,20 @@ export default function SubscriptionsPage() {
   const [search, setSearch]         = useState('');
   const [activating, setActivating] = useState<string | null>(null);
   const [form, setForm]             = useState<{
-    businessId: string; planId: string; days: string; mode: 'jours' | 'mois'; note: string;
+    businessId: string; planId: string; days: string; mode: 'jours' | 'mois'; note: string; amount: string;
   } | null>(null);
   const [page, setPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<{ ownerId: string; businessId: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Intouch Config
-  const [intouchForm, setIntouchForm] = useState<{
-    businessId: string; partner_id: string; api_key: string; merchant_id: string; is_active: boolean;
-  } | null>(null);
-  const [intouchLoading, setIntouchLoading] = useState(false);
-  const [intouchConfigs, setIntouchConfigs] = useState<Record<string, boolean>>({});
-
   async function load() {
     setLoading(true);
     try {
-      const [subs, configs, plansData] = await Promise.all([
+      const [subs, plansData] = await Promise.all([
         getAllSubscriptions(),
-        (async () => {
-           const { data } = await (getIntouchConfig as any).supabase
-            .from('intouch_configs_public')
-            .select('business_id, is_active');
-           const map: Record<string, boolean> = {};
-           (data ?? []).forEach((c: any) => { map[c.business_id] = c.is_active; });
-           return map;
-        })().catch(() => ({})),
         getPlans()
       ]);
       setRows(subs);
-      setIntouchConfigs(configs);
       setPlans(plansData);
     } catch { /* pas superadmin */ }
     finally { setLoading(false); }
@@ -110,50 +93,26 @@ export default function SubscriptionsPage() {
     const totalDays = form.mode === 'mois'
       ? (parseInt(form.days) || 1) * 30
       : parseInt(form.days) || 30;
+    // Vide = prix du plan × nombre de périodes (calculé en base), 0 = pas de facture
+    const amount = form.amount.trim() === '' ? undefined : Number(form.amount);
+    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) {
+      alert('Montant facturé invalide');
+      setActivating(null);
+      return;
+    }
     try {
-      await activateSubscription(form.businessId, form.planId, totalDays, form.note || undefined);
+      await activateSubscription(form.businessId, form.planId, totalDays, form.note || undefined, amount);
       setForm(null);
       await load();
     } catch (e) { alert(toUserError(e)); }
     finally { setActivating(null); }
   }
 
-  async function openIntouch(businessId: string) {
-    setIntouchLoading(true);
-    try {
-      const config = await getIntouchConfig(businessId) as any;
-      setIntouchForm({
-        businessId,
-        partner_id:  config?.partner_id ?? '',
-        api_key:     config?.api_key ?? '', 
-        merchant_id: config?.merchant_id ?? '',
-        is_active:   config?.is_active ?? false,
-      });
-    } catch (e) { alert(toUserError(e)); }
-    finally { setIntouchLoading(false); }
-  }
-
-  async function handleSaveIntouch() {
-    if (!intouchForm) return;
-    setIntouchLoading(true);
-    try {
-      await upsertIntouchConfig(intouchForm.businessId, {
-        partner_id:  intouchForm.partner_id,
-        api_key:     intouchForm.api_key,
-        merchant_id: intouchForm.merchant_id,
-        is_active:   intouchForm.is_active,
-      });
-      setIntouchForm(null);
-      load();
-    } catch (e) { alert(toUserError(e)); }
-    finally { setIntouchLoading(false); }
-  }
-
   async function handleDeleteAccount() {
     if (!deleteConfirm) return;
     setDeleting(true);
     try {
-      await deleteAccount(deleteConfirm.ownerId, deleteConfirm.businessId);
+      await deleteAccount(deleteConfirm.ownerId);
       setDeleteConfirm(null);
       await load();
     } catch (e) { alert(toUserError(e)); }
@@ -226,16 +185,9 @@ export default function SubscriptionsPage() {
                       </td>
                       <td className="px-6 py-4 text-content-primary font-bold">{row.plan_label ?? '-'}</td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border", badge.color)}>
-                            <Icon className="w-3 h-3" /> {badge.label}
-                          </span>
-                          {intouchConfigs[row.business_id] && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border border-status-brand/30 bg-badge-brand text-content-brand">
-                              <Smartphone className="w-2.5 h-2.5" /> Mobile-Pay
-                            </span>
-                          )}
-                        </div>
+                        <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border", badge.color)}>
+                          <Icon className="w-3 h-3" /> {badge.label}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-content-secondary text-xs font-medium">
                         {st === 'trial' && row.trial_ends_at
@@ -247,14 +199,7 @@ export default function SubscriptionsPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => openIntouch(row.business_id)}
-                            className="p-2 rounded-xl bg-surface-card text-content-secondary hover:text-content-brand transition-all border border-surface-border shadow-sm"
-                            title="Configurer Paiements"
-                          >
-                            <Settings2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setForm({ businessId: row.business_id, planId: plans[0]?.id ?? '', days: '1', mode: 'mois', note: '' })}
+                            onClick={() => setForm({ businessId: row.business_id, planId: plans[0]?.id ?? '', days: '1', mode: 'mois', note: '', amount: '' })}
                             className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-500/20 flex items-center gap-2 active:scale-95"
                           >
                             <Zap className="w-3.5 h-3.5" /> Activer
@@ -281,44 +226,6 @@ export default function SubscriptionsPage() {
       )}
 
       {/* -- SideDrawers -- */}
-
-      {/* Intouch */}
-      <SideDrawer
-        isOpen={!!intouchForm}
-        onClose={() => setIntouchForm(null)}
-        title="Configuration Intouch"
-        subtitle="Identifiants spécifiques à l'établissement"
-        footer={
-          <div className="flex gap-4">
-            <button onClick={() => setIntouchForm(null)} className="btn-secondary flex-1 h-12 font-black uppercase tracking-widest text-xs">Annuler</button>
-            <button onClick={handleSaveIntouch} disabled={intouchLoading} className="btn-primary flex-1 h-12 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-xl shadow-brand-500/20">
-              {intouchLoading && <Loader2 size={16} className="animate-spin" />} Enregistrer
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 text-status-orange text-xs italic">
-            Ces paramètres écrasent les configurations globales de passerelle pour cet établissement uniquement.
-          </div>
-          <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Partner ID</label>
-            <input className="input h-12" value={intouchForm?.partner_id} onChange={e => setIntouchForm({...intouchForm!, partner_id: e.target.value})} placeholder="MY_PARTNER_ID" />
-          </div>
-          <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">API Key</label>
-            <input type="password" className="input h-12" value={intouchForm?.api_key} onChange={e => setIntouchForm({...intouchForm!, api_key: e.target.value})} placeholder="••••••••••••" />
-          </div>
-          <div>
-            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Merchant ID</label>
-            <input className="input h-12" value={intouchForm?.merchant_id} onChange={e => setIntouchForm({...intouchForm!, merchant_id: e.target.value})} placeholder="MY_MERCHANT_ID" />
-          </div>
-          <label className="flex items-center gap-3 p-4 rounded-2xl bg-surface-input border border-surface-border cursor-pointer group">
-            <input type="checkbox" checked={intouchForm?.is_active} onChange={e => setIntouchForm({...intouchForm!, is_active: e.target.checked})} className="w-5 h-5 accent-brand-500" />
-            <span className="text-xs font-black text-content-primary uppercase tracking-widest">Activer Intouch pour ce client</span>
-          </label>
-        </div>
-      </SideDrawer>
 
       {/* Activation Abonnement */}
       <SideDrawer
@@ -357,6 +264,23 @@ export default function SubscriptionsPage() {
                   ))}
                </div>
             </div>
+          </div>
+          <div>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Montant facturé</label>
+            <input
+              type="number" min={0} inputMode="numeric"
+              value={form?.amount ?? ''}
+              onChange={(e) => setForm((f: any) => ({ ...f, amount: e.target.value }))}
+              className="input h-12"
+              placeholder={(() => {
+                const plan = plans.find((p) => p.id === form?.planId);
+                if (!plan || !form) return 'Prix du plan';
+                const days = form.mode === 'mois' ? (parseInt(form.days) || 1) * 30 : parseInt(form.days) || 30;
+                const qty  = Math.max(1, Math.round(days / (plan.duration_days || days)));
+                return `${(plan.price * qty).toLocaleString('fr-FR')} ${displayCurrency(plan.currency)} (prix du plan)`;
+              })()}
+            />
+            <p className="text-[10px] text-content-muted mt-2 italic">Une facture est émise pour le client. Mettez 0 pour une activation gratuite (pas de facture).</p>
           </div>
           <div>
             <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Notes (Paiement, Réf...)</label>

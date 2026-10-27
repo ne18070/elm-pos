@@ -270,7 +270,7 @@ function DeleteOrgModal({
     setDeleting(true);
     setErr(null);
     try {
-      await deleteAccount(group.owner_id, group.businesses[0].business_id);
+      await deleteAccount(group.owner_id);
       onDeleted(group.owner_id);
       onClose();
     } catch (e) {

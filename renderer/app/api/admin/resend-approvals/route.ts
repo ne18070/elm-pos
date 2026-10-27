@@ -1,46 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { requireSuperadmin } from '@/lib/admin-auth';
+
+export const runtime = 'nodejs';
 
 function siteUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '');
 }
 
-async function requireSuperadmin(req: NextRequest): Promise<{ userId: string; error?: string }> {
-  const auth = req.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return { userId: '', error: 'Token manquant' };
-
-  const token = auth.slice(7);
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceKey) {
-    return { userId: '', error: 'Configuration serveur incomplète' };
-  }
-
-  // Utiliser directement le client ADMIN pour vérifier l'utilisateur
-  // C'est plus robuste que getUser(token) qui peut échouer sur des sessions complexes
-  const admin = createClient(url, serviceKey, { 
-    auth: { autoRefreshToken: false, persistSession: false } 
-  });
-  
-  // 1. Récupérer l'utilisateur via son token JWT décodé par Supabase
-  const { data: { user }, error: userError } = await admin.auth.getUser(token);
-  
-  if (userError || !user) {
-    console.error('[Admin API] getUser error:', userError?.message);
-    return { userId: '', error: 'Session invalide ou expirée. Déconnectez-vous et reconnectez-vous.' };
-  }
-
-  // 2. Vérifier s'il est superadmin
-  const { data: profile } = await admin.from('users').select('is_superadmin').eq('id', user.id).single();
-  
-  if (!profile?.is_superadmin) return { userId: user.id, error: 'Accès superadmin requis' };
-
-  return { userId: user.id };
-}
-
-async function buildInvitationLink(admin: any, email: string): Promise<string> {
+async function buildInvitationLink(admin: SupabaseClient, email: string): Promise<string> {
   // Tenter d'abord une invitation (crée l'utilisateur si absent)
   let { data, error } = await admin.auth.admin.generateLink({
     type: 'invite',
@@ -99,12 +67,10 @@ async function sendInvitationEmail(input: {
 }
 
 export async function POST(req: NextRequest) {
-  const { error: authError } = await requireSuperadmin(req);
-  if (authError) return NextResponse.json({ error: authError }, { status: 403 });
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const ctx = await requireSuperadmin(req);
+  if ('response' in ctx) return ctx.response;
+  const { admin } = ctx;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
 
   const body = await req.json().catch(() => ({}));
   const bearerToken = req.headers.get('authorization') ?? '';

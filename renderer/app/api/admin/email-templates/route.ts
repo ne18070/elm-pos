@@ -1,33 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireSuperadmin } from '@/lib/admin-auth';
 
-async function requireSuperadmin(req: NextRequest): Promise<{ error: string } | { adminClient: any }> {
-  const auth = req.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return { error: 'Token manquant' };
-
-  const token = auth.slice(7);
-  const url   = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const user  = createClient(url, anon, { auth: { persistSession: false } });
-
-  const { data: { user: authUser }, error } = await user.auth.getUser(token);
-  if (error || !authUser) return { error: 'Token invalide' };
-
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
-
-  const { data: profile } = await admin.from('users').select('is_superadmin').eq('id', authUser.id).single();
-  if (!profile?.is_superadmin) return { error: 'Accès superadmin requis' };
-
-  return { adminClient: admin };
-}
+export const runtime = 'nodejs';
 
 // GET /api/admin/email-templates
 export async function GET(req: NextRequest) {
-  const result = await requireSuperadmin(req);
-  if ('error' in result) return NextResponse.json({ error: result.error }, { status: 403 });
+  const ctx = await requireSuperadmin(req);
+  if ('response' in ctx) return ctx.response;
 
-  const { data, error } = await result.adminClient
+  const { data, error } = await ctx.admin
     .from('email_templates')
     .select('*')
     .order('created_at');
@@ -38,8 +19,8 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/email-templates
 export async function PATCH(req: NextRequest) {
-  const result = await requireSuperadmin(req);
-  if ('error' in result) return NextResponse.json({ error: result.error }, { status: 403 });
+  const ctx = await requireSuperadmin(req);
+  if ('response' in ctx) return ctx.response;
 
   let body: { id: string; name?: string; description?: string; html_body?: string; is_active?: boolean };
   try {
@@ -48,12 +29,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'JSON invalide' }, { status: 400 });
   }
 
-  const { id, ...patch } = body;
+  const { id, name, description, html_body, is_active } = body;
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
 
-  const { error } = await result.adminClient
+  // Seuls les champs éditables depuis le backoffice — jamais key/variables
+  const { error } = await ctx.admin
     .from('email_templates')
-    .update(patch)
+    .update({ name, description, html_body, is_active })
     .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

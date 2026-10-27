@@ -27,6 +27,31 @@ export interface PaymentSettings {
   wave_qr_url:     string | null;
   om_qr_url:       string | null;
   whatsapp_number: string;
+  // Mentions légales du vendeur, imprimées sur les factures d'abonnement
+  invoice_company_name: string | null;
+  invoice_address:      string | null;
+  invoice_ninea:        string | null;
+  invoice_rccm:         string | null;
+  invoice_email:        string | null;
+}
+
+/** Facture d'abonnement — figée à l'émission (acheteur, plan, montant copiés). */
+export interface SubscriptionInvoice {
+  id:               string;
+  invoice_number:   string;
+  business_id:      string | null;
+  plan_label:       string;
+  quantity:         number;
+  unit_price:       number;
+  amount:           number;
+  currency:         string;
+  period_start:     string;
+  period_end:       string;
+  buyer_name:       string;
+  buyer_legal_name: string | null;
+  buyer_email:      string | null;
+  payment_note:     string | null;
+  issued_at:        string;
 }
 
 // -- Lecture -------------------------------------------------------------------
@@ -108,19 +133,35 @@ export async function getAllSubscriptions(): Promise<SubscriptionRow[]> {
   return (data ?? []) as unknown as SubscriptionRow[];
 }
 
+/**
+ * Superadmin. Émet aussi la facture de la période.
+ * amount : montant facturé ; absent = prix du plan × nombre de périodes, 0 = pas de facture.
+ */
 export async function activateSubscription(
   businessId: string,
   planId:     string,
   days:       number,
-  note?:      string
+  note?:      string,
+  amount?:    number,
 ): Promise<void> {
   const { error } = await supabase.rpc('activate_subscription', {
     p_business_id: businessId,
     p_plan_id:     planId,
     p_days:        days,
     p_note:        note ?? undefined,
+    p_amount:      amount ?? undefined,
   });
   if (error) throw new Error(error.message);
+}
+
+/** Factures visibles par l'utilisateur courant (RLS : titulaire, owner/admin, superadmin). */
+export async function getMySubscriptionInvoices(): Promise<SubscriptionInvoice[]> {
+  const { data, error } = await db
+    .from('subscription_invoices')
+    .select('id, invoice_number, business_id, plan_label, quantity, unit_price, amount, currency, period_start, period_end, buyer_name, buyer_legal_name, buyer_email, payment_note, issued_at')
+    .order('issued_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SubscriptionInvoice[];
 }
 
 export async function upsertPaymentSettings(settings: Partial<PaymentSettings>): Promise<void> {
@@ -298,7 +339,6 @@ export interface PublicSubscriptionRequest {
   plan_price:    number | null;
   plan_currency: string | null;
   receipt_url:   string | null;
-  password:      string | null;
   status:        'pending' | 'approved' | 'rejected';
   note:          string | null;
   created_at:    string;
@@ -308,7 +348,8 @@ export interface PublicSubscriptionRequest {
 export async function getPublicSubscriptionRequests(): Promise<PublicSubscriptionRequest[]> {
   const { data, error } = await db
     .from('public_subscription_requests')
-    .select('*, plans(label, price, currency)')
+    // Colonnes explicites : ne jamais rapatrier l'ancienne colonne password
+    .select('id, business_name, denomination, email, full_name, phone, plan_id, receipt_url, status, note, created_at, processed_at, plans(label, price, currency)')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map((r: Record<string, any>) => ({
@@ -337,87 +378,11 @@ export async function rejectPublicRequest(requestId: string, note?: string, req?
   }
 }
 
-export async function approvePublicRequest(
-  requestId:  string,
-  req:        PublicSubscriptionRequest,
-  planId:     string,
-  days:       number,
-  note?:      string,
-): Promise<void> {
-  // Import admin client dynamically
-  const { supabaseAdmin: admin } = await import('./admin');
-  if (!admin) throw new Error("Accès refusé : clé de service manquante dans cet environnement.");
-
-  const password = req.password ?? Math.random().toString(36).slice(-10) + 'A1!';
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
-    email:          req.email,
-    password,
-    email_confirm:  true,
-    user_metadata: {
-      full_name: req.full_name || req.business_name,
-    }
-  });
-  if (authError) throw new Error(authError.message);
-  const userId = authData.user!.id;
-
-  const { error: userErr } = await admin.from('users').upsert({
-    id:        userId,
-    email:     req.email,
-    full_name: req.full_name || req.business_name,
-    role:      'owner',
-  }, { onConflict: 'id' });
-  if (userErr) throw new Error(userErr.message);
-
-  const { data: bizData, error: bizError } = await admin
-    .from('businesses')
-    .insert({
-      name:         req.business_name,
-      denomination: req.denomination || req.business_name,
-      owner_id:     userId,
-      type:         'retail',
-    })
-    .select('id')
-    .single();
-  if (bizError) throw new Error(bizError.message);
-  const businessId = bizData.id;
-
-  await admin.from('business_members').insert({
-    business_id: businessId,
-    user_id:     userId,
-    role:        'owner',
-  });
-
-  await admin
-    .from('users')
-    .update({ business_id: businessId })
-    .eq('id', userId);
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + days);
-  await activateSubscription(businessId, planId, days, note);
-
-  const { error: reqError } = await db
-    .from('public_subscription_requests')
-    .update({ status: 'approved', processed_at: new Date().toISOString(), note: note ?? null })
-    .eq('id', requestId);
-  if (reqError) throw new Error(reqError.message);
-
-  const { sendEmail } = await import('../resend');
-  sendEmail({
-    type:    'subscription_approved',
-    to:      req.email,
-    subject: '✅ Votre accès ELM APP est activé',
-    data: {
-      business_name: req.business_name,
-      email:         req.email,
-      password,
-      plan_label:    req.plan_label ?? 'Pro',
-      expires_at:    expiresAt.toISOString(),
-    },
-  }).catch(() => {});
-}
-
-export async function deleteAccount(ownerId: string, businessId: string): Promise<void> {
+/**
+ * Superadmin. Sans organizationId : supprime le compte et tout ce qu'il possède.
+ * Avec : supprime seulement cette organisation (et le compte s'il ne lui reste rien).
+ */
+export async function deleteAccount(ownerId: string, organizationId?: string): Promise<{ accountDeleted: boolean }> {
   const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch('/api/admin/delete-account', {
     method:  'POST',
@@ -425,12 +390,11 @@ export async function deleteAccount(ownerId: string, businessId: string): Promis
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${session?.access_token ?? ''}`,
     },
-    body: JSON.stringify({ ownerId, businessId }),
+    body: JSON.stringify({ ownerId, organizationId }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(err.error ?? 'Erreur lors de la suppression');
-  }
+  const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  if (!res.ok) throw new Error(body.error ?? 'Erreur lors de la suppression');
+  return { accountDeleted: !!body.accountDeleted };
 }
 
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {

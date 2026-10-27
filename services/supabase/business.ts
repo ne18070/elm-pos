@@ -89,7 +89,8 @@ export async function createOrganizationAdmin(data: {
 /** Mettre à jour une organization */
 export async function updateOrganization(
   orgId: string,
-  patch: Partial<Organization>
+  // null = vider le champ
+  patch: Partial<Omit<Organization, 'denomination' | 'rib'>> & { denomination?: string | null; rib?: string | null }
 ): Promise<void> {
   const { error } = await supabase
     .from('organizations')

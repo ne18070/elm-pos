@@ -3474,6 +3474,11 @@ export type Database = {
       payment_settings: {
         Row: {
           id: number
+          invoice_address: string | null
+          invoice_company_name: string | null
+          invoice_email: string | null
+          invoice_ninea: string | null
+          invoice_rccm: string | null
           om_qr_url: string | null
           updated_at: string | null
           wave_qr_url: string | null
@@ -3481,6 +3486,11 @@ export type Database = {
         }
         Insert: {
           id?: number
+          invoice_address?: string | null
+          invoice_company_name?: string | null
+          invoice_email?: string | null
+          invoice_ninea?: string | null
+          invoice_rccm?: string | null
           om_qr_url?: string | null
           updated_at?: string | null
           wave_qr_url?: string | null
@@ -3488,6 +3498,11 @@ export type Database = {
         }
         Update: {
           id?: number
+          invoice_address?: string | null
+          invoice_company_name?: string | null
+          invoice_email?: string | null
+          invoice_ninea?: string | null
+          invoice_rccm?: string | null
           om_qr_url?: string | null
           updated_at?: string | null
           wave_qr_url?: string | null
@@ -6166,6 +6181,87 @@ export type Database = {
           },
         ]
       }
+      subscription_invoices: {
+        Row: {
+          amount: number
+          business_id: string | null
+          buyer_email: string | null
+          buyer_legal_name: string | null
+          buyer_name: string
+          created_by: string | null
+          currency: string
+          id: string
+          invoice_number: string
+          issued_at: string
+          owner_id: string | null
+          payment_note: string | null
+          period_end: string
+          period_start: string
+          plan_id: string | null
+          plan_label: string
+          quantity: number
+          source: string
+          unit_price: number
+        }
+        Insert: {
+          amount: number
+          business_id?: string | null
+          buyer_email?: string | null
+          buyer_legal_name?: string | null
+          buyer_name: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          invoice_number?: string
+          issued_at?: string
+          owner_id?: string | null
+          payment_note?: string | null
+          period_end: string
+          period_start: string
+          plan_id?: string | null
+          plan_label: string
+          quantity?: number
+          source?: string
+          unit_price: number
+        }
+        Update: {
+          amount?: number
+          business_id?: string | null
+          buyer_email?: string | null
+          buyer_legal_name?: string | null
+          buyer_name?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          invoice_number?: string
+          issued_at?: string
+          owner_id?: string | null
+          payment_note?: string | null
+          period_end?: string
+          period_start?: string
+          plan_id?: string | null
+          plan_label?: string
+          quantity?: number
+          source?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_requests: {
         Row: {
           business_id: string
@@ -7264,6 +7360,7 @@ export type Database = {
       }
       activate_subscription: {
         Args: {
+          p_amount?: number
           p_business_id: string
           p_days?: number
           p_note?: string
@@ -7371,6 +7468,19 @@ export type Database = {
       create_order: { Args: { order_data: Json }; Returns: Json }
       create_public_rental_request: { Args: { p_data: Json }; Returns: Json }
       create_public_reservation: { Args: { p_data: Json }; Returns: Json }
+      create_subscription_invoice: {
+        Args: {
+          p_amount?: number
+          p_business_id: string
+          p_days: number
+          p_note?: string
+          p_owner_id: string
+          p_period_start?: string
+          p_plan_id: string
+          p_source?: string
+        }
+        Returns: string
+      }
       create_public_service_order: {
         Args: {
           p_business_id: string
@@ -7734,6 +7844,10 @@ export type Database = {
       increment_tracking_view: { Args: { t: string }; Returns: undefined }
       invoke_workflow_processor: { Args: never; Returns: undefined }
       is_superadmin: { Args: never; Returns: boolean }
+      next_subscription_invoice_number: {
+        Args: { p_date?: string }
+        Returns: string
+      }
       open_cash_session: {
         Args: { p_business_id: string; p_opening_amount?: number }
         Returns: {

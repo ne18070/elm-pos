@@ -19,17 +19,13 @@ import type { Order } from '@pos-types';
 import { createOrder, findOverdueAcompte } from '@services/supabase/orders';
 import { getLoyaltyConfig, getClientBalance, type LoyaltyConfig } from '@services/supabase/loyalty';
 import { enqueueToSync, printReceipt, openCashDrawer } from '@/lib/ipc';
-import { getIntouchConfig, processIntouchPayment, waitForPayment } from '@services/supabase/intouch';
-import type { IntouchConfig, IntouchPaymentRequest, IntouchPaymentResponse } from '@services/supabase/intouch';
 import { RoomPicker } from './RoomPicker';
 import {
   computeChange,
   suggestRoundAmounts,
   PAYMENT_METHOD_LABELS,
-  MOBILE_MONEY_PROVIDER_LABELS,
   validatePayment,
   formatPaymentError,
-  type MobileMoneyProvider,
 } from '@domain/payment.service';
 import {
   validateOrderPayload,
@@ -51,7 +47,7 @@ interface PaymentModalProps {
   tableId?: string;
 }
 
-type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes' | 'intouch' | 'livraison_note';
+type Step = 'methode' | 'montant' | 'partiel' | 'room' | 'attente' | 'succes' | 'livraison_note';
 
 const SIMPLE_METHODES: PaymentMethod[] = ['cash', 'card', 'mobile_money'];
 const PARTIAL_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', 'mobile_money'];
@@ -67,7 +63,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   const [ordreId, setOrdreId]         = useState<string | null>(null);
   const [ordre, setOrdre]             = useState<Order | null>(null);
   const [erreur, setErreur]           = useState('');
-  const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | 'intouch' | null>(null);
+  const [numpad, setNumpad]           = useState<'montant' | 'acompte' | 'acompteRecu' | null>(null);
   // Bon de livraison : commande livrée sans encaissement, réglée plus tard par l'admin
   const [deliveryNote, setDeliveryNote] = useState(false);
   const [deliveryNoteAddress, setDeliveryNoteAddress] = useState('');
@@ -87,25 +83,13 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
   // Référence de transaction (carte / mobile money manuel)
   const [txReference, setTxReference] = useState('');
 
-  // Intouch
-  const [intouchConfig, setIntouchConfig] = useState<IntouchConfig | null>(null);
-  const [intouchPhone, setIntouchPhone]   = useState(prefilledCustomer?.phone ?? '');
-  const [intouchProvider, setIntouchProvider] = useState<'WAVE' | 'ORANGE_MONEY' | 'FREE_MONEY'>('WAVE');
+  // Téléphone client (mobile money manuel)
+  const [mobilePhone, setMobilePhone] = useState(prefilledCustomer?.phone ?? '');
 
   // Hôtel
   const [selectedReservation, setSelectedReservation] = useState<HotelReservation | null>(null);
   // Ref for immediate access in async submit (Point 4)
   const reservationRef = useRef<HotelReservation | null>(null);
-
-  // Charger config Intouch
-  useEffect(() => {
-    if (business?.id) {
-      getIntouchConfig(business.id).then(setIntouchConfig).catch(e => {
-        console.error('Failed to load Intouch config:', e);
-        // Discrete warning or no-op is fine here since it's just a feature activation
-      });
-    }
-  }, [business?.id]);
 
   // Paiement partiel (acompte)
   const [partialMethod, setPartialMethod]     = useState<Exclude<PaymentMethod, 'partial'>>('cash');
@@ -353,46 +337,6 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     }
   }
 
-  // -- DB : Intouch ----------------------------------------------------------
-  async function submitIntouch() {
-    if (!user || !business) return;
-    if (!cashSession) { setErreur('Ouvrez une session de caisse avant d\'encaisser.'); return; }
-    if (!intouchPhone.trim()) { setErreur('Numéro de téléphone requis'); return; }
-    setChargement(true);
-    setErreur('');
-    try {
-      const initRes = await processIntouchPayment({
-        business_id: business.id,
-        amount:      total,
-        currency,
-        phone:       intouchPhone.replace(/\s/g, ''),
-        provider:    intouchProvider,
-      });
-
-      if (!initRes.success) {
-        setErreur(initRes.error || 'Échec de l\'initialisation du paiement');
-        setChargement(false);
-        return;
-      }
-
-      // Attente du paiement (Polling)
-      if (initRes.status === 'PENDING' && initRes.external_reference) {
-          const finalRes = await waitForPayment(initRes.external_reference);
-          if (finalRes.status === 'SUCCESS') {
-              await submitSimple();
-          } else {
-              setErreur(finalRes.error || 'Le paiement n\'a pas été validé par le client');
-          }
-      } else if (initRes.status === 'SUCCESS') {
-          await submitSimple();
-      }
-    } catch (err: any) {
-      setErreur(err.message || 'Erreur lors du paiement');
-    } finally {
-      setChargement(false);
-    }
-  }
-
   // -- DB : acompte ----------------------------------------------------------
   async function submitAcompte() {
     if (!user || !business) return;
@@ -569,7 +513,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       amount:    effectiveTotal,
       received:  methode === 'cash' ? montantRecuNum : undefined,
       reference: txReference.trim() || undefined,
-      phone:     methode === 'mobile_money' ? (intouchPhone.trim() || undefined) : undefined,
+      phone:     methode === 'mobile_money' ? (mobilePhone.trim() || undefined) : undefined,
     });
     if (payError) { setErreur(formatPaymentError(payError)); return; }
 
@@ -844,7 +788,6 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               if (methode === 'partial') setStep('partiel');
               else if (methode === 'room_charge') setStep('room');
               else if (effectiveTotal === 0) preConfirmerSimple();
-              else if (methode === 'mobile_money' && intouchConfig?.is_active) setStep('intouch');
               else setStep('montant');
             }}
             disabled={!cashSession}
@@ -1017,7 +960,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
             </div>
           )}
 
-          {/* Référence transaction (carte / mobile money sans Intouch) */}
+          {/* Référence transaction (carte / mobile money) */}
           {(methode === 'card' || methode === 'mobile_money') && (
             <div className="space-y-3">
               {methode === 'mobile_money' && (
@@ -1026,8 +969,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   <input
                     type="tel"
                     inputMode="tel"
-                    value={intouchPhone}
-                    onChange={(e) => { setIntouchPhone(e.target.value); setErreur(''); }}
+                    value={mobilePhone}
+                    onChange={(e) => { setMobilePhone(e.target.value); setErreur(''); }}
                     placeholder="7x xxx xx xx"
                     className="input"
                   />
@@ -1289,66 +1232,6 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
         />
       )}
 
-      {/* -- Étape 2d : Intouch ---------------------------------------------- */}
-      {step === 'intouch' && (
-        <div className="space-y-5">
-          <div className="flex justify-between items-center bg-surface-input rounded-xl px-4 py-3">
-            <span className="text-content-secondary text-sm">Total à payer</span>
-            <span className="text-2xl font-bold text-content-brand">{fmt(total)}</span>
-          </div>
-
-          <div className="space-y-3">
-            <p className="label">Opérateur Mobile Money</p>
-            <div className="grid grid-cols-3 gap-2">
-              {(['WAVE', 'ORANGE_MONEY', 'FREE_MONEY'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setIntouchProvider(p)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all
-                    ${intouchProvider === p
-                      ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
-                    }`}
-                >
-                  <span className="text-[10px] font-bold">
-                    {MOBILE_MONEY_PROVIDER_LABELS[p.toLowerCase() as MobileMoneyProvider]}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="label">Numéro de téléphone (Push)</label>
-            <button
-              onClick={() => { setNumpad('intouch'); setErreur(''); }}
-              className="input text-2xl font-bold text-center py-3 w-full cursor-pointer hover:border-brand-500 transition-colors"
-            >
-              {intouchPhone || <span className="text-content-primary">7x xxx xx xx</span>}
-            </button>
-          </div>
-
-          {erreur && (
-            <p className="text-sm text-status-error bg-badge-error border border-status-error rounded-xl px-3 py-2">{erreur}</p>
-          )}
-
-          <div className="flex gap-3">
-            <button onClick={() => setStep('methode')} className="btn-secondary flex-1 h-11">Retour</button>
-            <button
-              onClick={submitIntouch}
-              disabled={chargement || !intouchPhone}
-              className="btn-primary flex-1 h-11 flex items-center justify-center gap-2"
-            >
-              {chargement && <Loader2 className="w-4 h-4 animate-spin" />}
-              {chargement ? 'Lancement...' : 'Payer maintenant'}
-            </button>
-          </div>
-          <p className="text-[10px] text-content-primary text-center">
-            Un message de confirmation sera envoyé sur le téléphone du client.
-          </p>
-        </div>
-      )}
-
       {/* -- Étape 3 : attente validation client ----------------------------- */}
       {step === 'attente' && (
         <div className="flex flex-col items-center gap-6 py-8 text-center">
@@ -1408,15 +1291,6 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           label="Montant reçu (espèces)"
           hint={`Acompte : ${fmt(acompteNum)}`}
           onDigit={setAcompteRecu}
-          onClose={() => setNumpad(null)}
-        />
-      )}
-      {numpad === 'intouch' && (
-        <NumpadModal
-          value={intouchPhone}
-          label="Téléphone client"
-          hint="Format: 771234567"
-          onDigit={setIntouchPhone}
           onClose={() => setNumpad(null)}
         />
       )}

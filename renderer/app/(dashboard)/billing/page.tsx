@@ -1,23 +1,25 @@
 'use client';
 import { toUserError } from '@/lib/user-error';
-import { displayCurrency } from '@/lib/utils';
+import { displayCurrency, formatCurrency } from '@/lib/utils';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle, Clock, Loader2, RefreshCw, Send, Calendar,
-  AlertTriangle, ChevronDown, Package, RotateCcw, FileText,
+  AlertTriangle, ChevronDown, Package, RotateCcw, FileText, Download, Receipt,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useSubscriptionStore } from '@/store/subscription';
 import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notifications';
 import {
-  getPlans, getSubscription, getMySubscriptionRequests,
-  submitSubscriptionRequest, getEffectiveStatus,
-  type Plan, type SubscriptionRequest,
+  getPlans, getSubscription, getMySubscriptionRequests, getMySubscriptionInvoices,
+  getPaymentSettings, submitSubscriptionRequest, getEffectiveStatus,
+  type Plan, type SubscriptionRequest, type SubscriptionInvoice,
 } from '@services/supabase/subscriptions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
+import { downloadSubscriptionInvoice } from '@/lib/subscription-invoice-pdf';
 
 // -- Status badge config -------------------------------------------------------
 
@@ -30,8 +32,9 @@ const REQ_STATUS: Record<string, { label: string; bg: string; text: string; bord
 // -- Page ----------------------------------------------------------------------
 
 export default function BillingPage() {
-  const { effectiveStatus, trialDaysRemaining, subscription, setSubscription } = useSubscriptionStore();
+  const { effectiveStatus, trialDaysRemaining, subscription, setSubscription, paymentSettings } = useSubscriptionStore();
   const { business, user } = useAuthStore();
+  const { error: notifError } = useNotificationStore();
   const router = useRouter();
 
   const [loading, setLoading]           = useState(true);
@@ -44,6 +47,22 @@ export default function BillingPage() {
   const [submitError, setSubmitError]   = useState('');
   const [myRequests, setMyRequests]     = useState<SubscriptionRequest[]>([]);
   const [showRenew, setShowRenew]       = useState(false);
+  // null = échec du chargement (distinct de « aucune facture »)
+  const [invoices, setInvoices]         = useState<SubscriptionInvoice[] | null>([]);
+  const [downloading, setDownloading]   = useState<string | null>(null);
+
+  async function handleDownload(invoice: SubscriptionInvoice) {
+    setDownloading(invoice.id);
+    try {
+      // Mentions vendeur à jour (le store peut dater du chargement de l'app)
+      const seller = await getPaymentSettings().catch(() => paymentSettings);
+      downloadSubscriptionInvoice(invoice, seller ?? paymentSettings);
+    } catch (e) {
+      notifError(toUserError(e));
+    } finally {
+      setDownloading(null);
+    }
+  }
 
   const status     = effectiveStatus();
   const days       = trialDaysRemaining();
@@ -92,12 +111,14 @@ export default function BillingPage() {
     Promise.all([
       getPlans(),
       getMySubscriptionRequests(business.id),
+      getMySubscriptionInvoices().catch(() => null),
     ])
-      .then(([p, reqs]) => {
+      .then(([p, reqs, inv]) => {
         setAllPlans(p);
         const firstPaid = p.find((pl) => pl.price > 0 && pl.duration_days < 300);
         if (firstPaid) setSelectedPlan(firstPaid);
         setMyRequests(reqs);
+        setInvoices(inv);
         if (reqs.some((r) => r.status === 'pending')) setStep('sent');
       })
       .finally(() => setLoading(false));
@@ -127,7 +148,7 @@ export default function BillingPage() {
         <div>
           <h1 className="text-xl font-bold text-content-primary">Abonnement & Facturation</h1>
           <p className="text-sm text-content-secondary mt-0.5">
-            Gérez votre plan et consultez l'historique de vos demandes.
+            Gérez votre plan, retrouvez vos paiements et téléchargez vos factures.
           </p>
         </div>
 
@@ -386,6 +407,67 @@ export default function BillingPage() {
             </button>
           </div>
         )}
+
+        {/* -- Abonnements payés / factures -- */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-content-secondary uppercase tracking-wider">
+              Abonnements payés
+            </h2>
+            {invoices && invoices.length > 0 && (
+              <span className="text-xs text-content-muted">
+                {invoices.length} facture{invoices.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+
+          {invoices === null ? (
+            <div className="card p-6 flex items-center gap-3 text-sm text-status-error">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              Impossible de charger vos factures. Réessayez dans un instant.
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="card p-10 flex flex-col items-center gap-3 text-center">
+              <Receipt className="w-8 h-8 text-content-muted" />
+              <p className="text-content-primary text-sm">Aucun paiement enregistré</p>
+              <p className="text-xs text-content-muted max-w-xs">
+                Vos factures apparaîtront ici dès que notre équipe aura activé votre abonnement.
+              </p>
+            </div>
+          ) : (
+            <div className="card divide-y divide-surface-border">
+              {invoices.map((inv) => (
+                <div key={inv.id} className="p-4 flex items-center gap-4">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-content-primary">{inv.plan_label}</p>
+                      <span className="text-[11px] font-mono text-content-muted">{inv.invoice_number}</span>
+                    </div>
+                    <p className="text-xs text-content-secondary">
+                      Du {format(new Date(inv.period_start), 'dd MMM yyyy', { locale: fr })}
+                      {' au '}
+                      {format(new Date(inv.period_end), 'dd MMM yyyy', { locale: fr })}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-content-primary whitespace-nowrap">
+                    {formatCurrency(inv.amount, inv.currency)}
+                  </p>
+                  <button
+                    onClick={() => handleDownload(inv)}
+                    disabled={downloading === inv.id}
+                    className="btn-secondary shrink-0 h-11 px-3 flex items-center gap-2 text-sm"
+                    title={`Télécharger la facture ${inv.invoice_number}`}
+                  >
+                    {downloading === inv.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Download className="w-4 h-4" />}
+                    <span className="hidden sm:inline">Facture</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* -- Historique des demandes -- */}
         <div className="space-y-3">

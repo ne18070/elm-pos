@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Loader2, Plus, Pencil, Layers, Search,
-  Mail, LogIn, X, Save, Copy, Check as CheckIcon,
+  Mail, X, Save, Copy, Check as CheckIcon,
   Phone as PhoneIcon, Mail as MailIcon, ChevronLeft, ChevronRight,
   Building2, Trash2, RefreshCw, AlertTriangle,
 } from 'lucide-react';
@@ -11,7 +11,7 @@ import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
   getAllOrganizationsAdmin, getUnassignedBusinesses,
-  createOrganizationAdmin, updateOrganization, switchBusiness,
+  createOrganizationAdmin, updateOrganization,
   type OrganizationWithBusinesses 
 } from '@services/supabase/business';
 import { createBusinessAdmin } from '@services/supabase/users';
@@ -54,7 +54,6 @@ export default function StructuresPage() {
   const [deleting, setDeleting]         = useState(false);
   const [deleteErr, setDeleteErr]       = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
-  const [switching, setSwitching]   = useState<string | null>(null);
   const [search, setSearch]         = useState('');
   const [page, setPage]             = useState(1);
 
@@ -76,22 +75,14 @@ export default function StructuresPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleSwitch = async (bizId: string) => {
-    setSwitching(bizId);
-    try {
-      await switchBusiness(bizId);
-      window.location.href = '/';
-    } catch (e) { alert(toUserError(e)); setSwitching(null); }
-  };
-
   const handleDelete = async () => {
     if (!deleteTarget?.owner_id) return;
     setDeleting(true);
     setDeleteErr(null);
     try {
-      await deleteAccount(deleteTarget.owner_id, deleteTarget.businesses[0]?.id ?? '');
-      setOrgs((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+      await deleteAccount(deleteTarget.owner_id, deleteTarget.id);
       setDeleteTarget(null);
+      await load();
     } catch (e) {
       setDeleteErr(e instanceof Error ? e.message : 'Erreur lors de la suppression');
     } finally {
@@ -124,8 +115,9 @@ export default function StructuresPage() {
     try {
       await updateOrganization(orgModal.id, {
         legal_name:   fd.get('legal_name') as string,
-        denomination: fd.get('denomination') as string || undefined,
-        rib:          fd.get('rib') as string || undefined,
+        denomination: (fd.get('denomination') as string).trim() || null,
+        rib:          (fd.get('rib') as string).trim() || null,
+        currency:     (fd.get('currency') as string) || 'XOF',
       });
       setOrgModal(null);
       await load();
@@ -355,24 +347,14 @@ export default function StructuresPage() {
                         Établissements · {org.businesses.length}
                       </p>
                       {org.businesses.map((biz) => (
-                        <div key={biz.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-surface-input border border-surface-border">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-semibold text-content-primary truncate">{biz.name}</p>
-                              {renderSlug(biz.public_slug)}
-                            </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded border ${getTypeBadge(biz.type)}`}>
-                              {biz.type}
-                            </span>
+                        <div key={biz.id} className="px-3 py-2 rounded-lg bg-surface-input border border-surface-border">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-content-primary truncate">{biz.name}</p>
+                            {renderSlug(biz.public_slug)}
                           </div>
-                          <button
-                            onClick={() => handleSwitch(biz.id)}
-                            disabled={!!switching}
-                            className="p-1.5 rounded-lg hover:bg-brand-500/10 text-content-brand hover:text-content-brand transition-all shrink-0"
-                            title="Accéder"
-                          >
-                            {switching === biz.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogIn className="w-3.5 h-3.5" />}
-                          </button>
+                          <span className={`text-[10px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded border ${getTypeBadge(biz.type)}`}>
+                            {biz.type}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -383,7 +365,9 @@ export default function StructuresPage() {
                   <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest">
                     {org.businesses.length} établissement{org.businesses.length !== 1 ? 's' : ''}
                   </span>
-                  <span className="text-xs text-status-success font-bold">✅ {org.owner_name ? 'Assignée' : 'Sans owner'}</span>
+                  {org.owner_id
+                    ? <span className="text-xs text-status-success font-bold">Assignée</span>
+                    : <span className="text-xs text-status-warning font-bold">Sans propriétaire</span>}
                 </div>
               </div>
             ))}
@@ -433,18 +417,13 @@ export default function StructuresPage() {
                 {filteredUnassigned.map((biz: any) => (
                   <div key={biz.id} className="card p-0 border-amber-500/20 hover:border-amber-500/40 transition-all group relative overflow-hidden flex flex-col">
                     <div className="p-6 flex-1 space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
-                          <div className="flex items-center gap-2 mt-1">
-                            <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{biz.name}</h3>
-                            {renderSlug(biz.public_slug)}
-                          </div>
-                          {biz.denomination && <p className="text-xs text-content-secondary italic truncate">{biz.denomination}</p>}
+                      <div className="space-y-1 min-w-0">
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border ${getTypeBadge(biz.type)}`}>{biz.type}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{biz.name}</h3>
+                          {renderSlug(biz.public_slug)}
                         </div>
-                        <button onClick={() => handleSwitch(biz.id)} disabled={!!switching} className="p-2 rounded-lg hover:bg-brand-500/10 text-content-brand hover:text-content-brand transition-all shrink-0">
-                          {switching === biz.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                        </button>
+                        {biz.denomination && <p className="text-xs text-content-secondary italic truncate">{biz.denomination}</p>}
                       </div>
                     </div>
                     <div className="px-6 py-4 bg-amber-500/5 border-t border-amber-500/20 flex items-center justify-between">
@@ -488,6 +467,7 @@ export default function StructuresPage() {
               </p>
               <p className="text-xs text-content-muted bg-badge-error border border-status-error/20 rounded-xl px-3 py-2">
                 Toutes les données (commandes, produits, membres, abonnements) seront définitivement supprimées.
+                Le compte du propriétaire est aussi supprimé s&apos;il ne possède aucun autre établissement.
               </p>
               {deleteTarget.businesses.length > 0 && (
                 <div className="text-xs text-content-muted space-y-1">

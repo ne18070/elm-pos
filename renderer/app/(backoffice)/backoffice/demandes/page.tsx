@@ -143,9 +143,10 @@ export default function RequestsPage() {
           // Note: Le mot de passe n'est plus envoyé, l'API doit déclencher une invitation
         }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(err.error ?? 'Erreur serveur');
+      const result = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      if (!res.ok) throw new Error(result.error ?? 'Erreur serveur');
+      if (result.emailError) {
+        alert(`Compte créé, mais l'email d'activation n'a pas pu être envoyé (${result.emailError}). Utilisez « Renvoyer l'email d'accès ».`);
       }
       setApprovePublicForm(null);
       await load();
@@ -446,7 +447,7 @@ export default function RequestsPage() {
             <p className="text-[10px] font-black text-content-muted uppercase tracking-widest mb-1">Prospect</p>
             <p className="text-sm font-bold text-content-primary">{approvePublicForm?.req.email}</p>
             <p className="text-xs text-content-muted mt-2 italic">
-               Un compte sera créé pour cet email avec le mot de passe fourni ou généré.
+               Un compte sera créé pour cet email. Le client recevra un lien pour choisir son mot de passe.
             </p>
           </div>
 
@@ -472,6 +473,10 @@ export default function RequestsPage() {
                   ))}
                </div>
             </div>
+          </div>
+          <div>
+            <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Note interne (Optionnel)</label>
+            <textarea value={approvePublicForm?.note} onChange={(e) => setApprovePublicForm((f: any) => ({ ...f, note: e.target.value }))} className="input min-h-[100px] py-4" placeholder="Ex: Paiement Wave reçu le 21/04..." />
           </div>
         </div>
       </SideDrawer>

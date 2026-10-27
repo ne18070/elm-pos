@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Loader2, Save, Upload, Smartphone, 
-  Mail, Grid3X3, CreditCard, ShieldCheck
+  Mail, Grid3X3, CreditCard, ShieldCheck, FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
@@ -22,16 +22,24 @@ export default function SettingsPage() {
   // Payment State
   const [paymentLoading, setPaymentLoading] = useState(true);
   const [paymentSaving, setPaymentSaving] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ wave_qr_url: '', om_qr_url: '', whatsapp_number: '' });
+  const [paymentForm, setPaymentForm] = useState({
+    wave_qr_url: '', om_qr_url: '', whatsapp_number: '',
+    invoice_company_name: '', invoice_address: '', invoice_ninea: '', invoice_rccm: '', invoice_email: '',
+  });
   const [uploading, setUploading] = useState<'wave' | 'om' | null>(null);
 
   useEffect(() => {
     if (activeTab === 'paiement') {
       getPaymentSettings().then((s) => {
-        setPaymentForm({ 
-          wave_qr_url: s?.wave_qr_url ?? '', 
-          om_qr_url: s?.om_qr_url ?? '', 
-          whatsapp_number: s?.whatsapp_number ?? '' 
+        setPaymentForm({
+          wave_qr_url: s?.wave_qr_url ?? '',
+          om_qr_url: s?.om_qr_url ?? '',
+          whatsapp_number: s?.whatsapp_number ?? '',
+          invoice_company_name: s?.invoice_company_name ?? '',
+          invoice_address:      s?.invoice_address ?? '',
+          invoice_ninea:        s?.invoice_ninea ?? '',
+          invoice_rccm:         s?.invoice_rccm ?? '',
+          invoice_email:        s?.invoice_email ?? '',
         });
       }).finally(() => setPaymentLoading(false));
     }
@@ -104,6 +112,37 @@ export default function SettingsPage() {
                       placeholder="+221770000000" 
                     />
                     <p className="text-[10px] text-content-muted mt-2 italic">Ce numéro sera utilisé pour les notifications de paiement et le support.</p>
+                  </div>
+               </div>
+
+               <div className="card p-6 space-y-4 col-span-2">
+                  <div>
+                    <h3 className="text-sm font-black text-content-primary uppercase tracking-widest flex items-center gap-2">
+                       <FileText size={16} className="text-content-brand" /> Mentions sur les factures
+                    </h3>
+                    <p className="text-[10px] text-content-muted mt-1 italic">Imprimées en en-tête des factures d'abonnement téléchargées par les clients.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Raison sociale</label>
+                      <input value={paymentForm.invoice_company_name} onChange={(e) => setPaymentForm({ ...paymentForm, invoice_company_name: e.target.value })} className="input h-12" placeholder="Ex : ELM SARL" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Adresse</label>
+                      <textarea value={paymentForm.invoice_address} onChange={(e) => setPaymentForm({ ...paymentForm, invoice_address: e.target.value })} className="input min-h-[72px] py-3" placeholder={'Rue, quartier\nDakar, Sénégal'} />
+                    </div>
+                    <div>
+                      <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">NINEA</label>
+                      <input value={paymentForm.invoice_ninea} onChange={(e) => setPaymentForm({ ...paymentForm, invoice_ninea: e.target.value })} className="input h-12" />
+                    </div>
+                    <div>
+                      <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">RCCM</label>
+                      <input value={paymentForm.invoice_rccm} onChange={(e) => setPaymentForm({ ...paymentForm, invoice_rccm: e.target.value })} className="input h-12" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="label text-[10px] font-black uppercase tracking-widest text-content-muted">Email de facturation</label>
+                      <input type="email" value={paymentForm.invoice_email} onChange={(e) => setPaymentForm({ ...paymentForm, invoice_email: e.target.value })} className="input h-12" placeholder="facturation@exemple.com" />
+                    </div>
                   </div>
                </div>
 

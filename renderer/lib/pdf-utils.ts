@@ -9,7 +9,7 @@ const MX     = 5;     // marge gauche/droite
 const CW     = W - MX * 2; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 /** Élimine les espaces insécables Unicode que jsPDF Helvetica ne supporte pas. */
-function sanitize(s: string): string {
+export function sanitize(s: string): string {
   //   no-break,   narrow no-break (séparateur milliers fr-FR),   thin space
   return s.replace(/ | | /g, ' ');
 }
