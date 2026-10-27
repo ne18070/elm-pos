@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
@@ -67,7 +68,7 @@ export default function LivreursPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Supprimer ce livreur ?')) return;
+    if (!(await confirmAsync('Supprimer ce livreur ?'))) return;
     try {
       await deleteLivreur(id);
       setLivreurs((prev) => prev.filter((l) => l.id !== id));

@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toUserError } from '@/lib/user-error';
 import { useAuthStore } from '@/store/auth';
@@ -185,7 +186,7 @@ export default function CommandeRapidePage() {
     if (!business || !activeResellerId) return;
     if (
       useQuickOrderStore.getState().lines.length > 0 &&
-      !confirm('Remplacer la commande en cours par la dernière commande de ce revendeur ?')
+      !(await confirmAsync('Remplacer la commande en cours par la dernière commande de ce revendeur ?'))
     ) return;
 
     setRecalling(true);

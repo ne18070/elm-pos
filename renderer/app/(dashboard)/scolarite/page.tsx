@@ -32,7 +32,7 @@ export default function ScolaritePage() {
     if (!business?.id) return;
     setLoading(true);
     try {
-      let query = (supabase as any)
+      let query = supabase
         .from('orders')
         .select('id, created_at, status, total, notes, student:edu_students(first_name,last_name), items:order_items(id,name,quantity,total), payments(method)')
         .eq('business_id', business.id)

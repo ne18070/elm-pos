@@ -1,5 +1,6 @@
 'use client';
 
+import { useNotificationStore } from '@/store/notifications';
 import { useState, useEffect } from 'react';
 import { X, Printer, Eye, Settings2, FileText } from 'lucide-react';
 import type { DistributeurInvoiceType } from '@/lib/invoice-templates';
@@ -93,7 +94,7 @@ export function InvoiceModal({
   function handlePreview() {
     setPreviewing(true);
     const w = window.open('', '_blank', 'width=1000,height=750');
-    if (!w) { alert('Autorisez les pop-ups pour prévisualiser.'); setPreviewing(false); return; }
+    if (!w) { useNotificationStore.getState().warning('Autorisez les pop-ups pour prévisualiser.'); setPreviewing(false); return; }
     w.document.write(getHtml());
     w.document.close();
     w.focus();

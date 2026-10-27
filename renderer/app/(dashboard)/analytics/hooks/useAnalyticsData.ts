@@ -109,7 +109,7 @@ export function useAnalyticsData(business: any, period: number) {
             case 'juridique': {
                 const [res, audData] = await Promise.all([
                     getJuridiqueAnalytics(business.id, days),
-                    (supabase as any)
+                    supabase
                         .from('dossiers')
                         .select('id, reference, client_name, date_audience, tribunal')
                         .eq('business_id', business.id)

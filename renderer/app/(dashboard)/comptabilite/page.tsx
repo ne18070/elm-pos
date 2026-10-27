@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer, Download, List, Settings, Upload, Trash2, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -227,8 +228,8 @@ export default function ComptabilitePage() {
 
   async function handleClearJournal() {
     if (!business?.id) return;
-    if (!confirm('Effacer TOUTES les écritures du journal (ventes, achats, manuelles, imports) ?\n\nAction irréversible. Un « Synchroniser » recréera les écritures issues de la caisse.')) return;
-    if (!confirm('Confirmer définitivement le vidage complet du journal ?')) return;
+    if (!(await confirmAsync('Effacer TOUTES les écritures du journal (ventes, achats, manuelles, imports) ?\n\nAction irréversible. Un « Synchroniser » recréera les écritures issues de la caisse.'))) return;
+    if (!(await confirmAsync('Confirmer définitivement le vidage complet du journal ?'))) return;
     setClearing(true);
     try {
       const n = await clearJournal(business.id);
@@ -246,7 +247,7 @@ export default function ComptabilitePage() {
     const msg = ids.length === 1
       ? 'Supprimer cette écriture ?'
       : `Supprimer ${ids.length} écritures ?`;
-    if (!confirm(msg)) return;
+    if (!(await confirmAsync(msg))) return;
     try {
       const n = await deleteJournalEntries(business.id, ids);
       success(`${n} écriture${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''}`);

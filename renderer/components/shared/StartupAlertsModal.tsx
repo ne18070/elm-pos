@@ -63,13 +63,13 @@ export function StartupAlertsModal() {
     const twoHoursAgo = new Date(Date.now() - 2 * ONE_HOUR_MS).toISOString();
 
     const [{ data: stale }, { data: unpaid }] = await Promise.all([
-      (supabase as any)
+      supabase
         .from('service_orders')
         .select('id, order_number, client_name, started_at')
         .eq('business_id', id)
         .eq('status', 'en_cours')
         .lt('started_at', twoHoursAgo),
-      (supabase as any)
+      supabase
         .from('service_orders')
         .select('id, order_number, client_name, finished_at')
         .eq('business_id', id)

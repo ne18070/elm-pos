@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useRef } from 'react';
 import {
   ChevronLeft, Pencil, Upload, Loader2, ExternalLink, Banknote, AlertCircle, XCircle,
@@ -133,7 +134,7 @@ export function ContractDetailPanel({
   }
 
   async function handleDeleteDocument(documentUrl: string, documentName: string) {
-    if (!window.confirm(`Supprimer le document "${documentName}" ?`)) return;
+    if (!(await confirmAsync(`Supprimer le document "${documentName}" ?`))) return;
     setDeletingDocument(documentUrl);
     try {
       const documents = await deleteContractDocument(detailContract.id, documentUrl, detailContract.documents ?? []);

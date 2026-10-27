@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState } from 'react';
 import { Plus, Trash2, ShieldCheck } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
@@ -38,7 +39,7 @@ export function SettingsTab({ accounts, businessId, onRefresh }: Props) {
   }
 
   async function handleDelete(acc: Account) {
-    if (!confirm(`Supprimer le compte ${acc.code} – ${acc.name} ?\nCette action est irréversible.`)) return;
+    if (!(await confirmAsync(`Supprimer le compte ${acc.code} – ${acc.name} ?\nCette action est irréversible.`))) return;
     try {
       await deleteAccount(acc.id);
       success(`Compte ${acc.code} supprimé`);

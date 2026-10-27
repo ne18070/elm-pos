@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useCallback } from 'react';
 import {
   DatabaseZap, ChevronRight, CheckCircle2, XCircle, Loader2,
@@ -241,7 +242,7 @@ export default function ImportPage() {
   }
 
   async function handleDeleteConfig(id: string) {
-    if (!confirm('Supprimer cette configuration ?')) return;
+    if (!(await confirmAsync('Supprimer cette configuration ?'))) return;
     await deleteImportConfig(id);
     notifOk('Configuration supprimée');
     loadSavedConfigs();

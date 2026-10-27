@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { Phone, MapPin, RotateCcw, Trash2, X, Tag, Gift } from 'lucide-react';
 import type { Reseller, ResellerClient } from '@services/supabase/resellers';
 import type { Business, Coupon } from '@pos-types';
@@ -201,7 +202,7 @@ export function OrderSummary({
         )}
         {!empty && (
           <button
-            onClick={() => { if (confirm('Vider la commande ?')) clear(); }}
+            onClick={async () => { if (await confirmAsync('Vider la commande ?')) clear(); }}
             className="w-full h-8 text-xs flex items-center justify-center gap-1.5 text-content-muted hover:text-status-error transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" /> Vider la commande

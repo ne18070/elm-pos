@@ -306,10 +306,10 @@ export default function PublicTrackingView() {
     if (!token || rating === 0 || feedbackBusy) return;
     setFeedbackBusy(true);
     try {
-      const { error } = await (supabase as any).rpc('submit_service_order_feedback', {
+      const { error } = await supabase.rpc('submit_service_order_feedback', {
         p_token:    String(token),
         p_rating:   rating,
-        p_feedback: feedbackText.trim() || null,
+        p_feedback: feedbackText.trim() || undefined,
       });
       if (error) throw error;
       setFeedbackDone(true);
@@ -331,10 +331,15 @@ export default function PublicTrackingView() {
     async function load() {
       if (!token) return;
       try {
-        const { data: result, error: rpcErr } = await (supabase as any)
+        const { data: raw, error: rpcErr } = await supabase
           .rpc('get_public_tracking', { p_token: String(token) });
 
         if (rpcErr) throw rpcErr;
+        // Réponse JSON de la RPC : soit { error }, soit les données de suivi
+        const result = raw as unknown as (Partial<TrackingData> & {
+          error?: string;
+          service?: { business_id?: string } & NonNullable<TrackingData['service']>;
+        }) | null;
         if (!result || result.error) {
           if (result?.error === 'expired_token') setError("Ce lien de suivi a expiré.");
           else if (result?.error === 'no_data')  setError("Aucune donnée associée à ce lien.");
@@ -351,14 +356,16 @@ export default function PublicTrackingView() {
           events:   result.events   ?? [],
         } as TrackingData);
 
-        void (supabase as any).rpc('increment_tracking_view', { t: token });
+        void supabase.rpc('increment_tracking_view', { t: String(token) });
 
         // Charger la carte fidélité en parallèle (silencieux si non disponible)
-        (supabase as any).rpc('get_public_loyalty', { p_token: String(token) })
-          .then(({ data: ldata }: any) => {
-            if (ldata?.success) setLoyalty(ldata as LoyaltyData);
-          })
-          .catch(() => {});
+        void (async () => {
+          try {
+            const { data: ldata } = await supabase.rpc('get_public_loyalty', { p_token: String(token) });
+            const loyalty = ldata as unknown as LoyaltyData & { success?: boolean } | null;
+            if (loyalty?.success) setLoyalty(loyalty);
+          } catch { /* silencieux */ }
+        })();
 
         // Charger produits/services pour les bandes promo (silencieux, en parallèle)
         const bid = result.service?.business_id;

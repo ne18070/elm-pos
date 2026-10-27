@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -147,11 +148,11 @@ function HonorairesModal({
 
       let honoraireId: string;
       if (initial) {
-        const { error } = await (supabase as any).from('honoraires_cabinet').update(payload).eq('id', initial.id);
+        const { error } = await supabase.from('honoraires_cabinet').update(payload).eq('id', initial.id);
         if (error) throw new Error(error.message);
         honoraireId = initial.id;
       } else {
-        const { data, error } = await (supabase as any).from('honoraires_cabinet').insert(payload).select('id').single();
+        const { data, error } = await supabase.from('honoraires_cabinet').insert(payload).select('id').single();
         if (error) throw new Error(error.message);
         honoraireId = data.id;
       }
@@ -278,9 +279,9 @@ export default function HonorairesPage() {
     try {
       const [h, d, tp, sp] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).from('honoraires_cabinet').select('*, dossier:dossiers(reference)').eq('business_id', business.id).order('date_facture', { ascending: false }),
+        supabase.from('honoraires_cabinet').select('*, dossier:dossiers(reference)').eq('business_id', business.id).order('date_facture', { ascending: false }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).from('dossiers').select('id, reference, client_name').eq('business_id', business.id).order('reference'),
+        supabase.from('dossiers').select('id, reference, client_name').eq('business_id', business.id).order('reference'),
         getReferenceData('type_prestation',  business.id),
         getReferenceData('statut_paiement',  business.id),
       ]);
@@ -311,15 +312,15 @@ export default function HonorairesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Supprimer ces honoraires ?')) return;
+    if (!(await confirmAsync('Supprimer ces honoraires ?'))) return;
     setDeletingId(id);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any).from('honoraires_cabinet').delete().eq('id', id);
+      const { error } = await supabase.from('honoraires_cabinet').delete().eq('id', id);
       if (error) throw new Error(error.message);
       // Supprimer l'écriture comptable liée
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('journal_entries').delete()
+      await supabase.from('journal_entries').delete()
         .eq('source', 'honoraires').eq('source_id', id);
       success('Supprimé');
       setLines((prev) => prev.filter((l) => l.id !== id));

@@ -58,7 +58,7 @@ export default function LoginPage() {
       console.log('[Login] Auth success, loading profile...');
 
       // Timeout pour le RPC profile
-      const profilePromise = (supabase as any).rpc('get_or_create_profile');
+      const profilePromise = supabase.rpc('get_or_create_profile');
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout profile')), 10000));
       
       const { data: profileRows, error: profileError } = await Promise.race([profilePromise, timeoutPromise]) as any;

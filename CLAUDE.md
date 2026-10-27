@@ -111,6 +111,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 Never define `getAdmin()` or `createClient(...serviceKey...)` inline in route files. The shared utility is the only place the service role key is used.
 
+Superadmin (backoffice) routes authenticate with `requireSuperadmin(req)` from `renderer/lib/admin-auth.ts`, which returns `{ admin, userId }` or a ready-made error `response`.
+
 ### State management (Zustand stores in `renderer/store/`)
 
 - `auth` — user, business, businesses list (persisted to localStorage + sessionStorage)
@@ -186,7 +188,7 @@ The app uses two distinct Supabase clients depending on context:
 | Client | Key | Where | RLS |
 |---|---|---|---|
 | Browser client (`services/supabase/client.ts`) | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Renderer, service layer | Enforced — isolates data per `business_id` |
-| Admin client (inline in API routes) | `SUPABASE_SERVICE_ROLE_KEY` | `/api/v1/*` server routes only | Bypassed — use only when RLS would block legitimate access |
+| Admin client (`getSupabaseAdmin()`) | `SUPABASE_SERVICE_ROLE_KEY` | `app/api/*` server routes only, after authenticating the caller | Bypassed — use only when RLS would block legitimate access |
 
 **Rules:**
 - `SUPABASE_SERVICE_ROLE_KEY` never appears in any file under `renderer/app` except inside `app/api/` route handlers (server-only)

@@ -1,5 +1,6 @@
 'use client';
 
+import { useNotificationStore } from '@/store/notifications';
 import { useState, useRef } from 'react';
 import { Upload, X, Check, AlertTriangle, Download, Loader2, FileText } from 'lucide-react';
 import { createClient } from '@services/supabase/clients';
@@ -48,13 +49,13 @@ export function ClientsImportModal({ businessId, onClose, onDone }: Props) {
 
   function processFile(file: File) {
     if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-      alert('Veuillez choisir un fichier .csv');
+      useNotificationStore.getState().error('Veuillez choisir un fichier .csv');
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
       const parsed = parseCSV(e.target?.result as string);
-      if (parsed.length < 2) { alert('Fichier vide ou invalide'); return; }
+      if (parsed.length < 2) { useNotificationStore.getState().error('Fichier vide ou invalide'); return; }
       setHeaders(parsed[0]);
       setRows(parsed.slice(1));
       setStep('preview');

@@ -52,7 +52,7 @@ export function InactivityGuard() {
   // Update last_seen_at in Supabase periodically
   const updateLastSeen = useCallback(async () => {
     try {
-      await (supabase as any).rpc('update_last_seen');
+      await supabase.rpc('update_last_seen');
     } catch {
       // silent
     }

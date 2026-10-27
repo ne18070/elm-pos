@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -134,7 +135,7 @@ export default function LivraisonPage() {
   async function handleDeliverSelected() {
     if (!user || selectedIds.size === 0) return;
     const ids = [...selectedIds];
-    if (!confirm(`Confirmer la livraison de ${ids.length} commande${ids.length > 1 ? 's' : ''} ?`)) return;
+    if (!(await confirmAsync(`Confirmer la livraison de ${ids.length} commande${ids.length > 1 ? 's' : ''} ?`))) return;
     setBulkDelivering(true);
     try {
       const results = await Promise.allSettled(ids.map((id) => confirmOrderDelivery(id, user.id)));

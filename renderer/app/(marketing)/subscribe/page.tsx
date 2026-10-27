@@ -14,7 +14,7 @@ import {
 import { sendEmail } from '@services/resend';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = supabase;
 
 type Step = 'info' | 'payment' | 'sent';
 

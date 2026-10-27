@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -131,7 +132,7 @@ export default function RecoveryPage() {
 
   // -- Delete ------------------------------------------------------------------
   async function handleDelete(snap: SnapshotMeta) {
-    if (!confirm(`Supprimer le snapshot "${snap.label}" ? Cette action est irréversible.`)) return;
+    if (!(await confirmAsync(`Supprimer le snapshot "${snap.label}" ? Cette action est irréversible.`))) return;
     try {
       await deleteSnapshot(snap.id);
       success('Snapshot supprimé');

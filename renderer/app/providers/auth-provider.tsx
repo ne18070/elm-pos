@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!profile) {
       // Trigger may not have fired yet — try RPC fallback
-      const { data: rows } = await (supabase as any).rpc('get_or_create_profile');
+      const { data: rows } = await supabase.rpc('get_or_create_profile');
       const fallbackProfile = rows?.[0] ?? null;
       if (!fallbackProfile) {
         clear();

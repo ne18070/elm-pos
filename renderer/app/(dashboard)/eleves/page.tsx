@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { Users, Plus, Pencil, Trash2, Search, Loader2, Save, X, GraduationCap, Phone, User } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -103,7 +104,7 @@ export default function ElevesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Supprimer cet élève ?')) return;
+    if (!(await confirmAsync('Supprimer cet élève ?'))) return;
     try {
       await deleteStudent(id);
       success('Élève supprimé');

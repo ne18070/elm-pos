@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { LayoutGrid, Plus, Pencil, Trash2, Users, Loader2, Save, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -89,7 +90,7 @@ export default function ClassesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Supprimer cette classe ?')) return;
+    if (!(await confirmAsync('Supprimer cette classe ?'))) return;
     try {
       await deleteClassroom(id);
       success('Classe supprimée');

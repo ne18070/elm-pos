@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
+export const runtime = 'nodejs';
+
 function makeReference() {
   const now = new Date();
   const y = now.getFullYear();
@@ -31,6 +33,22 @@ export async function POST(req: Request) {
     }
 
     const admin = getSupabaseAdmin();
+
+    // Formulaire public : limiter les rafales (5 / h par IP, 3 / h par téléphone et cabinet)
+    const ip    = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const phone = String(client_phone).replace(/\D/g, '');
+    for (const [key, max] of [
+      ...(ip ? [[`legal_rdv_ip:${ip}`, 5] as const] : []),
+      [`legal_rdv_phone:${business_id}:${phone}`, 3] as const,
+    ]) {
+      const { data: allowed } = await admin.rpc('check_rate_limit', { p_key: key, p_max_count: max, p_window_seconds: 3600 });
+      if (allowed === false) {
+        return NextResponse.json(
+          { error: 'Trop de demandes en peu de temps. Réessayez plus tard ou appelez le cabinet.' },
+          { status: 429 },
+        );
+      }
+    }
 
     // Verify the business exists before inserting — prevents submitting to arbitrary IDs
     const { data: biz } = await admin

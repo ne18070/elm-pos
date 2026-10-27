@@ -90,12 +90,14 @@ export default function OwnerDashboard() {
       .then(setDailySales)
       .finally(() => setLoadingSales(false));
 
-    (supabase as any)
-      .from('clients')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', business.id)
-      .then(({ count }: { count: number }) => setClientCount(count))
-      .finally(() => setLoadingClients(false));
+    void (async () => {
+      const { count } = await supabase
+        .from('clients')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', business.id);
+      setClientCount(count ?? 0);
+      setLoadingClients(false);
+    })();
 
     // Recent orders for boutique/restaurant/autre
     if (kind === 'boutique' || kind === 'restaurant' || kind === 'autre') {

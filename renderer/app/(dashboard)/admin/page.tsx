@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
@@ -277,7 +278,7 @@ export default function AdminPage() {
   async function handleToggleBlock(member: UserType) {
     if (!business) return;
     const action = member.is_blocked ? 'débloquer' : 'bloquer';
-    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${member.full_name} ?`)) return;
+    if (!(await confirmAsync(`${action.charAt(0).toUpperCase() + action.slice(1)} ${member.full_name} ?`))) return;
     setBlockingId(member.id);
     try {
       await toggleUserBlock(business.id, member.id, !member.is_blocked);
@@ -303,7 +304,7 @@ export default function AdminPage() {
   }
 
   async function handleRemove(member: UserType) {
-    if (!confirm(`Retirer ${member.full_name} de l'équipe ?`)) return;
+    if (!(await confirmAsync(`Retirer ${member.full_name} de l'équipe ?`))) return;
     try {
       await removeUserFromBusiness(member.id, business?.id);
       success(`${member.full_name} retiré de l'équipe`);

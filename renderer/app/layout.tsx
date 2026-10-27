@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from './providers/auth-provider';
 import { ThemeProvider } from './providers/theme-provider';
 import { NotificationContainer } from '@/components/ui/NotificationContainer';
+import { GlobalConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { MonitoringProvider } from '@/components/providers/MonitoringProvider';
 import { Analytics } from '@vercel/analytics/next';
 
@@ -206,6 +207,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <MonitoringProvider>
               {children}
               <NotificationContainer />
+              <GlobalConfirmDialog />
             </MonitoringProvider>
           </AuthProvider>
         </ThemeProvider>

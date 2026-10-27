@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { X, Clock, RotateCcw, Trash2, ShoppingBag } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -25,8 +26,8 @@ export function HeldOrdersDrawer({ currency, taxRate, onClose }: HeldOrdersDrawe
     onClose();
   }
 
-  function handleDiscard(id: string) {
-    if (!confirm('Supprimer cette commande en attente ?')) return;
+  async function handleDiscard(id: string) {
+    if (!(await confirmAsync('Supprimer cette commande en attente ?'))) return;
     discardHeldOrder(id);
     if (heldOrders.length <= 1) onClose();
   }

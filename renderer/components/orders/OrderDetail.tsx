@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
@@ -334,7 +335,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
   }
 
   async function handleCancel() {
-    if (!confirm('Annuler cette commande ?\n\nLe stock sera restauré et le coupon éventuellement appliqué sera annulé.')) return;
+    if (!(await confirmAsync('Annuler cette commande ?\n\nLe stock sera restauré et le coupon éventuellement appliqué sera annulé.'))) return;
     try {
       await cancelOrder(order.id);
       logAction({

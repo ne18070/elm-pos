@@ -156,7 +156,7 @@ async function executeFeeRequestNode(
       date_facture:    new Date().toISOString().slice(0, 10),
     };
 
-    const { error } = await (supabase as any).from('honoraires_cabinet').insert(payload);
+    const { error } = await supabase.from('honoraires_cabinet').insert(payload);
     if (error) throw error;
 
     await log({

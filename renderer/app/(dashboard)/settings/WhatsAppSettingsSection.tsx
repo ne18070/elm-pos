@@ -1,3 +1,4 @@
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { 
   MessageCircle, Loader2, Save, ToggleLeft, ToggleRight, 
@@ -96,7 +97,7 @@ export function WhatsAppSettingsSection() {
   }
 
   async function handleRegenerateToken() {
-    if (!waConfig?.id || !window.confirm('Voulez-vous vraiment régénérer le token de vérification ? Cela invalidera votre configuration actuelle sur Meta.')) return;
+    if (!waConfig?.id || !(await confirmAsync('Voulez-vous vraiment régénérer le token de vérification ? Cela invalidera votre configuration actuelle sur Meta.'))) return;
     setRegeneratingToken(true);
     try {
       const newToken = await regenerateVerifyToken(waConfig.id);

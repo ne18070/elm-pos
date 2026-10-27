@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { getOrdersForDelivery, confirmOrderDelivery } from '@services/supabase/orders';
@@ -32,7 +33,7 @@ export default function DeliveryPage() {
 
   const handleValidate = async (orderId: string) => {
     if (!user?.id) return;
-    if (!confirm('Voulez-vous confirmer la livraison de cette commande ?')) return;
+    if (!(await confirmAsync('Voulez-vous confirmer la livraison de cette commande ?'))) return;
     
     setProcessing(orderId);
     try {

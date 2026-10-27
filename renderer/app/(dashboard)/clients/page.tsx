@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
@@ -113,7 +114,7 @@ export default function ClientsPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Supprimer ce client ?')) return;
+    if (!(await confirmAsync('Supprimer ce client ?'))) return;
     try {
       await deleteClient(id);
       setClients((prev) => prev.filter((c) => c.id !== id));

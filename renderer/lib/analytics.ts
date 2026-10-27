@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { sanitize, safeUrl } from '@/lib/monitoring-sanitize';
+import type { Json } from '@services/supabase/database.types';
 
 // ─── Context cache ────────────────────────────────────────────────────────────
 // Set once by auth-provider after session loads. Avoids a getUser() network
@@ -65,7 +66,7 @@ export function trackAuth(
       let bizId        = getActiveBizId();
       let isSuperadmin = false;
       if (_userId) {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('users')
           .select('business_id, is_superadmin')
           .eq('id', _userId)
@@ -76,13 +77,13 @@ export function trackAuth(
         }
         isSuperadmin = data?.is_superadmin ?? false;
       }
-      await (supabase as any).from('monitoring_vitals').insert({
+      await supabase.from('monitoring_vitals').insert({
         user_id:     _userId,
         business_id: bizId,
         level:       eventType === 'login_failed' ? 'error' : 'info',
         category:    'auth',
         message:     eventType,
-        context:     sanitize({ ...context, is_superadmin: isSuperadmin }),
+        context:     sanitize({ ...context, is_superadmin: isSuperadmin }) as Json,
         url:         typeof window !== 'undefined' ? safeUrl(window.location.href) : null,
       });
     } catch {}
@@ -99,13 +100,13 @@ export function trackError(
 ) {
   (async () => {
     try {
-      await (supabase as any).from('monitoring_vitals').insert({
+      await supabase.from('monitoring_vitals').insert({
         user_id:     _userId,
         business_id: getActiveBizId(),
         level:       'error',
         category,
         message:     message.slice(0, 500),
-        context:     sanitize(context),
+        context:     sanitize(context) as Json,
         user_agent:  typeof navigator !== 'undefined' ? navigator.userAgent : null,
         url:         typeof window    !== 'undefined' ? safeUrl(window.location.href) : null,
       });
@@ -127,13 +128,13 @@ export function trackWarn(
 
   (async () => {
     try {
-      await (supabase as any).from('monitoring_vitals').insert({
+      await supabase.from('monitoring_vitals').insert({
         user_id:     _userId,
         business_id: getActiveBizId(),
         level:       'warn',
         category,
         message:     message.slice(0, 500),
-        context:     sanitize(context),
+        context:     sanitize(context) as Json,
         url:         typeof window !== 'undefined' ? safeUrl(window.location.href) : null,
       });
     } catch {}
@@ -157,14 +158,14 @@ export function trackPerf(
 
   (async () => {
     try {
-      await (supabase as any).from('monitoring_vitals').insert({
+      await supabase.from('monitoring_vitals').insert({
         user_id:     _userId,
         business_id: getActiveBizId(),
         level:       'perf',
         category,
         message:     name,
         latency_ms:  latencyMs,
-        context:     sanitize(context),
+        context:     sanitize(context) as Json,
         url:         typeof window !== 'undefined' ? window.location.pathname : null,
       });
     } catch {}

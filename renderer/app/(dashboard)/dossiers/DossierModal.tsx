@@ -27,7 +27,7 @@ function QuickClientModal({ businessId, onClose, onCreated }: { businessId: stri
     if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const { data, error } = await (supabase as any).from('clients').insert({
+      const { data, error } = await supabase.from('clients').insert({
         business_id: businessId,
         name: form.name.trim(),
         email: form.email.trim() || null,

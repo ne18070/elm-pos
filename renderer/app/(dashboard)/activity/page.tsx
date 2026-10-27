@@ -215,7 +215,7 @@ export default function ActivityPage() {
     if (!business) return;
     setLoading(true);
     try {
-      let query = (supabase as any)
+      let query = supabase
         .from('activity_logs')
         .select('*, users(full_name)', { count: 'exact' })
         .eq('business_id', business.id)

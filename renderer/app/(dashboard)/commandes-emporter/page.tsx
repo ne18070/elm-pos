@@ -63,7 +63,7 @@ export default function CommandesEmporterPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('orders')
         .select('id, order_number, customer_name, customer_phone, delivery_address, order_channel, total, status, created_at, items')
         .eq('business_id', business.id)
@@ -87,7 +87,7 @@ export default function CommandesEmporterPage() {
     if (!next) return;
     setUpdating(order.id);
     const dbStatus = next === 'done' ? 'completed' : next;
-    await (supabase as any)
+    await supabase
       .from('orders')
       .update({ status: dbStatus })
       .eq('id', order.id);

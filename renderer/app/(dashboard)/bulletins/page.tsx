@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect, useCallback } from 'react';
 import { GraduationCap, Plus, Trash2, Loader2, Save, X, User, BookOpen, Calendar } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -89,7 +90,7 @@ export default function BulletinsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Supprimer cette note ?')) return;
+    if (!(await confirmAsync('Supprimer cette note ?'))) return;
     try {
       await deleteGrade(id);
       success('Note supprimée');

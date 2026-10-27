@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState } from 'react';
@@ -21,7 +22,7 @@ export default function CategoriesPage() {
   const { categories, loading, refetch } = useCategories(business?.id ?? '');
 
   async function handleDelete(cat: Category) {
-    if (!confirm(`Supprimer "${cat.name}" ? Les produits de cette catégorie ne seront pas supprimés.`)) return;
+    if (!(await confirmAsync(`Supprimer "${cat.name}" ? Les produits de cette catégorie ne seront pas supprimés.`))) return;
     try {
       await deleteCategory(cat.id);
       success(`"${cat.name}" supprimée`);

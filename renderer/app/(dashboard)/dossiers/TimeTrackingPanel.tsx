@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { Loader2, Plus, Clock, Play, Square, Save, Trash2, FileText, CheckCircle2 } from 'lucide-react';
 import { 
@@ -96,7 +97,7 @@ export function TimeTrackingPanel({ dossier, businessId, onClose }: { dossier: D
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm('Supprimer cette entrée ?')) return;
+    if (!(await confirmAsync('Supprimer cette entrée ?'))) return;
     try {
       await deleteDossierTimeEntry(id);
       setEntries(entries.filter(e => e.id !== id));
@@ -110,7 +111,7 @@ export function TimeTrackingPanel({ dossier, businessId, onClose }: { dossier: D
     const unbilledIds = entries.filter(e => !e.is_billed).map(e => e.id);
     if (!unbilledIds.length) return;
 
-    if (!window.confirm(`Générer une facture pour les ${unbilledIds.length} entrée(s) non facturée(s) ?`)) return;
+    if (!(await confirmAsync(`Générer une facture pour les ${unbilledIds.length} entrée(s) non facturée(s) ?`))) return;
 
     setBilling(true);
     try {

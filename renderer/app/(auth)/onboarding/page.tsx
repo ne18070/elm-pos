@@ -1,5 +1,6 @@
 'use client';
 
+import { useNotificationStore } from '@/store/notifications';
 import { useState, useEffect } from 'react';
 import {
   Store, Utensils, Car, Gavel, Hotel, LayoutGrid,
@@ -138,7 +139,7 @@ export default function OnboardingPage() {
     } catch (err: any) {
       console.error('[Onboarding]', err);
       trackEvent('provisioning_failed', { error: err.message, sector: sectorId });
-      alert('Une erreur est survenue. Veuillez réessayer ou contacter le support.');
+      useNotificationStore.getState().error('Une erreur est survenue. Veuillez réessayer ou contacter le support.');
       setStep('sector');
       setProgress(0);
     }

@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -264,7 +265,7 @@ export default function HotelPage() {
   }
 
   async function removeRoom(id: string) {
-    if (!confirm('Archiver cette chambre ? Elle n\'apparaîtra plus dans la liste mais l\'historique est conservé.')) return;
+    if (!(await confirmAsync('Archiver cette chambre ? Elle n\'apparaîtra plus dans la liste mais l\'historique est conservé.'))) return;
     try {
       await deleteRoom(id);
       setRooms((p) => p.filter((r) => r.id !== id));
@@ -321,7 +322,7 @@ export default function HotelPage() {
   }
 
   async function removeGuest(id: string) {
-    if (!confirm('Supprimer ce client ?')) return;
+    if (!(await confirmAsync('Supprimer ce client ?'))) return;
     try {
       await deleteGuest(id);
       setGuests((p) => p.filter((g) => g.id !== id));
@@ -468,7 +469,7 @@ export default function HotelPage() {
   }
 
   async function handleCancelReservation(res: HotelReservation) {
-    if (!confirm('Annuler cette réservation ?')) return;
+    if (!(await confirmAsync('Annuler cette réservation ?'))) return;
     try {
       const updated = await cancelReservation(res.id);
       setReservations((p) => p.map((r) => r.id === updated.id ? updated : r));
@@ -479,7 +480,7 @@ export default function HotelPage() {
   }
 
   async function handleNoShow(res: HotelReservation) {
-    if (!confirm('Marquer cette réservation comme no-show ?')) return;
+    if (!(await confirmAsync('Marquer cette réservation comme no-show ?'))) return;
     try {
       const updated = await markNoShow(res.id);
       setReservations((p) => p.map((r) => r.id === updated.id ? updated : r));

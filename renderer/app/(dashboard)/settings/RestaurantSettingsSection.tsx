@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Check, X, Loader2, Layers, LayoutGrid, ChevronDown, ChevronRight, UtensilsCrossed } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -111,7 +112,7 @@ export function RestaurantSettingsSection() {
       notifError(`Supprimez d'abord les ${floor.tables.length} espace(s) de cette zone`);
       return;
     }
-    if (!confirm(`Supprimer la zone « ${floor.name} » ?`)) return;
+    if (!(await confirmAsync(`Supprimer la zone « ${floor.name} » ?`))) return;
     try {
       await deleteFloor(floor.id);
       success(`Zone « ${floor.name} » supprimée`);
@@ -159,7 +160,7 @@ export function RestaurantSettingsSection() {
   }
 
   async function handleDeleteTable(table: RestaurantTable) {
-    if (!confirm(`Supprimer « ${table.name} » ?`)) return;
+    if (!(await confirmAsync(`Supprimer « ${table.name} » ?`))) return;
     try {
       await deleteTable(table.id);
       setFloors(prev => prev.map(f => ({

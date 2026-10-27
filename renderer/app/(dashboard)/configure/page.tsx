@@ -89,7 +89,7 @@ export default function ConfigurePage() {
     if (!business) return;
     setSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('businesses')
         .update({ features })
         .eq('id', business.id);

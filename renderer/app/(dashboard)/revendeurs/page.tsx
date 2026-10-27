@@ -1,4 +1,5 @@
 'use client';
+import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
@@ -318,7 +319,7 @@ export default function RevendeursPage() {
   }
 
   async function removeReseller(id: string) {
-    if (!confirm('Supprimer ce revendeur et tous ses clients ?')) return;
+    if (!(await confirmAsync('Supprimer ce revendeur et tous ses clients ?'))) return;
     try {
       await deleteReseller(id);
       setResellers((prev) => prev.filter((r) => r.id !== id));
@@ -372,7 +373,7 @@ export default function RevendeursPage() {
     const msg = orphan
       ? `${c.name} n'est rattaché qu'à ${selected.name}. Le retirer et le supprimer définitivement ?`
       : `Retirer ${c.name} de ${selected.name} ? Le client reste chez ses autres revendeurs.`;
-    if (!confirm(msg)) return;
+    if (!(await confirmAsync(msg))) return;
     try {
       await unlinkResellerClient(selected.id, c.id);
       if (orphan) await deleteResellerClient(c.id);
@@ -385,7 +386,7 @@ export default function RevendeursPage() {
 
   async function removeSelectedClients() {
     if (selectedClientIds.size === 0 || !selected) return;
-    if (!confirm(`Retirer ${selectedClientIds.size} client(s) de ${selected.name} ? Ceux sans autre revendeur seront supprimés.`)) return;
+    if (!(await confirmAsync(`Retirer ${selectedClientIds.size} client(s) de ${selected.name} ? Ceux sans autre revendeur seront supprimés.`))) return;
     setDeletingClients(true);
     try {
       const ids = [...selectedClientIds];
@@ -450,7 +451,7 @@ export default function RevendeursPage() {
   }
 
   async function removeOffer(id: string) {
-    if (!confirm('Supprimer cette offre ?')) return;
+    if (!(await confirmAsync('Supprimer cette offre ?'))) return;
     try {
       await deleteResellerOffer(id);
       setOffers((prev) => prev.filter((o) => o.id !== id));

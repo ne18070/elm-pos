@@ -5,6 +5,7 @@ import { X, Upload, FileText, AlertCircle, CheckCircle2, Loader2, Download } fro
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
+import type { TablesInsert } from '@services/supabase/database.types';
 
 // --- Types --------------------------------------------------------------------
 
@@ -260,7 +261,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
     let ok = 0, skipped = 0;
 
     // Charger tous les revendeurs une seule fois pour la résolution par nom
-    const { data: resellerRows } = await (supabase as any)
+    const { data: resellerRows } = await supabase
       .from('resellers')
       .select('id, name')
       .eq('business_id', businessId);
@@ -282,7 +283,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
           resellerId = resellerMap[order.revendeur_name.toLowerCase()] ?? null;
         }
 
-        const { data: inserted, error } = await (supabase as any)
+        const { data: inserted, error } = await supabase
           .from('orders')
           .insert({
             business_id:     businessId,
@@ -300,7 +301,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
             reseller_name:   order.revendeur_name   ?? null,
             reseller_client_name: order.client_revendeur ?? null,
             created_at:      `${order.date}T12:00:00.000Z`,
-          })
+          } as unknown as TablesInsert<'orders'>)
           .select('id')
           .single();
 
@@ -309,7 +310,7 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
         const orderId = (inserted as { id: string }).id;
 
         if (order.items.length > 0) {
-          await (supabase as any).from('order_items').insert(
+          await supabase.from('order_items').insert(
             order.items.map((item) => ({
               order_id:        orderId,
               product_id:      null,
@@ -318,13 +319,13 @@ export function ImportOrdersModal({ businessId, userId, onClose, onDone }: Impor
               quantity:        item.quantity,
               discount_amount: item.discount_amount,
               total:           item.total,
-            }))
+            })) as unknown as TablesInsert<'order_items'>[]
           );
         }
 
         // Paiement si statut paid
         if (order.status === 'paid') {
-          await (supabase as any).from('payments').insert({
+          await supabase.from('payments').insert({
             order_id: orderId,
             method:   order.method,
             amount:   totalAfterDiscount,
