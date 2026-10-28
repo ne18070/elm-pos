@@ -45,7 +45,7 @@ export default function PrivacyPage() {
                 contact@elm-app.click
               </a>{' '}ou sur WhatsApp au{' '}
               <a href="https://wa.me/221772211126" className="text-content-brand hover:text-content-brand">
-                +33 7 46 43 68 01
+                +221 772 211 126
               </a>.
             </p>
           </Section>
