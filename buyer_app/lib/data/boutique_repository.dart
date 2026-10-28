@@ -167,12 +167,41 @@ class BoutiqueRepository {
         },
       );
 
+  /// Signalement (et/ou blocage) d'une boutique, d'un produit ou d'une prestation —
+  /// RPC report_content (migration 164), traité dans /backoffice/moderation.
+  Future<void> reportContent({
+    required String businessId,
+    required ReportTarget target,
+    String? targetId,
+    String? reason,
+    String? details,
+    bool blocked = false,
+    required String deviceId,
+    required String platform,
+  }) =>
+      _db.rpc(
+        'report_content',
+        params: {
+          'p_business_id': businessId,
+          'p_target_type': target.name,
+          'p_target_id': targetId,
+          'p_reason': reason,
+          'p_details': details,
+          'p_blocked': blocked,
+          'p_device_id': deviceId,
+          'p_platform': platform,
+        },
+      );
+
   Future<BoutiqueOrderDetail?> order(String token) async {
     final data = await _db.rpc('get_boutique_order', params: {'p_token': token});
     if (data is! Map) return null;
     return BoutiqueOrderDetail.fromJson(Map<String, dynamic>.from(data));
   }
 }
+
+/// Contenu signalé (valeur envoyée en p_target_type).
+enum ReportTarget { business, product, service }
 
 class TrackingException implements Exception {
   const TrackingException(this.message);

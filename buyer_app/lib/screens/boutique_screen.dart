@@ -7,6 +7,7 @@ import '../models/boutique.dart';
 import '../state/cart.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/moderation.dart';
 import 'checkout_screen.dart';
 
 enum _SortKey {
@@ -43,6 +44,9 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
   bool _loading = true;
   String? _error;
 
+  /// Boutique bloquée par l'acheteur, ouverte par un lien : rien n'est chargé
+  BoutiqueInfo? _blocked;
+
   String _search = '';
   String? _categoryId;
   _SortKey _sort = _SortKey.standard;
@@ -70,6 +74,10 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
       final info = await widget.repository.findBoutique(widget.boutiqueId);
       if (info == null) {
         if (mounted) setState(() => _error = 'Cette boutique n’existe plus ou son lien a changé.');
+        return;
+      }
+      if (await widget.store.isBlocked(info.id)) {
+        if (mounted) setState(() => _blocked = info);
         return;
       }
       final products = await widget.repository.products(info.id);
@@ -158,6 +166,29 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
     if (variant != null && mounted) _add(product, variant);
   }
 
+  ModerationSubject get _subject =>
+      ModerationSubject(businessId: _info!.id, businessName: _info!.name, logoUrl: _info!.logoUrl);
+
+  Future<void> _reportProduct(BoutiqueProduct product) async {
+    final outcome = await showReportSheet(
+      context,
+      repository: widget.repository,
+      store: widget.store,
+      subject: _subject,
+      target: ReportTarget.product,
+      targetId: product.id,
+      targetName: product.name,
+    );
+    if (outcome == ReportOutcome.blocked && mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _unblock() async {
+    await widget.store.unblockBusiness(_blocked!.id);
+    if (!mounted) return;
+    setState(() => _blocked = null);
+    await _load();
+  }
+
   Future<void> _showDetails(BoutiqueProduct product) async {
     final currency = _info!.currency;
     await showModalBottomSheet<void>(
@@ -200,6 +231,17 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
                     },
               icon: const Icon(Icons.add_shopping_cart),
               label: Text(product.outOfStock ? 'Épuisé' : 'Ajouter au panier'),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _reportProduct(product);
+                },
+                icon: const Icon(Icons.flag_outlined, size: 18),
+                label: const Text('Signaler ce produit'),
+              ),
             ),
           ],
         ),
@@ -267,6 +309,13 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
                   PopupMenuItem(value: key, child: Text(key.label)),
               ],
             ),
+          if (info != null)
+            ModerationMenuButton(
+              repository: widget.repository,
+              store: widget.store,
+              subject: _subject,
+              onBlocked: () => Navigator.of(context).pop(),
+            ),
         ],
       ),
       body: _buildBody(),
@@ -298,6 +347,7 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
 
   Widget _buildBody() {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_blocked != null) return BlockedBusinessView(name: _blocked!.name, onUnblock: _unblock);
     if (_error != null || _info == null) {
       return ErrorView(
         message: _error ?? 'Boutique introuvable.',

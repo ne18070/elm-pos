@@ -7,13 +7,14 @@ import {
   LayoutDashboard, Layers, Users, CreditCard, 
   Settings, Megaphone, Mail, LogOut, ChevronLeft,
   ChevronRight, Search, Bell, BarChart2, Smartphone,
-  Command, Package, Grid3X3, HelpCircle, Loader2
+  Command, Package, Grid3X3, HelpCircle, Loader2, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
 import { getSubscriptionRequests, getPublicSubscriptionRequests } from '@services/supabase/subscriptions';
 import { getAllTicketsAdmin } from '@services/supabase/support';
+import { countOpenContentReports } from '@services/supabase/moderation';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 
 interface NavItem {
@@ -31,6 +32,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [supportCount, setSupportCount] = useState(0);
+  const [reportCount, setReportCount] = useState(0);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   async function handleLogout() {
@@ -63,12 +65,14 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
       getSubscriptionRequests().catch(() => []),
       getPublicSubscriptionRequests().catch(() => []),
       getAllTicketsAdmin().catch(() => []),
-    ]).then(([reqs, pub, tickets]) => {
+      countOpenContentReports().catch(() => 0),
+    ]).then(([reqs, pub, tickets, reports]) => {
       setPendingCount(
         reqs.filter((r) => r.status === 'pending').length +
         pub.filter((r) => r.status === 'pending').length
       );
       setSupportCount(tickets.filter(t => t.status === 'open').length);
+      setReportCount(reports);
     });
   }, [isSuperadmin]);
 
@@ -79,6 +83,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
     { label: 'Abonnements', href: '/backoffice/abonnements', icon: CreditCard },
     { label: 'Plans & Tarifs', href: '/backoffice/plans', icon: BarChart2 },
     { label: 'Support Client', href: '/backoffice/support', icon: HelpCircle, badge: supportCount },
+    { label: 'Modération', href: '/backoffice/moderation', icon: ShieldAlert, badge: reportCount },
     { label: 'Marketing', href: '/backoffice/marketing', icon: Megaphone },
     { label: 'Paramètres', href: '/backoffice/settings', icon: Settings },
   ];

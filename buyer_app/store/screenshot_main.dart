@@ -74,6 +74,8 @@ Future<void> main() async {
   final info = await repository.findBoutique(params['id'] ?? _demoBoutique);
   if (info != null) await store.rememberBoutique(info);
   await store.saveCustomerDetails(_demoCustomer);
+  // Captures de l'app déjà acceptée (l'écran des conditions n'est pas photographié)
+  await store.acceptTerms(AppConfig.termsVersion);
 
   // Écran cible préparé AVANT le premier rendu (données chargées), puis ouvert juste après
   Widget? target;

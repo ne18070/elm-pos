@@ -10,6 +10,11 @@ class AppConfig {
 
   static const siteUrl = 'https://www.elm-app.click';
   static const privacyUrl = '$siteUrl/privacy';
+  static const termsUrl = '$siteUrl/conditions';
+
+  /// Version des conditions d'utilisation (renderer/app/(marketing)/conditions) :
+  /// l'incrémenter redemande l'acceptation au prochain lancement.
+  static const termsVersion = 1;
   static const downloadPageUrl = '$siteUrl/telecharger';
 
   static bool get isConfigured => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;

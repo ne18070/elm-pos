@@ -1167,6 +1167,72 @@ export type Database = {
           },
         ]
       }
+      content_reports: {
+        Row: {
+          blocked: boolean
+          business_id: string
+          created_at: string
+          details: string | null
+          device_id: string | null
+          id: string
+          platform: string | null
+          reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_id: string | null
+          target_label: string | null
+          target_type: string
+        }
+        Insert: {
+          blocked?: boolean
+          business_id: string
+          created_at?: string
+          details?: string | null
+          device_id?: string | null
+          id?: string
+          platform?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id?: string | null
+          target_label?: string | null
+          target_type: string
+        }
+        Update: {
+          blocked?: boolean
+          business_id?: string
+          created_at?: string
+          details?: string | null
+          device_id?: string | null
+          id?: string
+          platform?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_id?: string | null
+          target_label?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           body: string
@@ -1553,6 +1619,42 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      directory_suspensions: {
+        Row: {
+          business_id: string
+          created_at: string
+          reason: string | null
+          suspended_by: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          reason?: string | null
+          suspended_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          reason?: string | null
+          suspended_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directory_suspensions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "directory_suspensions_suspended_by_fkey"
+            columns: ["suspended_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dossier_fichiers: {
         Row: {
@@ -7337,6 +7439,19 @@ export type Database = {
       }
     }
     Functions: {
+      report_content: {
+        Args: {
+          p_blocked?: boolean
+          p_business_id: string
+          p_details?: string
+          p_device_id?: string
+          p_platform?: string
+          p_reason?: string
+          p_target_id?: string
+          p_target_type: string
+        }
+        Returns: string
+      }
       register_push_device: {
         Args: { p_fcm_token: string; p_platform: string; p_tracking_token: string }
         Returns: undefined

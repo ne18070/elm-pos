@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -84,6 +85,49 @@ class TrackedRequest {
       };
 }
 
+/// Boutique bloquée par l'acheteur : masquée de l'annuaire et des visites récentes.
+class BlockedBusiness {
+  const BlockedBusiness({
+    required this.id,
+    required this.name,
+    required this.blockedAt,
+    this.logoUrl,
+    this.reported = false,
+  });
+
+  factory BlockedBusiness.fromJson(Map<String, dynamic> json) => BlockedBusiness(
+        id: json['id'] as String,
+        name: '${json['name'] ?? ''}',
+        logoUrl: json['logo_url'] as String?,
+        blockedAt: DateTime.tryParse('${json['blocked_at']}') ?? DateTime.now(),
+        reported: json['reported'] == true,
+      );
+
+  final String id;
+  final String name;
+  final String? logoUrl;
+  final DateTime blockedAt;
+
+  /// Blocage transmis à l'équipe ELM (report_content) ; renvoyé au prochain lancement sinon.
+  final bool reported;
+
+  BlockedBusiness copyWith({bool? reported}) => BlockedBusiness(
+        id: id,
+        name: name,
+        logoUrl: logoUrl,
+        blockedAt: blockedAt,
+        reported: reported ?? this.reported,
+      );
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'logo_url': logoUrl,
+        'blocked_at': blockedAt.toIso8601String(),
+        'reported': reported,
+      };
+}
+
 /// Données gardées uniquement sur le téléphone (aucun compte acheteur en v1).
 class LocalStore {
   static const _recentKey = 'recent_boutiques';
@@ -91,6 +135,73 @@ class LocalStore {
   static const _recentMax = 20;
   static const _trackedKey = 'tracked_requests';
   static const _trackedMax = 50;
+  static const _blockedKey = 'blocked_businesses';
+  static const _termsKey = 'terms_accepted_version';
+  static const _deviceIdKey = 'device_id';
+
+  Future<int> acceptedTermsVersion() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_termsKey) ?? 0;
+  }
+
+  Future<void> acceptTerms(int version) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_termsKey, version);
+  }
+
+  /// Identifiant anonyme de l'installation, joint aux signalements
+  /// (regroupe les signalements d'un même téléphone, sans compte).
+  Future<String> deviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(_deviceIdKey);
+    if (existing != null) return existing;
+    final random = Random.secure();
+    final id = List.generate(16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+    await prefs.setString(_deviceIdKey, id);
+    return id;
+  }
+
+  Future<List<BlockedBusiness>> blockedBusinesses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_blockedKey);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .whereType<Map>()
+          .map((e) => BlockedBusiness.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } on FormatException {
+      return [];
+    }
+  }
+
+  Future<bool> isBlocked(String businessId) async =>
+      (await blockedBusinesses()).any((b) => b.id == businessId);
+
+  /// Bloque la boutique et la retire des visites récentes (boutique et services).
+  Future<void> blockBusiness(BlockedBusiness business) async {
+    final blocked = await blockedBusinesses();
+    await _saveBlocked([business, ...blocked.where((b) => b.id != business.id)]);
+    await _saveRecents((await recentBoutiques()).where((r) => r.id != business.id).toList());
+  }
+
+  Future<List<BlockedBusiness>> unblockBusiness(String businessId) async {
+    final next = (await blockedBusinesses()).where((b) => b.id != businessId).toList();
+    await _saveBlocked(next);
+    return next;
+  }
+
+  Future<void> markBlockReported(String businessId) async {
+    final blocked = await blockedBusinesses();
+    await _saveBlocked([
+      for (final b in blocked) b.id == businessId ? b.copyWith(reported: true) : b,
+    ]);
+  }
+
+  Future<void> _saveBlocked(List<BlockedBusiness> blocked) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_blockedKey, jsonEncode(blocked.map((b) => b.toJson()).toList()));
+  }
 
   Future<List<RecentBoutique>> recentBoutiques() async {
     final prefs = await SharedPreferences.getInstance();

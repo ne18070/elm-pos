@@ -9,6 +9,7 @@ import '../models/service.dart';
 import '../state/service_cart.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/moderation.dart';
 import 'service_request_screen.dart';
 
 /// Catalogue de prestations d'une entreprise — équivalent de /services/[businessId] sur le web.
@@ -36,6 +37,9 @@ class _ServiceScreenState extends State<ServiceScreen> {
   String? _error;
   String? _categoryId;
 
+  /// Établissement bloqué par l'acheteur, ouvert par un lien : rien n'est chargé
+  BoutiqueInfo? _blocked;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +61,10 @@ class _ServiceScreenState extends State<ServiceScreen> {
       final info = await widget.repository.findBoutique(widget.businessId);
       if (info == null) {
         if (mounted) setState(() => _error = 'Cet établissement n’existe plus ou son lien a changé.');
+        return;
+      }
+      if (await widget.store.isBlocked(info.id)) {
+        if (mounted) setState(() => _blocked = info);
         return;
       }
       final catalog = await widget.repository.serviceCatalog(info.id);
@@ -85,6 +93,16 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   List<ServiceItem> get _filtered =>
       _categoryId == null ? _catalog : _catalog.where((i) => i.categoryId == _categoryId).toList();
+
+  ModerationSubject get _subject =>
+      ModerationSubject(businessId: _info!.id, businessName: _info!.name, logoUrl: _info!.logoUrl);
+
+  Future<void> _unblock() async {
+    await widget.store.unblockBusiness(_blocked!.id);
+    if (!mounted) return;
+    setState(() => _blocked = null);
+    await _load();
+  }
 
   Future<void> _openRequest() async {
     await Navigator.of(context).push(
@@ -129,6 +147,13 @@ class _ServiceScreenState extends State<ServiceScreen> {
               icon: const Icon(Icons.call_outlined),
               onPressed: () => launchUrl(Uri(scheme: 'tel', path: info!.phone)),
             ),
+          if (info != null)
+            ModerationMenuButton(
+              repository: widget.repository,
+              store: widget.store,
+              subject: _subject,
+              onBlocked: () => Navigator.of(context).pop(),
+            ),
         ],
       ),
       body: _buildBody(),
@@ -160,6 +185,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   Widget _buildBody() {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_blocked != null) return BlockedBusinessView(name: _blocked!.name, onUnblock: _unblock);
     if (_error != null || _info == null) {
       return ErrorView(
         message: _error ?? 'Établissement introuvable.',

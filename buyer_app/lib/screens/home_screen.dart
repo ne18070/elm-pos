@@ -10,12 +10,15 @@ import '../data/local_store.dart';
 import '../models/directory.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/moderation.dart';
 import '../services/push_service.dart';
 import '../services/update_service.dart';
+import 'blocked_screen.dart';
 import 'boutique_screen.dart';
 import 'my_tracking_screen.dart';
 import 'tracking_screen.dart';
 import 'service_screen.dart';
+import 'terms_screen.dart';
 
 /// Accueil : annuaire des boutiques et services ELM avec recherche,
 /// fiches récemment visitées, ouverture par lien partagé.
@@ -46,6 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<RecentBoutique> _recents = [];
 
+  /// Boutiques bloquées sur ce téléphone : masquées de l'annuaire et des récents
+  Set<String> _blockedIds = {};
+
   /// Liens https://www.elm-app.click/boutique|services/… (QR codes, WhatsApp) :
   /// le flux émet aussi le lien qui a lancé l'app.
   StreamSubscription<Uri>? _linkSubscription;
@@ -55,7 +61,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _scroll.addListener(_onScroll);
     _loadRecents();
+    _loadBlocked();
     _reload();
+    sendPendingBlockReports(widget.repository, widget.store);
     _linkSubscription = AppLinks().uriLinkStream.listen(_handleIncomingLink);
     // Toucher d'une notification de suivi → écran de suivi
     PushService.instance.onOpenLink = _handleIncomingLink;
@@ -78,6 +86,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final recents = await widget.store.recentBoutiques();
     if (mounted) setState(() => _recents = recents);
   }
+
+  Future<void> _loadBlocked() async {
+    final blocked = await widget.store.blockedBusinesses();
+    if (mounted) setState(() => _blockedIds = {for (final b in blocked) b.id});
+  }
+
+  List<DirectoryEntry> get _visibleEntries =>
+      _entries.where((e) => !_blockedIds.contains(e.id)).toList();
+
+  List<RecentBoutique> get _visibleRecents =>
+      _recents.where((r) => !_blockedIds.contains(r.id)).toList();
 
   Future<void> _reload() async {
     final id = ++_requestId;
@@ -150,7 +169,27 @@ class _HomeScreenState extends State<HomeScreen> {
             : BoutiqueScreen(boutiqueId: businessId, repository: widget.repository, store: widget.store),
       ),
     );
+    // Un blocage depuis la fiche la retire aussitôt de l'annuaire
+    await _loadBlocked();
     await _loadRecents();
+  }
+
+  Future<void> _openBlocked() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => BlockedScreen(store: widget.store)),
+    );
+    await _loadBlocked();
+  }
+
+  void _onMenu(String value) {
+    switch (value) {
+      case 'terms':
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermsScreen()));
+      case 'blocked':
+        _openBlocked();
+      case 'privacy':
+        launchUrl(Uri.parse(AppConfig.privacyUrl), mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _openTracking(String token) async {
@@ -282,11 +321,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _openLinkSheet,
           ),
           PopupMenuButton<String>(
-            onSelected: (_) => launchUrl(
-              Uri.parse(AppConfig.privacyUrl),
-              mode: LaunchMode.externalApplication,
-            ),
+            onSelected: _onMenu,
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'blocked', child: Text('Boutiques bloquées')),
+              PopupMenuItem(value: 'terms', child: Text('Conditions d’utilisation')),
               PopupMenuItem(value: 'privacy', child: Text('Politique de confidentialité')),
             ],
           ),
@@ -348,10 +386,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (_query.isEmpty && _recents.isNotEmpty)
+              if (_query.isEmpty && _visibleRecents.isNotEmpty)
                 SliverToBoxAdapter(
                   child: _RecentStrip(
-                    recents: _recents,
+                    recents: _visibleRecents,
                     onOpen: (visit) => _open(visit.id, visit.kind),
                     onForget: _forget,
                   ),
@@ -387,7 +425,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ];
     }
-    if (_entries.isEmpty) {
+    final entries = _visibleEntries;
+    if (entries.isEmpty) {
       return [
         SliverFillRemaining(
           hasScrollBody: false,
@@ -409,10 +448,20 @@ class _HomeScreenState extends State<HomeScreen> {
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverList.builder(
-          itemCount: _entries.length,
+          itemCount: entries.length,
           itemBuilder: (context, index) => _DirectoryTile(
-            entry: _entries[index],
-            onTap: () => _openEntry(_entries[index]),
+            entry: entries[index],
+            onTap: () => _openEntry(entries[index]),
+            menu: ModerationMenuButton(
+              repository: widget.repository,
+              store: widget.store,
+              subject: ModerationSubject(
+                businessId: entries[index].id,
+                businessName: entries[index].name,
+                logoUrl: entries[index].logoUrl,
+              ),
+              onBlocked: _loadBlocked,
+            ),
           ),
         ),
       ),
@@ -431,10 +480,13 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _DirectoryTile extends StatelessWidget {
-  const _DirectoryTile({required this.entry, required this.onTap});
+  const _DirectoryTile({required this.entry, required this.onTap, required this.menu});
 
   final DirectoryEntry entry;
   final VoidCallback onTap;
+
+  /// Signaler / bloquer
+  final Widget menu;
 
   @override
   Widget build(BuildContext context) {
@@ -442,7 +494,7 @@ class _DirectoryTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        contentPadding: const EdgeInsets.only(left: 12, top: 4, bottom: 4),
         leading: BoutiqueLogo(url: entry.logoUrl, size: 48),
         title: Text(
           entry.name,
@@ -465,7 +517,7 @@ class _DirectoryTile extends StatelessWidget {
             ),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: menu,
         onTap: onTap,
       ),
     );
