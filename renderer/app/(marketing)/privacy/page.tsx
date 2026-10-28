@@ -14,7 +14,8 @@ export default function PrivacyPage() {
         backgroundSize: '40px 40px',
       }} />
 
-      <div className="relative max-w-3xl mx-auto px-4 py-12">
+      {/* pt : place sous la MarketingNav fixe (comme /subscribe) */}
+      <div className="relative max-w-3xl mx-auto px-4 pt-28 sm:pt-32 pb-12">
         {/* Header */}
         <div className="flex flex-col items-center mb-10">
           <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 p-3 shadow-2xl overflow-hidden border-2 border-white/20">
