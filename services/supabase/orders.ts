@@ -184,6 +184,8 @@ type GetOrdersOptions = {
   /** Origine de la commande (`orders.source`) : 'boutique' = commandes en
    *  ligne (boutique web + appli ELM Boutique), 'whatsapp', 'pos'… */
   source?: string;
+  /** Restreint aux commandes passées pour ce revendeur (`orders.reseller_id`). */
+  resellerId?: string;
   /** Demander un count (parcours des lignes correspondantes). Par défaut
    *  true ; passer false quand seule la page compte. */
   withCount?: boolean;
@@ -249,6 +251,9 @@ export async function getOrders(
   }
   if (options?.cashierId) {
     query = query.eq('cashier_id', options.cashierId);
+  }
+  if (options?.resellerId) {
+    query = query.eq('reseller_id', options.resellerId);
   }
   if (options?.createdAfter) {
     query = query.gte('created_at', options.createdAfter);
@@ -355,6 +360,8 @@ async function getOrdersBySearch(
     // Omis hors onglet « En ligne » : la signature sans p_source (migration
     // 124) reste ainsi appelable tant que la 158 n'est pas appliquée.
     ...(options?.source ? { p_source: options.source } : {}),
+    // Idem pour le filtre revendeur (migration 165).
+    ...(options?.resellerId ? { p_reseller_id: options.resellerId } : {}),
   } as never);
   if (idError) throw new Error(idError.message);
 

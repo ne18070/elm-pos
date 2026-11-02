@@ -16,6 +16,7 @@ interface UseOrdersOptions {
   createdAfter?: string;
   acompteOnly?:  boolean;
   source?:       string;
+  resellerId?:   string;
   withCount?:    boolean;
   projection?:   'full' | 'list';
 }
@@ -54,7 +55,7 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
       if (requestId === requestIdRef.current) setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search, options?.cashierId, options?.createdAfter, options?.acompteOnly, options?.source, options?.withCount, options?.projection]);
+  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.limit, options?.offset, options?.search, options?.cashierId, options?.createdAfter, options?.acompteOnly, options?.source, options?.resellerId, options?.withCount, options?.projection]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

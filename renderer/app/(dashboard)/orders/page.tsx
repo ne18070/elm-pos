@@ -15,6 +15,7 @@ import { OrderDetail } from '@/components/orders/OrderDetail';
 import { InvoiceModal } from '@/components/shared/InvoiceModal';
 import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
 import { getOrderById, getOrders } from '@services/supabase/orders';
+import { getResellers, type Reseller } from '@services/supabase/resellers';
 import type { Order, OrderStatus } from '@pos-types';
 
 type FilterTab = OrderStatus | 'all' | 'acompte' | 'today' | 'online';
@@ -89,6 +90,8 @@ export default function OrdersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFrom, setDateFrom]     = useState('');
   const [dateTo, setDateTo]         = useState('');
+  const [resellerId, setResellerId] = useState('');
+  const [resellers, setResellers]   = useState<Reseller[]>([]);
   const [showImport, setShowImport] = useState(false);
   const [page, setPage]             = useState(1);
   const [printingHistory, setPrintingHistory] = useState(false);
@@ -113,11 +116,15 @@ export default function OrdersPage() {
     [restricted],
   );
   const scopeOpts = restricted ? { cashierId: user?.id, createdAfter: restrictedSince } : undefined;
+  // Les commandes boutique n'ont jamais de revendeur : le filtre est ignoré
+  // (et masqué) sur l'onglet « En ligne ».
+  const resellerOpt = resellerId && !isOnlineTab ? resellerId : undefined;
+  const selectedReseller = resellerOpt ? resellers.find((r) => r.id === resellerOpt) : undefined;
   // Si le périmètre est restreint mais l'utilisateur pas encore chargé, on
   // désactive la requête (businessId vide) plutôt que de tout exposer.
   const effectiveBusinessId = restricted && !user?.id ? '' : (business?.id ?? '');
 
-  // Remet la page à 1 dès qu'un filtre (onglet, recherche, dates) change —
+  // Remet la page à 1 dès qu'un filtre (onglet, recherche, dates, revendeur) change —
   // fait directement pendant le rendu (pattern React recommandé pour
   // "ajuster un state suite au changement d'un autre"), pas dans un
   // useEffect séparé : useOrders ci-dessous lit `page` dans CE MÊME rendu
@@ -125,15 +132,16 @@ export default function OrdersPage() {
   // passer un premier fetch avec l'ancien offset avant de le corriger —
   // flash "aucune commande" et requête réseau doublée. Ajusté pendant le
   // rendu, useOrders ne voit jamais la valeur périmée.
-  const prevFiltersRef = useRef([tab, debouncedSearch, dateFrom, dateTo]);
+  const prevFiltersRef = useRef([tab, debouncedSearch, dateFrom, dateTo, resellerId]);
   let effectivePage = page;
   if (
     prevFiltersRef.current[0] !== tab ||
     prevFiltersRef.current[1] !== debouncedSearch ||
     prevFiltersRef.current[2] !== dateFrom ||
-    prevFiltersRef.current[3] !== dateTo
+    prevFiltersRef.current[3] !== dateTo ||
+    prevFiltersRef.current[4] !== resellerId
   ) {
-    prevFiltersRef.current = [tab, debouncedSearch, dateFrom, dateTo];
+    prevFiltersRef.current = [tab, debouncedSearch, dateFrom, dateTo, resellerId];
     if (page !== 1) { effectivePage = 1; setPage(1); }
   }
 
@@ -145,6 +153,7 @@ export default function OrdersPage() {
       status:      dbStatus,
       acompteOnly: isAcompteTab || undefined,
       source:      dbSource,
+      resellerId:  resellerOpt,
       limit:       PAGE_SIZE,
       offset:      (effectivePage - 1) * PAGE_SIZE,
       search:      debouncedSearch,
@@ -155,7 +164,8 @@ export default function OrdersPage() {
 
   // Badge de comptage "acompte" — count exact côté serveur (index partiel), pas
   // de lignes rapatriées hormis la première. Indépendant de l'onglet actif et
-  // de l'onglet "Aujourd'hui" ; suit le sélecteur de dates s'il est renseigné.
+  // de l'onglet "Aujourd'hui" ; suit le sélecteur de dates et le revendeur
+  // s'ils sont renseignés.
   const { count: acompteCount } = useOrders(
     isAcompteTab ? '' : effectiveBusinessId,
     {
@@ -164,6 +174,7 @@ export default function OrdersPage() {
       projection:  'list',
       dateFrom:    dateFrom || undefined,
       dateTo:      dateTo || undefined,
+      resellerId:  resellerId || undefined,
       ...scopeOpts,
     },
   );
@@ -198,6 +209,13 @@ export default function OrdersPage() {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  // Liste des revendeurs du filtre — le sélecteur reste masqué tant qu'elle
+  // est vide (business sans module revendeurs).
+  useEffect(() => {
+    if (!business?.id) return;
+    getResellers(business.id).then(setResellers).catch(() => setResellers([]));
+  }, [business?.id]);
 
   // Réaligne `page` sur la dernière page réelle quand le jeu de résultats a
   // rétréci sans passer par un changement de filtre (refetch temps réel,
@@ -245,6 +263,7 @@ export default function OrdersPage() {
         status:      dbStatus,
         acompteOnly: isAcompteTab || undefined,
         source:      dbSource,
+        resellerId:  resellerOpt,
         search:      debouncedSearch,
         limit:       HISTORY_PRINT_LIMIT,
         withCount:   false,
@@ -263,7 +282,7 @@ export default function OrdersPage() {
           ? `Du ${dateFrom ? format(new Date(dateFrom), 'dd/MM/yyyy') : '…'} au ${dateTo ? format(new Date(dateTo), 'dd/MM/yyyy') : '…'}`
           : 'Toute la période';
       printHtml(generateOrdersHistoryReport(list, business, {
-        title: `Historique des factures — ${TAB_LABELS[tab]}`,
+        title: `Historique des factures — ${TAB_LABELS[tab]}${selectedReseller ? ` — ${selectedReseller.name}` : ''}`,
         periodLabel,
       }));
     } catch (err) {
@@ -313,16 +332,36 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          {/* Recherche */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
-            <input
-              type="text"
-              placeholder="Rechercher par ID, nom ou téléphone client…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input pl-10 w-full"
-            />
+          {/* Recherche + filtre revendeur */}
+          <div className="flex gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
+              <input
+                type="text"
+                placeholder="Rechercher par ID, nom ou téléphone client…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input pl-10 w-full"
+              />
+            </div>
+            {resellers.length > 0 && !isOnlineTab && (
+              <div className="relative w-36 sm:w-56 shrink-0">
+                <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
+                <select
+                  value={resellerId}
+                  onChange={(e) => setResellerId(e.target.value)}
+                  aria-label="Filtrer par revendeur"
+                  className={`input pl-9 w-full truncate ${resellerId ? 'border-brand-600 text-content-primary' : 'text-content-secondary'}`}
+                >
+                  <option value="">Tous les revendeurs</option>
+                  {resellers.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}{r.is_active ? '' : ' (inactif)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Filtre de dates — masqué quand le périmètre est verrouillé sur les
@@ -428,6 +467,11 @@ export default function OrdersPage() {
                 <p className="text-xs text-content-muted mt-1 text-center px-4">
                   Les commandes passées sur votre boutique en ligne et l&apos;appli ELM Boutique apparaîtront ici.
                 </p>
+              )}
+              {selectedReseller && (
+                <button onClick={() => setResellerId('')} className="text-xs text-content-brand hover:underline mt-1">
+                  Aucune commande pour {selectedReseller.name} — voir tous les revendeurs
+                </button>
               )}
             </div>
           ) : (
