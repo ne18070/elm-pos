@@ -336,15 +336,7 @@ async function getOrdersBySearch(
 ): Promise<{ orders: Order[]; count: number }> {
   const limit  = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
-
-  // Même précédence et même conversion locale→UTC que le chemin non-recherche
-  // ci-dessus (`date` prime sur `dateFrom`/`dateTo` s'il est fourni).
-  const dateFromIso = options?.date
-    ? new Date(`${options.date}T00:00:00`).toISOString()
-    : options?.dateFrom ? new Date(`${options.dateFrom}T00:00:00`).toISOString() : undefined;
-  const dateToIso = options?.date
-    ? new Date(`${options.date}T23:59:59.999`).toISOString()
-    : options?.dateTo ? new Date(`${options.dateTo}T23:59:59.999`).toISOString() : undefined;
+  const { dateFromIso, dateToIso } = toUtcBounds(options);
 
   const { data: idRows, error: idError } = await supabase.rpc('search_order_ids' as never, {
     p_business_id:    businessId,
@@ -370,6 +362,55 @@ async function getOrdersBySearch(
 
   const orders = await hydrateOrders(rows.map((r) => r.id), selectStr);
   return { orders, count: withCount ? rows[0].total_count : orders.length };
+}
+
+/** Même précédence et même conversion locale→UTC que le chemin non-recherche
+ *  de getOrders (`date` prime sur `dateFrom`/`dateTo` s'il est fourni). */
+function toUtcBounds(options: GetOrdersOptions | undefined): { dateFromIso?: string; dateToIso?: string } {
+  const dateFromIso = options?.date
+    ? new Date(`${options.date}T00:00:00`).toISOString()
+    : options?.dateFrom ? new Date(`${options.dateFrom}T00:00:00`).toISOString() : undefined;
+  const dateToIso = options?.date
+    ? new Date(`${options.date}T23:59:59.999`).toISOString()
+    : options?.dateTo ? new Date(`${options.dateTo}T23:59:59.999`).toISOString() : undefined;
+  return { dateFromIso, dateToIso };
+}
+
+export interface OrderFilterTotals {
+  count:      number;
+  total:      number;
+  amountPaid: number;
+  balanceDue: number;
+}
+
+/** Totaux de TOUTES les commandes correspondant aux mêmes filtres que
+ *  getOrders (pas seulement la page chargée) — RPC `order_filter_totals`,
+ *  migration 165. Annulées/remboursées exclues hors filtre de statut. */
+export async function getOrderFilterTotals(
+  businessId: string,
+  options?: Omit<GetOrdersOptions, 'limit' | 'offset' | 'withCount' | 'projection'>,
+): Promise<OrderFilterTotals> {
+  const { dateFromIso, dateToIso } = toUtcBounds(options);
+  const { data, error } = await supabase.rpc('order_filter_totals' as never, {
+    p_business_id:   businessId,
+    p_search:        toIlikeTerm(options?.search ?? '') || undefined,
+    p_status:        options?.status && options.status !== 'all' ? options.status : undefined,
+    p_acompte_only:  options?.acompteOnly ?? false,
+    p_date_from:     dateFromIso,
+    p_date_to:       dateToIso,
+    p_cashier_id:    options?.cashierId ?? undefined,
+    p_created_after: options?.createdAfter ?? undefined,
+    p_source:        options?.source ?? undefined,
+    p_reseller_id:   options?.resellerId ?? undefined,
+  } as never);
+  if (error) throw new Error(error.message);
+  const row = ((data ?? []) as unknown as Array<{ order_count: number; total: number; amount_paid: number; balance_due: number }>)[0];
+  return {
+    count:      Number(row?.order_count ?? 0),
+    total:      Number(row?.total ?? 0),
+    amountPaid: Number(row?.amount_paid ?? 0),
+    balanceDue: Number(row?.balance_due ?? 0),
+  };
 }
 
 export async function getOrderById(id: string): Promise<Order> {

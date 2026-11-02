@@ -1,8 +1,14 @@
 -- ============================================================================
--- Migration 165 : filtre « Revendeur » de la page Commandes
+-- Migration 165 : filtre « Revendeur » + totaux filtrés de la page Commandes
 --
 -- search_order_ids (chemin de recherche de getOrders, migrations 124/158) :
 --   - nouveau paramètre p_reseller_id (orders.reseller_id).
+--
+-- order_filter_totals : totaux (nombre, montant, encaissé, reste dû) de TOUTES
+-- les commandes correspondant aux filtres de la page — pas seulement la page
+-- de 50 affichée. Mêmes paramètres que search_order_ids, recherche facultative.
+-- Hors filtre de statut explicite, annulées et remboursées sont exclues des
+-- sommes (ce ne sont pas des ventes). SECURITY INVOKER : RLS s'applique.
 --
 -- Index (business_id, reseller_id, created_at DESC, id DESC) partiel : le
 -- filtre revendeur pagine par date comme les autres onglets ; l'index simple
@@ -67,4 +73,60 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.search_order_ids(
   uuid, text, text, boolean, timestamptz, timestamptz, uuid, timestamptz, int, int, text, uuid
+) TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.order_filter_totals(
+  p_business_id    uuid,
+  p_search         text        DEFAULT NULL,
+  p_status         text        DEFAULT NULL,
+  p_acompte_only   boolean     DEFAULT false,
+  p_date_from      timestamptz DEFAULT NULL,
+  p_date_to        timestamptz DEFAULT NULL,
+  p_cashier_id     uuid        DEFAULT NULL,
+  p_created_after  timestamptz DEFAULT NULL,
+  p_source         text        DEFAULT NULL,
+  p_reseller_id    uuid        DEFAULT NULL
+)
+RETURNS TABLE (order_count bigint, total numeric, amount_paid numeric, balance_due numeric)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH matches AS MATERIALIZED (
+    SELECT o.total, o.amount_paid, o.balance_due
+    FROM public.orders o
+    WHERE o.business_id = p_business_id
+      AND (p_status IS NULL
+           OR o.status = p_status)
+      AND (p_status IS NOT NULL
+           OR o.status NOT IN ('cancelled', 'refunded'))
+      AND (p_source        IS NULL OR o.source      = p_source)
+      AND (p_cashier_id    IS NULL OR o.cashier_id  = p_cashier_id)
+      AND (p_reseller_id   IS NULL OR o.reseller_id = p_reseller_id)
+      AND (p_created_after IS NULL OR o.created_at >= p_created_after)
+      AND (p_date_from     IS NULL OR o.created_at >= p_date_from)
+      AND (p_date_to       IS NULL OR o.created_at <= p_date_to)
+      AND (
+            NOT p_acompte_only
+            OR (o.balance_due > 0.005
+                AND o.status NOT IN ('cancelled', 'refunded')
+                AND o.source NOT IN ('whatsapp', 'boutique'))
+          )
+      AND (
+            p_search IS NULL OR p_search = ''
+         OR o.id_text        ILIKE '%' || p_search || '%'
+         OR o.customer_name  ILIKE '%' || p_search || '%'
+         OR o.customer_phone ILIKE '%' || p_search || '%'
+          )
+  )
+  SELECT count(*),
+         COALESCE(sum(m.total), 0),
+         COALESCE(sum(m.amount_paid), 0),
+         -- Trop-perçus (balance_due < 0) ignorés : le reste dû ne baisse pas
+         -- parce qu'un autre client a trop payé.
+         COALESCE(sum(GREATEST(m.balance_due, 0)), 0)
+  FROM matches m;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.order_filter_totals(
+  uuid, text, text, boolean, timestamptz, timestamptz, uuid, timestamptz, text, uuid
 ) TO authenticated, service_role;

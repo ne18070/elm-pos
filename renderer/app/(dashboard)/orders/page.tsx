@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Search, Filter, RefreshCw, User, Printer, Loader2, MessageCircle, Upload, ChevronLeft, ChevronRight, Store, ShoppingBag } from 'lucide-react';
-import { useOrders } from '@/hooks/useOrders';
+import { useOrders, useOrderTotals } from '@/hooks/useOrders';
 import { usePermission } from '@/hooks/usePermission';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -179,6 +179,23 @@ export default function OrdersPage() {
     },
   );
   const effectiveAcompteCount = isAcompteTab ? count : acompteCount;
+
+  // Totaux de TOUTES les commandes filtrées (pas seulement la page affichée),
+  // uniquement quand un filtre est actif : sur « Toutes » sans filtre, la somme
+  // parcourrait tout l'historique pour un chiffre sans intérêt.
+  const hasFilter = Boolean(resellerOpt || debouncedSearch.trim() || isTodayTab || dateFrom || dateTo);
+  const { totals } = useOrderTotals(
+    hasFilter ? effectiveBusinessId : '',
+    {
+      status:      dbStatus,
+      acompteOnly: isAcompteTab || undefined,
+      source:      dbSource,
+      resellerId:  resellerOpt,
+      search:      debouncedSearch,
+      ...dateRange,
+      ...scopeOpts,
+    },
+  );
 
   // Badge "En ligne" : commandes boutique encore en attente, toutes dates
   // confondues — elles réservent du stock tant qu'elles ne sont ni encaissées
@@ -445,6 +462,28 @@ export default function OrdersPage() {
               </button>
             ))}
           </div>
+
+          {/* Totaux des commandes filtrées (toutes pages confondues) */}
+          {hasFilter && totals && (
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-surface-card border border-surface-border rounded-xl px-3 py-2 min-w-0">
+                <p className="text-xs text-content-secondary truncate">
+                  Total · {totals.count} cmd{totals.count !== 1 ? 's' : ''}
+                </p>
+                <p className="text-base sm:text-lg font-bold text-content-primary truncate">{fmt(totals.total)}</p>
+              </div>
+              <div className="bg-surface-card border border-surface-border rounded-xl px-3 py-2 min-w-0">
+                <p className="text-xs text-content-secondary truncate">Encaissé</p>
+                <p className="text-base sm:text-lg font-bold text-status-success truncate">{fmt(totals.amountPaid)}</p>
+              </div>
+              <div className="bg-surface-card border border-surface-border rounded-xl px-3 py-2 min-w-0">
+                <p className="text-xs text-content-secondary truncate">Reste dû</p>
+                <p className={`text-base sm:text-lg font-bold truncate ${totals.balanceDue > 0.005 ? 'text-status-warning' : 'text-content-primary'}`}>
+                  {fmt(totals.balanceDue)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tableau */}

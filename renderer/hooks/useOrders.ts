@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getOrders } from '@services/supabase/orders';
+import { getOrders, getOrderFilterTotals, type OrderFilterTotals } from '@services/supabase/orders';
 import type { Order } from '@pos-types';
 
 interface UseOrdersOptions {
@@ -77,4 +77,41 @@ export function useOrders(businessId: string, options?: UseOrdersOptions) {
   }, []);
 
   return { orders, count, loading, error, refetch: fetch, patchOrder };
+}
+
+/** Totaux (montant, encaissé, reste dû) de toutes les commandes filtrées.
+ *  businessId vide = désactivé (totaux à null). Suit les mêmes changements
+ *  temps réel que useOrders. */
+export function useOrderTotals(businessId: string, options?: Omit<UseOrdersOptions, 'limit' | 'offset' | 'withCount' | 'projection'>) {
+  const [totals, setTotals]   = useState<OrderFilterTotals | null>(null);
+  const [loading, setLoading] = useState(false);
+  const requestIdRef = useRef(0);
+
+  const fetch = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    if (!businessId) { setTotals(null); setLoading(false); return; }
+    setLoading(true);
+    try {
+      const result = await getOrderFilterTotals(businessId, options);
+      if (requestId === requestIdRef.current) setTotals(result);
+    } catch {
+      // Bandeau informatif : en cas d'échec on le masque plutôt que d'afficher
+      // des totaux faux ; la liste elle-même remonte ses propres erreurs.
+      if (requestId === requestIdRef.current) setTotals(null);
+    } finally {
+      if (requestId === requestIdRef.current) setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, options?.status, options?.date, options?.dateFrom, options?.dateTo, options?.search, options?.cashierId, options?.createdAfter, options?.acompteOnly, options?.source, options?.resellerId]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    const handler = () => { fetch(); };
+    window.addEventListener('elm-pos:orders:changed', handler);
+    return () => window.removeEventListener('elm-pos:orders:changed', handler);
+  }, [businessId, fetch]);
+
+  return { totals, loading };
 }
