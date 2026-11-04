@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   Loader2, CheckCircle, Clock, XCircle, RefreshCw,
   Search, ChevronLeft, ChevronRight,
-  Zap, Trash2
+  Zap, Trash2, Ban, LockOpen
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
@@ -13,7 +13,11 @@ import {
   getAllSubscriptions, activateSubscription, getPlans, deleteAccount,
   type SubscriptionRow, type Plan 
 } from '@services/supabase/subscriptions';
+import {
+  getOrganizationBlocks, getBusinessOrganizationIds, type OrganizationBlock,
+} from '@services/supabase/business';
 import { SideDrawer } from '@/components/ui/SideDrawer';
+import { OrganizationBlockModal, type OrganizationBlockTarget } from '../components/OrganizationBlockModal';
 
 const PAGE_SIZE = 25;
 
@@ -63,16 +67,23 @@ export default function SubscriptionsPage() {
   const [page, setPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<{ ownerId: string; businessId: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Blocage d'organisation (migration 166) : business_id → organization_id, organization_id → blocage
+  const [bizOrg, setBizOrg]           = useState<Map<string, string>>(new Map());
+  const [blocks, setBlocks]           = useState<Map<string, OrganizationBlock>>(new Map());
+  const [blockTarget, setBlockTarget] = useState<OrganizationBlockTarget | null>(null);
 
   async function load() {
     setLoading(true);
     try {
-      const [subs, plansData] = await Promise.all([
+      const [subs, plansData, blocksData] = await Promise.all([
         getAllSubscriptions(),
-        getPlans()
+        getPlans(),
+        getOrganizationBlocks().catch(() => [] as OrganizationBlock[]), // migration 166 pas encore appliquée
       ]);
       setRows(subs);
       setPlans(plansData);
+      setBlocks(new Map(blocksData.map((b) => [b.organization_id, b])));
+      setBizOrg(await getBusinessOrganizationIds(subs.map((s) => s.business_id).filter(Boolean)));
     } catch (e) {
       notifError(`Chargement des abonnements impossible : ${toUserError(e)}`);
     }
@@ -170,6 +181,8 @@ export default function SubscriptionsPage() {
                   const badge = STATUS_LABEL[st] ?? STATUS_LABEL.expired;
                   const Icon  = badge.icon;
                   const bizList = Array.isArray(row.businesses) ? row.businesses : [];
+                  const orgId   = bizOrg.get(row.business_id);
+                  const block   = orgId ? blocks.get(orgId) : undefined;
                   return (
                     <tr key={row.owner_id ?? row.business_id} className="hover:bg-surface-hover/30 transition-colors group">
                       <td className="px-6 py-4">
@@ -192,6 +205,14 @@ export default function SubscriptionsPage() {
                         <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border", badge.color)}>
                           <Icon className="w-3 h-3" /> {badge.label}
                         </span>
+                        {block && (
+                          <span
+                            className="ml-1 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border text-status-error bg-badge-error border-status-error"
+                            title={block.reason ?? undefined}
+                          >
+                            <Ban className="w-3 h-3" /> Bloquée
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-content-secondary text-xs font-medium">
                         {st === 'trial' && row.trial_ends_at
@@ -208,6 +229,20 @@ export default function SubscriptionsPage() {
                           >
                             <Zap className="w-3.5 h-3.5" /> Activer
                           </button>
+                          {orgId && (
+                            <button
+                              onClick={() => setBlockTarget({ organizationId: orgId, name: row.business_name ?? row.owner_name ?? 'Organisation' })}
+                              className={cn(
+                                "p-2 rounded-xl bg-surface-card transition-all border border-surface-border shadow-sm",
+                                block
+                                  ? "text-status-error hover:text-status-success hover:bg-badge-success"
+                                  : "text-content-secondary hover:text-status-warning hover:bg-badge-warning",
+                              )}
+                              title={block ? "Débloquer l'organisation" : "Bloquer l'organisation"}
+                            >
+                              {block ? <LockOpen className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                            </button>
+                          )}
                           {st === 'expired' && row.owner_id && (
                             <button
                               onClick={() => setDeleteConfirm({ ownerId: row.owner_id!, businessId: row.business_id, name: row.business_name })}
@@ -228,6 +263,13 @@ export default function SubscriptionsPage() {
           <Pagination total={filtered.length} page={page} onChange={setPage} />
         </div>
       )}
+
+      <OrganizationBlockModal
+        target={blockTarget}
+        block={blockTarget ? blocks.get(blockTarget.organizationId) : undefined}
+        onClose={() => setBlockTarget(null)}
+        onDone={load}
+      />
 
       {/* -- SideDrawers -- */}
 

@@ -116,6 +116,18 @@ export async function getOrganizationBlocks(): Promise<OrganizationBlock[]> {
   return data ?? [];
 }
 
+/** Organisation de chaque établissement (superadmin) — établissements sans organisation absents */
+export async function getBusinessOrganizationIds(businessIds: string[]): Promise<Map<string, string>> {
+  if (businessIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('id, organization_id')
+    .in('id', businessIds)
+    .not('organization_id', 'is', null);
+  if (error) throw new Error(error.message);
+  return new Map((data ?? []).map((b) => [b.id, b.organization_id as string]));
+}
+
 /** L'établissement appartient-il à une organisation bloquée ? */
 export async function isBusinessBlocked(businessId: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('is_business_blocked', { p_business_id: businessId });

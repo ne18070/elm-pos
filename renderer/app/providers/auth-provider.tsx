@@ -12,12 +12,11 @@ import { getMyPermissions } from '@services/supabase/permissions';
 import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
 import { setMonitoringUser, trackAuth } from '@/lib/analytics';
+import { markSuspended, isBannedError } from '@/lib/org-suspension';
+import { useOrganizationBlockGuard } from '@/hooks/useOrganizationBlockGuard';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/conditions', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service', '/delete-account', '/delete-data', '/developers', '/telecharger'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
-
-/** Posé avant la déconnexion d'un compte dont l'organisation est bloquée — lu par /login. */
-export const SUSPENDED_FLAG = 'elm-pos-org-suspended';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
@@ -69,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       const memberships = allMemberships.filter((_, i) => !blockedFlags[i]);
       if (allMemberships.length > 0 && memberships.length === 0) {
-        try { sessionStorage.setItem(SUSPENDED_FLAG, '1'); } catch { /* ignore */ }
+        markSuspended();
         await supabase.auth.signOut().catch(() => {});
         clear();
         setLoaded(true);
@@ -135,6 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
     if (!authUser || userError) {
+      // Compte banni par le blocage de son organisation : /login dira pourquoi
+      if (isBannedError(userError)) markSuspended();
       await supabase.auth.signOut().catch(() => {});
       clear();
       resetPermissions();
@@ -185,6 +186,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       checkingRef.current = false;
     }
   }, [clear, loadAllData, resetPermissions, router, setLoaded, setLoading]);
+
+  // Organisation bloquée pendant la session : rechargement immédiat (bascule ou déconnexion)
+  useOrganizationBlockGuard(() => { checkSession().catch(() => {}); });
 
   useEffect(() => {
     checkSession();

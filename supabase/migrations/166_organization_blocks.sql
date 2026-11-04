@@ -8,8 +8,8 @@
 -- 1. organization_blocks : une ligne = organisation bloquée. Table séparée de
 --    organizations, car la policy org_update laisse le propriétaire modifier sa
 --    propre organisation : une colonne blocked_at lui permettrait de se débloquer.
---    Écriture réservée aux superadmins ; les membres lisent le blocage de leur
---    organisation (écran « organisation suspendue » côté app).
+--    Écriture réservée aux superadmins ; les membres peuvent lire le blocage de
+--    leur organisation. Publiée en Realtime pour couper les sessions ouvertes.
 -- 2. is_business_blocked(business_id) : helper utilisé par le trigger, l'annuaire,
 --    les pages publiques et l'app.
 -- 3. Trigger sur orders : aucune commande (caisse, boutique en ligne, API v1,
@@ -17,7 +17,7 @@
 -- 4. list_directory_businesses : exclut les établissements des organisations bloquées.
 --
 -- Les comptes des membres sont bannis côté Supabase Auth par la route
--- /api/admin/block-organization (plus de connexion ni de rafraîchissement de session).
+-- /api/admin/organization-block (plus de connexion ni de rafraîchissement de session).
 -- ============================================================================
 
 -- ── 1. Blocages ─────────────────────────────────────────────────────────────
@@ -48,6 +48,18 @@ CREATE POLICY "organization_blocks_member_select" ON public.organization_blocks
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organization_blocks TO authenticated;
 GRANT ALL ON TABLE public.organization_blocks TO service_role;
+
+-- Realtime : les sessions ouvertes de l'organisation sont coupées dès le blocage
+-- (useOrganizationBlockGuard). Événements INSERT seulement, filtrés par la RLS ci-dessus.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'organization_blocks'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.organization_blocks;
+  END IF;
+END $$;
 
 -- ── 2. Helper ───────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.is_business_blocked(p_business_id UUID)
