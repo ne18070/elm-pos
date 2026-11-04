@@ -99,6 +99,53 @@ export async function updateOrganization(
   if (error) throw new Error(error.message);
 }
 
+// --- Blocage d'organisation (superadmin, migration 166) ----------------------
+
+export interface OrganizationBlock {
+  organization_id: string;
+  reason: string | null;
+  created_at: string;
+}
+
+/** Organisations bloquées (superadmin : toutes ; membre : la sienne) */
+export async function getOrganizationBlocks(): Promise<OrganizationBlock[]> {
+  const { data, error } = await supabase
+    .from('organization_blocks')
+    .select('organization_id, reason, created_at');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** L'établissement appartient-il à une organisation bloquée ? */
+export async function isBusinessBlocked(businessId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_business_blocked', { p_business_id: businessId });
+  if (error) throw new Error(error.message);
+  return !!data;
+}
+
+/**
+ * Bloque ou débloque une organisation (backoffice). Aucune donnée n'est modifiée :
+ * les comptes des membres sont bannis / rétablis et les nouvelles commandes refusées.
+ */
+export async function setOrganizationBlocked(
+  organizationId: string,
+  blocked: boolean,
+  reason?: string,
+): Promise<{ banned: number; restored: number }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch('/api/admin/organization-block', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify({ organizationId, blocked, reason }),
+  });
+  const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  if (!res.ok) throw new Error(body.error ?? 'Erreur lors du blocage');
+  return { banned: body.banned ?? 0, restored: body.restored ?? 0 };
+}
+
 /** Créer un business standalone depuis le backoffice et l'associer à une org */
 export async function createOrganization(data: {
   name: string;

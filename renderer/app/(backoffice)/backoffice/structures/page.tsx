@@ -5,7 +5,7 @@ import {
   Loader2, Plus, Pencil, Layers, Search,
   Mail, X, Save, Copy, Check as CheckIcon,
   Phone as PhoneIcon, Mail as MailIcon, ChevronLeft, ChevronRight,
-  Building2, Trash2, RefreshCw, AlertTriangle,
+  Building2, Trash2, RefreshCw, AlertTriangle, Ban, LockOpen,
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
@@ -13,7 +13,8 @@ import { displayCurrency, cn } from '@/lib/utils';
 import { 
   getAllOrganizationsAdmin, getUnassignedBusinesses,
   createOrganizationAdmin, updateOrganization,
-  type OrganizationWithBusinesses 
+  getOrganizationBlocks, setOrganizationBlocked,
+  type OrganizationWithBusinesses, type OrganizationBlock,
 } from '@services/supabase/business';
 import { createBusinessAdmin } from '@services/supabase/users';
 import { deleteAccount } from '@services/supabase/subscriptions';
@@ -46,8 +47,12 @@ const getTypeBadge = (type: string) => {
 };
 
 export default function StructuresPage() {
-  const { error: notifError } = useNotificationStore();
+  const { error: notifError, success: notifSuccess } = useNotificationStore();
   const [orgs, setOrgs]             = useState<OrganizationWithBusinesses[]>([]);
+  const [blocks, setBlocks]         = useState<Map<string, OrganizationBlock>>(new Map());
+  const [blockTarget, setBlockTarget]   = useState<OrganizationWithBusinesses | null>(null);
+  const [blockReason, setBlockReason]   = useState('');
+  const [blocking, setBlocking]         = useState(false);
   const [unassigned, setUnassigned] = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
   const [orgModal, setOrgModal]         = useState<'new' | OrganizationWithBusinesses | null>(null);
@@ -62,12 +67,14 @@ export default function StructuresPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [orgsData, unassignedData] = await Promise.all([
+      const [orgsData, unassignedData, blocksData] = await Promise.all([
         getAllOrganizationsAdmin(),
         getUnassignedBusinesses(),
+        getOrganizationBlocks(),
       ]);
       setOrgs(orgsData);
       setUnassigned(unassignedData);
+      setBlocks(new Map(blocksData.map((b) => [b.organization_id, b])));
     } catch (e) {
       notifError(toUserError(e));
     } finally {
@@ -89,6 +96,31 @@ export default function StructuresPage() {
       setDeleteErr(e instanceof Error ? e.message : 'Erreur lors de la suppression');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const openBlock = (org: OrganizationWithBusinesses) => {
+    setBlockReason('');
+    setBlockTarget(org);
+  };
+
+  const handleToggleBlock = async () => {
+    if (!blockTarget) return;
+    const block = !blocks.has(blockTarget.id);
+    setBlocking(true);
+    try {
+      const { banned, restored } = await setOrganizationBlocked(blockTarget.id, block, blockReason);
+      notifSuccess(block
+        ? `${blockTarget.legal_name} bloquée · ${banned} compte${banned > 1 ? 's' : ''} suspendu${banned > 1 ? 's' : ''}`
+        : `${blockTarget.legal_name} débloquée · ${restored} compte${restored > 1 ? 's' : ''} réactivé${restored > 1 ? 's' : ''}`);
+      setBlockTarget(null);
+      await load();
+    } catch (e) {
+      notifError(toUserError(e));
+      // Le blocage peut être enregistré même si la synchro des comptes a échoué
+      await load();
+    } finally {
+      setBlocking(false);
     }
   };
 
@@ -288,8 +320,13 @@ export default function StructuresPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {pagedOrgs.map((org) => (
-              <div key={org.id} className="card p-0 border-surface-border hover:border-brand-500/50 transition-all group relative overflow-hidden flex flex-col">
+            {pagedOrgs.map((org) => {
+              const block = blocks.get(org.id);
+              return (
+              <div key={org.id} className={cn(
+                "card p-0 transition-all group relative overflow-hidden flex flex-col",
+                block ? "border-status-error/40 hover:border-status-error/60" : "border-surface-border hover:border-brand-500/50",
+              )}>
                 <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                   <Layers className="w-24 h-24" />
                 </div>
@@ -297,7 +334,14 @@ export default function StructuresPage() {
                 <div className="p-6 flex-1 space-y-4">
                   <div className="flex items-start justify-between relative z-10">
                     <div className="space-y-0.5 min-w-0">
-                      <p className="text-[10px] font-black text-content-brand uppercase tracking-[0.15em]">Organisation</p>
+                      <p className="text-[10px] font-black text-content-brand uppercase tracking-[0.15em] flex items-center gap-2">
+                        Organisation
+                        {block && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-status-error/30 bg-badge-error text-status-error tracking-widest">
+                            <Ban className="w-2.5 h-2.5" /> Bloquée
+                          </span>
+                        )}
+                      </p>
                       <h3 className="text-lg font-black text-content-primary tracking-tight truncate">{org.legal_name}</h3>
                       {org.denomination && org.denomination !== org.legal_name && (
                         <p className="text-xs text-content-secondary italic truncate">{org.denomination}</p>
@@ -310,6 +354,18 @@ export default function StructuresPage() {
                         title="Modifier"
                       >
                         <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openBlock(org)}
+                        className={cn(
+                          "p-2 rounded-lg transition-all",
+                          block
+                            ? "text-status-error hover:bg-badge-success hover:text-status-success"
+                            : "text-content-secondary hover:bg-badge-warning hover:text-status-warning",
+                        )}
+                        title={block ? "Débloquer l'organisation" : "Bloquer l'organisation"}
+                      >
+                        {block ? <LockOpen className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
                       </button>
                       <button
                         onClick={() => { setDeleteErr(null); setDeleteTarget(org); }}
@@ -367,12 +423,17 @@ export default function StructuresPage() {
                   <span className="text-[10px] font-bold text-content-muted uppercase tracking-widest">
                     {org.businesses.length} établissement{org.businesses.length !== 1 ? 's' : ''}
                   </span>
-                  {org.owner_id
-                    ? <span className="text-xs text-status-success font-bold">Assignée</span>
-                    : <span className="text-xs text-status-warning font-bold">Sans propriétaire</span>}
+                  {block
+                    ? <span className="text-xs text-status-error font-bold truncate max-w-[60%]" title={block.reason ?? undefined}>
+                        Bloquée le {new Date(block.created_at).toLocaleDateString('fr-FR')}
+                      </span>
+                    : org.owner_id
+                      ? <span className="text-xs text-status-success font-bold">Assignée</span>
+                      : <span className="text-xs text-status-warning font-bold">Sans propriétaire</span>}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {totalPages > 1 && (
@@ -503,6 +564,91 @@ export default function StructuresPage() {
           </div>
         </div>
       )}
+
+      {/* -- Block / unblock confirm modal -- */}
+      {blockTarget && (() => {
+        const current = blocks.get(blockTarget.id);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div className={cn(
+              "bg-surface-card rounded-2xl shadow-xl w-full max-w-sm border",
+              current ? "border-status-success/30" : "border-status-warning/30",
+            )}>
+              <div className="flex items-center gap-3 p-5 border-b border-surface-border">
+                <div className={cn("p-2 rounded-xl shrink-0", current ? "bg-badge-success text-status-success" : "bg-badge-warning text-status-warning")}>
+                  {current ? <LockOpen className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-content-primary">{current ? "Débloquer l'organisation" : "Bloquer l'organisation"}</p>
+                  <p className="text-xs text-content-muted mt-0.5 truncate">{blockTarget.legal_name}</p>
+                </div>
+                <button onClick={() => setBlockTarget(null)} className="text-content-secondary hover:text-content-primary">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {current ? (
+                  <>
+                    <p className="text-sm text-content-secondary">
+                      Les comptes du propriétaire et des employés seront réactivés, la boutique en ligne
+                      et l&apos;annuaire réaffichés, et les commandes à nouveau acceptées.
+                    </p>
+                    {current.reason && (
+                      <p className="text-xs text-content-muted bg-surface-input border border-surface-border rounded-xl px-3 py-2">
+                        <span className="font-bold">Motif du blocage :</span> {current.reason}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <ul className="text-sm text-content-secondary space-y-1.5 list-disc pl-5">
+                      <li>Le propriétaire et les employés ne peuvent plus se connecter</li>
+                      <li>Boutique en ligne et annuaire masqués</li>
+                      <li>Nouvelles commandes et API refusées</li>
+                    </ul>
+                    <div>
+                      <label htmlFor="block-reason" className="label text-[10px] uppercase font-bold tracking-widest text-content-muted">Motif (interne, facultatif)</label>
+                      <textarea
+                        id="block-reason"
+                        value={blockReason}
+                        onChange={(e) => setBlockReason(e.target.value)}
+                        maxLength={500}
+                        className="input min-h-[80px] py-3 text-sm"
+                        placeholder="Ex : impayé, fraude signalée…"
+                      />
+                    </div>
+                  </>
+                )}
+                <p className="text-xs text-content-muted bg-badge-info border border-status-info/20 rounded-xl px-3 py-2">
+                  Aucune donnée n&apos;est modifiée ni supprimée (commandes, produits, clients, abonnement).
+                  {!current && ' Un déblocage rétablit tout à l’identique.'}
+                </p>
+              </div>
+
+              <div className="flex gap-2 p-4 border-t border-surface-border">
+                <button onClick={() => setBlockTarget(null)} className="btn-secondary flex-1 text-sm">
+                  Annuler
+                </button>
+                <button
+                  onClick={handleToggleBlock}
+                  disabled={blocking}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all",
+                    current ? "bg-status-success" : "bg-status-warning",
+                  )}
+                >
+                  {blocking
+                    ? <><RefreshCw className="w-4 h-4 animate-spin" /> En cours…</>
+                    : current
+                      ? <><LockOpen className="w-4 h-4" /> Débloquer</>
+                      : <><Ban className="w-4 h-4" /> Bloquer</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* -- SideDrawers -- */}
       <SideDrawer

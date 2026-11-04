@@ -133,6 +133,12 @@ export async function validateApiKey(rawKey: string, requiredScope?: string): Pr
   // Check that the business has a valid subscription
   await assertActiveSubscription(admin, keyRow.business_id);
 
+  // Organisation bloquée depuis le backoffice (migration 166)
+  const { data: blocked } = await admin.rpc('is_business_blocked', { p_business_id: keyRow.business_id });
+  if (blocked) {
+    throw Object.assign(new Error('This organization has been suspended. Contact ELM support.'), { status: 403 });
+  }
+
   if (requiredScope && !keyRow.scopes.includes(requiredScope)) {
     throw Object.assign(
       new Error(`Missing required scope: ${requiredScope}.`),

@@ -3540,6 +3540,42 @@ export type Database = {
           },
         ]
       }
+      organization_blocks: {
+        Row: {
+          blocked_by: string | null
+          created_at: string
+          organization_id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_by?: string | null
+          created_at?: string
+          organization_id: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_by?: string | null
+          created_at?: string
+          organization_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_blocks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_blocks_blocked_by_fkey"
+            columns: ["blocked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           country: string | null
@@ -7958,6 +7994,7 @@ export type Database = {
       }
       increment_tracking_view: { Args: { t: string }; Returns: undefined }
       invoke_workflow_processor: { Args: never; Returns: undefined }
+      is_business_blocked: { Args: { p_business_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       next_subscription_invoice_number: {
         Args: { p_date?: string }

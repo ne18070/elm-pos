@@ -25,6 +25,20 @@ export async function findPublicBusinessByRef<T extends { name: string }>(
   businessRef: string,
   select: string,
 ): Promise<T | null> {
+  const hasId = select.split(',').some((col) => col.trim() === 'id');
+  const row = await findBusinessRow<T & { id: string }>(businessRef, hasId ? select : `id, ${select}`);
+  if (!row) return null;
+
+  // Organisation bloquée depuis le backoffice : l'établissement disparaît des pages
+  // publiques. En cas d'erreur de la RPC, la page reste affichée.
+  const { data: blocked } = await supabase.rpc('is_business_blocked', { p_business_id: row.id });
+  return blocked ? null : row;
+}
+
+async function findBusinessRow<T extends { name: string }>(
+  businessRef: string,
+  select: string,
+): Promise<T | null> {
   const ref = normalizeRef(businessRef);
 
   if (isUuid(ref)) {

@@ -15,6 +15,9 @@ import { cn } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { trackAuth } from '@/lib/analytics';
 import { isCapacitor } from '@/lib/platform';
+import { SUSPENDED_FLAG } from '@/app/providers/auth-provider';
+
+const SUSPENDED_MESSAGE = 'Votre organisation a été suspendue par l’équipe ELM. Contactez le support pour la réactiver.';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,6 +25,16 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Déconnexion forcée par l'AuthProvider : organisation bloquée depuis le backoffice
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(SUSPENDED_FLAG)) {
+        sessionStorage.removeItem(SUSPENDED_FLAG);
+        setErreur(SUSPENDED_MESSAGE);
+      }
+    } catch { /* ignore */ }
+  }, []);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   const { setUser, setBusiness, setBusinesses } = useAuthStore();
@@ -44,7 +57,9 @@ export default function LoginPage() {
       if (authError) {
         console.error('[Login] Auth error:', authError);
         trackAuth('login_failed', { reason: authError.message, email_domain: email.split('@')[1] });
-        setErreur(authError.message);
+        // Compte banni par le blocage de son organisation (/api/admin/organization-block)
+        const banned = authError.code === 'user_banned' || /banned/i.test(authError.message);
+        setErreur(banned ? SUSPENDED_MESSAGE : authError.message);
         setChargement(false);
         return;
       }

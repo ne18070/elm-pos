@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
-import { getMyBusinesses } from '@services/supabase/business';
+import { getMyBusinesses, isBusinessBlocked } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
 import { getMyPermissions } from '@services/supabase/permissions';
@@ -15,6 +15,9 @@ import { setMonitoringUser, trackAuth } from '@/lib/analytics';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/conditions', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service', '/delete-account', '/delete-data', '/developers', '/telecharger'];
 const isPublic = (path: string) => PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'));
+
+/** Posé avant la déconnexion d'un compte dont l'organisation est bloquée — lu par /login. */
+export const SUSPENDED_FLAG = 'elm-pos-org-suspended';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setBusiness, setBusinesses, setLoading, clear } = useAuthStore();
@@ -57,7 +60,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Charger tous les établissements
     let fallbackBizId: string | null = null;
     try {
-      const memberships = await getMyBusinesses();
+      const allMemberships = await getMyBusinesses();
+      // Établissements d'une organisation bloquée depuis le backoffice : inaccessibles.
+      // Le compte est aussi banni côté Auth, mais une session ouverte reste valide jusqu'à
+      // l'expiration de son jeton — on la coupe ici.
+      const blockedFlags = await Promise.all(
+        allMemberships.map((m) => isBusinessBlocked(m.business.id).catch(() => false)),
+      );
+      const memberships = allMemberships.filter((_, i) => !blockedFlags[i]);
+      if (allMemberships.length > 0 && memberships.length === 0) {
+        try { sessionStorage.setItem(SUSPENDED_FLAG, '1'); } catch { /* ignore */ }
+        await supabase.auth.signOut().catch(() => {});
+        clear();
+        setLoaded(true);
+        setLoading(false);
+        router.replace('/login');
+        return;
+      }
       setBusinesses(memberships);
       // Use only businesses returned by getMyBusinesses; ignore stale tab state.
       const selectedMembership =
@@ -106,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoaded(true);
     setCashLoaded(true);
     setLoading(false);
-  }, [setUser, setBusiness, setBusinesses, setLoading, setLoaded, setSubscription, setPlans, setPaymentSettings, setCashSession, setOverrides, setCashLoaded, router]);
+  }, [setUser, setBusiness, setBusinesses, setLoading, setLoaded, setSubscription, setPlans, setPaymentSettings, setCashSession, setOverrides, setCashLoaded, clear, router]);
 
   const checkSession = useCallback(async () => {
     if (checkingRef.current) return;
