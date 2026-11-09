@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export const metadata = {
   title: 'Conditions d’utilisation — ELM Boutique',
+  alternates: { canonical: 'https://www.elm-app.click/conditions' },
 };
 
 // Texte résumé dans l'app (buyer_app/lib/screens/terms_screen.dart) :

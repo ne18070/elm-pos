@@ -3,6 +3,7 @@ import { ShoppingCart, ArrowLeft } from 'lucide-react';
 
 export const metadata = {
   title: 'Politique de confidentialité — ELM APP',
+  alternates: { canonical: 'https://www.elm-app.click/privacy' },
 };
 
 export default function PrivacyPage() {

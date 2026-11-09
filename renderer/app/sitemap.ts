@@ -17,13 +17,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${BASE_URL}/login`,
+      url: `${BASE_URL}/telecharger`,
       lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.4,
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
     {
       url: `${BASE_URL}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/conditions`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.3,

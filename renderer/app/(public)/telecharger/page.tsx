@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 export const metadata: Metadata = {
   title: "Télécharger l'app ELM Boutique",
   description: 'Commandez auprès des boutiques et services ELM depuis votre téléphone.',
+  alternates: { canonical: 'https://www.elm-app.click/telecharger' },
 };
 
 // Lien à partager pour installer l'app Android (APK hors Play Store)

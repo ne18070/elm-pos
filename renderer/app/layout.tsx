@@ -74,10 +74,6 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, 'max-snippet': -1, 'max-image-preview': 'large' },
   },
 
-  alternates: {
-    canonical: BASE_URL,
-  },
-
   openGraph: {
     type: 'website',
     locale: 'fr_SN',
