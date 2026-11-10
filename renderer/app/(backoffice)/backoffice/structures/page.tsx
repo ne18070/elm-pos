@@ -13,7 +13,7 @@ import { displayCurrency, cn } from '@/lib/utils';
 import { 
   getAllOrganizationsAdmin, getUnassignedBusinesses,
   createOrganizationAdmin, updateOrganization,
-  getOrganizationBlocks,
+  getOrganizationBlocks, deleteStructureAdmin,
   type OrganizationWithBusinesses, type OrganizationBlock,
 } from '@services/supabase/business';
 import { OrganizationBlockModal, type OrganizationBlockTarget } from '../components/OrganizationBlockModal';
@@ -56,7 +56,12 @@ export default function StructuresPage() {
   const [loading, setLoading]       = useState(true);
   const [orgModal, setOrgModal]         = useState<'new' | OrganizationWithBusinesses | null>(null);
   const [adminModal, setAdminModal]     = useState<any | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<OrganizationWithBusinesses | null>(null);
+  // Organisation (avec ou sans propriétaire) ou établissement orphelin
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: 'org'; org: OrganizationWithBusinesses }
+    | { kind: 'biz'; biz: { id: string; name: string } }
+    | null
+  >(null);
   const [deleting, setDeleting]         = useState(false);
   const [deleteErr, setDeleteErr]       = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
@@ -84,11 +89,17 @@ export default function StructuresPage() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async () => {
-    if (!deleteTarget?.owner_id) return;
+    if (!deleteTarget) return;
     setDeleting(true);
     setDeleteErr(null);
     try {
-      await deleteAccount(deleteTarget.owner_id, deleteTarget.id);
+      if (deleteTarget.kind === 'biz') {
+        await deleteStructureAdmin({ businessId: deleteTarget.biz.id });
+      } else if (deleteTarget.org.owner_id) {
+        await deleteAccount(deleteTarget.org.owner_id, deleteTarget.org.id);
+      } else {
+        await deleteStructureAdmin({ organizationId: deleteTarget.org.id });
+      }
       setDeleteTarget(null);
       await load();
     } catch (e) {
@@ -342,7 +353,7 @@ export default function StructuresPage() {
                         {block ? <LockOpen className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
                       </button>
                       <button
-                        onClick={() => { setDeleteErr(null); setDeleteTarget(org); }}
+                        onClick={() => { setDeleteErr(null); setDeleteTarget({ kind: 'org', org }); }}
                         className="p-2 rounded-lg hover:bg-badge-error text-content-secondary hover:text-status-error transition-all"
                         title="Supprimer l'organisation"
                       >
@@ -465,9 +476,19 @@ export default function StructuresPage() {
                     </div>
                     <div className="px-6 py-4 bg-badge-warning/50 border-t border-status-warning/20 flex items-center justify-between">
                       <span className="text-xs text-status-warning font-bold">⚠️ Sans organisation</span>
-                      <button onClick={() => setAdminModal(biz)} className="text-[10px] font-black uppercase tracking-widest text-content-brand hover:text-content-brand transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10">
-                        <Plus className="w-3 h-3" /> Créer Admin
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setAdminModal(biz)} className="text-[10px] font-black uppercase tracking-widest text-content-brand hover:text-content-brand transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/5 border border-brand-500/10 hover:bg-brand-500/10">
+                          <Plus className="w-3 h-3" /> Créer Admin
+                        </button>
+                        <button
+                          onClick={() => { setDeleteErr(null); setDeleteTarget({ kind: 'biz', biz }); }}
+                          className="p-2 rounded-lg hover:bg-badge-error text-content-secondary hover:text-status-error transition-all"
+                          title="Supprimer l'établissement"
+                          aria-label={`Supprimer ${biz.name}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -478,7 +499,12 @@ export default function StructuresPage() {
       )}
 
       {/* -- Delete confirm modal -- */}
-      {deleteTarget && (
+      {deleteTarget && (() => {
+        const isOrg      = deleteTarget.kind === 'org';
+        const name       = isOrg ? deleteTarget.org.legal_name : deleteTarget.biz.name;
+        const businesses = isOrg ? deleteTarget.org.businesses : [];
+        const hasOwner   = isOrg && !!deleteTarget.org.owner_id;
+        return (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-surface-card rounded-2xl shadow-xl w-full max-w-sm border border-status-error/30">
             <div className="flex items-center gap-3 p-5 border-b border-surface-border">
@@ -486,10 +512,12 @@ export default function StructuresPage() {
                 <Trash2 className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-content-primary">Supprimer l&apos;organisation</p>
+                <p className="font-semibold text-content-primary">
+                  {isOrg ? "Supprimer l'organisation" : "Supprimer l'établissement"}
+                </p>
                 <p className="text-xs text-content-muted mt-0.5">Action irréversible</p>
               </div>
-              <button onClick={() => setDeleteTarget(null)} className="text-content-secondary hover:text-content-primary">
+              <button onClick={() => setDeleteTarget(null)} className="text-content-secondary hover:text-content-primary" aria-label="Fermer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -497,38 +525,37 @@ export default function StructuresPage() {
             <div className="p-5 space-y-4">
               <p className="text-sm text-content-secondary">
                 Vous allez supprimer{' '}
-                <span className="font-bold text-content-primary">{deleteTarget.legal_name}</span>
-                {deleteTarget.businesses.length > 0 && (
-                  <> et ses <span className="font-bold text-status-error">{deleteTarget.businesses.length} établissement{deleteTarget.businesses.length > 1 ? 's' : ''}</span></>
+                <span className="font-bold text-content-primary">{name}</span>
+                {businesses.length > 0 && (
+                  <> et ses <span className="font-bold text-status-error">{businesses.length} établissement{businesses.length > 1 ? 's' : ''}</span></>
                 )}.
               </p>
               <p className="text-xs text-content-muted bg-badge-error border border-status-error/20 rounded-xl px-3 py-2">
                 Toutes les données (commandes, produits, membres, abonnements) seront définitivement supprimées.
-                Le compte du propriétaire est aussi supprimé s&apos;il ne possède aucun autre établissement.
+                {hasOwner
+                  ? " Le compte du propriétaire est aussi supprimé s'il ne possède aucun autre établissement."
+                  : ' Aucun compte utilisateur ne sera supprimé.'}
               </p>
-              {deleteTarget.businesses.length > 0 && (
+              {businesses.length > 0 && (
                 <div className="text-xs text-content-muted space-y-1">
-                  {deleteTarget.businesses.map((b) => (
+                  {businesses.map((b) => (
                     <p key={b.id} className="flex items-center gap-2">
                       <Building2 className="w-3 h-3 shrink-0" />{b.name}
                     </p>
                   ))}
                 </div>
               )}
-              {!deleteTarget.owner_id && (
-                <p className="text-xs text-status-warning font-medium">⚠ Cette organisation n&apos;a pas de propriétaire assigné.</p>
-              )}
               {deleteErr && <p className="text-xs text-status-error font-medium">{deleteErr}</p>}
             </div>
 
             <div className="flex gap-2 p-4 border-t border-surface-border">
-              <button onClick={() => setDeleteTarget(null)} className="btn-secondary flex-1 text-sm">
+              <button onClick={() => setDeleteTarget(null)} className="btn-secondary flex-1 text-sm h-11">
                 Annuler
               </button>
               <button
                 onClick={handleDelete}
-                disabled={deleting || !deleteTarget.owner_id}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-status-error text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all"
+                disabled={deleting}
+                className="flex-1 flex items-center justify-center gap-2 px-4 h-11 rounded-xl bg-status-error text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all"
               >
                 {deleting
                   ? <><RefreshCw className="w-4 h-4 animate-spin" /> Suppression…</>
@@ -537,7 +564,8 @@ export default function StructuresPage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* -- Block / unblock confirm modal -- */}
       <OrganizationBlockModal

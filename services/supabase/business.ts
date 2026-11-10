@@ -63,6 +63,24 @@ export async function getUnassignedBusinesses(): Promise<Business[]> {
   return data as Business[];
 }
 
+/**
+ * Superadmin. Supprime une organisation sans propriétaire (et ses établissements)
+ * ou un établissement orphelin. Aucun compte utilisateur n'est supprimé.
+ */
+export async function deleteStructureAdmin(target: { organizationId: string } | { businessId: string }): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch('/api/admin/delete-structure', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify(target),
+  });
+  const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  if (!res.ok) throw new Error(body.error ?? 'Erreur lors de la suppression');
+}
+
 /** Créer une organization depuis le backoffice superadmin */
 export async function createOrganizationAdmin(data: {
   legal_name: string;
