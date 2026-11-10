@@ -91,6 +91,8 @@ export function createMobileMoneyPayment(input: {
       operator:           input.operator,
       phone_number:       input.phoneNumber,
       otp:                input.otp,
+      // Fournisseur imposé (paydunya, pal…) ; absent = celui par défaut de l'opérateur chez Loov
+      provider:           process.env.LOOV_PAYIN_PROVIDER || undefined,
       customer:           input.customer,
       merchant_reference: input.merchantReference,
       description:        input.description,

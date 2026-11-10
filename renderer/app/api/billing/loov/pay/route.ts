@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { createMobileMoneyPayment, isLoovConfigured, LoovError } from '@/lib/loov';
 import { isLoovOperator, normalizeSenegalPhone, LOOV_CURRENCY, LOOV_MIN_AMOUNT } from '@/lib/loov-operators';
 import {
-  billingCorsHeaders, billingJson, canManageBilling, requireUser, toClientPayment,
+  billingCorsHeaders, billingJson, canManageBilling, requireUser, syncFromLoov, toClientPayment,
   type SubscriptionPaymentRow,
 } from '@/lib/subscription-payments';
 
@@ -99,15 +99,14 @@ export async function POST(req: NextRequest) {
       metadata:          { business_id: body.businessId, plan_id: plan.id, payment_id: payment.id },
     });
 
-    const { data: updated } = await admin
-      .from('subscription_payments')
-      .update({ reference: loov.reference, status: loov.status, livemode: loov.livemode, updated_at: new Date().toISOString() })
-      .eq('id', payment.id)
-      .select('*')
-      .single();
+    // Loov peut refuser d'emblée (statut « failed » dès la création) : la raison est enregistrée ici
+    if (loov.status === 'failed') {
+      console.warn('[loov] refus immédiat', { payment: payment.id, reference: loov.reference, failure: loov.failure });
+    }
+    const synced = await syncFromLoov(admin, payment, loov).catch(() => payment);
 
     return billingJson({
-      payment:      toClientPayment((updated ?? payment) as SubscriptionPaymentRow),
+      payment:      toClientPayment(synced),
       checkout_url: loov.checkout_url,
     }, 201);
   } catch (e) {

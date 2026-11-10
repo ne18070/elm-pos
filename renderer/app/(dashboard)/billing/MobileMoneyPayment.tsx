@@ -13,6 +13,12 @@ const POLL_MS     = 4_000;
 // Loov expire une demande non validée au bout de 15 min
 const MAX_WAIT_MS = 16 * 60_000;
 
+const FAILURE_MESSAGES: Record<string, string> = {
+  provider_declined: "Paiement refusé par l'opérateur. Aucun montant n'a été débité. Réessayez avec un autre opérateur ou contactez le support.",
+  provider_failed:   "L'opérateur n'a pas pu traiter le paiement. Réessayez dans quelques minutes ou choisissez un autre opérateur.",
+  amount_mismatch:   'Le montant payé ne correspond pas au plan. Contactez le support.',
+};
+
 function formatPhone(digits: string) {
   const local = digits.replace(/^221/, '');
   return local.replace(/^(\d{2})(\d{3})(\d{2})(\d{2})$/, '$1 $2 $3 $4');
@@ -222,8 +228,11 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
             <p className="text-content-secondary mt-0.5">
               {payment.status === 'expired'
                 ? 'Le paiement n\'a pas été validé à temps. Aucun montant n\'a été débité. Relancez-le ci-dessous.'
-                : (payment.failure_reason || 'Le paiement a été refusé. Vérifiez votre solde ou essayez un autre opérateur.')}
+                : (FAILURE_MESSAGES[payment.failure_code ?? ''] ?? 'Le paiement a été refusé. Vérifiez le numéro et votre solde, ou essayez un autre opérateur.')}
             </p>
+            {payment.status === 'failed' && payment.failure_reason && payment.failure_code !== 'amount_mismatch' && (
+              <p className="text-xs text-content-muted mt-1">Détail opérateur : {payment.failure_reason}</p>
+            )}
           </div>
         </div>
       )}

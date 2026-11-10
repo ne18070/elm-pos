@@ -36,7 +36,8 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const isFinal = LOOV_FINAL_STATUSES.includes(row.status);
   const needsActivation = row.status === 'succeeded' && !row.applied_at;
-  if (!isFinal || needsActivation) {
+  const missingReason   = row.status === 'failed' && !row.failure_code && !!row.reference;
+  if (!isFinal || needsActivation || missingReason) {
     try {
       const loov: LoovPayment | null = row.reference
         ? await getPayment(row.reference)

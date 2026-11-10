@@ -117,6 +117,8 @@ export async function syncFromLoov(
   }
   if (!alreadyFinal && status !== row.status) {
     Object.assign(patch, { status, failure_code: failureCode, failure_reason: failureReason });
+  } else if (row.status === status && status !== 'succeeded' && !row.failure_code && failureCode) {
+    Object.assign(patch, { failure_code: failureCode, failure_reason: failureReason });
   }
 
   let next = row;
