@@ -407,6 +407,69 @@ export async function deleteAccount(ownerId: string, organizationId?: string): P
   return { accountDeleted: !!body.accountDeleted };
 }
 
+// -- Paiement mobile money (Loov) ----------------------------------------------
+
+export type MobilePaymentStatus = 'pending' | 'processing' | 'succeeded' | 'failed' | 'expired';
+
+export interface MobilePayment {
+  id:             string;
+  status:         MobilePaymentStatus;
+  operator:       string;
+  amount:         number;
+  currency:       string;
+  livemode:       boolean;
+  /** true dès que l'abonnement a été activé/prolongé */
+  activated:      boolean;
+  failure_code:   string | null;
+  failure_reason: string | null;
+}
+
+export class MobilePaymentError extends Error {
+  constructor(message: string, public code?: string) { super(message); }
+}
+
+// Electron (elmpos://) et Capacitor n'embarquent pas les routes /api : on vise le site.
+function billingApiUrl(path: string): string {
+  if (typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)
+      && !(window as unknown as { Capacitor?: unknown }).Capacitor) {
+    return path;
+  }
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '');
+  return `${site}${path}`;
+}
+
+async function billingFetch(path: string, init: RequestInit = {}): Promise<{ payment: MobilePayment; checkout_url?: string | null }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(billingApiUrl(path), {
+    ...init,
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? ''}`,
+    },
+  });
+  const body = await res.json().catch(() => ({ error: `Erreur réseau (HTTP ${res.status})` }));
+  if (!res.ok) throw new MobilePaymentError(body.error ?? 'Paiement impossible', body.code);
+  return body;
+}
+
+/** Envoie la demande de paiement sur le téléphone du client. Montant = prix du plan (fixé par le serveur). */
+export function startMobilePayment(input: {
+  businessId: string; planId: string; operator: string; phone: string; otp?: string;
+}) {
+  return billingFetch('/api/billing/loov/pay', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function getMobilePayment(paymentId: string): Promise<MobilePayment> {
+  return (await billingFetch(`/api/billing/loov/pay/${paymentId}`)).payment;
+}
+
+/** Clés Loov de test uniquement. */
+export async function simulateMobilePayment(paymentId: string, outcome: 'succeeded' | 'failed'): Promise<MobilePayment> {
+  return (await billingFetch(`/api/billing/loov/pay/${paymentId}`, {
+    method: 'POST', body: JSON.stringify({ outcome }),
+  })).payment;
+}
+
 export async function uploadQrCode(type: 'wave' | 'om', file: File): Promise<string> {
   const BUCKET = 'product-images';
   const ext    = file.name.split('.').pop() ?? 'png';

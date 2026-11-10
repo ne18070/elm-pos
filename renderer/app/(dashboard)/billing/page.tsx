@@ -20,6 +20,7 @@ import {
 } from '@services/supabase/subscriptions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { downloadSubscriptionInvoice } from '@/lib/subscription-invoice-pdf';
+import { MobileMoneyPayment } from './MobileMoneyPayment';
 
 // -- Status badge config -------------------------------------------------------
 
@@ -34,7 +35,7 @@ const REQ_STATUS: Record<string, { label: string; bg: string; text: string; bord
 export default function BillingPage() {
   const { effectiveStatus, trialDaysRemaining, subscription, setSubscription, paymentSettings } = useSubscriptionStore();
   const { business, user } = useAuthStore();
-  const { error: notifError } = useNotificationStore();
+  const { error: notifError, success: notifSuccess } = useNotificationStore();
   const router = useRouter();
 
   const [loading, setLoading]           = useState(true);
@@ -84,6 +85,19 @@ export default function BillingPage() {
     } finally {
       setChecking(false);
     }
+  }
+
+  /** Paiement mobile money confirmé : statut et factures à jour, sans quitter la page. */
+  async function handlePaid() {
+    if (!user) return;
+    const [sub, inv] = await Promise.all([
+      getSubscription(user.id, business?.id).catch(() => null),
+      getMySubscriptionInvoices().catch(() => null),
+    ]);
+    if (sub) setSubscription(sub);
+    if (inv) setInvoices(inv);
+    notifSuccess('Paiement reçu — votre abonnement est actif.');
+    setShowRenew(false);
   }
 
   async function handleSubmit() {
@@ -353,18 +367,6 @@ export default function BillingPage() {
             </div>
 
             <div className="card p-5 space-y-5">
-              <div className="flex items-start gap-4 p-4 rounded-xl bg-badge-brand border border-brand-800/50">
-                <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5 text-content-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-content-primary">Activation par notre équipe</p>
-                  <p className="text-xs text-content-secondary mt-1">
-                    Une fois votre demande envoyée, notre équipe vous contactera sous 24h pour finaliser le règlement et activer votre accès.
-                  </p>
-                </div>
-              </div>
-
               {selectedPlan && (
                 <div className="flex items-center justify-between text-sm px-4 py-3 bg-surface-input rounded-xl border border-surface-border">
                   <span className="text-content-secondary">Plan sélectionné</span>
@@ -376,16 +378,38 @@ export default function BillingPage() {
                 </div>
               )}
 
-              {submitError && <p className="text-sm text-status-error">{submitError}</p>}
+              {business && selectedPlan ? (
+                <>
+                  <div>
+                    <h3 className="text-sm font-bold text-content-primary">Payer par mobile money</h3>
+                    <p className="text-xs text-content-secondary mt-0.5">
+                      Activation immédiate dès la validation sur votre téléphone
+                      {status === 'active' ? ' — les jours restants sont conservés.' : '.'}
+                    </p>
+                  </div>
+                  <MobileMoneyPayment
+                    key={selectedPlan.id}
+                    businessId={business.id}
+                    plan={selectedPlan}
+                    defaultPhone={business.phone}
+                    onActivated={handlePaid}
+                  />
+                </>
+              ) : (
+                <p className="text-sm text-content-secondary">Choisissez un plan ci-dessus pour le régler.</p>
+              )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={!selectedPlan || submitting}
-                className="btn-primary w-full flex items-center justify-center gap-2 h-11"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {submitting ? 'Envoi en cours…' : "Envoyer ma demande d'activation"}
-              </button>
+              <div className="pt-4 border-t border-surface-border text-center space-y-2">
+                {submitError && <p className="text-sm text-status-error">{submitError}</p>}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!selectedPlan || submitting}
+                  className="inline-flex items-center gap-2 h-11 px-3 text-xs text-content-secondary hover:text-content-primary underline underline-offset-2 disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {submitting ? 'Envoi en cours…' : 'Payer autrement (virement, espèces) : être contacté par notre équipe'}
+                </button>
+              </div>
             </div>
           </>
         )}
