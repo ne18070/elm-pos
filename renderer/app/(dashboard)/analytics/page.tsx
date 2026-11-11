@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   TrendingUp, RefreshCw, Store, Tag, BedDouble, Wrench, Download, Car,
   Package, Users, BarChart, Briefcase, UserCheck
@@ -47,7 +48,7 @@ export default function AnalyticsPage() {
   const { business } = useAuthStore();
   const can = useCan();
   const [period, setPeriod]   = useState(30);
-  const [tab, setTab]         = useState<Tab>('general');
+  const [tab, setTab]         = useUrlTab<Tab>('general', () => filteredTabs.map(t => t.id));
 
   const {
     loading,

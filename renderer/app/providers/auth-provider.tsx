@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
 import { supabase } from '@/lib/supabase';
+import { supabaseUrl, supabaseAnonKey } from '@services/supabase/client';
+import { isElectron, setSyncAuth } from '@/lib/ipc';
 import { getMyBusinesses, isBusinessBlocked } from '@services/supabase/business';
 import { getSubscription, getPlans, getPaymentSettings } from '@services/supabase/subscriptions';
 import { getCurrentSession } from '@services/supabase/cash-sessions';
@@ -253,6 +255,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Ne pas mettre pathname ici : évite de relancer checkSession() à chaque navigation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkSession]);
+
+  // Synchro hors ligne (Electron) : le main rejoue la file des ventes avec la
+  // session de l'utilisateur connecté — il n'a aucune autre clé. INITIAL_SESSION
+  // à l'abonnement, puis chaque TOKEN_REFRESHED, SIGNED_IN et SIGNED_OUT (null).
+  useEffect(() => {
+    if (!isElectron) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSyncAuth(session
+        ? { url: supabaseUrl, anonKey: supabaseAnonKey, accessToken: session.access_token }
+        : null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return <>{children}</>;
 }

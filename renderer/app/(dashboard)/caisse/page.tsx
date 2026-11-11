@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   Loader2, LockOpen, Lock, RefreshCw, Banknote, CreditCard,
   Smartphone, RotateCcw, History, CheckCircle, AlertTriangle,
@@ -40,7 +41,7 @@ export default function CaissePage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showOpenModal, setShowOpenModal]   = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [tab, setTab]                       = useState<'session' | 'historique'>('session');
+  const [tab, setTab]                       = useUrlTab<'session' | 'historique'>('session', ['session', 'historique']);
   const [reportData, setReportData]         = useState<ReportData | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
 

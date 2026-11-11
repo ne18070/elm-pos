@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import { toUserError } from '@/lib/user-error';
 import { displayCurrency, cn } from '@/lib/utils';
 import { 
@@ -28,6 +29,7 @@ import { getPaymentLines } from '@services/supabase/payroll-settings';
 import type { User as SystemUser } from '@pos-types';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
 import { ScrollableTabBar } from '@/components/shared/ScrollableTabBar';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 
 // Modular Components
 import { StaffTab, fmtMoney } from './staff-utils';
@@ -51,7 +53,19 @@ export default function StaffPage() {
   const cur = business?.currency ?? 'XOF';
   const can = useCan();
 
-  const [tab, setTab] = useState<StaffTab>('employes');
+  // Onglets ouvrables (droits) : alimentent la barre d'onglets ET l'onglet d'URL
+  const staffTabs = [
+    { id: 'employes' as StaffTab, label: 'Équipe', icon: LayoutList, show: true },
+    { id: 'presences' as StaffTab, label: 'Présences', icon: Calendar, show: can('manage_staff_attendance') },
+    { id: 'paie' as StaffTab, label: 'Paie & Salaires', icon: Wallet, show: can('manage_staff_payroll') },
+    { id: 'conges' as StaffTab, label: 'Congés & Absences', icon: Palmtree, show: true },
+    { id: 'taches' as StaffTab, label: 'Tâches', icon: ListChecks, show: can('manage_staff_tasks') },
+    { id: 'objectifs' as StaffTab, label: 'Objectifs', icon: Target, show: can('manage_staff_objectives') },
+    { id: 'formations' as StaffTab, label: 'Formation', icon: GraduationCap, show: can('manage_staff_trainings') },
+    { id: 'missions' as StaffTab, label: 'Missions', icon: Plane, show: can('manage_staff_missions') },
+    { id: 'finances' as StaffTab, label: 'Prêts & Avances', icon: Banknote, show: can('manage_staff_finances') },
+  ].filter(t => t.show);
+  const [tab, setTab] = useUrlTab<StaffTab>('employes', staffTabs.map(t => t.id));
   const [loading, setLoading] = useState(true);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [attendance, setAttendance] = useState<StaffAttendance[]>([]);
@@ -169,6 +183,12 @@ export default function StaffPage() {
 
   return (
     <div className="h-full flex flex-col bg-surface">
+      {/* Démarrage : Équipe est la page d'accueil d'une organisation RH */}
+      {business?.type === 'rh' && (
+        <div className="px-3 pt-3 empty:hidden">
+          <OnboardingChecklist />
+        </div>
+      )}
       {/* Header */}
       <div className="px-6 py-5 border-b border-surface-border bg-surface-card shrink-0">
         <div className="flex items-center justify-between mb-6">
@@ -222,17 +242,7 @@ export default function StaffPage() {
 
       {/* Tabs */}
       <ScrollableTabBar className="bg-surface-card border-b border-surface-border shrink-0">
-        {[
-          { id: 'employes', label: 'Équipe', icon: LayoutList, show: true },
-          { id: 'presences', label: 'Présences', icon: Calendar, show: can('manage_staff_attendance') },
-          { id: 'paie', label: 'Paie & Salaires', icon: Wallet, show: can('manage_staff_payroll') },
-          { id: 'conges', label: 'Congés & Absences', icon: Palmtree, show: true },
-          { id: 'taches', label: 'Tâches', icon: ListChecks, show: can('manage_staff_tasks') },
-          { id: 'objectifs', label: 'Objectifs', icon: Target, show: can('manage_staff_objectives') },
-          { id: 'formations', label: 'Formation', icon: GraduationCap, show: can('manage_staff_trainings') },
-          { id: 'missions', label: 'Missions', icon: Plane, show: can('manage_staff_missions') },
-          { id: 'finances', label: 'Prêts & Avances', icon: Banknote, show: can('manage_staff_finances') },
-        ].filter(t => t.show).map((t) => (
+        {staffTabs.map((t) => (
           <button 
             key={t.id} 
             onClick={() => setTab(t.id as StaffTab)}

@@ -2,6 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   Plus, RefreshCw, Package, TrendingUp, Search, Filter,
   AlertTriangle, Download, Building2, ClipboardList, Pencil,
@@ -93,7 +94,7 @@ export default function ApprovisionnementPage() {
   const [orders, setOrders]         = useState<PurchaseOrder[]>([]);
   const [loading, setLoading]       = useState(true);
 
-  const [activeTab, setActiveTab]   = useState<PageTab>('historique');
+  const [activeTab, setActiveTab]   = useUrlTab<PageTab>('historique', ['historique', 'commandes']);
   const [showModal, setShowModal]   = useState(false);
   const [showPOModal, setShowPOModal] = useState(false);
   const [showSupplierPanel, setShowSupplierPanel] = useState(false);

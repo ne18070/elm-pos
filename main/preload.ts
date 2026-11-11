@@ -18,6 +18,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'sync:queue:add',
   'sync:queue:flush',
   'sync:retry-failed',
+  'sync:set-auth',
   'orders:create-local',
   'orders:get-pending',
   'orders:mark-synced',
@@ -130,6 +131,17 @@ const api = {
       assertString(operation, 'operation');
       assertObject(payload, 'payload');
       return ipcRenderer.invoke('sync:queue:add', { operation, payload });
+    },
+
+    /** Session courante (null à la déconnexion) : le main rejoue la file en son nom. */
+    setAuth: (auth: { url: string; anonKey: string; accessToken: string } | null) => {
+      if (auth === null) return ipcRenderer.invoke('sync:set-auth', null);
+      assertObject(auth, 'auth');
+      return ipcRenderer.invoke('sync:set-auth', {
+        url:         assertString(auth.url, 'auth.url'),
+        anonKey:     assertString(auth.anonKey, 'auth.anonKey'),
+        accessToken: assertString(auth.accessToken, 'auth.accessToken'),
+      });
     },
 
     onStarted: (cb: () => void) => {

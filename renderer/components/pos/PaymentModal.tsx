@@ -11,7 +11,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
-import { isNetworkError, orderErrorMessage } from '@/lib/net';
+import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { sendInvoiceViaWhatsApp } from '@/lib/share-invoice';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { WholesaleContext } from './WholesaleSelector';
@@ -327,7 +327,12 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       if (reservation) {
         (dbPayload as Record<string, unknown>).hotel_reservation_id = reservation.id;
       }
-      await enqueueToSync('create_order', dbPayload);
+      // Pas de file hors Electron : on garde le panier plutôt que perdre la vente.
+      if (!(await enqueueToSync('create_order', dbPayload))) {
+        setErreur(OFFLINE_NOT_SAVED_MESSAGE);
+        setStep('methode');
+        return;
+      }
       notifWarning('Hors ligne —vente enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
       setStep('succes');
@@ -396,7 +401,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       });
       (dbPayload as Record<string, unknown>).customer_name  = customerName.trim() || null;
       (dbPayload as Record<string, unknown>).customer_phone = customerPhone.trim() || null;
-      await enqueueToSync('create_order', dbPayload);
+      if (!(await enqueueToSync('create_order', dbPayload))) {
+        setErreur(OFFLINE_NOT_SAVED_MESSAGE);
+        setStep('methode');
+        return;
+      }
       saveCustomer(customerName, customerPhone);
       notifWarning('Hors ligne —acompte enregistré, synchronisation automatique à la reconnexion');
       cart.clear();
@@ -479,7 +488,11 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
       (dbPayload as Record<string, unknown>).customer_phone   = customerPhone.trim() || null;
       (dbPayload as Record<string, unknown>).order_channel    = 'livraison';
       (dbPayload as Record<string, unknown>).delivery_address = deliveryNoteAddress.trim() || deliveryAddress.trim() || null;
-      await enqueueToSync('create_order', dbPayload);
+      if (!(await enqueueToSync('create_order', dbPayload))) {
+        setErreur(OFFLINE_NOT_SAVED_MESSAGE);
+        setStep('methode');
+        return;
+      }
       saveCustomer(customerName, customerPhone);
       notifWarning('Hors ligne —bon de livraison enregistré, synchronisation automatique à la reconnexion');
       cart.clear();
@@ -496,12 +509,16 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
     setErreur('');
     if (!cashSession) { setErreur('Ouvrez une session de caisse avant d\'encaisser.'); return; }
 
+    // Valide le panier uniquement. Les espèces reçues sont contrôlées juste
+    // dessous par validatePayment, contre le reste dû APRÈS remise fidélité :
+    // comparer ici au total avant remise bloquait toute vente payée en partie
+    // (ou en totalité) avec des points.
     const orderError = validateOrderPayload({
       businessId:    business.id,
       cashierId:     user.id,
       cart:          { items: cart.items, coupons: cart.coupons, discount_amount: discountAmount, notes: cart.notes },
       paymentMethod: methode,
-      paymentAmount: methode === 'cash' ? montantRecuNum : total,
+      paymentAmount: total,
       taxRate,
       taxInclusive,
     });

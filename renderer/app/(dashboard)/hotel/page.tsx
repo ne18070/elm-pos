@@ -3,6 +3,7 @@ import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import { Plus, BedDouble, Users, ClipboardList, Calendar, LogOut, LogIn, Share2, Copy, Check, ExternalLink, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -106,7 +107,7 @@ export default function HotelPage() {
   const [services,     setServices]     = useState<HotelService[]>([]);
   const [revenueToday, setRevenueToday] = useState(0);
 
-  const [tab,            setTab]            = useState<Tab>('chambres');
+  const [tab,            setTab]            = useUrlTab<Tab>('chambres', ['chambres', 'reservations', 'calendrier', 'clients']);
   const [resFilter,      setResFilter]      = useState<ResFilter>('active');
   const [dateFilterFrom, setDateFilterFrom] = useState('');
   const [dateFilterTo,   setDateFilterTo]   = useState('');

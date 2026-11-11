@@ -15,6 +15,10 @@ if (supabaseUrl.includes('placeholder') || supabaseAnonKey === 'placeholder') {
   console.error('ERREUR : Supabase URL ou Anon Key manquante !');
 }
 
+// Publiques (intégrées au build) : transmises au moteur de synchro Electron,
+// qui n'a pas d'autre moyen de joindre Supabase.
+export { supabaseUrl, supabaseAnonKey };
+
 // Promise-based mutex that serialises concurrent auth operations without
 // ever using the Web Locks `steal` option.  The built-in Supabase lock uses
 // steal:true for autoRefreshToken, which races with manual getUser() calls

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle, Settings2, MessageCircle } from 'lucide-react';
@@ -33,6 +34,7 @@ import { OrderDetailPanel } from './components/OrderDetailPanel';
 // Hooks
 import { useServiceCatalog } from './hooks/useServiceCatalog';
 import { getPublicSiteUrl } from '@/lib/public-links';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 
 type PageTab = 'orders' | 'catalog' | 'subjects' | 'campagnes';
 
@@ -53,7 +55,7 @@ export default function ServicesPage() {
   const currency = business?.currency ?? 'XOF';
   const businessId = business?.id ?? '';
 
-  const [tab, setTab] = useState<PageTab>('orders');
+  const [tab, setTab] = useUrlTab<PageTab>('orders', ['orders', 'catalog', 'subjects', 'campagnes']);
   const [showNewOT, setShowNewOT] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -170,6 +172,13 @@ export default function ServicesPage() {
 
   return (
     <div className="flex flex-col h-full bg-surface">
+      {/* Démarrage : Prestations est la page d'accueil d'un atelier de type
+          'service' (un loueur, même type, a sa checklist sur Contrats) */}
+      {business?.type === 'service' && business.industry_sector !== 'location' && (
+        <div className="px-3 pt-3 empty:hidden">
+          <OnboardingChecklist />
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col gap-2 px-4 py-2 bg-surface-card border-b border-surface-border shrink-0 sm:flex-row sm:items-center sm:justify-between md:px-4">
         <div className="flex items-center gap-3">
@@ -244,7 +253,9 @@ export default function ServicesPage() {
         <div className="bg-status-error/10 border-b border-status-error/20 px-4 py-2 flex items-center justify-center gap-2 text-status-error text-xs font-medium shrink-0">
           <AlertCircle className="w-4 h-4" />
           Attention : Aucune session de caisse n'est ouverte. L'encaissement sera impossible.
-          <Link href="/caisse" className="underline ml-2">Ouvrir la caisse</Link>
+          {can('view_cash_session') && can('manage_cash_session')
+            ? <Link href="/caisse" className="underline ml-2">Ouvrir la caisse</Link>
+            : <span className="ml-1">Demandez à un responsable d&apos;ouvrir la caisse.</span>}
         </div>
       )}
       {staleCount > 0 && (

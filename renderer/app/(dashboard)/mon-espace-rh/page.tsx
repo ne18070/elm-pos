@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   UserCircle, Loader2, Wallet, Palmtree, FileText, Download, Plus,
   Clock, CheckCircle2, XCircle, Ban, Lock, Contact, ListChecks, Briefcase, CalendarDays,
@@ -70,7 +71,7 @@ export default function MonEspaceRhPage() {
 
   const [loading, setLoading] = useState(true);
   const [myStaff, setMyStaff] = useState<Staff | null>(null);
-  const [tab, setTab] = useState<Tab>('dossier');
+  const [tab, setTab] = useUrlTab<Tab>('dossier', ['dossier', 'bulletins', 'conges', 'taches', 'objectifs', 'formation', 'mission', 'prets', 'avance', 'documents']);
 
   const [payments, setPayments] = useState<StaffPayment[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);

@@ -230,6 +230,89 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         },
       ];
 
+    // -- Organisation RH / SIRH (aucune vente ni stock) --------------------------
+    // Avant : parcours « commerce » (catégories, produits, première vente en
+    // caisse) — étapes inaccessibles pour ce métier, jamais cochées.
+    } else if (effectiveType === 'rh') {
+      const [
+        { count: staffCount },
+        { count: payrollCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('staff').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('staff_payments').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'staff',
+          label: 'Ajouter vos employés',
+          description: 'Créez la fiche de chaque employé : poste, contrat, salaire.',
+          href: '/staff',
+          done: (staffCount ?? 0) > 0,
+        },
+        {
+          id: 'payroll',
+          label: 'Enregistrer une première paie',
+          description: 'Saisissez un salaire pour démarrer le suivi de la paie.',
+          href: '/staff?tab=paie',
+          done: (payrollCount ?? 0) > 0,
+        },
+        {
+          id: 'team',
+          label: 'Inviter un collaborateur',
+          description: 'Donnez accès à un gestionnaire RH ou à un associé.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+      ];
+
+    // -- Atelier / Prestations (type 'service' hors location) --------------------
+    } else if (effectiveType === 'service') {
+      const [
+        { count: catalogCount },
+        { count: serviceOrderCount },
+        { count: cashSessionCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('service_catalog').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('service_orders').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('cash_sessions').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'catalog',
+          label: 'Créer votre catalogue',
+          description: 'Ajoutez vos prestations types et leurs tarifs.',
+          href: '/services?tab=catalog',
+          done: (catalogCount ?? 0) > 0,
+        },
+        {
+          id: 'first_order',
+          label: 'Créer un ordre de travail',
+          description: 'Enregistrez la prise en charge d\'un client et suivez-la sur le tableau.',
+          href: '/services',
+          done: (serviceOrderCount ?? 0) > 0,
+        },
+        {
+          id: 'cash_session',
+          label: 'Ouvrir la caisse',
+          description: 'Une session de caisse ouverte est nécessaire pour encaisser vos prestations.',
+          href: '/caisse',
+          done: (cashSessionCount ?? 0) > 0,
+        },
+        {
+          id: 'team',
+          label: 'Inviter votre équipe',
+          description: 'Ajoutez vos techniciens et collaborateurs.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+      ];
+
     // -- Retail / Commerce (défaut) ---------------------------------------------
     } else {
       const [

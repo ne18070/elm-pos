@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import { 
   Plus, Scale, Loader2, ExternalLink, Activity, 
   GitBranch, BookOpen, Settings2, Archive, ArchiveRestore 
@@ -40,7 +41,7 @@ export default function DossiersPage() {
   const { error: notifError, success } = useNotificationStore();
   const can = useCan();
 
-  const [tab, setTab] = useState<DossierTab>('dossiers');
+  const [tab, setTab] = useUrlTab<DossierTab>('dossiers', () => TABS.filter(t => t.id !== 'config' || can('manage_legal_config')).map(t => t.id));
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [typesAffaire, setTypesAffaire] = useState<RefItem[]>([]);
   const [tribunaux, setTribunaux] = useState<RefItem[]>([]);

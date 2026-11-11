@@ -3,6 +3,7 @@ import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import { useRouter } from 'next/navigation';
 import {
   Loader2, Save, UserPlus, Shield, UserX, ChevronDown,
@@ -121,7 +122,7 @@ export default function AdminPage() {
   const { user, business, businesses, setUser, setBusinesses } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const { members, loading: loadingTeam, refetch } = useTeam(business?.id ?? '');
-  const [tab, setTab] = useState<Tab>('profil');
+  const [tab, setTab] = useUrlTab<Tab>('profil', () => TABS.filter(t => !t.navigate).map(t => t.id));
   const [showInvite, setShowInvite] = useState(false);
   const can = useCan();
 

@@ -3,6 +3,7 @@ import { toUserError } from '@/lib/user-error';
 import { displayCurrency } from '@/lib/utils';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   Plus, Car, FileText, Pencil, Trash2, X, Loader2,
   Send, Archive, Share2, CheckCircle, Clock, FileSignature,
@@ -122,7 +123,7 @@ export default function ContratsPage() {
   const { success: notifSuccess, error: notifError } = useNotificationStore();
   const can = useCan();
 
-  const [tab, setTab]               = useState<Tab>('contrats');
+  const [tab, setTab]               = useUrlTab<Tab>('contrats', ['contrats', 'vehicules', 'modeles']);
   const [loading, setLoading]       = useState(true);
   const [vehicles, setVehicles]     = useState<RentalVehicle[]>([]);
   const [templates, setTemplates]   = useState<ContractTemplate[]>([]);

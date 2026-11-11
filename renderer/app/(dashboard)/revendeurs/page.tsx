@@ -3,6 +3,7 @@ import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   Plus, Search, Phone, MapPin, Users, Pencil, Trash2,
   ChevronRight, Check, Gift, Store, Upload, Loader2, Crown, Printer, X,
@@ -212,7 +213,7 @@ export default function RevendeursPage() {
   const { success, error: notifError } = useNotificationStore();
   const can = useCan();
 
-  const [tab, setTab]               = useState<Tab>('revendeurs');
+  const [tab, setTab]               = useUrlTab<Tab>('revendeurs', ['revendeurs', 'offres']);
   const [search, setSearch]         = useState('');
   const [resellers, setResellers]   = useState<Reseller[]>([]);
   const [selected, setSelected]     = useState<Reseller | null>(null);

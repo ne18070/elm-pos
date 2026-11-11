@@ -8,7 +8,7 @@ import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
-import { isNetworkError, orderErrorMessage } from '@/lib/net';
+import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { createOrder } from '@services/supabase/orders';
 import { enqueueToSync, openCashDrawer } from '@/lib/ipc';
 import { computeOrderTotals, buildOrderDbPayload } from '@domain/order.service';
@@ -118,14 +118,17 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, whole
       setStage('done');
     } catch (err: unknown) {
       console.error('Split bill order failed:', err);
-      // Erreur métier : on ne perd rien — retour à la dernière part, panier intact.
-      if (!isNetworkError(err)) {
-        setErreur(orderErrorMessage(err));
+      // On ne perd rien : retour à la dernière part, panier intact.
+      const backToLastShare = (message: string) => {
+        setErreur(message);
         setCollected(payments.slice(0, -1));
         setPersonIdx(n - 1);
         setMethod('cash');
         setReceived('');
         setStage('collect');
+      };
+      if (!isNetworkError(err)) {
+        backToLastShare(orderErrorMessage(err));
         return;
       }
       // Vraie panne réseau : file de synchro (client_order_id → pas de doublon).
@@ -147,7 +150,11 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, whole
       if (cart.orderChannel !== 'salle') {
         (dbPayload as Record<string, unknown>).order_channel = cart.orderChannel;
       }
-      await enqueueToSync('create_order', dbPayload);
+      // Pas de file hors Electron : on garde le panier plutôt que perdre la vente.
+      if (!(await enqueueToSync('create_order', dbPayload))) {
+        backToLastShare(OFFLINE_NOT_SAVED_MESSAGE);
+        return;
+      }
       notifWarning('Hors ligne — addition enregistrée, synchronisation automatique à la reconnexion');
       cart.clear();
       setStage('done');

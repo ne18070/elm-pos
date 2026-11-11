@@ -2,6 +2,7 @@
 
 import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import { BookOpen, RefreshCw, BarChart3, Scale, FileText, Printer, Download, List, Settings, Upload, Trash2, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { displayCurrency } from '@/lib/utils';
@@ -43,7 +44,7 @@ export default function ComptabilitePage() {
   const isOwnerOrAdmin = can('view_financials');
   const { success, error: notifErr, warning: notifWarn } = useNotificationStore();
 
-  const [tab, setTab]               = useState<Tab>('dashboard');
+  const [tab, setTab]               = useUrlTab<Tab>('dashboard', TABS.map(t => t.id));
   const [period, setPeriod]         = useState<Period>(new Date().getDate() <= 5 ? 'lastmonth' : 'month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');

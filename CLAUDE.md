@@ -138,6 +138,10 @@ Superadmin (backoffice) routes authenticate with `requireSuperadmin(req)` from `
 
 `main/ipc/sync.ts` drains that queue: triggered event-driven on network-online, plus a 60s fallback poll (10s when items are pending). Each queued item replays through the Supabase JS client using the same RPCs/tables the online path uses (`create_order` RPC, `orders` update, `payments` insert) — so `domain/order.service.ts` computing identical totals for both paths matters. Renderer-side status/retry comes through the `sync:*` IPC channels (`sync:status`, `sync:queue:add`, `sync:queue:flush`, `sync:retry-failed`).
 
+The main process holds **no Supabase key** (no `.env` exists in an installed app). `AuthProvider` pushes the logged-in user's session to it via `sync:set-auth` (URL + anon key + access token, `null` on sign-out); the queue replays as that user, under RLS and the `create_order` access check (migration 168), and simply waits while nobody is logged in or the token is expired — main never refreshes the token itself (sharing the refresh token would break its rotation).
+
+Outside Electron there is no queue: `enqueueToSync()` returns `false`, and callers must then keep the cart and tell the cashier nothing was saved (`OFFLINE_NOT_SAVED_MESSAGE` in `renderer/lib/net.ts`) — never clear it.
+
 ### Service layer pattern
 
 All Supabase queries live in `services/supabase/*.ts`. These files use the browser-side supabase client with RLS applying to all queries.
@@ -228,7 +232,7 @@ Before implementing any screen, component, or feature, verify:
 
 **Forms**: minimize fields. Inline validation, not on-submit. Labels always visible (no placeholder-as-label). Error messages say what to fix, not just that something is wrong.
 
-**Navigation**: breadcrumbs or back buttons on every nested view. Active state always visible in sidebar/nav. Deep links should work (no state trapped in memory).
+**Navigation**: breadcrumbs or back buttons on every nested view. Active state always visible in sidebar/nav. Deep links should work (no state trapped in memory) — page tabs use `useUrlTab` (`renderer/hooks/useUrlTab.ts`, `?tab=`), not `useState`. Each business type's entry points live in `PRIMARY_NAV_BY_TYPE` (`renderer/lib/nav-config.ts`): the first accessible one is the landing page (`getDefaultRoute`), the first four form the mobile bottom bar.
 
 **Trust**: loading states for every async action. Destructive actions require confirmation. Empty states explain why — not just "nothing here."
 

@@ -23,6 +23,13 @@ export function isNetworkError(err: unknown): boolean {
   );
 }
 
+/**
+ * Panne réseau SANS file de synchro (web, mobile — seul Electron en a une) ou
+ * ajout à la file en échec : rien n'est enregistré, le panier doit rester intact.
+ */
+export const OFFLINE_NOT_SAVED_MESSAGE =
+  'Connexion perdue : rien n\'a été enregistré. Le panier est conservé — vérifiez la connexion puis réessayez.';
+
 /** Message court à afficher au caissier pour une erreur de création de commande. */
 export function orderErrorMessage(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err ?? '');
@@ -43,6 +50,10 @@ export function orderErrorMessage(err: unknown): string {
   }
   if (/FIDELITE_(CLIENT_MANQUANT|VALEUR_INCOHERENTE)/i.test(raw)) {
     return 'Anomalie sur la remise fidélité — vente non enregistrée. Rechargez la fiche client et réessayez.';
+  }
+  // Contrôle d'accès de create_order (migration 168)
+  if (/ACCES_REFUSE/i.test(raw)) {
+    return 'Vous n\'êtes pas autorisé à encaisser pour cet établissement. La vente n\'a pas été enregistrée.';
   }
   if (/row-level security|permission denied|jwt|not authenticated/i.test(raw)) {
     return 'Session expirée ou droits insuffisants. Reconnectez-vous, la vente n\'a pas été enregistrée.';

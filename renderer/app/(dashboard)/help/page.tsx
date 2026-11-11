@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   HelpCircle, ChevronDown, ShoppingCart, Package, ClipboardList,
   Tag, Settings, LayoutGrid,
@@ -606,7 +607,7 @@ export default function HelpPage() {
   const { user, business } = useAuthStore();
   const { error: notifError } = useNotificationStore();
   
-  const [activeTab, setActiveTab] = useState<Tab>('faq');
+  const [activeTab, setActiveTab] = useUrlTab<Tab>('faq', ['faq', 'tickets']);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);

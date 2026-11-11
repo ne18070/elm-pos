@@ -2,6 +2,7 @@
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   Plus, Car, Users, Pencil, Trash2, Loader2, X,
   ImagePlus, Search, Share2, Copy, Check,
@@ -79,7 +80,7 @@ export default function VoituresPage() {
   const currency                         = business?.currency ?? 'XOF';
   const can = useCan();
 
-  const [tab, setTab]               = useState<Tab>('parc');
+  const [tab, setTab]               = useUrlTab<Tab>('parc', ['parc', 'leads']);
   const [voitures, setVoitures]     = useState<Voiture[]>([]);
   const [leads, setLeads]           = useState<VoitureLead[]>([]);
   const [loading, setLoading]       = useState(true);

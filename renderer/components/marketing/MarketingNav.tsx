@@ -4,9 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { UserCircle, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { usePermissionsStore } from '@/store/permissions';
+import { getDefaultRoute } from '@/lib/getDefaultRoute';
 
 export function MarketingNav() {
-  const { user } = useAuthStore();
+  const { user, business } = useAuthStore();
+  const { overrides } = usePermissionsStore();
+  // Accueil du métier (Dossiers, Contrats, Hôtel…) — pas la caisse pour tous
+  const appHref = business ? getDefaultRoute(user?.role, business, overrides) : '/pos';
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -47,7 +52,7 @@ export function MarketingNav() {
         <div className="flex items-center gap-3">
           {user ? (
             <Link
-              href="/pos"
+              href={appHref}
               className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-1.5 rounded-lg transition-all duration-300 ${
                 scrolled
                   ? 'text-content-primary bg-surface hover:bg-surface-hover'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -12,7 +12,8 @@ import { CommandPalette } from '@/components/shared/CommandPalette';
 import { Loader2 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { NAV_ITEMS } from '@/lib/nav-config';
-import { checkPermission } from '@/lib/permissions';
+import { checkPermission, isPermissionFeatureEnabled } from '@/lib/permissions';
+import { useNotificationStore } from '@/store/notifications';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { NotificationBanner } from '@/components/shared/NotificationBanner';
 import { StartupAlertsModal } from '@/components/shared/StartupAlertsModal';
@@ -70,6 +71,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [business?.id, user?.id]);
 
   const [offlineCheck, setOfflineCheck] = useState<{ allowed: boolean; status: string; reason?: string } | null>(null);
+  // Page refusée déjà signalée (l'effet de garde peut repasser avant la redirection)
+  const blockedNoticeRef = useRef<string | null>(null);
 
   // Empêche la molette de changer la valeur des inputs numériques
   useEffect(() => {
@@ -138,9 +141,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // using business?.id in deps prevents spurious re-runs on reference-only changes.
       const currentBusiness = useAuthStore.getState().business;
       const hasAccess = checkPermission(user.role, currentNavItem.permission, overrides, currentBusiness);
+      if (hasAccess) blockedNoticeRef.current = null;
       if (!hasAccess && currentBusiness) {
         const defaultRoute = getDefaultRoute(user.role, currentBusiness, overrides);
         if (defaultRoute !== pathname) {
+          // Dire pourquoi on change de page : sans message, un lien vers un
+          // module absent (onboarding, bandeau, lien partagé) semblait cassé.
+          if (blockedNoticeRef.current !== pathname) {
+            blockedNoticeRef.current = pathname;
+            useNotificationStore.getState().warning(
+              isPermissionFeatureEnabled(currentNavItem.permission, currentBusiness)
+                ? `Vous n'avez pas accès à « ${currentNavItem.label} ». Demandez l'accès à un responsable.`
+                : `« ${currentNavItem.label} » n'est pas activé pour votre établissement.`,
+            );
+          }
           router.replace(defaultRoute);
         }
       }

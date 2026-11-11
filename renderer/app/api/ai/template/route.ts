@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export const runtime = 'nodejs';
 
@@ -20,13 +20,6 @@ function checkRateLimit(businessId: string): boolean {
   if (entry.count >= 5) return false;
   entry.count++;
   return true;
-}
-
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
 }
 
 const SYSTEM_PROMPT = `Tu es un assistant spécialisé dans la rédaction de messages WhatsApp professionnels pour des petites entreprises en Afrique de l'Ouest.
@@ -53,8 +46,13 @@ Règles strictes :
 
 export async function POST(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  const admin = getSupabaseAdmin();
-  if (!admin || !token) {
+  if (!token) {
+    return NextResponse.json({ error: 'Configuration serveur incomplète.' }, { status: 500 });
+  }
+  let admin: ReturnType<typeof getSupabaseAdmin>;
+  try {
+    admin = getSupabaseAdmin();
+  } catch {
     return NextResponse.json({ error: 'Configuration serveur incomplète.' }, { status: 500 });
   }
   if (!GROQ_API_KEY) {

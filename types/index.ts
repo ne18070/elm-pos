@@ -285,20 +285,22 @@ export interface Coupon {
   code: string;
   type: CouponType;
   value: number;            // percentage (0–100) or fixed amount; 0 for free_item
-  min_order_amount?: number;
-  min_quantity?: number;         // free_item: nb minimum d'articles dans le panier
-  free_item_label?: string;      // free_item: description affichée (ex: "1 bouteille")
-  free_item_product_id?: string; // free_item: produit à offrir (sortie de stock automatique)
-  free_item_quantity?: number;   // free_item: quantité offerte (défaut 1), exprimée dans l'unité offerte
+  // Colonnes facultatives : null quand vides (valeur renvoyée par la base, et
+  // valeur à envoyer pour effacer un champ — undefined est ignoré à l'update).
+  min_order_amount?: number | null;
+  min_quantity?: number | null;         // free_item: nb minimum d'articles dans le panier
+  free_item_label?: string | null;      // free_item: description affichée (ex: "1 bouteille")
+  free_item_product_id?: string | null; // free_item: produit à offrir (sortie de stock automatique)
+  free_item_quantity?: number;          // free_item: quantité offerte (défaut 1, NOT NULL), exprimée dans l'unité offerte
   /** free_item: libellé de l'unité offerte (ex: "tablette"). Vide → unité du produit. */
-  free_item_unit_label?: string;
+  free_item_unit_label?: string | null;
   /** free_item: nb d'unités de STOCK consommées par unité offerte.
-   *  1 = offert à l'unité de vente ; 1/24 = offert à la pièce (carton de 24). */
+   *  1 = offert à l'unité de vente ; 1/24 = offert à la pièce (carton de 24). NOT NULL. */
   free_item_stock_consumption?: number;
-  max_uses?: number;
+  max_uses?: number | null;
   uses_count: number;
-  per_user_limit?: number;
-  expires_at?: string;
+  per_user_limit?: number | null;
+  expires_at?: string | null;
   is_active: boolean;
   created_at: string;
 }

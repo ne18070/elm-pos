@@ -125,9 +125,36 @@ export async function openCashDrawer(): Promise<{ success: boolean; error?: stri
 
 // --- Sync queue ---------------------------------------------------------------
 
-export async function enqueueToSync(operation: string, payload: unknown): Promise<void> {
+/**
+ * Met une opération dans la file de synchro hors ligne — qui n'existe que sous
+ * Electron. Renvoie false si rien n'a été mis en file (web, mobile, ou échec de
+ * l'ajout) : l'appelant ne doit alors ni vider le panier ni annoncer une
+ * sauvegarde, sinon la vente est perdue sans que personne ne le sache.
+ */
+export async function enqueueToSync(operation: string, payload: unknown): Promise<boolean> {
+  if (!api) return false;
+  try {
+    const res = await api.sync.addToQueue(operation, payload) as { success?: boolean } | undefined;
+    return res?.success !== false;
+  } catch {
+    return false;
+  }
+}
+
+/** Identifiants avec lesquels le main rejoue la file : ceux de l'utilisateur connecté. */
+export interface SyncAuth {
+  url:         string;
+  anonKey:     string;
+  accessToken: string;
+}
+
+/**
+ * Transmet la session courante au moteur de synchro (Electron). Le main n'a
+ * aucune clé : sans session (null = déconnexion), la file attend.
+ */
+export function setSyncAuth(auth: SyncAuth | null): void {
   if (!api) return;
-  await api.sync.addToQueue(operation, payload);
+  api.sync.setAuth(auth).catch(() => {});
 }
 
 export async function flushSyncQueue(): Promise<void> {

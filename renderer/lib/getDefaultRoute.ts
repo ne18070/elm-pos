@@ -1,5 +1,5 @@
-import { checkPermission } from './permissions';
-import { NAV_ITEMS } from './nav-config';
+import { checkPermission, type PermissionKey } from './permissions';
+import { NAV_ITEMS, getPrimaryNav } from './nav-config';
 import type { UserRole, Business } from '@pos-types';
 import { isCapacitor } from './platform';
 import { getBusinessKind } from '@/lib/business-kind';
@@ -42,8 +42,13 @@ export function getDefaultRoute(
     return '/staff';
   }
 
-  // On parcourt NAV_ITEMS dans l'ordre (défini par NAV_SECTIONS)
-  // et on retourne la première route autorisée.
+  // Point d'entrée du métier : premier module principal accessible
+  // (PRIMARY_NAV_BY_TYPE — Dossiers pour un cabinet, Contrats pour un loueur…).
+  const can = (permission: PermissionKey) => checkPermission(role, permission, overrides, business);
+  const entry = getPrimaryNav(business?.type, can, 1)[0];
+  if (entry) return entry.href;
+
+  // Repli : première route autorisée, tous métiers confondus.
   for (const item of NAV_ITEMS) {
     if (!item.permission || checkPermission(role, item.permission, overrides, business)) {
       return item.href;

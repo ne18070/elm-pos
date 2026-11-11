@@ -174,23 +174,30 @@ export function CouponModal({ coupon, businessId, onClose, onSaved }: CouponModa
 
     setLoading(true);
     try {
+      // Champ vide = null, jamais undefined : supabase-js retire les clés
+      // undefined du JSON, donc à la modification l'ancienne valeur restait en
+      // base (impossible de retirer une date d'expiration ou une limite).
       const payload = {
         business_id:      businessId,
         code:             form.code.toUpperCase().trim(),
         type:             form.type,
         value:            isFreeItem ? 0 : valueNum,
-        min_order_amount: minOrder,
-        min_quantity:     minQty,
-        free_item_label:       isFreeItem ? form.free_item_label.trim() : undefined,
-        free_item_product_id:  isFreeItem && form.free_item_product_id ? form.free_item_product_id : undefined,
-        free_item_quantity:    freeQty,
-        free_item_unit_label:       isFreeItem ? freeUnitLabelOut : undefined,
-        free_item_stock_consumption: isFreeItem ? freeConsumptionOut : undefined,
-        max_uses:         maxUses,
-        per_user_limit:   perUser,
+        min_order_amount: minOrder ?? null,
+        min_quantity:     minQty ?? null,
+        free_item_label:       isFreeItem ? form.free_item_label.trim() : null,
+        free_item_product_id:  isFreeItem && form.free_item_product_id ? form.free_item_product_id : null,
+        free_item_unit_label:  isFreeItem ? (freeUnitLabelOut ?? null) : null,
+        // Colonnes NOT NULL (défaut 1) : envoyées seulement pour un article offert.
+        // Présentes à undefined, elles déclenchaient le verrou « coupon déjà
+        // utilisé » (null ≠ 1) sur toute modification d'un coupon % ou montant.
+        ...(isFreeItem
+          ? { free_item_quantity: freeQty, free_item_stock_consumption: freeConsumptionOut }
+          : {}),
+        max_uses:         maxUses ?? null,
+        per_user_limit:   perUser ?? null,
         // Fin de journée locale plutôt que minuit UTC (sinon le coupon meurt la
         // veille au soir pour un fuseau à l'est de Greenwich).
-        expires_at:       form.expires_at ? new Date(form.expires_at + 'T23:59:59').toISOString() : undefined,
+        expires_at:       form.expires_at ? new Date(form.expires_at + 'T23:59:59').toISOString() : null,
         is_active:        form.is_active,
       };
 

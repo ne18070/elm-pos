@@ -165,11 +165,83 @@ export const NAV_ITEMS: NavItem[] = Object.values(NAV_BY_TYPE)
   .flatMap(s => s.items)
   .filter((item, i, arr) => arr.findIndex(x => x.href === item.href) === i);
 
-// ─── Bottom nav mobile (5 items max) ─────────────────────────────────────────
+// ─── Modules principaux par métier ────────────────────────────────────────────
+// Point d'entrée de chaque métier (CLAUDE.md › Business type UX contracts), par
+// ordre de priorité : le premier accessible devient la page d'accueil
+// (getDefaultRoute), les 4 premiers la barre du bas mobile. Une entrée que
+// l'utilisateur ne peut pas ouvrir (droit ou module non activé) est sautée, et
+// le reste du menu du métier complète la liste.
+// Avant : une barre fixe Caisse/Commandes/Produits/Stats pour tous — réduite à
+// « Stats » (voire vide) hors commerce — et un accueil pris dans l'ordre des
+// menus de TOUS les métiers (un cabinet atterrissait sur le tableau de bord).
 
-export const BOTTOM_NAV = [
-  { href: '/pos',      icon: ShoppingCart,  label: 'Caisse'    },
-  { href: '/orders',   icon: ClipboardList, label: 'Commandes' },
-  { href: '/products', icon: Package,       label: 'Produits'  },
-  { href: '/analytics',icon: BarChart2,     label: 'Stats'     },
-] as const;
+export const PRIMARY_NAV_BY_TYPE: Record<BusinessType, readonly string[]> = {
+  retail:     ['/pos', '/orders', '/products', '/analytics'],
+  restaurant: ['/pos', '/orders', '/products', '/analytics'],
+  // Hôtel : le planning des chambres d'abord, la caisse (bar, room service) ensuite
+  hotel:      ['/hotel', '/pos', '/orders', '/analytics'],
+  // 'service' regroupe la location (contrats + flotte) et les ateliers : pour un
+  // atelier, qui n'a pas ces modules, contrats et voitures sont sautés.
+  service:    ['/contrats', '/voitures', '/services', '/clients', '/analytics'],
+  juridique:  ['/dossiers', '/honoraires', '/clients', '/analytics'],
+  education:  ['/eleves', '/classes', '/scolarite', '/bulletins'],
+  rh:         ['/staff', '/mon-espace-rh', '/analytics'],
+};
+
+/** Libellés courts pour la barre du bas (la sidebar garde les libellés complets). */
+const SHORT_LABELS: Record<string, string> = {
+  '/pos':                'Caisse',
+  '/caisse':             'Session',
+  '/orders':             'Commandes',
+  '/products':           'Produits',
+  '/analytics':          'Stats',
+  '/hotel':              'Hôtel',
+  '/menu-du-jour':       'Menu',
+  '/commandes-emporter': 'Emporter',
+  '/services':           'Prestations',
+  '/contrats':           'Contrats',
+  '/voitures':           'Voitures',
+  '/dossiers':           'Dossiers',
+  '/honoraires':         'Honoraires',
+  '/clients':            'Clients',
+  '/eleves':             'Élèves',
+  '/classes':            'Classes',
+  '/scolarite':          'Scolarité',
+  '/bulletins':          'Notes',
+  '/staff':              'Équipe',
+  '/mon-espace-rh':      'Mon RH',
+  '/livraison':          'Livraisons',
+  '/settings':           'Réglages',
+};
+
+/** Jamais proposés comme module principal : réglages, journaux, outils d'administration. */
+const NOT_PRIMARY = new Set(['/settings', '/activity', '/recovery', '/marketing', '/coupons']);
+
+export type PrimaryNavItem = NavItem & { shortLabel: string };
+
+/**
+ * Modules principaux accessibles à l'utilisateur pour ce métier, dans l'ordre
+ * de PRIMARY_NAV_BY_TYPE, complétés par le reste du menu du métier.
+ */
+export function getPrimaryNav(
+  type:  BusinessType | null | undefined,
+  can:   (permission: PermissionKey) => boolean,
+  limit = 4,
+): PrimaryNavItem[] {
+  const menu   = getNavSections(type).flatMap((s) => s.items);
+  const byHref = new Map(menu.map((item) => [item.href, item]));
+  const preferred = (type ? PRIMARY_NAV_BY_TYPE[type] ?? [] : [])
+    .map((href) => byHref.get(href))
+    .filter((item): item is NavItem => !!item);
+
+  const result: PrimaryNavItem[] = [];
+  const seen = new Set<string>();
+  for (const item of [...preferred, ...menu]) {
+    if (result.length >= limit) break;
+    if (seen.has(item.href) || NOT_PRIMARY.has(item.href)) continue;
+    seen.add(item.href);
+    if (item.permission && !can(item.permission)) continue;
+    result.push({ ...item, shortLabel: SHORT_LABELS[item.href] ?? item.label });
+  }
+  return result;
+}

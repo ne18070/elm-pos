@@ -18,7 +18,7 @@ import { getProducts } from '@services/supabase/products';
 import { createOrder } from '@services/supabase/orders';
 import { buildOrderDbPayload } from '@domain/order.service';
 import { enqueueToSync } from '@/lib/ipc';
-import { isNetworkError, orderErrorMessage } from '@/lib/net';
+import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { generateDistributeurInvoice, printHtml } from '@/lib/invoice-templates';
 import { formatCurrency, generateId } from '@/lib/utils';
 import type { Order, Product, PaymentMethod, Coupon } from '@pos-types';
@@ -375,7 +375,11 @@ export default function CommandeRapidePage() {
           order_channel: 'livraison',
           delivery_address: address ?? null,
         });
-        await enqueueToSync('create_order', dbPayload);
+        // Pas de file hors Electron : on garde la commande plutôt que la perdre.
+        if (!(await enqueueToSync('create_order', dbPayload))) {
+          setFinalizeError(OFFLINE_NOT_SAVED_MESSAGE);
+          return;
+        }
         warning('Hors ligne — commande enregistrée, synchronisation à la reconnexion.');
         clear();
         setFinalizeMode(null);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LogOut, Monitor, HelpCircle, Sun, Moon, SunMoon,
-  Menu, X, ChevronUp, PanelLeftClose, PanelLeftOpen, UserCircle,
+  Menu, X, ChevronUp, PanelLeftClose, PanelLeftOpen, UserCircle, ArrowLeft,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useSubscriptionStore } from '@/store/subscription';
@@ -25,7 +25,7 @@ import { useSidebarStore } from '@/store/sidebar';
 
 import { useCan } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/lib/permissions';
-import { getNavSections, NAV_ITEMS, BOTTOM_NAV } from '@/lib/nav-config';
+import { getNavSections, getPrimaryNav, NAV_ITEMS } from '@/lib/nav-config';
 import type { BusinessType } from '@pos-types';
 
 import { autoRecordDeparture } from '@services/supabase/staff';
@@ -457,21 +457,36 @@ function SidebarContent({
 
 export function MobileTopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const { business } = useAuthStore();
+  const pathname = usePathname();
+  // Page courante (titre) ; une sous-page (« /staff/pointage ») affiche un
+  // retour vers sa page parente — un lien, pas history.back(), pour marcher
+  // aussi depuis un lien direct.
+  const current = NAV_ITEMS.find((item) => isNavActive(pathname, item.href));
+  const parent  = current && pathname !== current.href ? current : null;
+  const iconBtn = 'w-11 h-11 -ml-2 flex items-center justify-center shrink-0 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors';
+
   return (
     <div
-      className="md:hidden flex items-center gap-3 px-4 py-3 bg-surface-card border-b border-surface-border shrink-0"
-      style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
+      className="md:hidden flex items-center gap-2 px-4 py-1.5 bg-surface-card border-b border-surface-border shrink-0"
+      style={{ paddingTop: 'max(6px, env(safe-area-inset-top))' }}
     >
-      <button
-        onClick={onMenuOpen}
-        className="p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
-        aria-label="Ouvrir le menu"
-      >
-        <Menu className="w-5 h-5" />
-      </button>
-      <p className="text-sm font-semibold text-content-primary truncate flex-1">
-        {business?.name ?? 'Elm'}
-      </p>
+      {parent ? (
+        <Link href={parent.href} className={iconBtn} aria-label={`Retour : ${parent.label}`}>
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+      ) : (
+        <button onClick={onMenuOpen} className={iconBtn} aria-label="Ouvrir le menu">
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-content-primary truncate">
+          {current?.label ?? business?.name ?? 'Elm'}
+        </p>
+        {current && business?.name && (
+          <p className="text-[11px] text-content-muted truncate leading-tight">{business.name}</p>
+        )}
+      </div>
       <OfflineBadge compact />
     </div>
   );
@@ -484,21 +499,20 @@ export function MobileBottomNav() {
   const { business } = useAuthStore();
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
   const can = useCan();
+  const type = useCachedBusinessType(business);
 
-  const visible = useMemo(() => {
-    return BOTTOM_NAV.filter(({ href }) => {
-      const item = NAV_ITEMS.find(i => i.href === href);
-      if (!item) return true;
-      return !item.permission || can(item.permission as PermissionKey);
-    });
-  }, [can]);
+  // Modules principaux du métier (Dossiers pour un cabinet, Contrats pour un
+  // loueur…), filtrés par les droits — et non plus une liste fixe de commerce.
+  const visible = useMemo(() => getPrimaryNav(type, can, 4), [type, can]);
+
+  if (visible.length === 0) return null;
 
   return (
     <nav
       className="md:hidden flex items-center bg-surface-card border-t border-surface-border shrink-0"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {visible.map(({ href, icon: Icon, label }) => {
+      {visible.map(({ href, icon: Icon, shortLabel: label }) => {
         const active = isNavActive(pathname, href);
         const badge  = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
         return (

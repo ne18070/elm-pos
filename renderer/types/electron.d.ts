@@ -29,6 +29,8 @@ interface ElectronAPI {
     flush: () => Promise<unknown>;
     retryFailed: () => Promise<unknown>;
     addToQueue: (operation: string, payload: unknown) => Promise<unknown>;
+    /** Session courante (null à la déconnexion) : le main rejoue la file en son nom. */
+    setAuth: (auth: { url: string; anonKey: string; accessToken: string } | null) => Promise<unknown>;
     onStarted: (cb: () => void) => () => void;
     onComplete: (cb: (r: unknown) => void) => () => void;
     onOnline: (cb: () => void) => () => void;

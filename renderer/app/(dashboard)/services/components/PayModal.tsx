@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { X, Info, AlertTriangle, Banknote, CreditCard, Smartphone, Building2, FileCheck, Star, Gift } from 'lucide-react';
+import { useCan } from '@/hooks/usePermission';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCashSessionStore } from '@/store/cashSession';
@@ -27,6 +29,8 @@ export function PayModal({ order, currency, onClose, onPaid }: {
 }) {
   const { user }               = useAuthStore();
   const { session: cashSession } = useCashSessionStore();
+  const can = useCan();
+  const canOpenCash = can('view_cash_session') && can('manage_cash_session');
   const { error: notifError }  = useNotificationStore();
 
   const balance = order.total - order.paid_amount;
@@ -175,7 +179,10 @@ export function PayModal({ order, currency, onClose, onPaid }: {
             <div className="p-3 rounded-xl bg-status-error/10 border border-status-error/20 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
               <p className="text-xs text-status-error leading-relaxed">
-                <strong>Action bloquée.</strong> Ouvrez une session de caisse pour enregistrer un versement.
+                <strong>Action bloquée.</strong> Ouvrez une session de caisse pour enregistrer un versement.{' '}
+                {canOpenCash
+                  ? <Link href="/caisse" className="underline font-semibold">Ouvrir la caisse</Link>
+                  : 'Demandez à un responsable de l’ouvrir.'}
               </p>
             </div>
           )}

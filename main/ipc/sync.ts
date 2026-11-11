@@ -1,5 +1,6 @@
 import type { IpcMain, BrowserWindow } from 'electron';
 import { net } from 'electron';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IpcResponse } from '../../types';
 import {
   enqueueSync,
@@ -18,9 +19,79 @@ let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 const FALLBACK_INTERVAL_MS = 60_000; // 1 min si event-driven ne déclenche pas
 
+// ─── Identifiants ─────────────────────────────────────────────────────────────
+// Le main n'embarque AUCUNE clé (ni service role, ni .env — absents d'une app
+// installée). Le renderer lui transmet l'URL et la clé anon (publiques) et le
+// jeton d'accès de l'utilisateur connecté : la file est rejouée en son nom, avec
+// la RLS et les contrôles de create_order, comme une vente en ligne.
+// Le main ne rafraîchit jamais le jeton (le refresh token tourne côté renderer,
+// le partager casserait sa rotation) : il attend le suivant (TOKEN_REFRESHED).
+
+interface SyncAuth {
+  url:         string;
+  anonKey:     string;
+  accessToken: string;
+}
+
+let syncAuth: SyncAuth | null = null;
+let cachedClient: { token: string; client: SupabaseClient } | null = null;
+
+/** Un jeton qui expire dans moins de 30 s est considéré comme expiré. */
+const TOKEN_MARGIN_MS = 30_000;
+
+function parseSyncAuth(value: unknown): SyncAuth | null {
+  if (!value || typeof value !== 'object') return null;
+  const { url, anonKey, accessToken } = value as Record<string, unknown>;
+  if (typeof url !== 'string' || !url || typeof anonKey !== 'string' || !anonKey
+      || typeof accessToken !== 'string' || !accessToken) return null;
+  return { url, anonKey, accessToken };
+}
+
+/** Échéance du jeton (ms), lue dans le JWT ; null si illisible. */
+function tokenExpiresAt(token: string): number | null {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'),
+    ) as { exp?: unknown };
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Identifiants utilisables maintenant, ou null (déconnecté / jeton expiré). */
+function usableAuth(): SyncAuth | null {
+  if (!syncAuth) return null;
+  const exp = tokenExpiresAt(syncAuth.accessToken);
+  return exp === null || exp - TOKEN_MARGIN_MS > Date.now() ? syncAuth : null;
+}
+
+async function getClient(auth: SyncAuth): Promise<SupabaseClient> {
+  if (cachedClient?.token === auth.accessToken) return cachedClient.client;
+  const { createClient } = await import('@supabase/supabase-js');
+  const client = createClient(auth.url, auth.anonKey, {
+    global: { headers: { Authorization: `Bearer ${auth.accessToken}` } },
+    auth:   { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  cachedClient = { token: auth.accessToken, client };
+  return client;
+}
+
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
 
 export function registerSyncHandlers(ipcMain: IpcMain): void {
+  // Session courante du renderer (null = déconnexion : la file attend).
+  ipcMain.handle('sync:set-auth', (event, auth: unknown): IpcResponse => {
+    // Seule la fenêtre principale fait foi (l'écran client charge aussi l'app).
+    if (mainWindow && !mainWindow.isDestroyed() && event.sender !== mainWindow.webContents) {
+      return { success: false, error: 'Fenêtre non autorisée' };
+    }
+    syncAuth = parseSyncAuth(auth);
+    if (!syncAuth) cachedClient = null;
+    triggerSync();
+    return { success: true };
+  });
+
   ipcMain.handle('sync:status', (): IpcResponse => {
     try {
       const stats = getSyncStats();
@@ -102,27 +173,33 @@ export function triggerSync(): void {
 
 async function runSync(): Promise<{ processed: number; failed: number }> {
   if (syncInProgress) return { processed: 0, failed: 0 };
+  // Personne de connecté, ou jeton expiré en attendant son rafraîchissement :
+  // la file attend le prochain jeton du renderer, sans consommer de tentative.
+  if (!usableAuth()) return { processed: 0, failed: 0 };
   syncInProgress = true;
   notify('sync:started', {});
 
   let processed = 0;
   let failed = 0;
 
-  const items = getPendingSyncItems();
-
-  for (const item of items) {
-    try {
-      await processItem(item);
-      markSynced(item.id);
-      processed++;
-    } catch (error) {
-      const newAttempts = item.attempts + 1;
-      markFailed(item.id, String(error), newAttempts);
-      failed++;
+  try {
+    for (const item of getPendingSyncItems()) {
+      const auth = usableAuth();
+      if (!auth) break; // déconnexion ou expiration en cours de route
+      try {
+        await processItem(item, auth);
+        markSynced(item.id);
+        processed++;
+      } catch (error) {
+        const newAttempts = item.attempts + 1;
+        markFailed(item.id, String(error), newAttempts);
+        failed++;
+      }
     }
+  } finally {
+    // Sinon une exception SQLite laissait la synchro bloquée jusqu'au redémarrage
+    syncInProgress = false;
   }
-
-  syncInProgress = false;
 
   const stats = getSyncStats();
   notify('sync:complete', { processed, failed, stats });
@@ -135,15 +212,8 @@ async function runSync(): Promise<{ processed: number; failed: number }> {
   return { processed, failed };
 }
 
-async function processItem(item: SyncRow): Promise<void> {
-  const { createClient } = await import('@supabase/supabase-js');
-  
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) throw new Error('Supabase URL or Key missing in main process');
-
-  const supabase = createClient(url, key);
+async function processItem(item: SyncRow, auth: SyncAuth): Promise<void> {
+  const supabase = await getClient(auth);
 
   const payload = JSON.parse(item.payload) as Record<string, unknown>;
 

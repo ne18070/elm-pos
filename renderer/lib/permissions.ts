@@ -16,7 +16,10 @@ export interface PermissionMeta {
 const PERMISSIONS_MAP = {
   // -- Navigation (Pages)
   view_pos:               { label: 'Accès caisse (POS)',           group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
-  view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  // La caisse sert aussi le module Prestations : on n'y encaisse un ordre de
+  // travail qu'avec une session ouverte (PayModal). Sans 'service' ici, un
+  // établissement à prestations sans POS (ex. location) ne pouvait jamais encaisser.
+  view_cash_session:      { label: 'Accès gestion de caisse',       group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail', 'service'] },
   view_orders:            { label: 'Accès commandes/ventes',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_all_orders:        { label: 'Voir toutes les factures (sinon : ses ventes des 30 derniers jours)', group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
   view_services:          { label: 'Accès prestations service',    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'service' },
@@ -37,7 +40,10 @@ const PERMISSIONS_MAP = {
   view_activity:          { label: 'Accès journal audit',          group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] }, 
   view_recovery:          { label: 'Accès récupération données',   group: 'admin',      defaultRoles: ['admin', 'owner'] },
   // view_import:            { label: 'Accès import base de données',  group: 'admin',      defaultRoles: ['admin', 'owner'] },
-  view_dossiers:          { label: 'Accès dossiers juridiques',    group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'dossiers' },
+  // Ouvert aux employés (assistants, clercs) : sans cela, un employé de cabinet
+  // n'avait accès à rien d'autre que les Réglages. Créer / modifier / archiver
+  // restent réservés aux managers par défaut (create_dossier, edit_dossier…).
+  view_dossiers:          { label: 'Accès dossiers juridiques',    group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'], feature: 'dossiers' },
   view_honoraires:        { label: 'Accès facturation honoraires', group: 'finance',    defaultRoles: ['manager', 'admin', 'owner'], feature: 'honoraires' },
   view_contrats:          { label: 'Accès contrats location',      group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'contrats' },
   view_voitures:          { label: 'Accès vente voitures',         group: 'navigation', defaultRoles: ['manager', 'admin', 'owner'], feature: 'voitures' },
@@ -69,7 +75,7 @@ const PERMISSIONS_MAP = {
   // view_ai_assistant:      { label: 'Acces assistant IA local',       group: 'navigation', defaultRoles: ['staff', 'manager', 'admin', 'owner'] },
 
   // -- Actions Générales
-  manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail'] },
+  manage_cash_session:    { label: 'Ouvrir/Clôturer la caisse',      group: 'gestion',    defaultRoles: ['manager', 'admin', 'owner'], feature: ['pos', 'retail', 'service'] },
   view_financials:        { label: 'Voir marges & bénéfices',      group: 'finance',    defaultRoles: ['admin', 'owner'] },
   manage_team:            { label: 'Gérer l\'équipe (inviter/rôles)', group: 'admin',      defaultRoles: ['admin', 'owner'] },
   manage_settings:        { label: 'Modifier config business',     group: 'admin',      defaultRoles: ['manager', 'admin', 'owner'] },
@@ -227,6 +233,22 @@ export function hasFeature(business: Business | null | undefined, feature: strin
   return false;
 }
 
+/**
+ * Le module dont dépend cette permission est-il activé pour l'établissement ?
+ * (Sans module requis : toujours vrai.) Distingue « module non activé » de
+ * « droit refusé par le rôle » — utile pour expliquer une redirection.
+ */
+export function isPermissionFeatureEnabled(
+  permission: PermissionKey,
+  business?:  Business | null,
+): boolean {
+  const meta = PERMISSIONS[permission];
+  if (!meta?.feature) return true;
+  if (!business) return false;
+  const required = Array.isArray(meta.feature) ? meta.feature : [meta.feature];
+  return required.some(f => hasFeature(business, f));
+}
+
 export function checkPermission(
   role:       UserRole | null | undefined,
   permission: PermissionKey,
@@ -238,11 +260,7 @@ export function checkPermission(
   if (!meta) return false;
 
   // 1. Strict Feature Check (D'ABORD)
-  if (meta.feature) {
-    if (!business) return false;
-    const required = Array.isArray(meta.feature) ? meta.feature : [meta.feature];
-    if (!required.some(f => hasFeature(business, f))) return false;
-  }
+  if (!isPermissionFeatureEnabled(permission, business)) return false;
 
   // 2. Owners bypass (seulement si feature validée au-dessus)
   if (r === 'owner' && (IMMUTABLE_OWNER_PERMISSIONS as readonly string[]).includes(permission)) {
