@@ -18,7 +18,6 @@ import {
   Globe,
   Loader2,
   Car,
-  CalendarCheck,
   Utensils,
   GraduationCap,
 } from 'lucide-react';
@@ -27,6 +26,7 @@ import { usePermissionsStore } from '@/store/permissions';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
 import { displayCurrency } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   RECOMMENDED_PLAN_NAME, isAnnualPlan, annualSavingsPercent, annualSavingsLabel, formatSavings,
 } from '@/lib/plan-pricing';
@@ -41,9 +41,67 @@ function useSpaceHref() {
   return user ? getDefaultRoute(user.role, business, overrides) : '/login';
 }
 
+/** Hauteur des captures WebP (toutes en 1600 px de large) : déclarée pour éviter les sauts de mise en page. */
+const SHOT_HEIGHT: Record<string, number> = {
+  '/screenshots/02-pos-main.webp': 763,
+  '/screenshots/20-contrats-location.webp': 751,
+  '/screenshots/33-gestion-scolaire.webp': 760,
+};
+const shotSize = (src: string) => ({ width: 1600, height: SHOT_HEIGHT[src] ?? 1000 });
+
+/**
+ * « Vous êtes… » : un choix de métier qui montre l'essentiel pour ce métier et
+ * le transmet à l'inscription (/signup?secteur=…, présélectionné à l'étape
+ * « Quel est votre métier ? »). Les identifiants sont ceux de l'onboarding.
+ */
+const SECTOR_CHOICES = [
+  {
+    id: 'boutique', label: 'Commerce', icon: Store,
+    points: ['Caisse rapide avec lecteur de codes-barres', 'Stocks, variantes et alertes de rupture', 'Prix de gros et revendeurs'],
+    shot: '/screenshots/10-products-list.webp', alt: 'Gestion des produits et des stocks',
+  },
+  {
+    id: 'restaurant', label: 'Restaurant', icon: Utensils,
+    points: ['Plan de salle et suivi des tables', 'Menu du jour diffusé sur WhatsApp', 'Commandes à emporter et livraisons'],
+    shot: '/screenshots/06-menu-du-jour.webp', alt: 'Menu du jour du restaurant',
+  },
+  {
+    id: 'hotel', label: 'Hôtel', icon: BedDouble,
+    points: ['Planning des chambres et réservations', 'Arrivées et départs guidés', 'Consommations bar et restaurant sur la note'],
+    shot: '/screenshots/14-hotel-management.webp', alt: 'Gestion hôtelière',
+  },
+  {
+    id: 'location', label: 'Location auto', icon: Car,
+    points: ['Disponibilité de la flotte', 'Contrats et signature en ligne', 'Suivi des paiements'],
+    shot: '/screenshots/20-contrats-location.webp', alt: 'Contrats de location de véhicules',
+  },
+  {
+    id: 'juridique', label: 'Cabinet juridique', icon: Scale,
+    points: ['Dossiers et procédures OHADA', 'Honoraires calculés et facturés', 'Clients et pièces centralisés'],
+    shot: '/screenshots/15-dossiers-clients.webp', alt: 'Dossiers juridiques',
+  },
+  {
+    id: 'education', label: 'École', icon: GraduationCap,
+    points: ['Élèves, classes et contacts des parents', 'Frais de scolarité : qui a payé, qui relancer', 'Notes et bulletins'],
+    shot: '/screenshots/33-gestion-scolaire.webp', alt: 'Gestion scolaire',
+  },
+  {
+    id: 'rh', label: 'RH & paie', icon: Users,
+    points: ['Fiches employés et contrats', 'Présences, congés et paie', 'Espace personnel pour chaque employé'],
+    shot: '/screenshots/23-staff-management.webp', alt: 'Gestion du personnel',
+  },
+] as const;
+type SectorChoice = (typeof SECTOR_CHOICES)[number]['id'] | 'tous';
+const SECTOR_IDS: readonly SectorChoice[] = ['tous', ...SECTOR_CHOICES.map((s) => s.id)];
+
 function Hero() {
   const { user } = useAuthStore();
   const spaceHref = useSpaceHref();
+  // Porté par l'URL (?secteur=education) : un lien partagé ou une publicité ciblée arrive sur le bon métier
+  const [sectorId, setSectorId] = useUrlTab<SectorChoice>('tous', SECTOR_IDS, 'secteur');
+  const sector = SECTOR_CHOICES.find((s) => s.id === sectorId) ?? null;
+  const signupHref = sector ? `/signup?secteur=${sector.id}` : '/signup';
+  const heroShot = sector?.shot ?? '/screenshots/02-pos-main.webp';
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center px-5 overflow-hidden bg-surface">
@@ -86,7 +144,7 @@ function Hero() {
             ) : (
               <>
                 <Link
-                  href="/signup"
+                  href={signupHref}
                   className="flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
                 >
                   Démarrer gratuitement <ArrowRight className="w-4 h-4" />
@@ -101,39 +159,51 @@ function Hero() {
             )}
           </div>
 
-          {/* Aperçu des modules — informatif, non cliquable (pas d'effet de survol) */}
-          <div className="flex flex-wrap gap-2 max-w-2xl">
-            {[
-              { label: 'Caisse tactile', icon: ShoppingCart },
-              { label: 'Gestion des stocks', icon: Package },
-              { label: 'Comptabilité OHADA', icon: Receipt },
-              { label: 'RH & Paie', icon: Users },
-              { label: 'Location véhicules', icon: Car },
-              { label: 'Réservations', icon: CalendarCheck },
-              { label: 'Livraisons', icon: Truck },
-              { label: 'WhatsApp', icon: MessageCircle },
-              { label: 'Boutique en ligne', icon: Store },
-              { label: 'Multi-établissements', icon: Globe },
-              { label: 'Hôtellerie', icon: BedDouble },
-              { label: 'Dossiers juridiques', icon: Scale },
-              { label: 'Gestion scolaire', icon: GraduationCap },
-            ].map((tag) => (
-              <span
-                key={tag.label}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-card border border-surface-border text-[11px] font-bold text-content-primary whitespace-nowrap"
-              >
-                <tag.icon className="w-3 h-3" />
-                {tag.label}
-              </span>
-            ))}
+          {/* Vous êtes… — un second appui sur le métier choisi revient à la vue générale */}
+          <div className="max-w-2xl">
+            <p className="text-sm font-medium text-content-secondary mb-3">Vous êtes :</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Choisissez votre métier">
+              {SECTOR_CHOICES.map((s) => {
+                const active = s.id === sectorId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setSectorId(active ? 'tous' : s.id)}
+                    className={`flex items-center gap-1.5 h-10 px-3.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors ${
+                      active
+                        ? 'bg-brand-600 border-brand-600 text-content-primary'
+                        : 'bg-surface-card border-surface-border text-content-primary hover:border-brand-500/40'
+                    }`}
+                  >
+                    <s.icon className="w-3.5 h-3.5" />
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {sector && (
+              <ul className="mt-5 space-y-2">
+                {sector.points.map((point) => (
+                  <li key={point} className="flex items-start gap-2.5 text-sm text-content-secondary">
+                    <Check className="w-4 h-4 text-brand-300 shrink-0 mt-0.5" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
         <div className="mt-16 relative">
           <div className="absolute -inset-4 bg-brand-500/10 blur-3xl rounded-[40px]" />
           <img
-            src="/screenshots/02-pos-main.png"
-            alt="Interface ELM POS"
+            key={heroShot}
+            src={heroShot}
+            {...shotSize(heroShot)}
+            alt={sector?.alt ?? 'Caisse ELM'}
             className="relative rounded-2xl border border-surface-border shadow-2xl w-full max-w-5xl mx-auto bg-surface-card"
           />
         </div>
@@ -238,7 +308,8 @@ function Features() {
             <h3 className="text-xl font-bold text-content-primary">Suivi des stocks et inventaire</h3>
             <p className="text-sm text-content-secondary">Gérez vos variantes et vos prix de gros en quelques clics.</p>
             <img
-              src="/screenshots/10-products-list.png"
+              src="/screenshots/10-products-list.webp"
+              {...shotSize('/screenshots/10-products-list.webp')}
               className="rounded-xl border border-surface-border shadow-xl bg-surface-card"
               loading="lazy"
               alt="Suivi des stocks"
@@ -248,7 +319,8 @@ function Features() {
             <h3 className="text-xl font-bold text-content-primary">Analytique et rapports</h3>
             <p className="text-sm text-content-secondary">Visualisez votre chiffre d'affaires et vos marges en temps réel.</p>
             <img
-              src="/screenshots/17-analytics.png"
+              src="/screenshots/17-analytics.webp"
+              {...shotSize('/screenshots/17-analytics.webp')}
               className="rounded-xl border border-surface-border shadow-xl bg-surface-card"
               loading="lazy"
               alt="Analytique et rapports"
@@ -595,6 +667,85 @@ function Tarifs() {
   );
 }
 
+/**
+ * Questions fréquentes. Chaque réponse décrit le comportement réel de l'app
+ * (version web) : à revoir si l'app de bureau (hors ligne, imprimante directe)
+ * est proposée. Sert aussi de données structurées FAQPage pour Google.
+ */
+const FAQ = [
+  {
+    q: 'Faut-il installer quelque chose ?',
+    a: 'Non. ELM s’utilise dans le navigateur, sur ordinateur, tablette ou téléphone. Il suffit de créer votre compte.',
+  },
+  {
+    q: 'Et si la connexion internet coupe ?',
+    a: 'ELM a besoin d’internet pour enregistrer vos opérations. Si la connexion coupe pendant un encaissement, le panier reste affiché : vous validez dès le retour du réseau, sans rien ressaisir.',
+  },
+  {
+    q: 'Puis-je utiliser mon imprimante de tickets et ma douchette ?',
+    a: 'Oui. Les tickets s’impriment depuis le navigateur sur l’imprimante installée sur votre ordinateur, imprimante de tickets comprise. Une douchette USB fonctionne directement dans la recherche de la caisse.',
+  },
+  {
+    q: 'Puis-je reprendre mes produits et mes clients ?',
+    a: 'Oui, en important un fichier CSV (exportable depuis Excel) : vos produits et vos clients sont créés en une fois.',
+  },
+  {
+    q: 'Mes données sont-elles en sécurité ?',
+    a: 'Chaque établissement ne voit que ses propres données et les échanges sont chiffrés. Vous décidez de ce que chaque employé peut voir ou faire, et un journal garde la trace des actions sensibles (annulations, remises, modifications de prix).',
+  },
+  {
+    q: 'Que se passe-t-il après l’essai gratuit ?',
+    a: 'Vous choisissez la formule qui vous convient depuis votre espace, sans engagement. Aucune carte bancaire n’est demandée pour commencer l’essai.',
+  },
+  {
+    q: 'Comment être accompagné ?',
+    a: 'Écrivez-nous sur WhatsApp au +221 77 221 11 26 : prise en main, questions ou démonstration.',
+  },
+];
+
+const FAQ_JSON_LD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+});
+
+function Faq() {
+  return (
+    <section id="faq" className="py-24 px-5 bg-surface">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }} />
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-10">
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Questions fréquentes</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Avant de commencer</h2>
+        </div>
+        <div className="divide-y divide-surface-border border-y border-surface-border">
+          {FAQ.map(({ q, a }) => (
+            <details key={q} className="group py-1">
+              <summary className="flex items-center justify-between gap-4 min-h-[56px] py-3 cursor-pointer list-none text-content-primary font-medium [&::-webkit-details-marker]:hidden">
+                {q}
+                <ArrowRight className="w-4 h-4 text-content-muted shrink-0 transition-transform group-open:rotate-90" />
+              </summary>
+              <p className="pb-4 pr-8 text-sm text-content-secondary leading-relaxed">{a}</p>
+            </details>
+          ))}
+        </div>
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-brand-300 hover:text-brand-400"
+        >
+          <MessageCircle className="w-4 h-4" /> Une autre question ? Écrivez-nous sur WhatsApp
+        </a>
+      </div>
+    </section>
+  );
+}
+
 function CtaFinal() {
   const { user } = useAuthStore();
   const spaceHref = useSpaceHref();
@@ -714,6 +865,7 @@ function ModuleFeature({
         <div className="absolute -inset-4 bg-brand-500/5 blur-2xl rounded-[30px] transition-opacity group-hover:opacity-100 opacity-50" />
         <img
           src={img}
+          {...shotSize(img)}
           alt={title}
           className="relative rounded-2xl border border-surface-border shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] bg-surface-card"
           loading="lazy"
@@ -731,14 +883,14 @@ function ModulesShowcase() {
           subtitle="Communication client"
           title="Factures PDF sur WhatsApp"
           desc="Modernisez votre relation client. Plus besoin d'imprimer systématiquement: envoyez les reçus professionnels directement sur le téléphone de vos clients en un clic."
-          img="/screenshots/22-whatsapp-integration.png"
+          img="/screenshots/22-whatsapp-integration.webp"
         />
 
         <ModuleFeature
           subtitle="Restauration"
           title="Plan de salle & Menu du jour"
           desc="Gérez vos tables en temps réel. Publiez votre menu du jour et diffusez-le instantanément à tous vos contacts sur WhatsApp pour booster vos ventes du midi."
-          img="/screenshots/06-menu-du-jour.png"
+          img="/screenshots/06-menu-du-jour.webp"
           reverse
         />
 
@@ -746,7 +898,7 @@ function ModulesShowcase() {
           subtitle="Pilotage stratégique"
           title="Tableaux de bord en temps réel"
           desc="Prenez des décisions basées sur des chiffres réels. Suivez votre chiffre d'affaires, vos marges nettes et vos produits les plus vendus grâce à des graphiques dynamiques et précis."
-          img="/screenshots/17-analytics.png"
+          img="/screenshots/17-analytics.webp"
           reverse
         />
 
@@ -754,14 +906,14 @@ function ModulesShowcase() {
           subtitle="Logistique & Terrain"
           title="Suivez vos livraisons en temps réel"
           desc="Préparez les colis avec vérification par scan pour éviter les erreurs. Assignez des livreurs et suivez l'état de chaque commande jusqu'à la remise au client."
-          img="/screenshots/07-livraison.png"
+          img="/screenshots/07-livraison.webp"
         />
 
         <ModuleFeature
           subtitle="Réseau de vente"
           title="Module Grossiste & Revendeurs"
           desc="Gérez vos ventes en volume en toute simplicité. Configurez des grilles de prix spécifiques pour vos revendeurs et suivez leurs performances et commissions."
-          img="/screenshots/13-revendeurs.png"
+          img="/screenshots/13-revendeurs.webp"
           reverse
         />
 
@@ -769,14 +921,14 @@ function ModulesShowcase() {
           subtitle="Transparence & Sécurité"
           title="Un journal d'audit pour tout contrôler"
           desc="Gardez l'esprit tranquille. Chaque annulation de vente, chaque modification de prix ou ouverture de tiroir est consignée. La fin des pertes inexpliquées en caisse."
-          img="/screenshots/24-activity-logs.png"
+          img="/screenshots/24-activity-logs.webp"
         />
 
         <ModuleFeature
           subtitle="Confiance client"
           title="Écran client interactif"
           desc="Améliorez l'expérience en caisse. Affichez le panier et le total sur un second écran pour vos clients, réduisant les erreurs et renforçant la confiance lors du paiement."
-          img="/screenshots/27-customer-display.png"
+          img="/screenshots/27-customer-display.webp"
           reverse
         />
 
@@ -784,14 +936,14 @@ function ModulesShowcase() {
           subtitle="Rigueur financière"
           title="Comptabilité OHADA automatisée"
           desc="Générez vos journaux comptables, bilans et comptes de résultat sans effort. Toutes vos transactions sont déjà pré-classées selon les normes OHADA en vigueur."
-          img="/screenshots/19-comptabilite.png"
+          img="/screenshots/19-comptabilite.webp"
         />
 
         <ModuleFeature
           subtitle="Location de véhicules"
           title="Contrats & signature en ligne"
           desc="Créez des contrats de location en quelques secondes, envoyez le lien de signature par WhatsApp et encaissez en ligne. Suivez la disponibilité de votre flotte en temps réel."
-          img="/screenshots/20-contrats-location.png"
+          img="/screenshots/20-contrats-location.webp"
           reverse
         />
 
@@ -799,14 +951,14 @@ function ModulesShowcase() {
           subtitle="Services juridiques"
           title="Suivi de dossiers et honoraires"
           desc="Spécialement conçu pour les cabinets d'avocats et notaires au Sénégal. Gérez l'ouverture des dossiers, le suivi des procédures OHADA et la facturation précise des honoraires."
-          img="/screenshots/15-dossiers-clients.png"
+          img="/screenshots/15-dossiers-clients.webp"
         />
 
         <ModuleFeature
           subtitle="Spécialisation métier"
           title="Gestion hôtelière intégrée"
           desc="Activez le module PMS pour gérer vos chambres, vos réservations et vos consommations bar/restaurant sur une seule facture client. Une solution vraiment tout-en-un."
-          img="/screenshots/14-hotel-management.png"
+          img="/screenshots/14-hotel-management.webp"
           reverse
         />
 
@@ -814,7 +966,7 @@ function ModulesShowcase() {
           subtitle="Éducation & Formation"
           title="Gestion scolaire complète"
           desc="Gérez vos élèves, vos classes et vos professeurs au même endroit. Suivez les paiements de scolarité et générez des bulletins de notes numériques en quelques clics."
-          img="/screenshots/33-gestion-scolaire.png"
+          img="/screenshots/33-gestion-scolaire.webp"
         />
       </div>
     </section>
@@ -830,6 +982,7 @@ export default function LandingPage() {
       <Secteurs />
       <MultiEtablissements />
       <Tarifs />
+      <Faq />
       <CtaFinal />
       <Footer />
       <FloatingActions />

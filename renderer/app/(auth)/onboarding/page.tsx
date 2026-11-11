@@ -81,8 +81,22 @@ export default function OnboardingPage() {
   const [step,         setStep]        = useState<'sector' | 'loading' | 'success'>('sector');
   const [progress,     setProgress]    = useState(0);
   const [loadingText,  setLoadingText] = useState('Configuration...');
+  // Métier choisi sur la landing (« Vous êtes… », gardé par /signup) : mis en
+  // tête et signalé — la création reste un choix explicite de l'utilisateur.
+  const [preferred,    setPreferred]   = useState<string | null>(null);
 
   useEffect(() => { trackEvent('onboarding_started'); }, []);
+
+  useEffect(() => {
+    try {
+      const sector = localStorage.getItem('temp_sector');
+      if (sector && SECTORS.some((s) => s.id === sector)) setPreferred(sector);
+    } catch { /* navigation privée */ }
+  }, []);
+
+  const sectors = preferred
+    ? [...SECTORS.filter((s) => s.id === preferred), ...SECTORS.filter((s) => s.id !== preferred)]
+    : SECTORS;
 
   async function handleSelectSector(sectorId: string) {
     const bizName = localStorage.getItem('temp_biz_name') || 'Mon Commerce';
@@ -117,6 +131,7 @@ export default function OnboardingPage() {
       setStep('success');
       setLoadingText('Tout est prêt !');
       localStorage.removeItem('temp_biz_name');
+      localStorage.removeItem('temp_sector');
       await supabase.auth.refreshSession();
 
       const { data: business }: any = await supabase
@@ -216,12 +231,19 @@ export default function OnboardingPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {SECTORS.map((s) => (
+          {sectors.map((s) => (
             <button
               key={s.id}
               onClick={() => handleSelectSector(s.id)}
-              className="flex items-center gap-4 p-6 rounded-2xl border border-surface-border bg-surface-card hover:border-brand-500 hover:shadow-card transition-all text-left group relative overflow-hidden"
+              className={`flex items-center gap-4 p-6 rounded-2xl border bg-surface-card hover:border-brand-500 hover:shadow-card transition-all text-left group relative overflow-hidden ${
+                s.id === preferred ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-surface-border'
+              }`}
             >
+              {s.id === preferred && (
+                <span className="absolute top-2 right-3 text-[10px] font-bold uppercase tracking-wider text-content-brand">
+                  Votre choix
+                </span>
+              )}
               <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${s.bg} ${s.color} transition-transform group-hover:scale-110`}>
                 <s.icon className="w-7 h-7" />
               </div>

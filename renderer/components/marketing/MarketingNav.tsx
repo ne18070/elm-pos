@@ -47,6 +47,7 @@ export function MarketingNav() {
           <a href="/#features" className="hover:text-brand-300 transition-colors">Fonctionnalités</a>
           <a href="/#secteurs" className="hover:text-brand-300 transition-colors">Secteurs</a>
           <a href="/#tarifs" className="hover:text-brand-300 transition-colors">Tarifs</a>
+          <a href="/#faq" className="hover:text-brand-300 transition-colors">FAQ</a>
         </nav>
 
         <div className="flex items-center gap-3">

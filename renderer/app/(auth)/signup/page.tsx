@@ -17,6 +17,17 @@ export default function SignupPage() {
   
   const router = useRouter();
 
+  // Métier choisi sur la landing (« Vous êtes… » → /signup?secteur=education) :
+  // gardé jusqu'à l'étape « Quel est votre métier ? », qui le met en avant.
+  // Lu après montage (pas de useSearchParams : la page est pré-rendue).
+  useEffect(() => {
+    const sector = new URLSearchParams(window.location.search).get('secteur');
+    try {
+      if (sector && /^[a-z]{2,20}$/.test(sector)) localStorage.setItem('temp_sector', sector);
+      else localStorage.removeItem('temp_sector'); // pas de choix cette fois : rien d'ancien à mettre en avant
+    } catch { /* navigation privée */ }
+  }, []);
+
   useEffect(() => {
     if (!email) {
       setEmailStatus('idle');
