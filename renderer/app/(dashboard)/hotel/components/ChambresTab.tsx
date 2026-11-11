@@ -116,10 +116,10 @@ export function ChambresTab({
                   maintenance: 'bg-gradient-to-r from-slate-500 to-slate-400',
                 }[room.status];
                 const dot = {
-                  available:   'bg-emerald-400',
+                  available:   'bg-status-success',
                   occupied:    'bg-brand-400',
-                  cleaning:    'bg-amber-400',
-                  maintenance: 'bg-slate-400',
+                  cleaning:    'bg-status-warning',
+                  maintenance: 'bg-content-muted',
                 }[room.status];
 
                 return (
@@ -151,7 +151,7 @@ export function ChambresTab({
                         </div>
                         {isManagerOrAbove && (
                           <button
-                            className="opacity-0 group-hover:opacity-100 p-2 rounded-xl bg-surface-hover text-content-secondary hover:text-content-primary transition-all shrink-0 shadow-lg"
+                            className="p-2 rounded-xl bg-surface-hover text-content-secondary hover:text-content-primary transition-all shrink-0 shadow-lg"
                             onClick={(e) => { e.stopPropagation(); openRoomPanel(room); }}
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -179,7 +179,7 @@ export function ChambresTab({
                           </div>
                         )}
                         {!activeRes && confirmedRes && (
-                          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 space-y-1 shadow-inner">
+                          <div className="rounded-2xl bg-status-warning/10 border border-status-warning/20 p-3 space-y-1 shadow-inner">
                             <p className="text-[10px] font-black text-status-warning uppercase tracking-widest">Réservée</p>
                             <p className="text-xs font-bold text-content-primary truncate">{confirmedRes.guest?.full_name}</p>
                             <p className="text-[10px] font-bold text-status-warning/80 uppercase tracking-tighter">{fmt(confirmedRes.check_in)} —{fmt(confirmedRes.check_out)}</p>
@@ -204,7 +204,7 @@ export function ChambresTab({
 
                         {(room.status === 'cleaning' || room.status === 'maintenance') && (
                           <button
-                            className="mt-3 text-[10px] py-2 rounded-xl border border-amber-500/40 hover:border-amber-500/70 text-amber-400 hover:text-amber-300 transition-all font-bold uppercase tracking-widest bg-amber-500/5"
+                            className="mt-3 text-[10px] py-2 rounded-xl border border-status-warning/40 hover:border-status-warning/70 text-status-warning transition-all font-bold uppercase tracking-widest bg-status-warning/5"
                             onClick={(e) => { e.stopPropagation(); onOpenCleaning(room); }}
                           >
                             Gérer le ménage
@@ -213,8 +213,8 @@ export function ChambresTab({
                       </div>
 
                       {room.status === 'available' && !confirmedRes && (
-                        <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
-                           <div className="bg-emerald-500 text-content-primary px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                        <div className="absolute inset-0 bg-status-success/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
+                           <div className="bg-green-600 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-transform">
                              + Réserver
                            </div>
                         </div>

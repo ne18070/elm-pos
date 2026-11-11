@@ -155,12 +155,12 @@ export function CatalogTab({
                     <>
                       <button
                         onClick={e => { e.stopPropagation(); setEditingCatId(cat.id); setEditingCatName(cat.name); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-surface-hover text-content-secondary transition-all">
+                        className="p-1 rounded-lg hover:bg-surface-hover text-content-secondary transition-all">
                         <Pencil className="w-3 h-3" />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); setConfirmConfirmDelete({ type: 'category', id: cat.id, name: cat.name }); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/20 hover:text-status-error text-content-secondary transition-all">
+                        className="p-1 rounded-lg hover:bg-badge-error hover:text-status-error text-content-secondary transition-all">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </>

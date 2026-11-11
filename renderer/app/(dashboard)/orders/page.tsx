@@ -6,6 +6,8 @@ import { fr } from 'date-fns/locale';
 import { Search, Filter, RefreshCw, User, Printer, Loader2, MessageCircle, Upload, ChevronLeft, ChevronRight, Store, ShoppingBag } from 'lucide-react';
 import { useOrders, useOrderTotals } from '@/hooks/useOrders';
 import { usePermission } from '@/hooks/usePermission';
+import { useUrlTab } from '@/hooks/useUrlTab';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { formatCurrency } from '@/lib/utils';
@@ -83,7 +85,7 @@ export default function OrdersPage() {
   const { error: notifError, warning: notifWarn } = useNotificationStore();
   const canViewAllOrders = usePermission('view_all_orders');
   const restricted = !canViewAllOrders;
-  const [tab, setTab]               = useState<FilterTab>('today');
+  const [tab, setTab]               = useUrlTab<FilterTab>('today', TABS);
   const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
@@ -489,7 +491,9 @@ export default function OrdersPage() {
         {/* Tableau */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center h-32 text-content-secondary">Chargement…</div>
+            <table className="w-full">
+              <tbody><SkeletonRows rows={8} cols={5} /></tbody>
+            </table>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-32 text-content-secondary gap-2">
               <p className="text-status-error">Impossible de charger les commandes.</p>

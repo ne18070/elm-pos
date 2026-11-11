@@ -66,7 +66,7 @@ export function RoomPicker({ businessId, currency, onSelect, onCancel }: RoomPic
             <p className="text-sm">Chargement des chambres...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-content-primary border border-dashed border-slate-800 rounded-xl">
+          <div className="text-center py-12 text-content-primary border border-dashed border-surface-border rounded-xl">
             <p className="text-sm">{search ? 'Aucun résultat trouvé' : 'Aucun client en chambre actuellement'}</p>
           </div>
         ) : (

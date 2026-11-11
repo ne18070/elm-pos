@@ -32,9 +32,9 @@ const TYPES: { key: ResellerType | 'all'; label: string }[] = [
 ];
 
 const TYPE_STYLES: Record<ResellerType, { pill: string; card: string; dot: string }> = {
-  gros:       { pill: 'bg-purple-500/15 text-purple-300 border-purple-500/40', card: 'border-purple-500/50 bg-purple-500/5',  dot: 'bg-purple-400' },
-  demi_gros:  { pill: 'bg-blue-500/15   text-blue-300   border-blue-500/40',   card: 'border-blue-500/50   bg-blue-500/5',    dot: 'bg-blue-400'   },
-  detaillant: { pill: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40', card: 'border-emerald-500/50 bg-emerald-500/5', dot: 'bg-emerald-400' },
+  gros:       { pill: 'bg-badge-purple text-status-purple border-status-purple/40',   card: 'border-status-purple/50 bg-status-purple/5',   dot: 'bg-status-purple' },
+  demi_gros:  { pill: 'bg-badge-info text-status-info border-status-info/40',         card: 'border-status-info/50 bg-status-info/5',       dot: 'bg-status-info'   },
+  detaillant: { pill: 'bg-badge-success text-status-success border-status-success/40', card: 'border-status-success/50 bg-status-success/5', dot: 'bg-status-success' },
 };
 
 const TYPE_LABELS: Record<ResellerType, string> = { gros: 'Gros', demi_gros: 'Demi-gros', detaillant: 'Détaillant' };
@@ -219,7 +219,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-content-primary truncate">{r.name}</p>
-                          {chef && <Crown className="w-3 h-3 text-yellow-500 shrink-0" />}
+                          {chef && <Crown className="w-3 h-3 text-status-warning shrink-0" />}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', style.pill)}>
@@ -356,7 +356,7 @@ export function WholesaleSelector({ businessId, onClose, onApplied, onReset, cur
             disabled={!selectedReseller || applying}
             className={cn(
               'flex-1 h-11 flex items-center justify-center gap-2 font-semibold rounded-xl transition-all text-sm text-white disabled:opacity-40',
-              isDetaillant ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-700 hover:bg-amber-800'
+              isDetaillant ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'
             )}
           >
             {applying ? (

@@ -674,8 +674,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               <p className="text-xs text-status-success mt-0.5">Remise appliquée : -{fmt(discountAmount)}</p>
             )}
             {loyaltyDiscount > 0 && (
-              <p className="text-xs text-yellow-500 mt-0.5 flex items-center gap-1">
-                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+              <p className="text-xs text-status-warning mt-0.5 flex items-center gap-1">
+                <Star className="w-3 h-3 fill-status-warning text-status-warning" />
                 Remise fidélité : -{fmt(loyaltyDiscount)}
               </p>
             )}
@@ -702,7 +702,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               onClick={() => setUseLoyalty(v => !v)}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors text-sm ${
                 useLoyalty
-                  ? 'bg-yellow-400/10 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
+                  ? 'bg-badge-warning border-status-warning/40 text-status-warning'
                   : 'bg-surface-input border-surface-border text-content-secondary hover:bg-surface-hover'
               }`}
             >
@@ -711,7 +711,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 Utiliser les points de fidélité
               </span>
               <span className="flex items-center gap-1.5 text-xs font-bold">
-                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                <Star className="w-3 h-3 fill-status-warning text-status-warning" />
                 {loyaltyBalance} pts → -{fmt(maxRedeemablePoints * loyaltyConfig!.point_value)}
               </span>
             </button>
@@ -735,7 +735,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               </span>
             </span>
             <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
-              !skipClientConfirm ? 'bg-brand-600' : 'bg-slate-700'
+              !skipClientConfirm ? 'bg-brand-600' : 'bg-surface-border'
             }`}>
               <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
                 !skipClientConfirm ? 'translate-x-6' : 'translate-x-1'
@@ -753,7 +753,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${methode === m
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
+                      : 'border-surface-border text-content-secondary hover:border-content-muted hover:text-content-primary'
                     }`}
                 >
                   {m === 'cash'         && <Banknote className="w-6 h-6" />}
@@ -767,8 +767,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   onClick={() => setMethode('room_charge')}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${methode === 'room_charge'
-                      ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
+                      ? 'border-status-purple bg-badge-purple text-status-purple'
+                      : 'border-surface-border text-content-secondary hover:border-content-muted hover:text-content-primary'
                     }`}
                 >
                   <BedDouble className="w-6 h-6" />
@@ -779,8 +779,8 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                 onClick={() => setMethode('partial')}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                   ${'partial' === methode
-                    ? 'border-amber-500 bg-badge-warning text-status-warning'
-                    : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
+                    ? 'border-status-warning bg-badge-warning text-status-warning'
+                    : 'border-surface-border text-content-secondary hover:border-content-muted hover:text-content-primary'
                   }`}
               >
                 <SplitSquareHorizontal className="w-6 h-6" />
@@ -935,9 +935,9 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               </div>
             )}
             {loyaltyDiscount > 0 && (
-              <div className="flex justify-between text-sm text-yellow-500">
+              <div className="flex justify-between text-sm text-status-warning">
                 <span className="flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  <Star className="w-3 h-3 fill-status-warning text-status-warning" />
                   Fidélité ({maxRedeemablePoints} pts)
                 </span>
                 <span>-{fmt(loyaltyDiscount)}</span>
@@ -1069,7 +1069,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
 
               {/* Dropdown suggestions */}
               {showSuggestions && (
-                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-surface-border rounded-xl overflow-hidden shadow-xl">
                   {customerSuggestions.map((c) => (
                     <button
                       key={c.id}
@@ -1079,7 +1079,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                         setCustomerPhone(c.phone ?? '');
                         setShowSuggestions(false);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-700 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left"
                     >
                       <div className="w-7 h-7 rounded-full bg-badge-brand border border-brand-700 flex items-center justify-center shrink-0">
                         <User className="w-3.5 h-3.5 text-content-brand" />
@@ -1123,7 +1123,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
               />
 
               {showPhoneSuggestions && (
-                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface-card border border-surface-border rounded-xl overflow-hidden shadow-xl">
                   {customerSuggestions.map((c) => (
                     <button
                       key={c.id}
@@ -1133,7 +1133,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                         setCustomerPhone(c.phone ?? '');
                         setShowPhoneSuggestions(false);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-700 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors text-left"
                     >
                       <div className="w-7 h-7 rounded-full bg-badge-brand border border-brand-700 flex items-center justify-center shrink-0">
                         <User className="w-3.5 h-3.5 text-content-brand" />
@@ -1159,7 +1159,7 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs transition-all
                     ${partialMethod === m
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500 hover:text-content-primary'
+                      : 'border-surface-border text-content-secondary hover:border-content-muted hover:text-content-primary'
                     }`}
                 >
                   {m === 'cash'         && <Banknote className="w-5 h-5" />}
@@ -1194,17 +1194,17 @@ export function PaymentModal({ taxRate, taxInclusive, currency, onClose, onSucce
           )}
 
           {acompteNum > 0 && (
-            <div className="bg-slate-800/50 rounded-xl p-4 space-y-3">
+            <div className="bg-surface-input/50 rounded-xl p-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-content-secondary">Acompte versé</span>
                 <span className="text-content-primary font-semibold">{fmt(acompteNum)}</span>
               </div>
-              <div className="flex justify-between items-center border-t border-slate-700 pt-3">
+              <div className="flex justify-between items-center border-t border-surface-border pt-3">
                 <span className="text-status-warning font-medium">Reste à régler</span>
                 <span className="text-status-warning font-bold text-xl tabular-nums">{fmt(resteAPayer)}</span>
               </div>
               {renduAcompte > 0 && (
-                <div className="flex justify-between text-sm border-t border-slate-700 pt-3">
+                <div className="flex justify-between text-sm border-t border-surface-border pt-3">
                   <span className="text-status-success">Monnaie à rendre</span>
                   <span className="text-status-success font-bold">{fmt(renduAcompte)}</span>
                 </div>

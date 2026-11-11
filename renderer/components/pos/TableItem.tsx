@@ -17,11 +17,12 @@ export function TableItem({ table, onSelect, selected, editMode, onDragEnd, cont
   const isOccupied = table.status === 'occupied';
   const isCleaning = table.status === 'cleaning';
 
+  // Rendu dans le canvas .theme-dark du FloorPlan : les tokens résolvent en dark
   const statusColors = {
-    free:     'bg-slate-800/90 border-slate-600/60 hover:border-brand-400 text-slate-300',
-    occupied: 'bg-sky-950/90 border-sky-500/70 text-sky-300',
-    reserved: 'bg-amber-950/90 border-amber-500/70 text-amber-300',
-    cleaning: 'bg-indigo-950/90 border-indigo-500/50 text-indigo-300',
+    free:     'bg-surface-card/90 border-surface-border hover:border-brand-400 text-content-secondary',
+    occupied: 'bg-badge-info/90 border-status-info/70 text-status-info',
+    reserved: 'bg-badge-warning/90 border-status-warning/70 text-status-warning',
+    cleaning: 'bg-badge-purple/90 border-status-purple/50 text-status-purple',
   };
 
   const statusGlow = {
@@ -104,10 +105,10 @@ export function TableItem({ table, onSelect, selected, editMode, onDragEnd, cont
       </div>
 
       {isOccupied && !editMode && (
-        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-brand-500 border-2 border-slate-950 animate-pulse" />
+        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-brand-500 border-2 border-surface-overlay animate-pulse" />
       )}
       {isCleaning && !editMode && (
-        <Clock className="absolute -top-1.5 -right-1.5 w-4 h-4 text-indigo-400 bg-surface-overlay rounded-full" />
+        <Clock className="absolute -top-1.5 -right-1.5 w-4 h-4 text-status-purple bg-surface-overlay rounded-full" />
       )}
     </button>
   );

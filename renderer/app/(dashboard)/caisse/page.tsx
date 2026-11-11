@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useUrlTab } from '@/hooks/useUrlTab';
+import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
 import {
-  Loader2, LockOpen, Lock, RefreshCw, Banknote, CreditCard,
+  LockOpen, Lock, RefreshCw, Banknote, CreditCard,
   Smartphone, RotateCcw, History, CheckCircle, AlertTriangle,
   Printer, FileText, Search, Filter, Calendar, Clock, User
 } from 'lucide-react';
@@ -173,8 +174,12 @@ export default function CaissePage() {
 
   if (!loaded) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      <div className="flex-1 p-4 sm:p-6 space-y-4">
+        <Skeleton className="h-8 w-56" />
+        <SkeletonCard />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <SkeletonCard /><SkeletonCard /><SkeletonCard />
+        </div>
       </div>
     );
   }
@@ -340,8 +345,8 @@ export default function CaissePage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
                   </div>
                 )}
 
@@ -419,8 +424,8 @@ export default function CaissePage() {
             </div>
 
             {loadingHistory ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+              <div className="space-y-3">
+                <SkeletonCard /><SkeletonCard /><SkeletonCard />
               </div>
             ) : filteredHistory.length === 0 ? (
               <div className="card p-8 flex flex-col items-center gap-3 text-center">

@@ -13,6 +13,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
 import { ClientsImportModal } from '@/components/clients/ImportModal';
 import { SideDrawer } from '@/components/ui/SideDrawer';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 import {
   getClients, createClient, updateClient, deleteClient,
   type Client, type ClientForm,
@@ -205,7 +206,13 @@ export default function ClientsPage() {
           </div>
         )}
 
-        {loading && <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-500" /></div>}
+        {loading && (
+          <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card">
+            <table className="w-full text-sm">
+              <tbody><SkeletonRows rows={6} cols={5} /></tbody>
+            </table>
+          </div>
+        )}
 
         {filtered.length > 0 && (
         <div className="rounded-2xl border border-surface-border overflow-hidden bg-surface-card flex flex-col">

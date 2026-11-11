@@ -59,7 +59,7 @@ export function CouponPicker({
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 w-full px-3 py-2 rounded-xl border border-surface-border
-                   text-content-secondary hover:border-slate-500 hover:text-content-primary transition-colors text-xs font-medium"
+                   text-content-secondary hover:border-content-muted hover:text-content-primary transition-colors text-xs font-medium"
       >
         <Tag className="w-3.5 h-3.5 shrink-0" />
         <span className="flex-1 text-left">

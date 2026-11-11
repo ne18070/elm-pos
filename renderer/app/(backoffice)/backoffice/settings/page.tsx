@@ -14,12 +14,14 @@ import {
 } from '@services/supabase/subscriptions';
 import { ModulesTab } from '../components/ModulesTab';
 import { EmailTemplatesTab } from '../components/EmailTemplatesTab';
+import { useUrlTab } from '@/hooks/useUrlTab';
 
 type SettingsTab = 'paiement' | 'modules' | 'emails';
+const SETTINGS_TABS: readonly SettingsTab[] = ['paiement', 'modules', 'emails'];
 
 export default function SettingsPage() {
   const { success, error: notifError } = useNotificationStore();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('paiement');
+  const [activeTab, setActiveTab] = useUrlTab<SettingsTab>('paiement', SETTINGS_TABS);
   
   // Payment State
   const [paymentLoading, setPaymentLoading] = useState(true);

@@ -290,8 +290,8 @@ export function OrderPanel({
               onClick={() => setShowWholesale(true)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-medium shrink-0
                 ${wholesaleCtx
-                  ? 'border-amber-600 bg-badge-warning text-status-warning'
-                  : 'border-surface-border text-content-secondary hover:border-amber-600 hover:text-status-warning'}`}
+                  ? 'border-status-warning bg-badge-warning text-status-warning'
+                  : 'border-surface-border text-content-secondary hover:border-status-warning hover:text-status-warning'}`}
             >
               <Store className="w-3.5 h-3.5" />
               {wholesaleCtx ? wholesaleCtx.reseller.name : 'Gros'}
@@ -313,7 +313,7 @@ export function OrderPanel({
             <button
               onClick={() => setShowHoldModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-surface-border
-                         text-content-secondary hover:border-slate-500 hover:text-content-primary transition-colors text-xs font-medium shrink-0"
+                         text-content-secondary hover:border-content-muted hover:text-content-primary transition-colors text-xs font-medium shrink-0"
             >
               <Clock className="w-3.5 h-3.5" />
               Attente
@@ -514,10 +514,10 @@ export function OrderPanel({
         <div className="px-4 py-2 border-t border-surface-border space-y-2">
           {/* Table Selector */}
           {tableId ? (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-900/20 border border-indigo-700 animate-in fade-in slide-in-from-bottom-2">
-              <Utensils className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-badge-purple border border-status-purple/40 animate-in fade-in slide-in-from-bottom-2">
+              <Utensils className="w-3.5 h-3.5 text-status-purple shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-indigo-600 truncate">Table {selectedTable?.name || 'chargement...'}</p>
+                <p className="text-xs font-bold text-status-purple truncate">Table {selectedTable?.name || 'chargement...'}</p>
                 <p className="text-[10px] text-content-primary uppercase font-semibold">{selectedTable?.floor?.name}</p>
               </div>
               <button
@@ -641,7 +641,7 @@ export function OrderPanel({
                   className={`flex flex-col items-center gap-1 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-wide transition-all
                     ${orderChannel === ch
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500'}`}
+                      : 'border-surface-border text-content-secondary hover:border-content-muted'}`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {label}
@@ -676,7 +676,7 @@ export function OrderPanel({
             disabled={hasOverStock}
             className={`w-full h-12 text-base flex items-center justify-center gap-2 rounded-xl font-semibold transition-all
               ${hasOverStock
-                ? 'bg-slate-700 text-content-primary cursor-not-allowed'
+                ? 'bg-surface-border text-content-muted cursor-not-allowed'
                 : 'btn-primary'}`}
           >
             {hasOverStock

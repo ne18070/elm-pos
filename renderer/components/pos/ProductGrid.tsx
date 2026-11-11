@@ -195,7 +195,7 @@ export function ProductGrid({ businessId, categoryId, search, view, onSelect }: 
                   </div>
                 )}
                 {state === 'low' && (
-                  <div className="absolute top-1.5 right-1.5 bg-yellow-500 rounded-full w-2.5 h-2.5" />
+                  <div className="absolute top-1.5 right-1.5 bg-status-warning rounded-full w-2.5 h-2.5" />
                 )}
                 {/* Badge quantité en panier */}
                 {inCart > 0 && (

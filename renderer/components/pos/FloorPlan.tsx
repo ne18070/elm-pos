@@ -79,7 +79,7 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-950/20 rounded-2xl overflow-hidden border border-surface-border">
+    <div className="flex flex-col h-full bg-surface-overlay/20 rounded-2xl overflow-hidden border border-surface-border">
       {/* Zone tabs + edit toggle */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-surface-border bg-surface-card overflow-x-auto no-scrollbar">
         <Layers className="w-4 h-4 text-content-primary mr-1 shrink-0" />
@@ -113,9 +113,9 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
         </div>
       </div>
 
-      {/* Canvas */}
+      {/* Canvas — fond sombre fixe (carte), les tokens y restent dark via theme-dark */}
       <div
-        className="flex-1 relative overflow-hidden"
+        className="theme-dark flex-1 relative overflow-hidden"
         style={{
           backgroundColor: '#060c1a',
           backgroundImage: [
@@ -134,7 +134,7 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
         }}
       >
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm z-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-surface-overlay/40 backdrop-blur-sm z-50">
             <Loader2 className="w-6 h-6 animate-spin text-content-brand" />
           </div>
         ) : tables.length === 0 ? (
@@ -171,7 +171,7 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
       <div className="px-4 py-2 bg-surface-card border-t border-surface-border flex items-center justify-between text-[10px] uppercase font-bold tracking-wider">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-surface-border border border-slate-700" />
+            <div className="w-2.5 h-2.5 rounded-full bg-surface-border border border-content-muted/40" />
             <span className="text-content-primary">Libre</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -179,7 +179,7 @@ export function FloorPlan({ businessId, onTableSelect, selectedTableId }: FloorP
             <span className="text-content-brand">Occupé</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <div className="w-2.5 h-2.5 rounded-full bg-status-warning" />
             <span className="text-status-warning">Réservé</span>
           </div>
         </div>

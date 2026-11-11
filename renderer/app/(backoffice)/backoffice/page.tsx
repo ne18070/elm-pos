@@ -13,8 +13,10 @@ import { CEOTab } from './components/CEOTab';
 import { CTOTab } from './components/CTOTab';
 import { SecurityTab } from './components/SecurityTab';
 import { useThemeStore } from '@/store/theme';
+import { useUrlTab } from '@/hooks/useUrlTab';
 
 type Tab = 'monitoring' | 'vitals' | 'whatsapp' | 'ceo' | 'cto' | 'security';
+const TABS: readonly Tab[] = ['monitoring', 'vitals', 'whatsapp', 'ceo', 'cto', 'security'];
 
 // Un abonnement « active » dont l'échéance est passée est expiré (même règle que /backoffice/abonnements)
 function effectiveStatus(s: SubscriptionRow): string {
@@ -25,7 +27,7 @@ function effectiveStatus(s: SubscriptionRow): string {
 }
 
 export default function BackofficeDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>('monitoring');
+  const [activeTab, setActiveTab] = useUrlTab<Tab>('monitoring', TABS);
   const [stats, setStats] = useState<{
     collected: number; payments: number; orgs: number; businesses: number;
     activeSubs: number; trialSubs: number; errorCount: number;

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { ConfirmModal } from '@/components/ui/Modal';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   getContentReports, getDirectorySuspensions, resolveBusinessReports,
   suspendFromDirectory, restoreToDirectory,
@@ -26,6 +27,7 @@ const REASON_LABEL: Record<ReportReason, string> = {
 const TARGET_LABEL = { business: 'Boutique', product: 'Produit', service: 'Prestation' } as const;
 
 type Tab = 'open' | 'suspended' | 'closed';
+const MODERATION_TABS: readonly Tab[] = ['open', 'suspended', 'closed'];
 
 interface BusinessGroup {
   businessId: string;
@@ -55,7 +57,7 @@ export default function ModerationPage() {
   const [reports, setReports] = useState<ContentReport[]>([]);
   const [suspensions, setSuspensions] = useState<DirectorySuspension[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>('open');
+  const [tab, setTab] = useUrlTab<Tab>('open', MODERATION_TABS);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmSuspend, setConfirmSuspend] = useState<BusinessGroup | null>(null);
 

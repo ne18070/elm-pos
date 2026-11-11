@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { useUrlTab } from '@/hooks/useUrlTab';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { Plus, Pencil, Trash2, Check, ToggleLeft, ToggleRight, Grid3X3, Package, Layers } from 'lucide-react';
@@ -34,7 +35,8 @@ export function ModulesTab() {
     }, { confirmLabel: 'Supprimer' });
   }
 
-  const [subTab, setSubTab] = useState<SubTab>('types');
+  // ?subtab= pour ne pas entrer en collision avec le ?tab= de la page parente
+  const [subTab, setSubTab] = useUrlTab<SubTab>('types', ['types', 'modules', 'matrix'], 'subtab');
   const [types,   setTypes]   = useState<BusinessTypeRow[]>([]);
   const [modules, setModules] = useState<AppModule[]>([]);
   const [links,   setLinks]   = useState<TypeModule[]>([]);

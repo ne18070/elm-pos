@@ -236,6 +236,8 @@ Before implementing any screen, component, or feature, verify:
 
 **Trust**: loading states for every async action. Destructive actions require confirmation. Empty states explain why — not just "nothing here."
 
+**Shared primitives (`renderer/components/ui/`)** — use these instead of hand-styling elements: `Button` (variants primary/secondary/danger/ghost, `loading` prop), `Input`/`Textarea`/`Select` (visible label + inline error), `Badge` (semantic `bg-badge-*`/`text-status-*` tones), `EmptyState` (icon + why-it's-empty + action), `Skeleton`/`SkeletonText`/`SkeletonCard`/`SkeletonRows` (page loading), `Tabs` (pill tab bar — wire to `useUrlTab`). All are theme-safe (light + dark) by construction. Barrel import: `import { Button, Badge } from '@/components/ui'`.
+
 ## Theming system
 
 Theme tokens are CSS variables in `renderer/app/globals.css`. Dark mode is the default (`:root`). Light mode overrides via `[data-theme="light"]` on the `<html>` element.

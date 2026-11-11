@@ -118,7 +118,7 @@ export function VariantPicker({
 
         {/* Barre de swipe mobile */}
         <div className="sm:hidden h-5 flex items-center justify-center">
-          <div className="w-10 h-1 rounded-full bg-slate-600" />
+          <div className="w-10 h-1 rounded-full bg-surface-border" />
         </div>
       </div>
     </div>

@@ -259,7 +259,7 @@ export function SplitBillModal({ taxRate, taxInclusive, currency, tableId, whole
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs transition-all
                     ${method === m
                       ? 'border-brand-500 bg-badge-brand text-content-brand'
-                      : 'border-surface-border text-content-secondary hover:border-slate-500'}`}
+                      : 'border-surface-border text-content-secondary hover:border-content-muted'}`}
                 >
                   {m === 'cash'         && <Banknote className="w-5 h-5" />}
                   {m === 'card'         && <CreditCard className="w-5 h-5" />}
