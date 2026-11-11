@@ -10,7 +10,8 @@ import {
 
 import { useAuthStore } from '@/store/auth';
 import { useCan } from '@/hooks/usePermission';
-import { hasRole } from '@/lib/permissions';
+import { hasRole, getContextualRoleLabel } from '@/lib/permissions';
+import { isElectron } from '@/lib/ipc';
 import { getBusinessTypes, type BusinessTypeRow } from '@services/supabase/business-config';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,9 @@ import { LoyaltySettingsSection } from './LoyaltySettingsSection';
 import { ApiKeysSection } from './ApiKeysSection';
 import { hasFeature } from '@/lib/permissions';
 
+/** WhatsApp Business (Meta) : en attente de validation de l'app — voir le commentaire de S_ADMIN dans nav-config. */
+const WHATSAPP_SETTINGS_ENABLED = false;
+
 // --- Local Components --------------------------------------------------------
 
 function SettingsSection({ 
@@ -40,8 +44,9 @@ function SettingsSection({
   id: string; title: string; icon: React.ComponentType<{ className?: string }>; isOpen: boolean; onToggle: (id: string) => void; children: React.ReactNode; badge?: string;
 }) {
   return (
-    <div className="card overflow-hidden transition-all duration-300">
-      <button 
+    <div id={`section-${id}`} className="card overflow-hidden transition-all duration-300 scroll-mt-4">
+      <button
+        aria-expanded={isOpen}
         onClick={() => onToggle(id)} 
         className={cn(
           "w-full flex items-center justify-between p-5 transition-colors",
@@ -86,6 +91,17 @@ export default function SettingsPage() {
   });
 
   const toggle = (id: string) => setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Lien direct vers une section (/settings?section=printer — liste de
+  // démarrage, aide…) : elle s'ouvre et vient à l'écran.
+  useEffect(() => {
+    const target = new URLSearchParams(window.location.search).get('section');
+    if (!target) return;
+    setOpenSections(prev => ({ ...prev, [target]: true }));
+    requestAnimationFrame(() => {
+      document.getElementById(`section-${target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
 
   // Dynamic types for icon helper
   const [allTypes, setAllTypes] = useState<BusinessTypeRow[]>([]);
@@ -146,8 +162,8 @@ export default function SettingsPage() {
                   })}
                 </div>
               </div>
-              <Link href="/configure" className="p-2 rounded-xl bg-surface-card hover:bg-brand-500 hover:text-content-primary text-content-secondary transition-all shadow-sm">
-                <Wrench className="w-4 h-4" />
+              <Link href="/configure" className="flex items-center gap-1.5 h-10 px-3 shrink-0 rounded-xl bg-surface-card hover:bg-brand-500 hover:text-content-primary text-content-secondary text-xs font-semibold transition-all shadow-sm">
+                <Wrench className="w-4 h-4" /> Modules
               </Link>
             </div>
             
@@ -157,8 +173,10 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Niveau d&apos;accès</p>
-                <p className="text-sm font-bold text-content-primary capitalize">{user?.role}</p>
-                <p className="text-[10px] text-content-secondary italic">Permissions limitées selon le rôle</p>
+                <p className="text-sm font-bold text-content-primary">{getContextualRoleLabel(user?.role, business.type)}</p>
+                <p className="text-[10px] text-content-secondary italic">
+                  {isOwner ? 'Accès complet à l’établissement' : 'Les accès dépendent de votre rôle'}
+                </p>
               </div>
             </div>
           </div>
@@ -171,8 +189,8 @@ export default function SettingsPage() {
             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-content-muted">Établissement & Organisation</h3>
           </div>
 
-          <SettingsSection id="biz" title="Informations de l'établissement" icon={Briefcase} isOpen={openSections.biz} onToggle={toggle} badge={isManager ? "Manager+" : "Lecture seule"}>
-            <BusinessSettingsSection />
+          <SettingsSection id="biz" title="Informations de l'établissement" icon={Briefcase} isOpen={openSections.biz} onToggle={toggle} badge={isManager ? undefined : "Consultation"}>
+            <BusinessSettingsSection readOnly={!isManager} />
           </SettingsSection>
 
           {isOwner && (
@@ -188,7 +206,7 @@ export default function SettingsPage() {
           )}
 
           {isManager && hasStockFeature && (
-            <SettingsSection id="stock" title="Unités de stock" icon={Package} isOpen={openSections.stock} onToggle={toggle} badge="Manager+">
+            <SettingsSection id="stock" title="Unités de stock" icon={Package} isOpen={openSections.stock} onToggle={toggle}>
               <StockUnitsSection />
             </SettingsSection>
           )}
@@ -200,8 +218,8 @@ export default function SettingsPage() {
           )}
 
           {hasSalesFeature && (
-            <SettingsSection id="loyalty" title="Programme de fidélité" icon={Gift} isOpen={openSections.loyalty} onToggle={toggle}>
-              <LoyaltySettingsSection />
+            <SettingsSection id="loyalty" title="Programme de fidélité" icon={Gift} isOpen={openSections.loyalty} onToggle={toggle} badge={isManager ? undefined : "Consultation"}>
+              <LoyaltySettingsSection readOnly={!isManager} />
             </SettingsSection>
           )}
         </div>
@@ -215,18 +233,21 @@ export default function SettingsPage() {
             </div>
 
             {isManager && (
-              <SettingsSection id="print-temp" title="Modèles de facture & reçus" icon={LucideIcons.Palette} isOpen={openSections['print-temp']} onToggle={toggle} badge="Manager+">
+              <SettingsSection id="print-temp" title="Modèles de facture & reçus" icon={LucideIcons.Palette} isOpen={openSections['print-temp']} onToggle={toggle}>
                 <PrintTemplatesSection />
               </SettingsSection>
             )}
 
-            <SettingsSection id="printer" title="Imprimante thermique" icon={Printer} isOpen={openSections.printer} onToggle={toggle}>
+            <SettingsSection id="printer" title={isElectron ? 'Imprimante thermique' : 'Impression des tickets'} icon={Printer} isOpen={openSections.printer} onToggle={toggle}>
               <PrinterSection />
             </SettingsSection>
 
-            <SettingsSection id="drawer" title="Tiroir-caisse" icon={Archive} isOpen={openSections.drawer} onToggle={toggle}>
-              <CashDrawerSection />
-            </SettingsSection>
+            {/* Ouverture du tiroir : uniquement par l'imprimante, depuis l'app de bureau */}
+            {isElectron && (
+              <SettingsSection id="drawer" title="Tiroir-caisse" icon={Archive} isOpen={openSections.drawer} onToggle={toggle}>
+                <CashDrawerSection />
+              </SettingsSection>
+            )}
           </div>
         )}
 
@@ -237,11 +258,16 @@ export default function SettingsPage() {
             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-content-muted">Système & Intégrations</h3>
           </div>
 
-          <SettingsSection id="sync" title="Synchronisation & Hors ligne" icon={Wifi} isOpen={openSections.sync} onToggle={toggle}>
-            <OfflineSyncSection />
-          </SettingsSection>
+          {/* File hors ligne : n'existe que dans l'app de bureau (sur le web, rien n'est mis en attente) */}
+          {isElectron && (
+            <SettingsSection id="sync" title="Synchronisation & Hors ligne" icon={Wifi} isOpen={openSections.sync} onToggle={toggle}>
+              <OfflineSyncSection />
+            </SettingsSection>
+          )}
 
-          {isAdmin && (
+          {/* Masquée comme l'entrée « WhatsApp Business » du menu (nav-config) tant
+              que l'app Meta n'est pas validée : passer WHATSAPP_SETTINGS_ENABLED à true. */}
+          {WHATSAPP_SETTINGS_ENABLED && isAdmin && (
             <SettingsSection id="wa" title="WhatsApp Business API" icon={MessageCircle} isOpen={openSections.wa} onToggle={toggle} badge="Administrateur">
               <WhatsAppSettingsSection />
             </SettingsSection>

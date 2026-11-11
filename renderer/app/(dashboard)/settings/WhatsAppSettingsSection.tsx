@@ -130,7 +130,7 @@ export function WhatsAppSettingsSection() {
               "flex flex-col gap-4 p-6 rounded-2xl border-2 transition-all text-left group relative overflow-hidden",
               form.use_shared_number 
                 ? "border-brand-500 bg-brand-500/5 ring-4 ring-brand-500/10" 
-                : "border-surface-border bg-white hover:border-brand-500/30"
+                : "border-surface-border bg-surface-card hover:border-brand-500/30"
             )}
           >
             <div className="flex items-center justify-between">
@@ -155,7 +155,7 @@ export function WhatsAppSettingsSection() {
               "flex flex-col gap-4 p-6 rounded-2xl border-2 transition-all text-left group",
               !form.use_shared_number 
                 ? "border-brand-500 bg-brand-500/5 ring-4 ring-brand-500/10" 
-                : "border-surface-border bg-white hover:border-brand-500/30"
+                : "border-surface-border bg-surface-card hover:border-brand-500/30"
             )}
           >
             <div className="flex items-center justify-between">
@@ -362,7 +362,7 @@ export function WhatsAppSettingsSection() {
       </div>
 
       {/* 4. Final Actions */}
-      <div className="flex items-center gap-4 sticky bottom-8 bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-surface-border shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 duration-700">
+      <div className="flex items-center gap-4 sticky bottom-8 bg-surface-card/80 backdrop-blur-xl p-4 rounded-3xl border border-surface-border shadow-2xl animate-in fade-in zoom-in slide-in-from-bottom-8 duration-700">
         <button
           onClick={handleSave}
           disabled={saving || !isDirty || (!form.use_shared_number && (!form.phone_number_id || !form.access_token))}

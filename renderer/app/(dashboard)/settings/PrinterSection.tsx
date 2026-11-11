@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer, Network, Wifi, Loader2, CheckCircle2, XCircle, Save, AlertCircle } from 'lucide-react';
+import { Printer, Network, Wifi, Loader2, CheckCircle2, XCircle, Save } from 'lucide-react';
 import { useNotificationStore } from '@/store/notifications';
 import { useAuthStore } from '@/store/auth';
 import { loadPrinterConfig, savePrinterConfig, printTestPage, isElectron, type PrinterConfig } from '@/lib/ipc';
@@ -41,16 +41,36 @@ export function PrinterSection() {
     }
   }
 
+  // Web : l'impression passe par la fenêtre d'impression du navigateur — USB
+  // direct, réseau TCP et tiroir n'existent que dans l'app de bureau (non
+  // distribuée pour l'instant). Rien à régler, seulement un test.
+  if (!isElectron) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-content-secondary leading-relaxed">
+          Les tickets s&apos;impriment par la fenêtre d&apos;impression du navigateur, sur l&apos;imprimante
+          installée sur cet ordinateur — imprimante de tickets comprise. Il n&apos;y a rien à régler ici :
+          choisissez votre imprimante dans la fenêtre d&apos;impression.
+        </p>
+        <button
+          onClick={handleTest}
+          disabled={testing}
+          className="btn-secondary h-11 px-4 flex items-center gap-2 text-content-primary"
+        >
+          {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+          Imprimer une page test
+        </button>
+        {testResult && !testResult.ok && (
+          <p className="text-xs text-status-error">
+            {testResult.error || "L'impression n'a pas pu s'ouvrir. Autorisez les fenêtres pop-up pour ce site, puis réessayez."}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {!isElectron && (
-        <div className="p-3 bg-amber-500/10 border border-status-warning/20 rounded-xl flex items-start gap-3">
-          <AlertCircle className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
-          <p className="text-xs text-status-warning leading-relaxed font-medium">
-            L&apos;impression thermique directe est uniquement disponible via l&apos;application de bureau. En mode Web, seule l&apos;impression système standard est possible.
-          </p>
-        </div>
-      )}
 
       {/* Mode de connexion */}
       <div className="space-y-2">

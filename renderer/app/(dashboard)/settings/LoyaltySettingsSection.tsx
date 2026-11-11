@@ -14,7 +14,8 @@ const DEFAULTS: Omit<LoyaltyConfig, 'business_id'> = {
   min_redeem:  100,
 };
 
-export function LoyaltySettingsSection() {
+/** `readOnly` : hors managers — la base refuse aussi l'écriture (migration 172). */
+export function LoyaltySettingsSection({ readOnly = false }: { readOnly?: boolean }) {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
 
@@ -64,7 +65,12 @@ export function LoyaltySettingsSection() {
   }
 
   return (
-    <div className="space-y-6">
+    <fieldset disabled={readOnly} className="space-y-6 min-w-0">
+      {readOnly && (
+        <p className="text-xs text-content-secondary p-3 rounded-xl bg-surface-input border border-surface-border">
+          Consultation uniquement : seuls le propriétaire et les managers peuvent modifier le programme de fidélité.
+        </p>
+      )}
 
       {/* Active toggle */}
       <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-surface-border bg-surface-input">
@@ -159,16 +165,18 @@ export function LoyaltySettingsSection() {
       )}
 
       {/* Save */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 disabled:opacity-50 transition-colors"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Enregistrer
-        </button>
-      </div>
-    </div>
+      {!readOnly && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 disabled:opacity-50 transition-colors"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Enregistrer
+          </button>
+        </div>
+      )}
+    </fieldset>
   );
 }

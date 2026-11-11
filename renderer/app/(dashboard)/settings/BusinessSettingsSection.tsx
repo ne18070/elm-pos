@@ -18,7 +18,7 @@ const DEFAULT_ECHEANCE_RULES: EcheanceRule[] = [
   {                  label: 'Échéance : 30 jours' },
 ];
 
-export function BusinessSettingsSection() {
+export function BusinessSettingsSection({ readOnly = false }: { readOnly?: boolean }) {
   const { business, setBusiness } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
   const { askConfirm, ConfirmDialog } = useConfirm();
@@ -181,7 +181,14 @@ export function BusinessSettingsSection() {
   }
 
   return (
-    <div className="space-y-4">
+    // Lecture seule : tous les champs et boutons désactivés d'un coup (la base
+    // refuse de toute façon la mise à jour hors propriétaire / admin / manager).
+    <fieldset disabled={readOnly} className="space-y-4 min-w-0">
+      {readOnly && (
+        <p className="text-xs text-content-secondary p-3 rounded-xl bg-surface-input border border-surface-border">
+          Consultation uniquement : seuls le propriétaire et les managers peuvent modifier ces informations.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Nom commercial *</label>
@@ -445,7 +452,7 @@ export function BusinessSettingsSection() {
         </div>
       </div>
 
-      <div className="pt-4 flex items-center gap-3">
+      {!readOnly && <div className="pt-4 flex items-center gap-3">
         <button
           onClick={handleSave}
           disabled={saving || !isDirty}
@@ -485,8 +492,8 @@ export function BusinessSettingsSection() {
             Modifié
           </span>
         )}
-      </div>
+      </div>}
       <ConfirmDialog />
-    </div>
+    </fieldset>
   );
 }

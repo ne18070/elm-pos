@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isElectron } from '@/lib/ipc';
 
 export interface OnboardingStep {
   id: string;
@@ -76,7 +77,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
           id: 'printer',
           label: "Configurer l'imprimante",
           description: 'Connectez votre imprimante thermique pour imprimer les reçus.',
-          href: '/settings',
+          href: '/settings?section=printer',
           done: printerConfigured,
         },
         {
@@ -121,7 +122,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
           id: 'printer',
           label: "Configurer l'imprimante",
           description: 'Connectez votre imprimante thermique pour les tickets de caisse et de cuisine.',
-          href: '/settings',
+          href: '/settings?section=printer',
           done: printerConfigured,
         },
         {
@@ -393,7 +394,7 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
           id: 'printer',
           label: "Configurer l'imprimante",
           description: 'Connectez votre imprimante thermique pour imprimer les reçus.',
-          href: '/settings',
+          href: '/settings?section=printer',
           done: printerConfigured,
         },
         {
@@ -412,6 +413,11 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         },
       ];
     }
+
+    // L'imprimante thermique ne se configure que dans l'app de bureau : sur le
+    // web, les tickets passent par l'impression du navigateur, sans réglage —
+    // l'étape ne pourrait jamais être cochée.
+    if (!isElectron) newSteps = newSteps.filter((s) => s.id !== 'printer');
 
     setSteps(newSteps);
     setLoading(false);
