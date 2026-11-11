@@ -34,12 +34,12 @@ interface WorkflowRunnerProps {
 // -- Badge de statut -----------------------------------------------------------
 const STATUS_CONFIG: Record<WorkflowStatus, { label: string; className: string; icon: React.ReactNode }> = {
   PENDING:   { label: 'En attente',  className: 'border-surface-border bg-surface-card/50 text-content-secondary',    icon: <Clock className="w-3 h-3" /> },
-  RUNNING:   { label: 'En cours',    className: 'border-blue-700 bg-badge-info text-blue-300',       icon: <Loader2 className="w-3 h-3 animate-spin" /> },
+  RUNNING:   { label: 'En cours',    className: 'border-status-info bg-badge-info text-status-info',       icon: <Loader2 className="w-3 h-3 animate-spin" /> },
   WAITING:   { label: 'Action req.', className: 'border-status-warning bg-badge-warning text-status-warning',    icon: <Clock className="w-3 h-3" /> },
-  PAUSED:    { label: 'En pause',    className: 'border-purple-700 bg-badge-purple text-status-purple', icon: <PauseCircle className="w-3 h-3" /> },
+  PAUSED:    { label: 'En pause',    className: 'border-status-purple/60 bg-badge-purple text-status-purple', icon: <PauseCircle className="w-3 h-3" /> },
   COMPLETED: { label: 'Terminé',     className: 'border-status-success bg-badge-success text-status-success',    icon: <CheckCircle2 className="w-3 h-3" /> },
   FAILED:    { label: 'Échoué',      className: 'border-status-error bg-badge-error text-status-error',          icon: <XCircle className="w-3 h-3" /> },
-  CANCELLED: { label: 'Annulé',      className: 'border-status-error bg-red-950/20 text-status-error',          icon: <Ban className="w-3 h-3" /> },
+  CANCELLED: { label: 'Annulé',      className: 'border-status-error bg-badge-error/50 text-status-error',          icon: <Ban className="w-3 h-3" /> },
 };
 
 function StatusBadge({ status }: { status: WorkflowStatus }) {
@@ -160,7 +160,7 @@ function LegalClaimPanel({ node, context }: { node: LegalClaimNode; context: Rec
       </div>
       {waUrl ? (
         <a href={waUrl} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-content-primary text-sm font-semibold transition-colors">
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors">
           <MessageCircle className="w-4 h-4" />
           Envoyer via WhatsApp
         </a>
@@ -210,7 +210,7 @@ function ActionPanel({ node, context }: { node: ActionNode; context: Record<stri
             {waUrl ? (
               <a
                 href={waUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2.5 px-4 py-3 bg-green-600 hover:bg-green-500 active:bg-green-700 text-content-primary rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/30"
+                className="flex items-center justify-center gap-2.5 px-4 py-3 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-900/30"
               >
                 <Send className="w-4 h-4" />
                 Ouvrir WhatsApp et envoyer
@@ -245,7 +245,7 @@ function WaitEventPanel({ node, instance }: { node: WaitEventNode; instance: Wor
   return (
     <div className="space-y-3">
       {node.description && <p className="text-sm text-content-secondary">{node.description}</p>}
-      <div className="bg-badge-purple border border-purple-700/50 rounded-xl px-4 py-4 space-y-2.5">
+      <div className="bg-badge-purple border border-status-purple/40 rounded-xl px-4 py-4 space-y-2.5">
         <div className="flex items-center gap-2 text-status-purple text-sm font-semibold">
           <Radio className="w-4 h-4" />
           {isClientReply ? 'En attente de la réponse client' : `Attente de : ${node.event_key}`}
@@ -272,7 +272,7 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
 
   return (
     <div className="space-y-4">
-      <div className="bg-badge-purple border border-purple-700 rounded-xl px-4 py-3 space-y-2">
+      <div className="bg-badge-purple border border-status-purple/60 rounded-xl px-4 py-3 space-y-2">
         <div className="flex items-center gap-2 text-status-purple text-sm font-medium">
           <Timer className="w-4 h-4" />
           {node.delay_label ?? (hours > 0 ? `Délai de ${hours}h` : 'Délai non configuré')}
@@ -290,7 +290,7 @@ function DelayPanel({ node, instance, onResume }: { node: WorkflowDelayNode; ins
       
       <button 
         onClick={onResume}
-        className="w-full py-2.5 rounded-xl border border-purple-600 bg-badge-purple hover:bg-badge-purple text-status-purple text-xs font-bold transition-all flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl border border-status-purple bg-badge-purple text-status-purple text-xs font-bold transition-all flex items-center justify-center gap-2"
       >
         <RefreshCw className="w-3.5 h-3.5" />
         Reprendre manuellement maintenant
@@ -342,13 +342,13 @@ function FailedPanel({ instance, onRetry }: { instance: WorkflowInstance; onRetr
         </div>
         <button 
           onClick={onRetry}
-          className="text-[10px] font-black uppercase tracking-widest bg-red-500 hover:bg-red-600 text-content-primary px-3 py-1.5 rounded-lg transition-all"
+          className="text-[10px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition-all"
         >
           Réessayer
         </button>
       </div>
       {instance.last_error && (
-        <pre className="text-xs text-status-error whitespace-pre-wrap font-mono bg-red-950/30 rounded p-2 max-h-32 overflow-y-auto">
+        <pre className="text-xs text-status-error whitespace-pre-wrap font-mono bg-badge-error/50 rounded p-2 max-h-32 overflow-y-auto">
           {instance.last_error}
         </pre>
       )}
@@ -429,9 +429,9 @@ function CompletedPanel({ instance, onRestart }: { instance: WorkflowInstance; o
   return (
     <div className="space-y-4">
       {/* Header succès */}
-      <div className="bg-gradient-to-br from-green-950/60 to-emerald-900/30 border border-status-success/50 rounded-2xl p-5 text-center space-y-2">
+      <div className="bg-gradient-to-br from-badge-success/80 to-badge-success/30 border border-status-success/50 rounded-2xl p-5 text-center space-y-2">
         <div className="flex justify-center">
-          <div className="w-14 h-14 rounded-full bg-green-500/20 border-2 border-green-500/50 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full bg-status-success/20 border-2 border-status-success/50 flex items-center justify-center">
             <CheckCircle2 className="w-8 h-8 text-status-success" />
           </div>
         </div>
@@ -685,7 +685,7 @@ export function WorkflowRunner({
         <div className="space-y-5">
           {/* Instructions détaillées */}
           {currentNode.instructions && (
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-1">
+            <div className="bg-status-purple/10 border border-status-purple/20 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-1">
               <Info className="w-5 h-5 text-status-purple shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-status-purple">Consignes de l&apos;étape</p>

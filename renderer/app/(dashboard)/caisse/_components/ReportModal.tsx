@@ -64,7 +64,8 @@ export function ReportModal({ data, onClose }: { data: ReportData; onClose: () =
 
         <div className="flex-1 overflow-y-auto p-4">
           <div className="bg-white rounded-xl p-4 font-mono shadow-inner">
-            <p className="text-center font-bold text-sm text-content-primary mb-0.5">{data.businessName}</p>
+            {/* Aperçu ticket : fond blanc fixe, texte sombre fixe (pas de tokens thémés ici) */}
+            <p className="text-center font-bold text-sm text-gray-900 mb-0.5">{data.businessName}</p>
             <p className="text-center text-[10px] text-gray-500 border-b border-dashed border-gray-300 pb-1 mb-1">
               {isZ ? '— RAPPORT Z — CLÔTURE —' : '— RAPPORT X — LECTURE —'}
             </p>

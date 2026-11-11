@@ -141,42 +141,42 @@ export default function OwnerDashboard() {
     switch (kind) {
       case 'restaurant':
         return [
-          { label: 'CA du jour',   value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,  color: 'text-green-500', bg: 'bg-green-500/10',  loading: loadingSales },
+          { label: 'CA du jour',   value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,  color: 'text-status-success', bg: 'bg-status-success/10',  loading: loadingSales },
           { label: 'Commandes',    value: dailySales.count.toString(),                  icon: ShoppingBag, color: 'text-brand-500', bg: 'bg-brand-500/10',  loading: loadingSales },
-          { label: 'Base Clients', value: clientCount?.toString() ?? '0',              icon: Users,       color: 'text-blue-500',  bg: 'bg-blue-500/10',   loading: loadingClients },
-          { label: 'Ruptures',     value: lowStockCount.toString(),                    icon: AlertCircle, color: 'text-red-500',   bg: 'bg-red-500/10',    loading: loadingStock },
+          { label: 'Base Clients', value: clientCount?.toString() ?? '0',              icon: Users,       color: 'text-status-info',  bg: 'bg-status-info/10',   loading: loadingClients },
+          { label: 'Ruptures',     value: lowStockCount.toString(),                    icon: AlertCircle, color: 'text-status-error',   bg: 'bg-status-error/10',    loading: loadingStock },
         ];
 
       case 'service':
         return [
-          { label: 'CA du jour',        value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,  color: 'text-green-500',  bg: 'bg-green-500/10',  loading: loadingSales },
+          { label: 'CA du jour',        value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,  color: 'text-status-success',  bg: 'bg-status-success/10',  loading: loadingSales },
           { label: 'Ordres actifs',     value: serviceActive?.toString() ?? '—',            icon: Wrench,      color: 'text-brand-500',  bg: 'bg-brand-500/10',  loading: loadingService },
-          { label: 'Base Clients',      value: clientCount?.toString() ?? '0',             icon: Users,       color: 'text-blue-500',   bg: 'bg-blue-500/10',   loading: loadingClients },
-          { label: 'Commandes du jour', value: dailySales.count.toString(),                icon: ShoppingBag, color: 'text-purple-500', bg: 'bg-purple-500/10', loading: loadingSales },
+          { label: 'Base Clients',      value: clientCount?.toString() ?? '0',             icon: Users,       color: 'text-status-info',   bg: 'bg-status-info/10',   loading: loadingClients },
+          { label: 'Commandes du jour', value: dailySales.count.toString(),                icon: ShoppingBag, color: 'text-status-purple', bg: 'bg-status-purple/10', loading: loadingSales },
         ];
 
       case 'juridique':
         return [
-          { label: 'CA du mois',       value: `${dailySales.total.toLocaleString()} FCFA`, icon: Receipt,     color: 'text-green-500',  bg: 'bg-green-500/10',  loading: loadingSales },
+          { label: 'CA du mois',       value: `${dailySales.total.toLocaleString()} FCFA`, icon: Receipt,     color: 'text-status-success',  bg: 'bg-status-success/10',  loading: loadingSales },
           { label: 'Dossiers actifs',  value: dossierCount?.toString() ?? '—',             icon: Scale,       color: 'text-brand-500',  bg: 'bg-brand-500/10',  loading: loadingDossier },
-          { label: 'Base Clients',     value: clientCount?.toString() ?? '0',              icon: Users,       color: 'text-blue-500',   bg: 'bg-blue-500/10',   loading: loadingClients },
-          { label: 'Factures du jour', value: dailySales.count.toString(),                 icon: ShoppingBag, color: 'text-purple-500', bg: 'bg-purple-500/10', loading: loadingSales },
+          { label: 'Base Clients',     value: clientCount?.toString() ?? '0',              icon: Users,       color: 'text-status-info',   bg: 'bg-status-info/10',   loading: loadingClients },
+          { label: 'Factures du jour', value: dailySales.count.toString(),                 icon: ShoppingBag, color: 'text-status-purple', bg: 'bg-status-purple/10', loading: loadingSales },
         ];
 
       case 'location':
         return [
-          { label: 'CA du jour',        value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,    color: 'text-green-500',  bg: 'bg-green-500/10',  loading: loadingSales },
+          { label: 'CA du jour',        value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,    color: 'text-status-success',  bg: 'bg-status-success/10',  loading: loadingSales },
           { label: 'Contrats actifs',   value: contratsCount?.toString() ?? '—',            icon: FileSignature, color: 'text-brand-500',  bg: 'bg-brand-500/10',  loading: loadingContrats },
-          { label: 'Base Clients',      value: clientCount?.toString() ?? '0',              icon: Users,         color: 'text-blue-500',   bg: 'bg-blue-500/10',   loading: loadingClients },
-          { label: 'Locations du jour', value: dailySales.count.toString(),                 icon: Car,           color: 'text-orange-500', bg: 'bg-orange-500/10', loading: loadingSales },
+          { label: 'Base Clients',      value: clientCount?.toString() ?? '0',              icon: Users,         color: 'text-status-info',   bg: 'bg-status-info/10',   loading: loadingClients },
+          { label: 'Locations du jour', value: dailySales.count.toString(),                 icon: Car,           color: 'text-status-orange', bg: 'bg-status-orange/10', loading: loadingSales },
         ];
 
       default: // boutique + autre
         return [
-          { label: 'Ventes du jour', value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,  color: 'text-green-500', bg: 'bg-green-500/10', loading: loadingSales },
+          { label: 'Ventes du jour', value: `${dailySales.total.toLocaleString()} FCFA`, icon: TrendingUp,  color: 'text-status-success', bg: 'bg-status-success/10', loading: loadingSales },
           { label: 'Commandes',      value: dailySales.count.toString(),                  icon: ShoppingBag, color: 'text-brand-500', bg: 'bg-brand-500/10', loading: loadingSales },
-          { label: 'Base Clients',   value: clientCount?.toString() ?? '0',               icon: Users,       color: 'text-blue-500',  bg: 'bg-blue-500/10',  loading: loadingClients },
-          { label: 'Ruptures stock', value: lowStockCount.toString(),                     icon: AlertCircle, color: 'text-red-500',   bg: 'bg-red-500/10',   loading: loadingStock },
+          { label: 'Base Clients',   value: clientCount?.toString() ?? '0',               icon: Users,       color: 'text-status-info',  bg: 'bg-status-info/10',  loading: loadingClients },
+          { label: 'Ruptures stock', value: lowStockCount.toString(),                     icon: AlertCircle, color: 'text-status-error',   bg: 'bg-status-error/10',   loading: loadingStock },
         ];
     }
   })();

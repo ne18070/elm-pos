@@ -75,17 +75,17 @@ function SubjectTypePill({ type }: { type: string | null | undefined }) {
 
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return (
-    <span className="inline-flex items-center gap-1 text-xs font-black text-yellow-600 bg-yellow-400/20 px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-xs font-black text-status-warning bg-badge-warning px-2 py-0.5 rounded-full">
       <Trophy className="w-3 h-3" /> 1
     </span>
   );
   if (rank === 2) return (
-    <span className="inline-flex items-center gap-1 text-xs font-black text-slate-400 bg-slate-400/20 px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-xs font-black text-content-secondary bg-surface-hover px-2 py-0.5 rounded-full">
       <Medal className="w-3 h-3" /> 2
     </span>
   );
   if (rank === 3) return (
-    <span className="inline-flex items-center gap-1 text-xs font-black text-orange-500 bg-orange-400/20 px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-xs font-black text-status-orange bg-badge-orange px-2 py-0.5 rounded-full">
       <Medal className="w-3 h-3" /> 3
     </span>
   );
@@ -98,7 +98,7 @@ function LoyaltyStars({ visits }: { visits: number }) {
   return (
     <span className="inline-flex gap-0.5 ml-1.5 align-middle">
       {[0, 1, 2].map(i => (
-        <Star key={i} className={cn('w-2.5 h-2.5', i < filled ? 'fill-yellow-400 text-yellow-400' : 'text-surface-border fill-surface-border')} />
+        <Star key={i} className={cn('w-2.5 h-2.5', i < filled ? 'fill-status-warning text-status-warning' : 'text-surface-border fill-surface-border')} />
       ))}
     </span>
   );
@@ -194,11 +194,11 @@ function LoyaltySection({
       <div className="flex items-center gap-2 mb-3">
         <div className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-xl flex-1',
-          balance > 0 ? 'bg-yellow-400/10 border border-yellow-400/30' : 'bg-surface-hover border border-surface-border'
+          balance > 0 ? 'bg-badge-warning border border-status-warning/30' : 'bg-surface-hover border border-surface-border'
         )}>
-          <Star className={cn('w-4 h-4 shrink-0', balance > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-content-muted')} />
+          <Star className={cn('w-4 h-4 shrink-0', balance > 0 ? 'fill-status-warning text-status-warning' : 'text-content-muted')} />
           <div>
-            <p className={cn('text-sm font-black tabular-nums', balance > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-content-muted')}>
+            <p className={cn('text-sm font-black tabular-nums', balance > 0 ? 'text-status-warning' : 'text-content-muted')}>
               {balance} pt{balance > 1 ? 's' : ''}
             </p>
             <p className="text-[10px] text-content-muted">
@@ -219,7 +219,7 @@ function LoyaltySection({
       {feedback && (
         <div className={cn(
           'flex items-start gap-2 text-xs px-3 py-2 rounded-xl mb-3',
-          feedback.ok ? 'bg-green-500/10 text-green-600 dark:text-green-400' : 'bg-red-500/10 text-red-500'
+          feedback.ok ? 'bg-badge-success text-status-success' : 'bg-badge-error text-status-error'
         )}>
           {feedback.ok ? <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
           {feedback.msg}
@@ -249,7 +249,7 @@ function LoyaltySection({
           </div>
           {inputPts >= minRedeem && (
             <p className="text-xs text-content-secondary">
-              {inputPts} pts → <span className="font-bold text-green-500">{cashVal.toLocaleString('fr-FR')} CFA</span> de remise
+              {inputPts} pts → <span className="font-bold text-status-success">{cashVal.toLocaleString('fr-FR')} CFA</span> de remise
             </p>
           )}
           <div className="flex gap-2 pt-1">
@@ -283,7 +283,7 @@ function LoyaltySection({
           {loyaltyTx.slice(0, 8).map(tx => (
             <div key={tx.id} className="flex items-center justify-between text-xs">
               <span className="text-content-secondary truncate flex-1 mr-2">{tx.note ?? tx.type}</span>
-              <span className={cn('font-bold tabular-nums shrink-0', tx.points > 0 ? 'text-yellow-500' : 'text-red-400')}>
+              <span className={cn('font-bold tabular-nums shrink-0', tx.points > 0 ? 'text-status-warning' : 'text-status-error')}>
                 {tx.points > 0 ? '+' : ''}{tx.points} pts
               </span>
             </div>
@@ -335,7 +335,7 @@ function HistoryPanel({
                   {selected.visits} visite{selected.visits > 1 ? 's' : ''}
                 </span>
                 {selected.total_spent > 0 && (
-                  <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-status-success bg-badge-success px-2 py-0.5 rounded-full">
                     {formatCurrency(selected.total_spent, currency)}
                   </span>
                 )}
@@ -568,7 +568,7 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
                         <SortTh label="CA Total"      sortKey="total_spent" current={sortKey} dir={sortDir} onSort={handleSort} />
                         <SortTh label="Moy./visite"   sortKey="avg_spent"   current={sortKey} dir={sortDir} onSort={handleSort} />
                         <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-content-muted">
-                          <span className="inline-flex items-center gap-1"><Star className="w-3 h-3 text-yellow-400" />Pts</span>
+                          <span className="inline-flex items-center gap-1"><Star className="w-3 h-3 text-status-warning" />Pts</span>
                         </th>
                         <SortTh label="Dernière visite" sortKey="lastDate"  current={sortKey} dir={sortDir} onSort={handleSort} />
                       </>
@@ -611,7 +611,7 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
                               <LoyaltyStars visits={e.visits} />
                             </td>
                             <td className="px-3 py-3">
-                              <span className={cn('font-bold', e.total_spent > 0 ? 'text-green-500' : 'text-content-muted')}>
+                              <span className={cn('font-bold', e.total_spent > 0 ? 'text-status-success' : 'text-content-muted')}>
                                 {e.total_spent > 0 ? formatCurrency(e.total_spent, currency) : '–'}
                               </span>
                             </td>
@@ -620,8 +620,8 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
                             </td>
                             <td className="px-3 py-3">
                               {pts > 0 ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full">
-                                  <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+                                <span className="inline-flex items-center gap-1 text-xs font-bold text-status-warning bg-badge-warning px-2 py-0.5 rounded-full">
+                                  <Star className="w-2.5 h-2.5 fill-status-warning text-status-warning" />
                                   {pts}
                                 </span>
                               ) : (
@@ -647,7 +647,7 @@ export function SubjectsTab({ businessId, currency }: { businessId: string; curr
                             </td>
                             <td className="px-3 py-3 font-semibold text-content-primary">{e.visits}</td>
                             <td className="px-3 py-3">
-                              <span className={cn('font-bold', e.total_spent > 0 ? 'text-green-500' : 'text-content-muted')}>
+                              <span className={cn('font-bold', e.total_spent > 0 ? 'text-status-success' : 'text-content-muted')}>
                                 {e.total_spent > 0 ? formatCurrency(e.total_spent, currency) : '–'}
                               </span>
                             </td>

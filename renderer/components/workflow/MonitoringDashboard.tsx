@@ -38,7 +38,7 @@ function StatCard({
 function LevelBadge({ level }: { level: WorkflowLog['level'] }) {
   const map: Record<WorkflowLog['level'], string> = {
     DEBUG: 'bg-surface-card text-content-secondary',
-    INFO:  'bg-badge-info text-blue-300',
+    INFO:  'bg-badge-info text-status-info',
     WARN:  'bg-badge-warning text-status-warning',
     ERROR: 'bg-badge-error text-status-error',
   };
@@ -59,7 +59,7 @@ function BlockedRow({
   const isOverdue = hours > ((item.node as Extract<WorkflowNode, { due_hours?: number }>).due_hours ?? 24);
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-surface-border last:border-0">
-      <div className={`w-2 h-2 rounded-full shrink-0 ${isOverdue ? 'bg-red-400' : 'bg-amber-400'}`} />
+      <div className={`w-2 h-2 rounded-full shrink-0 ${isOverdue ? 'bg-status-error' : 'bg-status-warning'}`} />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-content-primary truncate font-medium">{item.node?.label ?? 'Étape inconnue'}</p>
         <p className="text-xs text-content-muted truncate">Dossier {item.instance.dossier_id.slice(0, 8)}…</p>
@@ -135,19 +135,19 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
       {/* -- Cartes KPI -- */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <StatCard
-          label="Actifs" value={stats.total_active} color="border-blue-500"
+          label="Actifs" value={stats.total_active} color="border-status-info"
           icon={<TrendingUp className="w-6 h-6" />}
         />
         <StatCard
-          label="En attente" value={stats.waiting} color="border-amber-500"
+          label="En attente" value={stats.waiting} color="border-status-warning"
           icon={<Clock className="w-6 h-6" />}
         />
         <StatCard
-          label="En pause" value={stats.paused} color="border-purple-500"
+          label="En pause" value={stats.paused} color="border-status-purple"
           icon={<PauseCircle className="w-6 h-6" />}
         />
         <StatCard
-          label="En retard" value={stats.overdue} color="border-red-500"
+          label="En retard" value={stats.overdue} color="border-status-error"
           icon={<AlertTriangle className="w-6 h-6" />}
           sublabel="WAITING > SLA"
         />
@@ -156,7 +156,7 @@ export function MonitoringDashboard({ businessId, refreshInterval = 30000 }: Mon
           icon={<XCircle className="w-6 h-6" />}
         />
         <StatCard
-          label="Terminés" value={stats.completed_today} color="border-green-500"
+          label="Terminés" value={stats.completed_today} color="border-status-success"
           icon={<CheckCircle2 className="w-6 h-6" />}
           sublabel="Aujourd'hui"
         />

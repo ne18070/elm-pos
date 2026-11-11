@@ -106,7 +106,7 @@ function FieldConfigModal({
             <button onClick={onCancel} className="px-4 py-2 text-content-secondary font-bold text-sm hover:text-content-muted transition-colors">Annuler</button>
             <button 
               onClick={() => onConfirm(val)}
-              className="bg-blue-600 hover:bg-blue-700 text-content-primary font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-200 transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-200 transition-all"
             >
               <Check className="w-4 h-4" /> Valider
             </button>
@@ -341,7 +341,7 @@ function PretentionEditor({
 
         <div className="flex items-center gap-3">
           <button onClick={onCancel} className="px-4 py-2 text-content-muted hover:text-slate-800 font-bold text-sm transition-colors uppercase tracking-widest text-[10px]">Annuler</button>
-          <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-content-primary font-black py-2.5 px-8 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-200 transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-widest">
+          <button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white font-black py-2.5 px-8 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-200 transition-all active:scale-95 disabled:opacity-50 text-[10px] uppercase tracking-widest">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Enregistrer le modèle
           </button>
@@ -391,7 +391,7 @@ function PretentionEditor({
 
       {error && (
         <div className="fixed bottom-8 right-8 z-[100] animate-in slide-in-from-right-4 duration-300">
-          <p className="text-sm text-content-primary bg-red-600 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-3 font-bold border border-red-500">
+          <p className="text-sm text-white bg-red-600 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-3 font-bold border border-red-500">
             <X className="w-5 h-5 shrink-0" /> {error}
           </p>
         </div>
@@ -495,7 +495,7 @@ function PretentionCard({
             >
               <Trash2 className="w-4 h-4" />
             </button>
-            <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-content-primary' : 'bg-surface-overlay border-surface-border text-content-muted'}`}>
+            <button onClick={() => setExpanded(e => !e)} className={`p-2.5 rounded-xl border transition-all active:scale-90 shadow-sm ${expanded ? 'bg-brand-500 border-brand-500 text-white' : 'bg-surface-overlay border-surface-border text-content-muted'}`}>
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
@@ -598,14 +598,14 @@ export function PretentionsLibrary({ businessId }: PretentionsLibraryProps) {
           <h2 className="text-2xl font-black text-content-primary tracking-tight">Bibliothèque de Modèles</h2>
           <p className="text-content-muted text-sm mt-1 font-medium">Gérez vos lettres types et documents juridiques automatisés.</p>
         </div>
-        <button onClick={() => setShowNew(true)} className="bg-brand-500 hover:bg-brand-600 text-content-primary font-bold py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95">
+        <button onClick={() => setShowNew(true)} className="bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-6 rounded-2xl flex items-center gap-2 shadow-xl shadow-brand-500/20 transition-all active:scale-95">
           <Plus className="w-5 h-5" /> Nouveau modèle
         </button>
       </div>
 
       <div className="relative group">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted group-focus-within:text-content-brand transition-colors" />
-        <input className="w-full bg-surface border border-surface-border rounded-2xl pl-14 pr-6 py-4 text-base text-content-primary placeholder-slate-600 focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un document..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="w-full bg-surface border border-surface-border rounded-2xl pl-14 pr-6 py-4 text-base text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500/50 transition-all shadow-inner" placeholder="Rechercher un document..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {loading ? (
