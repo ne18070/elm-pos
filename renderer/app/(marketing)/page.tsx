@@ -8,7 +8,6 @@ import {
   MessageCircle,
   BedDouble,
   Scale,
-  WifiOff,
   Check,
   ArrowRight,
   ArrowUp,
@@ -24,14 +23,27 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { usePermissionsStore } from '@/store/permissions';
 import { getPlans, type Plan } from '@services/supabase/subscriptions';
 import { displayCurrency } from '@/lib/utils';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
+import {
+  RECOMMENDED_PLAN_NAME, isAnnualPlan, annualSavingsPercent, annualSavingsLabel, formatSavings,
+} from '@/lib/plan-pricing';
 
+// Message pré-rempli : le visiteur n'a plus qu'à envoyer
+const WHATSAPP_URL = `https://wa.me/221772211126?text=${encodeURIComponent("Bonjour, je souhaite une démonstration d'ELM.")}`;
+
+/** Accueil du métier de l'utilisateur connecté (mêmes droits que le menu de MarketingNav). */
+function useSpaceHref() {
+  const { user, business } = useAuthStore();
+  const { overrides } = usePermissionsStore();
+  return user ? getDefaultRoute(user.role, business, overrides) : '/login';
+}
 
 function Hero() {
-  const { user, business } = useAuthStore();
-  const spaceHref = user ? getDefaultRoute(user.role, business) : '/login';
+  const { user } = useAuthStore();
+  const spaceHref = useSpaceHref();
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center px-5 overflow-hidden bg-surface">
@@ -49,7 +61,7 @@ function Hero() {
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold text-brand-300 tracking-widest uppercase mb-6">
-            ELM Sénégal - Entreprise Lifecycle Management
+            ELM · Logiciel de gestion pour PME au Sénégal
           </p>
 
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-content-primary leading-[1.1] tracking-tight mb-6">
@@ -59,36 +71,11 @@ function Hero() {
           </h1>
 
           <p className="text-lg text-content-secondary leading-relaxed max-w-xl mb-10">
-            ELM (Entreprise Lifecycle Management) : Caisse, stocks, comptabilité OHADA, RH & paie, location, hôtellerie et juridique. La solution tout-en-un conçue pour les PME sénégalaises.
+            Caisse, stocks, comptabilité OHADA, RH & paie, location, hôtellerie, juridique et gestion scolaire. La solution tout-en-un conçue pour les PME sénégalaises.
           </p>
 
-          <div className="flex flex-wrap gap-2 mb-12 max-w-2xl">
-            {[
-              { label: 'Caisse tactile', icon: ShoppingCart },
-              { label: 'Gestion des stocks', icon: Package },
-              { label: 'Comptabilité OHADA', icon: Receipt },
-              { label: 'RH & Paie', icon: Users },
-              { label: 'Location véhicules', icon: Car },
-              { label: 'Réservations', icon: CalendarCheck },
-              { label: 'Livraisons', icon: Truck },
-              { label: 'WhatsApp', icon: MessageCircle },
-              { label: 'Mode hors ligne', icon: WifiOff },
-              { label: 'Multi-établissements', icon: Globe },
-              { label: 'Hôtellerie', icon: BedDouble },
-              { label: 'Dossiers juridiques', icon: Scale },
-              { label: 'Gestion scolaire', icon: GraduationCap },
-            ].map((tag) => (
-              <span
-                key={tag.label}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-card border border-surface-border text-[11px] font-bold text-content-primary whitespace-nowrap hover:bg-surface-hover hover:border-brand-500/30 hover:text-brand-300 transition-all cursor-default"
-              >
-                <tag.icon className="w-3 h-3" />
-                {tag.label}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-start gap-3">
+          {/* Boutons avant les pastilles : sur téléphone, ils restent dans le premier écran */}
+          <div className="flex flex-col sm:flex-row items-start gap-3 mb-10">
             {user ? (
               <Link
                 href={spaceHref}
@@ -112,6 +99,33 @@ function Hero() {
                 </Link>
               </>
             )}
+          </div>
+
+          {/* Aperçu des modules — informatif, non cliquable (pas d'effet de survol) */}
+          <div className="flex flex-wrap gap-2 max-w-2xl">
+            {[
+              { label: 'Caisse tactile', icon: ShoppingCart },
+              { label: 'Gestion des stocks', icon: Package },
+              { label: 'Comptabilité OHADA', icon: Receipt },
+              { label: 'RH & Paie', icon: Users },
+              { label: 'Location véhicules', icon: Car },
+              { label: 'Réservations', icon: CalendarCheck },
+              { label: 'Livraisons', icon: Truck },
+              { label: 'WhatsApp', icon: MessageCircle },
+              { label: 'Boutique en ligne', icon: Store },
+              { label: 'Multi-établissements', icon: Globe },
+              { label: 'Hôtellerie', icon: BedDouble },
+              { label: 'Dossiers juridiques', icon: Scale },
+              { label: 'Gestion scolaire', icon: GraduationCap },
+            ].map((tag) => (
+              <span
+                key={tag.label}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-card border border-surface-border text-[11px] font-bold text-content-primary whitespace-nowrap"
+              >
+                <tag.icon className="w-3 h-3" />
+                {tag.label}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -155,9 +169,11 @@ const FEATURES = [
     desc: 'Envoi automatique des factures PDF et communication directe avec vos clients.',
   },
   {
-    icon: WifiOff,
-    title: 'Mode hors ligne',
-    desc: 'Encaissez même sans connexion internet. Synchronisation automatique au retour.',
+    // Le mode hors ligne n'existe que dans l'app de bureau, pas encore distribuée :
+    // à remettre (carte + pastille + métadonnées du layout racine) quand elle le sera.
+    icon: Store,
+    title: 'Boutique en ligne',
+    desc: 'Vos produits en ligne avec un lien à partager : vos clients commandent en retrait ou en livraison.',
   },
   {
     icon: Globe,
@@ -386,7 +402,7 @@ function MultiEtablissements() {
             { name: 'Boutique Dakar Plateau', type: 'Commerce', active: true },
             { name: 'Restaurant Almadies', type: 'Restauration', active: false },
             { name: 'Agence Location Thiès', type: 'Location véhicules', active: false },
-            { name: 'Cabinet Me. Diallo', type: 'Juridique', active: false },
+            { name: 'Cabinet Me Diallo', type: 'Juridique', active: false },
           ].map(({ name, type, active }) => (
             <div
               key={name}
@@ -416,9 +432,9 @@ function MultiEtablissements() {
   );
 }
 
-function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
+function PlanCard({ plan, isPrimary, savingsPct }: { plan: Plan; isPrimary: boolean; savingsPct: number | null }) {
   const isFree = plan.price === 0;
-  const isAnnual = plan.duration_days >= 300;
+  const isAnnual = isAnnualPlan(plan);
   const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
 
   return (
@@ -433,13 +449,13 @@ function PlanCard({ plan, isPrimary }: { plan: Plan; isPrimary: boolean }) {
         </span>
       )}
 
-      {isAnnual && !isFree && (
-        <span className="absolute top-4 left-4 text-[10px] font-semibold text-status-success bg-badge-success border border-status-success/40 px-2 py-0.5 rounded-full tracking-wider uppercase">
-          1 mois offert
+      {savingsPct !== null && !isFree && (
+        <span className="absolute top-4 left-4 text-[10px] font-semibold text-status-success bg-badge-success border border-status-success/40 px-2 py-0.5 rounded-full tracking-wider">
+          {formatSavings(savingsPct)}
         </span>
       )}
 
-      <div className={isAnnual && !isFree ? 'pt-5' : ''}>
+      <div className={savingsPct !== null && !isFree ? 'pt-5' : ''}>
         <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-3">
           {plan.label || plan.name}
         </p>
@@ -502,15 +518,15 @@ function Tarifs() {
   }, []);
 
   const trialPlans = allPlans.filter((p) => p.price === 0);
-  const paidMonthly = allPlans.filter((p) => p.price > 0 && p.duration_days < 300);
-  const paidAnnual = allPlans.filter((p) => p.price > 0 && p.duration_days >= 300);
+  const paidMonthly = allPlans.filter((p) => p.price > 0 && !isAnnualPlan(p));
+  const paidAnnual = allPlans.filter((p) => p.price > 0 && isAnnualPlan(p));
 
   const hasAnnual = paidAnnual.length > 0;
   const hasMonthly = paidMonthly.length > 0;
 
   const shownPaid = period === 'annual' && hasAnnual ? paidAnnual : paidMonthly;
   const plans = [...trialPlans, ...shownPaid];
-  const maxPrice = plans.length ? Math.max(...plans.map((p) => p.price)) : 0;
+  const savingsLabel = annualSavingsLabel(allPlans);
 
   return (
     <section id="tarifs" className="py-24 px-5 bg-surface">
@@ -537,7 +553,9 @@ function Tarifs() {
                   ) : (
                     <span className="flex items-center gap-1.5">
                       Annuel
-                      <span className="text-[10px] font-bold text-status-success">-10%</span>
+                      {savingsLabel && (
+                        <span className="text-[10px] font-bold text-status-success">{savingsLabel}</span>
+                      )}
                     </span>
                   )}
                 </button>
@@ -566,7 +584,8 @@ function Tarifs() {
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                isPrimary={plan.price === maxPrice && plan.price > 0}
+                isPrimary={plan.name === RECOMMENDED_PLAN_NAME && plan.price > 0}
+                savingsPct={annualSavingsPercent(plan, allPlans)}
               />
             ))}
           </div>
@@ -577,8 +596,8 @@ function Tarifs() {
 }
 
 function CtaFinal() {
-  const { user, business } = useAuthStore();
-  const spaceHref = user ? getDefaultRoute(user.role, business) : '/login';
+  const { user } = useAuthStore();
+  const spaceHref = useSpaceHref();
   return (
     <section className="py-24 px-5 bg-surface border-t border-surface-border">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
@@ -621,13 +640,13 @@ function Footer() {
         </div>
         <div className="flex items-center gap-6 text-xs text-content-muted">
           <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialité</Link>
-          <a href="https://wa.me/221772211126" className="hover:text-content-secondary transition-colors">WhatsApp</a>
+          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="hover:text-content-secondary transition-colors">WhatsApp</a>
           <a href="mailto:contact@elm-app.click" className="hover:text-content-secondary transition-colors">Contact</a>
           <span className="flex items-center gap-1.5">
             <Globe className="w-3 h-3" /> Sénégal - Afrique
           </span>
         </div>
-        <p className="text-xs text-content-muted">(c) {new Date().getFullYear()} ELM - Entreprise Lifecycle Management</p>
+        <p className="text-xs text-content-muted">© {new Date().getFullYear()} ELM - Entreprise Lifecycle Management</p>
       </div>
     </footer>
   );
@@ -646,7 +665,7 @@ function FloatingActions() {
   return (
     <div className="fixed right-4 bottom-4 z-50 flex flex-col gap-3">
       <a
-        href="https://wa.me/221772211126"
+        href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contacter sur WhatsApp"

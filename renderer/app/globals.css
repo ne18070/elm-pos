@@ -242,6 +242,29 @@
   --text-base:        241 245 249;
   --text-secondary:   148 163 184;
   --text-placeholder: 100 116 139;  /* slate-500 — un cran plus lisible */
+
+  /* Statuts, pastilles et marque — mêmes valeurs que :root. Sans eux, une zone
+     sombre affichée en mode clair (landing en journée, sidebar, en-tête POS)
+     héritait des pastilles pastel et des couleurs de statut foncées du thème
+     clair : carrés blancs derrière les icônes, badges illisibles. */
+  --color-success:  74 222 128;
+  --color-warning:  251 191 36;
+  --color-error:    248 113 113;
+  --color-info:     56 189 248;
+  --badge-success:  13 45 30;
+  --badge-warning:  55 35 10;
+  --badge-error:    55 15 20;
+  --badge-info:     15 40 70;
+  --surface-overlay: 2 6 23;
+  --text-brand:     56 189 248;
+  --color-brand:    56 189 248;
+  --color-teal:     45 212 191;
+  --color-purple:   192 132 252;
+  --color-orange:   251 146 60;
+  --badge-brand:    12 45 70;
+  --badge-teal:     15 50 50;
+  --badge-purple:   45 20 65;
+  --badge-orange:   60 25 10;
   color-scheme: dark;
 }
 

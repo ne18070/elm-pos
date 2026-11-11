@@ -19,6 +19,7 @@ import {
   type Plan, type SubscriptionRequest, type SubscriptionInvoice,
 } from '@services/supabase/subscriptions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
+import { annualSavingsPercent, annualSavingsLabel, formatSavings } from '@/lib/plan-pricing';
 import { downloadSubscriptionInvoice } from '@/lib/subscription-invoice-pdf';
 import { MobileMoneyPayment } from './MobileMoneyPayment';
 
@@ -310,7 +311,12 @@ export default function BillingPage() {
                           ${period === p ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}
                       >
                         {p === 'monthly' ? 'Mensuel' : (
-                          <span className="flex items-center gap-1">Annuel <span className="text-status-success">−10%</span></span>
+                          <span className="flex items-center gap-1">
+                            Annuel
+                            {annualSavingsLabel(allPlans) && (
+                              <span className="text-status-success">{annualSavingsLabel(allPlans)}</span>
+                            )}
+                          </span>
                         )}
                       </button>
                     ))}
@@ -326,6 +332,7 @@ export default function BillingPage() {
                 {shownPlans.map((plan) => {
                   const isAnnual     = plan.duration_days >= 300;
                   const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
+                  const savingsPct   = annualSavingsPercent(plan, allPlans);
                   return (
                     <button
                       key={plan.id}
@@ -335,9 +342,9 @@ export default function BillingPage() {
                           ? 'border-brand-500 bg-badge-brand'
                           : 'border-surface-border hover:border-slate-500'}`}
                     >
-                      {isAnnual && (
+                      {savingsPct !== null && (
                         <span className="absolute top-3 right-3 text-[10px] font-bold text-status-success bg-badge-success border border-status-success/40 px-1.5 py-0.5 rounded-full">
-                          1 mois offert
+                          {formatSavings(savingsPct)}
                         </span>
                       )}
                       <p className="font-bold text-content-primary text-base">{plan.label}</p>

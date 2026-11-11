@@ -137,3 +137,126 @@ export async function deleteGrade(id: string): Promise<void> {
 
   if (error) throw new Error(error.message);
 }
+
+// ─── Frais de scolarité (migration 171) ───────────────────────────────────────
+// Un frais = une commande liée à un élève (orders.student_id, source
+// 'scolarite', motif dans `notes`) ; chaque versement = une ligne payments.
+// amount_paid / balance_due sont tenus à jour par la base (migration 112).
+
+export type FeePaymentMethod = 'cash' | 'card' | 'mobile_money';
+
+export interface SchoolFee {
+  id:          string;
+  created_at:  string;
+  updated_at:  string;
+  status:      'pending' | 'paid' | 'cancelled' | 'refunded';
+  total:       number;
+  amount_paid: number;
+  balance_due: number;
+  /** Motif du frais (« Mensualité novembre »…) */
+  notes:       string | null;
+  student: {
+    id:           string;
+    first_name:   string;
+    last_name:    string;
+    parent_name:  string | null;
+    parent_phone: string | null;
+    classroom_id: string | null;
+    classroom:    { name: string } | null;
+  } | null;
+  payments: { method: string; amount: number; paid_at: string }[];
+}
+
+/** Frais restant à encaisser — tous, les plus anciens d'abord (à relancer en priorité). */
+export async function getPendingSchoolFees(businessId: string): Promise<SchoolFee[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id, created_at, updated_at, status, total, amount_paid, balance_due, notes, student:edu_students(id, first_name, last_name, parent_name, parent_phone, classroom_id, classroom:edu_classrooms(name)), payments(method, amount, paid_at)')
+    .eq('business_id', businessId)
+    .not('student_id', 'is', null)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as SchoolFee[];
+}
+
+/** Derniers frais réglés, du plus récemment soldé au plus ancien. */
+export async function getPaidSchoolFees(businessId: string, limit = 200): Promise<SchoolFee[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id, created_at, updated_at, status, total, amount_paid, balance_due, notes, student:edu_students(id, first_name, last_name, parent_name, parent_phone, classroom_id, classroom:edu_classrooms(name)), payments(method, amount, paid_at)')
+    .eq('business_id', businessId)
+    .not('student_id', 'is', null)
+    .eq('status', 'paid')
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as SchoolFee[];
+}
+
+/** Somme des versements reçus sur des frais de scolarité depuis `sinceIso`. */
+export async function getSchoolFeesCollectedSince(businessId: string, sinceIso: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('amount, order:orders!inner(business_id, student_id)')
+    .eq('order.business_id', businessId)
+    .not('order.student_id', 'is', null)
+    .gte('paid_at', sinceIso);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+}
+
+/** Crée un frais pour un élève ; `paidAmount` > 0 l'encaisse (en tout ou partie) dans la foulée. */
+export async function createSchoolFee(params: {
+  businessId: string;
+  studentId:  string;
+  label:      string;
+  amount:     number;
+  paidAmount: number;
+  method:     FeePaymentMethod;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('create_school_fee', {
+    p_business_id: params.businessId,
+    p_student_id:  params.studentId,
+    p_label:       params.label,
+    p_amount:      params.amount,
+    p_paid_amount: params.paidAmount,
+    p_method:      params.method,
+  });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Émet le même frais « à payer » pour chaque élève actif de la classe. Renvoie le nombre créé. */
+export async function issueClassFees(params: {
+  businessId:  string;
+  classroomId: string;
+  label:       string;
+  amount:      number;
+}): Promise<number> {
+  const { data, error } = await supabase.rpc('issue_class_fees', {
+    p_business_id:  params.businessId,
+    p_classroom_id: params.classroomId,
+    p_label:        params.label,
+    p_amount:       params.amount,
+  });
+
+  if (error) throw new Error(error.message);
+  return data ?? 0;
+}
+
+/** Encaisse tout ou partie d'un frais en attente. Renvoie le reste dû. */
+export async function paySchoolFee(orderId: string, amount: number, method: FeePaymentMethod): Promise<number> {
+  const { data, error } = await supabase.rpc('pay_school_fee', {
+    p_order_id: orderId,
+    p_amount:   amount,
+    p_method:   method,
+  });
+
+  if (error) throw new Error(error.message);
+  return Number(data ?? 0);
+}

@@ -313,6 +313,53 @@ export function useOnboarding(businessId: string | undefined, businessType?: str
         },
       ];
 
+    // -- École / Formation (type 'education', inscription libre depuis la 169) ---
+    // Ordre de la rentrée : les élèves se rangent dans des classes, les notes
+    // se saisissent par élève.
+    } else if (effectiveType === 'education') {
+      const [
+        { count: classCount },
+        { count: studentCount },
+        { count: gradeCount },
+        { count: userCount },
+      ] = await Promise.all([
+        db.from('edu_classrooms').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('edu_students').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('edu_grades').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+        db.from('users').select('id', { count: 'exact', head: true }).eq('business_id', businessId),
+      ]);
+
+      newSteps = [
+        {
+          id: 'classes',
+          label: 'Créer vos classes',
+          description: 'Ajoutez chaque classe avec son niveau, son effectif et son professeur principal.',
+          href: '/classes',
+          done: (classCount ?? 0) > 0,
+        },
+        {
+          id: 'students',
+          label: 'Inscrire vos élèves',
+          description: 'Créez la fiche de chaque élève avec le contact de ses parents.',
+          href: '/eleves',
+          done: (studentCount ?? 0) > 0,
+        },
+        {
+          id: 'grades',
+          label: 'Saisir les premières notes',
+          description: 'Enregistrez une évaluation pour préparer les bulletins.',
+          href: '/bulletins',
+          done: (gradeCount ?? 0) > 0,
+        },
+        {
+          id: 'team',
+          label: 'Inviter vos enseignants',
+          description: 'Donnez accès à la direction et aux enseignants.',
+          href: '/admin',
+          done: (userCount ?? 0) > 1,
+        },
+      ];
+
     // -- Retail / Commerce (défaut) ---------------------------------------------
     } else {
       const [

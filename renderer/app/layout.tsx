@@ -13,11 +13,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
 
   title: {
-    default: 'ELM - Entreprise Lifecycle Management (Sénégal) | Caisse · Restaurant · École · Stocks · Compta · Location · Juridique',
+    // ≤ 60 caractères : au-delà, Google coupe le titre dans ses résultats
+    default: 'ELM — Logiciel de gestion et de caisse pour PME au Sénégal',
     template: '%s | ELM (Sénégal)',
   },
+  // ≤ ~160 caractères (longueur affichée par Google)
   description:
-    'ELM (Entreprise Lifecycle Management) Sénégal : Le logiciel de gestion tout-en-un conçu pour les PME sénégalaises. Caisse tactile, gestion scolaire (élèves, classes, bulletins), gestion restaurant, stocks, comptabilité OHADA, location de véhicules, réservations hôtels et dossiers juridiques. La solution de référence au Sénégal',
+    'Caisse, stocks, comptabilité OHADA, RH & paie, hôtel, location, cabinet juridique et école : le logiciel de gestion des PME au Sénégal. Essai gratuit 7 jours.',
   applicationName: 'ELM Sénégal',
   keywords: [
     // Fonctionnalités core
@@ -35,8 +37,6 @@ export const metadata: Metadata = {
     'gestion livraisons Sénégal', 'suivi livreur Sénégal', 'tracking commandes Sénégal',
     // Communication
     'WhatsApp business Sénégal', 'menu du jour WhatsApp', 'reçu WhatsApp Sénégal',
-    // Hors-ligne
-    'mode hors-ligne', 'caisse sans internet Sénégal',
     // Multi-établissements
     'multi-établissements Sénégal', 'gestion plusieurs boutiques',
     // Équipe
@@ -79,9 +79,9 @@ export const metadata: Metadata = {
     locale: 'fr_SN',
     url: BASE_URL,
     siteName: 'ELM Sénégal',
-    title: 'ELM - Entreprise Lifecycle Management (Sénégal) | Gestion PME Tout-en-un',
+    title: 'ELM — Logiciel de gestion tout-en-un pour PME au Sénégal',
     description:
-      'Solution complète pour PME au Sénégal : caisse, stocks, comptabilité OHADA, location, hôtellerie et dossiers juridiques. WhatsApp natif & mode hors-ligne. Essayez ELM gratuitement pendant 7 jours.',
+      'Caisse, stocks, comptabilité OHADA, RH & paie, location, hôtellerie, cabinet juridique et gestion scolaire. Reçus WhatsApp et boutique en ligne. Essayez ELM gratuitement pendant 7 jours.',
     images: [
       {
         url: '/og-image.png',
@@ -94,9 +94,9 @@ export const metadata: Metadata = {
 
   twitter: {
     card: 'summary_large_image',
-    title: 'ELM (Entreprise Lifecycle Management) Sénégal - Gestion PME Tout-en-un',
+    title: 'ELM — Logiciel de gestion tout-en-un pour PME au Sénégal',
     description:
-      'Caisse tactile, stocks, comptabilité OHADA, location, hôtellerie & dossiers juridiques au Sénégal. WhatsApp natif & hors-ligne.',
+      'Caisse, stocks, comptabilité OHADA, location, hôtellerie, juridique et école au Sénégal. Reçus WhatsApp et boutique en ligne.',
     images: ['/og-image.png'],
     creator: '@elmapp',
   },
@@ -143,10 +143,11 @@ const jsonLd = {
       '@type': 'SoftwareApplication',
       name: 'ELM (Entreprise Lifecycle Management) Sénégal',
       applicationCategory: 'BusinessApplication',
-      operatingSystem: 'Web, Windows',
+      // 'Windows' (app de bureau) à rajouter quand elle sera distribuée
+      operatingSystem: 'Web',
       url: BASE_URL,
       description:
-        'ELM (Entreprise Lifecycle Management) est le logiciel de gestion tout-en-un leader au Sénégal pour les PME : caisse tactile, stocks en temps réel, comptabilité OHADA, livraisons, WhatsApp natif, mode hors-ligne, multi-établissements, gestion hôtelière et dossiers juridiques.',
+        'ELM (Entreprise Lifecycle Management) est un logiciel de gestion tout-en-un pour les PME au Sénégal : caisse tactile, stocks en temps réel, comptabilité OHADA, livraisons, WhatsApp natif, boutique en ligne, multi-établissements, gestion hôtelière, dossiers juridiques et gestion scolaire.',
       offers: {
         '@type': 'Offer',
         price: '0',
@@ -166,7 +167,7 @@ const jsonLd = {
         'Facturation et devis',
         'Gestion des livraisons et suivi livreurs',
         'WhatsApp natif (menu du jour, promos, réponses clients)',
-        'Mode hors-ligne (encaissement sans internet)',
+        'Boutique en ligne (retrait ou livraison)',
         'Multi-établissements (plusieurs boutiques, un seul compte)',
         'Gestion d\'équipe et rôles employés',
         'Statistiques et rapports de ventes',

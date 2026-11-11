@@ -571,6 +571,8 @@ export async function getOrdersForDelivery(
       .eq('business_id', businessId)
       .in('status', ['paid', 'pending'])
       .neq('delivery_status', 'delivered')
+      // Frais de scolarité (migration 171) : des commandes sans colis à livrer
+      .neq('source', 'scolarite')
       .gte('created_at', since)
       .order('created_at', { ascending: true })
       .limit(limit) as never,

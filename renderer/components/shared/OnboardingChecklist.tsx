@@ -5,7 +5,7 @@ import {
   CheckCircle2, ChevronRight, X, Rocket, Sparkles,
   Tag, Package, Printer, Users, ShoppingCart,
   Building2, UserPlus, CalendarDays,
-  FolderOpen, Receipt, Car,
+  FolderOpen, Receipt, Car, LayoutGrid, GraduationCap,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -29,6 +29,10 @@ const STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   // location
   vehicles:    Car,
   contract:    Receipt,
+  // école
+  classes:     LayoutGrid,
+  students:    UserPlus,
+  grades:      GraduationCap,
 };
 
 const TOUR_STEPS_BY_TYPE: Record<string, TourStep[]> = {
@@ -55,6 +59,13 @@ const TOUR_STEPS_BY_TYPE: Record<string, TourStep[]> = {
     { id: 'checklist', title: 'Configuration de l\'Hôtel', content: 'Définissez vos types de chambres et commencez à enregistrer vos premières réservations.', selector: '#onboarding-checklist', position: 'bottom' },
     { id: 'sidebar', title: 'Espace Réception', content: 'Le calendrier des réservations et la gestion des clients sont à portée de clic.', selector: '#sidebar-nav', position: 'right' },
     { id: 'nav-hotel', title: 'Planning des Chambres', content: 'Visualisez d\'un coup d\'œil l\'occupation de votre établissement et les départs prévus.', selector: '#nav-item-hotel', position: 'right' },
+  ],
+  // Sans entrée dédiée, une école recevait le guide « boutique » (stocks, caisse)
+  education: [
+    { id: 'welcome', title: 'Bienvenue ! 🎓', content: 'Gérez vos élèves, vos classes et les bulletins de votre établissement au même endroit.', position: 'center' },
+    { id: 'checklist', title: 'Préparer la rentrée', content: 'Créez vos classes, inscrivez vos élèves, puis saisissez les premières notes.', selector: '#onboarding-checklist', position: 'bottom' },
+    { id: 'sidebar', title: 'Votre espace Scolarité', content: 'Élèves, classes, scolarité et bulletins sont regroupés ici.', selector: '#sidebar-nav', position: 'right' },
+    { id: 'nav-eleves', title: 'Base Élèves', content: 'Retrouvez chaque élève et le contact de ses parents en un instant.', selector: '#nav-item-eleves', position: 'right' },
   ],
   retail: [
     { id: 'welcome', title: 'Bienvenue ! 🛍️', content: 'ELM APP vous aide à piloter votre boutique, vos stocks et vos ventes au quotidien.', position: 'center' },

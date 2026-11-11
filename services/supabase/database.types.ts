@@ -7617,6 +7617,17 @@ export type Database = {
         Returns: string
       }
       create_order: { Args: { order_data: Json }; Returns: Json }
+      create_school_fee: {
+        Args: {
+          p_amount: number
+          p_business_id: string
+          p_label: string
+          p_method?: string
+          p_paid_amount?: number
+          p_student_id: string
+        }
+        Returns: string
+      }
       create_public_rental_request: { Args: { p_data: Json }; Returns: Json }
       create_public_reservation: { Args: { p_data: Json }; Returns: Json }
       create_subscription_invoice: {
@@ -7996,6 +8007,15 @@ export type Database = {
       invoke_workflow_processor: { Args: never; Returns: undefined }
       is_business_blocked: { Args: { p_business_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      issue_class_fees: {
+        Args: {
+          p_amount: number
+          p_business_id: string
+          p_classroom_id: string
+          p_label: string
+        }
+        Returns: number
+      }
       next_subscription_invoice_number: {
         Args: { p_date?: string }
         Returns: string
@@ -8028,6 +8048,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      pay_school_fee: {
+        Args: { p_amount: number; p_method?: string; p_order_id: string }
+        Returns: number
       }
       pay_service_order: {
         Args: { p_amount: number; p_id: string; p_method: string }

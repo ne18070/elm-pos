@@ -12,6 +12,7 @@ import {
   type Plan, type PaymentSettings,
 } from '@services/supabase/subscriptions';
 import { sendEmail } from '@services/resend';
+import { annualSavingsPercent, annualSavingsLabel, formatSavings } from '@/lib/plan-pricing';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase;
@@ -304,7 +305,12 @@ export default function SubscribePage() {
                             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
                               ${period === p ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'}`}>
                             {p === 'monthly' ? 'Mensuel' : (
-                              <span className="flex items-center gap-1">Annuel <span className="text-status-success">−10%</span></span>
+                              <span className="flex items-center gap-1">
+                                Annuel
+                                {annualSavingsLabel(allPlans) && (
+                                  <span className="text-status-success">{annualSavingsLabel(allPlans)}</span>
+                                )}
+                              </span>
                             )}
                           </button>
                         ))}
@@ -315,13 +321,14 @@ export default function SubscribePage() {
                     {shownPlans.map((plan) => {
                       const isAnnual = plan.duration_days >= 300;
                       const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
+                      const savingsPct = annualSavingsPercent(plan, allPlans);
                       return (
                         <button key={plan.id} onClick={() => setSelectedPlan(plan)}
                           className={`text-left p-5 rounded-2xl border transition-all relative
                             ${selectedPlan?.id === plan.id ? 'border-brand-500 bg-badge-brand' : 'border-surface-border hover:border-slate-500'}`}>
-                          {isAnnual && (
+                          {savingsPct !== null && (
                             <span className="absolute top-3 right-3 text-[10px] font-bold text-status-success bg-badge-success border border-status-success/40 px-1.5 py-0.5 rounded-full">
-                              1 mois offert
+                              {formatSavings(savingsPct)}
                             </span>
                           )}
                           <p className="font-bold text-content-primary text-base">{plan.label}</p>

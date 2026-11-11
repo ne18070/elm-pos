@@ -67,7 +67,7 @@ export function MarketingNav() {
             <>
               <Link
                 href="/login"
-                className={`text-sm transition-colors duration-300 hidden sm:block ${
+                className={`text-sm transition-colors duration-300 ${
                   scrolled ? 'text-content-muted hover:text-content-primary' : 'text-content-secondary hover:text-content-primary'
                 }`}
               >

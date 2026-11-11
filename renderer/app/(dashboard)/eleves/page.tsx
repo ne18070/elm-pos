@@ -1,9 +1,12 @@
 'use client';
 
 import { confirmAsync } from '@/components/shared/ConfirmDialog';
+import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 import { useState, useEffect } from 'react';
-import { Users, Plus, Pencil, Trash2, Search, Loader2, Save, X, GraduationCap, Phone, User } from 'lucide-react';
+import Link from 'next/link';
+import { Users, Plus, Pencil, Trash2, Search, Loader2, Save, X, GraduationCap, Phone, User, Receipt } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useCan } from '@/hooks/usePermission';
 import { useNotificationStore } from '@/store/notifications';
 import { toUserError } from '@/lib/user-error';
 import { getStudents, createStudent, updateStudent, deleteStudent, getClassrooms } from '@services/supabase/education';
@@ -12,6 +15,8 @@ import type { Student, Classroom } from '@pos-types';
 export default function ElevesPage() {
   const { business } = useAuthStore();
   const { success, error: notifError } = useNotificationStore();
+  const can = useCan();
+  const canCollectFees = can('view_scolarite');
 
   const [students, setStudents]     = useState<Student[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -122,6 +127,9 @@ export default function ElevesPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-6 max-w-6xl mx-auto space-y-6">
+        {/* Page d'arrivée d'une école après l'inscription (getDefaultRoute) */}
+        {business?.type === 'education' && <OnboardingChecklist />}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-badge-brand border border-brand-500/40 flex items-center justify-center">
@@ -195,7 +203,12 @@ export default function ElevesPage() {
                       <div>
                         <p className="text-content-primary">{s.parent_name || '-'}</p>
                         <p className="text-xs text-content-secondary flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {s.parent_phone || '-'}
+                          <Phone className="w-3 h-3" />
+                          {s.parent_phone ? (
+                            <a href={`tel:${s.parent_phone}`} className="hover:text-content-brand hover:underline">
+                              {s.parent_phone}
+                            </a>
+                          ) : '-'}
                         </p>
                       </div>
                     </td>
@@ -210,6 +223,16 @@ export default function ElevesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {canCollectFees && (
+                          <Link
+                            href={`/scolarite?eleve=${s.id}`}
+                            title="Encaisser des frais"
+                            aria-label={`Encaisser des frais pour ${s.first_name} ${s.last_name}`}
+                            className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary hover:text-content-brand"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </Link>
+                        )}
                         <button onClick={() => handleEdit(s)} className="p-1.5 rounded-lg hover:bg-surface-hover text-content-secondary">
                           <Pencil className="w-4 h-4" />
                         </button>
