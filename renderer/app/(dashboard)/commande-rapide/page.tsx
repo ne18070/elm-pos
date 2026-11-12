@@ -1,7 +1,8 @@
 'use client';
 
 import { confirmAsync } from '@/components/shared/ConfirmDialog';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { toUserError } from '@/lib/user-error';
 import { useAuthStore } from '@/store/auth';
 import { useCashSessionStore } from '@/store/cashSession';
@@ -21,7 +22,8 @@ import { enqueueToSync } from '@/lib/ipc';
 import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { generateDistributeurInvoice, printHtml } from '@/lib/invoice-templates';
 import { formatCurrency, generateId, cn } from '@/lib/utils';
-import { Users } from 'lucide-react';
+import { Lock, Users } from 'lucide-react';
+import { EmptyState, Skeleton } from '@/components/ui';
 import type { Order, Product, PaymentMethod, Coupon } from '@pos-types';
 import { ResellerRail } from '@/components/commande-rapide/ResellerRail';
 import { OrderGrid } from '@/components/commande-rapide/OrderGrid';
@@ -29,6 +31,19 @@ import { OrderSummary } from '@/components/commande-rapide/OrderSummary';
 import { FinalizeDialog, type FinalizeMode, type FinalizePayload } from '@/components/commande-rapide/FinalizeDialog';
 
 type ProductRow = Product & { wholesale_price?: number | null };
+
+/** Ligne de la grille → article de commande (même forme en ligne, hors ligne et sur la facture). */
+function toOrderItem(l: QuickLine) {
+  return {
+    product_id: l.product_id,
+    variant_id: l.variant_id,
+    name: l.name,
+    price: l.is_gift ? 0 : l.unit_price,
+    quantity: l.qty,
+    stock_consumption: l.stock_consumption,
+    notes: l.note,
+  };
+}
 
 export default function CommandeRapidePage() {
   const { user, business } = useAuthStore();
@@ -44,6 +59,9 @@ export default function CommandeRapidePage() {
   const [finalizeMode, setFinalizeMode] = useState<FinalizeMode | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
+  // Un seul client_order_id par finalisation : une nouvelle tentative après une
+  // erreur ne doit pas créer une seconde commande. Remis à zéro à la fermeture.
+  const clientOrderIdRef = useRef<string | null>(null);
 
   const activeResellerId = useQuickOrderStore((s) => s.activeResellerId);
   const lines = useQuickOrderStore((s) => s.lines);
@@ -61,7 +79,6 @@ export default function CommandeRapidePage() {
   const removeCoupon = useQuickOrderStore((s) => s.removeCoupon);
   const reconcileCoupons = useQuickOrderStore((s) => s.reconcileCoupons);
   const addGiftLine = useQuickOrderStore((s) => s.addGiftLine);
-  const removeGiftLine = useQuickOrderStore((s) => s.removeGiftLine);
   const replaceLines = useQuickOrderStore((s) => s.replaceLines);
   const clear = useQuickOrderStore((s) => s.clear);
 
@@ -136,9 +153,13 @@ export default function CommandeRapidePage() {
     let alive = true;
     getResellerClients(activeResellerId)
       .then((c) => { if (alive) setClients(c); })
-      .catch(() => { if (alive) setClients([]); });
+      .catch(() => {
+        if (!alive) return;
+        setClients([]);
+        warning('Clients du revendeur indisponibles — la commande reste possible, sans client final.');
+      });
     return () => { alive = false; };
-  }, [activeResellerId]);
+  }, [activeResellerId, warning]);
 
   // Règle POS : à chaque changement de commande, retirer les coupons dont le
   // seuil (montant / quantité) n'est plus atteint, et prévenir.
@@ -184,11 +205,10 @@ export default function CommandeRapidePage() {
 
   const handleCouponRemove = useCallback(
     (id: string) => {
-      const c = coupons.find((x) => x.id === id);
-      if (c?.type === 'free_item' && c.free_item_product_id) removeGiftLine(c.free_item_product_id);
+      // removeCoupon retire aussi la ligne offerte d'un coupon « article offert ».
       removeCoupon(id);
     },
-    [coupons, removeGiftLine, removeCoupon],
+    [removeCoupon],
   );
 
   const handleRecall = useCallback(async () => {
@@ -203,14 +223,25 @@ export default function CommandeRapidePage() {
       const [last] = await getResellerOrders(business.id, activeResellerId, 1);
       // Capage au stock disponible : une quantité hors stock ne peut pas entrer,
       // même par reprise. On cumule par produit pour les lignes multiples.
+      if (!last) {
+        warning('Aucune commande précédente à reprendre pour ce revendeur.');
+        return;
+      }
       const remaining = new Map<string, number>();
       let capped = false;
+      let repriced = 0;
       const newLines: QuickLine[] = [];
-      for (const it of last?.items ?? []) {
+      for (const it of last.items ?? []) {
         if (it.price <= 0) continue;
         const p = productMap.get(it.product_id);
         const v = it.variant_id ? p?.variants?.find((x) => x.id === it.variant_id) : undefined;
         const consumption = v?.stock_consumption && v.stock_consumption !== 1 ? v.stock_consumption : 1;
+        // On garde le prix pratiqué (souvent négocié), mais on signale l'écart
+        // avec le tarif de gros actuel.
+        if (p) {
+          const current = (p.wholesale_price ?? p.price) + (v?.price_modifier ?? 0);
+          if (Math.abs(current - it.price) > 0.005) repriced++;
+        }
 
         let qty = it.quantity;
         if (p?.track_stock) {
@@ -234,14 +265,23 @@ export default function CommandeRapidePage() {
           stock_consumption: consumption !== 1 ? consumption : undefined,
         });
       }
+      const when = new Date(last.created_at).toLocaleDateString('fr-FR');
       if (newLines.length === 0) {
-        warning('Aucune commande précédente à reprendre pour ce revendeur.');
+        warning(
+          capped
+            ? `Commande du ${when} non reprise : aucun de ses articles n'est en stock.`
+            : `La commande du ${when} ne contient aucun article payant à reprendre.`,
+        );
         return;
       }
       replaceLines(newLines);
-      const when = new Date(last!.created_at).toLocaleDateString('fr-FR');
-      if (capped) {
-        warning(`Commande du ${when} reprise — quantités ajustées au stock disponible.`);
+      const adjustments: string[] = [];
+      if (capped) adjustments.push('quantités ajustées au stock disponible');
+      if (repriced > 0) {
+        adjustments.push(`${repriced} prix différent${repriced > 1 ? 's' : ''} du tarif actuel, conservé${repriced > 1 ? 's' : ''}`);
+      }
+      if (adjustments.length > 0) {
+        warning(`Commande du ${when} reprise — ${adjustments.join(' ; ')}.`);
       } else {
         success(`${newLines.length} ligne(s) reprise(s) — commande du ${when}.`);
       }
@@ -254,19 +294,15 @@ export default function CommandeRapidePage() {
 
   const buildInvoiceOrder = useCallback(
     (order: Order, p: FinalizePayload, customerName: string, customerPhone: string): Order => {
-      const items = lines
-        .filter((l) => l.qty > 0)
-        .map((l) => ({
-          product_id: l.product_id,
-          variant_id: l.variant_id,
-          name: l.name,
-          price: l.is_gift ? 0 : l.unit_price,
-          quantity: l.qty,
-          total: l.is_gift ? 0 : Math.round(l.unit_price * l.qty * 100) / 100,
+      const items = lines.filter((l) => l.qty > 0).map((l) => {
+        const it = toOrderItem(l);
+        return {
+          ...it,
+          total: Math.round(it.price * it.quantity * 100) / 100,
           discount_amount: 0,
-          notes: l.note,
           product: { sku: l.sku ?? undefined },
-        }));
+        };
+      });
       const paidNow = p.mode === 'bl' ? 0 : p.mode === 'acompte' ? p.amount : totals.net;
       return {
         ...order,
@@ -287,36 +323,44 @@ export default function CommandeRapidePage() {
   const doFinalize = useCallback(
     async (p: FinalizePayload) => {
       if (!business || !user || !reseller) return;
-      setSubmitting(true);
-      setFinalizeError(null);
-
       if (hasOverStock) {
-        setSubmitting(false);
         setFinalizeError('Stock insuffisant sur une ou plusieurs lignes — ajustez les quantités.');
         return;
       }
+      setSubmitting(true);
+      setFinalizeError(null);
 
       const client = clients.find((c) => c.id === clientId) ?? null;
       const t = computeQuickTotals(lines, coupons);
-      const items = lines
-        .filter((l) => l.qty > 0)
-        .map((l) => ({
-          product_id: l.product_id,
-          variant_id: l.variant_id,
-          name: l.name,
-          price: l.is_gift ? 0 : l.unit_price,
-          quantity: l.qty,
-          stock_consumption: l.stock_consumption,
-          is_free_item: l.is_gift || undefined,
-          notes: l.note,
-        }));
+      const items = lines.filter((l) => l.qty > 0).map(toOrderItem);
       const paymentMethod: PaymentMethod = p.mode === 'cash' ? 'cash' : 'partial';
       const paymentAmount = p.mode === 'bl' ? 0 : p.mode === 'acompte' ? p.amount : t.net;
-      const clientOrderId = generateId();
+      const clientOrderId = (clientOrderIdRef.current ??= generateId());
       const cart = { items, coupons, discount_amount: 0, notes };
       const customerName = p.customerName || client?.name || reseller.name;
       const customerPhone = p.customerPhone || client?.phone || '';
       const address = deliveryAddress || reseller.address || undefined;
+
+      // N'échoue jamais : la commande est déjà enregistrée quand on imprime
+      // (sinon le caissier recommencerait → doublon).
+      const printInvoice = (order: Order, failHint: string) => {
+        try {
+          printHtml(
+            generateDistributeurInvoice(
+              buildInvoiceOrder(order, p, customerName, customerPhone),
+              business,
+              p.mode === 'bl' ? 'BON DE FACTURE' : 'FACTURE',
+              {
+                resellerName: reseller.name,
+                resellerClientName: client?.name,
+                resellerClientPhone: client?.phone ?? undefined,
+              },
+            ),
+          );
+        } catch {
+          warning(`Commande enregistrée, mais l'impression a échoué — ${failHint}`);
+        }
+      };
 
       try {
         const order = await createOrder({
@@ -338,19 +382,6 @@ export default function CommandeRapidePage() {
           delivery_address: address,
         });
 
-        printHtml(
-          generateDistributeurInvoice(
-            buildInvoiceOrder(order, p, customerName, customerPhone),
-            business,
-            p.mode === 'bl' ? 'BON DE FACTURE' : 'FACTURE',
-            {
-              resellerName: reseller.name,
-              resellerClientName: client?.name,
-              resellerClientPhone: client?.phone ?? undefined,
-            },
-          ),
-        );
-
         success(
           p.mode === 'bl'
             ? 'Bon de livraison créé'
@@ -358,6 +389,8 @@ export default function CommandeRapidePage() {
               ? 'Acompte enregistré'
               : 'Commande encaissée',
         );
+        printInvoice(order, "réimprimez-la depuis l'historique des commandes.");
+        clientOrderIdRef.current = null;
         clear();
         setFinalizeMode(null);
         setMobilePane('grid');
@@ -391,6 +424,13 @@ export default function CommandeRapidePage() {
           return;
         }
         warning('Hors ligne — commande enregistrée, synchronisation à la reconnexion.');
+        // Le livreur part avec son bon même sans réseau. Commande locale : le
+        // numéro imprimé vient du client_order_id (provisoire).
+        printInvoice(
+          { id: clientOrderId, created_at: new Date().toISOString(), business_id: business.id } as unknown as Order,
+          "réimprimez-la depuis l'historique une fois synchronisée.",
+        );
+        clientOrderIdRef.current = null;
         clear();
         setFinalizeMode(null);
         setMobilePane('grid');
@@ -404,12 +444,40 @@ export default function CommandeRapidePage() {
     ],
   );
 
-  if (!business) return null;
-  if (!hasFeature(business, 'revendeurs') || !can('view_commande_rapide')) {
+  if (!business) {
     return (
-      <div className="h-full flex items-center justify-center p-6 text-center text-sm text-content-muted">
-        La commande rapide nécessite la fonctionnalité Revendeurs.
+      <div className="h-full flex flex-col">
+        <div className="px-4 py-3 border-b border-surface-border space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-3 w-80 max-w-full" />
+        </div>
+        <div className="flex-1 p-4 space-y-3" aria-hidden>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-11 w-full" />
+          ))}
+        </div>
       </div>
+    );
+  }
+  if (!hasFeature(business, 'revendeurs')) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="Fonctionnalité Revendeurs non incluse"
+        description="La commande rapide fait partie du module Revendeurs, absent de votre offre actuelle."
+        action={<Link href="/billing" className="btn-primary h-11 px-4 inline-flex items-center text-sm">Voir les offres</Link>}
+        className="h-full"
+      />
+    );
+  }
+  if (!can('view_commande_rapide')) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="Accès non autorisé"
+        description="Votre rôle n'a pas accès à la commande rapide. Demandez à un administrateur de vous l'ouvrir."
+        className="h-full"
+      />
     );
   }
 
@@ -503,7 +571,7 @@ export default function CommandeRapidePage() {
           defaultPhone={selectedClient?.phone || reseller.phone || ''}
           submitting={submitting}
           error={finalizeError}
-          onCancel={() => { setFinalizeMode(null); setFinalizeError(null); }}
+          onCancel={() => { setFinalizeMode(null); setFinalizeError(null); clientOrderIdRef.current = null; }}
           onConfirm={doFinalize}
         />
       )}

@@ -95,7 +95,8 @@ interface QuickOrderState {
   setQty: (id: string, qty: number) => void;
   setUnitPrice: (id: string, price: number) => void;
   removeLine: (id: string) => void;
-  /** Charge un jeu de lignes complet — « Reprendre la dernière commande ». */
+  /** Remplace les lignes payantes — « Reprendre la dernière commande ».
+   *  Les lignes offertes des coupons en cours sont conservées. */
   replaceLines: (lines: QuickLine[]) => void;
   clear: () => void;
 }
@@ -280,7 +281,11 @@ export const useQuickOrderStore = create<QuickOrderState>()(
 
       removeLine: (id) => set((s) => ({ lines: s.lines.filter((l) => l.id !== id) })),
 
-      replaceLines: (lines) => set({ lines }),
+      // Les lignes offertes appartiennent aux coupons encore appliqués : on les
+      // garde (en fin de liste), sinon un coupon « article offert » resterait
+      // actif sans son article après une reprise.
+      replaceLines: (lines) =>
+        set((s) => ({ lines: [...lines.filter((l) => !l.is_gift), ...s.lines.filter((l) => l.is_gift)] })),
 
       clear: () => {
         const { activeResellerId, draftsByReseller } = get();
