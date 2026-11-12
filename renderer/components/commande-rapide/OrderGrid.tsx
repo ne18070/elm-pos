@@ -10,6 +10,8 @@ import { formatCurrency, cn } from '@/lib/utils';
 interface Props {
   products: QuickProductInput[];
   currency: string;
+  /** Classes de visibilité posées par la page (volets mobile) — doit contenir `flex` ou `hidden`. */
+  className?: string;
 }
 
 const num = (v: string) => {
@@ -60,7 +62,7 @@ function NumCell({
   );
 }
 
-export function OrderGrid({ products, currency }: Props) {
+export function OrderGrid({ products, currency, className = 'flex' }: Props) {
   const lines = useQuickOrderStore((s) => s.lines);
   const addProduct = useQuickOrderStore((s) => s.addProduct);
   const setQty = useQuickOrderStore((s) => s.setQty);
@@ -186,7 +188,7 @@ export function OrderGrid({ products, currency }: Props) {
   };
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+    <div className={cn('flex-1 min-w-0 flex-col overflow-hidden', className)}>
       {/* Recherche / ajout */}
       <div ref={boxRef} className="px-4 py-2.5 border-b border-surface-border relative">
         <div className="relative">
@@ -400,8 +402,8 @@ export function OrderGrid({ products, currency }: Props) {
         )}
       </div>
 
-      {/* Aide clavier */}
-      <div className="px-4 py-1.5 border-t border-surface-border flex items-center gap-3 text-[10px] text-content-muted">
+      {/* Aide clavier — sans objet au tactile */}
+      <div className="px-4 py-1.5 border-t border-surface-border hidden sm:flex items-center gap-3 text-[10px] text-content-muted">
         <span className="inline-flex items-center gap-1">
           <kbd className="border border-surface-border rounded px-1 py-0.5 font-sans">Entrée</kbd>
           ajoute l'article

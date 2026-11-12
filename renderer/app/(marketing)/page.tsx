@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   ShoppingCart,
   Truck,
@@ -20,34 +20,51 @@ import {
   Car,
   Utensils,
   GraduationCap,
-} from 'lucide-react';
-import { useAuthStore } from '@/store/auth';
-import { usePermissionsStore } from '@/store/permissions';
-import { getPlans, type Plan } from '@services/supabase/subscriptions';
-import { displayCurrency } from '@/lib/utils';
-import { getDefaultRoute } from '@/lib/getDefaultRoute';
-import { useUrlTab } from '@/hooks/useUrlTab';
+  Shirt,
+  Hammer,
+  Croissant,
+  Coffee,
+  Sandwich,
+  Sparkles,
+  Scissors,
+  CakeSlice,
+} from "lucide-react";
+import { useAuthStore } from "@/store/auth";
+import { usePermissionsStore } from "@/store/permissions";
+import { getPlans, type Plan } from "@services/supabase/subscriptions";
+import { displayCurrency } from "@/lib/utils";
+import { getDefaultRoute } from "@/lib/getDefaultRoute";
+import { useUrlTab } from "@/hooks/useUrlTab";
 import {
-  RECOMMENDED_PLAN_NAME, isAnnualPlan, annualSavingsPercent, annualSavingsLabel, formatSavings,
-} from '@/lib/plan-pricing';
+  RECOMMENDED_PLAN_NAME,
+  isAnnualPlan,
+  annualSavingsPercent,
+  annualSavingsLabel,
+  formatSavings,
+} from "@/lib/plan-pricing";
 
 // Message pré-rempli : le visiteur n'a plus qu'à envoyer
-const WHATSAPP_URL = `https://wa.me/221772211126?text=${encodeURIComponent("Bonjour, je souhaite une démonstration d'ELM.")}`;
+const WHATSAPP_URL = `https://wa.me/221772211126?text=${encodeURIComponent(
+  "Bonjour, je souhaite une démonstration d'ELM.",
+)}`;
 
 /** Accueil du métier de l'utilisateur connecté (mêmes droits que le menu de MarketingNav). */
 function useSpaceHref() {
   const { user, business } = useAuthStore();
   const { overrides } = usePermissionsStore();
-  return user ? getDefaultRoute(user.role, business, overrides) : '/login';
+  return user ? getDefaultRoute(user.role, business, overrides) : "/login";
 }
 
 /** Hauteur des captures WebP (toutes en 1600 px de large) : déclarée pour éviter les sauts de mise en page. */
 const SHOT_HEIGHT: Record<string, number> = {
-  '/screenshots/02-pos-main.webp': 763,
-  '/screenshots/20-contrats-location.webp': 751,
-  '/screenshots/33-gestion-scolaire.webp': 760,
+  "/screenshots/02-pos-main.webp": 763,
+  "/screenshots/20-contrats-location.webp": 751,
+  "/screenshots/33-gestion-scolaire.webp": 760,
 };
-const shotSize = (src: string) => ({ width: 1600, height: SHOT_HEIGHT[src] ?? 1000 });
+const shotSize = (src: string) => ({
+  width: 1600,
+  height: SHOT_HEIGHT[src] ?? 1000,
+});
 
 /**
  * « Vous êtes… » : un choix de métier qui montre l'essentiel pour ce métier et
@@ -56,52 +73,108 @@ const shotSize = (src: string) => ({ width: 1600, height: SHOT_HEIGHT[src] ?? 10
  */
 const SECTOR_CHOICES = [
   {
-    id: 'boutique', label: 'Commerce', icon: Store,
-    points: ['Caisse rapide avec lecteur de codes-barres', 'Stocks, variantes et alertes de rupture', 'Prix de gros et revendeurs'],
-    shot: '/screenshots/10-products-list.webp', alt: 'Gestion des produits et des stocks',
+    id: "boutique",
+    label: "Commerce",
+    icon: Store,
+    points: [
+      "Caisse rapide avec lecteur de codes-barres",
+      "Stocks, variantes et alertes de rupture",
+      "Prix de gros et revendeurs",
+    ],
+    shot: "/screenshots/10-products-list.webp",
+    alt: "Gestion des produits et des stocks",
   },
   {
-    id: 'restaurant', label: 'Restaurant', icon: Utensils,
-    points: ['Plan de salle et suivi des tables', 'Menu du jour diffusé sur WhatsApp', 'Commandes à emporter et livraisons'],
-    shot: '/screenshots/06-menu-du-jour.webp', alt: 'Menu du jour du restaurant',
+    id: "restaurant",
+    label: "Restaurant",
+    icon: Utensils,
+    points: [
+      "Plan de salle et suivi des tables",
+      "Menu du jour diffusé sur WhatsApp",
+      "Commandes à emporter et livraisons",
+    ],
+    shot: "/screenshots/06-menu-du-jour.webp",
+    alt: "Menu du jour du restaurant",
   },
   {
-    id: 'hotel', label: 'Hôtel', icon: BedDouble,
-    points: ['Planning des chambres et réservations', 'Arrivées et départs guidés', 'Consommations bar et restaurant sur la note'],
-    shot: '/screenshots/14-hotel-management.webp', alt: 'Gestion hôtelière',
+    id: "hotel",
+    label: "Hôtel",
+    icon: BedDouble,
+    points: [
+      "Planning des chambres et réservations",
+      "Arrivées et départs guidés",
+      "Consommations bar et restaurant sur la note",
+    ],
+    shot: "/screenshots/14-hotel-management.webp",
+    alt: "Gestion hôtelière",
   },
   {
-    id: 'location', label: 'Location auto', icon: Car,
-    points: ['Disponibilité de la flotte', 'Contrats et signature en ligne', 'Suivi des paiements'],
-    shot: '/screenshots/20-contrats-location.webp', alt: 'Contrats de location de véhicules',
+    id: "location",
+    label: "Location auto",
+    icon: Car,
+    points: [
+      "Disponibilité de la flotte",
+      "Contrats et signature en ligne",
+      "Suivi des paiements",
+    ],
+    shot: "/screenshots/20-contrats-location.webp",
+    alt: "Contrats de location de véhicules",
   },
   {
-    id: 'juridique', label: 'Cabinet juridique', icon: Scale,
-    points: ['Dossiers et procédures OHADA', 'Honoraires calculés et facturés', 'Clients et pièces centralisés'],
-    shot: '/screenshots/15-dossiers-clients.webp', alt: 'Dossiers juridiques',
+    id: "juridique",
+    label: "Cabinet juridique",
+    icon: Scale,
+    points: [
+      "Dossiers et procédures OHADA",
+      "Honoraires calculés et facturés",
+      "Clients et pièces centralisés",
+    ],
+    shot: "/screenshots/15-dossiers-clients.webp",
+    alt: "Dossiers juridiques",
   },
   {
-    id: 'education', label: 'École', icon: GraduationCap,
-    points: ['Élèves, classes et contacts des parents', 'Frais de scolarité : qui a payé, qui relancer', 'Notes et bulletins'],
-    shot: '/screenshots/33-gestion-scolaire.webp', alt: 'Gestion scolaire',
+    id: "education",
+    label: "École",
+    icon: GraduationCap,
+    points: [
+      "Élèves, classes et contacts des parents",
+      "Frais de scolarité : qui a payé, qui relancer",
+      "Notes et bulletins",
+    ],
+    shot: "/screenshots/33-gestion-scolaire.webp",
+    alt: "Gestion scolaire",
   },
   {
-    id: 'rh', label: 'RH & paie', icon: Users,
-    points: ['Fiches employés et contrats', 'Présences, congés et paie', 'Espace personnel pour chaque employé'],
-    shot: '/screenshots/23-staff-management.webp', alt: 'Gestion du personnel',
+    id: "rh",
+    label: "RH & paie",
+    icon: Users,
+    points: [
+      "Fiches employés et contrats",
+      "Présences, congés et paie",
+      "Espace personnel pour chaque employé",
+    ],
+    shot: "/screenshots/23-staff-management.webp",
+    alt: "Gestion du personnel",
   },
 ] as const;
-type SectorChoice = (typeof SECTOR_CHOICES)[number]['id'] | 'tous';
-const SECTOR_IDS: readonly SectorChoice[] = ['tous', ...SECTOR_CHOICES.map((s) => s.id)];
+type SectorChoice = (typeof SECTOR_CHOICES)[number]["id"] | "tous";
+const SECTOR_IDS: readonly SectorChoice[] = [
+  "tous",
+  ...SECTOR_CHOICES.map((s) => s.id),
+];
 
 function Hero() {
   const { user } = useAuthStore();
   const spaceHref = useSpaceHref();
   // Porté par l'URL (?secteur=education) : un lien partagé ou une publicité ciblée arrive sur le bon métier
-  const [sectorId, setSectorId] = useUrlTab<SectorChoice>('tous', SECTOR_IDS, 'secteur');
+  const [sectorId, setSectorId] = useUrlTab<SectorChoice>(
+    "tous",
+    SECTOR_IDS,
+    "secteur",
+  );
   const sector = SECTOR_CHOICES.find((s) => s.id === sectorId) ?? null;
-  const signupHref = sector ? `/signup?secteur=${sector.id}` : '/signup';
-  const heroShot = sector?.shot ?? '/screenshots/02-pos-main.webp';
+  const signupHref = sector ? `/signup?secteur=${sector.id}` : "/signup";
+  const heroShot = sector?.shot ?? "/screenshots/02-pos-main.png";
 
   return (
     <section className="relative min-h-screen flex flex-col justify-center px-5 overflow-hidden bg-surface">
@@ -111,8 +184,8 @@ function Hero() {
         className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
+            "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
         }}
       />
 
@@ -125,11 +198,15 @@ function Hero() {
           <h1 className="text-4xl sm:text-5xl md:text-[56px] font-bold text-content-primary leading-[1.1] tracking-tight mb-6">
             Gérez votre activité au Sénégal
             <br />
-            <span className="text-content-secondary">sans vous compliquer la vie.</span>
+            <span className="text-content-secondary">
+              sans vous compliquer la vie.
+            </span>
           </h1>
 
           <p className="text-lg text-content-secondary leading-relaxed max-w-xl mb-10">
-            Caisse, stocks, comptabilité OHADA, RH & paie, location, hôtellerie, juridique et gestion scolaire. La solution tout-en-un conçue pour les PME sénégalaises.
+            Caisse, stocks, comptabilité, RH & paie, location, hôtellerie,
+            juridique et gestion scolaire. La solution tout-en-un conçue pour
+            les sénégalaises.
           </p>
 
           {/* Boutons avant les pastilles : sur téléphone, ils restent dans le premier écran */}
@@ -158,11 +235,56 @@ function Hero() {
               </>
             )}
           </div>
-
+          {/* Matériel de caisse */}
+          <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-content-primary">
+                Fonctionne avec votre matériel de caisse
+              </h3>
+              <p className="text-sm text-content-secondary leading-relaxed">
+                Sur l&apos;application de bureau, ELM pilote directement votre
+                équipement. Branchez, encaissez — pas de configuration
+                compliquée.
+              </p>
+              <ul className="space-y-2">
+                {[
+                  "Imprimante de tickets ESC/POS (USB & réseau)",
+                  "Scanner de codes-barres",
+                  "Tiroir-caisse",
+                  "Cartes NFC pour la fidélité",
+                ].map((p) => (
+                  <li
+                    key={p}
+                    className="flex items-start gap-2.5 text-sm text-content-secondary"
+                  >
+                    <Check className="w-4 h-4 text-brand-300 shrink-0 mt-0.5" />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative">
+              <div className="absolute -inset-4 bg-brand-500/10 blur-3xl rounded-[40px]" />
+              <img
+                src="/images/pos-terminal-elm.webp"
+                width={1024}
+                height={1024}
+                className="relative rounded-2xl border border-surface-border shadow-2xl w-full"
+                loading="lazy"
+                alt="Terminal de caisse avec l'application ELM à l'écran — imprimante de tickets, tiroir-caisse et scanner"
+              />
+            </div>
+          </div>
           {/* Vous êtes… — un second appui sur le métier choisi revient à la vue générale */}
           <div className="max-w-2xl">
-            <p className="text-sm font-medium text-content-secondary mb-3">Vous êtes :</p>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Choisissez votre métier">
+            <p className="text-sm font-medium text-content-secondary mb-3">
+              Vous êtes :
+            </p>
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="Choisissez votre métier"
+            >
               {SECTOR_CHOICES.map((s) => {
                 const active = s.id === sectorId;
                 return (
@@ -170,11 +292,11 @@ function Hero() {
                     key={s.id}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => setSectorId(active ? 'tous' : s.id)}
+                    onClick={() => setSectorId(active ? "tous" : s.id)}
                     className={`flex items-center gap-1.5 h-10 px-3.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors ${
                       active
-                        ? 'bg-brand-600 border-brand-600 text-content-primary'
-                        : 'bg-surface-card border-surface-border text-content-primary hover:border-brand-500/40'
+                        ? "bg-brand-600 border-brand-600 text-content-primary"
+                        : "bg-surface-card border-surface-border text-content-primary hover:border-brand-500/40"
                     }`}
                   >
                     <s.icon className="w-3.5 h-3.5" />
@@ -187,7 +309,10 @@ function Hero() {
             {sector && (
               <ul className="mt-5 space-y-2">
                 {sector.points.map((point) => (
-                  <li key={point} className="flex items-start gap-2.5 text-sm text-content-secondary">
+                  <li
+                    key={point}
+                    className="flex items-start gap-2.5 text-sm text-content-secondary"
+                  >
                     <Check className="w-4 h-4 text-brand-300 shrink-0 mt-0.5" />
                     {point}
                   </li>
@@ -203,7 +328,7 @@ function Hero() {
             key={heroShot}
             src={heroShot}
             {...shotSize(heroShot)}
-            alt={sector?.alt ?? 'Caisse ELM'}
+            alt={sector?.alt ?? "Caisse ELM"}
             className="relative rounded-2xl border border-surface-border shadow-2xl w-full max-w-5xl mx-auto bg-surface-card"
           />
         </div>
@@ -215,65 +340,65 @@ function Hero() {
 const FEATURES = [
   {
     icon: ShoppingCart,
-    title: 'Caisse tactile',
-    desc: 'Interface ultra-rapide optimisée pour le scan et le tactile. Reçus WhatsApp instantanés.',
+    title: "Caisse tactile",
+    desc: "Interface ultra-rapide optimisée pour le scan et le tactile. Reçus WhatsApp instantanés.",
   },
   {
     icon: Package,
-    title: 'Gestion des stocks',
-    desc: 'Suivi en temps réel, alertes de rupture, gestion des variantes et prix de gros.',
+    title: "Gestion des stocks",
+    desc: "Suivi en temps réel, alertes de rupture, gestion des variantes et prix de gros.",
   },
   {
     icon: Receipt,
-    title: 'Comptabilité OHADA',
-    desc: 'Génération automatique des journaux, bilans et résultats aux normes africaines.',
+    title: "Comptabilité OHADA",
+    desc: "Génération automatique des journaux, bilans et résultats aux normes africaines.",
   },
   {
     icon: Truck,
-    title: 'Livraisons',
-    desc: 'Suivi des livreurs sur le terrain et vérification des colis par scan.',
+    title: "Livraisons",
+    desc: "Suivi des livreurs sur le terrain et vérification des colis par scan.",
   },
   {
     icon: MessageCircle,
-    title: 'WhatsApp',
-    desc: 'Envoi automatique des factures PDF et communication directe avec vos clients.',
+    title: "WhatsApp",
+    desc: "Envoi automatique des factures PDF et communication directe avec vos clients.",
   },
   {
     // Le mode hors ligne n'existe que dans l'app de bureau, pas encore distribuée :
     // à remettre (carte + pastille + métadonnées du layout racine) quand elle le sera.
     icon: Store,
-    title: 'Boutique en ligne',
-    desc: 'Vos produits en ligne avec un lien à partager : vos clients commandent en retrait ou en livraison.',
+    title: "Boutique en ligne",
+    desc: "Vos produits en ligne avec un lien à partager : vos clients commandent en retrait ou en livraison.",
   },
   {
     icon: Globe,
-    title: 'Multi-établissements',
-    desc: 'Gérez plusieurs boutiques ou points de vente depuis un seul compte centralisé.',
+    title: "Multi-établissements",
+    desc: "Gérez plusieurs boutiques ou points de vente depuis un seul compte centralisé.",
   },
   {
     icon: Users,
-    title: 'Gestion RH & Paie (SIRH)',
-    desc: 'Employés, présences, paie configurable, congés et espace self-service pour votre équipe.',
+    title: "Gestion RH & Paie (SIRH)",
+    desc: "Employés, présences, paie configurable, congés et espace self-service pour votre équipe.",
   },
   {
     icon: Car,
-    title: 'Location de véhicules',
-    desc: 'Contrats numériques, signature électronique, suivi des disponibilités et encaissement.',
+    title: "Location de véhicules",
+    desc: "Contrats numériques, signature électronique, suivi des disponibilités et encaissement.",
   },
   {
     icon: BedDouble,
-    title: 'Hôtellerie & Réservations',
-    desc: 'Gestion des chambres, check-in/out, réservations en ligne et facturation unifiée.',
+    title: "Hôtellerie & Réservations",
+    desc: "Gestion des chambres, check-in/out, réservations en ligne et facturation unifiée.",
   },
   {
     icon: Scale,
-    title: 'Dossiers juridiques',
+    title: "Dossiers juridiques",
     desc: "Suivi des procédures OHADA, gestion documentaire et facturation d'honoraires.",
   },
   {
     icon: GraduationCap,
-    title: 'Gestion scolaire',
-    desc: 'Suivi des élèves, gestion des classes, bulletins de notes et paiements de scolarité.',
+    title: "Gestion scolaire",
+    desc: "Suivi des élèves, gestion des classes, bulletins de notes et paiements de scolarité.",
   },
 ];
 
@@ -282,8 +407,12 @@ function Features() {
     <section id="features" className="py-24 px-5 bg-surface">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
-          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Expertise</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Une solution complète</h2>
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
+            Expertise
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">
+            Une solution complète
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -296,8 +425,12 @@ function Features() {
                 <Icon className="w-5 h-5 text-brand-300" />
               </div>
               <div>
-                <h3 className="text-content-primary font-bold text-base mb-2">{title}</h3>
-                <p className="text-sm text-content-muted leading-relaxed">{desc}</p>
+                <h3 className="text-content-primary font-bold text-base mb-2">
+                  {title}
+                </h3>
+                <p className="text-sm text-content-muted leading-relaxed">
+                  {desc}
+                </p>
               </div>
             </div>
           ))}
@@ -305,22 +438,30 @@ function Features() {
 
         <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-content-primary">Suivi des stocks et inventaire</h3>
-            <p className="text-sm text-content-secondary">Gérez vos variantes et vos prix de gros en quelques clics.</p>
+            <h3 className="text-xl font-bold text-content-primary">
+              Suivi des stocks et inventaire
+            </h3>
+            <p className="text-sm text-content-secondary">
+              Gérez vos variantes et vos prix de gros en quelques clics.
+            </p>
             <img
               src="/screenshots/10-products-list.webp"
-              {...shotSize('/screenshots/10-products-list.webp')}
+              {...shotSize("/screenshots/10-products-list.webp")}
               className="rounded-xl border border-surface-border shadow-xl bg-surface-card"
               loading="lazy"
               alt="Suivi des stocks"
             />
           </div>
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-content-primary">Analytique et rapports</h3>
-            <p className="text-sm text-content-secondary">Visualisez votre chiffre d'affaires et vos marges en temps réel.</p>
+            <h3 className="text-xl font-bold text-content-primary">
+              Analytique et rapports
+            </h3>
+            <p className="text-sm text-content-secondary">
+              Visualisez votre chiffre d'affaires et vos marges en temps réel.
+            </p>
             <img
               src="/screenshots/17-analytics.webp"
-              {...shotSize('/screenshots/17-analytics.webp')}
+              {...shotSize("/screenshots/17-analytics.webp")}
               className="rounded-xl border border-surface-border shadow-xl bg-surface-card"
               loading="lazy"
               alt="Analytique et rapports"
@@ -342,67 +483,67 @@ const SECTEURS: {
 }[] = [
   {
     icon: Store,
-    iconColor: 'text-status-warning',
-    iconBg: 'bg-badge-warning',
-    border: 'border-surface-border',
-    title: 'Commerce & Distribution',
-    desc: 'Stocks, revendeurs, fournisseurs, prix de gros.',
+    iconColor: "text-status-warning",
+    iconBg: "bg-badge-warning",
+    border: "border-surface-border",
+    title: "Commerce & Distribution",
+    desc: "Stocks, revendeurs, fournisseurs, prix de gros.",
   },
   {
     icon: Utensils,
-    iconColor: 'text-status-orange',
-    iconBg: 'bg-badge-orange',
-    border: 'border-orange-500/20',
-    title: 'Restaurant / Café',
-    desc: 'Menu du jour, plan de salle, commandes en cuisine et WhatsApp.',
+    iconColor: "text-status-orange",
+    iconBg: "bg-badge-orange",
+    border: "border-orange-500/20",
+    title: "Restaurant / Café",
+    desc: "Menu du jour, plan de salle, commandes en cuisine et WhatsApp.",
   },
   {
     icon: ShoppingCart,
-    iconColor: 'text-brand-300',
-    iconBg: 'bg-badge-info',
-    border: 'border-surface-border',
-    title: 'Boutique & Retail',
-    desc: 'Caisse rapide, codes-barres, variantes, promotions.',
+    iconColor: "text-brand-300",
+    iconBg: "bg-badge-info",
+    border: "border-surface-border",
+    title: "Boutique & Retail",
+    desc: "Caisse rapide, codes-barres, variantes, promotions.",
   },
   {
     icon: Car,
-    iconColor: 'text-status-warning',
-    iconBg: 'bg-badge-warning',
-    border: 'border-surface-border',
-    title: 'Location de véhicules',
-    desc: 'Contrats, signature électronique, disponibilités et encaissements.',
+    iconColor: "text-status-warning",
+    iconBg: "bg-badge-warning",
+    border: "border-surface-border",
+    title: "Location de véhicules",
+    desc: "Contrats, signature électronique, disponibilités et encaissements.",
   },
   {
     icon: BedDouble,
-    iconColor: 'text-status-info',
-    iconBg: 'bg-badge-info',
-    border: 'border-surface-border',
-    title: 'Hôtellerie',
-    desc: 'Réservations, check-in/out, services additionnels.',
+    iconColor: "text-status-info",
+    iconBg: "bg-badge-info",
+    border: "border-surface-border",
+    title: "Hôtellerie",
+    desc: "Réservations, check-in/out, services additionnels.",
   },
   {
     icon: GraduationCap,
-    iconColor: 'text-brand-300',
-    iconBg: 'bg-badge-info',
-    border: 'border-surface-border',
-    title: 'Éducation & Formation',
-    desc: 'Gestion des élèves, classes, scolarité et bulletins scolaires.',
+    iconColor: "text-brand-300",
+    iconBg: "bg-badge-info",
+    border: "border-surface-border",
+    title: "Éducation & Formation",
+    desc: "Gestion des élèves, classes, scolarité et bulletins scolaires.",
   },
   {
     icon: Scale,
-    iconColor: 'text-content-secondary',
-    iconBg: 'bg-surface-input',
-    border: 'border-surface-border',
-    title: 'Cabinet juridique',
-    desc: 'Dossiers, honoraires, OHADA, juridictions sénégalaises.',
+    iconColor: "text-content-secondary",
+    iconBg: "bg-surface-input",
+    border: "border-surface-border",
+    title: "Cabinet juridique",
+    desc: "Dossiers, honoraires, OHADA, juridictions sénégalaises.",
   },
   {
     icon: Users,
-    iconColor: 'text-status-success',
-    iconBg: 'bg-badge-success',
-    border: 'border-surface-border',
-    title: 'Prestation de service',
-    desc: 'Devis, factures, suivi clients, honoraires et encaissements.',
+    iconColor: "text-status-success",
+    iconBg: "bg-badge-success",
+    border: "border-surface-border",
+    title: "Prestation de service",
+    desc: "Devis, factures, suivi clients, honoraires et encaissements.",
   },
 ];
 
@@ -411,26 +552,139 @@ function Secteurs() {
     <section id="secteurs" className="py-24 px-5 bg-surface">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
-          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Secteurs</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Adapté à votre activité au Sénégal</h2>
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
+            Secteurs
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">
+            Adapté à votre activité au Sénégal
+          </h2>
           <p className="text-content-muted mt-2 text-sm max-w-md">
-            ELM se configure selon votre secteur d&apos;activité. Une expertise locale pour les entreprises sénégalaises.
+            ELM se configure selon votre secteur d&apos;activité. Une expertise
+            locale pour les entreprises sénégalaises.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {SECTEURS.map(({ icon: Icon, iconColor, iconBg, border, title, desc }) => (
+          {SECTEURS.map(
+            ({ icon: Icon, iconColor, iconBg, border, title, desc }) => (
+              <div
+                key={title}
+                className={`flex items-start gap-4 p-5 rounded-xl border bg-surface-card ${border} transition-colors`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}
+                >
+                  <Icon className={`w-4 h-4 ${iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-content-primary font-medium text-sm mb-1">
+                    {title}
+                  </p>
+                  <p className="text-xs text-content-secondary leading-relaxed">
+                    {desc}
+                  </p>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Cartes illustrées : palette terre/ocre/sauge (clin d'œil aux tissus wax),
+// motifs SVG décoratifs — aucune photo à gérer.
+const METIERS: {
+  label: string;
+  icon: React.ElementType;
+  bg: string;
+  fg: string;
+}[] = [
+  { label: "Prêt-à-porter", icon: Shirt, bg: "#F4E3D7", fg: "#A34F2C" },
+  { label: "Quincaillerie", icon: Hammer, bg: "#E8E6E1", fg: "#55534C" },
+  { label: "Restaurant", icon: Utensils, bg: "#F6E8C9", fg: "#9C6B16" },
+  { label: "Supermarché", icon: ShoppingCart, bg: "#E3EDDC", fg: "#4F7942" },
+  { label: "Épicerie", icon: Store, bg: "#F2EBDD", fg: "#8A6D3B" },
+  { label: "Boulangerie", icon: Croissant, bg: "#F6E3C5", fg: "#A3652A" },
+  { label: "Cafétéria", icon: Coffee, bg: "#EAE0D5", fg: "#6F4E37" },
+  { label: "Fast-food", icon: Sandwich, bg: "#F4E0DC", fg: "#A04A3F" },
+  { label: "Maison de beauté", icon: Sparkles, bg: "#F2DEE7", fg: "#99456B" },
+  { label: "Maison de mode", icon: Scissors, bg: "#E0E4F2", fg: "#3F4C8A" },
+  { label: "Pâtisserie", icon: CakeSlice, bg: "#FBE7EE", fg: "#B0487A" },
+];
+
+function Metiers() {
+  return (
+    <section id="metiers" className="py-24 px-5 bg-surface">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-10">
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
+            Métiers
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">
+            Des commerces d&apos;ici, gérés avec ELM
+          </h2>
+          <p className="text-content-muted mt-2 text-sm max-w-md">
+            Boutiques, ateliers et restaurants africains : chaque métier a sa
+            caisse, son stock et ses reçus — sans rien configurer de compliqué.
+          </p>
+        </div>
+
+        {/* Mobile : bande défilante avec snap · Desktop : grille */}
+        <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-5 px-5 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible">
+          {METIERS.map(({ label, icon: Icon, bg, fg }) => (
             <div
-              key={title}
-              className={`flex items-start gap-4 p-5 rounded-xl border bg-surface-card ${border} transition-colors`}
+              key={label}
+              className="relative w-40 lg:w-auto shrink-0 snap-start aspect-[4/5] rounded-2xl overflow-hidden group"
+              style={{ backgroundColor: bg }}
             >
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
-                <Icon className={`w-4 h-4 ${iconColor}`} />
+              {/* Motifs décoratifs (cercles, zigzag, points) */}
+              <svg
+                className="absolute inset-0 w-full h-full"
+                viewBox="0 0 160 200"
+                fill="none"
+                aria-hidden
+                preserveAspectRatio="xMidYMid slice"
+              >
+                <circle cx="132" cy="26" r="48" fill={fg} opacity="0.10" />
+                <circle cx="14" cy="176" r="34" fill={fg} opacity="0.08" />
+                <path
+                  d="M12 30 l8 -8 l8 8 l8 -8 l8 8 l8 -8 l8 8"
+                  stroke={fg}
+                  strokeWidth="2.5"
+                  opacity="0.25"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {[0, 1, 2, 3].map((r) =>
+                  [0, 1, 2, 3].map((c) => (
+                    <circle
+                      key={`${r}-${c}`}
+                      cx={116 + c * 10}
+                      cy={148 + r * 10}
+                      r="1.6"
+                      fill={fg}
+                      opacity="0.3"
+                    />
+                  )),
+                )}
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110"
+                  style={{ backgroundColor: "rgba(255,255,255,0.55)" }}
+                >
+                  <Icon className="w-9 h-9" style={{ color: fg }} />
+                </div>
               </div>
-              <div>
-                <p className="text-content-primary font-medium text-sm mb-1">{title}</p>
-                <p className="text-xs text-content-secondary leading-relaxed">{desc}</p>
-              </div>
+              <p
+                className="absolute inset-x-2 bottom-0 pb-4 text-center text-sm font-bold leading-tight"
+                style={{ color: fg }}
+              >
+                {label}
+              </p>
             </div>
           ))}
         </div>
@@ -444,24 +698,30 @@ function MultiEtablissements() {
     <section className="py-24 px-5 bg-surface">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         <div>
-          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Multi-établissements</p>
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
+            Multi-établissements
+          </p>
           <h2 className="text-2xl sm:text-3xl font-bold text-content-primary leading-tight mb-5">
             Plusieurs boutiques,
             <br />
             un seul compte.
           </h2>
           <p className="text-content-secondary text-sm leading-relaxed mb-8">
-            Gérez plusieurs établissements depuis le même compte. Chacun a ses propres données,
-            son équipe et ses stocks. Vous passez de l&apos;un à l&apos;autre en un clic.
+            Gérez plusieurs établissements depuis le même compte. Chacun a ses
+            propres données, son équipe et ses stocks. Vous passez de l&apos;un
+            à l&apos;autre en un clic.
           </p>
           <ul className="space-y-3">
             {[
-              'Données isolées par établissement',
-              'Équipe et rôles séparés',
-              'Changement de contexte instantané',
-              'Synchronisation en temps réel',
+              "Données isolées par établissement",
+              "Équipe et rôles séparés",
+              "Changement de contexte instantané",
+              "Synchronisation en temps réel",
             ].map((item) => (
-              <li key={item} className="flex items-center gap-3 text-sm text-content-secondary">
+              <li
+                key={item}
+                className="flex items-center gap-3 text-sm text-content-secondary"
+              >
                 <Check className="w-3.5 h-3.5 text-brand-300 shrink-0" />
                 {item}
               </li>
@@ -471,31 +731,55 @@ function MultiEtablissements() {
 
         <div className="space-y-2">
           {[
-            { name: 'Boutique Dakar Plateau', type: 'Commerce', active: true },
-            { name: 'Restaurant Almadies', type: 'Restauration', active: false },
-            { name: 'Agence Location Thiès', type: 'Location véhicules', active: false },
-            { name: 'Cabinet Me Diallo', type: 'Juridique', active: false },
+            { name: "Boutique Dakar Plateau", type: "Commerce", active: true },
+            {
+              name: "Restaurant Almadies",
+              type: "Restauration",
+              active: false,
+            },
+            {
+              name: "Agence Location Thiès",
+              type: "Location véhicules",
+              active: false,
+            },
+            { name: "Cabinet Me Diallo", type: "Juridique", active: false },
           ].map(({ name, type, active }) => (
             <div
               key={name}
               className={`flex items-center gap-3.5 p-4 rounded-xl border transition-colors ${
                 active
-                  ? 'bg-surface-card border-brand-500/40 shadow-lg shadow-brand-500/10'
-                  : 'bg-surface-card border-surface-border'
+                  ? "bg-surface-card border-brand-500/40 shadow-lg shadow-brand-500/10"
+                  : "bg-surface-card border-surface-border"
               }`}
             >
               <div
                 className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                  active ? 'bg-brand-600 text-content-primary' : 'bg-surface-input text-content-muted'
+                  active
+                    ? "bg-brand-600 text-content-primary"
+                    : "bg-surface-input text-content-muted"
                 }`}
               >
                 {name.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${active ? 'text-brand-300' : 'text-content-secondary'}`}>{name}</p>
-                <p className={`text-xs ${active ? 'text-content-secondary' : 'text-content-muted'}`}>{type}</p>
+                <p
+                  className={`text-sm font-medium truncate ${
+                    active ? "text-brand-300" : "text-content-secondary"
+                  }`}
+                >
+                  {name}
+                </p>
+                <p
+                  className={`text-xs ${
+                    active ? "text-content-secondary" : "text-content-muted"
+                  }`}
+                >
+                  {type}
+                </p>
               </div>
-              {active && <div className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />}
+              {active && (
+                <div className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />
+              )}
             </div>
           ))}
         </div>
@@ -504,7 +788,15 @@ function MultiEtablissements() {
   );
 }
 
-function PlanCard({ plan, isPrimary, savingsPct }: { plan: Plan; isPrimary: boolean; savingsPct: number | null }) {
+function PlanCard({
+  plan,
+  isPrimary,
+  savingsPct,
+}: {
+  plan: Plan;
+  isPrimary: boolean;
+  savingsPct: number | null;
+}) {
   const isFree = plan.price === 0;
   const isAnnual = isAnnualPlan(plan);
   const monthlyEquiv = isAnnual ? Math.round(plan.price / 12) : null;
@@ -512,7 +804,9 @@ function PlanCard({ plan, isPrimary, savingsPct }: { plan: Plan; isPrimary: bool
   return (
     <div
       className={`relative rounded-xl p-6 border flex flex-col gap-5 ${
-        isPrimary ? 'bg-surface-card border-brand-500/40' : 'bg-surface-card border-surface-border'
+        isPrimary
+          ? "bg-surface-card border-brand-500/40"
+          : "bg-surface-card border-surface-border"
       }`}
     >
       {isPrimary && (
@@ -527,36 +821,47 @@ function PlanCard({ plan, isPrimary, savingsPct }: { plan: Plan; isPrimary: bool
         </span>
       )}
 
-      <div className={savingsPct !== null && !isFree ? 'pt-5' : ''}>
+      <div className={savingsPct !== null && !isFree ? "pt-5" : ""}>
         <p className="text-xs font-medium text-content-muted uppercase tracking-wider mb-3">
           {plan.label || plan.name}
         </p>
         {isFree ? (
           <>
             <p className="text-3xl font-bold text-content-primary">Gratuit</p>
-            <p className="text-xs text-content-muted mt-1">{plan.duration_days} jours d&apos;essai</p>
+            <p className="text-xs text-content-muted mt-1">
+              {plan.duration_days} jours d&apos;essai
+            </p>
           </>
         ) : isAnnual ? (
           <>
-            <p className="text-3xl font-bold text-content-primary">{plan.price.toLocaleString('fr-FR')}</p>
+            <p className="text-3xl font-bold text-content-primary">
+              {plan.price.toLocaleString("fr-FR")}
+            </p>
             <p className="text-xs text-content-muted mt-1">
               {displayCurrency(plan.currency)} / an
               <span className="ml-2 text-content-muted">
-                ({monthlyEquiv?.toLocaleString('fr-FR')} / mois)
+                ({monthlyEquiv?.toLocaleString("fr-FR")} / mois)
               </span>
             </p>
           </>
         ) : (
           <>
-            <p className="text-3xl font-bold text-content-primary">{plan.price.toLocaleString('fr-FR')}</p>
-            <p className="text-xs text-content-muted mt-1">{displayCurrency(plan.currency)} / mois</p>
+            <p className="text-3xl font-bold text-content-primary">
+              {plan.price.toLocaleString("fr-FR")}
+            </p>
+            <p className="text-xs text-content-muted mt-1">
+              {displayCurrency(plan.currency)} / mois
+            </p>
           </>
         )}
       </div>
 
       <ul className="space-y-2.5 flex-1">
         {plan.features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5 text-xs text-content-secondary">
+          <li
+            key={f}
+            className="flex items-start gap-2.5 text-xs text-content-secondary"
+          >
             <Check className="w-3.5 h-3.5 text-brand-300 shrink-0 mt-0.5" />
             {f}
           </li>
@@ -567,11 +872,11 @@ function PlanCard({ plan, isPrimary, savingsPct }: { plan: Plan; isPrimary: bool
         href="/signup"
         className={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors ${
           isPrimary
-            ? 'bg-brand-600 hover:bg-brand-500 text-content-primary'
-            : 'border border-surface-border hover:border-brand-500/30 text-content-primary hover:bg-surface-hover'
+            ? "bg-brand-600 hover:bg-brand-500 text-content-primary"
+            : "border border-surface-border hover:border-brand-500/30 text-content-primary hover:bg-surface-hover"
         }`}
       >
-        {isFree ? 'Commencer' : `Choisir ${plan.label || plan.name}`}
+        {isFree ? "Commencer" : `Choisir ${plan.label || plan.name}`}
       </Link>
     </div>
   );
@@ -580,7 +885,7 @@ function PlanCard({ plan, isPrimary, savingsPct }: { plan: Plan; isPrimary: bool
 function Tarifs() {
   const [allPlans, setAllPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [period, setPeriod] = useState<"monthly" | "annual">("monthly");
 
   useEffect(() => {
     getPlans()
@@ -596,7 +901,7 @@ function Tarifs() {
   const hasAnnual = paidAnnual.length > 0;
   const hasMonthly = paidMonthly.length > 0;
 
-  const shownPaid = period === 'annual' && hasAnnual ? paidAnnual : paidMonthly;
+  const shownPaid = period === "annual" && hasAnnual ? paidAnnual : paidMonthly;
   const plans = [...trialPlans, ...shownPaid];
   const savingsLabel = annualSavingsLabel(allPlans);
 
@@ -605,28 +910,38 @@ function Tarifs() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
-            <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Tarifs</p>
-            <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Simple et transparent</h2>
-            <p className="text-content-muted mt-2 text-sm">Pas de frais cachés. Pas de surprise.</p>
+            <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
+              Tarifs
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">
+              Simple et transparent
+            </h2>
+            <p className="text-content-muted mt-2 text-sm">
+              Pas de frais cachés. Pas de surprise.
+            </p>
           </div>
 
           {hasAnnual && hasMonthly && (
             <div className="flex items-center bg-surface-card border border-surface-border rounded-lg p-1 self-start sm:self-auto shrink-0">
-              {(['monthly', 'annual'] as const).map((p) => (
+              {(["monthly", "annual"] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
                   className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                    period === p ? 'bg-brand-600 text-content-primary' : 'text-content-secondary hover:text-content-primary'
+                    period === p
+                      ? "bg-brand-600 text-content-primary"
+                      : "text-content-secondary hover:text-content-primary"
                   }`}
                 >
-                  {p === 'monthly' ? (
-                    'Mensuel'
+                  {p === "monthly" ? (
+                    "Mensuel"
                   ) : (
                     <span className="flex items-center gap-1.5">
                       Annuel
                       {savingsLabel && (
-                        <span className="text-[10px] font-bold text-status-success">{savingsLabel}</span>
+                        <span className="text-[10px] font-bold text-status-success">
+                          {savingsLabel}
+                        </span>
                       )}
                     </span>
                   )}
@@ -644,19 +959,21 @@ function Tarifs() {
           <div
             className={`grid grid-cols-1 gap-4 ${
               plans.length === 1
-                ? 'max-w-sm'
+                ? "max-w-sm"
                 : plans.length === 2
-                  ? 'sm:grid-cols-2 max-w-2xl'
-                  : plans.length === 4
-                    ? 'sm:grid-cols-2 lg:grid-cols-4'
-                    : 'sm:grid-cols-3'
+                ? "sm:grid-cols-2 max-w-2xl"
+                : plans.length === 4
+                ? "sm:grid-cols-2 lg:grid-cols-4"
+                : "sm:grid-cols-3"
             }`}
           >
             {plans.map((plan) => (
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                isPrimary={plan.name === RECOMMENDED_PLAN_NAME && plan.price > 0}
+                isPrimary={
+                  plan.name === RECOMMENDED_PLAN_NAME && plan.price > 0
+                }
                 savingsPct={annualSavingsPercent(plan, allPlans)}
               />
             ))}
@@ -674,53 +991,60 @@ function Tarifs() {
  */
 const FAQ = [
   {
-    q: 'Faut-il installer quelque chose ?',
-    a: 'Non. ELM s’utilise dans le navigateur, sur ordinateur, tablette ou téléphone. Il suffit de créer votre compte.',
+    q: "Faut-il installer quelque chose ?",
+    a: "Non. ELM s’utilise dans le navigateur, sur ordinateur, tablette ou téléphone. Il suffit de créer votre compte.",
   },
   {
-    q: 'Et si la connexion internet coupe ?',
-    a: 'ELM a besoin d’internet pour enregistrer vos opérations. Si la connexion coupe pendant un encaissement, le panier reste affiché : vous validez dès le retour du réseau, sans rien ressaisir.',
+    q: "Et si la connexion internet coupe ?",
+    a: "ELM a besoin d’internet pour enregistrer vos opérations. Si la connexion coupe pendant un encaissement, le panier reste affiché : vous validez dès le retour du réseau, sans rien ressaisir.",
   },
   {
-    q: 'Puis-je utiliser mon imprimante de tickets et ma douchette ?',
-    a: 'Oui. Les tickets s’impriment depuis le navigateur sur l’imprimante installée sur votre ordinateur, imprimante de tickets comprise. Une douchette USB fonctionne directement dans la recherche de la caisse.',
+    q: "Puis-je utiliser mon imprimante de tickets et ma douchette ?",
+    a: "Oui. Les tickets s’impriment depuis le navigateur sur l’imprimante installée sur votre ordinateur, imprimante de tickets comprise. Une douchette USB fonctionne directement dans la recherche de la caisse.",
   },
   {
-    q: 'Puis-je reprendre mes produits et mes clients ?',
-    a: 'Oui, en important un fichier CSV (exportable depuis Excel) : vos produits et vos clients sont créés en une fois.',
+    q: "Puis-je reprendre mes produits et mes clients ?",
+    a: "Oui, en important un fichier CSV (exportable depuis Excel) : vos produits et vos clients sont créés en une fois.",
   },
   {
-    q: 'Mes données sont-elles en sécurité ?',
-    a: 'Chaque établissement ne voit que ses propres données et les échanges sont chiffrés. Vous décidez de ce que chaque employé peut voir ou faire, et un journal garde la trace des actions sensibles (annulations, remises, modifications de prix).',
+    q: "Mes données sont-elles en sécurité ?",
+    a: "Chaque établissement ne voit que ses propres données et les échanges sont chiffrés. Vous décidez de ce que chaque employé peut voir ou faire, et un journal garde la trace des actions sensibles (annulations, remises, modifications de prix).",
   },
   {
-    q: 'Que se passe-t-il après l’essai gratuit ?',
-    a: 'Vous choisissez la formule qui vous convient depuis votre espace, sans engagement. Aucune carte bancaire n’est demandée pour commencer l’essai.',
+    q: "Que se passe-t-il après l’essai gratuit ?",
+    a: "Vous choisissez la formule qui vous convient depuis votre espace, sans engagement. Aucune carte bancaire n’est demandée pour commencer l’essai.",
   },
   {
-    q: 'Comment être accompagné ?',
-    a: 'Écrivez-nous sur WhatsApp au +221 77 221 11 26 : prise en main, questions ou démonstration.',
+    q: "Comment être accompagné ?",
+    a: "Écrivez-nous sur WhatsApp au +221 77 221 11 26 : prise en main, questions ou démonstration.",
   },
 ];
 
 const FAQ_JSON_LD = JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
   mainEntity: FAQ.map(({ q, a }) => ({
-    '@type': 'Question',
+    "@type": "Question",
     name: q,
-    acceptedAnswer: { '@type': 'Answer', text: a },
+    acceptedAnswer: { "@type": "Answer", text: a },
   })),
 });
 
 function Faq() {
   return (
     <section id="faq" className="py-24 px-5 bg-surface">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }}
+      />
       <div className="max-w-3xl mx-auto">
         <div className="mb-10">
-          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">Questions fréquentes</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">Avant de commencer</h2>
+          <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
+            Questions fréquentes
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary">
+            Avant de commencer
+          </h2>
         </div>
         <div className="divide-y divide-surface-border border-y border-surface-border">
           {FAQ.map(({ q, a }) => (
@@ -729,7 +1053,9 @@ function Faq() {
                 {q}
                 <ArrowRight className="w-4 h-4 text-content-muted shrink-0 transition-transform group-open:rotate-90" />
               </summary>
-              <p className="pb-4 pr-8 text-sm text-content-secondary leading-relaxed">{a}</p>
+              <p className="pb-4 pr-8 text-sm text-content-secondary leading-relaxed">
+                {a}
+              </p>
             </details>
           ))}
         </div>
@@ -739,7 +1065,8 @@ function Faq() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-brand-300 hover:text-brand-400"
         >
-          <MessageCircle className="w-4 h-4" /> Une autre question ? Écrivez-nous sur WhatsApp
+          <MessageCircle className="w-4 h-4" /> Une autre question ?
+          Écrivez-nous sur WhatsApp
         </a>
       </div>
     </section>
@@ -753,8 +1080,12 @@ function CtaFinal() {
     <section className="py-24 px-5 bg-surface border-t border-surface-border">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary mb-2">Prêt à démarrer ?</h2>
-          <p className="text-content-muted text-sm">7 jours gratuits. Aucune carte bancaire requise.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary mb-2">
+            Prêt à démarrer ?
+          </h2>
+          <p className="text-content-muted text-sm">
+            7 jours gratuits. Aucune carte bancaire requise.
+          </p>
         </div>
         {user ? (
           <Link
@@ -782,22 +1113,47 @@ function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2">
           <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center p-1.5 overflow-hidden shadow-sm border border-surface-border">
-            <img src="/logo.png" alt="ELM" className="max-w-full max-h-full object-contain" />
+            <img
+              src="/logo.png"
+              alt="ELM"
+              className="max-w-full max-h-full object-contain"
+            />
           </div>
           <div className="hidden sm:block">
             <p className="text-xs font-bold text-content-primary">ELM</p>
-            <p className="text-[10px] text-content-muted">Entreprise Lifecycle Management</p>
+            <p className="text-[10px] text-content-muted">
+              Entreprise Lifecycle Management
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-6 text-xs text-content-muted">
-          <Link href="/privacy" className="hover:text-content-secondary transition-colors">Confidentialité</Link>
-          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="hover:text-content-secondary transition-colors">WhatsApp</a>
-          <a href="mailto:contact@elm-app.click" className="hover:text-content-secondary transition-colors">Contact</a>
+          <Link
+            href="/privacy"
+            className="hover:text-content-secondary transition-colors"
+          >
+            Confidentialité
+          </Link>
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-content-secondary transition-colors"
+          >
+            WhatsApp
+          </a>
+          <a
+            href="mailto:contact@elm-app.click"
+            className="hover:text-content-secondary transition-colors"
+          >
+            Contact
+          </a>
           <span className="flex items-center gap-1.5">
             <Globe className="w-3 h-3" /> Sénégal - Afrique
           </span>
         </div>
-        <p className="text-xs text-content-muted">© {new Date().getFullYear()} ELM - Entreprise Lifecycle Management</p>
+        <p className="text-xs text-content-muted">
+          © {new Date().getFullYear()} ELM - Entreprise Lifecycle Management
+        </p>
       </div>
     </footer>
   );
@@ -809,8 +1165,8 @@ function FloatingActions() {
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 320);
     onScroll();
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
@@ -829,7 +1185,7 @@ function FloatingActions() {
         <button
           type="button"
           aria-label="Retour en haut"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="w-12 h-12 rounded-full bg-surface-card hover:bg-surface-hover text-content-primary shadow-xl border border-surface-border flex items-center justify-center transition-colors"
         >
           <ArrowUp className="w-5 h-5" />
@@ -853,12 +1209,18 @@ function ModuleFeature({
   reverse?: boolean;
 }) {
   return (
-    <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12 lg:gap-20`}>
+    <div
+      className={`flex flex-col ${
+        reverse ? "lg:flex-row-reverse" : "lg:flex-row"
+      } items-center gap-12 lg:gap-20`}
+    >
       <div className="flex-1 space-y-6">
         <div className="inline-block px-3 py-1 rounded-full bg-surface-card border border-brand-500/30 text-status-info text-[10px] font-bold tracking-widest uppercase">
           {subtitle}
         </div>
-        <h3 className="text-3xl font-bold text-content-primary tracking-tight">{title}</h3>
+        <h3 className="text-3xl font-bold text-content-primary tracking-tight">
+          {title}
+        </h3>
         <p className="text-content-secondary leading-relaxed text-lg">{desc}</p>
       </div>
       <div className="flex-1 w-full relative group">
@@ -980,6 +1342,7 @@ export default function LandingPage() {
       <Features />
       <ModulesShowcase />
       <Secteurs />
+      <Metiers />
       <MultiEtablissements />
       <Tarifs />
       <Faq />

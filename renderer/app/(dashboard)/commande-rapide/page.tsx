@@ -20,7 +20,8 @@ import { buildOrderDbPayload } from '@domain/order.service';
 import { enqueueToSync } from '@/lib/ipc';
 import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { generateDistributeurInvoice, printHtml } from '@/lib/invoice-templates';
-import { formatCurrency, generateId } from '@/lib/utils';
+import { formatCurrency, generateId, cn } from '@/lib/utils';
+import { Users } from 'lucide-react';
 import type { Order, Product, PaymentMethod, Coupon } from '@pos-types';
 import { ResellerRail } from '@/components/commande-rapide/ResellerRail';
 import { OrderGrid } from '@/components/commande-rapide/OrderGrid';
@@ -52,6 +53,10 @@ export default function CommandeRapidePage() {
   const deliveryAddress = useQuickOrderStore((s) => s.deliveryAddress);
   const draftsByReseller = useQuickOrderStore((s) => s.draftsByReseller);
   const setReseller = useQuickOrderStore((s) => s.setReseller);
+  // Volets mobile (< lg) : les 3 colonnes ne tiennent pas côte à côte sur téléphone.
+  const [mobilePane, setMobilePane] = useState<'resellers' | 'grid' | 'summary'>(
+    () => (useQuickOrderStore.getState().activeResellerId ? 'grid' : 'resellers'),
+  );
   const addCoupon = useQuickOrderStore((s) => s.addCoupon);
   const removeCoupon = useQuickOrderStore((s) => s.removeCoupon);
   const reconcileCoupons = useQuickOrderStore((s) => s.reconcileCoupons);
@@ -121,6 +126,10 @@ export default function CommandeRapidePage() {
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id]);
+
+  useEffect(() => {
+    if (!activeResellerId) setMobilePane('resellers');
+  }, [activeResellerId]);
 
   useEffect(() => {
     if (!activeResellerId) { setClients([]); return; }
@@ -351,6 +360,7 @@ export default function CommandeRapidePage() {
         );
         clear();
         setFinalizeMode(null);
+        setMobilePane('grid');
       } catch (err) {
         if (!isNetworkError(err)) {
           setFinalizeError(orderErrorMessage(err));
@@ -383,6 +393,7 @@ export default function CommandeRapidePage() {
         warning('Hors ligne — commande enregistrée, synchronisation à la reconnexion.');
         clear();
         setFinalizeMode(null);
+        setMobilePane('grid');
       } finally {
         setSubmitting(false);
       }
@@ -408,7 +419,7 @@ export default function CommandeRapidePage() {
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 border-b border-surface-border">
         <h1 className="text-lg font-bold text-content-primary">Commande rapide</h1>
-        <p className="text-xs text-content-secondary">
+        <p className="text-xs text-content-secondary hidden sm:block">
           Saisie en grille pour vos revendeurs — bon de livraison, encaissement ou acompte.
         </p>
       </div>
@@ -417,14 +428,19 @@ export default function CommandeRapidePage() {
         <ResellerRail
           resellers={resellers}
           selectedId={activeResellerId}
-          onSelect={(r) => setReseller(r.id, r.address ?? '')}
+          onSelect={(r) => { setReseller(r.id, r.address ?? ''); setMobilePane('grid'); }}
           loading={loading}
           draftResellerIds={Object.keys(draftsByReseller)}
+          className={mobilePane === 'resellers' ? 'flex' : 'hidden lg:flex'}
         />
 
         {reseller ? (
           <>
-            <OrderGrid products={productInputs} currency={currency} />
+            <OrderGrid
+              products={productInputs}
+              currency={currency}
+              className={mobilePane === 'grid' ? 'flex' : 'hidden lg:flex'}
+            />
             <OrderSummary
               reseller={reseller}
               clients={clients}
@@ -438,14 +454,45 @@ export default function CommandeRapidePage() {
               onFinalize={setFinalizeMode}
               onCouponAdd={handleCouponAdd}
               onCouponRemove={handleCouponRemove}
+              className={mobilePane === 'summary' ? 'flex' : 'hidden lg:flex'}
+              onBack={() => setMobilePane('grid')}
             />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-content-muted text-sm">
+          <div className={cn(
+            'flex-1 items-center justify-center text-content-muted text-sm',
+            mobilePane === 'resellers' ? 'hidden lg:flex' : 'flex',
+          )}>
             Choisissez un revendeur pour commencer.
           </div>
         )}
       </div>
+
+      {/* Barre mobile : total en vue + bascule grille ↔ récap */}
+      {reseller && mobilePane === 'grid' && (
+        <div className="lg:hidden border-t border-surface-border bg-surface-card px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center gap-2">
+          <button
+            onClick={() => setMobilePane('resellers')}
+            className="btn-secondary h-11 px-3 flex items-center shrink-0"
+            aria-label="Changer de revendeur"
+          >
+            <Users className="w-4 h-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-content-primary truncate">{reseller.name}</p>
+            <p className="text-xs text-content-secondary tabular-nums">
+              {totals.itemCount} article{totals.itemCount > 1 ? 's' : ''} · {formatCurrency(totals.net, currency)}
+            </p>
+          </div>
+          <button
+            onClick={() => setMobilePane('summary')}
+            disabled={totals.itemCount === 0}
+            className="btn-primary h-11 px-4 text-sm shrink-0 disabled:opacity-40"
+          >
+            Récapitulatif
+          </button>
+        </div>
+      )}
 
       {finalizeMode && reseller && (
         <FinalizeDialog

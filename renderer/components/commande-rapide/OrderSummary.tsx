@@ -1,7 +1,7 @@
 'use client';
 
 import { confirmAsync } from '@/components/shared/ConfirmDialog';
-import { Phone, MapPin, RotateCcw, Trash2, X, Tag, Gift } from 'lucide-react';
+import { Phone, MapPin, RotateCcw, Trash2, X, Tag, Gift, ChevronLeft } from 'lucide-react';
 import type { Reseller, ResellerClient } from '@services/supabase/resellers';
 import type { Business, Coupon } from '@pos-types';
 import { useQuickOrderStore } from '@/store/quickOrder';
@@ -25,11 +25,15 @@ interface Props {
   onFinalize: (mode: 'bl' | 'cash' | 'acompte') => void;
   onCouponAdd: (c: Coupon) => void;
   onCouponRemove: (id: string) => void;
+  /** Classes de visibilité posées par la page (volets mobile) — doit contenir `flex` ou `hidden`. */
+  className?: string;
+  /** Retour au volet grille (affiché seulement sous lg). */
+  onBack?: () => void;
 }
 
 export function OrderSummary({
   reseller, clients, business, currency, hasCashSession, hasOverStock, canRecall, recalling,
-  onRecall, onFinalize, onCouponAdd, onCouponRemove,
+  onRecall, onFinalize, onCouponAdd, onCouponRemove, className = 'flex', onBack,
 }: Props) {
   const lines = useQuickOrderStore((s) => s.lines);
   const clientId = useQuickOrderStore((s) => s.clientId);
@@ -48,7 +52,15 @@ export function OrderSummary({
   const showEcheance = Boolean(business.brand_config?.echeance_enabled);
 
   return (
-    <div className="w-72 shrink-0 border-l border-surface-border flex flex-col">
+    <div className={cn('w-full lg:w-72 shrink-0 lg:border-l border-surface-border flex-col', className)}>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="lg:hidden w-full h-11 px-4 flex items-center gap-1.5 border-b border-surface-border text-sm font-medium text-content-secondary hover:text-content-primary transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Retour à la commande
+        </button>
+      )}
       {/* Revendeur */}
       <div className="px-4 py-3 border-b border-surface-border">
         <div className="flex items-center gap-2 flex-wrap">

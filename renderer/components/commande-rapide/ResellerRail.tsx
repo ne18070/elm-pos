@@ -12,9 +12,11 @@ interface Props {
   onSelect: (r: Reseller) => void;
   loading: boolean;
   draftResellerIds: string[];
+  /** Classes de visibilité posées par la page (volets mobile) — doit contenir `flex` ou `hidden`. */
+  className?: string;
 }
 
-export function ResellerRail({ resellers, selectedId, onSelect, loading, draftResellerIds }: Props) {
+export function ResellerRail({ resellers, selectedId, onSelect, loading, draftResellerIds, className = 'flex' }: Props) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ResellerType | ''>('');
 
@@ -36,7 +38,7 @@ export function ResellerRail({ resellers, selectedId, onSelect, loading, draftRe
   const drafts = new Set(draftResellerIds);
 
   return (
-    <div className="w-60 shrink-0 border-r border-surface-border flex flex-col">
+    <div className={cn('w-full lg:w-60 shrink-0 lg:border-r border-surface-border flex-col', className)}>
       <div className="p-3 border-b border-surface-border space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted" />
