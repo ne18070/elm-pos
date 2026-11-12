@@ -32,6 +32,13 @@
     --surface-border: 51 65 85;    /* slate-700 */
     --surface-hover:  30 41 59;
 
+    /* Séries de graphiques (catégoriel, ordre fixe) — validées CVD/contraste
+       sur surface-card sombre (dataviz validate_palette). */
+    --chart-1: 57 135 229;   /* bleu   #3987e5 */
+    --chart-2: 217 89 38;    /* orange #d95926 */
+    --chart-3: 25 158 112;   /* aqua   #199e70 */
+    --chart-4: 201 133 0;    /* jaune  #c98500 */
+
     /* Text tokens */
     --text-base:        248 250 252;  /* slate-50 */
     --text-secondary:   148 163 184;  /* slate-400 */
@@ -155,6 +162,11 @@
 /* ─── MODE CLAIR ──────────────────────────────────────────────────────────── */
 
 [data-theme="light"] {
+  /* Séries de graphiques — pas clair (validées sur blanc ; 3 et 4 < 3:1 → légende + infobulle obligatoires) */
+  --chart-1: 42 120 214;   /* #2a78d6 */
+  --chart-2: 235 104 52;   /* #eb6834 */
+  --chart-3: 27 175 122;   /* #1baf7a */
+  --chart-4: 237 161 0;    /* #eda100 */
   --surface:        244 246 248;
   --surface-card:   255 255 255;
   --surface-input:  255 255 255;
@@ -234,6 +246,7 @@
 
 /* ─── ZONE TOUJOURS SOMBRE ─── */
 .theme-dark {
+  --chart-1: 57 135 229; --chart-2: 217 89 38; --chart-3: 25 158 112; --chart-4: 201 133 0;
   --surface:        15 23 42;
   --surface-card:   21 32 54;
   --surface-input:  30 41 59;

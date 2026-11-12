@@ -3,7 +3,7 @@ import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle, Link, Pencil, Check, Plus, Minus, Trash2 } from 'lucide-react';
+import { X, ArrowLeft, Printer, XCircle, RotateCcw, AlertTriangle, CreditCard, Banknote, Smartphone, Loader2, FileText, MessageCircle, Link, Pencil, Check, Plus, Minus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
@@ -19,7 +19,9 @@ import { useAuthStore } from '@/store/auth';
 import { useCan } from '@/hooks/usePermission';
 import { useNotificationStore } from '@/store/notifications';
 import { RefundModal } from './RefundModal';
-import type { Order, OrderStatus, Refund, PaymentMethod, Payment } from '@pos-types';
+import { Badge } from '@/components/ui/Badge';
+import { getPaidAmount, getRemainingAmount, isAcompte, isOnlineToCollect, orderStatusBadge } from '@/lib/order-payment';
+import type { Order, Refund, PaymentMethod, Payment } from '@pos-types';
 
 interface OrderDetailProps {
   order: Order;
@@ -37,20 +39,6 @@ interface OrderDetailProps {
   onPrint?: (order: Order) => void;
 }
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending:   'En attente',
-  paid:      'Payée',
-  cancelled: 'Annulée',
-  refunded:  'Remboursée',
-};
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending:   'bg-yellow-900/30 text-status-warning border-yellow-700',
-  paid:      'bg-badge-success text-status-success border-status-success',
-  cancelled: 'bg-badge-error text-status-error border-status-error',
-  refunded:  'bg-badge-purple text-status-purple border-purple-700',
-};
-
 const METHOD_LABELS: Record<string, string> = {
   cash:         'Espèces',
   card:         'Carte',
@@ -59,20 +47,6 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 const PAYMENT_METHODES: Exclude<PaymentMethod, 'partial'>[] = ['cash', 'card', 'mobile_money'];
-
-function getPaidAmount(order: Order): number {
-  return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
-}
-
-function getRemainingAmount(order: Order): number {
-  return Math.max(0, order.total - getPaidAmount(order));
-}
-
-function isAcompte(order: Order): boolean {
-  if (order.status === 'cancelled' || order.status === 'refunded') return false;
-  if ((order as { source?: string }).source === 'whatsapp') return false;
-  return getRemainingAmount(order) > 0.01;
-}
 
 export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatched, onPrint }: OrderDetailProps) {
   const { business, user } = useAuthStore();
@@ -105,7 +79,10 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
   const partial          = isAcompte(order);
   const paidAmt          = getPaidAmount(order);
   const remaining        = getRemainingAmount(order);
-  const isWhatsAppPending = (order as { source?: string }).source === 'whatsapp' && order.status === 'pending';
+  // Commande en ligne (boutique, WhatsApp) : réglée chez le marchand, à la livraison ou au retrait.
+  const onlineToCollect  = isOnlineToCollect(order);
+  const toCollect        = partial || onlineToCollect;
+  const statusBadge      = orderStatusBadge(order);
   // Le caissier (staff) peut modifier une commande tant qu'aucun paiement n'a
   // été encaissé — le RPC update_pending_order refuse dès qu'un acompte existe.
   const canEdit          = canEditOrders && order.status === 'pending' && paidAmt <= 0.01;
@@ -271,9 +248,9 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
   // Pré-remplir le montant quand on ouvre le formulaire
   useEffect(() => {
     if (showCompleteForm) {
-      setCompleteAmount(String(isWhatsAppPending ? order.total : remaining));
+      setCompleteAmount(String(remaining));
     }
-  }, [showCompleteForm, remaining, isWhatsAppPending, order.total]);
+  }, [showCompleteForm, remaining]);
 
   async function handleWhatsAppShare() {
     if (!order || !business) return;
@@ -421,9 +398,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
 
   return (
     <>
-      <div className="w-80 border-l border-surface-border bg-surface-card flex flex-col h-full">
+      {/* Mobile : plein écran au-dessus de la liste (une colonne de 320 px à côté
+          d'elle ne laissait que ~55 px à la liste sur un téléphone). md+ : panneau latéral. */}
+      <div className="fixed inset-0 z-40 pt-[env(safe-area-inset-top)] md:pt-0 md:static md:inset-auto md:z-auto w-full md:w-80 md:border-l border-surface-border bg-surface-card flex flex-col h-full">
         {/* En-tête */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+        <div className="flex items-center md:justify-between px-4 py-2 md:py-3 border-b border-surface-border">
           <div>
             <p className="font-semibold text-content-primary font-mono text-sm">
               #{order.id.slice(0, 8).toUpperCase()}
@@ -432,8 +411,10 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
               {format(new Date(order.created_at), 'dd MMM yyyy, HH:mm', { locale: fr })}
             </p>
           </div>
-          <button onClick={onClose} className="text-content-secondary hover:text-content-primary">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} aria-label="Fermer le détail"
+            className="order-first md:order-none -ml-2 md:ml-0 mr-2 md:mr-0 h-11 w-11 flex items-center justify-center rounded-lg text-content-secondary hover:text-content-primary hover:bg-surface-hover">
+            <ArrowLeft className="w-5 h-5 md:hidden" />
+            <X className="w-5 h-5 hidden md:block" />
           </button>
         </div>
 
@@ -442,15 +423,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
           {/* Statut */}
           <div className="flex items-center justify-between">
             <p className="label">Statut</p>
-            {partial ? (
-              <span className="inline-flex px-3 py-1 rounded-lg text-xs font-medium border bg-badge-warning text-status-warning border-status-warning">
-                Acompte versé
-              </span>
-            ) : (
-              <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-medium border ${STATUS_COLORS[order.status as OrderStatus]}`}>
-                {STATUS_LABELS[order.status as OrderStatus]}
-              </span>
-            )}
+            <Badge tone={statusBadge.tone}>{statusBadge.label}</Badge>
           </div>
 
           {/* Client (acompte) */}
@@ -645,13 +618,15 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
               <span>{fmt(editMode ? editTotal : order.total)}</span>
             </div>
 
-            {/* Solde acompte */}
-            {partial && (
+            {/* Reste à régler (acompte de caisse, ou commande en ligne pas encore réglée) */}
+            {toCollect && (
               <>
-                <div className="flex justify-between text-sm text-content-brand pt-1 border-t border-surface-border">
-                  <span>Acompte versé</span>
-                  <span className="font-medium">{fmt(paidAmt)}</span>
-                </div>
+                {paidAmt > 0.01 && (
+                  <div className="flex justify-between text-sm text-content-brand pt-1 border-t border-surface-border">
+                    <span>Déjà versé</span>
+                    <span className="font-medium">{fmt(paidAmt)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-status-warning font-bold">
                   <span>Reste à régler</span>
                   <span className="text-lg">{fmt(remaining)}</span>
@@ -692,7 +667,13 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
           )}
 
           {/* Alerte acompte */}
-          {partial && !showCompleteForm && !isWhatsAppPending && (
+          {onlineToCollect && !showCompleteForm && (
+            <div className="flex gap-2 p-3 bg-badge-info border border-status-info/30 rounded-xl text-xs text-status-info">
+              <CreditCard className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Commande en ligne : le client règle à la livraison ou au retrait. Encaissez-la au moment du paiement.</span>
+            </div>
+          )}
+          {partial && !showCompleteForm && (
             <div className="flex gap-2 p-3 bg-badge-warning border border-status-warning rounded-xl text-xs text-status-warning">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>Acompte de <strong>{fmt(paidAmt)}</strong> versé. Reste à régler : <strong>{fmt(remaining)}</strong>.</span>
@@ -789,11 +770,11 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
               (footer fixe) — et non plus dans le panneau de contenu défilant
               au-dessus, où il pouvait apparaître hors champ et donner
               l'impression que le bouton "Encaisser" ne faisait rien. */}
-          {(partial || isWhatsAppPending) && (
+          {toCollect && (
             showCompleteForm ? (
               <div className="bg-badge-warning border border-status-warning rounded-xl p-3 space-y-3">
                 <p className="text-xs text-status-warning font-medium uppercase tracking-wider">
-                  Enregistrer le solde ({fmt(remaining)})
+                  {onlineToCollect ? `Encaisser la commande (${fmt(remaining)})` : `Encaisser le reste (${fmt(remaining)})`}
                 </p>
 
                 {/* Méthode */}
@@ -805,7 +786,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
                       className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-all ${
                         completeMethod === m
                           ? 'border-brand-500 bg-badge-brand text-content-brand'
-                          : 'border-slate-700 text-content-secondary hover:text-content-primary'
+                          : 'border-surface-border text-content-secondary hover:text-content-primary'
                       }`}
                     >
                       {m === 'cash'         && <Banknote className="w-4 h-4" />}
@@ -848,20 +829,18 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
             ) : partial ? (
               <button
                 onClick={() => setShowCompleteForm(true)}
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
-                           bg-amber-600 hover:bg-amber-500 text-content-primary font-medium text-sm transition-colors"
+                className="btn-primary w-full flex items-center justify-center gap-2 h-11 text-sm"
               >
                 <CreditCard className="w-4 h-4" />
-                Encaisser le solde ({fmt(remaining)})
+                Encaisser le reste ({fmt(remaining)})
               </button>
             ) : (
               <button
                 onClick={() => setShowCompleteForm(true)}
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl
-                           bg-green-700 hover:bg-green-600 text-content-primary font-medium text-sm transition-colors"
+                className="btn-primary w-full flex items-center justify-center gap-2 h-11 text-sm"
               >
                 <CreditCard className="w-4 h-4" />
-                Payer ({fmt(order.total)})
+                Encaisser ({fmt(remaining)})
               </button>
             )
           )}
@@ -871,7 +850,7 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
               <button
                 onClick={() => setShowRefundModal(true)}
                 className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl
-                           border border-purple-700 text-status-purple hover:bg-badge-purple transition-colors text-sm font-medium"
+                           border border-status-purple/40 text-status-purple hover:bg-badge-purple transition-colors text-sm font-medium"
               >
                 <RotateCcw className="w-4 h-4" />
                 Rembourser
@@ -880,9 +859,10 @@ export function OrderDetail({ order, currency, onClose, onRefresh, onOrderPatche
                 onClick={handleCancel}
                 className="flex items-center justify-center gap-2 px-3 h-10 rounded-xl
                            border border-status-error text-status-error hover:bg-badge-error transition-colors"
-                title="Annuler la commande"
+                aria-label="Annuler la commande"
               >
                 <XCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">Annuler</span>
               </button>
             </div>
           )}

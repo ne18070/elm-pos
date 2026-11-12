@@ -1,4 +1,5 @@
 import { supabase } from './client';
+import { fetchAllRows } from './fetch-all';
 import type { Json } from './database.types';
 
 const db  = supabase.from.bind(supabase);
@@ -460,31 +461,9 @@ function _payMethodToAccount(method: string): { code: string; name: string } {
   }
 }
 
-const _PAGE_SIZE = 1000;
-
-/**
- * PostgREST plafonne toute requête sans .range() explicite à 1000 lignes
- * (db-max-rows par défaut chez Supabase) — silencieusement, sans erreur. Pour
- * une entreprise avec un historique de plusieurs milliers de commandes,
- * syncAccounting ne verrait jamais que les 1000 premières et penserait avoir
- * tout synchronisé. Cette fonction feuillette la requête par pages de 1000
- * jusqu'à épuisement.
- */
+// Pagination au-delà du plafond PostgREST de 1000 lignes : voir fetch-all.ts.
+const _fetchAllRows = fetchAllRows;
 type _Rows<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
-
-async function _fetchAllRows<T>(build: (from: number, to: number) => _Rows<T>): Promise<T[]> {
-  const all: T[] = [];
-  let from = 0;
-  for (;;) {
-    const { data, error } = await build(from, from + _PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    const rows = data ?? [];
-    all.push(...rows);
-    if (rows.length < _PAGE_SIZE) break;
-    from += _PAGE_SIZE;
-  }
-  return all;
-}
 
 /** Découpe un .in(column, ids) en lots — une liste de plusieurs milliers
  *  d'UUID dans une seule requête risque de dépasser la longueur d'URL max

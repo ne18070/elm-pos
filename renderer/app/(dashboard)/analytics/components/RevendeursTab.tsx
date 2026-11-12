@@ -5,6 +5,7 @@ import { DollarSign, ShoppingBag, Users, Banknote } from 'lucide-react';
 import { KpiCard, KpiGrid } from './KpiCard';
 import { RankBar } from './Charts';
 import type { RevendeursAnalyticsSummary } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 const TYPE_LABELS: Record<string, string> = { gros: 'Gros', demi_gros: 'Demi-gros', detaillant: 'Détaillant' };
 const TYPE_COLORS: Record<string, string> = {
@@ -26,7 +27,7 @@ export function RevendeursTab({
   period,
   fmt
 }: RevendeursTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading || !revendeursData) {
       return (

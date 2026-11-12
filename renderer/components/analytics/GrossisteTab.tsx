@@ -3,12 +3,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Store, Users, Package, Search, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { getResellerDetailStats } from '@services/supabase/analytics';
-import type { WholesaleOrderItem } from '@services/supabase/analytics';
+import type { StatsPeriod, WholesaleOrderItem } from '@services/supabase/analytics';
 
 interface Props {
   businessId: string;
-  days: number;
+  days: StatsPeriod;
   fmt: (n: number) => string;
+  /** Lignes chargées — remontées à la page pour l'export CSV de l'onglet. */
+  onItemsLoaded?: (items: WholesaleOrderItem[]) => void;
 }
 
 interface ResellerGroup {
@@ -20,7 +22,7 @@ interface ResellerGroup {
   products: Map<string, { name: string; quantity: number; revenue: number }>;
 }
 
-export function GrossisteTab({ businessId, days, fmt }: Props) {
+export function GrossisteTab({ businessId, days, fmt, onItemsLoaded }: Props) {
   const [items, setItems]     = useState<WholesaleOrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -32,10 +34,11 @@ export function GrossisteTab({ businessId, days, fmt }: Props) {
   useEffect(() => {
     setLoading(true);
     getResellerDetailStats(businessId, days)
-      .then(setItems)
+      .then((rows) => { setItems(rows); onItemsLoaded?.(rows); })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [businessId, days]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- callback de remontée, pas une dépendance de chargement
+  }, [businessId, typeof days === 'number' ? days : `${days.start}/${days.end}`]);
 
   /* All unique clients for the select */
   const allClients = useMemo(() => {

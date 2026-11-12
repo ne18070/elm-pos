@@ -5,6 +5,7 @@ import { DollarSign, ShoppingBag, UserCheck, Banknote, Award } from 'lucide-reac
 import { KpiCard, KpiGrid } from './KpiCard';
 import { RankBar } from './Charts';
 import type { VendeursAnalyticsSummary } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 interface VendeursTabProps {
   loading: boolean;
@@ -14,7 +15,7 @@ interface VendeursTabProps {
 }
 
 export function VendeursTab({ loading, vendeursData, period, fmt }: VendeursTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading || !vendeursData) {
     return (

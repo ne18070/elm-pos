@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Tag, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CouponStat } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 interface PromosTabProps {
   loading: boolean;
@@ -17,7 +18,7 @@ export function PromosTab({
   period,
   fmt
 }: PromosTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (loading) {

@@ -3,7 +3,7 @@
 import React from 'react';
 import {
   ResponsiveContainer, BarChart as RBarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip as RTooltip, Legend,
+  CartesianGrid, Tooltip as RTooltip, Legend, ComposedChart, Line,
 } from 'recharts';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -11,13 +11,6 @@ import { Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 // --- Types --------------------------------------------------------------------
 
-export interface DayStack { 
-  date: string; 
-  retail: number; 
-  services: number; 
-  hotel: number; 
-  juridique: number; 
-}
 
 // --- Helpers ------------------------------------------------------------------
 
@@ -26,12 +19,22 @@ export const fmtAxis = (n: number) =>
   : n >= 1_000   ? `${(n / 1_000).toFixed(0)}K`
   : String(Math.round(n));
 
+// Variables du thème (globals.css) — triplets RGB, d'où rgb(var(--x)).
+export const chartTheme = {
+  surface: 'rgb(var(--surface-card))',
+  grid:    'rgb(var(--surface-border))',
+  axis:    'rgb(var(--text-placeholder))',
+  text:    'rgb(var(--text-base))',
+  textSecondary: 'rgb(var(--text-secondary))',
+  series:  ['rgb(var(--chart-1))', 'rgb(var(--chart-2))', 'rgb(var(--chart-3))', 'rgb(var(--chart-4))'],
+};
+
 export const chartTooltipStyle = {
-  backgroundColor: 'var(--color-surface-card, #1e1e2e)',
-  border: '1px solid var(--color-surface-border, #333)',
+  backgroundColor: chartTheme.surface,
+  border: `1px solid ${chartTheme.grid}`,
   borderRadius: '10px',
   fontSize: 11,
-  color: 'var(--color-content-primary, #fff)',
+  color: chartTheme.text,
 };
 
 export function Delta({ current, prev, invert = false }: { current: number; prev: number; invert?: boolean }) {
@@ -48,48 +51,6 @@ export function Delta({ current, prev, invert = false }: { current: number; prev
 }
 
 // --- Components ---------------------------------------------------------------
-
-export function StackedChart({ days: daysList, fmt }: { days: DayStack[]; fmt: (n: number) => string }) {
-  if (daysList.length === 0) {
-      return (
-          <div className="h-[220px] flex items-center justify-center border border-dashed border-surface-border rounded-xl text-content-muted text-xs">
-              Aucune donnée sur la période
-          </div>
-      );
-  }
-
-  const hasRetail   = daysList.some(d => d.retail    > 0);
-  const hasServices = daysList.some(d => d.services  > 0);
-  const hasHotel    = daysList.some(d => d.hotel     > 0);
-  const hasJur      = daysList.some(d => d.juridique > 0);
-
-  const data = daysList.map(d => ({
-    ...d,
-    label: format(new Date(d.date), 'd MMM', { locale: fr }),
-  }));
-
-  return (
-    <div className="space-y-4">
-        <ResponsiveContainer width="100%" height={220}>
-        <RBarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-content-muted, #888)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-            <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 10, fill: 'var(--color-content-muted, #888)' }} axisLine={false} tickLine={false} width={42} />
-            <RTooltip
-            contentStyle={chartTooltipStyle}
-            formatter={(value, name) => [fmt(value as number), name as string]}
-            labelStyle={{ marginBottom: 4, fontWeight: 600, color: 'var(--color-content-secondary,#aaa)' }}
-            />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
-            {hasRetail   && <Bar dataKey="retail"    name="Ventes"      stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />}
-            {hasServices && <Bar dataKey="services"  name="Prestations" stackId="a" fill="#fb923c" radius={[0, 0, 0, 0]} />}
-            {hasHotel    && <Bar dataKey="hotel"     name="Hôtel"       stackId="a" fill="#14b8a6" radius={[0, 0, 0, 0]} />}
-            {hasJur      && <Bar dataKey="juridique" name="Honoraires"  stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} />}
-        </RBarChart>
-        </ResponsiveContainer>
-    </div>
-  );
-}
 
 export function SimpleBarChart({
   data, dataKey, color = '#6366f1', fmt, xKey = 'label',
@@ -110,13 +71,13 @@ export function SimpleBarChart({
   return (
     <ResponsiveContainer width="100%" height={200}>
       <RBarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: 'var(--color-content-muted,#888)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-        <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 10, fill: 'var(--color-content-muted,#888)' }} axisLine={false} tickLine={false} width={42} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--surface-border))" strokeOpacity={0.6} vertical={false} />
+        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: 'rgb(var(--text-placeholder))' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+        <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 10, fill: 'rgb(var(--text-placeholder))' }} axisLine={false} tickLine={false} width={42} />
         <RTooltip
           contentStyle={chartTooltipStyle}
           formatter={(value) => [fmt(value as number)]}
-          labelStyle={{ marginBottom: 4, fontWeight: 600, color: 'var(--color-content-secondary,#aaa)' }}
+          labelStyle={{ marginBottom: 4, fontWeight: 600, color: 'rgb(var(--text-secondary))' }}
         />
         <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />
       </RBarChart>
@@ -139,5 +100,65 @@ export function RankBar({ label, sub, value, max, color, fmt }: { label: string;
         <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
     </div>
+  );
+}
+
+// --- Tendance : CA par jour, par activité, + période précédente ---------------
+
+export interface TrendPoint {
+  date: string;
+  ventes: number;
+  prestations: number;
+  hotel: number;
+  honoraires: number;
+  /** CA facturé du même rang de jour sur la période précédente (null = pas de comparaison). */
+  prev: number | null;
+}
+
+const TREND_SERIES = [
+  { key: 'ventes',      name: 'Ventes' },
+  { key: 'prestations', name: 'Prestations' },
+  { key: 'hotel',       name: 'Hôtel' },
+  { key: 'honoraires',  name: 'Honoraires' },
+] as const;
+
+/**
+ * Barres empilées par activité (ordre et couleurs fixes : une activité garde sa
+ * couleur quelle que soit la combinaison affichée) + ligne pointillée neutre
+ * pour la période précédente, sur le même axe.
+ */
+export function TrendChart({ points, fmt, prevLabel }: { points: TrendPoint[]; fmt: (n: number) => string; prevLabel: string }) {
+  const active = TREND_SERIES
+    .map((s, i) => ({ ...s, color: chartTheme.series[i] }))
+    .filter((s) => points.some((p) => p[s.key] > 0));
+  const hasPrev = points.some((p) => (p.prev ?? 0) > 0);
+  const data = points.map((p) => ({ ...p, label: format(new Date(`${p.date}T00:00:00`), 'd MMM', { locale: fr }) }));
+  const topKey = active[active.length - 1]?.key;
+  const showLegend = active.length + (hasPrev ? 1 : 0) >= 2;
+
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <ComposedChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+        <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} strokeOpacity={0.6} vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTheme.axis }} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
+        <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 10, fill: chartTheme.axis }} axisLine={false} tickLine={false} width={42} />
+        <RTooltip
+          contentStyle={chartTooltipStyle}
+          cursor={{ fill: chartTheme.grid, fillOpacity: 0.35 }}
+          formatter={(value, name) => [value == null ? '—' : fmt(value as number), name as string]}
+          labelStyle={{ marginBottom: 4, fontWeight: 600, color: chartTheme.textSecondary }}
+        />
+        {showLegend && <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10, color: chartTheme.textSecondary }} />}
+        {active.map((s) => (
+          <Bar key={s.key} dataKey={s.key} name={s.name} stackId="ca" fill={s.color}
+            stroke={chartTheme.surface} strokeWidth={1}
+            radius={s.key === topKey ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
+        ))}
+        {hasPrev && (
+          <Line dataKey="prev" name={prevLabel} type="monotone" stroke={chartTheme.axis}
+            strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={{ r: 4 }} connectNulls />
+        )}
+      </ComposedChart>
+    </ResponsiveContainer>
   );
 }

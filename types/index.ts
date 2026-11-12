@@ -309,9 +309,17 @@ export interface Coupon {
 
 export interface DailyStat {
   date: string;
+  /** Ventes finalisées (commandes payées) — historique, utilisé par les graphiques. */
   total_sales: number;
   order_count: number;
   avg_order_value: number;
+  /** CA facturé du jour : commandes payées + ventes avec solde dû (acomptes, crédit). */
+  billed_sales?: number;
+  /** Encaissé du jour sur ces mêmes ventes. */
+  collected_sales?: number;
+  billed_count?: number;
+  /** Part de `billed_sales` venant des prestations (atelier / services). */
+  billed_services?: number;
 }
 
 export interface TopProduct {
@@ -319,12 +327,37 @@ export interface TopProduct {
   name: string;
   quantity_sold: number;
   revenue: number;
+  /** Prix d'achat courant (products.cost_price) — null si inconnu ou prestation. */
+  unit_cost?: number | null;
+}
+
+/**
+ * Marge brute ESTIMÉE : coût = quantité × prix d'achat courant du produit (pas le
+ * coût historique du lot vendu). Seules les ventes de produits au coût connu
+ * entrent dans le calcul ; `revenue_total` permet d'afficher la couverture.
+ */
+export interface GrossMarginEstimate {
+  revenue_with_cost: number;
+  cost: number;
+  revenue_total: number;
 }
 
 export interface AnalyticsSummary {
   total_sales: number;
   order_count: number;
   avg_order_value: number;
+  /**
+   * CA facturé : commandes payées + commandes en attente avec solde dû (acompte,
+   * vente à crédit — hors commandes en ligne non encaissées), + prestations
+   * payées ou terminées. `total_sales` ne compte que les ventes finalisées.
+   */
+  billed_total: number;
+  /** Montant réellement encaissé sur ces ventes. */
+  collected_total: number;
+  billed_count: number;
+  gross_margin: GrossMarginEstimate;
+  /** Paiements reçus sur ces mêmes ventes, par moyen (espèces, carte, mobile money…). */
+  payment_methods: Array<{ method: string; amount: number; count: number }>;
   top_products: TopProduct[];
   daily_stats: DailyStat[];
 }

@@ -7,6 +7,7 @@ import { SimpleBarChart, RankBar } from './Charts';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { ServicesAnalyticsSummary } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 interface ServicesTabProps {
   loading: boolean;
@@ -21,7 +22,7 @@ export function ServicesTab({
   period,
   fmt
 }: ServicesTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading || !servicesData) {
       return (

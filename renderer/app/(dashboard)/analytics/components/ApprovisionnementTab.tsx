@@ -7,6 +7,7 @@ import { SimpleBarChart, RankBar } from './Charts';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { ApprovAnalyticsSummary } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 interface ApprovisionnementTabProps {
   loading: boolean;
@@ -21,7 +22,7 @@ export function ApprovisionnementTab({
   period,
   fmt
 }: ApprovisionnementTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading || !approvData) {
       return (

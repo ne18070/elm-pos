@@ -1,96 +1,112 @@
 import { supabase } from './client';
+import { fetchAllRows } from './fetch-all';
 import type { AnalyticsSummary, DailyStat, TopProduct } from '../../types';
-import { format, subDays } from 'date-fns';
+import { addDays, format, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+// --- Période des stats ----------------------------------------------------------
+
+/**
+ * Période d'une requête de stats : un nombre = jours à remonter (de `today - n`
+ * 00:00 jusqu'à maintenant, 0 = aujourd'hui) ; ou des bornes explicites, `end`
+ * EXCLUSIF (YYYY-MM-DD), pour une période close comme « mois dernier ».
+ */
+export type StatsPeriod = number | { start: string; end?: string | null };
+
+/** Borne de fin « ouverte » : les périodes glissantes vont jusqu'à maintenant. */
+const OPEN_END = '9999-12-31';
+
+export function periodBounds(p: StatsPeriod, now = new Date()): { start: string; end: string } {
+  if (typeof p === 'number') return { start: format(subDays(now, p), 'yyyy-MM-dd'), end: OPEN_END };
+  return { start: p.start, end: p.end ?? OPEN_END };
+}
 
 export async function getAnalyticsSummary(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<AnalyticsSummary> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
-  const [ordersResult, itemsResult, serviceOrdersResult, serviceItemsResult] = await Promise.all([
-    // Orders summary
-    supabase
+  // Paginé (fetchAllRows) : au-delà de 1000 lignes PostgREST tronque sans erreur.
+  // Tri par created_at (indexé avec business_id) + id pour un ordre total : trier
+  // sur id seul faisait parcourir la clé primaire de TOUTES les entreprises →
+  // statement timeout sur un vrai volume. Lignes et paiements sont embarqués
+  // dans chaque commande (le plafond de 1000 ne porte que sur les commandes),
+  // au lieu d'interroger order_items / payments, qui n'ont pas de business_id.
+  const [orderRows, serviceOrderRows] = await Promise.all([
+    fetchAllRows((from, to) => supabase
       .from('orders')
-      .select('total, created_at')
-      .eq('business_id', businessId)
-      .eq('status', 'paid')
-      .gte('created_at', `${startDate}T00:00:00Z`),
-
-    // Top products via order items
-    supabase
-      .from('order_items')
       .select(`
-        product_id,
-        name,
-        quantity,
-        total,
-        order:orders!inner(business_id, status)
+        id, total, amount_paid, status, source, created_at,
+        items:order_items(product_id, name, quantity, total, product:products(cost_price)),
+        payments(method, amount)
       `)
-      .eq('order.business_id', businessId)
-      .eq('order.status', 'paid')
-      .gte('order.created_at' as never, `${startDate}T00:00:00Z`),
+      .eq('business_id', businessId)
+      .in('status', ['paid', 'pending'])
+      .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`)
+      .order('created_at')
+      .order('id')
+      .range(from, to)),
 
-    supabase
+    // Prestations payées (datées au paiement) + terminées non soldées (datées à la création)
+    fetchAllRows((from, to) => supabase
       .from('service_orders')
-      .select('id, total, paid_amount, paid_at, created_at')
-      .eq('business_id', businessId)
-      .eq('status', 'paye')
-      .gte('paid_at', `${startDate}T00:00:00Z`),
-
-    supabase
-      .from('service_order_items')
       .select(`
-        service_id,
-        name,
-        quantity,
-        total,
-        order:service_orders!inner(business_id, status, paid_at)
+        id, status, total, paid_amount, paid_at, created_at,
+        items:service_order_items(service_id, name, quantity, total)
       `)
-      .eq('order.business_id', businessId)
-      .eq('order.status', 'paye')
-      .gte('order.paid_at', `${startDate}T00:00:00Z`),
+      .eq('business_id', businessId)
+      .or(`and(status.eq.paye,paid_at.gte.${startDate},paid_at.lt.${endDate}),and(status.eq.termine,created_at.gte.${startDate},created_at.lt.${endDate})`)
+      .order('created_at')
+      .order('id')
+      .range(from, to)),
   ]);
 
-  if (ordersResult.error) throw new Error(ordersResult.error.message);
-  if (itemsResult.error) throw new Error(itemsResult.error.message);
-  if (serviceOrdersResult.error) throw new Error(serviceOrdersResult.error.message);
-  if (serviceItemsResult.error) throw new Error(serviceItemsResult.error.message);
+  type OrderItemRow   = { product_id: string; name: string; quantity: number; total: number; product: { cost_price: number | null } | null };
+  type ServiceItemRow = { service_id: string | null; name: string; quantity: number; total: number };
+  type PaymentRow     = { method: string | null; amount: number };
+  const ordersFull   = orderRows as unknown as Array<BilledOrderRow & { items: OrderItemRow[] | null; payments: PaymentRow[] | null }>;
+  const servicesFull = serviceOrderRows as unknown as Array<BilledServiceRow & { items: ServiceItemRow[] | null }>;
 
-  const orders = (ordersResult.data ?? []) as Array<{ total: number; created_at: string }>;
-  const serviceOrders = (serviceOrdersResult.data ?? []) as Array<{ total: number; paid_amount: number; paid_at: string | null; created_at: string }>;
-  const total_sales = orders.reduce((sum, o) => sum + o.total, 0) +
+  const { orders: billedOrders, services: billedServices } = splitBilled(ordersFull, servicesFull);
+  const orders        = billedOrders.filter((o) => o.status === 'paid');
+  const serviceOrders = billedServices.filter((o) => o.status === 'paye');
+
+  const total_sales = orders.reduce((sum, o) => sum + Number(o.total), 0) +
     serviceOrders.reduce((sum, o) => sum + Number(o.paid_amount ?? o.total), 0);
   const order_count = orders.length + serviceOrders.length;
   const avg_order_value = order_count > 0 ? total_sales / order_count : 0;
 
   // Build daily stats
   const dailyMap = new Map<string, DailyStat>();
-  for (const order of orders) {
-    const date = order.created_at.slice(0, 10);
-    const existing = dailyMap.get(date) ?? {
-      date,
-      total_sales: 0,
-      order_count: 0,
-      avg_order_value: 0,
-    };
-    existing.total_sales += order.total;
-    existing.order_count += 1;
-    dailyMap.set(date, existing);
+  const day = (date: string) => {
+    let s = dailyMap.get(date);
+    if (!s) {
+      s = { date, total_sales: 0, order_count: 0, avg_order_value: 0, billed_sales: 0, collected_sales: 0, billed_count: 0, billed_services: 0 };
+      dailyMap.set(date, s);
+    }
+    return s;
+  };
+  for (const o of billedOrders) {
+    const s = day(o.created_at.slice(0, 10));
+    s.billed_sales!    += Number(o.total);
+    s.collected_sales! += orderCollected(o);
+    s.billed_count!    += 1;
+    if (o.status === 'paid') { s.total_sales += Number(o.total); s.order_count += 1; }
   }
-  for (const order of serviceOrders) {
-    const date = (order.paid_at ?? order.created_at).slice(0, 10);
-    const existing = dailyMap.get(date) ?? {
-      date,
-      total_sales: 0,
-      order_count: 0,
-      avg_order_value: 0,
-    };
-    existing.total_sales += Number(order.paid_amount ?? order.total);
-    existing.order_count += 1;
-    dailyMap.set(date, existing);
+  for (const o of billedServices) {
+    const paid = o.status === 'paye';
+    const s = day(((paid ? o.paid_at : null) ?? o.created_at).slice(0, 10));
+    s.billed_sales!    += Number(o.total);
+    s.collected_sales! += serviceCollected(o);
+    s.billed_count!    += 1;
+    s.billed_services! += Number(o.total);
+    if (paid) { s.total_sales += Number(o.paid_amount ?? o.total); s.order_count += 1; }
   }
+
+  const billed_total    = Array.from(dailyMap.values()).reduce((s, d) => s + (d.billed_sales ?? 0), 0);
+  const collected_total = Array.from(dailyMap.values()).reduce((s, d) => s + (d.collected_sales ?? 0), 0);
+  const billed_count    = billedOrders.length + billedServices.length;
 
   const daily_stats: DailyStat[] = Array.from(dailyMap.values())
     .map((s) => ({
@@ -100,20 +116,30 @@ export async function getAnalyticsSummary(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Build top products
-  type ItemRow = { product_id: string; name: string; quantity: number; total: number };
+  // Top produits / marge : ventes finalisées seulement (comme avant).
+  const itemRows = (orders as typeof ordersFull).flatMap((o) => o.items ?? []);
+  const serviceItemRows = (serviceOrders as typeof servicesFull).flatMap((o) => o.items ?? []);
   const productMap = new Map<string, TopProduct>();
-  for (const item of (itemsResult.data ?? []) as ItemRow[]) {
+  const gross_margin = { revenue_with_cost: 0, cost: 0, revenue_total: 0 };
+  for (const item of itemRows) {
+    const unitCost = item.product?.cost_price ?? null;
+    gross_margin.revenue_total += Number(item.total);
+    if (unitCost != null) {
+      gross_margin.revenue_with_cost += Number(item.total);
+      gross_margin.cost += Number(item.quantity) * Number(unitCost);
+    }
     const existing = productMap.get(item.product_id) ?? {
       product_id: item.product_id,
       name: item.name,
       quantity_sold: 0,
       revenue: 0,
+      unit_cost: unitCost == null ? null : Number(unitCost),
     };
     existing.quantity_sold += item.quantity;
     existing.revenue += item.total;
     productMap.set(item.product_id, existing);
   }
-  for (const item of (serviceItemsResult.data ?? []) as Array<{ service_id: string | null; name: string; quantity: number; total: number }>) {
+  for (const item of serviceItemRows) {
     const key = item.service_id ? `service:${item.service_id}` : `service:${item.name}`;
     const existing = productMap.get(key) ?? {
       product_id: key,
@@ -130,7 +156,64 @@ export async function getAnalyticsSummary(
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 
-  return { total_sales, order_count, avg_order_value, top_products, daily_stats };
+  // Encaissements par moyen de paiement, sur les mêmes ventes que « Encaissé ».
+  const methodMap = new Map<string, PaymentMethodStat>();
+  for (const o of billedOrders as typeof ordersFull) {
+    for (const pay of o.payments ?? []) {
+      const method = pay.method || 'autre';
+      const e = methodMap.get(method) ?? { method, amount: 0, count: 0 };
+      e.amount += Number(pay.amount);
+      e.count  += 1;
+      methodMap.set(method, e);
+    }
+  }
+  const payment_methods = Array.from(methodMap.values()).filter((m) => m.amount > 0).sort((x, y) => y.amount - x.amount);
+
+  return {
+    total_sales, order_count, avg_order_value,
+    billed_total, collected_total, billed_count, gross_margin, payment_methods,
+    top_products, daily_stats,
+  };
+}
+
+// --- Répartition des encaissements par moyen de paiement --------------------
+
+export interface PaymentMethodStat {
+  method: string;
+  amount: number;
+  count:  number;
+}
+
+// --- CA facturé / encaissé — règles partagées (période courante + précédente) --
+
+type BilledOrderRow   = { total: number; amount_paid: number | null; status: string; source: string | null; created_at: string };
+type BilledServiceRow = { status: string; total: number; paid_amount: number | null; paid_at: string | null; created_at: string };
+
+/** Commandes en ligne en attente = pas encore une vente (même critère que les acomptes, migration 158). */
+const ONLINE_SOURCES = ['whatsapp', 'boutique'];
+
+/**
+ * Garde les ventes qui comptent dans le CA facturé : commandes payées, commandes
+ * en attente hors canaux en ligne (acompte / vente à crédit), prestations payées
+ * ou terminées.
+ */
+function splitBilled(orders: BilledOrderRow[], services: BilledServiceRow[]) {
+  return {
+    orders:   orders.filter((o) => o.status === 'paid' || !ONLINE_SOURCES.includes(o.source ?? '')),
+    services,
+  };
+}
+
+/** Une commande payée est soldée ; sinon `amount_paid` (maintenu par trigger, migration 112), plafonné au total. */
+function orderCollected(o: BilledOrderRow): number {
+  const total = Number(o.total);
+  return o.status === 'paid' ? total : Math.min(total, Number(o.amount_paid ?? 0));
+}
+
+function serviceCollected(o: BilledServiceRow): number {
+  const total = Number(o.total);
+  if (o.status === 'paye') return Number(o.paid_amount ?? total);
+  return Math.min(total, Number(o.paid_amount ?? 0));
 }
 
 // --- Ventes d'un produit sur une période ------------------------------------
@@ -193,16 +276,16 @@ export interface ResellerClientStat {
 
 export async function getResellerStats(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<ResellerStat[]> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   const { data, error } = await supabase
     .from('orders')
     .select('total, reseller_id, reseller:resellers!reseller_id(name)')
     .eq('business_id', businessId)
     .eq('status', 'paid')
-    .gte('created_at', `${startDate}T00:00:00Z`)
+    .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`)
     .not('reseller_id', 'is', null) as unknown as {
       data: Array<{ total: number; reseller_id: string; reseller: { name: string } | null }> | null;
       error: unknown;
@@ -229,9 +312,9 @@ export async function getResellerStats(
 
 export async function getResellerClientStats(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<ResellerClientStat[]> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   const { data, error } = await supabase
     .from('orders')
@@ -243,7 +326,7 @@ export async function getResellerClientStats(
     `)
     .eq('business_id', businessId)
     .eq('status', 'paid')
-    .gte('created_at', `${startDate}T00:00:00Z`)
+    .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`)
     .not('reseller_client_id', 'is', null) as unknown as {
       data: Array<{
         total: number;
@@ -321,16 +404,16 @@ function formatFcfa(n: number): string {
 
 export async function getCouponStats(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<CouponStat[]> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   const { data, error } = await supabase
     .from('orders')
     .select('id, created_at, coupon_code, coupon_codes, discount_amount, total, customer_name, cashier:users!cashier_id(full_name)')
     .eq('business_id', businessId)
     .eq('status', 'paid')
-    .gte('created_at', `${startDate}T00:00:00Z`)
+    .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`)
     .not('coupon_code', 'is', null) as unknown as {
       data: CouponOrderRow[] | null;
       error: unknown;
@@ -518,9 +601,9 @@ export interface WholesaleOrderItem {
 
 export async function getResellerDetailStats(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<WholesaleOrderItem[]> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   type OrderRow = {
     id: string;
@@ -544,7 +627,7 @@ export async function getResellerDetailStats(
     .eq('business_id', businessId)
     .eq('status', 'paid')
     .not('reseller_id', 'is', null)
-    .gte('created_at', `${startDate}T00:00:00Z`) as unknown as {
+    .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`) as unknown as {
       data: OrderRow[] | null;
       error: unknown;
     };
@@ -633,10 +716,9 @@ export interface HotelAnalyticsSummary {
 
 export async function getHotelAnalytics(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<HotelAnalyticsSummary> {
-  const { format: fmt2, subDays: sub2 } = await import('date-fns');
-  const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   const [resResult, roomsResult] = await Promise.all([
     supabase
@@ -644,7 +726,7 @@ export async function getHotelAnalytics(
       .select('*, room:hotel_rooms(number, type)')
       .eq('business_id', businessId)
       .eq('status', 'checked_out')
-      .gte('actual_check_out', `${startDate}T00:00:00Z`),
+      .gte('actual_check_out', `${startDate}T00:00:00Z`).lt('actual_check_out', `${endDate}T00:00:00Z`),
     supabase
       .from('hotel_rooms')
       .select('status')
@@ -713,10 +795,10 @@ export interface JuridiqueAnalyticsSummary {
 
 export async function getJuridiqueAnalytics(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<JuridiqueAnalyticsSummary> {
   const { format: fmt2, subDays: sub2, startOfMonth, endOfMonth } = await import('date-fns');
-  const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
   const sixMonthsAgo = fmt2(sub2(new Date(), 180), 'yyyy-MM-01');
 
   const [dossiersRes, feesRes, allDossiersRes, historyRes] = await Promise.all([
@@ -724,12 +806,12 @@ export async function getJuridiqueAnalytics(
       .from('dossiers')
       .select('*')
       .eq('business_id', businessId)
-      .gte('created_at', `${startDate}T00:00:00Z`),
+      .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`),
     supabase
       .from('honoraires_cabinet')
       .select('*')
       .eq('business_id', businessId)
-      .gte('date_facture', startDate),
+      .gte('date_facture', startDate).lt('date_facture', endDate),
     supabase
       .from('dossiers')
       .select('status')
@@ -820,10 +902,10 @@ export interface RHAnalyticsSummary {
 
 export async function getRHAnalytics(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<RHAnalyticsSummary> {
-  const { format: fmt2, subDays: sub2 } = await import('date-fns');
-  const startDate = fmt2(sub2(new Date(), days), 'yyyy-MM-dd');
+  const { format: fmt2 } = await import('date-fns');
+  const { start: startDate, end: endDate } = periodBounds(days);
   const todayStr  = fmt2(new Date(), 'yyyy-MM-dd');
 
   const [paymentsRes, staffRes, attendanceRes, leavesRes] = await Promise.all([
@@ -832,7 +914,7 @@ export async function getRHAnalytics(
       .select('net_amount')
       .eq('business_id', businessId)
       .eq('status', 'paid')
-      .gte('payment_date', startDate),
+      .gte('payment_date', startDate).lt('payment_date', endDate),
     supabase
       .from('staff')
       .select('id')
@@ -878,9 +960,9 @@ export interface VoituresAnalyticsSummary {
 
 export async function getVoituresAnalytics(
   businessId: string,
-  days = 30,
+  days: StatsPeriod = 30,
 ): Promise<VoituresAnalyticsSummary> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
   const db = supabase;
 
   const [parcResult, venteResult, leadsResult] = await Promise.all([
@@ -889,12 +971,12 @@ export async function getVoituresAnalytics(
       .select('id, marque, modele, annee, prix, updated_at')
       .eq('business_id', businessId)
       .eq('statut', 'vendu')
-      .gte('updated_at', `${startDate}T00:00:00Z`)
+      .gte('updated_at', `${startDate}T00:00:00Z`).lt('updated_at', `${endDate}T00:00:00Z`)
       .order('updated_at', { ascending: false }),
     supabase.from('voiture_leads')
       .select('statut')
       .eq('business_id', businessId)
-      .gte('created_at', `${startDate}T00:00:00Z`),
+      .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`),
   ]);
 
   const parc        = (parcResult.data ?? []) as Array<{ statut: string }>;
@@ -916,61 +998,118 @@ export async function getVoituresAnalytics(
 // --- Période précédente (comparaison) -----------------------------------------
 
 export interface PrevPeriodCA {
+  /** Ventes finalisées (commandes payées + prestations payées). */
   total_sales: number;
   total_fees:  number;
   total_hotel: number;
   order_count: number;
+  /** Mêmes règles que `AnalyticsSummary.billed_total` / `collected_total`. */
+  billed_total:    number;
+  collected_total: number;
+  billed_count:    number;
+  fees_paid:       number;
+  hotel_paid:      number;
+  /** CA facturé par jour (ventes + prestations + honoraires + hôtel), jours sans activité à 0. */
+  daily: Array<{ date: string; total: number }>;
 }
 
+/**
+ * Bornes de la période de comparaison : même durée que la période courante,
+ * juste avant elle, sans chevauchement. La période courante des stats démarre à
+ * `today - days` 00:00 (donc `days + 1` jours calendaires, aujourd'hui inclus) ;
+ * `days = 0` = aujourd'hui seul, comparé à hier.
+ */
+export function prevPeriodBounds(days: number, now = new Date()): { start: string; end: string } {
+  const len = days === 0 ? 1 : days + 1;
+  const curStart = days === 0 ? now : subDays(now, days);
+  return {
+    start: format(subDays(curStart, len), 'yyyy-MM-dd'),
+    end:   format(curStart, 'yyyy-MM-dd'), // exclusif
+  };
+}
+
+/** `bounds` : période de comparaison, `end` exclusif (cf. prevPeriodBounds). */
 export async function getPrevPeriodCA(
   businessId: string,
-  days: number,
+  bounds: { start: string; end: string },
   hasHotel: boolean,
   hasJuridique: boolean,
 ): Promise<PrevPeriodCA> {
-  const end   = format(subDays(new Date(), days), 'yyyy-MM-dd');
-  const start = format(subDays(new Date(), days * 2), 'yyyy-MM-dd');
-  const [ordersRes, serviceOrdersRes, feesRes, hotelRes] = await Promise.all([
-    supabase
+  const { start, end } = bounds;
+  const none = <T,>() => Promise.resolve([] as T[]);
+  const [orderRows, serviceRows, feeRows, hotelRows] = await Promise.all([
+    fetchAllRows((from, to) => supabase
       .from('orders')
-      .select('total')
+      .select('id, total, amount_paid, status, source, created_at')
       .eq('business_id', businessId)
-      .eq('status', 'paid')
+      .in('status', ['paid', 'pending'])
       .gte('created_at', `${start}T00:00:00Z`)
-      .lt('created_at',  `${end}T23:59:59Z`),
-    supabase.from('service_orders')
-      .select('paid_amount, total')
+      .lt('created_at',  `${end}T00:00:00Z`)
+      .order('created_at')
+      .order('id')
+      .range(from, to)),
+    fetchAllRows((from, to) => supabase.from('service_orders')
+      .select('id, status, total, paid_amount, paid_at, created_at')
       .eq('business_id', businessId)
-      .eq('status', 'paye')
-      .gte('paid_at', `${start}T00:00:00Z`)
-      .lt('paid_at',  `${end}T23:59:59Z`),
+      .or(`and(status.eq.paye,paid_at.gte.${start},paid_at.lt.${end}),and(status.eq.termine,created_at.gte.${start},created_at.lt.${end})`)
+      .order('created_at')
+      .order('id')
+      .range(from, to)),
     hasJuridique
-      ? supabase.from('honoraires_cabinet').select('montant')
+      ? fetchAllRows((from, to) => supabase.from('honoraires_cabinet').select('id, montant, montant_paye, date_facture')
           .eq('business_id', businessId)
-          .gte('date_facture', start).lte('date_facture', end)
-      : Promise.resolve({ data: [] as { montant: number }[], error: null }),
+          .gte('date_facture', start).lt('date_facture', end)
+          .order('date_facture')
+          .order('id')
+          .range(from, to))
+      : none<{ montant: number; montant_paye: number | null; date_facture: string }>(),
     hasHotel
-      ? supabase.from('hotel_reservations').select('total')
+      ? fetchAllRows((from, to) => supabase.from('hotel_reservations').select('id, total, paid_amount, actual_check_out')
           .eq('business_id', businessId).eq('status', 'checked_out')
           .gte('actual_check_out', `${start}T00:00:00Z`)
-          .lt('actual_check_out',  `${end}T23:59:59Z`)
-      : Promise.resolve({ data: [] as { total: number }[], error: null }),
+          .lt('actual_check_out',  `${end}T00:00:00Z`)
+          .order('actual_check_out')
+          .order('id')
+          .range(from, to))
+      : none<{ total: number; paid_amount: number | null; actual_check_out: string | null }>(),
   ]);
 
-  if (ordersRes.error) throw new Error(ordersRes.error.message);
-  if (serviceOrdersRes.error) throw new Error(serviceOrdersRes.error.message);
-  if (feesRes.error) throw new Error((feesRes as { error: { message: string } | null }).error?.message ?? '');
-  if (hotelRes.error) throw new Error((hotelRes as { error: { message: string } | null }).error?.message ?? '');
+  const { orders, services } = splitBilled(
+    orderRows as unknown as BilledOrderRow[],
+    serviceRows as unknown as BilledServiceRow[],
+  );
+  const paidOrders   = orders.filter((o) => o.status === 'paid');
+  const paidServices = services.filter((o) => o.status === 'paye');
+  const fees  = feeRows as Array<{ montant: number; montant_paye: number | null; date_facture: string }>;
+  const hotel = hotelRows as Array<{ total: number; paid_amount: number | null; actual_check_out: string | null }>;
 
-  const ordersData = (ordersRes.data ?? []) as any[];
-  const serviceOrdersData = (serviceOrdersRes.data ?? []) as any[];
+  const dayMap = new Map<string, number>();
+  for (let d = new Date(`${start}T00:00:00`); format(d, 'yyyy-MM-dd') < end; d = addDays(d, 1)) {
+    dayMap.set(format(d, 'yyyy-MM-dd'), 0);
+  }
+  const add = (date: string | null | undefined, n: number) => {
+    const k = date?.slice(0, 10);
+    if (k && dayMap.has(k)) dayMap.set(k, dayMap.get(k)! + n);
+  };
+  orders.forEach((o) => add(o.created_at, Number(o.total)));
+  services.forEach((o) => add(o.status === 'paye' ? (o.paid_at ?? o.created_at) : o.created_at, Number(o.total)));
+  fees.forEach((f) => add(f.date_facture, Number(f.montant)));
+  hotel.forEach((r) => add(r.actual_check_out, Number(r.total)));
 
   return {
-    total_sales: ordersData.reduce((s, o) => s + Number(o.total), 0) +
-      serviceOrdersData.reduce((s, o) => s + Number(o.paid_amount ?? o.total), 0),
-    total_fees:  ((feesRes.data  ?? []) as any[]).reduce((s, f) => s + Number(f.montant), 0),
-    total_hotel: ((hotelRes.data ?? []) as any[]).reduce((s, r) => s + Number(r.total), 0),
-    order_count: ordersData.length + serviceOrdersData.length,
+    total_sales: paidOrders.reduce((s, o) => s + Number(o.total), 0) +
+      paidServices.reduce((s, o) => s + Number(o.paid_amount ?? o.total), 0),
+    order_count: paidOrders.length + paidServices.length,
+    billed_total: orders.reduce((s, o) => s + Number(o.total), 0) +
+      services.reduce((s, o) => s + Number(o.total), 0),
+    collected_total: orders.reduce((s, o) => s + orderCollected(o), 0) +
+      services.reduce((s, o) => s + serviceCollected(o), 0),
+    billed_count: orders.length + services.length,
+    total_fees:  fees.reduce((s, f) => s + Number(f.montant), 0),
+    fees_paid:   fees.reduce((s, f) => s + Number(f.montant_paye ?? 0), 0),
+    total_hotel: hotel.reduce((s, r) => s + Number(r.total), 0),
+    hotel_paid:  hotel.reduce((s, r) => s + Math.min(Number(r.total), Number(r.paid_amount ?? 0)), 0),
+    daily: Array.from(dayMap, ([date, total]) => ({ date, total })),
   };
 }
 
@@ -986,16 +1125,16 @@ export interface RevendeursAnalyticsSummary {
 
 export async function getRevendeursAnalytics(
   businessId: string,
-  days = 30,
+  days: StatsPeriod = 30,
 ): Promise<RevendeursAnalyticsSummary> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   const { data, error } = await supabase
     .from('orders')
     .select('total, reseller_id, reseller:resellers!reseller_id(id, name, type, zone)')
     .eq('business_id', businessId)
     .eq('status', 'paid')
-    .gte('created_at', `${startDate}T00:00:00Z`)
+    .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`)
     .not('reseller_id', 'is', null) as unknown as {
       data: Array<{
         total: number;
@@ -1060,21 +1199,21 @@ export interface ServicesAnalyticsSummary {
 
 export async function getServicesAnalytics(
   businessId: string,
-  days = 30,
+  days: StatsPeriod = 30,
 ): Promise<ServicesAnalyticsSummary> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
   const [ordersRes, itemsRes] = await Promise.all([
     supabase
       .from('service_orders')
       .select('id, total, paid_amount, status, created_at, paid_at')
       .eq('business_id', businessId)
-      .gte('created_at', `${startDate}T00:00:00Z`),
+      .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`),
     supabase
       .from('service_order_items')
       .select('name, quantity, total, order:service_orders!inner(business_id, status, paid_at)')
       .eq('order.business_id', businessId)
       .eq('order.status', 'paye')
-      .gte('order.paid_at', `${startDate}T00:00:00Z`),
+      .gte('order.paid_at', `${startDate}T00:00:00Z`).lt('order.paid_at', `${endDate}T00:00:00Z`),
   ]);
 
   if (ordersRes.error) throw new Error(ordersRes.error.message);
@@ -1140,19 +1279,19 @@ export interface ApprovAnalyticsSummary {
 
 export async function getApprovisionnementAnalytics(
   businessId: string,
-  days = 30,
+  days: StatsPeriod = 30,
 ): Promise<ApprovAnalyticsSummary> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
   const [entriesRes, poRes] = await Promise.all([
     supabase.from('stock_entries')
       .select('quantity, cost_per_unit, supplier, created_at, product:products(id, name)')
       .eq('business_id', businessId)
-      .gte('created_at', `${startDate}T00:00:00Z`),
+      .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`),
     supabase.from('purchase_orders')
       .select('id')
       .eq('business_id', businessId)
       .eq('status', 'received')
-      .gte('received_at', `${startDate}T00:00:00Z`),
+      .gte('received_at', `${startDate}T00:00:00Z`).lt('received_at', `${endDate}T00:00:00Z`),
   ]);
 
   if (entriesRes.error) throw new Error(entriesRes.error.message);
@@ -1225,9 +1364,9 @@ const UNASSIGNED_KEY = 'inconnu';
 
 export async function getVendeursAnalytics(
   businessId: string,
-  days = 30
+  days: StatsPeriod = 30
 ): Promise<VendeursAnalyticsSummary> {
-  const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+  const { start: startDate, end: endDate } = periodBounds(days);
 
   const [ordersRes, itemsRes] = await Promise.all([
     supabase
@@ -1235,13 +1374,13 @@ export async function getVendeursAnalytics(
       .select('total, cashier_id, cashier:users!cashier_id(full_name)')
       .eq('business_id', businessId)
       .eq('status', 'paid')
-      .gte('created_at', `${startDate}T00:00:00Z`),
+      .gte('created_at', `${startDate}T00:00:00Z`).lt('created_at', `${endDate}T00:00:00Z`),
     supabase
       .from('order_items')
       .select('quantity, order:orders!inner(business_id, status, cashier_id, created_at)')
       .eq('order.business_id', businessId)
       .eq('order.status', 'paid')
-      .gte('order.created_at' as never, `${startDate}T00:00:00Z`),
+      .gte('order.created_at' as never, `${startDate}T00:00:00Z`).lt('order.created_at' as never, `${endDate}T00:00:00Z`),
   ]);
   if (ordersRes.error) throw new Error(ordersRes.error.message);
   if (itemsRes.error)  throw new Error(itemsRes.error.message);

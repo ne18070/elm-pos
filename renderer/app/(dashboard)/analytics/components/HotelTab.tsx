@@ -5,6 +5,7 @@ import { DollarSign, LogOut, BedDouble, LogIn, Wrench, Banknote } from 'lucide-r
 import { KpiCard, KpiGrid } from './KpiCard';
 import { RankBar } from './Charts';
 import type { HotelAnalyticsSummary } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 interface HotelTabProps {
   loading: boolean;
@@ -19,7 +20,7 @@ export function HotelTab({
   period,
   fmt
 }: HotelTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading || !hotelData) {
       return (

@@ -4,6 +4,7 @@ import React from 'react';
 import { DollarSign, Car, TrendingUp, BarChart } from 'lucide-react';
 import { KpiCard, KpiGrid } from './KpiCard';
 import type { VoituresAnalyticsSummary } from '@services/supabase/analytics';
+import { usePeriod } from '../lib/period';
 
 interface VoituresTabProps {
   loading: boolean;
@@ -18,7 +19,7 @@ export function VoituresTab({
   period,
   fmt
 }: VoituresTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading || !voituresData) {
       return (

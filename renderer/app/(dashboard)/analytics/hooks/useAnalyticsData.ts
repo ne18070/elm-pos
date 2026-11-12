@@ -1,29 +1,30 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import {
-  getAnalyticsSummary, getDailySales, getCouponStats,
+  getAnalyticsSummary, getCouponStats,
   getHotelAnalytics, getJuridiqueAnalytics, getVoituresAnalytics,
   getRevendeursAnalytics, getApprovisionnementAnalytics, getPrevPeriodCA,
   getServicesAnalytics, getVendeursAnalytics, getRHAnalytics,
   type CouponStat, type HotelAnalyticsSummary, type JuridiqueAnalyticsSummary,
   type VoituresAnalyticsSummary, type RevendeursAnalyticsSummary,
   type ApprovAnalyticsSummary, type PrevPeriodCA, type ServicesAnalyticsSummary,
-  type VendeursAnalyticsSummary, type RHAnalyticsSummary
+  type VendeursAnalyticsSummary, type RHAnalyticsSummary, type PaymentMethodStat
 } from '@services/supabase/analytics';
 import { supabase } from '@services/supabase/client';
 import type { AnalyticsSummary } from '@pos-types';
+import { getOrderFilterTotals, type OrderFilterTotals } from '@services/supabase/orders';
 import { useNotificationStore } from '@/store/notifications';
-import { DayStack } from '../components/Charts';
+import { getBusinessProfile } from '../lib/profile';
+import type { ResolvedPeriod } from '../lib/period';
 
-export function useAnalyticsData(business: any, period: number) {
+export function useAnalyticsData(business: any, period: ResolvedPeriod) {
   const { error: notifError } = useNotificationStore();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
   const [data, setData]             = useState<AnalyticsSummary | null>(null);
-  const [today, setToday]           = useState<{ total: number; count: number } | null>(null);
   const [prevCA, setPrevCA]         = useState<PrevPeriodCA | null>(null);
   
   // Tab-specific data
@@ -37,54 +38,67 @@ export function useAnalyticsData(business: any, period: number) {
   const [vendeursData, setVendeursData]     = useState<VendeursAnalyticsSummary | null>(null);
   const [rhData, setRHData]                 = useState<RHAnalyticsSummary | null>(null);
   const [audiences, setAudiences]           = useState<any[]>([]);
+  const [payments, setPayments]             = useState<PaymentMethodStat[]>([]);
+  /** Ventes avec solde dû, toutes dates confondues (à relancer). */
+  const [receivables, setReceivables]       = useState<OrderFilterTotals | null>(null);
 
   // Which tabs have been loaded for the current period/business
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set());
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const days = period === 0 ? 1 : period;
+  // `period` est recalculé par la page via useMemo(key) : la référence est stable
+  // tant que la période ne change pas, d'où son usage direct en dépendance.
+  const days = period.query;
+  const prevStart = period.prev.start;
+  const prevEnd   = period.prev.end;
 
   const loadGeneral = useCallback(async (silent = false) => {
     if (!business) return;
     if (!silent) setLoading(true); else setRefreshing(true);
     
     try {
-      const isHotel     = business?.type === 'hotel' || business?.features?.includes('hotel');
-      const isJuridique = business?.type === 'juridique' ||
-                          business?.features?.includes('dossiers') ||
-                          business?.features?.includes('honoraires');
-      const isRH        = business?.type === 'rh';
+      // hasFeature() gère l'héritage (types[], juridique → dossiers…), comme les onglets.
+      const { isHotel, isJuridique, isRH, isStandard } = getBusinessProfile(business);
 
-      const [summary, todayData, prevStats, rh] = await Promise.all([
+      // Les blocs secondaires (comparaison, hôtel, honoraires, RH, soldes dus) ne
+      // doivent pas faire tomber les chiffres clés : chacun échoue seul, l'erreur
+      // est loggée avec son nom. Seul le résumé des ventes est bloquant.
+      const failed: string[] = [];
+      const soft = <T,>(name: string, p: Promise<T>, fallback: T): Promise<T> =>
+        p.catch((err) => { console.error(`[analytics] ${name}`, err); failed.push(name); return fallback; });
+
+      // Hôtel / honoraires entrent dans le CA global de Général : on les charge
+      // ici, sinon les cartes restent à 0 tant que leur onglet n'a pas été ouvert.
+      const [summary, prevStats, rh, hotel, juridique, recv] = await Promise.all([
         getAnalyticsSummary(business.id, days),
-        getDailySales(business.id, todayStr),
-        period > 0 ? getPrevPeriodCA(business.id, days, !!isHotel, !!isJuridique) : Promise.resolve(null),
-        isRH ? getRHAnalytics(business.id, days) : Promise.resolve(null),
+        soft('comparaison', getPrevPeriodCA(business.id, { start: prevStart, end: prevEnd }, isHotel, isJuridique), null),
+        isRH ? soft('rh', getRHAnalytics(business.id, days), null) : Promise.resolve(null),
+        isHotel ? soft('hôtel', getHotelAnalytics(business.id, days), null) : Promise.resolve(null),
+        isJuridique ? soft('honoraires', getJuridiqueAnalytics(business.id, days), null) : Promise.resolve(null),
+        isStandard ? soft('soldes dus', getOrderFilterTotals(business.id, { acompteOnly: true }), null) : Promise.resolve(null),
       ]);
 
-      if (period === 0) {
-        const todayStat = summary.daily_stats.find((d) => d.date === todayStr);
-        setData({
-            ...summary,
-            total_sales: todayStat?.total_sales ?? 0,
-            order_count: todayStat?.order_count ?? 0,
-            avg_order_value: todayStat?.avg_order_value ?? 0,
-            daily_stats: todayStat ? [todayStat] : []
-        });
-      } else {
-        setData(summary);
-      }
-      setToday(todayData);
+      setData(summary);
       setPrevCA(prevStats);
       setRHData(rh);
-      setLoadedTabs(new Set(['general']));
+      if (hotel) setHotelData(hotel);
+      if (juridique) setJuridiqueData(juridique);
+      setPayments(isStandard ? summary.payment_methods : []);
+      setReceivables(recv);
+      const loaded = new Set(['general']);
+      if (hotel) loaded.add('hotel');
+      setLoadedTabs(loaded);
+      if (failed.length > 0) {
+        notifError(`Certaines statistiques n'ont pas pu être chargées (${failed.join(', ')}) — réessayez avec Actualiser`);
+      }
     } catch (e) {
-      notifError('Erreur lors du chargement des statistiques générales');
+      console.error('[analytics] résumé des ventes', e);
+      notifError('Impossible de charger les ventes de la période — réessayez avec Actualiser');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [business, days, period, todayStr, notifError]);
+  }, [business, days, prevStart, prevEnd, notifError]);
 
   const loadTab = useCallback(async (tab: string) => {
     if (!business || loadedTabs.has(tab)) return;
@@ -152,28 +166,11 @@ export function useAnalyticsData(business: any, period: number) {
     loadGeneral();
   }, [loadGeneral]);
 
-  const stackedDays = useMemo<DayStack[]>(() => {
-    const map = new Map<string, DayStack>();
-    const ensure = (d: string) => { if (!map.has(d)) map.set(d, { date: d, retail: 0, services: 0, hotel: 0, juridique: 0 }); return map.get(d)!; };
-    
-    (data?.daily_stats ?? []).forEach(d => { ensure(d.date).retail = d.total_sales; });
-    (juridiqueData?.daily_fees ?? []).forEach(d => { ensure(d.date).juridique = d.amount; });
-    (hotelData?.daily_revenue ?? []).forEach(d => { ensure(d.date).hotel = d.total; });
-    (servicesData?.daily_revenue ?? []).forEach(d => {
-      const e = ensure(d.date);
-      e.services += d.total;
-      e.retail = Math.max(0, e.retail - d.total);
-    });
-    return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }, [data, juridiqueData, hotelData, servicesData]);
-
-  const hasMultiSource = stackedDays.some(d => d.hotel > 0) || stackedDays.some(d => d.juridique > 0) || stackedDays.some(d => d.services > 0);
 
   return {
     loading,
     refreshing,
     data,
-    today,
     prevCA,
     coupons,
     hotelData,
@@ -185,8 +182,8 @@ export function useAnalyticsData(business: any, period: number) {
     vendeursData,
     rhData,
     audiences,
-    stackedDays,
-    hasMultiSource,
+    payments,
+    receivables,
     loadTab,
     refresh: () => loadGeneral(true),
   };

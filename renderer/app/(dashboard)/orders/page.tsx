@@ -19,28 +19,31 @@ import { ImportOrdersModal } from '@/components/orders/ImportOrdersModal';
 import { getOrderById, getOrders } from '@services/supabase/orders';
 import { getResellers, type Reseller } from '@services/supabase/resellers';
 import type { Order, OrderStatus } from '@pos-types';
+import { Badge } from '@/components/ui/Badge';
+import { getPaidAmount, isAcompte, isOnlineToCollect, orderStatusBadge } from '@/lib/order-payment';
 
-type FilterTab = OrderStatus | 'all' | 'acompte' | 'today' | 'online';
+// Vues de travail (onglets) : une question chacune. Le statut, le revendeur et
+// les dates sont des filtres à côté, pas des onglets — l'ancienne barre de 8
+// onglets mélangeait date, canal, reste à payer et statut, qui se recoupaient.
+type ViewTab = 'today' | 'online' | 'acompte' | 'all';
+type StatusFilter = 'tous' | OrderStatus;
 
-const TAB_LABELS: Record<FilterTab, string> = {
-  today:     "Aujourd'hui",
-  all:       'Toutes',
-  online:    'En ligne',
+const VIEW_LABELS: Record<ViewTab, string> = {
+  today:   "Aujourd'hui",
+  online:  'En ligne',
+  acompte: 'Reste à payer',
+  all:     'Toutes',
+};
+const VIEWS: ViewTab[] = ['today', 'online', 'acompte', 'all'];
+
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  tous:      'Tous les statuts',
   paid:      'Payées',
   pending:   'En attente',
-  acompte:   'Acomptes',
   cancelled: 'Annulées',
   refunded:  'Remboursées',
 };
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending:   'bg-yellow-500/20 text-status-warning border-yellow-700',
-  paid:      'bg-green-500/20 text-status-success border-status-success',
-  cancelled: 'bg-red-500/20 text-status-error border-status-error',
-  refunded:  'bg-purple-500/20 text-status-purple border-purple-700',
-};
-
-const TABS: FilterTab[] = ['today', 'all', 'online', 'acompte', 'paid', 'pending', 'cancelled', 'refunded'];
+const STATUS_FILTERS = Object.keys(STATUS_FILTER_LABELS) as StatusFilter[];
 
 /** Date du jour au format YYYY-MM-DD dans le fuseau local. */
 function todayLocalISO(): string {
@@ -63,29 +66,13 @@ const HISTORY_PRINT_LIMIT = 5000;
 // le plancher created_at est calculé côté serveur, non modifiable depuis l'UI.
 const RESTRICTED_WINDOW_DAYS = 30;
 
-// Somme des paiements depuis les lignes `payments` (et non `order.amount_paid`) :
-// c'est ce que la mise à jour optimiste de la liste modifie (OrderDetail →
-// patchOrder) après l'encaissement d'un solde, sans attendre le refetch.
-// `order.amount_paid` (dénormalisé) ne sert qu'au filtre SQL de l'onglet.
-function getPaidAmount(order: Order): number {
-  return (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
-}
-
-// Affichage par ligne : badge "Acompte" + colonne versé/reste. Le filtrage de
-// l'onglet se fait côté serveur (acompteOnly) ; cette fonction ne fait que
-// refléter le même critère visuellement.
-function isAcompte(order: Order): boolean {
-  if (order.status === 'cancelled' || order.status === 'refunded') return false;
-  if (order.source === 'whatsapp' || order.source === 'boutique') return false;
-  return getPaidAmount(order) < order.total - 0.01;
-}
-
 export default function OrdersPage() {
   const { business, user } = useAuthStore();
   const { error: notifError, warning: notifWarn } = useNotificationStore();
   const canViewAllOrders = usePermission('view_all_orders');
   const restricted = !canViewAllOrders;
-  const [tab, setTab]               = useUrlTab<FilterTab>('today', TABS);
+  const [tab, setTab]               = useUrlTab<ViewTab>('today', VIEWS);
+  const [statusFilter, setStatusFilter] = useUrlTab<StatusFilter>('tous', STATUS_FILTERS, 'statut');
   const [selectedOrder, setSelectedOrder]   = useState<Order | null>(null);
   const [printOrder,    setPrintOrder]      = useState<Order | null>(null);
   const [search, setSearch]         = useState('');
@@ -101,7 +88,8 @@ export default function OrdersPage() {
   const isAcompteTab = tab === 'acompte';
   const isTodayTab   = tab === 'today';
   const isOnlineTab  = tab === 'online';
-  const dbStatus = tab === 'all' || tab === 'today' || isAcompteTab || isOnlineTab ? undefined : tab as OrderStatus;
+  // « Reste à payer » porte son propre critère (solde dû) : le statut n'y a pas de sens.
+  const dbStatus = isAcompteTab || statusFilter === 'tous' ? undefined : statusFilter;
   // Commandes passées sur la boutique en ligne (web + appli ELM Boutique).
   const dbSource = isOnlineTab ? 'boutique' : undefined;
   // L'onglet "Aujourd'hui" force la plage sur la date du jour et ignore le
@@ -134,16 +122,11 @@ export default function OrdersPage() {
   // passer un premier fetch avec l'ancien offset avant de le corriger —
   // flash "aucune commande" et requête réseau doublée. Ajusté pendant le
   // rendu, useOrders ne voit jamais la valeur périmée.
-  const prevFiltersRef = useRef([tab, debouncedSearch, dateFrom, dateTo, resellerId]);
+  const filterKey = [tab, statusFilter, debouncedSearch, dateFrom, dateTo, resellerId];
+  const prevFiltersRef = useRef(filterKey);
   let effectivePage = page;
-  if (
-    prevFiltersRef.current[0] !== tab ||
-    prevFiltersRef.current[1] !== debouncedSearch ||
-    prevFiltersRef.current[2] !== dateFrom ||
-    prevFiltersRef.current[3] !== dateTo ||
-    prevFiltersRef.current[4] !== resellerId
-  ) {
-    prevFiltersRef.current = [tab, debouncedSearch, dateFrom, dateTo, resellerId];
+  if (filterKey.some((v, i) => prevFiltersRef.current[i] !== v)) {
+    prevFiltersRef.current = filterKey;
     if (page !== 1) { effectivePage = 1; setPage(1); }
   }
 
@@ -185,7 +168,10 @@ export default function OrdersPage() {
   // Totaux de TOUTES les commandes filtrées (pas seulement la page affichée),
   // uniquement quand un filtre est actif : sur « Toutes » sans filtre, la somme
   // parcourrait tout l'historique pour un chiffre sans intérêt.
-  const hasFilter = Boolean(resellerOpt || debouncedSearch.trim() || isTodayTab || dateFrom || dateTo);
+  // « Reste à payer » et « En ligne » sont des lots bornés : leur total (ce qui reste
+  // à encaisser) est justement l'information utile.
+  const hasFilter = Boolean(resellerOpt || debouncedSearch.trim() || isTodayTab || isAcompteTab || isOnlineTab
+    || statusFilter !== 'tous' || dateFrom || dateTo);
   const { totals } = useOrderTotals(
     hasFilter ? effectiveBusinessId : '',
     {
@@ -245,6 +231,17 @@ export default function OrdersPage() {
     if (!loading && page > pageCount) setPage(pageCount);
   }, [loading, page, pageCount]);
 
+  // Anciens liens (?tab=paid, ?tab=pending…, avant la refonte des onglets) :
+  // vue « Toutes » filtrée sur ce statut, pour que les favoris restent valides.
+  useEffect(() => {
+    const legacy = new URLSearchParams(window.location.search).get('tab');
+    if (legacy && (['paid', 'pending', 'cancelled', 'refunded'] as string[]).includes(legacy)) {
+      setTab('all');
+      setStatusFilter(legacy as OrderStatus);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lecture unique au montage
+  }, []);
+
   // Auto-sélection depuis l'URL (?order=<id>) — ex: lien depuis WhatsApp.
   // Fait un fetch direct par id plutôt que de chercher dans la page chargée :
   // la commande visée peut être sur n'importe quelle page/onglet.
@@ -301,7 +298,7 @@ export default function OrdersPage() {
           ? `Du ${dateFrom ? format(new Date(dateFrom), 'dd/MM/yyyy') : '…'} au ${dateTo ? format(new Date(dateTo), 'dd/MM/yyyy') : '…'}`
           : 'Toute la période';
       printHtml(generateOrdersHistoryReport(list, business, {
-        title: `Historique des factures — ${TAB_LABELS[tab]}${selectedReseller ? ` — ${selectedReseller.name}` : ''}`,
+        title: `Historique des factures — ${VIEW_LABELS[tab]}${dbStatus ? ` — ${STATUS_FILTER_LABELS[dbStatus]}` : ''}${selectedReseller ? ` — ${selectedReseller.name}` : ''}`,
         periodLabel,
       }));
     } catch (err) {
@@ -324,34 +321,63 @@ export default function OrdersPage() {
                   {totalCount} commande{totalCount !== 1 ? 's' : ''}
                 </span>
               </h1>
-              <p className="text-xs text-content-secondary mt-0.5">
-                {restricted
-                  ? `Vos ventes des ${RESTRICTED_WINDOW_DAYS} derniers jours · "Acompte" = commande partiellement payée`
-                  : 'Historique de toutes les ventes · "Acompte" = commande partiellement payée'}
-              </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrintHistory}
                 disabled={printingHistory}
-                className="btn-secondary flex items-center gap-1.5 text-sm disabled:opacity-60"
+                className="btn-secondary h-10 min-w-10 justify-center flex items-center gap-1.5 text-sm disabled:opacity-60"
                 title="Imprimer l'historique des factures affichées"
+                aria-label="Imprimer l'historique des factures affichées"
               >
                 {printingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
                 <span className="hidden sm:inline">Imprimer l&apos;historique</span>
               </button>
-              <button onClick={() => setShowImport(true)} className="btn-secondary flex items-center gap-1.5 text-sm">
+              <button onClick={() => setShowImport(true)} aria-label="Importer des commandes"
+                className="btn-secondary h-10 min-w-10 justify-center flex items-center gap-1.5 text-sm">
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Importer</span>
               </button>
-              <button onClick={refetch} className="btn-secondary flex items-center gap-1.5 text-sm">
+              <button onClick={refetch} aria-label="Actualiser"
+                className="btn-secondary h-10 min-w-10 justify-center flex items-center gap-1.5 text-sm">
                 <RefreshCw className="w-4 h-4" />
                 <span className="hidden sm:inline">Actualiser</span>
               </button>
             </div>
           </div>
 
-          {/* Recherche + filtre revendeur */}
+          {/* Vues de travail */}
+          <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 overflow-x-auto" role="tablist">
+            {VIEWS.map((t) => {
+              const badge = t === 'online' ? onlinePendingCount : t === 'acompte' ? effectiveAcompteCount : 0;
+              const active = tab === t;
+              return (
+                <button
+                  key={t}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => { setTab(t); if (t === 'today') { setDateFrom(''); setDateTo(''); } }}
+                  className={`flex-1 sm:flex-none min-h-[40px] px-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    active ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {VIEW_LABELS[t]}
+                  {badge > 0 && (
+                    <span
+                      title={t === 'online' ? 'Commandes en ligne à encaisser' : 'Ventes avec un reste à payer'}
+                      className={`ml-1.5 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs font-bold tabular-nums ${
+                        active ? 'bg-white/25 text-white' : t === 'acompte' ? 'bg-badge-warning text-status-warning' : 'bg-badge-info text-status-info'
+                      }`}
+                    >
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Recherche */}
           <div className="flex gap-2">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary" />
@@ -363,14 +389,27 @@ export default function OrdersPage() {
                 className="input pl-10 w-full"
               />
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {!isAcompteTab && (
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                aria-label="Filtrer par statut"
+                className={`input h-10 w-auto text-sm ${statusFilter !== 'tous' ? 'border-brand-600 text-content-primary' : 'text-content-secondary'}`}
+              >
+                {STATUS_FILTERS.map((st) => <option key={st} value={st}>{STATUS_FILTER_LABELS[st]}</option>)}
+              </select>
+            )}
             {resellers.length > 0 && !isOnlineTab && (
-              <div className="relative w-36 sm:w-56 shrink-0">
+              <div className="relative w-44 sm:w-56 shrink-0">
                 <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-secondary pointer-events-none" />
                 <select
                   value={resellerId}
                   onChange={(e) => setResellerId(e.target.value)}
                   aria-label="Filtrer par revendeur"
-                  className={`input pl-9 w-full truncate ${resellerId ? 'border-brand-600 text-content-primary' : 'text-content-secondary'}`}
+                  className={`input h-10 pl-9 w-full truncate text-sm ${resellerId ? 'border-brand-600 text-content-primary' : 'text-content-secondary'}`}
                 >
                   <option value="">Tous les revendeurs</option>
                   {resellers.map((r) => (
@@ -381,20 +420,15 @@ export default function OrdersPage() {
                 </select>
               </div>
             )}
-          </div>
 
           {/* Filtre de dates — masqué quand le périmètre est verrouillé sur les
               30 derniers jours du caissier (le choix de dates n'aurait aucun effet
               au-delà de cette fenêtre). */}
           {restricted ? (
             <p className="text-xs text-content-muted">
-              Vous voyez uniquement vos propres ventes des {RESTRICTED_WINDOW_DAYS} derniers jours.
+              Vos propres ventes des {RESTRICTED_WINDOW_DAYS} derniers jours.
             </p>
-          ) : isTodayTab ? (
-            <p className="text-xs text-content-muted">
-              Ventes du jour uniquement — choisissez « Toutes » pour filtrer par dates.
-            </p>
-          ) : (
+          ) : isTodayTab ? null : (
             <div className="flex items-center gap-2 flex-wrap">
               <label className="flex items-center gap-1.5 text-xs text-content-secondary">
                 Du
@@ -403,7 +437,7 @@ export default function OrdersPage() {
                   value={dateFrom}
                   max={dateTo || undefined}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="input h-8 text-sm py-0"
+                  className="input h-10 text-sm py-0"
                 />
               </label>
               <label className="flex items-center gap-1.5 text-xs text-content-secondary">
@@ -413,7 +447,7 @@ export default function OrdersPage() {
                   value={dateTo}
                   min={dateFrom || undefined}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="input h-8 text-sm py-0"
+                  className="input h-10 text-sm py-0"
                 />
               </label>
               {(dateFrom || dateTo) && (
@@ -426,43 +460,6 @@ export default function OrdersPage() {
               )}
             </div>
           )}
-
-          {/* Onglets filtre */}
-          <div className="flex items-center gap-1 bg-surface-input rounded-xl p-1 overflow-x-auto">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); if (t === 'today') { setDateFrom(''); setDateTo(''); } }}
-                className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                  tab === t
-                    ? t === 'acompte'
-                      ? 'bg-amber-600 text-content-primary'
-                      : 'bg-brand-600 text-content-primary'
-                    : 'text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                {TAB_LABELS[t]}
-                {/* Badge compteur commandes en ligne à traiter */}
-                {t === 'online' && onlinePendingCount > 0 && (
-                  <span
-                    title="Commandes en ligne en attente"
-                    className={`ml-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-xs font-bold ${
-                      tab === 'online' ? 'bg-white/20 text-content-primary' : 'bg-brand-600 text-content-primary'
-                    }`}
-                  >
-                    {onlinePendingCount}
-                  </span>
-                )}
-                {/* Badge compteur acomptes */}
-                {t === 'acompte' && effectiveAcompteCount > 0 && (
-                  <span className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold ${
-                    tab === 'acompte' ? 'bg-white/20 text-content-primary' : 'bg-amber-600 text-content-primary'
-                  }`}>
-                    {effectiveAcompteCount}
-                  </span>
-                )}
-              </button>
-            ))}
           </div>
 
           {/* Totaux des commandes filtrées (toutes pages confondues) */}
@@ -505,7 +502,12 @@ export default function OrdersPage() {
           ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-content-secondary">
               {isOnlineTab ? <ShoppingBag className="w-8 h-8 mb-2 opacity-40" /> : <Filter className="w-8 h-8 mb-2 opacity-40" />}
-              <p>{isOnlineTab ? 'Aucune commande en ligne' : 'Aucune commande trouvée'}</p>
+              <p>{isOnlineTab ? 'Aucune commande en ligne' : isAcompteTab ? 'Aucun reste à payer' : 'Aucune commande trouvée'}</p>
+              {isAcompteTab && (
+                <p className="text-xs text-content-muted mt-1 text-center px-4">
+                  Les ventes réglées en partie (acompte, crédit) apparaissent ici jusqu&apos;à leur paiement complet.
+                </p>
+              )}
               {isOnlineTab && (
                 <p className="text-xs text-content-muted mt-1 text-center px-4">
                   Les commandes passées sur votre boutique en ligne et l&apos;appli ELM Boutique apparaîtront ici.
@@ -533,6 +535,8 @@ export default function OrdersPage() {
               <tbody>
                 {orders.map((order) => {
                   const partial   = isAcompte(order);
+                  const toCollect = isOnlineToCollect(order);
+                  const status    = orderStatusBadge(order);
                   const paidAmt   = getPaidAmount(order);
                   const remaining = order.total - paidAmt;
                   const qty       = order.items?.reduce((s, i) => s + i.quantity, 0) ?? 0;
@@ -541,9 +545,12 @@ export default function OrdersPage() {
                     <tr
                       key={order.id}
                       onClick={() => setSelectedOrder(order)}
-                      className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer transition-colors
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                      tabIndex={0}
+                      aria-selected={selectedOrder?.id === order.id}
+                      className={`border-b border-surface-border hover:bg-surface-hover cursor-pointer transition-colors focus-visible:outline-none focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500
                         ${selectedOrder?.id === order.id ? 'bg-surface-hover' : ''}
-                        ${partial ? 'border-l-2 border-l-amber-600' : ''}`}
+                        ${partial ? 'border-l-2 border-l-status-warning' : toCollect ? 'border-l-2 border-l-status-info' : ''}`}
                     >
                       <td className="px-3 py-2 font-mono text-xs text-content-primary whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
@@ -559,6 +566,10 @@ export default function OrdersPage() {
                           )}
                           #{order.id.slice(0, 8).toUpperCase()}
                         </div>
+                        {/* Heure visible sur mobile (la colonne Date est masquée) */}
+                        <p className="sm:hidden mt-0.5 font-sans text-xs text-content-muted">
+                          {format(new Date(order.created_at), isTodayTab ? 'HH:mm' : 'dd MMM, HH:mm', { locale: fr })}
+                        </p>
                       </td>
 
                       <td className="px-3 py-2 text-xs text-content-secondary whitespace-nowrap hidden sm:table-cell">
@@ -609,7 +620,7 @@ export default function OrdersPage() {
 
                       {/* Versé / Reste */}
                       <td className="px-3 py-2 text-sm hidden lg:table-cell whitespace-nowrap">
-                        {partial ? (
+                        {partial || (toCollect && paidAmt > 0.01) ? (
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1 text-content-brand">
                               <span className="text-xs text-content-muted">versé</span>
@@ -627,15 +638,7 @@ export default function OrdersPage() {
 
                       {/* Statut */}
                       <td className="px-3 py-2">
-                        {partial ? (
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/20 text-status-warning border-status-warning whitespace-nowrap">
-                            Acompte
-                          </span>
-                        ) : (
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${STATUS_COLORS[order.status as OrderStatus]}`}>
-                            {TAB_LABELS[order.status as OrderStatus] ?? order.status}
-                          </span>
-                        )}
+                        <Badge tone={status.tone}>{status.label}</Badge>
                       </td>
                     </tr>
                   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUrlTab } from '@/hooks/useUrlTab';
 import {
   TrendingUp, RefreshCw, Store, Tag, BedDouble, Wrench, Download, Car,
@@ -26,13 +26,11 @@ import { VendeursTab } from './components/VendeursTab';
 
 // Hooks
 import { useAnalyticsData } from './hooks/useAnalyticsData';
+import { buildTabExport, downloadCsv, toCsv } from './lib/export';
+import { useNotificationStore } from '@/store/notifications';
+import type { WholesaleOrderItem } from '@services/supabase/analytics';
+import { PERIOD_OPTIONS, PeriodContext, resolvePeriod, type PeriodKey } from './lib/period';
 
-const PERIODS = [
-  { label: "Aujourd'hui", value: 0  },
-  { label: '7 jours',     value: 7  },
-  { label: '30 jours',    value: 30 },
-  { label: '90 jours',    value: 90 },
-];
 
 type Tab = 'general' | 'produits' | 'grossiste' | 'promos' | 'hotel' | 'juridique' | 'voitures' | 'revendeurs' | 'appro' | 'services' | 'vendeurs';
 
@@ -47,7 +45,12 @@ interface TabConfig {
 export default function AnalyticsPage() {
   const { business } = useAuthStore();
   const can = useCan();
-  const [period, setPeriod]   = useState(30);
+  const [periodKey, setPeriodKey] = useState<PeriodKey>('30d');
+  const resolved = useMemo(() => resolvePeriod(periodKey), [periodKey]);
+  /** Jours à remonter (0 = aujourd'hui) — la convention attendue par les onglets. */
+  const period = resolved.back;
+  const { error: notifError } = useNotificationStore();
+  const [wholesaleItems, setWholesaleItems] = useState<WholesaleOrderItem[] | null>(null);
   const [tab, setTab]         = useUrlTab<Tab>('general', () => filteredTabs.map(t => t.id));
 
   const {
@@ -65,11 +68,11 @@ export default function AnalyticsPage() {
     vendeursData,
     rhData,
     audiences,
-    stackedDays,
-    hasMultiSource,
+    payments,
+    receivables,
     loadTab,
     refresh,
-  } = useAnalyticsData(business, period);
+  } = useAnalyticsData(business, resolved);
 
   const isService = hasFeature(business, 'service');
 
@@ -94,17 +97,16 @@ export default function AnalyticsPage() {
   }
 
   function exportCSV() {
-    if (!data) return;
-    const rows = [
-      ['Date', 'Ventes (CA)', 'Commandes', 'Panier moyen'],
-      ...data.daily_stats.map((d) => [d.date, d.total_sales.toFixed(0), d.order_count, d.avg_order_value?.toFixed(0) ?? '0']),
-    ];
-    const csv  = rows.map((r) => r.join(';')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = `stats-${period}j-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    const sections = buildTabExport(tab, {
+      data, payments, coupons, hotelData, juridiqueData, voituresData,
+      revendeursData, approvData, servicesData, vendeursData, wholesaleItems,
+      showFinancials: can('view_financials'),
+    }, resolved);
+    if (!sections || sections.every((sec) => sec.rows.length === 0)) {
+      notifError('Rien à exporter pour cet onglet sur la période');
+      return;
+    }
+    downloadCsv(`stats-${tab}-${periodKey}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(sections));
   }
 
   const tabsConfig: TabConfig[] = [
@@ -135,19 +137,21 @@ export default function AnalyticsPage() {
       <div className="px-4 py-3 border-b border-surface-border flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div>
           <h1 className="text-lg font-bold text-content-primary">Statistiques</h1>
-          <p className="text-xs text-content-secondary mt-0.5">Chiffres clés de votre activité — ventes, achats, marges et tendances par période</p>
+          <p className="text-xs text-content-secondary mt-0.5">Chiffres clés de votre activité, comparés à la période précédente</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={exportCSV} disabled={!data} className="btn-secondary p-2" title="Exporter CSV">
+        <div className="flex items-center gap-2 min-w-0 max-w-full">
+          <button onClick={exportCSV} disabled={loading} className="btn-secondary h-10 px-3 flex items-center gap-1.5 text-sm"
+            aria-label="Exporter cet onglet en CSV" title="Exporter cet onglet en CSV">
             <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Exporter</span>
           </button>
-          <button onClick={refresh} disabled={refreshing} className="btn-secondary p-2" title="Actualiser">
+          <button onClick={refresh} disabled={refreshing} className="btn-secondary h-10 w-10 flex items-center justify-center" title="Actualiser" aria-label="Actualiser">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          <div className="flex gap-1 bg-surface-input rounded-xl p-1">
-            {PERIODS.map(({ label, value }) => (
-              <button key={value} onClick={() => setPeriod(value)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${period === value ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}>
+          <div className="flex gap-1 bg-surface-input rounded-xl p-1 max-w-full overflow-x-auto" role="group" aria-label="Période">
+            {PERIOD_OPTIONS.map(({ label, key }) => (
+              <button key={key} onClick={() => setPeriodKey(key)} aria-pressed={periodKey === key}
+                className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${periodKey === key ? 'bg-brand-600 text-white' : 'text-content-secondary hover:text-content-primary'}`}>
                 {label}
               </button>
             ))}
@@ -166,6 +170,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
+      <PeriodContext.Provider value={resolved}>
       <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 sm:space-y-5">
         {tab === 'general' && (
           <GeneralTab 
@@ -176,9 +181,12 @@ export default function AnalyticsPage() {
             hotelData={hotelData}
             rhData={rhData}
             prevCA={prevCA}
-            stackedDays={stackedDays}
-            hasMultiSource={hasMultiSource}
             fmt={fmt}
+            period={period}
+            availableTabs={filteredTabs.map(t => t.id)}
+            onNavigate={(t) => setTab(t as Tab)}
+            payments={payments}
+            receivables={receivables}
           />
         )}
 
@@ -195,7 +203,7 @@ export default function AnalyticsPage() {
         )}
 
         {tab === 'grossiste' && business && (
-          <GrossisteTab businessId={business.id} days={period === 0 ? 1 : period} fmt={fmt} />
+          <GrossisteTab businessId={business.id} days={resolved.query} fmt={fmt} onItemsLoaded={setWholesaleItems} />
         )}
 
         {tab === 'revendeurs' && (
@@ -222,6 +230,7 @@ export default function AnalyticsPage() {
           <VoituresTab loading={loading} voituresData={voituresData} period={period} fmt={fmt} />
         )}
       </div>
+      </PeriodContext.Provider>
     </div>
   );
 }

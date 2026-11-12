@@ -7,6 +7,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { getProductSales, type ProductSalesResult } from '@services/supabase/analytics';
 import { useNotificationStore } from '@/store/notifications';
 import type { AnalyticsSummary } from '@pos-types';
+import { usePeriod, periodDates } from '../lib/period';
 
 interface ProductsTabProps {
   loading: boolean;
@@ -20,11 +21,6 @@ function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function daysAgoISO(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 function ProductSalesLookup({ businessId, period, fmt }: { businessId: string; period: number; fmt: (n: number) => string }) {
   const { products } = useProducts(businessId, false, { includeInactive: true });
@@ -32,8 +28,11 @@ function ProductSalesLookup({ businessId, period, fmt }: { businessId: string; p
 
   const [search, setSearch]     = useState('');
   const [productId, setProductId] = useState('');
-  const [from, setFrom]   = useState(() => daysAgoISO(period > 0 ? period : 30));
-  const [to, setTo]       = useState(() => todayISO());
+  // Bornes incluses de la période globale (dernier jour = aujourd'hui, ou fin du mois clos).
+  const periodInfo = usePeriod();
+  const periodTo   = periodInfo.closed ? periodDates(periodInfo).slice(-1)[0] : todayISO();
+  const [from, setFrom]   = useState(() => periodInfo.start);
+  const [to, setTo]       = useState(() => periodTo);
   const [busy, setBusy]   = useState(false);
   const [result, setResult] = useState<(ProductSalesResult & { productName: string; from: string; to: string }) | null>(null);
 
@@ -42,9 +41,9 @@ function ProductSalesLookup({ businessId, period, fmt }: { businessId: string; p
   const [dirtyDates, setDirtyDates] = useState(false);
   useEffect(() => {
     if (dirtyDates) return;
-    setFrom(daysAgoISO(period > 0 ? period : 30));
-    setTo(todayISO());
-  }, [period, dirtyDates]);
+    setFrom(periodInfo.start);
+    setTo(periodTo);
+  }, [periodInfo.start, periodTo, dirtyDates]);
 
   const options = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -166,7 +165,7 @@ export function ProductsTab({
   fmt,
   businessId,
 }: ProductsTabProps) {
-  const periodLabel = period === 0 ? "aujourd'hui" : `les ${period} derniers jours`;
+  const { noun: periodLabel } = usePeriod();
 
   if (loading) {
     return (
