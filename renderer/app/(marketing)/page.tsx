@@ -20,14 +20,6 @@ import {
   Car,
   Utensils,
   GraduationCap,
-  Shirt,
-  Hammer,
-  Croissant,
-  Coffee,
-  Sandwich,
-  Sparkles,
-  Scissors,
-  CakeSlice,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { usePermissionsStore } from "@/store/permissions";
@@ -35,6 +27,10 @@ import { getPlans, type Plan } from "@services/supabase/subscriptions";
 import { displayCurrency } from "@/lib/utils";
 import { getDefaultRoute } from "@/lib/getDefaultRoute";
 import { useUrlTab } from "@/hooks/useUrlTab";
+import {
+  MetierIllustration,
+  type MetierId,
+} from "@/components/marketing/MetierIllustrations";
 import {
   RECOMMENDED_PLAN_NAME,
   isAnnualPlan,
@@ -191,7 +187,7 @@ function Hero() {
 
       <div className="relative z-10 max-w-6xl mx-auto w-full pt-32 pb-20">
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold text-brand-300 tracking-widest uppercase mb-6">
+          <p className="text-xs font-semibold text-content-brand tracking-widest uppercase mb-6">
             ELM · Logiciel de gestion pour PME au Sénégal
           </p>
 
@@ -257,7 +253,7 @@ function Hero() {
                     key={p}
                     className="flex items-start gap-2.5 text-sm text-content-secondary"
                   >
-                    <Check className="w-4 h-4 text-brand-300 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-content-brand shrink-0 mt-0.5" />
                     {p}
                   </li>
                 ))}
@@ -313,7 +309,7 @@ function Hero() {
                     key={point}
                     className="flex items-start gap-2.5 text-sm text-content-secondary"
                   >
-                    <Check className="w-4 h-4 text-brand-300 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-content-brand shrink-0 mt-0.5" />
                     {point}
                   </li>
                 ))}
@@ -404,7 +400,7 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section id="features" className="py-24 px-5 bg-surface">
+    <section id="features" data-theme="light" className="py-24 px-5 bg-surface [color-scheme:light]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
           <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
@@ -422,7 +418,7 @@ function Features() {
               className="group bg-surface-card p-8 space-y-4 rounded-2xl border border-surface-border hover:bg-surface-hover transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-badge-info flex items-center justify-center mb-2">
-                <Icon className="w-5 h-5 text-brand-300" />
+                <Icon className="w-5 h-5 text-content-brand" />
               </div>
               <div>
                 <h3 className="text-content-primary font-bold text-base mb-2">
@@ -499,7 +495,7 @@ const SECTEURS: {
   },
   {
     icon: ShoppingCart,
-    iconColor: "text-brand-300",
+    iconColor: "text-content-brand",
     iconBg: "bg-badge-info",
     border: "border-surface-border",
     title: "Boutique & Retail",
@@ -523,7 +519,7 @@ const SECTEURS: {
   },
   {
     icon: GraduationCap,
-    iconColor: "text-brand-300",
+    iconColor: "text-content-brand",
     iconBg: "bg-badge-info",
     border: "border-surface-border",
     title: "Éducation & Formation",
@@ -549,7 +545,7 @@ const SECTEURS: {
 
 function Secteurs() {
   return (
-    <section id="secteurs" className="py-24 px-5 bg-surface">
+    <section id="secteurs" data-theme="light" className="py-24 px-5 bg-surface [color-scheme:light]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
           <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
@@ -595,23 +591,18 @@ function Secteurs() {
 
 // Cartes illustrées : palette terre/ocre/sauge (clin d'œil aux tissus wax),
 // motifs SVG décoratifs — aucune photo à gérer.
-const METIERS: {
-  label: string;
-  icon: React.ElementType;
-  bg: string;
-  fg: string;
-}[] = [
-  { label: "Prêt-à-porter", icon: Shirt, bg: "#F4E3D7", fg: "#A34F2C" },
-  { label: "Quincaillerie", icon: Hammer, bg: "#E8E6E1", fg: "#55534C" },
-  { label: "Restaurant", icon: Utensils, bg: "#F6E8C9", fg: "#9C6B16" },
-  { label: "Supermarché", icon: ShoppingCart, bg: "#E3EDDC", fg: "#4F7942" },
-  { label: "Épicerie", icon: Store, bg: "#F2EBDD", fg: "#8A6D3B" },
-  { label: "Boulangerie", icon: Croissant, bg: "#F6E3C5", fg: "#A3652A" },
-  { label: "Cafétéria", icon: Coffee, bg: "#EAE0D5", fg: "#6F4E37" },
-  { label: "Fast-food", icon: Sandwich, bg: "#F4E0DC", fg: "#A04A3F" },
-  { label: "Maison de beauté", icon: Sparkles, bg: "#F2DEE7", fg: "#99456B" },
-  { label: "Maison de mode", icon: Scissors, bg: "#E0E4F2", fg: "#3F4C8A" },
-  { label: "Pâtisserie", icon: CakeSlice, bg: "#FBE7EE", fg: "#B0487A" },
+const METIERS: { id: MetierId; label: string; bg: string; fg: string }[] = [
+  { id: "pret-a-porter", label: "Prêt-à-porter", bg: "#F4E3D7", fg: "#A34F2C" },
+  { id: "quincaillerie", label: "Quincaillerie", bg: "#E8E6E1", fg: "#55534C" },
+  { id: "restaurant", label: "Restaurant", bg: "#F6E8C9", fg: "#9C6B16" },
+  { id: "supermarche", label: "Supermarché", bg: "#E3EDDC", fg: "#4F7942" },
+  { id: "epicerie", label: "Épicerie", bg: "#F2EBDD", fg: "#8A6D3B" },
+  { id: "boulangerie", label: "Boulangerie", bg: "#F6E3C5", fg: "#A3652A" },
+  { id: "cafeteria", label: "Cafétéria", bg: "#EAE0D5", fg: "#6F4E37" },
+  { id: "fast-food", label: "Fast-food", bg: "#F4E0DC", fg: "#A04A3F" },
+  { id: "maison-de-beaute", label: "Maison de beauté", bg: "#F2DEE7", fg: "#99456B" },
+  { id: "maison-de-mode", label: "Maison de mode", bg: "#E0E4F2", fg: "#3F4C8A" },
+  { id: "patisserie", label: "Pâtisserie", bg: "#FBE7EE", fg: "#B0487A" },
 ];
 
 function Metiers() {
@@ -633,7 +624,7 @@ function Metiers() {
 
         {/* Mobile : bande défilante avec snap · Desktop : grille */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-5 px-5 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible">
-          {METIERS.map(({ label, icon: Icon, bg, fg }) => (
+          {METIERS.map(({ id, label, bg, fg }) => (
             <div
               key={label}
               className="relative w-40 lg:w-auto shrink-0 snap-start aspect-[4/5] rounded-2xl overflow-hidden group"
@@ -671,14 +662,11 @@ function Metiers() {
                   )),
                 )}
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110"
-                  style={{ backgroundColor: "rgba(255,255,255,0.55)" }}
-                >
-                  <Icon className="w-9 h-9" style={{ color: fg }} />
-                </div>
-              </div>
+              <MetierIllustration
+                id={id}
+                fg={fg}
+                className="absolute inset-x-0 top-[6%] mx-auto w-[86%] transition-transform duration-500 group-hover:scale-105 group-hover:-translate-y-1"
+              />
               <p
                 className="absolute inset-x-2 bottom-0 pb-4 text-center text-sm font-bold leading-tight"
                 style={{ color: fg }}
@@ -695,7 +683,7 @@ function Metiers() {
 
 function MultiEtablissements() {
   return (
-    <section className="py-24 px-5 bg-surface">
+    <section data-theme="light" className="py-24 px-5 bg-surface [color-scheme:light]">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         <div>
           <p className="text-xs font-semibold text-content-muted tracking-widest uppercase mb-3">
@@ -722,7 +710,7 @@ function MultiEtablissements() {
                 key={item}
                 className="flex items-center gap-3 text-sm text-content-secondary"
               >
-                <Check className="w-3.5 h-3.5 text-brand-300 shrink-0" />
+                <Check className="w-3.5 h-3.5 text-content-brand shrink-0" />
                 {item}
               </li>
             ))}
@@ -755,7 +743,7 @@ function MultiEtablissements() {
               <div
                 className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                   active
-                    ? "bg-brand-600 text-content-primary"
+                    ? "bg-brand-600 text-white"
                     : "bg-surface-input text-content-muted"
                 }`}
               >
@@ -764,7 +752,7 @@ function MultiEtablissements() {
               <div className="flex-1 min-w-0">
                 <p
                   className={`text-sm font-medium truncate ${
-                    active ? "text-brand-300" : "text-content-secondary"
+                    active ? "text-content-brand" : "text-content-secondary"
                   }`}
                 >
                   {name}
@@ -810,7 +798,7 @@ function PlanCard({
       }`}
     >
       {isPrimary && (
-        <span className="absolute top-4 right-4 text-[10px] font-semibold text-brand-300 bg-badge-info border border-brand-500/30 px-2 py-0.5 rounded-full tracking-wider uppercase">
+        <span className="absolute top-4 right-4 text-[10px] font-semibold text-content-brand bg-badge-info border border-brand-500/30 px-2 py-0.5 rounded-full tracking-wider uppercase">
           Recommandé
         </span>
       )}
@@ -862,7 +850,7 @@ function PlanCard({
             key={f}
             className="flex items-start gap-2.5 text-xs text-content-secondary"
           >
-            <Check className="w-3.5 h-3.5 text-brand-300 shrink-0 mt-0.5" />
+            <Check className="w-3.5 h-3.5 text-content-brand shrink-0 mt-0.5" />
             {f}
           </li>
         ))}
@@ -929,7 +917,7 @@ function Tarifs() {
                   onClick={() => setPeriod(p)}
                   className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                     period === p
-                      ? "bg-brand-600 text-content-primary"
+                      ? "bg-brand-600 text-white"
                       : "text-content-secondary hover:text-content-primary"
                   }`}
                 >
@@ -953,7 +941,7 @@ function Tarifs() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-brand-300 animate-spin" />
+            <Loader2 className="w-6 h-6 text-content-brand animate-spin" />
           </div>
         ) : (
           <div
@@ -1032,7 +1020,7 @@ const FAQ_JSON_LD = JSON.stringify({
 
 function Faq() {
   return (
-    <section id="faq" className="py-24 px-5 bg-surface">
+    <section id="faq" data-theme="light" className="py-24 px-5 bg-surface [color-scheme:light]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }}
@@ -1063,7 +1051,7 @@ function Faq() {
           href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-brand-300 hover:text-brand-400"
+          className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-content-brand hover:opacity-80"
         >
           <MessageCircle className="w-4 h-4" /> Une autre question ?
           Écrivez-nous sur WhatsApp
