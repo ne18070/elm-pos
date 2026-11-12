@@ -541,6 +541,41 @@ export async function findOverdueAcompte(
 // ─── Livraison / Picking ─────────────────────────────────────────────────────
 
 /**
+ * Seulement les commandes qui ont réellement quelque chose à remettre : une
+ * vente comptoir (le client repart avec) garde delivery_status 'pending' par
+ * défaut et noierait la file. Livraison = commande rapide / canal livraison,
+ * commandes boutique (retrait ou livraison), WhatsApp, ou livreur assigné.
+ */
+const DELIVERY_QUEUE_FILTER =
+  'order_channel.eq.livraison,delivery_type.not.is.null,livreur_id.not.is.null,source.in.(boutique,public,whatsapp)';
+
+/**
+ * Taille de la file de livraison et date de la plus ancienne commande en
+ * attente — pour le badge de navigation et le rappel à la clôture de caisse.
+ * Même périmètre que `getOrdersForDelivery`, sans charger les articles.
+ */
+export async function getDeliveryQueueSummary(
+  businessId: string,
+  opts?: { since?: string; sinceDays?: number },
+): Promise<{ count: number; oldestAt: string | null }> {
+  const since = opts?.since
+    ?? new Date(Date.now() - (opts?.sinceDays ?? 60) * 86_400_000).toISOString();
+  const { data, count, error } = await supabase
+    .from('orders')
+    .select('created_at', { count: 'exact' })
+    .eq('business_id', businessId)
+    .in('status', ['paid', 'pending'])
+    .neq('delivery_status', 'delivered')
+    .neq('source', 'scolarite')
+    .or(DELIVERY_QUEUE_FILTER)
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+    .limit(1);
+  if (error) throw error;
+  return { count: count ?? 0, oldestAt: data?.[0]?.created_at ?? null };
+}
+
+/**
  * Commandes payées en attente de livraison, avec barcode produit pour le scan.
  *
  * `orders.delivery_status` vaut `'pending'` par défaut sur TOUTE commande (même
@@ -573,6 +608,7 @@ export async function getOrdersForDelivery(
       .neq('delivery_status', 'delivered')
       // Frais de scolarité (migration 171) : des commandes sans colis à livrer
       .neq('source', 'scolarite')
+      .or(DELIVERY_QUEUE_FILTER)
       .gte('created_at', since)
       .order('created_at', { ascending: true })
       .limit(limit) as never,

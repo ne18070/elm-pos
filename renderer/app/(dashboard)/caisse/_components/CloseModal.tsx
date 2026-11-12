@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Lock, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { X, Loader2, Lock, AlertTriangle, Truck } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { CashSession, SessionLiveSummary } from '@services/supabase/cash-sessions';
 
@@ -7,12 +8,14 @@ interface CloseModalProps {
   session: CashSession;
   summary: SessionLiveSummary;
   currency: string;
+  /** Commandes de la session payées / validées mais pas encore livrées. */
+  undeliveredCount?: number;
   onConfirm: (actualCash: number, notes: string) => Promise<void>;
   onClose: () => void;
 }
 
 export function CloseModal({
-  session, summary, currency, onConfirm, onClose,
+  session, summary, currency, undeliveredCount = 0, onConfirm, onClose,
 }: CloseModalProps) {
   const [actualCash, setActualCash] = useState('');
   const [notes, setNotes]           = useState('');
@@ -57,6 +60,24 @@ export function CloseModal({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {undeliveredCount > 0 && (
+          // Rappel, pas un blocage : la clôture reste possible.
+          <div className="flex items-start gap-3 rounded-xl border border-status-warning/40 bg-badge-warning p-3 text-sm">
+            <Truck className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-content-primary">
+                {undeliveredCount} commande{undeliveredCount > 1 ? 's' : ''} de cette session pas encore livrée{undeliveredCount > 1 ? 's' : ''}
+              </p>
+              <p className="text-content-secondary text-xs mt-0.5">
+                Vérifiez qu&apos;elles sont parties avec le livreur avant de fermer la caisse.
+              </p>
+              <Link href="/livraison" className="inline-flex items-center min-h-[44px] text-xs font-semibold text-content-brand hover:underline">
+                Ouvrir le suivi des livraisons →
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="bg-surface-input rounded-xl p-4 space-y-2 text-sm">
           <p className="text-xs text-content-muted uppercase tracking-wider font-medium mb-3">Résumé de la session</p>

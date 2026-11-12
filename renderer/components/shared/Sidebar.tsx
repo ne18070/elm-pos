@@ -19,6 +19,7 @@ import { TeamTracker } from './TeamTracker';
 import { TerminalStatus } from './TerminalStatus';
 import { SupportPanel } from './SupportPanel';
 import { useLowStockAlerts } from '@/hooks/useLowStockAlerts';
+import { useDeliveryQueue } from '@/hooks/useDeliveryQueue';
 import { getContextualRoleLabel } from '@/lib/permissions';
 import { useState, useEffect, useMemo } from 'react';
 import { useSidebarStore } from '@/store/sidebar';
@@ -93,6 +94,10 @@ function SidebarContent({
   const role = user?.role ?? 'staff';
   const isAdmin = can('manage_team');
   const { count: lowStockCount } = useLowStockAlerts(business?.id ?? '');
+  // Commandes à remettre au livreur : badge sur « Suivi Livraisons », orange
+  // dès que la plus ancienne attend depuis plus de 2 h.
+  const { count: deliveryCount, late: deliveryLate } =
+    useDeliveryQueue(business?.id ?? '', !!business && can('view_livraisons'));
   const expanded = !collapsed;
 
   const [isSupportOpen, setIsSupportOpen] = useState(false);
@@ -194,7 +199,11 @@ function SidebarContent({
             <div className="space-y-0.5">
               {section.items.map(({ href, icon: Icon, label }) => {
                 const active = isNavActive(pathname, href);
-                const badge = href === '/products' && lowStockCount > 0 ? lowStockCount : 0;
+                const isDelivery = href === '/livraison';
+                const badge = href === '/products' ? lowStockCount : isDelivery ? deliveryCount : 0;
+                // Stock bas = alerte (rouge) ; file de livraison = à faire
+                // (marque), en retard (orange) au-delà de 2 h d'attente.
+                const badgeTone = !isDelivery ? 'error' : deliveryLate ? 'warning' : 'brand';
                 const sessionDot = href === '/caisse';
                 const linkId = `nav-item-${href.replace('/', '')}`;
                 return (
@@ -221,9 +230,12 @@ function SidebarContent({
                         active ? "text-content-brand" : "text-content-secondary group-hover:text-content-primary"
                       )} />
                       {badge > 0 && (
-                        <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5
-                                         flex items-center justify-center rounded-full
-                                         bg-red-500 text-content-primary text-[9px] font-bold leading-none shadow-sm">
+                        <span className={cn(
+                          'absolute top-1.5 right-1.5 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full text-[9px] font-bold leading-none shadow-sm',
+                          badgeTone === 'error' ? 'bg-red-500 text-content-primary'
+                            : badgeTone === 'warning' ? 'bg-status-warning text-white'
+                            : 'bg-brand-600 text-white',
+                        )}>
                           {badge > 99 ? '99+' : badge}
                         </span>
                       )}
@@ -242,8 +254,15 @@ function SidebarContent({
                         active ? "text-content-brand" : ""
                       )}>{label}</span>
                       {badge > 0 && (
-                        <span className="flex items-center justify-center min-w-[20px] h-5 px-1
-                                         rounded-full bg-red-500/20 text-status-error text-xs font-bold">
+                        <span
+                          className={cn(
+                            'flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-xs font-bold',
+                            badgeTone === 'error' ? 'bg-red-500/20 text-status-error'
+                              : badgeTone === 'warning' ? 'bg-badge-warning text-status-warning'
+                              : 'bg-badge-brand text-content-brand',
+                          )}
+                          title={isDelivery ? (deliveryLate ? 'Commandes à livrer — dont certaines en attente depuis plus de 2 h' : 'Commandes à livrer') : undefined}
+                        >
                           {badge > 99 ? '99+' : badge}
                         </span>
                       )}

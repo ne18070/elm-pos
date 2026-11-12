@@ -22,6 +22,7 @@ import {
   type CashSession, type SessionLiveSummary,
 } from '@services/supabase/cash-sessions';
 import { logAction } from '@services/supabase/logger';
+import { getDeliveryQueueSummary } from '@services/supabase/orders';
 
 // Local components & utils
 import { MetricCard } from './_components/MetricCard';
@@ -42,6 +43,8 @@ export default function CaissePage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showOpenModal, setShowOpenModal]   = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  // Commandes de la session encore à remettre au livreur (rappel à la clôture)
+  const [undelivered, setUndelivered]       = useState(0);
   const [tab, setTab]                       = useUrlTab<'session' | 'historique'>('session', ['session', 'historique']);
   const [reportData, setReportData]         = useState<ReportData | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
@@ -94,6 +97,18 @@ export default function CaissePage() {
     const id = setInterval(() => loadSummary(false), 30_000);
     return () => clearInterval(id);
   }, [session, loadSummary]);
+
+  async function openCloseModal() {
+    if (!session || !business) return;
+    const pendingDeliveries = can('view_livraisons')
+      ? getDeliveryQueueSummary(business.id, { since: session.opened_at })
+          .then((s) => s.count)
+          .catch(() => 0) // rappel indicatif : ne bloque jamais la clôture
+      : Promise.resolve(0);
+    const [n] = await Promise.all([pendingDeliveries, loadSummary(true)]);
+    setUndelivered(n);
+    setShowCloseModal(true);
+  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -235,7 +250,7 @@ export default function CaissePage() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => { loadSummary(true).then(() => setShowCloseModal(true)); }}
+                    onClick={openCloseModal}
                     className="btn-danger flex-1 sm:flex-none flex items-center justify-center gap-2 h-10 px-4"
                   >
                     <Lock className="w-4 h-4" />Clôturer
@@ -523,6 +538,7 @@ export default function CaissePage() {
       {showCloseModal && session && summary && (
         <CloseModal
           session={session} summary={summary} currency={currency}
+          undeliveredCount={undelivered}
           onConfirm={handleClose} onClose={() => setShowCloseModal(false)}
         />
       )}

@@ -2,7 +2,7 @@
 import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCw, Truck, Clock, CheckCircle, Package, UserCheck, X, CheckCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -86,9 +86,33 @@ export default function LivraisonPage() {
         { event: 'UPDATE', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
         () => { fetchOrders(true); }
       )
+      // Une nouvelle commande à livrer doit apparaître sans recharger la page.
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders', filter: `business_id=eq.${business.id}` },
+        () => { fetchOrders(true); }
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [business?.id, fetchOrders]);
+
+  // Lien direct `/livraison?order=<id>` (ex. « Préparer la livraison » après
+  // une commande rapide) : ouvre la commande dès qu'elle est dans la file.
+  // L'URL est lue après le montage (pas de Suspense, cf. useUrlTab).
+  const deepLinkDone = useRef(false);
+  useEffect(() => {
+    if (deepLinkDone.current || loading) return;
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get('order');
+    deepLinkDone.current = true;
+    if (!id) return;
+    url.searchParams.delete('order');
+    window.history.replaceState(window.history.state, '', url.toString());
+    const target = orders.find((o) => o.id === id);
+    if (target) handleSelect(target);
+    else notifError('Cette commande n\'est plus dans la file de livraison (déjà livrée ?).');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, orders]);
 
   async function handleSelect(order: Order) {
     setSelected(order);

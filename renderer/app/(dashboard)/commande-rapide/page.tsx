@@ -22,7 +22,7 @@ import { enqueueToSync } from '@/lib/ipc';
 import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { generateDistributeurInvoice, printHtml } from '@/lib/invoice-templates';
 import { formatCurrency, generateId, cn } from '@/lib/utils';
-import { Lock, Users } from 'lucide-react';
+import { Lock, Truck, Users, X } from 'lucide-react';
 import { EmptyState, Skeleton } from '@/components/ui';
 import type { Order, Product, PaymentMethod, Coupon } from '@pos-types';
 import { ResellerRail } from '@/components/commande-rapide/ResellerRail';
@@ -62,6 +62,9 @@ export default function CommandeRapidePage() {
   // Un seul client_order_id par finalisation : une nouvelle tentative après une
   // erreur ne doit pas créer une seconde commande. Remis à zéro à la fermeture.
   const clientOrderIdRef = useRef<string | null>(null);
+  // Dernière commande créée en ligne : proposée à la préparation de livraison
+  // tout de suite, sinon elle est oubliée dans la file /livraison.
+  const [toDeliver, setToDeliver] = useState<{ id: string; reseller: string } | null>(null);
 
   const activeResellerId = useQuickOrderStore((s) => s.activeResellerId);
   const lines = useQuickOrderStore((s) => s.lines);
@@ -390,6 +393,7 @@ export default function CommandeRapidePage() {
               : 'Commande encaissée',
         );
         printInvoice(order, "réimprimez-la depuis l'historique des commandes.");
+        setToDeliver({ id: order.id, reseller: reseller.name });
         clientOrderIdRef.current = null;
         clear();
         setFinalizeMode(null);
@@ -491,6 +495,28 @@ export default function CommandeRapidePage() {
           Saisie en grille pour vos revendeurs — bon de livraison, encaissement ou acompte.
         </p>
       </div>
+
+      {toDeliver && can('view_livraisons') && (
+        <div className="px-4 py-2 border-b border-surface-border bg-badge-info flex items-center gap-3">
+          <Truck className="w-4 h-4 text-status-info shrink-0" />
+          <p className="flex-1 min-w-0 text-sm text-content-primary truncate">
+            Commande #{toDeliver.id.slice(0, 8).toUpperCase()} · {toDeliver.reseller} — à préparer pour le livreur
+          </p>
+          <Link
+            href={`/livraison?order=${toDeliver.id}`}
+            className="btn-primary h-11 px-4 inline-flex items-center text-sm shrink-0"
+          >
+            Préparer la livraison
+          </Link>
+          <button
+            onClick={() => setToDeliver(null)}
+            className="h-11 w-11 inline-flex items-center justify-center text-content-muted hover:text-content-primary shrink-0"
+            aria-label="Masquer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         <ResellerRail
