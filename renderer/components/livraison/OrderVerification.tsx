@@ -132,7 +132,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
             <div className="h-2.5 bg-surface-input rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
-                  allDone ? 'bg-green-500' : 'bg-brand-500'
+                  allDone ? 'bg-status-success' : 'bg-brand-500'
                 }`}
                 style={{ width: `${progress}%` }}
               />
@@ -199,7 +199,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                 scannerEnabled
                   ? 'border-brand-700 bg-badge-brand text-content-brand hover:bg-badge-brand'
-                  : 'border-slate-700 bg-surface-input text-content-primary hover:border-slate-600 hover:text-content-primary'
+                  : 'border-surface-border bg-surface-input text-content-secondary hover:border-content-muted hover:text-content-primary'
               }`}
             >
               {scannerEnabled
@@ -226,14 +226,14 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                            transition-all duration-150 active:scale-[0.99]
                            ${done
                              ? 'bg-badge-success border-status-success'
-                             : 'bg-surface-input border-surface-border hover:border-slate-500'}`}
+                             : 'bg-surface-input border-surface-border hover:border-content-muted'}`}
               >
                 {/* Checkbox visuel */}
                 <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all
                   ${done
-                    ? 'bg-green-500 border-green-500'
-                    : 'border-slate-600'}`}>
-                  {done && <Check className="w-4 h-4 text-content-primary" strokeWidth={3} />}
+                    ? 'bg-green-600 border-green-600'
+                    : 'border-content-muted'}`}>
+                  {done && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
                 </div>
 
                 {/* Image miniature */}
@@ -253,7 +253,7 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
                 {/* Infos article */}
                 <div className="flex-1 min-w-0">
                   <p className={`font-medium truncate transition-colors ${
-                    done ? 'text-status-success line-through decoration-green-600/50' : 'text-content-primary'
+                    done ? 'text-status-success line-through decoration-status-success/50' : 'text-content-primary'
                   }`}>
                     {item.name}
                   </p>
@@ -290,8 +290,8 @@ export function OrderVerification({ order, currency, onConfirm, onClose }: Order
             className={`w-full h-12 rounded-xl font-semibold text-base flex items-center justify-center gap-2
               transition-all duration-200
               ${allDone && !confirming
-                ? 'bg-green-600 hover:bg-green-500 text-content-primary shadow-lg shadow-green-900/30'
-                : 'bg-slate-700 text-content-primary cursor-not-allowed'}`}
+                ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/30'
+                : 'bg-surface-border text-content-muted cursor-not-allowed'}`}
           >
             {confirming ? (
               <Loader2 className="w-5 h-5 animate-spin" />

@@ -30,8 +30,8 @@ import { dispatchTableChanged } from '@/hooks/useRealtimeSync';
 import type { Order } from '@pos-types';
 
 const DELIVERY_LABELS = {
-  pending:   { label: 'En attente',  color: 'text-status-warning bg-yellow-900/20 border-yellow-800' },
-  picking:   { label: 'En cours',    color: 'text-content-brand bg-badge-brand border-brand-800'   },
+  pending:   { label: 'En attente',  color: 'text-status-warning bg-badge-warning border-status-warning/40' },
+  picking:   { label: 'En cours',    color: 'text-content-brand bg-badge-brand border-brand-500/40'   },
   delivered: { label: 'Livré',       color: 'text-status-success bg-badge-success border-status-success'   },
 };
 
@@ -333,7 +333,7 @@ export default function LivraisonPage() {
                         ? 'border-brand-500 bg-badge-brand'
                         : selectedIds.has(order.id)
                           ? 'border-brand-500/60 bg-surface-card'
-                          : 'border-surface-border bg-surface-card hover:border-slate-600 hover:bg-surface-hover'
+                          : 'border-surface-border bg-surface-card hover:border-content-muted hover:bg-surface-hover'
                     }`}
                   >
                    <div className="flex items-stretch">
