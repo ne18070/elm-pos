@@ -3,7 +3,8 @@ import { confirmAsync } from '@/components/shared/ConfirmDialog';
 import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Truck, Clock, CheckCircle, Package, UserCheck, X, CheckCheck } from 'lucide-react';
+import { RefreshCw, Truck, Clock, CheckCircle, Package, UserCheck, X, CheckCheck, Share2 } from 'lucide-react';
+import { shareDeliveryLink } from '@/lib/delivery-share';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '@/store/auth';
@@ -251,8 +252,10 @@ export default function LivraisonPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* -- Colonne gauche : liste des commandes -- */}
-      <div className={`flex flex-col border-r border-surface-border transition-all ${
-        selected ? 'w-80 shrink-0' : 'flex-1'
+      {/* Sur téléphone (lien envoyé au magasinier), la vérification prend tout
+          l'écran ; le bouton fermer du panneau ramène à la liste. */}
+      <div className={`flex-col border-r border-surface-border transition-all ${
+        selected ? 'hidden md:flex md:w-80 shrink-0' : 'flex flex-1'
       }`}>
         {/* Header */}
         <div className="p-6 border-b border-surface-border">
@@ -395,8 +398,18 @@ export default function LivraisonPage() {
                     </button>
                    </div>
 
+                    <div className="px-4 pb-3 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          shareDeliveryLink({ orderId: order.id, customerName: order.customer_name, itemCount });
+                        }}
+                        className="flex items-center gap-1.5 text-xs px-2.5 min-h-[36px] rounded-lg border border-surface-border text-content-secondary hover:text-content-primary hover:bg-surface-hover transition-colors"
+                      >
+                        <Share2 className="w-3 h-3" />
+                        Envoyer au magasinier
+                      </button>
                     {isDelivery && livreurs.length > 0 && canAssign && (
-                      <div className="px-4 pb-3 flex items-center gap-2">
                         <button
                           onClick={(e) => { e.stopPropagation(); openAssign(order); }}
                           className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border transition-colors ${
@@ -411,8 +424,8 @@ export default function LivraisonPage() {
                             : 'Assigner livreur'
                           }
                         </button>
-                      </div>
                     )}
+                    </div>
                   </div>
                 );
               })}

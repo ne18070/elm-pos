@@ -17,6 +17,7 @@ import { useNotificationStore } from '@/store/notifications';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { NotificationBanner } from '@/components/shared/NotificationBanner';
 import { StartupAlertsModal } from '@/components/shared/StartupAlertsModal';
+import { WhatsNewModal } from '@/components/shared/WhatsNewModal';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { updateStaffHeartbeat } from '@services/supabase/staff';
 import { useSidebarStore } from '@/store/sidebar';
@@ -33,6 +34,7 @@ function MobileLayout({ children }: { children: React.ReactNode }) {
         <MobileTopBar onMenuOpen={() => setDrawerOpen(true)} />
         <NotificationBanner />
         <StartupAlertsModal />
+        <WhatsNewModal />
         <TrialBanner />
         <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <ErrorBoundary section="dashboard">

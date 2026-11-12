@@ -107,7 +107,8 @@ export function StartupAlertsModal() {
   if (!visible || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+    // data-blocking-modal : WhatsNewModal attend sa fermeture avant de s'afficher
+    <div data-blocking-modal className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
       <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 
         {/* Header */}

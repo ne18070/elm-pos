@@ -16,6 +16,7 @@ import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { trackAuth } from '@/lib/analytics';
 import { isCapacitor } from '@/lib/platform';
 import { SUSPENDED_MESSAGE, consumeSuspended, isBannedError } from '@/lib/org-suspension';
+import { getReturnTo } from '@/lib/return-to';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -138,7 +139,8 @@ export default function LoginPage() {
         setLoaded(true);
         setCashLoaded(true);
         console.log('[Login] Redirecting user to default route');
-        router.replace(getDefaultRoute(profile.role, activeBusiness as any));
+        // Lien partagé (ex. livraison envoyée au magasinier) : on y retourne
+        router.replace(getReturnTo() ?? getDefaultRoute(profile.role, activeBusiness as any));
       } catch (innerErr) {
         console.error('[Login] Inner loading error (non-blocking):', innerErr);
         router.replace('/orders'); // Fallback

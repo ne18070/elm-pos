@@ -15,6 +15,7 @@ import { useCashSessionStore } from '@/store/cashSession';
 import { usePermissionsStore } from '@/store/permissions';
 import { setMonitoringUser, trackAuth } from '@/lib/analytics';
 import { markSuspended, isBannedError } from '@/lib/org-suspension';
+import { loginUrlWithReturn } from '@/lib/return-to';
 import { useOrganizationBlockGuard } from '@/hooks/useOrganizationBlockGuard';
 
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/onboarding', '/reset-password', '/display', '/subscribe', '/privacy', '/conditions', '/c', '/upload', '/boutique', '/payer', '/track', '/reservation', '/location', '/juridique', '/voitures', '/proprietaire', '/services', '/tech-service', '/delete-account', '/delete-data', '/developers', '/telecharger'];
@@ -156,7 +157,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isPublic(pathnameRef.current)) {
         clear();
         resetPermissions();
-        router.replace('/login');
+        // Garde la page demandée (lien partagé) pour y revenir après connexion
+        router.replace(loginUrlWithReturn());
       }
       return;
     }

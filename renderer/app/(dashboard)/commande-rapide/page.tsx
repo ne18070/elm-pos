@@ -22,7 +22,8 @@ import { enqueueToSync } from '@/lib/ipc';
 import { isNetworkError, orderErrorMessage, OFFLINE_NOT_SAVED_MESSAGE } from '@/lib/net';
 import { generateDistributeurInvoice, printHtml } from '@/lib/invoice-templates';
 import { formatCurrency, generateId, cn } from '@/lib/utils';
-import { Lock, Truck, Users, X } from 'lucide-react';
+import { Lock, Share2, Truck, Users, X } from 'lucide-react';
+import { shareDeliveryLink } from '@/lib/delivery-share';
 import { EmptyState, Skeleton } from '@/components/ui';
 import type { Order, Product, PaymentMethod, Coupon } from '@pos-types';
 import { ResellerRail } from '@/components/commande-rapide/ResellerRail';
@@ -64,7 +65,9 @@ export default function CommandeRapidePage() {
   const clientOrderIdRef = useRef<string | null>(null);
   // Dernière commande créée en ligne : proposée à la préparation de livraison
   // tout de suite, sinon elle est oubliée dans la file /livraison.
-  const [toDeliver, setToDeliver] = useState<{ id: string; reseller: string } | null>(null);
+  const [toDeliver, setToDeliver] = useState<
+    { id: string; reseller: string; customerName: string; itemCount: number } | null
+  >(null);
 
   const activeResellerId = useQuickOrderStore((s) => s.activeResellerId);
   const lines = useQuickOrderStore((s) => s.lines);
@@ -393,7 +396,12 @@ export default function CommandeRapidePage() {
               : 'Commande encaissée',
         );
         printInvoice(order, "réimprimez-la depuis l'historique des commandes.");
-        setToDeliver({ id: order.id, reseller: reseller.name });
+        setToDeliver({
+          id: order.id,
+          reseller: reseller.name,
+          customerName,
+          itemCount: items.reduce((n, i) => n + i.quantity, 0),
+        });
         clientOrderIdRef.current = null;
         clear();
         setFinalizeMode(null);
@@ -508,6 +516,19 @@ export default function CommandeRapidePage() {
           >
             Préparer la livraison
           </Link>
+          <button
+            onClick={() => shareDeliveryLink({
+              orderId: toDeliver.id,
+              customerName: toDeliver.customerName,
+              itemCount: toDeliver.itemCount,
+            })}
+            className="btn-secondary h-11 px-3 inline-flex items-center gap-2 text-sm shrink-0"
+            aria-label="Envoyer au magasinier"
+            title="Envoyer le lien de préparation au magasinier"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Envoyer au magasinier</span>
+          </button>
           <button
             onClick={() => setToDeliver(null)}
             className="h-11 w-11 inline-flex items-center justify-center text-content-muted hover:text-content-primary shrink-0"
