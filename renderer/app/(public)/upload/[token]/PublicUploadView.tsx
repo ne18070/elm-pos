@@ -79,7 +79,7 @@ export default function PublicUploadView() {
   if (success) {
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-500">
-        <div className="w-24 h-24 bg-badge-success border border-status-success rounded-full flex items-center justify-center mb-8 shadow-xl shadow-green-500/20">
+        <div className="w-24 h-24 bg-badge-success border border-status-success rounded-full flex items-center justify-center mb-8 shadow-xl shadow-status-success/20">
           <CheckCircle2 className="w-12 h-12 text-status-success" />
         </div>
         <h1 className="text-3xl font-black text-content-primary mb-3">Documents envoyés !</h1>

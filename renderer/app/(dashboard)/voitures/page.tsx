@@ -3,6 +3,7 @@ import { toUserError } from '@/lib/user-error';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUrlTab } from '@/hooks/useUrlTab';
+import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Plus, Car, Users, Pencil, Trash2, Loader2, X,
   ImagePlus, Search, Share2, Copy, Check,
@@ -371,8 +372,14 @@ export default function VoituresPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-content-muted" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="card p-4 space-y-3" aria-hidden>
+                <Skeleton className="h-36 rounded-xl" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3.5 w-1/3" />
+              </div>
+            ))}
           </div>
         ) : tab === 'parc' ? (
           <ParcTab

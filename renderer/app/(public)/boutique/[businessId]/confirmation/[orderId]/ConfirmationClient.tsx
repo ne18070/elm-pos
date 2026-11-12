@@ -60,7 +60,7 @@ export default function ConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div data-theme="light" className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-brand-600" />
       </div>
     );
@@ -68,7 +68,7 @@ export default function ConfirmationPage() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div data-theme="light" className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-sm w-full space-y-4">
           <AlertCircle className="w-12 h-12 text-status-error mx-auto" />
           <p className="font-semibold text-slate-800">{error ?? "Une erreur est survenue"}</p>
@@ -92,7 +92,7 @@ export default function ConfirmationPage() {
   const paymentConfig = PAYMENT_LABELS['cash']; // le mode est stocké dans la commande
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
+    <div data-theme="light" className="min-h-screen bg-slate-50 pb-16">
 
       {/* Header */}
       <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
@@ -243,7 +243,7 @@ export default function ConfirmationPage() {
               href={`https://wa.me/${info.phone.replace(/[^0-9]/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-content-primary px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0"
             >
               <MessageCircle className="w-4 h-4" />
               WhatsApp

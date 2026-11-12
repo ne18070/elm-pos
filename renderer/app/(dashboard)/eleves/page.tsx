@@ -1,6 +1,7 @@
 'use client';
 
 import { confirmAsync } from '@/components/shared/ConfirmDialog';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 import { OnboardingChecklist } from '@/components/shared/OnboardingChecklist';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -159,8 +160,10 @@ export default function ElevesPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-content-secondary" />
+          <div className="card overflow-hidden bg-surface-card border-surface-border">
+            <table className="w-full">
+              <tbody><SkeletonRows rows={7} cols={5} /></tbody>
+            </table>
           </div>
         ) : (
           <div className="card overflow-hidden bg-surface-card border-surface-border">

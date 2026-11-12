@@ -295,7 +295,7 @@ export default function ContractSignPage() {
     return (
       <MobileShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-6">
-          <div className="w-20 h-20 rounded-full bg-badge-success border-2 border-green-500 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full bg-badge-success border-2 border-status-success flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-status-success" />
           </div>
           <p className="text-xl font-bold text-content-primary">Contrat signé !</p>

@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUrlTab } from '@/hooks/useUrlTab';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 import { 
-  Plus, Scale, Loader2, ExternalLink, Activity, 
+  Plus, Scale, ExternalLink, Activity,
   GitBranch, BookOpen, Settings2, Archive, ArchiveRestore 
 } from 'lucide-react';
 
@@ -183,7 +184,9 @@ export default function DossiersPage() {
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-status-purple" /></div>
+              <div className="card overflow-hidden">
+                <table className="w-full"><tbody><SkeletonRows rows={7} cols={5} /></tbody></table>
+              </div>
             ) : (
               <DossierTable 
                 dossiers={dossiers}

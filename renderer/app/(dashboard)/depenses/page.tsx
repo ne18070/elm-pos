@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, TrendingDown, Trash2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
+import { SkeletonRows } from '@/components/ui/Skeleton';
 import { getJournalEntries, createManualEntry, deleteManualEntry } from '@services/supabase/accounting';
 import type { JournalEntry } from '@services/supabase/accounting';
 import { getVehicles, type RentalVehicle } from '@services/supabase/contracts';
@@ -308,8 +309,8 @@ export default function DepensesPage() {
 
         {/* -- Liste -- */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-content-primary" />
+          <div className="card overflow-hidden">
+            <table className="w-full"><tbody><SkeletonRows rows={6} cols={4} /></tbody></table>
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-content-primary gap-3">

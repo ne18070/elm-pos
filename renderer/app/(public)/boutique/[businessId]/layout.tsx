@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // Boutique pages are client-only, no server-side auth or dashboard chrome
 export default function BoutiqueLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div data-theme="light" className="min-h-screen bg-slate-50 text-slate-900">
       <AppDownloadBanner />
       {children}
     </div>

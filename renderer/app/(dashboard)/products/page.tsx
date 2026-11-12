@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useCan } from '@/hooks/usePermission';
 import { triggerWhatsAppShare } from '@/lib/whatsapp-direct';
 import { useConfirm } from '@/components/shared/ConfirmDialog';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { ProductModal } from '@/components/products/ProductModal';
 import { ImportProductsModal } from '@/components/products/ImportProductsModal';
 import { BarcodePrintModal } from '@/components/products/BarcodePrintModal';
@@ -432,7 +433,15 @@ export default function ProductsPage() {
         )}
 
         {loading ? (
-          <div className="text-content-secondary text-center py-10">Chargement…</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="card p-3 flex flex-col gap-2" aria-hidden>
+                <Skeleton className="aspect-square rounded-lg" />
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3.5 w-1/2" />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-content-secondary">
             <Package className="w-12 h-12 mb-3 opacity-30" />

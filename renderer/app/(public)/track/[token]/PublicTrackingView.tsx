@@ -604,13 +604,13 @@ export default function PublicTrackingView() {
           <div className="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
               <div className="flex items-center gap-2">
-                <Store className="w-4 h-4 text-emerald-600" />
+                <Store className="w-4 h-4 text-status-success" />
                 <span className="text-xs font-bold text-content-primary">Notre boutique</span>
               </div>
               <a
                 href={`/boutique/${service.business_id}`}
                 target='_blank'
-                className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:gap-2 transition-all"
+                className="flex items-center gap-1 text-xs font-bold text-status-success hover:gap-2 transition-all"
               >
                 Voir tout <ArrowRight className="w-3.5 h-3.5" />
               </a>
@@ -620,7 +620,7 @@ export default function PublicTrackingView() {
                 {[...boutiqueItems, ...boutiqueItems].map((item, i) => (
                   <span key={i} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 bg-surface-hover border border-surface-border rounded-full text-[11px] whitespace-nowrap">
                     <span className="text-content-secondary font-medium">{item.name}</span>
-                    <span className="font-bold text-emerald-600">{formatCurrency(item.price, cur)}</span>
+                    <span className="font-bold text-status-success">{formatCurrency(item.price, cur)}</span>
                   </span>
                 ))}
               </div>
@@ -777,7 +777,7 @@ export default function PublicTrackingView() {
                 <div className="text-center space-y-3 py-2">
                   <div className="flex justify-center gap-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={cn('w-7 h-7', s <= (service!.client_rating ?? rating) ? 'text-yellow-400 fill-yellow-400' : 'text-content-muted')} />
+                      <Star key={s} className={cn('w-7 h-7', s <= (service!.client_rating ?? rating) ? 'text-status-warning fill-status-warning' : 'text-content-muted')} />
                     ))}
                   </div>
                   <p className="font-bold text-content-primary">Merci pour votre avis !</p>
@@ -795,7 +795,7 @@ export default function PublicTrackingView() {
                       <button key={s} onClick={() => setRating(s)}
                         onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)}
                         className="p-1 transition-transform active:scale-90 hover:scale-110">
-                        <Star className={cn('w-10 h-10 transition-colors', s <= (hoverRating || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-surface-border')} />
+                        <Star className={cn('w-10 h-10 transition-colors', s <= (hoverRating || rating) ? 'text-status-warning fill-status-warning' : 'text-surface-border')} />
                       </button>
                     ))}
                   </div>
