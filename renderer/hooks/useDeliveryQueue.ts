@@ -9,8 +9,9 @@ export const DELIVERY_LATE_AFTER_MS = 2 * 60 * 60 * 1000;
 /**
  * Compteur de la file de livraison pour la navigation : nombre de commandes à
  * remettre, et `late` dès que la plus ancienne attend depuis plus de 2 h.
- * Rafraîchi par le canal temps réel central (`elm-pos:orders:changed`, émis
- * par useRealtimeSync) et toutes les minutes pour faire vieillir le statut.
+ * Rafraîchi par `elm-pos:orders:changed` (canal temps réel central, et émis
+ * localement par la page livraison après chaque action), au retour sur la
+ * fenêtre et toutes les minutes.
  */
 export function useDeliveryQueue(businessId: string, enabled: boolean) {
   const [count, setCount]       = useState(0);
@@ -42,9 +43,19 @@ export function useDeliveryQueue(businessId: string, enabled: boolean) {
       timer.current = setTimeout(refresh, 800);
     };
     window.addEventListener('elm-pos:orders:changed', onChange);
-    const tick = setInterval(() => setNow(Date.now()), 60_000);
+    // Filet de sécurité si le temps réel ne passe pas (réseau, publication) :
+    // requête de comptage légère chaque minute et au retour sur la fenêtre.
+    const onVisible = () => { if (document.visibilityState === 'visible') onChange(); };
+    window.addEventListener('focus', onChange);
+    document.addEventListener('visibilitychange', onVisible);
+    const tick = setInterval(() => {
+      setNow(Date.now());
+      if (document.visibilityState === 'visible') refresh();
+    }, 60_000);
     return () => {
       window.removeEventListener('elm-pos:orders:changed', onChange);
+      window.removeEventListener('focus', onChange);
+      document.removeEventListener('visibilitychange', onVisible);
       clearInterval(tick);
       if (timer.current) clearTimeout(timer.current);
     };

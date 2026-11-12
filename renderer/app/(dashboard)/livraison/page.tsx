@@ -25,6 +25,7 @@ import {
 } from '@services/supabase/livreurs';
 import { getWhatsAppConfig } from '@services/supabase/whatsapp';
 import { supabase } from '@/lib/supabase';
+import { dispatchTableChanged } from '@/hooks/useRealtimeSync';
 import type { Order } from '@pos-types';
 
 const DELIVERY_LABELS = {
@@ -60,6 +61,9 @@ export default function LivraisonPage() {
     try {
       const data = await getOrdersForDelivery(business.id);
       setOrders(data);
+      // Le badge « Suivi Livraisons » se recale sur la liste, même sans
+      // événement temps réel (livraison confirmée sur ce poste).
+      dispatchTableChanged('orders');
     } catch (err) {
       notifError(toUserError(err));
     } finally {
