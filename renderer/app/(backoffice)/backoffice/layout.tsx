@@ -81,6 +81,7 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
     { label: 'Organisations', href: '/backoffice/structures', icon: Layers },
     { label: 'Demandes', href: '/backoffice/demandes', icon: Users, badge: pendingCount },
     { label: 'Abonnements', href: '/backoffice/abonnements', icon: CreditCard },
+    { label: 'Paiements Mobile Money', href: '/backoffice/paiements', icon: Smartphone },
     { label: 'Plans & Tarifs', href: '/backoffice/plans', icon: BarChart2 },
     { label: 'Support Client', href: '/backoffice/support', icon: HelpCircle, badge: supportCount },
     { label: 'Modération', href: '/backoffice/moderation', icon: ShieldAlert, badge: reportCount },

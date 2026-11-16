@@ -293,7 +293,7 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
             placeholder="Ex. 123456"
           />
           <p className="text-xs text-content-muted mt-1">
-            Générez-le juste avant de payer : composez <strong className="text-content-primary">#144*82#</strong> sur votre téléphone,
+            Générez-le juste avant de payer : composez <strong className="text-content-primary">#144#391#</strong> sur votre téléphone,
             ou passez par l&apos;application Orange Money.
           </p>
         </div>

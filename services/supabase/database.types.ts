@@ -6400,6 +6400,94 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          applied_at: string | null
+          business_id: string
+          created_at: string
+          currency: string
+          days: number
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          initiated_by: string | null
+          invoice_id: string | null
+          livemode: boolean
+          operator: string
+          phone_number: string
+          plan_id: string
+          provider: string
+          reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          applied_at?: string | null
+          business_id: string
+          created_at?: string
+          currency: string
+          days: number
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string | null
+          invoice_id?: string | null
+          livemode?: boolean
+          operator: string
+          phone_number: string
+          plan_id: string
+          provider?: string
+          reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          applied_at?: string | null
+          business_id?: string
+          created_at?: string
+          currency?: string
+          days?: number
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string | null
+          invoice_id?: string | null
+          livemode?: boolean
+          operator?: string
+          phone_number?: string
+          plan_id?: string
+          provider?: string
+          reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_requests: {
         Row: {
           business_id: string

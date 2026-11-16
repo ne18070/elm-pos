@@ -148,6 +148,13 @@ def configure_ios() -> None:
     info['ITSAppUsesNonExemptEncryption'] = False
     # Liens reçus par le plugin app_links, pas par le routeur Flutter
     info['FlutterDeepLinkingEnabled'] = False
+    # Espace partenaire : photo produit (image_picker) — sans ces textes, iOS ferme l'app
+    info['NSCameraUsageDescription'] = (
+        'Prenez en photo vos produits pour les afficher dans votre boutique ELM.'
+    )
+    info['NSPhotoLibraryUsageDescription'] = (
+        'Choisissez la photo d’un produit à afficher dans votre boutique ELM.'
+    )
     if IOS_PUSH_ENABLED:
         modes = info.setdefault('UIBackgroundModes', [])
         if 'remote-notification' not in modes:

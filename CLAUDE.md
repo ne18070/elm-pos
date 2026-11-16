@@ -49,7 +49,7 @@ elm-pos/
 ├── types/        Shared TypeScript types (import via @pos-types alias)
 ├── supabase/migrations/  PostgreSQL schema, RLS policies, functions — apply in order
 ├── android/, ios/  Capacitor native shells (generated; app code stays in renderer/)
-├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — directory of ELM boutiques & services (RPC list_directory_businesses, opt-out via businesses.directory_listed), product orders, service requests
+├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — directory of ELM boutiques & services (RPC list_directory_businesses, opt-out via businesses.directory_listed), product orders, service requests; « Espace partenaire » (`lib/partner/`, menu ⋮) where owner/admin/manager accounts manage products on a SEPARATE SupabaseClient — public read policies are `TO anon`, so the buyer client must stay anonymous
 └── tests/        Playwright end-to-end specs
 ```
 

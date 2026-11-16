@@ -9,6 +9,7 @@ import '../config.dart';
 import '../data/boutique_repository.dart';
 import '../data/local_store.dart';
 import '../models/directory.dart';
+import '../partner/partner_screen.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/moderation.dart';
@@ -185,6 +186,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onMenu(String value) {
     switch (value) {
+      case 'partner':
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PartnerScreen()));
       case 'terms':
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermsScreen()));
       case 'blocked':
@@ -501,6 +504,8 @@ class _HomeHeader extends StatelessWidget {
                 iconColor: onBand,
                 onSelected: onMenu,
                 itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'partner', child: Text('Espace partenaire')),
+                  PopupMenuDivider(),
                   PopupMenuItem(value: 'blocked', child: Text('Boutiques bloquées')),
                   PopupMenuItem(value: 'terms', child: Text('Conditions d’utilisation')),
                   PopupMenuItem(value: 'privacy', child: Text('Politique de confidentialité')),

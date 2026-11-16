@@ -21,6 +21,7 @@ dependencies:
   # Android hors Play Store : comparaison avec android/latest.json (mises à jour)
   package_info_plus: ^10.2.2
   google_fonts: ^6.2.1
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:

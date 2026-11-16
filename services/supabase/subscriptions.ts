@@ -67,12 +67,14 @@ export async function getSubscription(_userId?: string, _businessId?: string | n
   return null;
 }
 
-export async function getPlans(): Promise<Plan[]> {
-  const { data } = await db
-    .from('plans')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order');
+/**
+ * Plans proposés à la vente (actifs). Le backoffice passe `includeInactive`
+ * pour voir et réactiver les plans désactivés.
+ */
+export async function getPlans(opts: { includeInactive?: boolean } = {}): Promise<Plan[]> {
+  let query = db.from('plans').select('*');
+  if (!opts.includeInactive) query = query.eq('is_active', true);
+  const { data } = await query.order('sort_order');
   return (data ?? []) as Plan[];
 }
 
@@ -172,6 +174,65 @@ export async function getMySubscriptionInvoices(): Promise<SubscriptionInvoice[]
     .order('issued_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as SubscriptionInvoice[];
+}
+
+export type SubscriptionPaymentStatus = 'pending' | 'processing' | 'succeeded' | 'failed' | 'expired';
+
+/** Tentative de paiement mobile money (Loov) vue par le backoffice. */
+export interface AdminSubscriptionPayment {
+  id:             string;
+  business_id:    string;
+  business_name:  string | null;
+  plan_label:     string | null;
+  reference:      string | null;
+  operator:       string;
+  phone_number:   string;
+  amount:         number;
+  currency:       string;
+  days:           number;
+  status:         SubscriptionPaymentStatus;
+  failure_code:   string | null;
+  failure_reason: string | null;
+  livemode:       boolean;
+  applied_at:     string | null;
+  invoice_number: string | null;
+  created_at:     string;
+  updated_at:     string;
+}
+
+/**
+ * Paiements mobile money les plus récents, toutes boutiques confondues
+ * (RLS subpay_select : superadmin). Le webhook Loov fait avancer ces lignes.
+ */
+export async function getSubscriptionPaymentsAdmin(sinceIso: string): Promise<AdminSubscriptionPayment[]> {
+  const { data, error } = await db
+    .from('subscription_payments')
+    // Une seule chaîne littérale : le typage Supabase ne sait pas analyser une concaténation
+    .select('id, business_id, reference, operator, phone_number, amount, currency, days, status, failure_code, failure_reason, livemode, applied_at, created_at, updated_at, business:businesses(name), plan:plans(label), invoice:subscription_invoices(invoice_number)')
+    .gte('created_at', sinceIso)
+    .order('created_at', { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id:             row.id,
+    business_id:    row.business_id,
+    business_name:  row.business?.name ?? null,
+    plan_label:     row.plan?.label ?? null,
+    reference:      row.reference,
+    operator:       row.operator,
+    phone_number:   row.phone_number,
+    amount:         Number(row.amount),
+    currency:       row.currency,
+    days:           row.days,
+    status:         row.status as SubscriptionPaymentStatus,
+    failure_code:   row.failure_code,
+    failure_reason: row.failure_reason,
+    livemode:       row.livemode,
+    applied_at:     row.applied_at,
+    invoice_number: row.invoice?.invoice_number ?? null,
+    created_at:     row.created_at,
+    updated_at:     row.updated_at,
+  }));
 }
 
 export async function upsertPaymentSettings(settings: Partial<PaymentSettings>): Promise<void> {

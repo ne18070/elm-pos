@@ -24,7 +24,7 @@ export default function PlansPage() {
 
   async function load() {
     setLoading(true);
-    try { setPlans(await getPlans()); }
+    try { setPlans(await getPlans({ includeInactive: true })); }
     catch (e) { notifError(toUserError(e)); }
     finally { setLoading(false); }
   }
