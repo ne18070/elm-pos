@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle, Loader2, Smartphone, XCircle, FlaskConical, ExternalLink } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { LOOV_OPERATORS, loovOperatorLabel, normalizeSenegalPhone, type LoovOperatorCode } from '@/lib/loov-operators';
+import { LOOV_OPERATORS, loovOperatorLabel, normalizeSenegalPhone, operatorRequiresOtp, type LoovOperatorCode } from '@/lib/loov-operators';
 import {
   startMobilePayment, getMobilePayment, simulateMobilePayment, MobilePaymentError,
   type MobilePayment, type Plan,
@@ -37,7 +37,9 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
   const [phone, setPhone]       = useState(defaultPhone ?? '');
   const [phoneError, setPhoneError] = useState('');
   const [otp, setOtp]           = useState('');
+  // Exigé d'emblée par certains opérateurs (Orange Money), ou découvert via 422 otp_required
   const [needsOtp, setNeedsOtp] = useState(false);
+  const otpRequired = needsOtp || operatorRequiresOtp(operator);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]       = useState('');
   const [payment, setPayment]   = useState<MobilePayment | null>(null);
@@ -90,7 +92,7 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
     try {
       const res = await startMobilePayment({
         businessId, planId: plan.id, operator, phone: normalized,
-        otp: needsOtp ? otp : undefined,
+        otp: otpRequired ? otp : undefined,
       });
       startedAt.current = Date.now();
       activatedNotified.current = false;
@@ -277,9 +279,9 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
         {phoneError && <p className="text-xs text-status-error mt-1">{phoneError}</p>}
       </div>
 
-      {needsOtp && (
+      {otpRequired && (
         <div>
-          <label htmlFor="mm-otp" className="label">Code de validation</label>
+          <label htmlFor="mm-otp" className="label">Code de paiement {loovOperatorLabel(operator)}</label>
           <input
             id="mm-otp"
             type="text"
@@ -291,7 +293,8 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
             placeholder="Ex. 123456"
           />
           <p className="text-xs text-content-muted mt-1">
-            Composez <strong className="text-content-primary">#144#391#</strong> sur votre téléphone Orange pour obtenir le code.
+            Générez-le juste avant de payer : composez <strong className="text-content-primary">#144*82#</strong> sur votre téléphone,
+            ou passez par l&apos;application Orange Money.
           </p>
         </div>
       )}
@@ -300,7 +303,7 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
 
       <button
         onClick={handlePay}
-        disabled={submitting || !normalized || (needsOtp && !otp.trim())}
+        disabled={submitting || !normalized || (otpRequired && !otp.trim())}
         className="btn-primary w-full flex items-center justify-center gap-2 h-12 text-base"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}

@@ -8,7 +8,8 @@ export const LOOV_CURRENCY = 'XOF';
 export const LOOV_MIN_AMOUNT = 200;
 
 export const LOOV_OPERATORS = [
-  { code: 'orange-money-senegal', label: 'Orange Money' },
+  // Orange Money SN : code à usage unique obligatoire (#144*82# ou app Orange Money), sinon 422 otp_required
+  { code: 'orange-money-senegal', label: 'Orange Money', requiresOtp: true },
   { code: 'free-money-senegal',   label: 'Free Money' },
   { code: 'expresso-senegal',     label: 'Expresso' },
   { code: 'wave-senegal',         label: 'Wave' },
@@ -18,6 +19,10 @@ export type LoovOperatorCode = (typeof LOOV_OPERATORS)[number]['code'];
 
 export function isLoovOperator(code: unknown): code is LoovOperatorCode {
   return LOOV_OPERATORS.some((o) => o.code === code);
+}
+
+export function operatorRequiresOtp(code: string): boolean {
+  return LOOV_OPERATORS.some((o) => o.code === code && 'requiresOtp' in o && o.requiresOtp);
 }
 
 export function loovOperatorLabel(code: string | null | undefined): string {

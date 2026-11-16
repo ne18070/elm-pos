@@ -22,7 +22,7 @@ const LOOV_ERROR_MESSAGES: Record<string, string> = {
   validation_failed:      'Numéro de téléphone refusé par l\'opérateur. Vérifiez-le.',
   route_not_available:    'Cet opérateur est momentanément indisponible. Essayez-en un autre.',
   provider_not_available: 'Cet opérateur est momentanément indisponible. Essayez-en un autre.',
-  otp_required:           'Code de validation requis : composez #144#391# pour l\'obtenir, puis saisissez-le.',
+  otp_required:           "Code de paiement requis : composez #144*82# (ou ouvrez l'app Orange Money) pour l'obtenir, puis saisissez-le.",
   rate_limited:           'Trop de tentatives. Réessayez dans une minute.',
   account_not_active:     'Le paiement en ligne est momentanément indisponible. Contactez le support.',
   unauthorized:           'Le paiement en ligne est momentanément indisponible. Contactez le support.',
