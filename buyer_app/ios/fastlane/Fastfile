@@ -67,14 +67,17 @@ platform :ios do
       next
     end
 
+    # « Nouveautés » obligatoires pour toute mise à jour (l'app est en ligne) :
+    # texte par défaut si le lancement manuel n'en fournit pas.
     notes = ENV["RELEASE_NOTES"].to_s.strip
+    notes = "Améliorations et corrections." if notes.empty?
     upload_to_app_store(
       api_key:                    api_key,
       ipa:                        ipa,
       app_version:                version,
       skip_screenshots:           true,
-      skip_metadata:              notes.empty?,
-      release_notes:              notes.empty? ? nil : { "default" => notes },
+      skip_metadata:              false,
+      release_notes:              { "default" => notes },
       submit_for_review:          true,
       automatic_release:          true,
       force:                      true, # pas d'aperçu HTML à valider en CI
