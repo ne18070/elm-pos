@@ -5,6 +5,7 @@ import '../data/boutique_repository.dart';
 import '../data/local_store.dart';
 import '../models/boutique.dart';
 import '../state/cart.dart';
+import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/moderation.dart';
@@ -268,40 +269,12 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: info == null
-            ? null
-            : Row(
-                children: [
-                  BoutiqueLogo(url: info.logoUrl, size: 36),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(info.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        if ((info.address ?? '').isNotEmpty)
-                          Text(
-                            info.address!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+        title: info == null ? null : Text(info.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
-          if ((info?.phone ?? '').isNotEmpty)
-            IconButton(
-              tooltip: 'Appeler la boutique',
-              icon: const Icon(Icons.call_outlined),
-              onPressed: () => launchUrl(Uri(scheme: 'tel', path: info!.phone)),
-            ),
           if (info != null)
             PopupMenuButton<_SortKey>(
               tooltip: 'Trier',
-              icon: const Icon(Icons.sort),
+              icon: const Icon(Icons.swap_vert_rounded),
               initialValue: _sort,
               onSelected: (value) => setState(() => _sort = value),
               itemBuilder: (_) => [
@@ -326,17 +299,10 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: FilledButton(
+              child: _CartBar(
+                count: _cart.count,
+                total: formatCurrency(_cart.total, info.currency),
                 onPressed: _openCheckout,
-                child: Row(
-                  children: [
-                    const Icon(Icons.shopping_bag_outlined),
-                    const SizedBox(width: 8),
-                    Text('Panier (${_cart.count})'),
-                    const Spacer(),
-                    Text(formatCurrency(_cart.total, info.currency)),
-                  ],
-                ),
               ),
             ),
           );
@@ -346,7 +312,7 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const _CatalogSkeleton();
     if (_blocked != null) return BlockedBusinessView(name: _blocked!.name, onUnblock: _unblock);
     if (_error != null || _info == null) {
       return ErrorView(
@@ -366,14 +332,20 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
+            child: _ShopHeader(
+              info: _info!,
+              productCount: _products.length,
+            ),
+          ),
+          SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: TextField(
                 onChanged: (value) => setState(() => _search = value),
                 textInputAction: TextInputAction.search,
                 decoration: const InputDecoration(
-                  hintText: 'Rechercher un produit…',
-                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Rechercher dans la boutique',
+                  prefixIcon: Icon(Icons.search_rounded),
                 ),
               ),
             ),
@@ -400,7 +372,7 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
                   ],
                   const SizedBox(width: 8),
                   FilterChip(
-                    label: const Text('Afficher les épuisés'),
+                    label: const Text('Inclure les épuisés'),
                     selected: _showOutOfStock,
                     onSelected: (value) => setState(() => _showOutOfStock = value),
                   ),
@@ -425,13 +397,13 @@ class _BoutiqueScreenState extends State<BoutiqueScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 220,
-                  mainAxisExtent: 300,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
+                  mainAxisExtent: 268,
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 14,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => _ProductCard(
@@ -471,70 +443,86 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Opacity(
-          opacity: product.outOfStock ? 0.55 : 1,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: ProductImage(url: product.imageUrl)),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      height: 40,
-                      child: Text(
-                        product.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                      ),
+    final scheme = theme.colorScheme;
+    final radius = BorderRadius.circular(10);
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                DecoratedBox(
+                  position: DecorationPosition.foreground,
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: Opacity(
+                      opacity: product.outOfStock ? 0.45 : 1,
+                      child: ProductImage(url: product.imageUrl),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      formatCurrency(product.price, currency),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 44,
-                      child: product.outOfStock
-                          ? Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Épuisé',
-                                style: TextStyle(color: theme.colorScheme.error),
-                              ),
-                            )
-                          : ListenableBuilder(
-                              listenable: cart,
-                              builder: (context, _) => _QuantityControl(
-                                product: product,
-                                cart: cart,
-                                onAdd: onAdd,
-                              ),
-                            ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                if (product.outOfStock)
+                  Positioned(
+                    left: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: scheme.inverseSurface,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Épuisé',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.onInverseSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: ListenableBuilder(
+                      listenable: cart,
+                      builder: (context, _) => _QuantityControl(product: product, cart: cart, onAdd: onAdd),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.25),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            formatCurrency(product.price, currency),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: product.outOfStock ? scheme.onSurfaceVariant : scheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
+/// Bouton « + » posé sur la photo ; devient un sélecteur de quantité une fois au panier.
 class _QuantityControl extends StatelessWidget {
   const _QuantityControl({required this.product, required this.cart, required this.onAdd});
 
@@ -544,38 +532,229 @@ class _QuantityControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Produit à variantes : le choix se fait dans la feuille dédiée
-    if (product.hasVariants) {
-      final qty = cart.quantityOfProduct(product.id);
-      return FilledButton.tonal(
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final qty = product.hasVariants ? cart.quantityOfProduct(product.id) : cart.quantityOf(product);
+    final countStyle = theme.textTheme.titleSmall?.copyWith(
+      color: scheme.surface,
+      fontWeight: FontWeight.w800,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+    Widget round({required IconData icon, required String tooltip, required VoidCallback onPressed}) =>
+        IconButton(
+          tooltip: tooltip,
+          onPressed: onPressed,
+          iconSize: 20,
+          color: scheme.surface,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          icon: Icon(icon),
+        );
+
+    final Widget content;
+    if (qty == 0) {
+      content = round(
+        icon: Icons.add_rounded,
+        tooltip: product.hasVariants ? 'Choisir une option' : 'Ajouter au panier',
         onPressed: onAdd,
-        child: Text(qty > 0 ? 'Options · $qty au panier' : 'Choisir', overflow: TextOverflow.ellipsis),
+      );
+    } else if (product.hasVariants) {
+      // Les options se choisissent dans la feuille dédiée : on affiche le total au panier
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(padding: const EdgeInsets.only(left: 14), child: Text('$qty', style: countStyle)),
+          round(icon: Icons.add_rounded, tooltip: 'Choisir une autre option', onPressed: onAdd),
+        ],
+      );
+    } else {
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          round(
+            icon: Icons.remove_rounded,
+            tooltip: 'Retirer un',
+            onPressed: () => cart.decrement(cartKey(product.id)),
+          ),
+          Text('$qty', style: countStyle),
+          round(icon: Icons.add_rounded, tooltip: 'Ajouter un', onPressed: onAdd),
+        ],
       );
     }
 
-    final qty = cart.quantityOf(product);
-    if (qty == 0) {
-      return FilledButton.tonalIcon(
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-        onPressed: onAdd,
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text('Ajouter'),
-      );
-    }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton.outlined(
-          tooltip: 'Retirer un',
-          onPressed: () => cart.decrement(cartKey(product.id)),
-          icon: const Icon(Icons.remove, size: 20),
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.centerRight,
+      child: Material(
+        color: scheme.onSurface,
+        shape: const StadiumBorder(),
+        elevation: 2,
+        shadowColor: Colors.black38,
+        child: content,
+      ),
+    );
+  }
+}
+
+/// Barre panier : nombre d'articles, accès au panier, total.
+class _CartBar extends StatelessWidget {
+  const _CartBar({required this.count, required this.total, required this.onPressed});
+
+  final int count;
+  final String total;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: ElmColors.navy,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: SizedBox(
+          height: 58,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                Container(
+                  constraints: const BoxConstraints(minWidth: 30),
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: ElmColors.sun, borderRadius: BorderRadius.circular(15)),
+                  child: Text(
+                    '$count',
+                    style: theme.textTheme.labelLarge?.copyWith(color: ElmColors.ink, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Voir le panier',
+                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                ),
+                const Spacer(),
+                Text(
+                  total,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        Text('$qty', style: Theme.of(context).textTheme.titleMedium),
-        IconButton.filled(
-          tooltip: 'Ajouter un',
-          onPressed: onAdd,
-          icon: const Icon(Icons.add, size: 20),
+      ),
+    );
+  }
+}
+
+/// En-tête de la boutique, comme son enseigne : logo, nom, adresse, appel.
+class _ShopHeader extends StatelessWidget {
+  const _ShopHeader({required this.info, required this.productCount});
+
+  final BoutiqueInfo info;
+  final int productCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasPhone = (info.phone ?? '').isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              BoutiqueLogo(url: info.logoUrl, size: 64),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(info.name, style: theme.textTheme.headlineSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if ((info.address ?? '').isNotEmpty) info.address!,
+                        productCount == 1 ? '1 produit' : '$productCount produits',
+                      ].join('\n'),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (hasPhone) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: () => launchUrl(Uri(scheme: 'tel', path: info.phone)),
+              icon: const Icon(Icons.call_outlined, size: 18),
+              label: const Text('Appeler la boutique'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Squelette du catalogue pendant le chargement.
+class _CatalogSkeleton extends StatelessWidget {
+  const _CatalogSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
+    Widget block(double? width, double height, [double radius = 4]) => Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(radius)),
+        );
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            block(64, 64, 14),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [block(170, 20), const SizedBox(height: 8), block(110, 12)],
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        block(null, 48, 10),
+        const SizedBox(height: 20),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 14,
+          childAspectRatio: 0.72,
+          children: [
+            for (var i = 0; i < 4; i++)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: block(null, double.infinity, 10)),
+                  const SizedBox(height: 8),
+                  block(120, 12),
+                  const SizedBox(height: 6),
+                  block(70, 14),
+                ],
+              ),
+          ],
         ),
       ],
     );

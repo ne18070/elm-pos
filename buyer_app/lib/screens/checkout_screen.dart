@@ -241,7 +241,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         dimension: 22,
                         child: CircularProgressIndicator(strokeWidth: 2.5),
                       )
-                    : Text('Commander · ${formatCurrency(widget.cart.total, currency)}'),
+                    : Row(
+                        children: [
+                          const Text('Commander'),
+                          const Spacer(),
+                          Text(formatCurrency(widget.cart.total, currency)),
+                        ],
+                      ),
               ),
             ),
           );
@@ -306,10 +312,16 @@ class _ChoiceTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: selected ? scheme.primaryContainer : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        color: selected ? scheme.primaryContainer : scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(14),

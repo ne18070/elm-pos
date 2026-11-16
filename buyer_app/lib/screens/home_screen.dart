@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
@@ -13,6 +14,7 @@ import '../widgets/common.dart';
 import '../widgets/moderation.dart';
 import '../services/push_service.dart';
 import '../services/update_service.dart';
+import '../theme.dart';
 import 'blocked_screen.dart';
 import 'boutique_screen.dart';
 import 'my_tracking_screen.dart';
@@ -297,41 +299,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/logo.png', width: 32, height: 32),
-            ),
-            const SizedBox(width: 12),
-            const Text('ELM Boutique'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Mes suivis',
-            icon: const Icon(Icons.assignment_outlined),
-            onPressed: _openMyTracking,
-          ),
-          IconButton(
-            tooltip: 'Ouvrir un lien de boutique',
-            icon: const Icon(Icons.link),
-            onPressed: _openLinkSheet,
-          ),
-          PopupMenuButton<String>(
-            onSelected: _onMenu,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'blocked', child: Text('Boutiques bloquées')),
-              PopupMenuItem(value: 'terms', child: Text('Conditions d’utilisation')),
-              PopupMenuItem(value: 'privacy', child: Text('Politique de confidentialité')),
-            ],
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
+    final theme = Theme.of(context);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Icônes de la barre d'état en clair sur le bandeau marine
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: RefreshIndicator(
           onRefresh: () async {
             await _loadRecents();
             await _reload();
@@ -340,50 +313,29 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _scroll,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: 'Boutique, service, quartier…',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: ListenableBuilder(
-                        listenable: _searchController,
-                        builder: (context, _) => _searchController.text.isEmpty
-                            ? const SizedBox.shrink()
-                            : IconButton(
-                                tooltip: 'Effacer',
-                                icon: const Icon(Icons.close),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _onSearchChanged('');
-                                },
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
+              // Bande marine sous la barre d'état, toujours visible au défilement
+              SliverAppBar(
+                pinned: true,
+                toolbarHeight: 0,
+                backgroundColor: _bandColor(theme),
+                systemOverlayStyle: SystemUiOverlayStyle.light,
+                shape: const Border(),
               ),
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 56,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    children: [
-                      for (final kind in DirectoryKind.values) ...[
-                        ChoiceChip(
-                          label: Text(kind.label),
-                          selected: _kind == kind,
-                          onSelected: (_) => _setKind(kind),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
+                child: _HomeHeader(
+                  searchController: _searchController,
+                  onSearchChanged: _onSearchChanged,
+                  onOpenTracking: _openMyTracking,
+                  onOpenLink: _openLinkSheet,
+                  onMenu: _onMenu,
+                ),
+              ),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _KindTabsDelegate(
+                  selected: _kind,
+                  onSelected: _setKind,
+                  background: theme.colorScheme.surface,
                 ),
               ),
               if (_query.isEmpty && _visibleRecents.isNotEmpty)
@@ -395,9 +347,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 sliver: SliverToBoxAdapter(
-                  child: SectionTitle(_query.isEmpty ? 'Boutiques et services' : 'Résultats'),
+                  child: SectionTitle(
+                    _query.isEmpty ? 'Toutes les boutiques' : 'Résultats pour « $_query »',
+                  ),
                 ),
               ),
               ..._buildDirectory(),
@@ -410,11 +364,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildDirectory() {
     if (_loading) {
-      return const [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(child: CircularProgressIndicator()),
-        ),
+      return [
+        SliverList.builder(itemCount: 6, itemBuilder: (_, __) => const _DirectoryTileSkeleton()),
       ];
     }
     if (_error != null) {
@@ -427,41 +378,54 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final entries = _visibleEntries;
     if (entries.isEmpty) {
+      final theme = Theme.of(context);
       return [
         SliverFillRemaining(
           hasScrollBody: false,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                _query.isEmpty
-                    ? 'Aucune boutique ni service pour le moment.'
-                    : 'Aucun résultat pour « $_query ». Essayez un autre nom ou un quartier.',
-                textAlign: TextAlign.center,
-              ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(32, 32, 32, 64),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off_rounded, size: 40, color: theme.colorScheme.outline),
+                const SizedBox(height: 12),
+                Text(
+                  _query.isEmpty
+                      ? 'Aucune boutique en ligne pour le moment.'
+                      : 'Rien ne correspond à « $_query ».',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _query.isEmpty
+                      ? 'Revenez bientôt, ou ouvrez le lien reçu d’une boutique.'
+                      : 'Essayez le nom de la boutique ou un quartier.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
             ),
           ),
         ),
       ];
     }
     return [
-      SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        sliver: SliverList.builder(
-          itemCount: entries.length,
-          itemBuilder: (context, index) => _DirectoryTile(
-            entry: entries[index],
-            onTap: () => _openEntry(entries[index]),
-            menu: ModerationMenuButton(
-              repository: widget.repository,
-              store: widget.store,
-              subject: ModerationSubject(
-                businessId: entries[index].id,
-                businessName: entries[index].name,
-                logoUrl: entries[index].logoUrl,
-              ),
-              onBlocked: _loadBlocked,
+      SliverList.separated(
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const Divider(indent: 84),
+        itemBuilder: (context, index) => _DirectoryTile(
+          entry: entries[index],
+          onTap: () => _openEntry(entries[index]),
+          menu: ModerationMenuButton(
+            repository: widget.repository,
+            store: widget.store,
+            subject: ModerationSubject(
+              businessId: entries[index].id,
+              businessName: entries[index].name,
+              logoUrl: entries[index].logoUrl,
             ),
+            onBlocked: _loadBlocked,
           ),
         ),
       ),
@@ -470,13 +434,194 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: Center(
             child: _loadingMore
-                ? const CircularProgressIndicator()
+                ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
                 : const SizedBox.shrink(),
           ),
         ),
       ),
     ];
   }
+}
+
+Color _bandColor(ThemeData theme) =>
+    theme.brightness == Brightness.dark ? ElmColors.navyDeep : ElmColors.navy;
+
+/// Bandeau marine de l'accueil : marque, actions et recherche.
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onOpenTracking,
+    required this.onOpenLink,
+    required this.onMenu,
+  });
+
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onOpenTracking;
+  final VoidCallback onOpenLink;
+  final ValueChanged<String> onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const onBand = Colors.white;
+    return Container(
+      color: _bandColor(theme),
+      padding: const EdgeInsets.fromLTRB(20, 4, 8, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(9)),
+                child: Image.asset('assets/logo.png', width: 28, height: 28),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'ELM Boutique',
+                style: theme.textTheme.titleMedium?.copyWith(color: onBand, fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Mes suivis',
+                color: onBand,
+                icon: const Icon(Icons.receipt_long_outlined),
+                onPressed: onOpenTracking,
+              ),
+              IconButton(
+                tooltip: 'Ouvrir un lien de boutique',
+                color: onBand,
+                icon: const Icon(Icons.link_rounded),
+                onPressed: onOpenLink,
+              ),
+              PopupMenuButton<String>(
+                iconColor: onBand,
+                onSelected: onMenu,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'blocked', child: Text('Boutiques bloquées')),
+                  PopupMenuItem(value: 'terms', child: Text('Conditions d’utilisation')),
+                  PopupMenuItem(value: 'privacy', child: Text('Politique de confidentialité')),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Text(
+              'Trouvez une boutique,\ncommandez en quelques secondes.',
+              style: theme.textTheme.headlineSmall?.copyWith(color: onBand),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: TextField(
+              controller: searchController,
+              onChanged: onSearchChanged,
+              textInputAction: TextInputAction.search,
+              style: theme.textTheme.bodyLarge?.copyWith(color: ElmColors.ink),
+              cursorColor: ElmColors.blue,
+              decoration: InputDecoration(
+                fillColor: Colors.white,
+                hintText: 'Nom, service ou quartier',
+                hintStyle: const TextStyle(color: ElmColors.inkMuted),
+                prefixIcon: const Icon(Icons.search_rounded, color: ElmColors.inkMuted),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  borderSide: BorderSide(color: ElmColors.sun, width: 2),
+                ),
+                suffixIcon: ListenableBuilder(
+                  listenable: searchController,
+                  builder: (context, _) => searchController.text.isEmpty
+                      ? const SizedBox.shrink()
+                      : IconButton(
+                          tooltip: 'Effacer',
+                          color: ElmColors.inkMuted,
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () {
+                            searchController.clear();
+                            onSearchChanged('');
+                          },
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Onglets Tout / Boutiques / Services, épinglés sous la bande de statut.
+class _KindTabsDelegate extends SliverPersistentHeaderDelegate {
+  _KindTabsDelegate({
+    required this.selected,
+    required this.onSelected,
+    required this.background,
+  });
+
+  final DirectoryKind selected;
+  final ValueChanged<DirectoryKind> onSelected;
+  final Color background;
+
+  static const _barHeight = 52.0;
+
+  @override
+  double get minExtent => _barHeight;
+
+  @override
+  double get maxExtent => _barHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      color: background,
+      alignment: Alignment.bottomLeft,
+      child: Container(
+        height: _barHeight,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: [
+            for (final kind in DirectoryKind.values)
+              InkWell(
+                onTap: () => onSelected(kind),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: kind == selected ? scheme.primary : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    kind.label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontSize: 15,
+                      color: kind == selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_KindTabsDelegate old) =>
+      old.selected != selected || old.background != background;
 }
 
 class _DirectoryTile extends StatelessWidget {
@@ -488,54 +633,94 @@ class _DirectoryTile extends StatelessWidget {
   /// Signaler / bloquer
   final Widget menu;
 
+  String get _offer => switch ((entry.hasProducts, entry.hasServices)) {
+        (true, true) => 'Produits et services',
+        (false, true) => 'Services',
+        _ => 'Produits',
+      };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.only(left: 12, top: 4, bottom: 4),
-        leading: BoutiqueLogo(url: entry.logoUrl, size: 48),
-        title: Text(
-          entry.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 0, 12),
+        child: Row(
           children: [
-            if ((entry.address ?? '').isNotEmpty)
-              Text(entry.address!, maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6,
-              children: [
-                if (entry.hasProducts) _Badge(label: 'Boutique', color: theme.colorScheme.primaryContainer),
-                if (entry.hasServices) _Badge(label: 'Services', color: theme.colorScheme.tertiaryContainer),
-              ],
+            BoutiqueLogo(url: entry.logoUrl, size: 54),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  if ((entry.address ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.address!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _offer,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
+            menu,
           ],
         ),
-        trailing: menu,
-        onTap: onTap,
       ),
     );
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
+class _DirectoryTileSkeleton extends StatelessWidget {
+  const _DirectoryTileSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
-      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
+    Widget bar(double width, double height) => Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              bar(160, 14),
+              const SizedBox(height: 8),
+              bar(110, 10),
+              const SizedBox(height: 8),
+              bar(70, 10),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -554,11 +739,11 @@ class _RecentStrip extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: SectionTitle('Récemment visitées'),
+          padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
+          child: SectionTitle('Vos boutiques récentes'),
         ),
         SizedBox(
-          height: 112,
+          height: 108,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -575,14 +760,17 @@ class _RecentStrip extends StatelessWidget {
                   child: Column(
                     children: [
                       const SizedBox(height: 4),
-                      BoutiqueLogo(url: visit.logoUrl, size: 56),
-                      const SizedBox(height: 6),
+                      BoutiqueLogo(url: visit.logoUrl, size: 60),
+                      const SizedBox(height: 8),
                       Text(
                         visit.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),

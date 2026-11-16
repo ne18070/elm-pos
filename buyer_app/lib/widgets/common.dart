@@ -10,23 +10,32 @@ class BoutiqueLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(size * 0.22);
+    // Repli : monogramme marine, comme une enseigne sans logo
     final fallback = Container(
-      color: scheme.primary,
+      color: scheme.secondaryContainer,
       alignment: Alignment.center,
-      child: Icon(Icons.storefront, color: scheme.onPrimary, size: size * 0.5),
+      child: Icon(Icons.storefront_rounded, color: scheme.onSecondaryContainer, size: size * 0.48),
     );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.25),
-      child: Container(
-        width: size,
-        height: size,
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: radius,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
         child: url == null || url!.isEmpty
             ? fallback
-            : Image.network(
-                url!,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => fallback,
+            : Padding(
+                padding: EdgeInsets.all(size * 0.06),
+                child: Image.network(
+                  url!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => fallback,
+                ),
               ),
       ),
     );
@@ -43,9 +52,9 @@ class ProductImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final placeholder = Container(
-      color: scheme.surfaceContainerHighest,
+      color: scheme.surfaceContainer,
       alignment: Alignment.center,
-      child: Icon(Icons.inventory_2_outlined, color: scheme.onSurfaceVariant, size: 36),
+      child: Icon(Icons.image_outlined, color: scheme.outline, size: 32),
     );
     if (url == null || url!.isEmpty) return placeholder;
     return Image.network(
@@ -88,23 +97,24 @@ class ErrorView extends StatelessWidget {
   }
 }
 
+/// Titre de section en casse normale : il nomme le bloc, sans le décorer.
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key});
+  const SectionTitle(this.text, {super.key, this.trailing});
 
   final String text;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text.toUpperCase(),
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-        ),
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: Text(text, style: theme.textTheme.titleMedium)),
+          if (trailing != null) trailing!,
+        ],
       ),
     );
   }
