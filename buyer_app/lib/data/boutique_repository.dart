@@ -38,6 +38,14 @@ class BoutiqueRepository {
     return null;
   }
 
+  /// Numéro WhatsApp du support ELM, réglé dans le backoffice (Paramètres de paiement) —
+  /// le même que la page abonnement du web. null s'il n'est pas renseigné.
+  Future<String?> supportWhatsApp() async {
+    final row = await _db.from('payment_settings').select('whatsapp_number').eq('id', 1).maybeSingle();
+    final digits = digitsOnly('${row?['whatsapp_number'] ?? ''}');
+    return digits.length >= 8 ? digits : null;
+  }
+
   static const directoryPageSize = 30;
 
   /// Annuaire public (RPC list_directory_businesses, migration 156).

@@ -4,10 +4,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/contact_sheet.dart';
+import 'account_deletion_screen.dart';
 import 'partner_login_screen.dart';
 import 'partner_models.dart';
 import 'partner_repository.dart';
 import 'partner_session.dart';
+import 'partner_signup_screen.dart' show pendingBusinessNameKey;
 import 'product_form_screen.dart';
 
 /// Point d'entrée de l'espace partenaire : connexion, puis gestion des produits.
@@ -62,6 +65,13 @@ class _ProductsHomeState extends State<_ProductsHome> {
   late final _repository = PartnerRepository(widget.session.client);
 
   List<PartnerBusiness> _businesses = [];
+
+  /// Compte sans aucune boutique (inscrit dans l'app, email confirmé ensuite) :
+  /// on propose de la créer, avec le nom saisi à l'inscription
+  bool _hasNoBusiness = false;
+  String _pendingName = '';
+  bool _creating = false;
+  String? _createError;
   PartnerBusiness? _business;
   List<PartnerProduct> _products = [];
   List<PartnerCategory> _categories = [];
@@ -84,13 +94,17 @@ class _ProductsHomeState extends State<_ProductsHome> {
     try {
       final all = await _repository.myBusinesses();
       final manageable = all.where((b) => b.canManageProducts).toList();
+      final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
-      setState(() => _businesses = manageable);
+      setState(() {
+        _businesses = manageable;
+        _hasNoBusiness = all.isEmpty;
+        _pendingName = prefs.getString(pendingBusinessNameKey) ?? '';
+      });
       if (manageable.isEmpty) {
         setState(() => _loading = false);
         return;
       }
-      final prefs = await SharedPreferences.getInstance();
       final lastId = prefs.getString(_lastBusinessKey);
       final initial = manageable.firstWhere((b) => b.id == lastId, orElse: () => manageable.first);
       await _selectBusiness(initial);
@@ -104,6 +118,34 @@ class _ProductsHomeState extends State<_ProductsHome> {
         });
       }
     }
+  }
+
+  Future<void> _createBoutique(String name) async {
+    setState(() {
+      _creating = true;
+      _createError = null;
+    });
+    try {
+      await _repository.createBoutique(name);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(pendingBusinessNameKey);
+      if (!mounted) return;
+      setState(() => _creating = false);
+      await _loadBusinesses();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _creating = false;
+          _createError = 'Création impossible. Vérifiez votre connexion et réessayez.';
+        });
+      }
+    }
+  }
+
+  Future<void> _openAccountDeletion() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => AccountDeletionScreen(session: widget.session)),
+    );
   }
 
   Future<void> _selectBusiness(PartnerBusiness business) async {
@@ -234,10 +276,18 @@ class _ProductsHomeState extends State<_ProductsHome> {
             : Text(business?.name ?? 'Espace partenaire'),
         actions: [
           PopupMenuButton<String>(
-            onSelected: (value) => value == 'logout' ? _signOut() : _chooseBusiness(),
+            onSelected: (value) => switch (value) {
+              'logout' => _signOut(),
+              'delete' => _openAccountDeletion(),
+              'contact' => showContactSheet(context),
+              _ => _chooseBusiness(),
+            },
             itemBuilder: (_) => [
               if (_businesses.length > 1) const PopupMenuItem(value: 'switch', child: Text('Changer de boutique')),
+              const PopupMenuItem(value: 'contact', child: Text('Nous contacter')),
               const PopupMenuItem(value: 'logout', child: Text('Se déconnecter')),
+              const PopupMenuDivider(),
+              const PopupMenuItem(value: 'delete', child: Text('Supprimer mon compte')),
             ],
           ),
         ],
@@ -259,6 +309,14 @@ class _ProductsHomeState extends State<_ProductsHome> {
       return ErrorView(
         message: _error!,
         onRetry: _business == null ? _loadBusinesses : () => _selectBusiness(_business!),
+      );
+    }
+    if (_hasNoBusiness) {
+      return _CreateBoutique(
+        initialName: _pendingName,
+        busy: _creating,
+        error: _createError,
+        onCreate: _createBoutique,
       );
     }
     if (_businesses.isEmpty) {
@@ -436,6 +494,79 @@ class _NoAccess extends StatelessWidget {
             OutlinedButton(onPressed: onSignOut, child: const Text('Se connecter avec un autre compte')),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Compte sans boutique : dernière étape de l'inscription.
+class _CreateBoutique extends StatefulWidget {
+  const _CreateBoutique({
+    required this.initialName,
+    required this.busy,
+    required this.error,
+    required this.onCreate,
+  });
+
+  final String initialName;
+  final bool busy;
+  final String? error;
+  final ValueChanged<String> onCreate;
+
+  @override
+  State<_CreateBoutique> createState() => _CreateBoutiqueState();
+}
+
+class _CreateBoutiqueState extends State<_CreateBoutique> {
+  final _formKey = GlobalKey<FormState>();
+  late final _name = TextEditingController(text: widget.initialName);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+        children: [
+          Text('Créez votre boutique', style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          Text(
+            'Votre compte est prêt. Donnez le nom que les clients verront dans l’app, '
+            'puis ajoutez vos produits.',
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 24),
+          TextFormField(
+            controller: _name,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Nom de la boutique', hintText: 'Ex : Boutique Ndèye Mode'),
+            validator: (v) =>
+                (v ?? '').trim().length < 2 ? 'Donnez le nom affiché aux clients (2 caractères minimum).' : null,
+          ),
+          if (widget.error != null) ...[
+            const SizedBox(height: 14),
+            Text(widget.error!, style: TextStyle(color: theme.colorScheme.error)),
+          ],
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: widget.busy
+                ? null
+                : () {
+                    if (_formKey.currentState!.validate()) widget.onCreate(_name.text.trim());
+                  },
+            child: widget.busy
+                ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+                : const Text('Créer ma boutique'),
+          ),
+        ],
       ),
     );
   }

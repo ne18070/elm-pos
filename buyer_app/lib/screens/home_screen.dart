@@ -12,6 +12,7 @@ import '../models/directory.dart';
 import '../partner/partner_screen.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/contact_sheet.dart';
 import '../widgets/moderation.dart';
 import '../services/push_service.dart';
 import '../services/update_service.dart';
@@ -186,6 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onMenu(String value) {
     switch (value) {
+      case 'contact':
+        showContactSheet(context);
       case 'partner':
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PartnerScreen()));
       case 'terms':
@@ -509,6 +512,8 @@ class _HomeHeader extends StatelessWidget {
                   PopupMenuItem(value: 'blocked', child: Text('Boutiques bloquées')),
                   PopupMenuItem(value: 'terms', child: Text('Conditions d’utilisation')),
                   PopupMenuItem(value: 'privacy', child: Text('Politique de confidentialité')),
+                  PopupMenuDivider(),
+                  PopupMenuItem(value: 'contact', child: Text('Nous contacter')),
                 ],
               ),
             ],

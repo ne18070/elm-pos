@@ -28,6 +28,22 @@ class PartnerRepository {
         .toList();
   }
 
+  /// Crée la boutique du compte inscrit depuis l'app — mêmes RPC que l'onboarding web
+  /// (secteur « boutique »), sans données de démonstration : la boutique part vide,
+  /// rien de fictif n'apparaît dans l'annuaire public.
+  Future<void> createBoutique(String name) async {
+    final businessId = await _db.rpc('create_business_v2', params: {'p_name': name.trim(), 'p_sector': 'boutique'});
+    await _db.rpc('activate_trial_v2', params: {'p_biz_id': businessId});
+    // Finalise l'onboarding : déclenche l'email de bienvenue, comme sur le web
+    await _db.from('businesses').update({'onboarding_done': true}).eq('id', '$businessId');
+    await _db.auth.refreshSession();
+  }
+
+  /// Demande de suppression du compte (migration 176), traitée par l'équipe ELM.
+  Future<void> requestAccountDeletion(String? reason) async {
+    await _db.rpc('request_account_deletion', params: {'p_reason': reason});
+  }
+
   /// Rend [businessId] actif pour la RLS (switch_business), seulement s'il ne l'est pas
   /// déjà : le changement s'applique aussi au web et à la caisse de ce compte.
   Future<void> activate(String businessId) async {

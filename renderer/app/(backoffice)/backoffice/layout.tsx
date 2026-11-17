@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/lib/supabase';
 import { getSubscriptionRequests, getPublicSubscriptionRequests } from '@services/supabase/subscriptions';
-import { getAllTicketsAdmin } from '@services/supabase/support';
+import { getAllTicketsAdmin, getPendingAccountDeletionRequests } from '@services/supabase/support';
 import { countOpenContentReports } from '@services/supabase/moderation';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 
@@ -66,12 +66,13 @@ export default function BackofficeLayout({ children }: { children: React.ReactNo
       getPublicSubscriptionRequests().catch(() => []),
       getAllTicketsAdmin().catch(() => []),
       countOpenContentReports().catch(() => 0),
-    ]).then(([reqs, pub, tickets, reports]) => {
+      getPendingAccountDeletionRequests().catch(() => []),
+    ]).then(([reqs, pub, tickets, reports, deletions]) => {
       setPendingCount(
         reqs.filter((r) => r.status === 'pending').length +
         pub.filter((r) => r.status === 'pending').length
       );
-      setSupportCount(tickets.filter(t => t.status === 'open').length);
+      setSupportCount(tickets.filter(t => t.status === 'open').length + deletions.length);
       setReportCount(reports);
     });
   }, [isSuperadmin]);

@@ -12,6 +12,9 @@ class AppConfig {
   static const privacyUrl = '$siteUrl/privacy';
   static const termsUrl = '$siteUrl/conditions';
 
+  /// Support ELM (« Nous contacter ») — le WhatsApp vient de payment_settings
+  static const contactEmail = 'contact@elm-app.click';
+
   /// Version des conditions d'utilisation (renderer/app/(marketing)/conditions) :
   /// l'incrémenter redemande l'acceptation au prochain lancement.
   static const termsVersion = 1;

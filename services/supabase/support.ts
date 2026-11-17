@@ -56,6 +56,38 @@ export async function createTicket(businessId: string, userId: string, form: Tic
   return data as SupportTicket;
 }
 
+// --- Demandes de suppression de compte (app ELM Boutique, migration 176) ---------
+
+export interface AccountDeletionRequest {
+  id:         string;
+  /** null une fois le compte supprimé */
+  user_id:    string | null;
+  email:      string | null;
+  reason:     string | null;
+  source:     string;
+  created_at: string;
+}
+
+/** Demandes en attente, plus anciennes d'abord (délai annoncé : 30 jours). */
+export async function getPendingAccountDeletionRequests(): Promise<AccountDeletionRequest[]> {
+  const { data, error } = await supabase
+    .from('account_deletion_requests')
+    .select('id, user_id, email, reason, source, created_at')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** Une fois le compte supprimé (Organisations), la demande est close. */
+export async function markAccountDeletionProcessed(requestId: string, adminId: string): Promise<void> {
+  const { error } = await supabase
+    .from('account_deletion_requests')
+    .update({ status: 'processed', processed_at: new Date().toISOString(), processed_by: adminId })
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
 /**
  * Upload a screenshot/attachment for a ticket.
  */

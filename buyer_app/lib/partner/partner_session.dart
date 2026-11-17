@@ -69,6 +69,25 @@ class PartnerSession extends ChangeNotifier {
     await client.auth.signInWithPassword(email: email.trim().toLowerCase(), password: password);
   }
 
+  /// Email déjà utilisé par un compte ELM (même contrôle que /signup sur le web).
+  Future<bool> emailExists(String email) async {
+    final result = await client.rpc('check_email_exists', params: {'p_email': email.trim().toLowerCase()});
+    return result == true;
+  }
+
+  /// Crée le compte. Renvoie false si Supabase exige d'abord la confirmation de l'email
+  /// (pas de session tant que le lien reçu n'a pas été ouvert).
+  Future<bool> signUp(String email, String password) async {
+    final normalized = email.trim().toLowerCase();
+    final response = await client.auth.signUp(
+      email: normalized,
+      password: password,
+      emailRedirectTo: '${AppConfig.siteUrl}/login',
+      data: {'full_name': normalized.split('@').first},
+    );
+    return response.session != null;
+  }
+
   /// Lien de réinitialisation envoyé par email, ouvert sur le site (page /reset-password).
   Future<void> sendPasswordReset(String email) async {
     await client.auth.resetPasswordForEmail(

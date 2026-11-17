@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          source: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          source?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          source?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       accounts: {
         Row: {
           balance_type: string
@@ -7608,6 +7644,10 @@ export type Database = {
         Returns: undefined
       }
       activate_trial_v2: { Args: { p_biz_id: string }; Returns: undefined }
+      request_account_deletion: {
+        Args: { p_reason?: string }
+        Returns: Database["public"]["Tables"]["account_deletion_requests"]["Row"]
+      }
       add_stock_entry: {
         Args: {
           p_business_id: string

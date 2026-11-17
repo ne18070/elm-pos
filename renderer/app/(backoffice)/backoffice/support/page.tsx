@@ -15,6 +15,7 @@ import {
 } from '@services/supabase/support';
 import { useNotificationStore } from '@/store/notifications';
 import { SideDrawer } from '@/components/ui/SideDrawer';
+import { AccountDeletionRequests } from './AccountDeletionRequests';
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; color: string; icon: any }> = {
   open:        { label: 'Ouvert',      color: 'text-status-info bg-badge-info border-status-info/20', icon: Clock },
@@ -37,6 +38,8 @@ export default function SupportAdminPage() {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [updating, setUpdating] = useState(false);
+  // Recharge aussi l'encadré des demandes de suppression au clic sur « Actualiser »
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const { success, error: notifError } = useNotificationStore();
 
@@ -101,12 +104,14 @@ export default function SupportAdminPage() {
               className="bg-surface-card border border-surface-border rounded-xl pl-10 pr-4 h-11 text-sm focus:ring-1 focus:ring-brand-500 w-64 transition-all"
             />
           </div>
-          <button onClick={load} className="btn-secondary h-11 px-4 flex items-center gap-2">
+          <button onClick={() => { load(); setRefreshKey((k) => k + 1); }} className="btn-secondary h-11 px-4 flex items-center gap-2">
             <RefreshCw className={loading ? 'animate-spin' : ''} size={16} />
             <span>Actualiser</span>
           </button>
         </div>
       </div>
+
+      <AccountDeletionRequests refreshKey={refreshKey} />
 
       {/* Filters */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">

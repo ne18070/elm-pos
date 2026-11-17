@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/contact_sheet.dart';
 import 'partner_session.dart';
+import 'partner_signup_screen.dart';
 
 /// Connexion à l'espace partenaire avec le compte de la boutique (le même que sur le web).
 /// Aucune inscription ici : les comptes se créent sur elm-app.click.
@@ -69,6 +71,17 @@ class _PartnerLoginScreenState extends State<PartnerLoginScreen> {
       if (mounted) setState(() => _error = 'Envoi impossible. Vérifiez l’email et votre connexion.');
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openSignup() async {
+    final email = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => PartnerSignupScreen(session: widget.session)),
+    );
+    // Email à confirmer : retour ici avec l'email déjà saisi
+    if (email != null && mounted) {
+      _email.text = email;
+      setState(() => _error = null);
     }
   }
 
@@ -151,6 +164,27 @@ class _PartnerLoginScreenState extends State<PartnerLoginScreen> {
                 child: TextButton(
                   onPressed: _busy ? null : _forgotPassword,
                   child: const Text('Mot de passe oublié'),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 20),
+              Text('Pas encore de compte ?', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Créez votre boutique en une minute, avec une période d’essai gratuite.',
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 14),
+              OutlinedButton(
+                onPressed: _busy ? null : _openSignup,
+                child: const Text('Créer ma boutique'),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: () => showContactSheet(context),
+                  child: const Text('Besoin d’aide ? Nous contacter'),
                 ),
               ),
             ],
