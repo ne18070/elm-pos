@@ -9,10 +9,13 @@ export const LOOV_MIN_AMOUNT = 200;
 
 export const LOOV_OPERATORS = [
   // Orange Money SN : code à usage unique obligatoire (#144*82# ou app Orange Money), sinon 422 otp_required
-  { code: 'orange-money-senegal', label: 'Orange Money', requiresOtp: true },
+  // provider : fournisseur Loov imposé — PAL tant que le fournisseur par défaut refuse ces canaux
+  // (« not allowed to use this payin channel »). Sans provider : défaut de l'opérateur chez Loov.
+  { code: 'orange-money-senegal', label: 'Orange Money', requiresOtp: true, provider: 'pal' },
   { code: 'free-money-senegal',   label: 'Free Money' },
   { code: 'expresso-senegal',     label: 'Expresso' },
-  { code: 'wave-senegal',         label: 'Wave' },
+  // Wave via PAL : Loov renvoie un checkout_url (redirection vers l'app Wave)
+  { code: 'wave-senegal',         label: 'Wave', provider: 'pal' },
 ] as const;
 
 export type LoovOperatorCode = (typeof LOOV_OPERATORS)[number]['code'];
@@ -23,6 +26,12 @@ export function isLoovOperator(code: unknown): code is LoovOperatorCode {
 
 export function operatorRequiresOtp(code: string): boolean {
   return LOOV_OPERATORS.some((o) => o.code === code && 'requiresOtp' in o && o.requiresOtp);
+}
+
+/** Fournisseur Loov à imposer pour cet opérateur (undefined = défaut Loov). */
+export function operatorProvider(code: string): string | undefined {
+  const op = LOOV_OPERATORS.find((o) => o.code === code);
+  return op && 'provider' in op ? op.provider : undefined;
 }
 
 export function loovOperatorLabel(code: string | null | undefined): string {

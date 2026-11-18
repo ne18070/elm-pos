@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { operatorProvider } from '@/lib/loov-operators';
 
 // Client Loov (paiements mobile money) — import ONLY in server route handlers under app/api/.
 // Doc : https://loov-solutions.com/docs — LOOV_API_KEY (loov_test_… / loov_live_…) ne quitte jamais le serveur.
@@ -92,7 +93,7 @@ export function createMobileMoneyPayment(input: {
       phone_number:       input.phoneNumber,
       otp:                input.otp,
       // Fournisseur imposé (paydunya, pal…) ; absent = celui par défaut de l'opérateur chez Loov
-      provider:           process.env.LOOV_PAYIN_PROVIDER || undefined,
+      provider:           process.env.LOOV_PAYIN_PROVIDER || operatorProvider(input.operator),
       customer:           input.customer,
       merchant_reference: input.merchantReference,
       description:        input.description,
