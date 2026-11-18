@@ -22,6 +22,7 @@ import { getDefaultRoute } from '@/lib/getDefaultRoute';
 import { annualSavingsPercent, annualSavingsLabel, formatSavings } from '@/lib/plan-pricing';
 import { downloadSubscriptionInvoice } from '@/lib/subscription-invoice-pdf';
 import { MobileMoneyPayment } from './MobileMoneyPayment';
+import { ENABLED_LOOV_OPERATORS } from '@/lib/loov-operators';
 
 // -- Status badge config -------------------------------------------------------
 
@@ -428,7 +429,9 @@ export default function BillingPage() {
               {business && selectedPlan ? (
                 <>
                   <div>
-                    <h3 className="text-sm font-bold text-content-primary">Payer par mobile money</h3>
+                    <h3 className="text-sm font-bold text-content-primary">
+                      {ENABLED_LOOV_OPERATORS.length === 1 ? `Payer avec ${ENABLED_LOOV_OPERATORS[0].label}` : 'Payer par mobile money'}
+                    </h3>
                     <p className="text-xs text-content-secondary mt-0.5">
                       Activation immédiate dès la validation sur votre téléphone
                       {status === 'active' ? ' — les jours restants sont conservés.' : '.'}

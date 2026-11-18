@@ -21,12 +21,11 @@ export const MOBILE_APP_PATHS = ['/boutique/*', '/services/*', '/track/*'];
  * Où obtenir l'app :
  *   Android : page /telecharger du site (APK), ou NEXT_PUBLIC_ANDROID_DOWNLOAD_URL pour la remplacer
  *             (ex. page Play Store un jour)
- *   iOS     : NEXT_PUBLIC_IOS_APP_STORE_URL (https://apps.apple.com/app/id…) ; bandeau masqué
- *             tant qu'elle est vide
+ *   iOS     : fiche App Store ; NEXT_PUBLIC_IOS_APP_STORE_URL pour la remplacer
  */
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '');
 export const ANDROID_DOWNLOAD_URL = process.env.NEXT_PUBLIC_ANDROID_DOWNLOAD_URL || `${SITE_URL}/telecharger`;
-export const APP_STORE_URL = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || '';
+export const APP_STORE_URL = process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || 'https://apps.apple.com/app/elm-boutique/id6822231983';
 
 /** APK Android et son manifeste latest.json, déposés par .github/workflows/mobile-android.yml */
 export const ANDROID_RELEASES_URL = `${(process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '')}/storage/v1/object/public/app-releases/android`;

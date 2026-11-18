@@ -20,6 +20,8 @@ import {
   Car,
   Utensils,
   GraduationCap,
+  Smartphone,
+  Download,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { usePermissionsStore } from "@/store/permissions";
@@ -27,6 +29,7 @@ import { getPlans, type Plan } from "@services/supabase/subscriptions";
 import { displayCurrency } from "@/lib/utils";
 import { getDefaultRoute } from "@/lib/getDefaultRoute";
 import { useUrlTab } from "@/hooks/useUrlTab";
+import { APP_STORE_URL, ANDROID_DOWNLOAD_URL } from "@/lib/mobile-app";
 import {
   MetierIllustration,
   type MetierId,
@@ -1061,6 +1064,51 @@ function Faq() {
   );
 }
 
+function AppDownload() {
+  return (
+    <section id="app" className="py-24 px-5 bg-surface border-t border-surface-border">
+      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-content-brand mb-3">
+            Application mobile
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-content-primary mb-3">
+            Vos clients commandent depuis l&apos;app ELM Boutique
+          </h2>
+          <p className="text-content-secondary text-sm leading-relaxed max-w-md">
+            Boutiques et services ELM près de chez eux, commande en quelques
+            gestes et suivi en temps réel. Disponible sur iPhone et Android.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row md:justify-end gap-3">
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-3 bg-brand-600 hover:bg-brand-500 text-content-primary font-semibold px-6 h-14 rounded-xl text-sm transition-colors"
+          >
+            <Smartphone className="w-5 h-5" />
+            <span className="text-left leading-tight">
+              <span className="block text-[10px] font-normal opacity-80">Télécharger sur</span>
+              l&apos;App Store
+            </span>
+          </a>
+          <a
+            href={ANDROID_DOWNLOAD_URL}
+            className="flex items-center justify-center gap-3 border border-surface-border hover:border-brand-500 text-content-primary font-semibold px-6 h-14 rounded-xl text-sm transition-colors"
+          >
+            <Download className="w-5 h-5" />
+            <span className="text-left leading-tight">
+              <span className="block text-[10px] font-normal text-content-muted">Télécharger pour</span>
+              Android
+            </span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CtaFinal() {
   const { user } = useAuthStore();
   const spaceHref = useSpaceHref();
@@ -1334,6 +1382,7 @@ export default function LandingPage() {
       <MultiEtablissements />
       <Tarifs />
       <Faq />
+      <AppDownload />
       <CtaFinal />
       <Footer />
       <FloatingActions />

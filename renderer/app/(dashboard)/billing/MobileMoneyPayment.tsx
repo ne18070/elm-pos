@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle, Loader2, Smartphone, XCircle, FlaskConical, ExternalLink } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { LOOV_OPERATORS, loovOperatorLabel, normalizeSenegalPhone, operatorRequiresOtp, type LoovOperatorCode } from '@/lib/loov-operators';
+import { ENABLED_LOOV_OPERATORS, loovOperatorLabel, normalizeSenegalPhone, operatorRequiresOtp, type LoovOperatorCode } from '@/lib/loov-operators';
 import {
   startMobilePayment, getMobilePayment, simulateMobilePayment, MobilePaymentError,
   type MobilePayment, type Plan,
@@ -33,7 +33,7 @@ interface Props {
 }
 
 export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated }: Props) {
-  const [operator, setOperator] = useState<LoovOperatorCode>('orange-money-senegal');
+  const [operator, setOperator] = useState<LoovOperatorCode>(ENABLED_LOOV_OPERATORS[0].code);
   const [phone, setPhone]       = useState(defaultPhone ?? '');
   const [phoneError, setPhoneError] = useState('');
   const [otp, setOtp]           = useState('');
@@ -239,10 +239,11 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
         </div>
       )}
 
+      {ENABLED_LOOV_OPERATORS.length > 1 && (
       <div>
         <p className="label">Opérateur</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Opérateur mobile money">
-          {LOOV_OPERATORS.map((op) => (
+          {ENABLED_LOOV_OPERATORS.map((op) => (
             <button
               key={op.code}
               type="button"
@@ -259,6 +260,7 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
           ))}
         </div>
       </div>
+      )}
 
       <div>
         <label htmlFor="mm-phone" className="label">Numéro {loovOperatorLabel(operator)} à débiter</label>
