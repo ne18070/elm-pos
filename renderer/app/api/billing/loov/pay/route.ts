@@ -96,6 +96,9 @@ export async function POST(req: NextRequest) {
       merchantReference: payment.id,
       description:       `Abonnement ELM ${plan.label} — ${biz.name}`.slice(0, 200),
       callbackUrl:       callbackUrl(),
+      // /billing reprend le suivi de cette tentative au retour de l'app Wave
+      returnUrl:         `${siteUrl()}/billing?payment=${payment.id}`,
+      cancelUrl:         `${siteUrl()}/billing?payment=${payment.id}`,
       metadata:          { business_id: body.businessId, plan_id: plan.id, payment_id: payment.id },
     });
 

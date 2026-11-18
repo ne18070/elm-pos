@@ -80,6 +80,9 @@ export function createMobileMoneyPayment(input: {
   merchantReference: string;
   description?:      string;
   callbackUrl?:      string;
+  /** Retour après paiement sur une page opérateur (Wave) — sinon PAL renvoie vers son URL par défaut. */
+  returnUrl?:        string;
+  cancelUrl?:        string;
   metadata?:         Record<string, string>;
 }): Promise<LoovPayment> {
   return loovFetch<LoovPayment>('/v2/payments', {
@@ -98,6 +101,8 @@ export function createMobileMoneyPayment(input: {
       merchant_reference: input.merchantReference,
       description:        input.description,
       callback_url:       input.callbackUrl,
+      return_url:         input.returnUrl,
+      cancel_url:         input.cancelUrl,
       metadata:           input.metadata,
     }),
   });

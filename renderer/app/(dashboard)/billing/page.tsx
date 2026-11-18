@@ -15,7 +15,7 @@ import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import {
   getPlans, getSubscription, getMySubscriptionRequests, getMySubscriptionInvoices,
-  getPaymentSettings, submitSubscriptionRequest, getEffectiveStatus,
+  getPaymentSettings, submitSubscriptionRequest, getEffectiveStatus, getMobilePayment,
   type Plan, type SubscriptionRequest, type SubscriptionInvoice,
 } from '@services/supabase/subscriptions';
 import { getDefaultRoute } from '@/lib/getDefaultRoute';
@@ -101,6 +101,39 @@ export default function BillingPage() {
     setShowRenew(false);
   }
 
+  // Retour de l'app Wave (return_url = /billing?payment=<id>) : la page a été rechargée,
+  // on reprend le suivi de la tentative jusqu'à l'activation.
+  const [returningPayment, setReturningPayment] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const id = new URLSearchParams(window.location.search).get('payment');
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
+    setReturningPayment(id);
+    let cancelled = false;
+    (async () => {
+      const deadline = Date.now() + 2 * 60_000;
+      while (!cancelled && Date.now() < deadline) {
+        try {
+          const p = await getMobilePayment(id);
+          if (p.status === 'succeeded' && p.activated) { await handlePaid(); break; }
+          if (p.status === 'failed' || p.status === 'expired') {
+            notifError(p.status === 'expired'
+              ? "Le paiement n'a pas été validé à temps. Aucun montant n'a été débité."
+              : 'Le paiement a été refusé. Aucun montant n\'a été débité.');
+            break;
+          }
+        } catch { /* réseau instable : on réessaie */ }
+        await new Promise((r) => setTimeout(r, 3_000));
+      }
+      if (!cancelled) {
+        setReturningPayment(null);
+        router.replace('/billing');
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   async function handleSubmit() {
     if (!business || !selectedPlan) return;
     setSubmitting(true);
@@ -166,6 +199,13 @@ export default function BillingPage() {
             Gérez votre plan, retrouvez vos paiements et téléchargez vos factures.
           </p>
         </div>
+
+        {returningPayment && (
+          <div className="flex items-center gap-3 rounded-xl border border-brand-600/40 bg-badge-brand px-4 py-3 text-sm text-content-primary" aria-live="polite">
+            <Loader2 className="w-4 h-4 animate-spin text-content-brand shrink-0" />
+            Vérification de votre paiement… votre abonnement s&apos;active dès sa confirmation.
+          </div>
+        )}
 
         {/* -- Statut actuel -- */}
         <div className={`rounded-2xl border p-5 space-y-3
