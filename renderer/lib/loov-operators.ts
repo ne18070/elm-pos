@@ -12,11 +12,12 @@ export const LOOV_OPERATORS = [
   // provider : fournisseur Loov imposé — PAL tant que le fournisseur par défaut refuse ces canaux
   // (« not allowed to use this payin channel »). Sans provider : défaut de l'opérateur chez Loov.
   // enabled : proposé dans /billing et accepté par le serveur. Seul Wave pour l'instant.
-  { code: 'orange-money-senegal', label: 'Orange Money', requiresOtp: true, provider: 'pal', enabled: false },
+  // customerFeeBps : frais Loov répercutés sur le client (250 = 2,5 %) — ELM reçoit le prix net.
+  { code: 'orange-money-senegal', label: 'Orange Money', requiresOtp: true, provider: 'pal', enabled: false, customerFeeBps: 250 },
   { code: 'free-money-senegal',   label: 'Free Money',   enabled: false },
   { code: 'expresso-senegal',     label: 'Expresso',     enabled: false },
   // Wave via PAL : Loov renvoie un checkout_url (redirection vers l'app Wave)
-  { code: 'wave-senegal',         label: 'Wave', provider: 'pal', enabled: true },
+  { code: 'wave-senegal',         label: 'Wave', provider: 'pal', enabled: true, customerFeeBps: 250 },
 ] as const;
 
 export type LoovOperatorCode = (typeof LOOV_OPERATORS)[number]['code'];
@@ -37,6 +38,18 @@ export function operatorRequiresOtp(code: string): boolean {
 export function operatorProvider(code: string): string | undefined {
   const op = LOOV_OPERATORS.find((o) => o.code === code);
   return op && 'provider' in op ? op.provider : undefined;
+}
+
+/**
+ * Frais à ajouter au prix pour que le marchand reçoive `amount` net : Loov prélève son
+ * pourcentage sur le total débité, d'où total = amount / (1 − taux), arrondi au franc supérieur.
+ * Ex. 8 000 F à 2,5 % → 206 F de frais, 8 206 F débités, 8 000 F reçus.
+ */
+export function customerFee(amount: number, operator: string): number {
+  const op  = LOOV_OPERATORS.find((o) => o.code === operator);
+  const bps = op && 'customerFeeBps' in op ? op.customerFeeBps : 0;
+  if (!bps || amount <= 0) return 0;
+  return Math.ceil((amount * bps) / (10_000 - bps));
 }
 
 export function loovOperatorLabel(code: string | null | undefined): string {

@@ -14,6 +14,8 @@ export interface SubscriptionPaymentRow {
   operator:       string;
   phone_number:   string;
   amount:         number;
+  /** Frais payés par le client, inclus dans amount */
+  customer_fee:   number;
   currency:       string;
   days:           number;
   status:         LoovStatus;

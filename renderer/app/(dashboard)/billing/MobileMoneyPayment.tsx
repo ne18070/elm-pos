@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle, Loader2, Smartphone, XCircle, FlaskConical, ExternalLink } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { ENABLED_LOOV_OPERATORS, loovOperatorLabel, normalizeSenegalPhone, operatorRequiresOtp, type LoovOperatorCode } from '@/lib/loov-operators';
+import { ENABLED_LOOV_OPERATORS, customerFee, loovOperatorLabel, normalizeSenegalPhone, operatorRequiresOtp, type LoovOperatorCode } from '@/lib/loov-operators';
 import {
   startMobilePayment, getMobilePayment, simulateMobilePayment, MobilePaymentError,
   type MobilePayment, type Plan,
@@ -127,7 +127,9 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
     setError('');
   }
 
-  const amountLabel = formatCurrency(plan.price, plan.currency);
+  // Frais à la charge du client (même calcul que le serveur) : total débité = prix + frais
+  const fee         = customerFee(plan.price, operator);
+  const amountLabel = formatCurrency(plan.price + fee, plan.currency);
 
   // -- Attente de validation sur le téléphone ----------------------------------
   if (payment && waiting) {
@@ -299,6 +301,23 @@ export function MobileMoneyPayment({ businessId, plan, defaultPhone, onActivated
             ou passez par l&apos;application Orange Money.
           </p>
         </div>
+      )}
+
+      {fee > 0 && (
+        <dl className="text-sm rounded-xl border border-surface-border bg-surface-input px-4 py-3 space-y-1">
+          <div className="flex justify-between text-content-secondary">
+            <dt>Abonnement {plan.label}</dt>
+            <dd>{formatCurrency(plan.price, plan.currency)}</dd>
+          </div>
+          <div className="flex justify-between text-content-secondary">
+            <dt>Frais {loovOperatorLabel(operator)}</dt>
+            <dd>{formatCurrency(fee, plan.currency)}</dd>
+          </div>
+          <div className="flex justify-between font-bold text-content-primary pt-1 border-t border-surface-border">
+            <dt>Total à payer</dt>
+            <dd>{amountLabel}</dd>
+          </div>
+        </dl>
       )}
 
       {error && <p className="text-sm text-status-error" role="alert">{error}</p>}

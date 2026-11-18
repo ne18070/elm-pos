@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createMobileMoneyPayment, isLoovConfigured, LoovError } from '@/lib/loov';
-import { isLoovOperator, normalizeSenegalPhone, LOOV_CURRENCY, LOOV_MIN_AMOUNT } from '@/lib/loov-operators';
+import { customerFee, isLoovOperator, normalizeSenegalPhone, LOOV_CURRENCY, LOOV_MIN_AMOUNT } from '@/lib/loov-operators';
 import {
   billingCorsHeaders, billingJson, canManageBilling, requireUser, syncFromLoov, toClientPayment,
   type SubscriptionPaymentRow,
@@ -63,10 +63,13 @@ export async function POST(req: NextRequest) {
   ]);
   if (!plan?.is_active) return billingJson({ error: 'Ce plan n\'est plus disponible.' }, 400);
   if (!biz) return billingJson({ error: 'Établissement introuvable.' }, 404);
-  const amount = Number(plan.price);
-  if (plan.currency !== LOOV_CURRENCY || !Number.isInteger(amount) || amount < LOOV_MIN_AMOUNT) {
+  const price = Number(plan.price);
+  if (plan.currency !== LOOV_CURRENCY || !Number.isInteger(price) || price < LOOV_MIN_AMOUNT) {
     return billingJson({ error: 'Ce plan ne peut pas être réglé par mobile money. Contactez le support.' }, 400);
   }
+  // Frais Loov à la charge du client : il paie prix + frais, ELM reçoit le prix du plan
+  const fee    = customerFee(price, body.operator);
+  const amount = price + fee;
 
   const { data: row, error: insertError } = await admin
     .from('subscription_payments')
@@ -77,6 +80,7 @@ export async function POST(req: NextRequest) {
       operator:     body.operator,
       phone_number: phone,
       amount,
+      customer_fee: fee,
       currency:     plan.currency,
       days:         plan.duration_days,
     })
