@@ -145,6 +145,29 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Check Firebase config (notifications push)
+        # Vide = app construite SANS notifications, sans autre erreur. Valeurs lues dans
+        # Variables OU Secrets du dépôt.
+        run: |
+          missing=""
+          for k in FIREBASE_API_KEY FIREBASE_PROJECT_ID FIREBASE_MESSAGING_SENDER_ID FIREBASE_ANDROID_APP_ID; do
+            if [ -z "${!k}" ]; then missing="$missing $k"; fi
+          done
+          if [ -n "$missing" ]; then
+            if [ "$STRICT" = "true" ]; then
+              echo "::error::Notifications Android : valeurs Firebase manquantes :$missing"; exit 1
+            fi
+            echo "::warning::Notifications Android désactivées dans ce build — valeurs Firebase manquantes :$missing"
+          else
+            echo "Firebase Android : configuré"
+          fi
+        env:
+          STRICT: 'false'
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID }}
+
       - name: Generate & configure native projects
         run: |
           flutter config --jdk-dir "$JAVA_HOME"
@@ -193,10 +216,10 @@ jobs:
           {
             echo "SUPABASE_URL=$SUPABASE_URL"
             echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
-            echo "FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }}"
-            echo "FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }}"
-            echo "FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID }}"
-            echo "FIREBASE_ANDROID_APP_ID=${{ vars.FIREBASE_ANDROID_APP_ID }}"
+            echo "FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY }}"
+            echo "FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID }}"
+            echo "FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID }}"
+            echo "FIREBASE_ANDROID_APP_ID=${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID }}"
           } > "$RUNNER_TEMP/dart-defines.env"
 
       # Un APK par architecture (~20 Mo chacun) : un APK universel dépasse la limite de

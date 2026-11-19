@@ -98,6 +98,9 @@ async function canNotify(
  * Texte, statut et lien sont lus en base — jamais pris dans la requête, sinon
  * n'importe qui pouvait pousser un message et un lien arbitraires au client.
  */
+const orderRefOf = (order: { order_number: number | null }) =>
+  `OT-${String(order.order_number).padStart(4, '0')}`;
+
 export async function POST(req: NextRequest) {
   const { serviceOrderId, technicianToken, event } = await req.json().catch(() => ({}));
   if (!serviceOrderId) {
@@ -158,7 +161,10 @@ export async function POST(req: NextRequest) {
     }
     tokens.push(created);
   }
-  if (!tokens.length) return NextResponse.json({ ok: true, skipped: 'no token' });
+  if (!tokens.length) {
+    console.info('[client-push/notify] personne à notifier (aucun suivi ni app liée)', orderRefOf(order));
+    return NextResponse.json({ ok: true, skipped: 'no token' });
+  }
 
   const business     = order.businesses as unknown as { name: string } | null;
   const orderRef     = `OT-${String(order.order_number).padStart(4, '0')}`;
@@ -211,6 +217,9 @@ export async function POST(req: NextRequest) {
   }
 
   let appSent = 0;
+  if (devices.size && !isFcmConfigured()) {
+    console.error('[client-push/notify] FIREBASE_SERVICE_ACCOUNT_JSON absent ou invalide : app non notifiée', orderRefOf(order));
+  }
   if (devices.size && isFcmConfigured()) {
     // L'app ouvre /track/<jeton> : on lui donne l'URL publique complète
     const appUrl = url.startsWith('http')
@@ -233,5 +242,7 @@ export async function POST(req: NextRequest) {
     appSent = results.filter((r) => r === 'sent').length;
   }
 
+  console.info('[client-push/notify]', orderRefOf(order), order.status,
+    { web: `${webSent}/${subs?.length ?? 0}`, app: `${appSent}/${devices.size}` });
   return NextResponse.json({ ok: true, sent: { web: webSent, app: appSent } });
 }

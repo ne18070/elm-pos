@@ -102,13 +102,17 @@ export async function sendFcm(deviceToken: string, message: FcmMessage): Promise
     if (res.ok) return 'sent';
     // Jeton périmé (app désinstallée, données effacées) — seul cas où l'on supprime l'appareil
     const error = (await res.json().catch(() => null)) as
-      | { error?: { details?: Array<{ errorCode?: string }> } }
+      | { error?: { message?: string; details?: Array<{ errorCode?: string }> } }
       | null;
     const unregistered =
       res.status === 404 ||
       error?.error?.details?.some((d) => d.errorCode === 'UNREGISTERED') === true;
+    // Jeton tronqué : assez pour recouper avec la base, sans exposer le jeton entier
+    console.warn('[fcm] envoi refusé', res.status, error?.error?.details?.map((d) => d.errorCode).join(',') ?? '',
+      error?.error?.message ?? '', deviceToken.slice(0, 12));
     return unregistered ? 'unregistered' : 'error';
-  } catch {
+  } catch (err) {
+    console.error('[fcm] envoi impossible', String(err));
     return 'error';
   }
 }
