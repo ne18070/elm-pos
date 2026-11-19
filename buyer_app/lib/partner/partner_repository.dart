@@ -202,9 +202,10 @@ class PartnerRepository {
   }
 
   /// Lie l'app du client à (boutique, [phone]). [fixOrderIds] : ordres dont le
-  /// numéro est corrigé en [phone]. [identityChecked] : le technicien confirme que
-  /// le numéro est celui du client — exigé par le serveur quand aucun ordre ouvert
-  /// ne le prouve. Envoie ensuite la notification « App liée ».
+  /// numéro est corrigé en [phone]. [identityChecked] : le technicien confirme avoir
+  /// vérifié l'identité du client — toujours exigé par le serveur (un ordre ouvert
+  /// à ce numéro ne prouve rien, le numéro est déclaré). Envoie ensuite la
+  /// notification « App liée ».
   Future<ClientLinkResult> linkClientApp(
     String businessId,
     String code,

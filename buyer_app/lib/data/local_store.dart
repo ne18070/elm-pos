@@ -284,29 +284,54 @@ class LocalStore {
   }
 
   /// Ajoute (ou remonte en tête) une demande suivie ; garde les infos déjà connues.
-  Future<void> rememberTracking(TrackedRequest request) async {
+  /// Mémorise un suivi consulté (en tête de liste) et renvoie l'entrée gardée.
+  /// Un ordre déjà synchronisé par le compte client le reste (fromAccount) :
+  /// l'ouvrir ne doit pas en faire un suivi « utilisateur », que PushService
+  /// abonnerait au jeton et qu'une déliaison ne retirerait plus.
+  Future<TrackedRequest> rememberTracking(TrackedRequest request) async {
     final current = await trackedRequests();
-    final next = [request, ...current.where((r) => r.token != request.token)].take(_trackedMax).toList();
+    final previous = current.where((r) => r.token == request.token).firstOrNull;
+    final entry = previous?.fromAccount == true
+        ? TrackedRequest(
+            token: request.token,
+            businessName: request.businessName,
+            label: request.label,
+            createdAt: previous!.createdAt,
+            fromAccount: true,
+          )
+        : request;
+    final next = [entry, ...current.where((r) => r.token != request.token)].take(_trackedMax).toList();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
+    return entry;
   }
 
-  /// Ajoute les demandes encore inconnues (ordres liés au compte client) sans
-  /// réordonner celles déjà suivies.
+  /// Aligne « Mes suivis » sur les ordres du compte client ([requests], renvoyés
+  /// par client_app_overview) : ajoute les inconnus sans réordonner ceux déjà
+  /// suivis, et retire les suivis synchronisés que le serveur ne renvoie plus
+  /// (numéro de l'ordre corrigé, boutique déliée…). Les suivis ouverts par
+  /// l'utilisateur lui-même (lien /track) ne sont jamais retirés.
   ///
   /// [aliases] : pour chaque jeton de [requests], les autres jetons du même ordre
   /// (lien WhatsApp, jeton expiré…). Un ordre déjà suivi sous l'un d'eux n'est pas
   /// ajouté une seconde fois : son entrée passe au jeton courant, à sa place.
-  Future<void> addTrackings(
+  ///
+  /// [complete] : faux si le serveur a tronqué la liste (plafond de l'overview) —
+  /// un suivi absent n'est alors pas forcément sorti du compte, on ne retire rien.
+  Future<void> syncAccountTrackings(
     List<TrackedRequest> requests, {
     Map<String, Set<String>> aliases = const {},
+    bool complete = true,
   }) async {
-    final current = await trackedRequests();
+    final all = await trackedRequests();
+    // Jeton courant ou ancien jeton du même ordre : l'entrée est mise à jour plus bas
+    final synced = {for (final r in requests) ...{r.token, ...?aliases[r.token]}};
+    final current = complete ? all.where((r) => !r.fromAccount || synced.contains(r.token)).toList() : [...all];
+    var changed = current.length != all.length;
     final prefs = await SharedPreferences.getInstance();
     // Retirées à la main de « Mes suivis » : elles ne reviennent pas à la synchro
     final dismissed = {...?prefs.getStringList(_dismissedKey)};
     final known = {...current.map((r) => r.token)};
-    var changed = false;
     final added = <TrackedRequest>[];
     for (final request in requests) {
       final tokens = {request.token, ...?aliases[request.token]};

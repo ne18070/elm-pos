@@ -636,12 +636,13 @@ export async function getTechnicianServiceOrders(token: string): Promise<Technic
 }
 
 /**
- * Le client a-t-il lié l'app ELM Boutique à ce numéro dans l'établissement
- * (scan de son code client au comptoir, migration 178) ? null si on ne sait pas
+ * Cet OT partira-t-il en push vers une app ELM Boutique liée au comptoir
+ * (migration 178) ? Mêmes règles que l'envoi : numéro lié, ordre couvert par la
+ * liaison, pas retiré de « Mes suivis » par le client. null si on ne sait pas
  * (erreur) : l'appelant n'affiche alors rien plutôt qu'un état faux.
  */
-export async function hasClientApp(businessId: string, phone: string): Promise<boolean | null> {
-  const { data, error } = await supabase.rpc('has_client_app', { p_business_id: businessId, p_phone: phone });
+export async function hasClientApp(serviceOrderId: string): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc('has_client_app', { p_service_order_id: serviceOrderId });
   return error ? null : data === true;
 }
 

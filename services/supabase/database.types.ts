@@ -1136,7 +1136,6 @@ export type Database = {
           id: string
           last_seen_at: string
           platform: string
-          source: string
           tracking_token: string
         }
         Insert: {
@@ -1145,7 +1144,6 @@ export type Database = {
           id?: string
           last_seen_at?: string
           platform: string
-          source: string
           tracking_token: string
         }
         Update: {
@@ -1154,7 +1152,6 @@ export type Database = {
           id?: string
           last_seen_at?: string
           platform?: string
-          source?: string
           tracking_token?: string
         }
         Relationships: []
@@ -5110,6 +5107,7 @@ export type Database = {
           assigned_name: string | null
           assigned_to: string | null
           business_id: string
+          cancelled_at: string | null
           client_feedback: string | null
           client_name: string | null
           client_phone: string | null
@@ -5136,6 +5134,7 @@ export type Database = {
           assigned_name?: string | null
           assigned_to?: string | null
           business_id: string
+          cancelled_at?: string | null
           client_feedback?: string | null
           client_name?: string | null
           client_phone?: string | null
@@ -5162,6 +5161,7 @@ export type Database = {
           assigned_name?: string | null
           assigned_to?: string | null
           business_id?: string
+          cancelled_at?: string | null
           client_feedback?: string | null
           client_name?: string | null
           client_phone?: string | null
@@ -7709,6 +7709,10 @@ export type Database = {
         Args: { p_service_order_id: string; p_shared?: boolean }
         Returns: string
       }
+      _is_business_member: {
+        Args: { p_business_id: string; p_user_id: string }
+        Returns: boolean
+      }
       _is_client_app_manager: {
         Args: { p_business_id: string; p_user_id: string }
         Returns: boolean
@@ -7726,7 +7730,7 @@ export type Database = {
         Returns: { device_id: string; fcm_token: string }[]
       }
       has_client_app: {
-        Args: { p_business_id: string; p_phone: string }
+        Args: { p_service_order_id: string }
         Returns: boolean
       }
       normalize_phone: {
@@ -7737,7 +7741,6 @@ export type Database = {
         Args: {
           p_fcm_token: string
           p_platform: string
-          p_source?: string
           p_tracking_token: string
         }
         Returns: undefined

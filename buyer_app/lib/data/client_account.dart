@@ -28,6 +28,7 @@ class ClientAccount extends ChangeNotifier {
   static const _secretKey = 'client_app_secret';
   static const _profileKey = 'client_app_profile';
   static const _sentTokenKey = 'client_app_fcm_sent';
+  static const _sentAtKey = 'client_app_fcm_sent_at';
 
   ClientProfile? _profile;
   bool _loaded = false;
@@ -91,7 +92,10 @@ class ClientAccount extends ChangeNotifier {
     final profile = ClientProfile(name: name.trim(), phone: phone.trim());
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_profileKey, jsonEncode(profile.toJson()));
-    if (fcmToken != null) await prefs.setString(_sentTokenKey, fcmToken);
+    if (fcmToken != null) {
+      await prefs.setString(_sentTokenKey, fcmToken);
+      await prefs.setString(_sentAtKey, DateTime.now().toIso8601String());
+    }
     if (fromUser) {
       // Pré-remplit aussi les prochaines commandes et demandes de service
       final details = await _store.customerDetails();
@@ -113,9 +117,17 @@ class ClientAccount extends ChangeNotifier {
     await load();
     final profile = _profile;
     if (profile == null) return;
-    // Appelé à chaque lancement : rien à envoyer si le serveur a déjà ce jeton
+    // Appelé à chaque lancement : rien à envoyer si ce jeton est parti il y a
+    // moins d'un jour. Renvoyé au moins une fois par jour : le serveur retire un
+    // jeton à un compte quand un autre l'enregistre (réinstallation), il faut
+    // pouvoir le récupérer s'il a été pris à tort.
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getString(_sentTokenKey) == fcmToken) return;
+    final sentAt = DateTime.tryParse(prefs.getString(_sentAtKey) ?? '');
+    if (prefs.getString(_sentTokenKey) == fcmToken &&
+        sentAt != null &&
+        DateTime.now().difference(sentAt) < const Duration(days: 1)) {
+      return;
+    }
     try {
       await register(profile.name, profile.phone, fcmToken: fcmToken, platform: platform, fromUser: false);
     } catch (error) {
@@ -148,7 +160,7 @@ class ClientAccount extends ChangeNotifier {
   Future<ClientOverview> overview() async {
     final data = await _call('client_app_overview');
     final overview = ClientOverview.fromJson(Map<String, dynamic>.from(data as Map));
-    await _store.addTrackings(
+    await _store.syncAccountTrackings(
       [
         for (final order in overview.orders)
           TrackedRequest(
@@ -160,6 +172,7 @@ class ClientAccount extends ChangeNotifier {
           ),
       ],
       aliases: {for (final order in overview.orders) order.trackingToken: order.knownTokens},
+      complete: !overview.truncated,
     );
     return overview;
   }
@@ -187,6 +200,7 @@ class ClientAccount extends ChangeNotifier {
     await prefs.remove(_secretKey);
     await prefs.remove(_profileKey);
     await prefs.remove(_sentTokenKey);
+    await prefs.remove(_sentAtKey);
     await _store.removeAccountTrackings();
     _profile = null;
     notifyListeners();
@@ -204,9 +218,9 @@ class ClientAccount extends ChangeNotifier {
     );
   }
 
-  /// Délie une boutique : le serveur coupe les abonnements push de ce téléphone à
-  /// ses ordres et renvoie leurs jetons de suivi, retirés ici de « Mes suivis »
-  /// (sinon PushService les réabonnerait au prochain lancement).
+  /// Délie une boutique : ses ordres ne sont plus notifiés (le serveur ne trouve
+  /// plus la liaison) et leurs jetons de suivi, renvoyés, sont retirés tout de
+  /// suite de « Mes suivis » sans attendre la prochaine synchro.
   Future<void> unlink(String linkId) async {
     final data = await _call('client_app_unlink', {'p_link_id': linkId});
     final tokens = data is Map ? (data['tracking_tokens'] as List? ?? []) : const [];
@@ -316,9 +330,10 @@ class ClientOrder {
 }
 
 class ClientOverview {
-  const ClientOverview({required this.links, required this.orders});
+  const ClientOverview({required this.links, required this.orders, this.truncated = false});
 
   factory ClientOverview.fromJson(Map<String, dynamic> json) => ClientOverview(
+        truncated: json['truncated'] == true,
         links: ((json['links'] as List?) ?? [])
             .whereType<Map>()
             .map((e) => ClientLink.fromJson(Map<String, dynamic>.from(e)))
@@ -331,4 +346,7 @@ class ClientOverview {
 
   final List<ClientLink> links;
   final List<ClientOrder> orders;
+
+  /// Plus d'ordres que le plafond du serveur : [orders] n'est pas la liste complète
+  final bool truncated;
 }

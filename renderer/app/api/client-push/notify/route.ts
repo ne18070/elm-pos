@@ -25,6 +25,10 @@ const STATUS_NOTIF: Record<string, { title: string; body: (ref: string, biz: str
     title: '✅ Travaux terminés',
     body:  (ref, biz) => `${ref} est prêt ! Vous pouvez passer récupérer votre objet chez ${biz}.`,
   },
+  annule: {
+    title: '❌ Ordre annulé',
+    body:  (ref, biz) => `${ref} a été annulé par ${biz}. Contactez-les pour plus d'informations.`,
+  },
   paye: {
     title: '💰 Paiement confirmé',
     body:  (ref, biz) => `Le paiement pour ${ref} a bien été enregistré. Merci !`,
@@ -79,13 +83,12 @@ async function canNotify(
   if (!auth?.startsWith('Bearer ')) return false;
   const { data: { user } } = await admin.auth.getUser(auth.slice(7));
   if (!user) return false;
-  const { data: member } = await admin
-    .from('business_members')
-    .select('user_id')
-    .eq('business_id', order.business_id)
-    .eq('user_id', user.id)
-    .maybeSingle();
-  return !!member;
+  // Même règle que le partage du lien et le badge (migration 178)
+  const { data: isMember } = await admin.rpc('_is_business_member', {
+    p_business_id: order.business_id,
+    p_user_id: user.id,
+  });
+  return isMember === true;
 }
 
 /**
@@ -126,7 +129,7 @@ export async function POST(req: NextRequest) {
 
   // Appareils liés au comptoir (migration 178) : (boutique, numéro de l'OT), et
   // jetons de suivi valides de l'OT (demande publique, dashboard, app liée)
-  const [{ data: linkedRows }, { data: tokenRows }] = await Promise.all([
+  const [{ data: linkedRows, error: linkedError }, { data: tokenRows, error: tokenError }] = await Promise.all([
     supabaseAdmin.rpc('client_app_push_targets', { p_service_order_id: order.id }),
     supabaseAdmin
       .from('client_tracking_tokens')
@@ -135,16 +138,25 @@ export async function POST(req: NextRequest) {
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false }),
   ]);
+  // Une erreur ici ne doit pas passer pour « personne à notifier »
+  if (linkedError || tokenError) {
+    console.error('[client-push/notify] destinataires illisibles', order.id, linkedError ?? tokenError);
+    return NextResponse.json({ error: 'Destinataires indisponibles' }, { status: 500 });
+  }
   const linked = (linkedRows ?? []) as Array<{ device_id: string; fcm_token: string }>;
 
   const tokens = (tokenRows ?? []).map((r) => r.token);
   // App liée mais aucun lien jamais envoyé : la notification ouvre quand même le
   // suivi. Jeton créé en base sous verrou (auto_created, pas de doublon)
   if (!tokens.length && linked.length) {
-    const { data: created } = await supabaseAdmin.rpc('_ensure_tracking_token', {
+    const { data: created, error: createError } = await supabaseAdmin.rpc('_ensure_tracking_token', {
       p_service_order_id: order.id,
     });
-    if (created) tokens.push(created);
+    if (createError || !created) {
+      console.error('[client-push/notify] jeton de suivi non créé', order.id, createError);
+      return NextResponse.json({ error: 'Lien de suivi indisponible' }, { status: 500 });
+    }
+    tokens.push(created);
   }
   if (!tokens.length) return NextResponse.json({ ok: true, skipped: 'no token' });
 
@@ -169,15 +181,14 @@ export async function POST(req: NextRequest) {
   // Un même téléphone peut être lié ET abonné au suivi (parfois sous plusieurs
   // jetons de l'OT) : une seule notification, mais toutes ses lignes sont gardées
   // pour être nettoyées si FCM le déclare désinscrit
-  const devices = new Map<string, { trackedIds: string[]; linkedId?: string }>();
-  for (const d of trackedDevices ?? []) {
-    const entry = devices.get(d.fcm_token) ?? { trackedIds: [] };
-    entry.trackedIds.push(d.id);
-    devices.set(d.fcm_token, entry);
-  }
-  for (const d of linked) {
-    devices.set(d.fcm_token, { trackedIds: [], ...devices.get(d.fcm_token), linkedId: d.device_id });
-  }
+  const devices = new Map<string, { trackedIds: string[]; linkedIds: string[] }>();
+  const entryFor = (fcmToken: string) => {
+    const entry = devices.get(fcmToken) ?? { trackedIds: [], linkedIds: [] };
+    devices.set(fcmToken, entry);
+    return entry;
+  };
+  for (const d of trackedDevices ?? []) entryFor(d.fcm_token).trackedIds.push(d.id);
+  for (const d of linked) entryFor(d.fcm_token).linkedIds.push(d.device_id);
 
   let webSent = 0;
   if (subs?.length) {
@@ -212,8 +223,8 @@ export async function POST(req: NextRequest) {
           if (device.trackedIds.length) {
             await supabaseAdmin.from('client_push_devices').delete().in('id', device.trackedIds);
           }
-          if (device.linkedId) {
-            await supabaseAdmin.from('client_app_devices').update({ fcm_token: null }).eq('id', device.linkedId);
+          if (device.linkedIds.length) {
+            await supabaseAdmin.from('client_app_devices').update({ fcm_token: null }).in('id', device.linkedIds);
           }
         }
         return result;

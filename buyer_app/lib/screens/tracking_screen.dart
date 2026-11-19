@@ -31,6 +31,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
   String? _error;
   bool _notificationsOn = false;
 
+  /// Ordre arrivé par une boutique liée : déjà notifié via la liaison (le serveur
+  /// revérifie le numéro à chaque envoi). Pas d'abonnement au jeton, qui
+  /// survivrait à une correction de ce numéro ou à une déliaison.
+  bool _fromAccount = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +49,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     });
     try {
       final data = await widget.repository.tracking(widget.token);
-      await widget.store.rememberTracking(
+      final entry = await widget.store.rememberTracking(
         TrackedRequest(
           token: widget.token,
           businessName: data.business.name,
@@ -52,7 +57,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
           createdAt: DateTime.now(),
         ),
       );
-      if (mounted) setState(() => _data = data);
+      if (mounted) {
+        setState(() {
+          _data = data;
+          _fromAccount = entry.fromAccount;
+        });
+      }
     } on TrackingException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
@@ -154,7 +164,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
           ],
           if (data.isService && PushService.instance.isAvailable) ...[
             const SizedBox(height: 24),
-            _notificationsOn
+            _fromAccount
+                ? const ListTile(
+                    leading: Icon(Icons.notifications_active),
+                    title: Text('Notifications activées'),
+                    subtitle: Text('App liée à cette boutique : vous êtes prévenu à chaque étape.'),
+                  )
+                : _notificationsOn
                 ? const ListTile(
                     leading: Icon(Icons.notifications_active),
                     title: Text('Notifications activées'),

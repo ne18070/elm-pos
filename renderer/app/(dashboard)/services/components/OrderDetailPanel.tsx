@@ -107,10 +107,11 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
     setTrackingSent(null);
     if (!order.client_phone) return;
     let cancelled = false;
-    hasClientApp(businessId, order.client_phone).then(v => { if (!cancelled) setAppLinked(v); });
+    hasClientApp(order.id).then(v => { if (!cancelled) setAppLinked(v); });
     hasTrackingLink(order.id).then(v => { if (!cancelled) setTrackingSent(v); });
     return () => { cancelled = true; };
-  }, [businessId, order.id, order.client_phone]);
+    // status : la couverture par la liaison en dépend (ordre clos avant la liaison)
+  }, [order.id, order.client_phone, order.status]);
 
   const balance = order.total - order.paid_amount;
   const typeCfg = subjectTypeCfg(order.subject_type);
@@ -144,7 +145,12 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
   async function doCancel() {
     if (!canCancelOrder) { deny(); return; }
     setBusy(true);
-    try { await cancelServiceOrder(order.id, { userId: user?.id, userName: user?.full_name }); onRefresh(); onClose(); }
+    try {
+      await cancelServiceOrder(order.id, { userId: user?.id, userName: user?.full_name });
+      // Le client suivait peut-être l'ordre (lien, app liée) : il doit savoir qu'il est annulé
+      void notifyServiceOrderClient(order.id);
+      onRefresh(); onClose();
+    }
     catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
@@ -379,11 +385,11 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                     <div
                       className="mt-1.5"
                       title={trackingSent
-                        ? "Le client suit l'ordre par son lien. Proposez l'app ELM Boutique : scannez son « code client » depuis l'espace partenaire"
+                        ? "Le lien de suivi a été partagé (WhatsApp, SMS…) : son envoi n'est pas confirmé. Proposez l'app ELM Boutique : scannez son « code client » depuis l'espace partenaire"
                         : "Envoyez le lien de suivi (WhatsApp) ou liez l'app ELM Boutique du client depuis l'espace partenaire"}
                     >
                       {trackingSent ? (
-                        <Badge tone="neutral"><ExternalLink className="w-3 h-3" />Notifié par lien</Badge>
+                        <Badge tone="neutral"><ExternalLink className="w-3 h-3" />Lien partagé</Badge>
                       ) : (
                         <Badge tone="warning"><Bell className="w-3 h-3" />Client pas encore notifié</Badge>
                       )}

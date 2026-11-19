@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const { data: link } = await admin
     .from('client_app_links')
-    .select('id, business_id, client_app_devices(fcm_token), businesses(name)')
+    .select('id, business_id, device_id, client_app_devices(fcm_token), businesses(name)')
     .eq('id', linkId)
     .maybeSingle();
   if (!link) return NextResponse.json({ error: 'Liaison introuvable' }, { status: 404 });
@@ -60,5 +60,14 @@ export async function POST(req: NextRequest) {
     url: '',
     tag: `link-${link.id}`,
   });
-  return NextResponse.json({ ok: true, sent: result === 'sent' });
+  // Jeton mort : on l'efface, sinon has_push et le badge « notifié par push »
+  // annonceraient des notifications qui n'arriveront jamais
+  if (result === 'unregistered') {
+    await admin
+      .from('client_app_devices')
+      .update({ fcm_token: null })
+      .eq('id', link.device_id)
+      .eq('fcm_token', device.fcm_token);
+  }
+  return NextResponse.json({ ok: true, sent: result === 'sent', ...(result === 'unregistered' ? { unregistered: true } : {}) });
 }

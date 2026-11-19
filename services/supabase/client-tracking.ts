@@ -9,6 +9,10 @@ export interface TrackingTokenInfo {
   businesses: { name: string; logo_url: string | null };
 }
 
+/**
+ * Jeton de suivi à partager au client (WhatsApp, SMS). [clientPhone] ne sert
+ * qu'aux dossiers : pour un OT, la base prend le numéro de l'ordre lui-même.
+ */
 export async function getOrCreateTrackingToken(
   _businessId: string,
   entityId: string,
@@ -16,7 +20,7 @@ export async function getOrCreateTrackingToken(
   clientPhone?: string | null
 ): Promise<string> {
   // OT : jeton créé/réutilisé en base sous verrou (pas de doublon), et marqué
-  // comme envoyé au client (« Notifié par lien ») même s'il avait été créé
+  // comme envoyé au client (« Lien partagé ») même s'il avait été créé
   // automatiquement pour son app liée (migration 178)
   if (type === 'service_order') {
     const { data, error } = await supabase.rpc('share_service_order_tracking_token', {
@@ -26,13 +30,11 @@ export async function getOrCreateTrackingToken(
     return data;
   }
 
-  const col = 'dossier_id';
-
   // 1. Chercher un token existant valide (le plus récent : il peut y en avoir plusieurs)
   const { data: existing } = await supabase
     .from('client_tracking_tokens')
     .select('token')
-    .eq(col, entityId)
+    .eq('dossier_id', entityId)
     .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(1)
@@ -48,7 +50,7 @@ export async function getOrCreateTrackingToken(
   const { error } = await supabase
     .from('client_tracking_tokens')
     .insert({
-      [col]:        entityId,
+      dossier_id:   entityId,
       token,
       client_phone: clientPhone || null,
       expires_at:   expiresAt.toISOString(),

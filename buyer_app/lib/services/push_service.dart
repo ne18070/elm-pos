@@ -136,9 +136,13 @@ class PushService {
   Future<void> _registerAllTracked() async {
     final token = _deviceToken ??= await FirebaseMessaging.instance.getToken();
     if (token == null) return;
+    // Les ordres synchronisés (boutique liée) ne sont pas abonnés : le serveur les
+    // notifie via la liaison et revérifie le numéro de l'ordre à chaque envoi. Un
+    // abonnement au jeton survivrait à une correction de ce numéro.
     for (final request in await _store.trackedRequests()) {
+      if (request.fromAccount) continue;
       try {
-        await _repository.registerPushDevice(request.token, token, _platform, fromAccount: request.fromAccount);
+        await _repository.registerPushDevice(request.token, token, _platform);
       } catch (_) {
         // Lien expiré : rien à faire, le suivi reste consultable s'il est encore valide
       }

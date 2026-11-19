@@ -86,21 +86,58 @@ ALTER TABLE public.client_app_links
 ALTER TABLE public.client_app_links
   ADD COLUMN IF NOT EXISTS link_notified_at timestamptz;
 
--- Origine des abonnements push (client_push_devices, migration 159) :
---   tracking    voulu par l'utilisateur (lien /track, demande depuis l'app)
---   client_app  créé par la synchro des ordres d'une boutique liée
--- Délier une boutique ne supprime que les seconds.
-ALTER TABLE public.client_push_devices
-  ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'tracking'
-  CHECK (source IN ('tracking', 'client_app'));
+-- Les ordres d'une boutique liée sont notifiés par client_app_push_targets
+-- (appareil lié + numéro de l'OT, revérifiés à chaque envoi), JAMAIS par un
+-- abonnement client_push_devices : un tel abonnement survivrait à une correction
+-- du numéro de l'OT. Une version précédente de cette migration créait ces
+-- abonnements (colonne source = 'client_app') : on les retire avec la colonne.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'client_push_devices'
+                AND column_name = 'source') THEN
+    DELETE FROM public.client_push_devices WHERE source = 'client_app';
+    ALTER TABLE public.client_push_devices DROP COLUMN source;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_client_app_links_business_phone
   ON public.client_app_links (business_id, phone_normalized);
 
 -- Jetons de suivi créés automatiquement pour une app liée (synchro, notification)
--- et non envoyés au client : le dashboard ne doit pas afficher « Notifié par lien »
+-- et non envoyés au client : le dashboard ne doit pas afficher « Lien partagé »
 ALTER TABLE public.client_tracking_tokens
   ADD COLUMN IF NOT EXISTS auto_created boolean NOT NULL DEFAULT false;
+
+-- Date d'annulation d'un OT : comme paid_at / finished_at, elle borne la
+-- couverture d'une liaison (_client_app_link_covers). Sans elle, un ordre ouvert
+-- à la liaison puis annulé sortait de l'app sans que le client le sache.
+-- Posée par trigger : l'annulation passe par plusieurs chemins (dashboard, RPC).
+ALTER TABLE public.service_orders
+  ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
+
+CREATE OR REPLACE FUNCTION public._service_orders_set_cancelled_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.status = 'annule' AND OLD.status IS DISTINCT FROM 'annule' THEN
+    NEW.cancelled_at := now();
+  ELSIF NEW.status IS DISTINCT FROM 'annule' THEN
+    NEW.cancelled_at := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public._service_orders_set_cancelled_at() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_service_orders_cancelled_at ON public.service_orders;
+CREATE TRIGGER trg_service_orders_cancelled_at
+  BEFORE UPDATE OF status ON public.service_orders
+  FOR EACH ROW
+  EXECUTE FUNCTION public._service_orders_set_cancelled_at();
 
 -- Ordres que le client a retirés de « Mes suivis » : plus synchronisés ni notifiés
 CREATE TABLE IF NOT EXISTS public.client_app_muted_orders (
@@ -209,7 +246,29 @@ BEGIN
 END;
 $$;
 
--- Un ordre entre-t-il dans une liaison ? Ouvert, ou créé / terminé / payé après
+-- Membre de l'établissement, quel que soit son rôle (ou propriétaire). Seule
+-- définition : utilisée par les RPC du dashboard et par /api/client-push/notify
+-- (clé service), pour que le partage du lien, le badge et l'envoi des push
+-- appliquent exactement la même règle.
+CREATE OR REPLACE FUNCTION public._is_business_member(p_business_id uuid, p_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT p_user_id IS NOT NULL AND (
+    EXISTS (SELECT 1 FROM business_members bm
+             WHERE bm.business_id = p_business_id AND bm.user_id = p_user_id)
+    OR EXISTS (SELECT 1 FROM businesses b
+                WHERE b.id = p_business_id AND b.owner_id = p_user_id)
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public._is_business_member(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._is_business_member(uuid, uuid) TO service_role;
+
+-- Un ordre entre-t-il dans une liaison ? Ouvert, ou créé / terminé / payé / annulé après
 -- la liaison. Règle commune à la synchro (overview) et aux push (push_targets).
 CREATE OR REPLACE FUNCTION public._client_app_link_covers(
   p_status    text,
@@ -233,7 +292,7 @@ $$;
 -- Le plus récent jeton valide, créé au besoin. Verrou par ordre : deux appels
 -- simultanés (synchro, notification, partage WhatsApp) ne créent pas deux jetons.
 -- p_shared : le jeton part au client (WhatsApp, SMS) → il n'est plus
--- « auto_created » et le dashboard affiche « Notifié par lien ».
+-- « auto_created » et le dashboard affiche « Lien partagé ».
 CREATE OR REPLACE FUNCTION public._ensure_tracking_token(p_service_order_id uuid, p_shared boolean DEFAULT false)
 RETURNS text
 LANGUAGE plpgsql
@@ -276,15 +335,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF auth.uid() IS NULL OR NOT EXISTS (
+  IF NOT EXISTS (
     SELECT 1 FROM service_orders so
      WHERE so.id = p_service_order_id
-       AND (
-         EXISTS (SELECT 1 FROM business_members bm
-                  WHERE bm.business_id = so.business_id AND bm.user_id = auth.uid())
-         OR EXISTS (SELECT 1 FROM businesses b
-                     WHERE b.id = so.business_id AND b.owner_id = auth.uid())
-       )
+       AND public._is_business_member(so.business_id, auth.uid())
   ) THEN
     RAISE EXCEPTION 'ACCES_REFUSE: ordre de travail introuvable'
       USING ERRCODE = 'insufficient_privilege';
@@ -425,7 +479,6 @@ DECLARE
   v_name      text := trim(coalesce(p_name, ''));
   v_id        uuid;
   v_old_phone text;
-  v_old_fcm   text;
   v_removed   int := 0;
 BEGIN
   -- Seules les créations de compte comptent : les mises à jour (jeton FCM au
@@ -447,8 +500,7 @@ BEGIN
     RAISE EXCEPTION 'Plateforme invalide';
   END IF;
 
-  -- Avant l'upsert : il peut remplacer le jeton FCM par un nouveau
-  SELECT declared_phone, fcm_token INTO v_old_phone, v_old_fcm
+  SELECT declared_phone INTO v_old_phone
     FROM client_app_devices WHERE secret_hash = public._client_app_secret_hash(p_secret);
 
   INSERT INTO client_app_devices (secret_hash, display_name, declared_phone, fcm_token, platform)
@@ -462,14 +514,22 @@ BEGIN
         last_seen_at   = now()
   RETURNING id INTO v_id;
 
+  -- Même jeton FCM sur un autre compte : en pratique ce téléphone, réinstallé ou
+  -- dont les données ont été effacées (secret perdu). L'ancien compte perd le
+  -- jeton, sinon ce téléphone recevrait encore ses push sans moyen de les couper.
+  -- On ne SUPPRIME pas ce compte : l'appel est anonyme et rien ne prouve que
+  -- l'appelant possède ce jeton — au pire, un compte légitime perd ses push
+  -- jusqu'au prochain enregistrement de son jeton, sans perdre ses liaisons.
+  IF nullif(p_fcm_token, '') IS NOT NULL THEN
+    UPDATE client_app_devices SET fcm_token = NULL
+     WHERE fcm_token = p_fcm_token AND id <> v_id;
+  END IF;
+
   -- Nouveau numéro : les liaisons vérifiées au comptoir valaient pour l'ancien.
   -- On les supprime (sinon l'appareil recevrait les ordres du prochain titulaire
   -- de ce numéro) ; chaque boutique devra rescanner le code.
   IF v_old_phone IS NOT NULL
      AND public.normalize_phone(v_old_phone) IS DISTINCT FROM public.normalize_phone(p_phone) THEN
-    DELETE FROM client_push_devices
-     WHERE source = 'client_app'
-       AND fcm_token IN (SELECT v_old_fcm UNION SELECT fcm_token FROM client_app_devices WHERE id = v_id);
     DELETE FROM client_app_links WHERE device_id = v_id;
     GET DIAGNOSTICS v_removed = ROW_COUNT;
   END IF;
@@ -529,8 +589,9 @@ DECLARE
   v_device  uuid := public._client_app_device_id(p_secret);
   v_profile jsonb;
   v_links   jsonb;
-  v_ids     uuid[];
-  v_orders  jsonb;
+  v_ids       uuid[];
+  v_truncated boolean;
+  v_orders    jsonb;
 BEGIN
   SELECT jsonb_build_object('name', display_name, 'phone', declared_phone)
     INTO v_profile FROM client_app_devices WHERE id = v_device;
@@ -543,12 +604,18 @@ BEGIN
     FROM client_app_links l JOIN businesses b ON b.id = l.business_id
    WHERE l.device_id = v_device;
 
-  -- Les 50 ordres les plus récents des boutiques liées
-  SELECT coalesce(array_agg(o.id ORDER BY o.created_at DESC), '{}')
-    INTO v_ids
+  -- 50 ordres des boutiques liées : les ouverts d'abord (jamais évincés par
+  -- l'historique), puis les plus récents. truncated : il y en avait davantage,
+  -- l'app ne doit alors pas retirer de « Mes suivis » ceux qui manquent.
+  SELECT coalesce(array_agg(o.id ORDER BY o.created_at DESC) FILTER (WHERE o.rn <= 50), '{}'),
+         count(*) > 50
+    INTO v_ids, v_truncated
     FROM (
-      SELECT d.id, d.created_at FROM (
-        SELECT DISTINCT ON (so.id) so.id, so.created_at
+      SELECT d.id, d.created_at,
+             row_number() OVER (ORDER BY d.is_open DESC, d.created_at DESC) AS rn
+        FROM (
+        SELECT DISTINCT ON (so.id) so.id, so.created_at,
+               so.status IN ('attente', 'en_cours', 'pause', 'termine') AS is_open
           FROM client_app_links l
           JOIN service_orders so
             ON so.business_id = l.business_id
@@ -560,11 +627,11 @@ BEGIN
            -- ordre ouvert à la liaison puis terminé/payé reste listé (son état
            -- final doit arriver dans l'app).
            AND public._client_app_link_covers(so.status, so.created_at,
-                                              coalesce(so.paid_at, so.finished_at), l.created_at)
+                                              greatest(so.paid_at, so.finished_at, so.cancelled_at), l.created_at)
          ORDER BY so.id
       ) d
-      ORDER BY d.created_at DESC
-      LIMIT 50
+      ORDER BY rn
+      LIMIT 51
     ) o;
 
   -- Jeton de suivi des ordres qui n'en ont pas de valide, en une insertion.
@@ -601,7 +668,8 @@ BEGIN
        WHERE t.service_order_id = so.id
     ) known ON true;
 
-  RETURN jsonb_build_object('profile', v_profile, 'links', v_links, 'orders', v_orders);
+  RETURN jsonb_build_object('profile', v_profile, 'links', v_links, 'orders', v_orders,
+                            'truncated', v_truncated);
 END;
 $$;
 
@@ -631,11 +699,11 @@ BEGIN
 END;
 $$;
 
--- Le client retire une boutique liée : plus d'ordres ni de push de sa part.
--- Seuls les abonnements push créés par la synchro (source « client_app ») sont
--- supprimés : un ordre suivi par l'utilisateur lui-même (lien /track), avant ou
--- après la liaison, reste notifié. Les jetons de suivi de la boutique sont
--- renvoyés ; l'app ne retire de sa liste que ceux ajoutés par la synchro.
+-- Le client retire une boutique liée : plus d'ordres ni de push de sa part
+-- (client_app_push_targets ne trouve plus la liaison). Un ordre suivi par
+-- l'utilisateur lui-même (lien /track) reste notifié par son abonnement. Les
+-- jetons de suivi de la boutique sont renvoyés ; l'app ne retire de sa liste
+-- que ceux ajoutés par la synchro.
 DROP FUNCTION IF EXISTS public.client_app_unlink(text, uuid);
 CREATE FUNCTION public.client_app_unlink(p_secret text, p_link_id uuid)
 RETURNS jsonb
@@ -646,7 +714,6 @@ AS $$
 DECLARE
   v_device uuid := public._client_app_device_id(p_secret);
   v_link   client_app_links;
-  v_fcm    text;
   v_tokens text[];
 BEGIN
   DELETE FROM client_app_links
@@ -661,13 +728,6 @@ BEGIN
     JOIN client_tracking_tokens t ON t.service_order_id = so.id
    WHERE so.business_id = v_link.business_id
      AND public.normalize_phone(so.client_phone) = v_link.phone_normalized;
-
-  SELECT fcm_token INTO v_fcm FROM client_app_devices WHERE id = v_device;
-  IF v_fcm IS NOT NULL AND cardinality(v_tokens) > 0 THEN
-    DELETE FROM client_push_devices
-     WHERE fcm_token = v_fcm AND tracking_token = ANY (v_tokens)
-       AND source = 'client_app';
-  END IF;
 
   RETURN jsonb_build_object('tracking_tokens', to_jsonb(v_tokens));
 END;
@@ -706,29 +766,15 @@ END;
 $$;
 
 -- Suppression du compte client (exigence App Store 5.1.1(v)) : appareil, profil
--- déclaré, jeton FCM, liaisons et ordres retirés (cascade), abonnements push nés
--- de la synchro. Les suivis ouverts par l'utilisateur lui-même (lien /track)
--- ne dépendent pas du compte et restent.
+-- déclaré, jeton FCM, liaisons et ordres retirés (cascade). Les suivis ouverts
+-- par l'utilisateur lui-même (lien /track) ne dépendent pas du compte et restent.
 CREATE OR REPLACE FUNCTION public.client_app_delete(p_secret text)
 RETURNS void
-LANGUAGE plpgsql
+LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_device uuid;
-  v_fcm    text;
-BEGIN
-  SELECT id, fcm_token INTO v_device, v_fcm
-    FROM client_app_devices WHERE secret_hash = public._client_app_secret_hash(p_secret);
-  IF v_device IS NULL THEN
-    RETURN;
-  END IF;
-  IF v_fcm IS NOT NULL THEN
-    DELETE FROM client_push_devices WHERE fcm_token = v_fcm AND source = 'client_app';
-  END IF;
-  DELETE FROM client_app_devices WHERE id = v_device;
-END;
+  DELETE FROM client_app_devices WHERE secret_hash = public._client_app_secret_hash(p_secret);
 $$;
 
 -- Désabonne ce téléphone d'un suivi (« Retirer de mes suivis »). Connaître le
@@ -743,27 +789,22 @@ AS $$
    WHERE tracking_token = p_tracking_token AND fcm_token = p_fcm_token;
 $$;
 
--- Abonnement push d'un suivi (migration 159) avec son origine. p_source
--- 'client_app' : synchro d'une boutique liée. Un abonnement voulu par
--- l'utilisateur (« tracking ») le reste, même si la synchro le réenregistre.
--- Ancienne version à 3 paramètres retirée ; OR REPLACE pour pouvoir rejouer
-DROP FUNCTION IF EXISTS public.register_push_device(text, text, text);
+-- Une version précédente de cette migration remplaçait register_push_device
+-- (migration 159) par une variante à 4 paramètres (p_source) : on la retire,
+-- et la version d'origine à 3 paramètres est recréée (elle avait été supprimée).
+DROP FUNCTION IF EXISTS public.register_push_device(text, text, text, text);
 CREATE OR REPLACE FUNCTION public.register_push_device(
   p_tracking_token text,
   p_fcm_token      text,
-  p_platform       text,
-  p_source         text DEFAULT 'tracking'
+  p_platform       text
 )
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_source text := coalesce(p_source, 'tracking');
 BEGIN
-  IF p_platform NOT IN ('android', 'ios') OR length(coalesce(p_fcm_token, '')) < 20
-     OR v_source NOT IN ('tracking', 'client_app') THEN
+  IF p_platform NOT IN ('android', 'ios') OR length(coalesce(p_fcm_token, '')) < 20 THEN
     RAISE EXCEPTION 'Appareil invalide';
   END IF;
   -- Seul un jeton de suivi valide (non expiré) peut recevoir des notifications
@@ -774,18 +815,14 @@ BEGIN
     RAISE EXCEPTION 'Lien de suivi invalide ou expiré';
   END IF;
 
-  INSERT INTO client_push_devices (tracking_token, fcm_token, platform, source)
-  VALUES (p_tracking_token, p_fcm_token, p_platform, v_source)
+  INSERT INTO client_push_devices (tracking_token, fcm_token, platform)
+  VALUES (p_tracking_token, p_fcm_token, p_platform)
   ON CONFLICT (tracking_token, fcm_token)
-  DO UPDATE SET last_seen_at = now(),
-                platform     = EXCLUDED.platform,
-                source       = CASE WHEN client_push_devices.source = 'tracking'
-                                      OR EXCLUDED.source = 'tracking'
-                                    THEN 'tracking' ELSE 'client_app' END;
+  DO UPDATE SET last_seen_at = now(), platform = EXCLUDED.platform;
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.register_push_device(text, text, text, text)    TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.register_push_device(text, text, text)          TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.client_app_register(text, text, text, text, text) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.client_app_pairing_code(text)                    TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.client_app_overview(text)                        TO anon, authenticated, service_role;
@@ -944,32 +981,6 @@ GRANT EXECUTE ON FUNCTION public.partner_resolve_client_code(uuid, text)        
 GRANT EXECUTE ON FUNCTION public.partner_search_service_orders(uuid, text)             TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.partner_link_client_app(uuid, text, text, uuid[], boolean) TO authenticated, service_role;
 
--- ── Dashboard : badge « App liée · notifié par push » ────────────────────────
--- Vrai seulement si un appareil lié peut vraiment recevoir les push (jeton FCM) :
--- notifications refusées → le dashboard propose le lien WhatsApp.
-CREATE OR REPLACE FUNCTION public.has_client_app(p_business_id uuid, p_phone text)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM client_app_links l
-      JOIN client_app_devices d ON d.id = l.device_id AND d.fcm_token IS NOT NULL
-     WHERE l.business_id = p_business_id
-       AND l.phone_normalized = public.normalize_phone(p_phone)
-       AND (
-         EXISTS (SELECT 1 FROM business_members bm
-                  WHERE bm.business_id = p_business_id AND bm.user_id = auth.uid())
-         OR EXISTS (SELECT 1 FROM businesses b
-                     WHERE b.id = p_business_id AND b.owner_id = auth.uid())
-       )
-  );
-$$;
-
-GRANT EXECUTE ON FUNCTION public.has_client_app(uuid, text) TO authenticated, service_role;
-
 -- ── Serveur : appareils à notifier pour un ordre (/api/client-push/notify) ──
 CREATE OR REPLACE FUNCTION public.client_app_push_targets(p_service_order_id uuid)
 RETURNS TABLE (device_id uuid, fcm_token text)
@@ -987,13 +998,36 @@ AS $$
    WHERE so.id = p_service_order_id
      AND d.fcm_token IS NOT NULL
      AND public._client_app_link_covers(so.status, so.created_at,
-                                        coalesce(so.paid_at, so.finished_at), l.created_at)
+                                        greatest(so.paid_at, so.finished_at, so.cancelled_at), l.created_at)
      AND NOT EXISTS (SELECT 1 FROM client_app_muted_orders m
                       WHERE m.device_id = d.id AND m.service_order_id = so.id);
 $$;
 
 REVOKE ALL ON FUNCTION public.client_app_push_targets(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.client_app_push_targets(uuid) TO service_role;
+
+-- ── Dashboard : badge « App liée · notifié par push » ────────────────────────
+-- Vrai seulement si cet ordre partira vraiment en push : mêmes règles que
+-- client_app_push_targets (jeton FCM, ordre couvert par la liaison, pas retiré
+-- de « Mes suivis »). Sinon le dashboard propose le lien WhatsApp.
+-- Ancienne version (boutique, numéro) : ignorait couverture et ordres retirés.
+DROP FUNCTION IF EXISTS public.has_client_app(uuid, text);
+CREATE OR REPLACE FUNCTION public.has_client_app(p_service_order_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM service_orders so
+     WHERE so.id = p_service_order_id
+       AND public._is_business_member(so.business_id, auth.uid())
+       AND EXISTS (SELECT 1 FROM public.client_app_push_targets(so.id))
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.has_client_app(uuid) TO authenticated, service_role;
 
 -- ── Serveur : une seule notification « App liée » par scan ─────────────────
 -- (/api/client-app/linked) Vrai si la liaison vient d'être scannée (2 min) et

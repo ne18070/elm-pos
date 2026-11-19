@@ -63,9 +63,11 @@ class _ClientAccountScreenState extends State<ClientAccountScreen> with WidgetsB
     _refreshCode();
     _refreshLinks();
     // Compte à rebours du code ; nouveau code dès qu'il expire
+    // Sans code (échec réseau), nouvel essai toutes les 5 s
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       final code = _code;
-      if (code != null && code.expiresAt.isBefore(DateTime.now())) _refreshCode();
+      final now = DateTime.now();
+      if (code == null ? now.isAfter(_codeRetryAt) : code.expiresAt.isBefore(now)) _refreshCode();
       if (mounted) setState(() {});
     });
     // Le scan au comptoir crée la liaison côté serveur : on la voit arriver ici
@@ -85,6 +87,9 @@ class _ClientAccountScreenState extends State<ClientAccountScreen> with WidgetsB
   /// déclarer « consommé » le code qui vient d'être émis
   DateTime _codeIssuedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
+  /// Prochain essai après un échec de récupération du code
+  DateTime _codeRetryAt = DateTime.fromMillisecondsSinceEpoch(0);
+
   Future<void> _refreshCode() async {
     if (_fetchingCode) return;
     _fetchingCode = true;
@@ -98,6 +103,7 @@ class _ClientAccountScreenState extends State<ClientAccountScreen> with WidgetsB
         });
       }
     } catch (_) {
+      _codeRetryAt = DateTime.now().add(const Duration(seconds: 5));
       if (mounted) {
         setState(() {
           _code = null;
@@ -113,13 +119,18 @@ class _ClientAccountScreenState extends State<ClientAccountScreen> with WidgetsB
 
   /// Sondage léger (identifiants seulement) ; l'aperçu complet n'est rechargé
   /// que lorsqu'une liaison apparaît ou disparaît.
+  /// Un seul appel à la fois : sur un réseau lent, l'aperçu complet peut durer
+  /// plus que l'intervalle de sondage.
   Future<void> _checkNewLink() async {
-    final known = _links;
-    if (known == null) return _refreshLinks();
     if (_checkingLink) return;
     _checkingLink = true;
+    final known = _links;
     final pollStart = DateTime.now();
     try {
+      if (known == null) {
+        await _refreshLinks();
+        return;
+      }
       final (:ids, :codeUsed) = await _account.linkIds();
       final current = known.map((l) => l.id).toSet();
       if (ids.length != current.length || !ids.every(current.contains)) {
