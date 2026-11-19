@@ -39,15 +39,27 @@ class AppConfig {
 
   static bool get _isIos => defaultTargetPlatform == TargetPlatform.iOS;
 
-  static String get firebaseApiKey => _isIos ? firebaseIosApiKey : firebaseAndroidApiKey;
+  // trim() : une valeur collée avec un espace ou un retour à la ligne (secret GitHub)
+  static String get firebaseApiKey =>
+      (_isIos ? firebaseIosApiKey : firebaseAndroidApiKey).trim();
 
-  static String get firebaseAppId => _isIos ? firebaseIosAppId : firebaseAndroidAppId;
+  static String get firebaseAppId => (_isIos ? firebaseIosAppId : firebaseAndroidAppId).trim();
 
-  /// Sans configuration Firebase, l'app fonctionne normalement, sans notifications.
-  static bool get isPushConfigured =>
-      !kIsWeb &&
-      firebaseApiKey.isNotEmpty &&
-      firebaseProjectId.isNotEmpty &&
-      firebaseSenderId.isNotEmpty &&
-      firebaseAppId.isNotEmpty;
+  static String get firebaseProjectIdValue => firebaseProjectId.trim();
+
+  static String get firebaseSenderIdValue => firebaseSenderId.trim();
+
+  /// Sans configuration Firebase VALIDE, l'app fonctionne normalement, sans notifications.
+  /// Le format est vérifié avant Firebase.initializeApp : sur iOS, le SDK natif fait
+  /// planter l'app (NSException, hors d'atteinte d'un try/catch Dart) quand l'App ID
+  /// est invalide — ex. celui de l'app Android, ou un identifiant d'un autre projet.
+  static bool get isPushConfigured {
+    if (kIsWeb) return false;
+    final appId = RegExp(r'^1:(\d+):(ios|android):[0-9a-f]+$').firstMatch(firebaseAppId);
+    return appId != null &&
+        appId.group(2) == (_isIos ? 'ios' : 'android') &&
+        appId.group(1) == firebaseSenderIdValue &&
+        RegExp(r'^AIza[0-9A-Za-z_\-]{35}$').hasMatch(firebaseApiKey) &&
+        RegExp(r'^[a-z0-9][a-z0-9\-]{3,}$').hasMatch(firebaseProjectIdValue);
+  }
 }

@@ -46,8 +46,8 @@ class PushService {
         options: FirebaseOptions(
           apiKey: AppConfig.firebaseApiKey,
           appId: AppConfig.firebaseAppId,
-          messagingSenderId: AppConfig.firebaseSenderId,
-          projectId: AppConfig.firebaseProjectId,
+          messagingSenderId: AppConfig.firebaseSenderIdValue,
+          projectId: AppConfig.firebaseProjectIdValue,
           iosBundleId: 'com.elmapp.mobile',
         ),
       );

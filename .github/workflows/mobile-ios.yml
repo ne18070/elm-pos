@@ -120,7 +120,21 @@ jobs:
             fi
             echo "::warning::Notifications iOS désactivées dans ce build — valeurs Firebase manquantes :$missing"
           else
-            echo "Firebase iOS : configuré"
+            # Format : sinon l'app ignore Firebase (garde-fou de config.dart) — sur iOS, sans ce
+            # garde-fou, une valeur invalide fait planter l'app au lancement.
+            app_id=$(echo -n "$FIREBASE_IOS_APP_ID" | tr -d '[:space:]')
+            sender=$(echo -n "$FIREBASE_MESSAGING_SENDER_ID" | tr -d '[:space:]')
+            api_key=$(echo -n "$FIREBASE_IOS_API_KEY" | tr -d '[:space:]')
+            bad=""
+            [[ "$app_id" =~ ^1:([0-9]+):ios:[0-9a-f]+$ ]] || bad="$bad FIREBASE_IOS_APP_ID(attendu 1:<numéro>:ios:<hex>)"
+            [[ "$app_id" =~ ^1:([0-9]+): && "${BASH_REMATCH[1]}" == "$sender" ]] || bad="$bad FIREBASE_MESSAGING_SENDER_ID(≠ numéro de l'App ID)"
+            [[ "$api_key" =~ ^AIza[0-9A-Za-z_-]{35}$ ]] || bad="$bad FIREBASE_IOS_API_KEY(attendu AIza…, 39 caractères)"
+            if [ -n "$bad" ]; then
+              if [ "$STRICT" = "true" ]; then echo "::error::Firebase iOS mal configuré :$bad"; exit 1; fi
+              echo "::warning::Notifications iOS désactivées — Firebase mal configuré :$bad"
+            else
+              echo "Firebase iOS : configuré"
+            fi
           fi
         env:
           STRICT: ${{ vars.IOS_PUSH_ENABLED }}
