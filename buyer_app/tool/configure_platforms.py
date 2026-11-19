@@ -148,9 +148,10 @@ def configure_ios() -> None:
     info['ITSAppUsesNonExemptEncryption'] = False
     # Liens reçus par le plugin app_links, pas par le routeur Flutter
     info['FlutterDeepLinkingEnabled'] = False
-    # Espace partenaire : photo produit (image_picker) — sans ces textes, iOS ferme l'app
+    # Espace partenaire : photo produit (image_picker) et scan du code client au
+    # comptoir (mobile_scanner) — sans ces textes, iOS ferme l'app
     info['NSCameraUsageDescription'] = (
-        'Prenez en photo vos produits pour les afficher dans votre boutique ELM.'
+        'Prenez en photo vos produits et scannez le code client de vos clients au comptoir.'
     )
     info['NSPhotoLibraryUsageDescription'] = (
         'Choisissez la photo d’un produit à afficher dans votre boutique ELM.'

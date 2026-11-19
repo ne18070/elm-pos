@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../data/boutique_repository.dart';
+import '../data/client_account.dart';
 import '../data/local_store.dart';
 
 /// Notifications push (Firebase Cloud Messaging) des demandes suivies.
@@ -58,6 +59,7 @@ class PushService {
       messaging.onTokenRefresh.listen((token) {
         _deviceToken = token;
         _registerAllTracked();
+        ClientAccount.instance.updatePushToken(token, _platform);
       });
       final initial = await messaging.getInitialMessage();
       if (initial != null) _openFromMessage(initial);
@@ -66,7 +68,11 @@ class PushService {
 
       // Permission déjà accordée : on réabonne les suivis (nouveau jeton, réinstallation…)
       final settings = await messaging.getNotificationSettings();
-      if (_isAuthorized(settings.authorizationStatus)) await _registerAllTracked();
+      if (_isAuthorized(settings.authorizationStatus)) {
+        await _registerAllTracked();
+        final token = _deviceToken;
+        if (token != null) await ClientAccount.instance.updatePushToken(token, _platform);
+      }
     } catch (error) {
       debugPrint('Notifications indisponibles : $error');
     }
@@ -100,12 +106,39 @@ class PushService {
     }
   }
 
+  /// Suivi retiré de « Mes suivis » : plus de notification pour lui sur ce téléphone.
+  Future<void> unsubscribe(String trackingToken) async {
+    if (!_ready) return;
+    try {
+      final token = _deviceToken ??= await FirebaseMessaging.instance.getToken();
+      if (token != null) await _repository.unregisterPushDevice(trackingToken, token);
+    } catch (error) {
+      debugPrint('Désabonnement impossible : $error');
+    }
+  }
+
+  /// Jeton de cet appareil pour le compte client (permission demandée ici, à la
+  /// création du compte). Null si refusé ou notifications non configurées.
+  Future<String?> deviceToken() async {
+    if (!_ready) return null;
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission();
+      if (!_isAuthorized(settings.authorizationStatus)) return null;
+      return _deviceToken ??= await FirebaseMessaging.instance.getToken();
+    } catch (error) {
+      debugPrint('Jeton de notification indisponible : $error');
+      return null;
+    }
+  }
+
+  String get platform => _platform;
+
   Future<void> _registerAllTracked() async {
     final token = _deviceToken ??= await FirebaseMessaging.instance.getToken();
     if (token == null) return;
     for (final request in await _store.trackedRequests()) {
       try {
-        await _repository.registerPushDevice(request.token, token, _platform);
+        await _repository.registerPushDevice(request.token, token, _platform, fromAccount: request.fromAccount);
       } catch (_) {
         // Lien expiré : rien à faire, le suivi reste consultable s'il est encore valide
       }

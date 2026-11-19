@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Copy, ArrowRight, Download, Loader2, Smartphone } from 'lucide-react';
+import Link from 'next/link';
+import { Copy, ArrowRight, Download, Loader2, Smartphone, Printer } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { ALL_PUBLIC_MODULES, getAppUrl, qrImageUrl } from './settings-utils';
@@ -120,6 +121,18 @@ export function PublicLinksQrSection() {
       </div>
 
       <DirectoryListingToggle businessId={business.id} />
+
+      <Link href="/affiche-app"
+        className="flex items-center gap-4 p-4 rounded-2xl border border-surface-border bg-surface-card hover:bg-surface-hover transition-colors">
+        <div className="w-11 h-11 rounded-xl bg-badge-brand flex items-center justify-center shrink-0">
+          <Printer className="w-5 h-5 text-content-brand" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-content-primary">Affiche de l&apos;app mobile</p>
+          <p className="text-xs text-content-secondary">QR Android et iPhone avec votre logo, à imprimer pour le comptoir</p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-content-muted shrink-0" />
+      </Link>
 
       {!business.public_slug && (
         <div className="p-4 bg-badge-error/20 border border-status-error/20 rounded-2xl flex items-start gap-3">

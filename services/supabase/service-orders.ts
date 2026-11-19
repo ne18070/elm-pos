@@ -636,6 +636,32 @@ export async function getTechnicianServiceOrders(token: string): Promise<Technic
 }
 
 /**
+ * Le client a-t-il lié l'app ELM Boutique à ce numéro dans l'établissement
+ * (scan de son code client au comptoir, migration 178) ? null si on ne sait pas
+ * (erreur) : l'appelant n'affiche alors rien plutôt qu'un état faux.
+ */
+export async function hasClientApp(businessId: string, phone: string): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc('has_client_app', { p_business_id: businessId, p_phone: phone });
+  return error ? null : data === true;
+}
+
+/**
+ * Un lien de suivi valide existe-t-il pour cet OT (envoyé par WhatsApp/SMS ou
+ * créé par une demande publique) ? Les jetons créés automatiquement pour une app
+ * liée (auto_created) ne comptent pas : ils n'ont jamais été envoyés au client.
+ * null en cas d'erreur.
+ */
+export async function hasTrackingLink(serviceOrderId: string): Promise<boolean | null> {
+  const { count, error } = await supabase
+    .from('client_tracking_tokens')
+    .select('token', { count: 'exact', head: true })
+    .eq('service_order_id', serviceOrderId)
+    .eq('auto_created', false)
+    .gt('expires_at', new Date().toISOString());
+  return error ? null : (count ?? 0) > 0;
+}
+
+/**
  * Notifie le client (Web Push + app ELM Boutique) du statut actuel de l'OT.
  * Fire-and-forget : n'échoue jamais. Le serveur exige d'être membre de
  * l'établissement (session) ou technicien assigné (technicianToken).

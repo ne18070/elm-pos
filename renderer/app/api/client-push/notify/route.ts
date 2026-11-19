@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { safeEqual } from '@/lib/safe-equal';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { sendFcm, isFcmConfigured } from '@/lib/fcm';
 
@@ -30,7 +31,27 @@ const STATUS_NOTIF: Record<string, { title: string; body: (ref: string, biz: str
   },
 };
 
+/**
+ * Nouvel ordre : prévient les appareils liés au comptoir qu'un ordre est arrivé
+ * pour leur numéro. Envoyé uniquement par le trigger de création en base
+ * (trg_service_orders_client_app_created, migration 178, via pg_net et le secret
+ * CLIENT_PUSH_WEBHOOK_SECRET) — toutes les créations sont couvertes, et un ordre
+ * remis en attente plus tard ne redit jamais « enregistré ».
+ */
+const CREATED_NOTIF = {
+  title: '📋 Ordre de travail enregistré',
+  body:  (ref: string, biz: string) => `${biz} a enregistré ${ref}. Vous serez prévenu à chaque étape.`,
+};
+const CREATED_WINDOW_MS = 15 * 60 * 1000;
+
 type Admin = ReturnType<typeof getSupabaseAdmin>;
+
+/** Appel du trigger en base (pg_net) : secret partagé, comparé en temps constant */
+function isWebhookCall(req: NextRequest): boolean {
+  const expected = process.env.CLIENT_PUSH_WEBHOOK_SECRET;
+  const given = req.headers.get('x-webhook-secret');
+  return !!expected && !!given && safeEqual(given, expected);
+}
 
 /**
  * L'appelant doit pouvoir agir sur l'OT : membre de l'établissement (Bearer de
@@ -69,12 +90,13 @@ async function canNotify(
 
 /**
  * Notifie le client du statut ACTUEL d'un ordre de service : navigateurs abonnés
- * (Web Push, page /track) et app « ELM Boutique » (FCM).
+ * (Web Push, page /track) et app « ELM Boutique » (FCM) : téléphones abonnés au
+ * jeton de suivi ET appareils liés au comptoir (migration 178) pour ce numéro.
  * Texte, statut et lien sont lus en base — jamais pris dans la requête, sinon
  * n'importe qui pouvait pousser un message et un lien arbitraires au client.
  */
 export async function POST(req: NextRequest) {
-  const { serviceOrderId, technicianToken } = await req.json().catch(() => ({}));
+  const { serviceOrderId, technicianToken, event } = await req.json().catch(() => ({}));
   if (!serviceOrderId) {
     return NextResponse.json({ error: 'Missing params' }, { status: 400 });
   }
@@ -83,27 +105,47 @@ export async function POST(req: NextRequest) {
 
   const { data: order } = await supabaseAdmin
     .from('service_orders')
-    .select('id, business_id, assigned_to, order_number, status, businesses(name)')
+    .select('id, business_id, assigned_to, order_number, status, client_phone, created_at, businesses(name)')
     .eq('id', serviceOrderId)
     .maybeSingle();
   if (!order) return NextResponse.json({ error: 'Ordre introuvable' }, { status: 404 });
 
-  if (!(await canNotify(supabaseAdmin, req, order, technicianToken))) {
+  const fromWebhook = isWebhookCall(req);
+  if (!fromWebhook && !(await canNotify(supabaseAdmin, req, order, technicianToken))) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
 
-  const notif = STATUS_NOTIF[order.status];
+  // « Ordre enregistré » : seulement depuis le trigger de création, ordre récent
+  const isCreation = fromWebhook && event === 'created';
+  const justCreated = !!order.created_at
+    && Date.now() - new Date(order.created_at).getTime() < CREATED_WINDOW_MS;
+  const notif = isCreation
+    ? (justCreated ? CREATED_NOTIF : undefined)
+    : STATUS_NOTIF[order.status];
   if (!notif) return NextResponse.json({ ok: true, skipped: true });
 
-  // Jetons de suivi valides de l'OT (créé à la demande publique et/ou par le dashboard)
-  const { data: tokenRows } = await supabaseAdmin
-    .from('client_tracking_tokens')
-    .select('token')
-    .eq('service_order_id', order.id)
-    .gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false });
+  // Appareils liés au comptoir (migration 178) : (boutique, numéro de l'OT), et
+  // jetons de suivi valides de l'OT (demande publique, dashboard, app liée)
+  const [{ data: linkedRows }, { data: tokenRows }] = await Promise.all([
+    supabaseAdmin.rpc('client_app_push_targets', { p_service_order_id: order.id }),
+    supabaseAdmin
+      .from('client_tracking_tokens')
+      .select('token')
+      .eq('service_order_id', order.id)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false }),
+  ]);
+  const linked = (linkedRows ?? []) as Array<{ device_id: string; fcm_token: string }>;
 
   const tokens = (tokenRows ?? []).map((r) => r.token);
+  // App liée mais aucun lien jamais envoyé : la notification ouvre quand même le
+  // suivi. Jeton créé en base sous verrou (auto_created, pas de doublon)
+  if (!tokens.length && linked.length) {
+    const { data: created } = await supabaseAdmin.rpc('_ensure_tracking_token', {
+      p_service_order_id: order.id,
+    });
+    if (created) tokens.push(created);
+  }
   if (!tokens.length) return NextResponse.json({ ok: true, skipped: 'no token' });
 
   const business     = order.businesses as unknown as { name: string } | null;
@@ -113,7 +155,7 @@ export async function POST(req: NextRequest) {
   const url   = `/track/${tokens[0]}`;
   const tag   = `ot-${order.id}`;
 
-  const [{ data: subs }, { data: devices }] = await Promise.all([
+  const [{ data: subs }, { data: trackedDevices }] = await Promise.all([
     supabaseAdmin
       .from('client_push_subscriptions')
       .select('endpoint, p256dh, auth')
@@ -123,6 +165,19 @@ export async function POST(req: NextRequest) {
       .select('id, fcm_token')
       .in('tracking_token', tokens),
   ]);
+
+  // Un même téléphone peut être lié ET abonné au suivi (parfois sous plusieurs
+  // jetons de l'OT) : une seule notification, mais toutes ses lignes sont gardées
+  // pour être nettoyées si FCM le déclare désinscrit
+  const devices = new Map<string, { trackedIds: string[]; linkedId?: string }>();
+  for (const d of trackedDevices ?? []) {
+    const entry = devices.get(d.fcm_token) ?? { trackedIds: [] };
+    entry.trackedIds.push(d.id);
+    devices.set(d.fcm_token, entry);
+  }
+  for (const d of linked) {
+    devices.set(d.fcm_token, { trackedIds: [], ...devices.get(d.fcm_token), linkedId: d.device_id });
+  }
 
   let webSent = 0;
   if (subs?.length) {
@@ -145,16 +200,21 @@ export async function POST(req: NextRequest) {
   }
 
   let appSent = 0;
-  if (devices?.length && isFcmConfigured()) {
+  if (devices.size && isFcmConfigured()) {
     // L'app ouvre /track/<jeton> : on lui donne l'URL publique complète
     const appUrl = url.startsWith('http')
       ? url
       : `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '')}${url}`;
     const results = await Promise.all(
-      devices.map(async (device) => {
-        const result = await sendFcm(device.fcm_token, { title, body, url: appUrl, tag });
+      [...devices].map(async ([fcmToken, device]) => {
+        const result = await sendFcm(fcmToken, { title, body, url: appUrl, tag });
         if (result === 'unregistered') {
-          await supabaseAdmin.from('client_push_devices').delete().eq('id', device.id);
+          if (device.trackedIds.length) {
+            await supabaseAdmin.from('client_push_devices').delete().in('id', device.trackedIds);
+          }
+          if (device.linkedId) {
+            await supabaseAdmin.from('client_app_devices').update({ fcm_token: null }).eq('id', device.linkedId);
+          }
         }
         return result;
       }),

@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
+import { safeEqual } from '@/lib/safe-equal';
 import { operatorProvider } from '@/lib/loov-operators';
 
 // Client Loov (paiements mobile money) — import ONLY in server route handlers under app/api/.
@@ -144,5 +145,5 @@ export function verifyWebhookSignature(rawBody: string, header: string | null, n
 
   const expected = createHmac('sha256', secret).update(`${t}.${rawBody}`).digest();
   const received = Buffer.from(signature, 'hex');
-  return received.length === expected.length && timingSafeEqual(received, expected);
+  return safeEqual(received, expected);
 }

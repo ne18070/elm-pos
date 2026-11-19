@@ -49,7 +49,7 @@ elm-pos/
 ├── types/        Shared TypeScript types (import via @pos-types alias)
 ├── supabase/migrations/  PostgreSQL schema, RLS policies, functions — apply in order
 ├── android/, ios/  Capacitor native shells (generated; app code stays in renderer/)
-├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — directory of ELM boutiques & services (RPC list_directory_businesses, opt-out via businesses.directory_listed), product orders, service requests; « Espace partenaire » (`lib/partner/`, menu ⋮) where owner/admin/manager accounts manage products on a SEPARATE SupabaseClient — public read policies are `TO anon`, so the buyer client must stay anonymous
+├── buyer_app/   Flutter buyer app « ELM Boutique » (com.elmapp.mobile) — directory of ELM boutiques & services (RPC list_directory_businesses, opt-out via businesses.directory_listed), product orders, service requests; « Espace partenaire » (`lib/partner/`, menu ⋮) where owner/admin/manager accounts manage products on a SEPARATE SupabaseClient — public read policies are `TO anon`, so the buyer client must stay anonymous; « Mon code client » (`lib/data/client_account.dart`, migration 178) = account without OTP: device secret + declared name/phone, verified at the counter when an owner/admin/manager scans the QR from the partner space (`lib/partner/scan_client_screen.dart`) — the link is per (device, business, normalized phone) and makes `/api/client-push/notify` push every work order of that number; the `/track` link stays the fallback
 └── tests/        Playwright end-to-end specs
 ```
 
@@ -281,6 +281,7 @@ See `supabase/migrations/085_explicit_grants.sql` for the baseline.
 | `ANDROID_SHA256_CERT_FINGERPRINTS` | `/.well-known/assetlinks.json` (Android App Links of the buyer app) — Play Console app-signing + upload key SHA-256, comma-separated |
 | `NEXT_PUBLIC_ANDROID_DOWNLOAD_URL`, `NEXT_PUBLIC_IOS_APP_STORE_URL` | `AppDownloadBanner` at the top of `/boutique`, `/boutique/[id]`, `/services/[id]`, `/track/[token]` on phones (+ Safari Smart App Banner). Android defaults to `/telecharger` (APK), iOS to the App Store listing (id6822231983) — the variables only override them; also used by the « Application mobile » section of the landing page |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | `renderer/lib/fcm.ts` — push notifications to the buyer app, sent by `/api/client-push/notify` alongside Web Push |
+| `CLIENT_PUSH_WEBHOOK_SECRET` | `/api/client-push/notify` — authentifie l'appel du trigger `trg_service_orders_client_app_created` (migration 178, pg_net) qui envoie « Ordre enregistré » aux apps liées. Même valeur que le secret Vault `client_push_webhook_secret` (+ `client_push_notify_url`) |
 | `LOOV_API_KEY`, `LOOV_WEBHOOK_SECRET` | `renderer/lib/loov.ts` — subscription payments by mobile money (only Wave SN enabled — `enabled` flag in `renderer/lib/loov-operators.ts`) from `/billing`, via `/api/billing/loov/*`; webhook `/api/webhooks/loov` activates the subscription (`apply_subscription_payment`, migration 167). Optional `LOOV_API_URL`, `LOOV_CALLBACK_URL`, `LOOV_PAYIN_PROVIDER` (`paydunya` / `pal`) |
 | `ELECTRON_DEV=true` | Forces dev mode in Electron |
 

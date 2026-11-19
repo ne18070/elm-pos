@@ -23,9 +23,7 @@ export function getAppUrl() {
   return getPublicSiteUrl();
 }
 
-export function qrImageUrl(url: string) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=512x512&margin=16&ecc=H&format=png&data=${encodeURIComponent(url)}`;
-}
+export { qrImageUrl } from '@/lib/qr';
 
 export function normalizeSlug(slug: string): string {
   return slug

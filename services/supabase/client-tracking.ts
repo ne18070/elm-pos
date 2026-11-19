@@ -15,14 +15,27 @@ export async function getOrCreateTrackingToken(
   type: 'service_order' | 'dossier',
   clientPhone?: string | null
 ): Promise<string> {
-  const col = type === 'service_order' ? 'service_order_id' : 'dossier_id';
+  // OT : jeton créé/réutilisé en base sous verrou (pas de doublon), et marqué
+  // comme envoyé au client (« Notifié par lien ») même s'il avait été créé
+  // automatiquement pour son app liée (migration 178)
+  if (type === 'service_order') {
+    const { data, error } = await supabase.rpc('share_service_order_tracking_token', {
+      p_service_order_id: entityId,
+    });
+    if (error || !data) throw new Error(error?.message ?? 'Lien de suivi indisponible');
+    return data;
+  }
 
-  // 1. Chercher un token existant valide
+  const col = 'dossier_id';
+
+  // 1. Chercher un token existant valide (le plus récent : il peut y en avoir plusieurs)
   const { data: existing } = await supabase
     .from('client_tracking_tokens')
     .select('token')
     .eq(col, entityId)
     .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (existing) return existing.token;

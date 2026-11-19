@@ -166,13 +166,28 @@ class BoutiqueRepository {
       );
 
   /// Abonne ce téléphone aux notifications du suivi (table client_push_devices).
-  Future<void> registerPushDevice(String trackingToken, String fcmToken, String platform) => _db.rpc(
+  /// [fromAccount] : suivi ajouté par la synchro d'une boutique liée — seul ce
+  /// type d'abonnement est supprimé quand la boutique est déliée.
+  Future<void> registerPushDevice(
+    String trackingToken,
+    String fcmToken,
+    String platform, {
+    bool fromAccount = false,
+  }) =>
+      _db.rpc(
         'register_push_device',
         params: {
           'p_tracking_token': trackingToken,
           'p_fcm_token': fcmToken,
           'p_platform': platform,
+          'p_source': fromAccount ? 'client_app' : 'tracking',
         },
+      );
+
+  /// Désabonne ce téléphone d'un suivi (retiré de « Mes suivis »).
+  Future<void> unregisterPushDevice(String trackingToken, String fcmToken) => _db.rpc(
+        'unregister_push_device',
+        params: {'p_tracking_token': trackingToken, 'p_fcm_token': fcmToken},
       );
 
   /// Signalement (et/ou blocage) d'une boutique, d'un produit ou d'une prestation —

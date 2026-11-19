@@ -19,6 +19,7 @@ import '../services/update_service.dart';
 import '../theme.dart';
 import 'blocked_screen.dart';
 import 'boutique_screen.dart';
+import 'client_account_screen.dart';
 import 'my_tracking_screen.dart';
 import 'tracking_screen.dart';
 import 'service_screen.dart';
@@ -189,6 +190,10 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (value) {
       case 'contact':
         showContactSheet(context);
+      case 'client':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => ClientAccountScreen(store: widget.store)),
+        );
       case 'partner':
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PartnerScreen()));
       case 'terms':
@@ -507,6 +512,7 @@ class _HomeHeader extends StatelessWidget {
                 iconColor: onBand,
                 onSelected: onMenu,
                 itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'client', child: Text('Mon code client')),
                   PopupMenuItem(value: 'partner', child: Text('Espace partenaire')),
                   PopupMenuDivider(),
                   PopupMenuItem(value: 'blocked', child: Text('Boutiques bloquées')),

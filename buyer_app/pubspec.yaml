@@ -22,6 +22,10 @@ dependencies:
   package_info_plus: ^10.2.2
   google_fonts: ^6.2.1
   image_picker: ^1.2.4
+  # Code client (QR) montré au comptoir / scanné depuis l'espace partenaire (migration 178)
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.5.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

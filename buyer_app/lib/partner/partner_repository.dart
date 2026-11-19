@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config.dart';
 import 'partner_models.dart';
 
 /// Gestion des produits par un partenaire connecté — mêmes tables, RPC et règles
@@ -10,8 +13,31 @@ import 'partner_models.dart';
 /// La RLS `products_manage` (migration 118) s'appuie sur l'établissement ACTIF de
 /// l'utilisateur (users.business_id) et son rôle (manager, admin, owner) :
 /// [activate] bascule dessus avant toute écriture.
+/// Refus renvoyé par une RPC partenaire (`{error, message}`) au lieu d'une
+/// exception SQL — code client inconnu/expiré, trop d'essais, numéro à vérifier.
+class PartnerActionError implements Exception {
+  const PartnerActionError(this.code, this.message);
+
+  final String code;
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class PartnerRepository {
   PartnerRepository(this._db);
+
+  /// Les RPC du code client renvoient leurs refus au lieu de les lever : une
+  /// exception annulerait le compteur anti force brute côté serveur.
+  static Map<String, dynamic> _checked(dynamic data) {
+    final map = Map<String, dynamic>.from(data as Map);
+    final code = map['error'];
+    if (code != null) {
+      throw PartnerActionError('$code', '${map['message'] ?? 'Action refusée.'}');
+    }
+    return map;
+  }
 
   final SupabaseClient _db;
 
@@ -159,6 +185,59 @@ class PartnerRepository {
           fileOptions: FileOptions(upsert: true, contentType: ext == 'png' ? 'image/png' : 'image/jpeg'),
         );
     return _db.storage.from('product-images').getPublicUrl(path);
+  }
+
+  // ── Code client scanné au comptoir (migration 178) ─────────────────────────
+
+  /// Code scanné ou saisi → client déclaré et ordres ouverts avec son numéro.
+  Future<ScannedClient> resolveClientCode(String businessId, String code) async {
+    final data = await _db.rpc('partner_resolve_client_code', params: {'p_business_id': businessId, 'p_code': code});
+    return ScannedClient.fromJson(code, _checked(data));
+  }
+
+  /// Ordres ouverts par numéro d'OT, nom, téléphone ou référence.
+  Future<List<OpenServiceOrder>> searchServiceOrders(String businessId, String query) async {
+    final data = await _db.rpc('partner_search_service_orders', params: {'p_business_id': businessId, 'p_query': query});
+    return (data as List).whereType<Map>().map((e) => OpenServiceOrder.fromJson(Map<String, dynamic>.from(e))).toList();
+  }
+
+  /// Lie l'app du client à (boutique, [phone]). [fixOrderIds] : ordres dont le
+  /// numéro est corrigé en [phone]. [identityChecked] : le technicien confirme que
+  /// le numéro est celui du client — exigé par le serveur quand aucun ordre ouvert
+  /// ne le prouve. Envoie ensuite la notification « App liée ».
+  Future<ClientLinkResult> linkClientApp(
+    String businessId,
+    String code,
+    String phone, {
+    List<String> fixOrderIds = const [],
+    bool identityChecked = false,
+  }) async {
+    final data = await _db.rpc('partner_link_client_app', params: {
+      'p_business_id': businessId,
+      'p_code': code,
+      'p_phone': phone,
+      'p_fix_order_ids': fixOrderIds,
+      'p_identity_checked': identityChecked,
+    });
+    final result = ClientLinkResult.fromJson(_checked(data));
+    await _notifyLinked(result.linkId);
+    return result;
+  }
+
+  Future<void> _notifyLinked(String linkId) async {
+    final token = _db.auth.currentSession?.accessToken;
+    if (token == null) return;
+    try {
+      await http
+          .post(
+            Uri.parse('${AppConfig.siteUrl}/api/client-app/linked'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            body: jsonEncode({'linkId': linkId}),
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // La liaison est faite ; seule la notification de confirmation manque
+    }
   }
 
   /// Journal d'activité (activity_logs), sans jamais bloquer l'écran.

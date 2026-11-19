@@ -12,6 +12,7 @@ import 'partner_repository.dart';
 import 'partner_session.dart';
 import 'partner_signup_screen.dart' show pendingBusinessNameKey;
 import 'product_form_screen.dart';
+import 'scan_client_screen.dart';
 
 /// Point d'entrée de l'espace partenaire : connexion, puis gestion des produits.
 class PartnerScreen extends StatefulWidget {
@@ -140,6 +141,15 @@ class _ProductsHomeState extends State<_ProductsHome> {
         });
       }
     }
+  }
+
+  /// Code client montré au comptoir : lie l'app du client à la boutique (migration 178)
+  Future<void> _openScanClient() async {
+    final business = _business;
+    if (business == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => ScanClientScreen(repository: _repository, business: business)),
+    );
   }
 
   Future<void> _openAccountDeletion() async {
@@ -275,6 +285,12 @@ class _ProductsHomeState extends State<_ProductsHome> {
               )
             : Text(business?.name ?? 'Espace partenaire'),
         actions: [
+          if (business != null && !_loading && _error == null)
+            IconButton(
+              tooltip: 'Scanner un client',
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: _openScanClient,
+            ),
           PopupMenuButton<String>(
             onSelected: (value) => switch (value) {
               'logout' => _signOut(),

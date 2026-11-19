@@ -1042,6 +1042,93 @@ export type Database = {
           },
         ]
       }
+      client_app_devices: {
+        Row: {
+          created_at: string
+          declared_phone: string
+          display_name: string
+          fcm_token: string | null
+          id: string
+          last_seen_at: string
+          pairing_code: string | null
+          pairing_expires_at: string | null
+          platform: string | null
+          secret_hash: string
+        }
+        Insert: {
+          created_at?: string
+          declared_phone: string
+          display_name: string
+          fcm_token?: string | null
+          id?: string
+          last_seen_at?: string
+          pairing_code?: string | null
+          pairing_expires_at?: string | null
+          platform?: string | null
+          secret_hash: string
+        }
+        Update: {
+          created_at?: string
+          declared_phone?: string
+          display_name?: string
+          fcm_token?: string | null
+          id?: string
+          last_seen_at?: string
+          pairing_code?: string | null
+          pairing_expires_at?: string | null
+          platform?: string | null
+          secret_hash?: string
+        }
+        Relationships: []
+      }
+      client_app_links: {
+        Row: {
+          business_id: string
+          created_at: string
+          device_id: string
+          id: string
+          last_linked_at: string
+          link_notified_at: string | null
+          linked_by: string | null
+          phone_normalized: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          device_id: string
+          id?: string
+          last_linked_at?: string
+          link_notified_at?: string | null
+          linked_by?: string | null
+          phone_normalized: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          device_id?: string
+          id?: string
+          last_linked_at?: string
+          link_notified_at?: string | null
+          linked_by?: string | null
+          phone_normalized?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_app_links_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_app_links_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "client_app_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_push_devices: {
         Row: {
           created_at: string
@@ -1049,6 +1136,7 @@ export type Database = {
           id: string
           last_seen_at: string
           platform: string
+          source: string
           tracking_token: string
         }
         Insert: {
@@ -1057,6 +1145,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           platform: string
+          source: string
           tracking_token: string
         }
         Update: {
@@ -1065,6 +1154,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           platform?: string
+          source?: string
           tracking_token?: string
         }
         Relationships: []
@@ -1098,6 +1188,7 @@ export type Database = {
       }
       client_tracking_tokens: {
         Row: {
+          auto_created: boolean
           client_email: string | null
           client_phone: string | null
           created_at: string
@@ -1111,6 +1202,7 @@ export type Database = {
           view_count: number
         }
         Insert: {
+          auto_created?: boolean
           client_email?: string | null
           client_phone?: string | null
           created_at?: string
@@ -1124,6 +1216,7 @@ export type Database = {
           view_count?: number
         }
         Update: {
+          auto_created?: boolean
           client_email?: string | null
           client_phone?: string | null
           created_at?: string
@@ -7612,8 +7705,41 @@ export type Database = {
         }
         Returns: string
       }
+      _ensure_tracking_token: {
+        Args: { p_service_order_id: string; p_shared?: boolean }
+        Returns: string
+      }
+      _is_client_app_manager: {
+        Args: { p_business_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      share_service_order_tracking_token: {
+        Args: { p_service_order_id: string }
+        Returns: string
+      }
+      claim_client_app_link_notification: {
+        Args: { p_link_id: string }
+        Returns: boolean
+      }
+      client_app_push_targets: {
+        Args: { p_service_order_id: string }
+        Returns: { device_id: string; fcm_token: string }[]
+      }
+      has_client_app: {
+        Args: { p_business_id: string; p_phone: string }
+        Returns: boolean
+      }
+      normalize_phone: {
+        Args: { p_phone: string }
+        Returns: string
+      }
       register_push_device: {
-        Args: { p_fcm_token: string; p_platform: string; p_tracking_token: string }
+        Args: {
+          p_fcm_token: string
+          p_platform: string
+          p_source?: string
+          p_tracking_token: string
+        }
         Returns: undefined
       }
       list_directory_businesses: {

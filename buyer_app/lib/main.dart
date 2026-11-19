@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'config.dart';
 import 'data/boutique_repository.dart';
+import 'data/client_account.dart';
 import 'data/local_store.dart';
 import 'services/push_service.dart';
 
@@ -19,6 +20,10 @@ Future<void> main() async {
 
   final repository = BoutiqueRepository(Supabase.instance.client);
   final store = LocalStore();
+  // Compte client (code montré au comptoir) — chargé avant les notifications,
+  // qui lui transmettent le jeton FCM
+  ClientAccount.instance = ClientAccount(Supabase.instance.client, store);
+  await ClientAccount.instance.load();
   // Sans configuration Firebase : no-op, l'app fonctionne sans notifications
   PushService.instance = PushService(repository, store, scaffoldMessengerKey);
   await PushService.instance.init();

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   X, Printer, Edit2, Wrench, User, Search, Plus, Trash2,
   Play, CheckCircle2, CreditCard, XCircle, Check, MessageCircle,
-  ChevronDown, ExternalLink, Bell, Star,
+  ChevronDown, ExternalLink, Bell, Star, Smartphone,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
@@ -12,7 +12,7 @@ import { cn, formatCurrency, fmtInTz } from '@/lib/utils';
 import { toUserError } from '@/lib/user-error';
 import {
   updateServiceOrderStatus, cancelServiceOrder, updateServiceOrder, notifyServiceOrderClient,
-  getOrCreateServiceTechnicianToken, toggleServiceOrderCredit,
+  getOrCreateServiceTechnicianToken, toggleServiceOrderCredit, hasClientApp, hasTrackingLink,
   type ServiceOrder, type ServiceOrderStatus, type ServiceCatalogItem,
 } from '@services/supabase/service-orders';
 import { generateServiceOrderReceipt, printHtml } from '@/lib/invoice-templates';
@@ -26,6 +26,7 @@ import { SUBJECT_TYPES, PAY_METHODS, subjectTypeCfg } from '../constants';
 import { StatusBadge, OTNumber } from './StatusBadge';
 import { PayModal } from './PayModal';
 import { ConfirmModal } from '@/components/ui/Modal';
+import { Badge } from '@/components/ui';
 
 function SubjectTypePill({ type }: { type: string | null | undefined }) {
   const cfg = subjectTypeCfg(type);
@@ -95,6 +96,21 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
   useEffect(() => {
     getStaff(businessId).then(s => setStaffList(s.filter(m => m.status === 'active'))).catch(() => {});
   }, [businessId]);
+
+  // App ELM Boutique liée au comptoir pour ce numéro : les statuts partent en push,
+  // le lien WhatsApp reste le fallback des clients sans l'app
+  // null = inconnu (chargement ou erreur) : aucun badge plutôt qu'un état faux
+  const [appLinked, setAppLinked] = useState<boolean | null>(null);
+  const [trackingSent, setTrackingSent] = useState<boolean | null>(null);
+  useEffect(() => {
+    setAppLinked(null);
+    setTrackingSent(null);
+    if (!order.client_phone) return;
+    let cancelled = false;
+    hasClientApp(businessId, order.client_phone).then(v => { if (!cancelled) setAppLinked(v); });
+    hasTrackingLink(order.id).then(v => { if (!cancelled) setTrackingSent(v); });
+    return () => { cancelled = true; };
+  }, [businessId, order.id, order.client_phone]);
 
   const balance = order.total - order.paid_amount;
   const typeCfg = subjectTypeCfg(order.subject_type);
@@ -175,8 +191,9 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
         type,
         includeTracking: type === 'tracking' || type === 'status_update',
       });
-      if (res.success) success('Message WhatsApp envoyé');
-      else throw new Error(res.error);
+      if (!res.success) throw new Error(res.error);
+      success('Message WhatsApp envoyé');
+      if (type !== 'receipt') setTrackingSent(true);
     } catch (e: any) { notifError(toUserError(e)); }
     finally { setBusy(false); }
   }
@@ -352,6 +369,26 @@ export function OrderDetailPanel({ order, currency, catalog, businessId, onClose
                 <>
                   <p className="font-semibold text-content-primary">{order.client_name}</p>
                   {order.client_phone && <p className="text-sm text-content-secondary">{order.client_phone}</p>}
+                  {order.client_phone && appLinked === true && (
+                    <div className="mt-1.5" title="Le client reçoit l'avancement par notification dans l'app ELM Boutique">
+                      <Badge tone="success"><Smartphone className="w-3 h-3" />App liée · notifié par push</Badge>
+                    </div>
+                  )}
+                  {/* Pas d'app liée : on ne dit « notifié » que si un lien de suivi existe vraiment */}
+                  {order.client_phone && appLinked === false && trackingSent !== null && (
+                    <div
+                      className="mt-1.5"
+                      title={trackingSent
+                        ? "Le client suit l'ordre par son lien. Proposez l'app ELM Boutique : scannez son « code client » depuis l'espace partenaire"
+                        : "Envoyez le lien de suivi (WhatsApp) ou liez l'app ELM Boutique du client depuis l'espace partenaire"}
+                    >
+                      {trackingSent ? (
+                        <Badge tone="neutral"><ExternalLink className="w-3 h-3" />Notifié par lien</Badge>
+                      ) : (
+                        <Badge tone="warning"><Bell className="w-3 h-3" />Client pas encore notifié</Badge>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
               {/* Assignation dans le mode édition */}

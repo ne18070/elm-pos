@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useUrlTab } from '@/hooks/useUrlTab';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle, Settings2, MessageCircle } from 'lucide-react';
+import { Wrench, Plus, Link2, Check, Package2, History, AlertCircle, Settings2, MessageCircle, Printer } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
 import { useCan } from '@/hooks/usePermission';
@@ -191,6 +191,10 @@ export default function ServicesPage() {
           </div>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
+          <Link href="/affiche-app" title="Affiche à imprimer pour faire installer l'app à vos clients"
+            className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-surface-border text-sm font-medium text-content-secondary hover:bg-surface-hover transition-colors">
+            <Printer className="w-4 h-4" /><span className="hidden md:inline">Affiche app</span>
+          </Link>
           {canShareOrder && (
             <button onClick={copyPublicLink}
               className={cn('flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors sm:flex-none',

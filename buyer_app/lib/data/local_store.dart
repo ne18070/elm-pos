@@ -63,6 +63,7 @@ class TrackedRequest {
     required this.businessName,
     required this.label,
     required this.createdAt,
+    this.fromAccount = false,
   });
 
   factory TrackedRequest.fromJson(Map<String, dynamic> json) => TrackedRequest(
@@ -70,6 +71,7 @@ class TrackedRequest {
         businessName: '${json['business_name'] ?? ''}',
         label: '${json['label'] ?? ''}',
         createdAt: DateTime.tryParse('${json['created_at']}') ?? DateTime.now(),
+        fromAccount: json['from_account'] == true,
       );
 
   final String token;
@@ -77,11 +79,16 @@ class TrackedRequest {
   final String label;
   final DateTime createdAt;
 
+  /// Ajouté par la synchro du compte client (boutique liée), pas par l'utilisateur
+  /// lui-même : retiré si la boutique est déliée, évincé en premier si la liste déborde.
+  final bool fromAccount;
+
   Map<String, Object?> toJson() => {
         'token': token,
         'business_name': businessName,
         'label': label,
         'created_at': createdAt.toIso8601String(),
+        if (fromAccount) 'from_account': true,
       };
 }
 
@@ -135,6 +142,7 @@ class LocalStore {
   static const _recentMax = 20;
   static const _trackedKey = 'tracked_requests';
   static const _trackedMax = 50;
+  static const _dismissedKey = 'dismissed_trackings';
   static const _blockedKey = 'blocked_businesses';
   static const _termsKey = 'terms_accepted_version';
   static const _deviceIdKey = 'device_id';
@@ -283,9 +291,81 @@ class LocalStore {
     await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
   }
 
+  /// Ajoute les demandes encore inconnues (ordres liés au compte client) sans
+  /// réordonner celles déjà suivies.
+  ///
+  /// [aliases] : pour chaque jeton de [requests], les autres jetons du même ordre
+  /// (lien WhatsApp, jeton expiré…). Un ordre déjà suivi sous l'un d'eux n'est pas
+  /// ajouté une seconde fois : son entrée passe au jeton courant, à sa place.
+  Future<void> addTrackings(
+    List<TrackedRequest> requests, {
+    Map<String, Set<String>> aliases = const {},
+  }) async {
+    final current = await trackedRequests();
+    final prefs = await SharedPreferences.getInstance();
+    // Retirées à la main de « Mes suivis » : elles ne reviennent pas à la synchro
+    final dismissed = {...?prefs.getStringList(_dismissedKey)};
+    final known = {...current.map((r) => r.token)};
+    var changed = false;
+    final added = <TrackedRequest>[];
+    for (final request in requests) {
+      final tokens = {request.token, ...?aliases[request.token]};
+      if (tokens.any(dismissed.contains) || !known.add(request.token)) continue;
+      final index = current.indexWhere((r) => tokens.contains(r.token));
+      if (index >= 0) {
+        final old = current[index];
+        current[index] = TrackedRequest(
+          token: request.token,
+          businessName: old.businessName,
+          label: old.label,
+          createdAt: old.createdAt,
+          fromAccount: old.fromAccount,
+        );
+        changed = true;
+      } else {
+        added.add(request);
+      }
+    }
+    added.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (added.isEmpty && !changed) return;
+    // Les suivis existants gardent leur ordre ; si la liste déborde, ce sont les
+    // ordres synchronisés les plus anciens qui partent, jamais ceux de l'utilisateur
+    final next = [...current, ...added];
+    var overflow = next.length - _trackedMax;
+    if (overflow > 0) {
+      final evictable = next.where((r) => r.fromAccount).toList()
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final evicted = evictable.take(overflow).map((r) => r.token).toSet();
+      next.removeWhere((r) => evicted.contains(r.token));
+      overflow = next.length - _trackedMax;
+      if (overflow > 0) next.removeRange(next.length - overflow, next.length);
+    }
+    await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
+  }
+
+  /// Retire tous les suivis ajoutés par la synchro du compte (compte supprimé,
+  /// numéro changé : plus aucune boutique liée).
+  Future<void> removeAccountTrackings() async {
+    final next = (await trackedRequests()).where((r) => !r.fromAccount).toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
+  }
+
+  /// Retire les suivis ajoutés par la synchro du compte (boutique déliée), sans les
+  /// marquer « retirés à la main » : une nouvelle liaison doit pouvoir les ramener.
+  /// Les suivis ouverts par l'utilisateur lui-même (lien /track…) restent.
+  Future<void> removeTrackings(Set<String> tokens) async {
+    if (tokens.isEmpty) return;
+    final next = (await trackedRequests()).where((r) => !(r.fromAccount && tokens.contains(r.token))).toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
+  }
+
   Future<List<TrackedRequest>> forgetTracking(String token) async {
     final next = (await trackedRequests()).where((r) => r.token != token).toList();
     final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getStringList(_dismissedKey) ?? [];
+    await prefs.setStringList(_dismissedKey, [token, ...dismissed.where((t) => t != token)].take(200).toList());
     await prefs.setString(_trackedKey, jsonEncode(next.map((r) => r.toJson()).toList()));
     return next;
   }
