@@ -12,11 +12,17 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
-        node-version: lts/*
+        # Même version que release.yml / Electron 31 — lts/* a cassé l'installation début septembre
+        node-version: '20'
+        cache: 'yarn'
     - name: Install system dependencies
       run: sudo apt-get update && sudo apt-get install -y libudev-dev libusb-1.0-0-dev
     - name: Install dependencies
-      run: npm install -g yarn && yarn
+      # Comme release.yml : --ignore-engines (dépendances qui annoncent une autre version de Node),
+      # et pas d'electron-rebuild — les tests visent la version web.
+      run: npm install -g yarn && yarn install --ignore-engines --network-timeout 100000
+      env:
+        SKIP_ELECTRON_REBUILD: '1'
     - name: Install Playwright Browsers
       run: yarn playwright install --with-deps
     - name: Run Playwright tests
