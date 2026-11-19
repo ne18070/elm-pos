@@ -99,6 +99,24 @@ jobs:
           if [ "$PLAY_TRACK" != "aucune" ] && [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
             echo "ERROR: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON requis pour publier sur Google Play"; exit 1
           fi
+          # Clé JSON d'un compte de service (pas google-services.json, ni un client OAuth) :
+          # vérifiée ici plutôt qu'après les ~10 min de compilation
+          if [ "$PLAY_TRACK" != "aucune" ]; then
+            python3 - <<'PYEOF'
+          import json, os, sys
+          try:
+              key = json.loads(os.environ['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'])
+          except ValueError:
+              sys.exit("ERROR: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON n'est pas du JSON valide — coller le fichier entier, en clair (pas en base64)")
+          missing = [f for f in ('type', 'client_email', 'private_key') if not key.get(f)]
+          if missing or key.get('type') != 'service_account':
+              sys.exit("ERROR: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON n'est pas une clé de compte de service "
+                       f"(champs manquants : {', '.join(missing) or 'type ≠ service_account'}). "
+                       "Google Cloud → IAM → Comptes de service → Clés → Ajouter une clé → JSON. "
+                       "google-services.json (Firebase) et client_secret_*.json (OAuth) ne conviennent pas.")
+          print(f"Compte de service Google Play : {key['client_email']}")
+          PYEOF
+          fi
           # Déploiement progressif : % → fraction attendue par Google Play (10 → 0.10)
           if [ "$PLAY_TRACK" != "aucune" ] && [ "$PLAY_STATUS" = "inProgress" ]; then
             if ! echo "$PLAY_ROLLOUT" | grep -Eq '^[0-9]{1,2}$' || [ "$PLAY_ROLLOUT" -lt 1 ]; then
@@ -276,7 +294,7 @@ jobs:
           packageName: com.elmapp.mobile
           releaseFiles: buyer_app/build/app/outputs/bundle/release/app-release.aab
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
-          track: ${{ env.PLAY_TRACK }}
+          tracks: ${{ env.PLAY_TRACK }}
           # draft : la version attend dans la Play Console qu'on la déploie à la main
           # (seul statut accepté tant que l'app n'a jamais été publiée)
           status: ${{ env.PLAY_STATUS }}
