@@ -35,6 +35,10 @@ const SHOTS = [
   { name: '03-commande', screen: 'commande' },
   { name: '04-paiement', screen: 'commande', scroll: 1100 },
   { name: '05-confirmation', screen: 'confirmation' },
+  // Compte client (données d'exemple, voir screenshot_main.dart)
+  { name: '06-code-client', screen: 'code-client' },
+  { name: '07-suivis', screen: 'suivis' },
+  { name: '08-suivi', screen: 'suivi' },
 ];
 
 const MIME = {

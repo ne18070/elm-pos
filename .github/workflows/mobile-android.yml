@@ -23,6 +23,10 @@ name: Mobile Boutique — Android (APK)
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 #     → toujours la MÊME clé (elm-release.jks) : Android refuse une mise à jour signée autrement.
 #   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON — uniquement si un jour publication Play Store (input play_track)
+#     Statut de la version : input play_status — draft par défaut (seul accepté tant que
+#     l'app n'a jamais été publiée), completed pour déployer directement ensuite,
+#     inProgress pour un déploiement progressif à play_rollout % des utilisateurs (ensuite
+#     augmenté, suspendu ou finalisé dans la Play Console)
 #
 # Variables (Settings → Secrets and variables → Actions → Variables), notifications push :
 #   FIREBASE_API_KEY, FIREBASE_PROJECT_ID, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_ANDROID_APP_ID
@@ -43,6 +47,14 @@ on:
         type: choice
         options: [aucune, internal, alpha, beta, production]
         default: aucune
+      play_status:
+        description: 'Statut de la version Google Play (draft obligatoire tant que l''app n''a jamais été publiée)'
+        type: choice
+        options: [draft, completed, inProgress]
+        default: draft
+      play_rollout:
+        description: 'Déploiement progressif (inProgress) : % des utilisateurs, de 1 à 99'
+        default: '10'
 
 concurrency:
   group: mobile-android
@@ -57,6 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PLAY_TRACK: ${{ inputs.play_track || 'aucune' }}
+      PLAY_STATUS: ${{ inputs.play_status || 'draft' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -78,6 +91,7 @@ jobs:
           echo "Android versionName=$NAME versionCode=$CODE"
 
       - name: Check required secrets
+        id: checks
         run: |
           for s in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY ANDROID_KEYSTORE_BASE64; do
             if [ -z "${!s}" ]; then echo "ERROR: secret manquant pour $s"; exit 1; fi
@@ -85,12 +99,21 @@ jobs:
           if [ "$PLAY_TRACK" != "aucune" ] && [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
             echo "ERROR: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON requis pour publier sur Google Play"; exit 1
           fi
+          # Déploiement progressif : % → fraction attendue par Google Play (10 → 0.10)
+          if [ "$PLAY_TRACK" != "aucune" ] && [ "$PLAY_STATUS" = "inProgress" ]; then
+            if ! echo "$PLAY_ROLLOUT" | grep -Eq '^[0-9]{1,2}$' || [ "$PLAY_ROLLOUT" -lt 1 ]; then
+              echo "ERROR: play_rollout '$PLAY_ROLLOUT' invalide — attendu un pourcentage entier de 1 à 99"; exit 1
+            fi
+            printf 'user_fraction=0.%02d\n' "$((10#$PLAY_ROLLOUT))" >> "$GITHUB_OUTPUT"
+            echo "Déploiement progressif : $PLAY_ROLLOUT % des utilisateurs"
+          fi
         env:
           SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_ROLLOUT: ${{ inputs.play_rollout }}
 
       # JDK 21 obligatoire : le lint AGP récent appelle List.removeLast() (API Java 21) —
       # sous JDK 17 il plante (NoSuchMethodError) sur :image_picker_android:lintVitalAnalyzeRelease.
@@ -254,7 +277,11 @@ jobs:
           releaseFiles: buyer_app/build/app/outputs/bundle/release/app-release.aab
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
           track: ${{ env.PLAY_TRACK }}
-          status: completed
+          # draft : la version attend dans la Play Console qu'on la déploie à la main
+          # (seul statut accepté tant que l'app n'a jamais été publiée)
+          status: ${{ env.PLAY_STATUS }}
+          # Défini seulement pour inProgress (vide sinon : refusé avec draft / completed)
+          userFraction: ${{ steps.checks.outputs.user_fraction }}
 
       - name: Clean up signing material
         if: always()

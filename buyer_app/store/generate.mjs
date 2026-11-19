@@ -6,6 +6,9 @@
 //   3. node buyer_app/store/generate.mjs            (iPhone + iPhone Duo + bannières)
 //      node buyer_app/store/generate.mjs --ipad     (+ iPad 13" — seulement si l'app reste compatible iPad)
 //
+// Google Play : out/android-1080x1920/ (captures téléphone) et
+// out/bannieres/android-presentation-1024x500.png (image de présentation).
+//
 // Sortie : buyer_app/store/out/ (non commité). Rendu Chromium via Playwright (déjà installé pour les tests).
 import { launchBrowser } from './browser.mjs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
@@ -23,6 +26,8 @@ const SCREENSHOT_FORMATS = [
   { dir: 'iphone-1206x2622', width: 402, height: 874, scale: 3 },
   { dir: 'iphone-1179x2556', width: 393, height: 852, scale: 3 },
   { dir: 'iphone-duo-1398x2034', width: 699, height: 1017, scale: 2 },
+  // Google Play : 9:16 exact, chaque côté entre 320 et 3 840 px
+  { dir: 'android-1080x1920', width: 540, height: 960, scale: 2 },
 ];
 const IPAD_FORMAT = { dir: 'ipad-2064x2752', width: 1032, height: 1376, scale: 2 };
 const BANNER_FORMATS = [
@@ -32,6 +37,8 @@ const BANNER_FORMATS = [
   { file: 'recherche-3840x2560.png', width: 1920, height: 1280, scale: 2 },
   { file: 'recherche-1920x1280.png', width: 1920, height: 1280, scale: 1 },
 ];
+// Google Play : image de présentation 1 024 × 500 (mise en page dédiée, plus basse)
+const FEATURE_GRAPHIC = { file: 'android-presentation-1024x500.png', width: 1024, height: 500, scale: 1 };
 
 const BRAND = { dark: '#075985', main: '#0284c7', light: '#38bdf8' };
 
@@ -108,6 +115,35 @@ function bannerHtml({ logo, phoneImage, title, subtitle, pills }) {
   </body></html>`;
 }
 
+/** Image de présentation Google Play (1 024 × 500) : texte à gauche, téléphone
+ *  à droite qui sort par le bas. Tailles en px : le format est fixe. */
+function featureHtml({ logo, phoneImage, title, subtitle, pills }) {
+  const phone = phoneImage ? `<div class="phone"><img src="${phoneImage}"></div>` : '';
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    ${baseCss}
+    .text { position: absolute; left: 72px; top: 50%; transform: translateY(-50%); width: 560px; }
+    .brand { display: flex; align-items: center; gap: 18px; }
+    .logo { width: 76px; height: 76px; background: #fff; border-radius: 18px; padding: 8px;
+            box-shadow: 0 8px 24px rgba(2,20,40,.3); flex: 0 0 auto; }
+    .logo img { width: 100%; height: 100%; object-fit: contain; }
+    h1 { font-size: 58px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+    p { margin-top: 22px; font-size: 27px; font-weight: 500; opacity: .92; line-height: 1.25; }
+    .pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+    .pill { padding: 8px 16px; border-radius: 999px; font-size: 17px; font-weight: 600;
+            background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35); }
+    .phone { position: absolute; right: 86px; top: 58px; width: 228px; padding: 8px; background: #0b1220;
+             border-radius: 38px; box-shadow: 0 20px 50px rgba(2,20,40,.45); transform: rotate(5deg); }
+    .phone img { display: block; width: 100%; border-radius: 31px; }
+  </style></head><body>
+    <div class="text">
+      <div class="brand"><div class="logo"><img src="${logo}"></div><h1>${escapeHtml(title)}</h1></div>
+      <p>${escapeHtml(subtitle)}</p>
+      <div class="pills">${pills.map((p) => `<span class="pill">${escapeHtml(p)}</span>`).join('')}</div>
+    </div>
+    ${phone}
+  </body></html>`;
+}
+
 async function render(browser, html, { width, height, scale }, outPath) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: scale });
   await page.setContent(html, { waitUntil: 'load' });
@@ -144,6 +180,14 @@ try {
   const phoneImage = bannerScreen ? await dataUri(join(RAW, bannerScreen)) : null;
   const html = bannerHtml({ logo, phoneImage, ...captions.banner });
   for (const format of BANNER_FORMATS) await render(browser, html, format, join(OUT, 'bannieres', format.file));
+  const feature = captions.android_feature ?? captions.banner;
+  const featureScreen = rawFiles[(feature.screen ?? captions.banner.screen ?? 1) - 1] ?? rawFiles[0];
+  await render(
+    browser,
+    featureHtml({ logo, ...feature, phoneImage: featureScreen ? await dataUri(join(RAW, featureScreen)) : null }),
+    FEATURE_GRAPHIC,
+    join(OUT, 'bannieres', FEATURE_GRAPHIC.file),
+  );
 } finally {
   await browser.close();
 }
