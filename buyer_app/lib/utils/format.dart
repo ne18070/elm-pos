@@ -95,3 +95,12 @@ String formatDateTime(DateTime date) {
   String two(int v) => v.toString().padLeft(2, '0');
   return '${two(date.day)}/${two(date.month)}/${date.year} à ${two(date.hour)}:${two(date.minute)}';
 }
+
+/// Numéro pour wa.me : chiffres seuls, indicatif 221 ajouté à un numéro local
+/// (même règle que normalizeWhatsAppPhone côté web).
+String whatsAppNumber(String phone) {
+  var n = phone.replaceAll(RegExp(r'[^\d+]'), '');
+  if (n.startsWith('0') && !n.startsWith('00')) n = '221${n.substring(1)}';
+  if (RegExp(r'^[37]\d{8}$').hasMatch(n)) n = '221$n';
+  return n.replaceFirst(RegExp(r'^\+'), '');
+}

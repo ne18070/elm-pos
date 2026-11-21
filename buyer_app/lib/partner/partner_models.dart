@@ -1,5 +1,7 @@
 // Modèles de l'espace partenaire — colonnes de public.products / categories.
 
+import '../utils/format.dart';
+
 double _toDouble(Object? value) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 
@@ -16,6 +18,9 @@ class PartnerBusiness {
     required this.role,
     this.currency = 'XOF',
     this.logoUrl,
+    this.publicSlug,
+    this.types = const {},
+    this.features = const {},
   });
 
   factory PartnerBusiness.fromJson(Map<String, dynamic> json) => PartnerBusiness(
@@ -24,6 +29,9 @@ class PartnerBusiness {
         role: (json['member_role'] as String?) ?? '',
         currency: (json['currency'] as String?) ?? 'XOF',
         logoUrl: json['logo_url'] as String?,
+        publicSlug: json['public_slug'] as String?,
+        types: _stringSet(json['types']),
+        features: _stringSet(json['features']),
       );
 
   final String id;
@@ -31,9 +39,29 @@ class PartnerBusiness {
   final String role;
   final String currency;
   final String? logoUrl;
+  final String? publicSlug;
+  final Set<String> types;
+  final Set<String> features;
 
   bool get canManageProducts => productManagerRoles.contains(role);
+
+  /// Catégories produits : RLS categories_manage réservée à admin / owner (migration 002)
+  bool get canManageCategories => role == 'owner' || role == 'admin';
+
+  /// Module Prestations / Ateliers (hasFeature(business, 'service') côté web)
+  bool get hasServices => features.contains('service') || types.contains('service');
+
+  /// Référence publique, même règle que buildPublicBusinessRef du web
+  String get publicRef {
+    final slug = (publicSlug ?? '').trim();
+    if (slug.isNotEmpty) return slug;
+    final fromName = slugify(name);
+    return fromName.isEmpty ? id : fromName;
+  }
 }
+
+Set<String> _stringSet(Object? value) =>
+    value is List ? value.map((e) => '$e').toSet() : const {};
 
 class PartnerCategory {
   const PartnerCategory({required this.id, required this.name});
@@ -253,3 +281,183 @@ class ClientLinkResult {
   final bool hasPush;
   final int openOrders;
 }
+
+// ── Commandes en ligne (orders.source = 'boutique', migration 013/162) ──────
+
+class PartnerOrderItem {
+  const PartnerOrderItem({required this.name, required this.quantity, required this.total});
+
+  factory PartnerOrderItem.fromJson(Map<String, dynamic> json) => PartnerOrderItem(
+        name: '${json['name'] ?? 'Article'}',
+        quantity: _toIntOrNull(json['quantity']) ?? 1,
+        total: _toDouble(json['total'] ?? (_toDouble(json['price']) * (_toIntOrNull(json['quantity']) ?? 1))),
+      );
+
+  final String name;
+  final int quantity;
+  final double total;
+}
+
+class PartnerOrder {
+  const PartnerOrder({
+    required this.id,
+    required this.createdAt,
+    required this.status,
+    required this.total,
+    required this.amountPaid,
+    required this.deliveryType,
+    required this.deliveryStatus,
+    required this.items,
+    this.customerName,
+    this.customerPhone,
+    this.deliveryAddress,
+    this.notes,
+  });
+
+  factory PartnerOrder.fromJson(Map<String, dynamic> json) => PartnerOrder(
+        id: '${json['id']}',
+        createdAt: DateTime.tryParse('${json['created_at']}')?.toLocal() ?? DateTime.now(),
+        status: '${json['status'] ?? 'pending'}',
+        total: _toDouble(json['total']),
+        amountPaid: _toDouble(json['amount_paid']),
+        deliveryType: '${json['delivery_type'] ?? 'pickup'}',
+        deliveryStatus: '${json['delivery_status'] ?? 'pending'}',
+        items: ((json['items'] as List?) ?? [])
+            .whereType<Map>()
+            .map((e) => PartnerOrderItem.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        customerName: json['customer_name'] as String?,
+        customerPhone: json['customer_phone'] as String?,
+        deliveryAddress: json['delivery_address'] as String?,
+        notes: json['notes'] as String?,
+      );
+
+  final String id;
+  final DateTime createdAt;
+
+  /// pending (non soldée) · paid · cancelled · refunded
+  final String status;
+  final double total;
+  final double amountPaid;
+
+  /// pickup (retrait) · delivery (livraison)
+  final String deliveryType;
+
+  /// pending · picking · delivered
+  final String deliveryStatus;
+  final List<PartnerOrderItem> items;
+  final String? customerName;
+  final String? customerPhone;
+  final String? deliveryAddress;
+  final String? notes;
+
+  bool get isDelivery => deliveryType == 'delivery';
+  bool get isCancelled => status == 'cancelled' || status == 'refunded';
+  bool get isPaid => status == 'paid';
+  bool get isHandedOver => deliveryStatus == 'delivered';
+
+  double get balanceDue => (total - amountPaid).clamp(0, double.infinity).toDouble();
+
+  /// Encore une action à faire : encaisser ou remettre au client
+  bool get needsAction => !isCancelled && (!isPaid || !isHandedOver);
+
+  bool get canCollect => status == 'pending' && balanceDue > 0.005;
+  bool get canHandOver => (status == 'pending' || status == 'paid') && !isHandedOver;
+  bool get canCancel => status == 'pending' || status == 'paid';
+
+  String get reference => '#${shortOrderId(id)}';
+
+  int get articleCount => items.fold(0, (sum, i) => sum + i.quantity);
+}
+
+// ── Ordres de travail (service_orders, migration 024) ───────────────────────
+
+class PartnerServiceOrder {
+  const PartnerServiceOrder({
+    required this.id,
+    required this.orderNumber,
+    required this.status,
+    required this.total,
+    required this.paidAmount,
+    required this.createdAt,
+    required this.itemNames,
+    this.clientName,
+    this.clientPhone,
+    this.subjectRef,
+    this.subjectInfo,
+    this.assignedName,
+    this.notes,
+  });
+
+  factory PartnerServiceOrder.fromJson(Map<String, dynamic> json) => PartnerServiceOrder(
+        id: '${json['id']}',
+        orderNumber: _toIntOrNull(json['order_number']) ?? 0,
+        status: '${json['status'] ?? 'attente'}',
+        total: _toDouble(json['total']),
+        paidAmount: _toDouble(json['paid_amount']),
+        createdAt: DateTime.tryParse('${json['created_at']}')?.toLocal() ?? DateTime.now(),
+        itemNames: ((json['items'] as List?) ?? [])
+            .whereType<Map>()
+            .map((e) {
+              final qty = _toIntOrNull(e['quantity']) ?? 1;
+              return qty > 1 ? '${e['name']} ×$qty' : '${e['name']}';
+            })
+            .toList(),
+        clientName: json['client_name'] as String?,
+        clientPhone: json['client_phone'] as String?,
+        subjectRef: json['subject_ref'] as String?,
+        subjectInfo: json['subject_info'] as String?,
+        assignedName: json['assigned_name'] as String?,
+        notes: json['notes'] as String?,
+      );
+
+  final String id;
+  final int orderNumber;
+
+  /// attente → en_cours ⇄ pause → termine → paye (annule à tout moment avant paye)
+  final String status;
+  final double total;
+  final double paidAmount;
+  final DateTime createdAt;
+  final List<String> itemNames;
+  final String? clientName;
+  final String? clientPhone;
+  final String? subjectRef;
+  final String? subjectInfo;
+  final String? assignedName;
+  final String? notes;
+
+  String get reference => 'OT-${orderNumber.toString().padLeft(4, '0')}';
+
+  String get subject => [subjectRef, subjectInfo].whereType<String>().where((s) => s.trim().isNotEmpty).join(' · ');
+
+  bool get isClosed => status == 'paye' || status == 'annule';
+
+  String get statusLabel => serviceStatusLabel(status);
+
+  /// Étapes accessibles depuis le statut actuel (l'encaissement reste à la caisse / sur le web)
+  List<String> get nextStatuses => switch (status) {
+        'attente' => ['en_cours'],
+        'en_cours' => ['termine', 'pause'],
+        'pause' => ['en_cours'],
+        _ => const [],
+      };
+}
+
+String serviceStatusLabel(String status) => switch (status) {
+      'attente' => 'En attente',
+      'en_cours' => 'En cours',
+      'pause' => 'En pause',
+      'termine' => 'Terminé',
+      'paye' => 'Payé',
+      'annule' => 'Annulé',
+      _ => status,
+    };
+
+/// Libellé du bouton qui fait passer l'ordre à [status]
+String serviceActionLabel(String status) => switch (status) {
+      'en_cours' => 'Démarrer',
+      'pause' => 'Mettre en pause',
+      'termine' => 'Marquer terminé',
+      _ => serviceStatusLabel(status),
+    };

@@ -40,6 +40,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       ? widget.product?.categoryId
       : null;
   late bool _trackStock = widget.product?.trackStock ?? false;
+  late final List<PartnerCategory> _categories = [...widget.categories];
 
   /// URL actuelle (null si retirée) et nouvelle photo choisie, envoyée à l'enregistrement
   late String? _imageUrl = widget.product?.imageUrl;
@@ -202,6 +203,33 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
   }
 
+  Future<void> _createCategory() async {
+    final name = await showDialog<String>(context: context, builder: (_) => const _NewCategoryDialog());
+    if (name == null || !mounted) return;
+    final existing = _categories.where((c) => c.name.toLowerCase() == name.toLowerCase()).firstOrNull;
+    if (existing != null) {
+      setState(() => _categoryId = existing.id);
+      return;
+    }
+    try {
+      final created = await widget.repository.createCategory(widget.business.id, name, _categories.length);
+      if (!mounted) return;
+      setState(() {
+        _categories.add(created);
+        _categoryId = created.id;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Catégorie « ${created.name} » créée')));
+    } on PartnerException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Création impossible. Vérifiez votre connexion et réessayez.')),
+        );
+      }
+    }
+  }
+
   void _stepStock(int delta) {
     final current = int.tryParse(_stock.text.trim()) ?? 0;
     final next = (current + delta).clamp(0, 999999);
@@ -250,14 +278,34 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               },
             ),
             const SizedBox(height: 14),
-            DropdownButtonFormField<String?>(
-              initialValue: _categoryId,
-              decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Sans catégorie')),
-                for (final c in widget.categories) DropdownMenuItem(value: c.id, child: Text(c.name)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String?>(
+                    // Clé liée à la liste : une catégorie créée ici devient sélectionnable
+                    key: ValueKey(_categories.length),
+                    initialValue: _categoryId,
+                    decoration: const InputDecoration(labelText: 'Catégorie'),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('Sans catégorie')),
+                      for (final c in _categories) DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    ],
+                    onChanged: (v) => setState(() => _categoryId = v),
+                  ),
+                ),
+                if (widget.business.canManageCategories) ...[
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: IconButton.outlined(
+                      tooltip: 'Nouvelle catégorie',
+                      onPressed: _saving ? null : _createCategory,
+                      icon: const Icon(Icons.create_new_folder_outlined),
+                    ),
+                  ),
+                ],
               ],
-              onChanged: (v) => setState(() => _categoryId = v),
             ),
             const SizedBox(height: 14),
             TextFormField(
@@ -429,6 +477,53 @@ class _PhotoField extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NewCategoryDialog extends StatefulWidget {
+  const _NewCategoryDialog();
+
+  @override
+  State<_NewCategoryDialog> createState() => _NewCategoryDialogState();
+}
+
+class _NewCategoryDialogState extends State<_NewCategoryDialog> {
+  final _name = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    if (name.isNotEmpty) Navigator.of(context).pop(name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nouvelle catégorie'),
+      content: TextField(
+        controller: _name,
+        autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        decoration: const InputDecoration(labelText: 'Nom', hintText: 'Ex : Boissons'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Annuler')),
+        ListenableBuilder(
+          listenable: _name,
+          builder: (context, _) => TextButton(
+            onPressed: _name.text.trim().isEmpty ? null : _submit,
+            child: const Text('Créer'),
+          ),
+        ),
+      ],
     );
   }
 }
