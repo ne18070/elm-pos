@@ -6,6 +6,7 @@ import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/contact_sheet.dart';
 import 'account_deletion_screen.dart';
+import 'orders_tab.dart';
 import 'partner_login_screen.dart';
 import 'partner_models.dart';
 import 'partner_repository.dart';
@@ -13,8 +14,11 @@ import 'partner_session.dart';
 import 'partner_signup_screen.dart' show pendingBusinessNameKey;
 import 'product_form_screen.dart';
 import 'scan_client_screen.dart';
+import 'service_orders_tab.dart';
+import 'shop_settings_screen.dart';
 
-/// Point d'entrée de l'espace partenaire : connexion, puis gestion des produits.
+/// Point d'entrée de l'espace partenaire : connexion, puis produits, commandes en
+/// ligne et ordres de travail de la boutique choisie.
 class PartnerScreen extends StatefulWidget {
   const PartnerScreen({super.key});
 
@@ -51,6 +55,8 @@ class _PartnerScreenState extends State<PartnerScreen> {
 
 enum _Visibility { online, hidden }
 
+enum _Tab { products, orders, workshop }
+
 class _ProductsHome extends StatefulWidget {
   const _ProductsHome({super.key, required this.session});
 
@@ -80,6 +86,16 @@ class _ProductsHomeState extends State<_ProductsHome> {
   String? _error;
   String _search = '';
   _Visibility _visibility = _Visibility.online;
+  _Tab _tab = _Tab.products;
+
+  /// Commandes en ligne à encaisser ou à remettre (pastille de l'onglet)
+  int _ordersTodo = 0;
+
+  List<_Tab> get _tabs => [
+        _Tab.products,
+        _Tab.orders,
+        if (_business?.hasServices ?? false) _Tab.workshop,
+      ];
 
   @override
   void initState() {
@@ -152,6 +168,14 @@ class _ProductsHomeState extends State<_ProductsHome> {
     );
   }
 
+  Future<void> _openShopSettings() async {
+    final business = _business;
+    if (business == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => ShopSettingsScreen(repository: _repository, business: business)),
+    );
+  }
+
   Future<void> _openAccountDeletion() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(builder: (_) => AccountDeletionScreen(session: widget.session)),
@@ -163,6 +187,8 @@ class _ProductsHomeState extends State<_ProductsHome> {
       _business = business;
       _loading = true;
       _error = null;
+      _ordersTodo = 0;
+      if (!_tabs.contains(_tab)) _tab = _Tab.products;
     });
     try {
       await _repository.activate(business.id);
@@ -188,8 +214,16 @@ class _ProductsHomeState extends State<_ProductsHome> {
     final business = _business;
     if (business == null) return;
     try {
-      final products = await _repository.products(business.id);
-      if (mounted) setState(() => _products = products);
+      final results = await Future.wait([
+        _repository.products(business.id),
+        _repository.categories(business.id),
+      ]);
+      if (mounted) {
+        setState(() {
+          _products = results[0] as List<PartnerProduct>;
+          _categories = results[1] as List<PartnerCategory>;
+        });
+      }
     } catch (_) {
       _toast('Actualisation impossible. Vérifiez votre connexion.');
     }
@@ -296,9 +330,22 @@ class _ProductsHomeState extends State<_ProductsHome> {
               'logout' => _signOut(),
               'delete' => _openAccountDeletion(),
               'contact' => showContactSheet(context),
+              'shop' => _openShopSettings(),
               _ => _chooseBusiness(),
             },
             itemBuilder: (_) => [
+              if (business != null && !_loading && _error == null) ...[
+                const PopupMenuItem(
+                  value: 'shop',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.storefront_outlined),
+                    title: Text('Ma boutique en ligne'),
+                    subtitle: Text('Lien, QR code, annuaire'),
+                  ),
+                ),
+                const PopupMenuDivider(),
+              ],
               if (_businesses.length > 1) const PopupMenuItem(value: 'switch', child: Text('Changer de boutique')),
               const PopupMenuItem(value: 'contact', child: Text('Nous contacter')),
               const PopupMenuItem(value: 'logout', child: Text('Se déconnecter')),
@@ -308,14 +355,83 @@ class _ProductsHomeState extends State<_ProductsHome> {
           ),
         ],
       ),
-      floatingActionButton: business == null || _loading || _error != null
+      floatingActionButton: !_ready || _tab != _Tab.products
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _openForm(),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Ajouter un produit'),
             ),
-      body: _buildBody(),
+      bottomNavigationBar: _ready ? _buildNavigationBar() : null,
+      body: _ready ? _buildTabs(business!) : _buildBody(),
+    );
+  }
+
+  /// Boutique chargée : onglets disponibles
+  bool get _ready =>
+      _business != null && !_loading && _error == null && !_hasNoBusiness && _businesses.isNotEmpty;
+
+  Widget _buildNavigationBar() {
+    final tabs = _tabs;
+    return NavigationBar(
+      selectedIndex: tabs.indexOf(_tab).clamp(0, tabs.length - 1),
+      onDestinationSelected: (index) => setState(() => _tab = tabs[index]),
+      destinations: [
+        for (final tab in tabs)
+          switch (tab) {
+            _Tab.products => const NavigationDestination(
+                icon: Icon(Icons.inventory_2_outlined),
+                selectedIcon: Icon(Icons.inventory_2_rounded),
+                label: 'Produits',
+              ),
+            _Tab.orders => NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: _ordersTodo > 0,
+                  label: Text('$_ordersTodo'),
+                  child: const Icon(Icons.receipt_long_outlined),
+                ),
+                selectedIcon: Badge(
+                  isLabelVisible: _ordersTodo > 0,
+                  label: Text('$_ordersTodo'),
+                  child: const Icon(Icons.receipt_long_rounded),
+                ),
+                label: 'Commandes',
+              ),
+            _Tab.workshop => const NavigationDestination(
+                icon: Icon(Icons.handyman_outlined),
+                selectedIcon: Icon(Icons.handyman_rounded),
+                label: 'Atelier',
+              ),
+          },
+      ],
+    );
+  }
+
+  Widget _buildTabs(PartnerBusiness business) {
+    final tabs = _tabs;
+    // IndexedStack : chaque onglet garde sa liste et sa position ; les commandes se
+    // chargent dès l'ouverture pour la pastille « à traiter »
+    return IndexedStack(
+      index: tabs.indexOf(_tab).clamp(0, tabs.length - 1),
+      children: [
+        for (final tab in tabs)
+          switch (tab) {
+            _Tab.products => _buildBody(),
+            _Tab.orders => PartnerOrdersTab(
+                key: ValueKey('orders-${business.id}'),
+                repository: _repository,
+                business: business,
+                onTodoCount: (count) {
+                  if (mounted && count != _ordersTodo) setState(() => _ordersTodo = count);
+                },
+              ),
+            _Tab.workshop => PartnerServiceOrdersTab(
+                key: ValueKey('workshop-${business.id}'),
+                repository: _repository,
+                business: business,
+              ),
+          },
+      ],
     );
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -241,8 +242,141 @@ class PartnerRepository {
     }
   }
 
+  // ── Catégories ──────────────────────────────────────────────────────────
+
+  /// Nouvelle catégorie en fin de liste (RLS : admin / owner de l'établissement actif).
+  Future<PartnerCategory> createCategory(String businessId, String name, int sortOrder) async {
+    final rows = await _db
+        .from('categories')
+        .insert({'business_id': businessId, 'name': name.trim(), 'sort_order': sortOrder})
+        .select('id, name');
+    if (rows.isEmpty) {
+      throw const PartnerException('Création refusée : seul le propriétaire ou un administrateur peut ajouter une catégorie.');
+    }
+    return PartnerCategory.fromJson(rows.first);
+  }
+
+  // ── Commandes en ligne (boutique web + app) ────────────────────────────────
+
+  static const _orderColumns =
+      'id, created_at, status, total, amount_paid, customer_name, customer_phone, '
+      'delivery_address, delivery_type, delivery_status, notes, '
+      'items:order_items(name, quantity, price, total)';
+
+  /// Commandes passées sur la boutique en ligne, les plus récentes d'abord —
+  /// même filtre que l'onglet « En ligne » de /orders (source = boutique).
+  Future<List<PartnerOrder>> boutiqueOrders(String businessId, {int limit = 100}) async {
+    final rows = await _db
+        .from('orders')
+        .select(_orderColumns)
+        .eq('business_id', businessId)
+        .eq('source', 'boutique')
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return rows.map(PartnerOrder.fromJson).toList();
+  }
+
+  Future<PartnerOrder?> boutiqueOrder(String orderId) async {
+    final row = await _db.from('orders').select(_orderColumns).eq('id', orderId).maybeSingle();
+    return row == null ? null : PartnerOrder.fromJson(row);
+  }
+
+  /// Encaisse le solde (complete_order_payment, migration 174) : la commande passe
+  /// « payée » quand le total est atteint.
+  Future<void> collectOrderPayment(PartnerOrder order, String method) async {
+    await _db.rpc('complete_order_payment', params: {
+      'p_order_id': order.id,
+      'p_method': method,
+      'p_amount': order.balanceDue,
+    });
+  }
+
+  /// Remise au client : retirée en boutique ou livrée (confirm_order_delivery).
+  Future<void> confirmHandOver(String orderId) async {
+    final uid = _db.auth.currentUser?.id;
+    if (uid == null) throw const AuthException('Session expirée');
+    await _db.rpc('confirm_order_delivery', params: {'p_order_id': orderId, 'p_delivered_by': uid});
+  }
+
+  /// Annulation : stock restitué, coupons libérés (cancel_order, migration 174).
+  Future<void> cancelOrder(String orderId) async {
+    await _db.rpc('cancel_order', params: {'p_order_id': orderId});
+  }
+
+  // ── Ordres de travail (module Prestations) ─────────────────────────────────
+
+  /// Ordres non clôturés (ni payés ni annulés), plus anciens d'abord : la file d'attente.
+  Future<List<PartnerServiceOrder>> openServiceOrders(String businessId) async {
+    final rows = await _db
+        .from('service_orders')
+        .select('*, items:service_order_items(name, quantity)')
+        .eq('business_id', businessId)
+        .inFilter('status', ['attente', 'en_cours', 'pause', 'termine'])
+        .order('created_at', ascending: true)
+        .limit(200);
+    return rows.map(PartnerServiceOrder.fromJson).toList();
+  }
+
+  /// Change le statut (horodatage par le trigger SQL), journalise et prévient le
+  /// client (Web Push + app liée), comme OrderDetailPanel sur le web.
+  Future<void> setServiceOrderStatus(String businessId, PartnerServiceOrder order, String status) async {
+    final rows = await _db.from('service_orders').update({'status': status}).eq('id', order.id).select('id');
+    if (rows.isEmpty) {
+      throw const PartnerException('Modification refusée : vérifiez vos droits sur cet établissement.');
+    }
+    _log(
+      businessId,
+      status == 'annule' ? 'service_order.cancelled' : 'service_order.status_updated',
+      order.id,
+      {'order_number': order.orderNumber, 'status': status, 'source': 'elm_boutique_app'},
+      entityType: 'service_order',
+    );
+    unawaited(_notifyServiceOrderClient(order.id));
+  }
+
+  Future<void> _notifyServiceOrderClient(String serviceOrderId) async {
+    final token = _db.auth.currentSession?.accessToken;
+    if (token == null) return;
+    try {
+      await http
+          .post(
+            Uri.parse('${AppConfig.siteUrl}/api/client-push/notify'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            body: jsonEncode({'serviceOrderId': serviceOrderId}),
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // Notification au mieux : le statut est enregistré
+    }
+  }
+
+  // ── Boutique en ligne ──────────────────────────────────────────────────────
+
+  /// Présence dans l'annuaire de l'app (businesses.directory_listed, migration 156).
+  Future<bool> directoryListed(String businessId) async {
+    final row = await _db.from('businesses').select('directory_listed').eq('id', businessId).maybeSingle();
+    return row?['directory_listed'] != false;
+  }
+
+  Future<void> setDirectoryListed(String businessId, bool listed) async {
+    final rows = await _db
+        .from('businesses')
+        .update({'directory_listed': listed})
+        .eq('id', businessId)
+        .select('id');
+    if (rows.isEmpty) {
+      throw const PartnerException('Modification refusée : vérifiez vos droits sur cette boutique.');
+    }
+  }
+
   /// Journal d'activité (activity_logs), sans jamais bloquer l'écran.
-  void _log(String businessId, String action, String entityId, Map<String, Object?> metadata) {
+  void _log(
+    String businessId,
+    String action,
+    String entityId,
+    Map<String, Object?> metadata, {
+    String entityType = 'product',
+  }) {
     final user = _db.auth.currentUser;
     _db
         .from('activity_logs')
@@ -251,7 +385,7 @@ class PartnerRepository {
           'user_id': user?.id,
           'user_name': user?.userMetadata?['full_name'],
           'action': action,
-          'entity_type': 'product',
+          'entity_type': entityType,
           'entity_id': entityId,
           'metadata': metadata,
         })
