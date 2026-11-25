@@ -59,10 +59,24 @@ function serviceAccount(): ServiceAccount | null {
     return null;
   }
 
+  // Clé enveloppée dans un objet ({ "FIREBASE_SERVICE_ACCOUNT_JSON": {…} }, { "serviceAccount": "…" }…)
+  const looksLikeAccount = (o: unknown) => !!o && typeof o === 'object' && 'private_key' in o;
+  if (!looksLikeAccount(parsed)) {
+    for (const value of Object.values(parsed as Record<string, unknown>)) {
+      let inner: unknown = value;
+      try { if (typeof inner === 'string') inner = JSON.parse(inner); } catch { /* pas du JSON */ }
+      if (looksLikeAccount(inner)) { parsed = inner; break; }
+    }
+  }
+
   const account = parsed as Partial<ServiceAccount> & { type?: string };
   const missing = (['project_id', 'client_email', 'private_key'] as const).filter(k => !account[k]);
   if (missing.length) {
-    reportConfigError(`champ(s) manquant(s) : ${missing.join(', ')}${account.type ? ` (type « ${account.type} »)` : ''}`);
+    // Noms des champs reçus et forme de la valeur (jamais leur contenu) : de quoi
+    // reconnaître le fichier collé par erreur
+    const keys = Object.keys(account).slice(0, 8).join(', ') || 'aucun';
+    reportConfigError(`champ(s) manquant(s) : ${missing.join(', ')}${account.type ? ` (type « ${account.type} »)` : ''}` +
+      ` — champs reçus : ${keys} — valeur de ${raw.length} caractères commençant par « ${raw[0]} »`);
     return null;
   }
   return {
