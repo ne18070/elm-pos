@@ -25,14 +25,51 @@ export type FcmResult = 'sent' | 'unregistered' | 'error';
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
+let reportedConfigError = false;
+
+/** Une seule fois par instance : la cause exacte, sans jamais logguer de valeur secrète */
+function reportConfigError(reason: string) {
+  if (reportedConfigError) return;
+  reportedConfigError = true;
+  console.error(`[fcm] FIREBASE_SERVICE_ACCOUNT_JSON inutilisable : ${reason}. Attendu : le JSON du compte de service ` +
+    '(Console Firebase → Paramètres du projet → Comptes de service → Générer une nouvelle clé privée), ' +
+    'pas google-services.json / GoogleService-Info.plist.');
+}
+
+/**
+ * Lit le compte de service tel qu'il est souvent collé dans Vercel : JSON brut,
+ * JSON encodé une seconde fois (entre guillemets) ou base64. La clé privée peut
+ * arriver avec des « \n » littéraux au lieu de vrais retours à la ligne.
+ */
 function serviceAccount(): ServiceAccount | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
   if (!raw) return null;
+
+  let parsed: unknown = raw;
   try {
-    return JSON.parse(raw) as ServiceAccount;
+    if (!raw.startsWith('{') && !raw.startsWith('"')) parsed = Buffer.from(raw, 'base64').toString('utf8');
+    // Jusqu'à deux décodages : JSON brut, ou JSON stocké comme chaîne JSON
+    for (let i = 0; i < 2 && typeof parsed === 'string'; i++) parsed = JSON.parse(parsed);
   } catch {
+    reportConfigError('JSON illisible');
     return null;
   }
+  if (!parsed || typeof parsed !== 'object') {
+    reportConfigError('ce n’est pas un objet JSON');
+    return null;
+  }
+
+  const account = parsed as Partial<ServiceAccount> & { type?: string };
+  const missing = (['project_id', 'client_email', 'private_key'] as const).filter(k => !account[k]);
+  if (missing.length) {
+    reportConfigError(`champ(s) manquant(s) : ${missing.join(', ')}${account.type ? ` (type « ${account.type} »)` : ''}`);
+    return null;
+  }
+  return {
+    project_id: account.project_id!,
+    client_email: account.client_email!,
+    private_key: account.private_key!.replace(/\\n/g, '\n'),
+  };
 }
 
 export const isFcmConfigured = () => serviceAccount() !== null;
