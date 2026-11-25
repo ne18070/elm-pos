@@ -7692,6 +7692,14 @@ export type Database = {
       }
     }
     Functions: {
+      app_push_badge_clear: {
+        Args: { p_fcm_token: string }
+        Returns: undefined
+      }
+      app_push_badge_increment: {
+        Args: { p_fcm_token: string; p_tag: string }
+        Returns: number
+      }
       report_content: {
         Args: {
           p_blocked?: boolean

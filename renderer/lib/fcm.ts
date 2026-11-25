@@ -19,6 +19,8 @@ export interface FcmMessage {
   url: string;
   /** Regroupe les notifications d'un même suivi (la plus récente remplace la précédente) */
   tag?: string;
+  /** Nombre affiché sur l'icône de l'app (iOS, et lanceurs Android qui le gèrent) */
+  badge?: number;
 }
 
 export type FcmResult = 'sent' | 'unregistered' | 'error';
@@ -140,11 +142,11 @@ export async function sendFcm(deviceToken: string, message: FcmMessage): Promise
             data: { url: message.url },
             android: {
               priority: 'HIGH',
-              notification: { tag: message.tag },
+              notification: { tag: message.tag, notification_count: message.badge },
             },
             apns: {
               headers: message.tag ? { 'apns-collapse-id': message.tag } : undefined,
-              payload: { aps: { sound: 'default' } },
+              payload: { aps: { sound: 'default', badge: message.badge } },
             },
           },
         }),

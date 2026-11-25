@@ -181,6 +181,13 @@ class BoutiqueRepository {
         params: {'p_tracking_token': trackingToken, 'p_fcm_token': fcmToken},
       );
 
+  /// Remet à zéro la pastille de l'icône de ce téléphone (migration 179) : le
+  /// serveur ne compte plus les ordres notifiés avant cette ouverture.
+  Future<void> clearPushBadge(String fcmToken) => _db.rpc(
+        'app_push_badge_clear',
+        params: {'p_fcm_token': fcmToken},
+      );
+
   /// Signalement (et/ou blocage) d'une boutique, d'un produit ou d'une prestation —
   /// RPC report_content (migration 164), traité dans /backoffice/moderation.
   Future<void> reportContent({

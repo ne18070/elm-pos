@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -54,7 +57,11 @@ class PushService {
       final messaging = FirebaseMessaging.instance;
       await messaging.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
 
-      FirebaseMessaging.onMessage.listen(_showInApp);
+      FirebaseMessaging.onMessage.listen((message) {
+        _showInApp(message);
+        // App ouverte : la notification est vue, pas de pastille
+        unawaited(clearBadge());
+      });
       FirebaseMessaging.onMessageOpenedApp.listen(_openFromMessage);
       messaging.onTokenRefresh.listen((token) {
         _deviceToken = token;
@@ -65,6 +72,10 @@ class PushService {
       if (initial != null) _openFromMessage(initial);
 
       _ready = true;
+
+      // Pastille de l'icône : effacée à chaque ouverture (lancement + retour au premier plan)
+      unawaited(clearBadge());
+      _lifecycle = AppLifecycleListener(onResume: () => unawaited(clearBadge()));
 
       // Permission déjà accordée : on réabonne les suivis (nouveau jeton, réinstallation…)
       final settings = await messaging.getNotificationSettings();
@@ -132,6 +143,29 @@ class PushService {
   }
 
   String get platform => _platform;
+
+  // ignore: unused_field — gardé en vie pour recevoir les retours au premier plan
+  AppLifecycleListener? _lifecycle;
+
+  /// Efface le nombre sur l'icône de l'app, sur le téléphone et côté serveur (sinon
+  /// la prochaine notification repartirait de l'ancien compte). Sans permission de
+  /// notification, pas de jeton : rien à effacer côté serveur.
+  Future<void> clearBadge() async {
+    if (!_ready) return;
+    try {
+      await AppBadgePlus.updateBadge(0);
+    } catch (error) {
+      debugPrint('Pastille non effacée : $error');
+    }
+    try {
+      final settings = await FirebaseMessaging.instance.getNotificationSettings();
+      if (!_isAuthorized(settings.authorizationStatus)) return;
+      final token = _deviceToken ??= await FirebaseMessaging.instance.getToken();
+      if (token != null) await _repository.clearPushBadge(token);
+    } catch (error) {
+      debugPrint('Compteur de notifications non remis à zéro : $error');
+    }
+  }
 
   Future<void> _registerAllTracked() async {
     final token = _deviceToken ??= await FirebaseMessaging.instance.getToken();

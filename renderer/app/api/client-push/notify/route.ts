@@ -227,8 +227,16 @@ export async function POST(req: NextRequest) {
       : `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.elm-app.click').replace(/\/$/, '')}${url}`;
     const results = await Promise.all(
       [...devices].map(async ([fcmToken, device]) => {
-        const result = await sendFcm(fcmToken, { title, body, url: appUrl, tag });
+        // Pastille de l'icône : ordres non lus sur ce téléphone (migration 179).
+        // Sans elle la notification part quand même, la pastille reste inchangée.
+        const { data: badge, error: badgeError } = await supabaseAdmin.rpc('app_push_badge_increment', {
+          p_fcm_token: fcmToken,
+          p_tag: tag,
+        });
+        if (badgeError) console.warn('[client-push/notify] pastille non calculée', badgeError.message);
+        const result = await sendFcm(fcmToken, { title, body, url: appUrl, tag, badge: badge ?? undefined });
         if (result === 'unregistered') {
+          await supabaseAdmin.rpc('app_push_badge_clear', { p_fcm_token: fcmToken });
           if (device.trackedIds.length) {
             await supabaseAdmin.from('client_push_devices').delete().in('id', device.trackedIds);
           }
