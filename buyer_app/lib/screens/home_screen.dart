@@ -205,14 +205,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _openTracking(String token) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TrackingScreen(token: token, repository: widget.repository, store: widget.store),
-      ),
-    );
-  }
-
   Future<void> _openMyTracking() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -221,16 +213,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String? _lastLink;
+  DateTime? _lastLinkAt;
+
+  /// Attend que l'app soit au premier plan et qu'une image soit dessinée : sur iOS,
+  /// le toucher d'une notification arrive avant le retour au premier plan, et une
+  /// transition lancée à ce moment pouvait rester figée (accueil décalé, moitié noire).
+  Future<void> _whenForeground() async {
+    final binding = WidgetsBinding.instance;
+    final state = binding.lifecycleState;
+    if (state != null && state != AppLifecycleState.resumed) {
+      final resumed = Completer<void>();
+      final listener = AppLifecycleListener(onResume: () {
+        if (!resumed.isCompleted) resumed.complete();
+      });
+      await resumed.future.timeout(const Duration(seconds: 3), onTimeout: () {});
+      listener.dispose();
+    }
+    await binding.endOfFrame;
+  }
+
   Future<void> _handleIncomingLink(Uri uri) async {
-    // Lien de suivi (/track/<jeton>) : WhatsApp, QR code ou notification
-    final trackingToken = parseTrackingToken(uri.toString());
+    // Même lien reçu deux fois de suite (notification signalée en double, lien
+    // universel + notification) : une seule ouverture
+    final key = uri.toString();
+    final now = DateTime.now();
+    if (key == _lastLink && _lastLinkAt != null && now.difference(_lastLinkAt!) < const Duration(seconds: 3)) return;
+    _lastLink = key;
+    _lastLinkAt = now;
+
+    await _whenForeground();
+    if (!mounted) return;
+
+    // Lien de suivi (/track/<jeton>) : WhatsApp, QR code ou notification.
+    // Une seule opération de navigation (pas de popUntil puis push qui s'animent
+    // en même temps) : l'écran de suivi remplace tout ce qui était ouvert.
+    final trackingToken = parseTrackingToken(key);
     if (trackingToken != null) {
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      await _openTracking(trackingToken);
+      await Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => TrackingScreen(token: trackingToken, repository: widget.repository, store: widget.store),
+        ),
+        (route) => route.isFirst,
+      );
       return;
     }
-    final target = parseBusinessLink(uri.toString());
+    final target = parseBusinessLink(key);
     if (target == null || !mounted) return;
     try {
       final info = await widget.repository.findBoutique(target.ref);

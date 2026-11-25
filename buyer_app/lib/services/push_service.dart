@@ -152,7 +152,12 @@ class PushService {
   bool _isAuthorized(AuthorizationStatus status) =>
       status == AuthorizationStatus.authorized || status == AuthorizationStatus.provisional;
 
+  /// iOS peut signaler le même toucher deux fois (getInitialMessage + onMessageOpenedApp)
+  final _openedMessages = <String>{};
+
   void _openFromMessage(RemoteMessage message) {
+    final id = message.messageId;
+    if (id != null && !_openedMessages.add(id)) return;
     final uri = Uri.tryParse('${message.data['url'] ?? ''}');
     if (uri == null || uri.path.isEmpty) return;
     final handler = _openLink;
